@@ -120,7 +120,7 @@ async def exchange_token(
             audience=lhcb_iam_client_id,
             oauth2_app=oauth.lhcb,
         )
-    except OAuthError as error:
+    except OAuthError:
         raise
 
     vo = token["organisation_name"]
