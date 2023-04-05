@@ -158,7 +158,7 @@ async def verify_dirac_token(authorization: Annotated[str, Header()]) -> UserInf
     )
 
 
-def create_access_token(payload: dict, expires_delta: timedelta | None = None):
+def create_access_token(payload: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = payload.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -167,7 +167,7 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None):
     to_encode.update({"exp": expire})
 
     jwt = JsonWebToken(ALGORITHM)
-    encoded_jwt = jwt.encode({"alg": ALGORITHM}, to_encode, SECRET_KEY)
+    encoded_jwt = jwt.encode({"alg": ALGORITHM}, to_encode, SECRET_KEY).decode("ascii")
     return encoded_jwt
 
 

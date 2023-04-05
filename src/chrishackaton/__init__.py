@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from .routers import auth, job_manager
 
-# from .db import jobs_db
+from .db.jobs.db import JobDB
 
 app = FastAPI()
 
@@ -13,14 +13,14 @@ app.include_router(
     job_manager.router, prefix="/jobs", dependencies=[Depends(auth.verify_dirac_token)]
 )
 
-# @app.on_event("startup")
-# async def startup():
-#     await jobs_db.connect()
+@app.on_event("startup")
+async def startup():
+    await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
 
 
-# @app.on_event("shutdown")
-# async def shutdown():
-#     await jobs_db.disconnect()
+@app.on_event("shutdown")
+async def shutdown():
+    await JobDB.destroy_engine()
 
 
 @app.get("/")

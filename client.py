@@ -51,10 +51,9 @@ while True:
 idToken = r2.json()["id_token"]
 
 
-
 pprint(idToken)
 
-x= idToken.split('.')[1]
+x = idToken.split(".")[1]
 
 pprint(json.loads(base64.b64decode(x + (4 - len(x) % 4 if x != 0 else 0) * "=")))
 
@@ -101,6 +100,28 @@ tokenResponse = r.json()
 
 diracToken = tokenResponse["access_token"]
 
-r = requests.get('http://localhost:8000/jobs/', headers={"authorization":f"Bearer {diracToken}"})
+r = requests.get(
+    "http://localhost:8000/jobs/", headers={"authorization": f"Bearer {diracToken}"}
+)
 r.raise_for_status()
 pprint(r.json())
+
+
+job_definitions = [
+    {"owner": "owner1", "group": "group1", "vo": "vo1", "jdl": "jdl1"},
+    {"owner": "owner2", "group": "group2", "vo": "vo2", "jdl": "jdl2"},
+]
+
+r = requests.post(
+    "http://localhost:8000/jobs/",
+    headers={"authorization": f"Bearer {diracToken}"},
+    json=job_definitions,
+)
+
+
+assert r.ok, r.json()
+
+r = requests.get(
+    "http://localhost:8000/jobs/", headers={"authorization": f"Bearer {diracToken}"}
+)
+assert r.ok, r.json()

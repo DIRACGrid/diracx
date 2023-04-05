@@ -16,7 +16,7 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-Column = partial(RawColumn, nullable = False)
+Column = partial(RawColumn, nullable=False)
 NullColumn = partial(RawColumn, nullable=True)
 
 

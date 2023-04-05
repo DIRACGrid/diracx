@@ -1,5 +1,5 @@
 # import databases
-# import sqlalchemy
+import sqlalchemy
 
 # from .jobs import Base as JobsBase
 
@@ -13,3 +13,8 @@
 
 
 # jobs_db = setup_db("sqlite:///:memory:", JobsBase)
+
+# job_db_url = "sqlite:///:memory:"
+
+
+# engine = sqlalchemy.create_engine(job_db_url)

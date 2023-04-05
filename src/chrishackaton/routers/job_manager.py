@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import Annotated
 
+import asyncio
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
@@ -8,6 +10,8 @@ from pydantic import BaseModel
 from fastapi import status, Depends, HTTPException
 from .auth import verify_dirac_token, UserInfo
 from ..properties import SecurityProperty, UnevaluatedProperty
+
+from ..db.jobs.db import JobDB, get_job_db
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
@@ -35,6 +39,11 @@ class JobStatus(StrEnum):
     Running = "Running"
     Stalled = "Stalled"
     Killed = "Killed"
+
+
+# def get_jobdb():
+#     async with sessionmaker() as session:
+#         return JobDB(session)
 
 
 @router.get("/{job_id}")
@@ -65,11 +74,8 @@ async def set_single_job_status(job_id: int, status: JobStatus):
 
 
 @router.get("/")
-async def get_bulk_jobs() -> list:
-    return [
-        {"jobID": 1, "Status": JobStatus.Running},
-        {"jobID": 2, "Status": JobStatus.Stalled},
-    ]
+async def get_bulk_jobs(job_db: Annotated[JobDB, Depends(get_job_db)]) -> list:
+    return await job_db.list()
 
 
 class JobID(BaseModel):
@@ -108,6 +114,12 @@ class JobDefinition(BaseModel):
     jdl: str
 
 
+
 @router.post("/")
-async def submit_bulk_jobs(job_definitions: list[JobDefinition]):
-    return list(range(len(job_definitions)))
+async def submit_bulk_jobs(
+    job_definitions: list[JobDefinition],
+    job_db: Annotated[JobDB, Depends(get_job_db)],
+):
+    return await asyncio.gather(
+        *(job_db.insert(j.owner, j.group, j.vo) for j in job_definitions)
+    )
