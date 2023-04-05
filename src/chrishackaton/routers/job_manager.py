@@ -1,6 +1,7 @@
-from typing import Annotated
-from fastapi import APIRouter, Query
 from enum import StrEnum
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 router = APIRouter(tags=["jobs"])

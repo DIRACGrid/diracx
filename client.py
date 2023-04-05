@@ -1,6 +1,7 @@
-import requests
 import time
 from pprint import pprint
+
+import requests
 
 # TODO: use pkci
 

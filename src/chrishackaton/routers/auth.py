@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Header
-from fastapi.security import OpenIdConnect
-from pydantic import BaseModel, HttpUrl
 import re
 from datetime import datetime, timedelta
 
+from authlib.integrations.starlette_client import OAuth, OAuthError, StarletteOAuth2App
 from authlib.jose import JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
-
-from authlib.integrations.starlette_client import OAuth, OAuthError
-
+from fastapi import APIRouter, Header
+from fastapi.security import OpenIdConnect
+from pydantic import BaseModel, HttpUrl
 
 from ..config import Registry
 
