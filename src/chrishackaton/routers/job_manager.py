@@ -4,7 +4,31 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-router = APIRouter(tags=["jobs"])
+
+from fastapi import status, Depends, HTTPException
+from .auth import verify_dirac_token, UserInfo
+from ..properties import SecurityProperty, UnevaluatedProperty
+
+
+def has_properties(expression: UnevaluatedProperty | SecurityProperty):
+    if not isinstance(expression, UnevaluatedProperty):
+        expression = UnevaluatedProperty(expression)
+
+    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
+        if not expression(user.properties):
+            raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    return Depends(require_property)
+
+
+router = APIRouter(
+    tags=["jobs"],
+    dependencies=[
+        has_properties(
+            SecurityProperty.NORMAL_USER | SecurityProperty.JOB_ADMINISTRATOR
+        )
+    ],
+)
 
 
 class JobStatus(StrEnum):
@@ -23,7 +47,9 @@ async def delete_single_job(job_id: int):
     return f"I am deleting {job_id}"
 
 
-@router.post("/{job_id}/kill")
+@router.post(
+    "/{job_id}/kill", dependencies=[has_properties(SecurityProperty.JOB_ADMINISTRATOR)]
+)
 async def kill_single_job(job_id: int):
     return f"I am killing {job_id}"
 

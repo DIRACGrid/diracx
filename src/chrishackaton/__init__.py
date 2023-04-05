@@ -1,6 +1,6 @@
-from fastapi import FastAPI
-
+from fastapi import FastAPI, Depends
 from .routers import auth, job_manager
+
 # from .db import jobs_db
 
 app = FastAPI()
@@ -10,8 +10,7 @@ app.include_router(
     prefix="/auth",
 )
 app.include_router(
-    job_manager.router,
-    prefix="/jobs",
+    job_manager.router, prefix="/jobs", dependencies=[Depends(auth.verify_dirac_token)]
 )
 
 # @app.on_event("startup")

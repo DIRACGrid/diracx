@@ -16,16 +16,16 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-Column = partial(RawColumn, nullable=False)
+Column = partial(RawColumn, nullable = False)
 NullColumn = partial(RawColumn, nullable=True)
 
 
 class JobJDLs(Base):
     __tablename__ = "JobJDLs"
-    JobID = Column(Integer, nullable=False, autoincrement=True)
-    JDL = Column(String(2**24), nullable=False)
-    JobRequirements = Column(Text, nullable=False)
-    OriginalJDL = Column(String(2**24), nullable=False)
+    JobID = Column(Integer, autoincrement=True)
+    JDL = Column(String(2**24))
+    JobRequirements = Column(Text)
+    OriginalJDL = Column(String(2**24))
     __table_args__ = (PrimaryKeyConstraint("JobID"),)
 
 
@@ -45,12 +45,12 @@ class Jobs(Base):
     Owner = Column("Owner", String(64), default="Unknown")
     OwnerDN = Column("OwnerDN", String(255), default="Unknown")
     OwnerGroup = Column("OwnerGroup", String(128), default="Unknown")
-    SubmissionTime = Column("SubmissionTime", DateTime)
-    RescheduleTime = Column("RescheduleTime", DateTime)
-    LastUpdateTime = Column("LastUpdateTime", DateTime)
-    StartExecTime = Column("StartExecTime", DateTime)
-    HeartBeatTime = Column("HeartBeatTime", DateTime)
-    EndExecTime = Column("EndExecTime", DateTime)
+    SubmissionTime = NullColumn("SubmissionTime", DateTime)
+    RescheduleTime = NullColumn("RescheduleTime", DateTime)
+    LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
+    StartExecTime = NullColumn("StartExecTime", DateTime)
+    HeartBeatTime = NullColumn("HeartBeatTime", DateTime)
+    EndExecTime = NullColumn("EndExecTime", DateTime)
     Status = Column("Status", String(32), default="Received")
     MinorStatus = Column("MinorStatus", String(128), default="Unknown")
     ApplicationStatus = Column("ApplicationStatus", String(255), default="Unknown")
@@ -122,33 +122,33 @@ class AtticJobParameters(Base):
     __tablename__ = "AtticJobParameters"
     JobID = Column(Integer, ForeignKey("Jobs.JobID"), primary_key=True)
     Name = Column(String(100), primary_key=True)
-    Value = Column(Text, nullable=False)
-    RescheduleCycle = Column(Integer, nullable=False)
+    Value = Column(Text)
+    RescheduleCycle = Column(Integer)
 
 
 class SiteMask(Base):
     __tablename__ = "SiteMask"
     Site = Column(String(64), primary_key=True)
-    Status = Column(String(64), nullable=False)
-    LastUpdateTime = Column(DateTime, nullable=False)
-    Author = Column(String(255), nullable=False)
-    Comment = Column(Text, nullable=False)
+    Status = Column(String(64))
+    LastUpdateTime = Column(DateTime)
+    Author = Column(String(255))
+    Comment = Column(Text)
 
 
 class SiteMaskLogging(Base):
     __tablename__ = "SiteMaskLogging"
     Site = Column(String(64), primary_key=True)
     UpdateTime = Column(DateTime, primary_key=True)
-    Status = Column(String(64), nullable=False)
-    Author = Column(String(255), nullable=False)
-    Comment = Column(Text, nullable=False)
+    Status = Column(String(64))
+    Author = Column(String(255))
+    Comment = Column(Text)
 
 
 class HeartBeatLoggingInfo(Base):
     __tablename__ = "HeartBeatLoggingInfo"
     JobID = Column(Integer, primary_key=True)
     Name = Column(String(100), primary_key=True)
-    Value = Column(Text, nullable=False)
+    Value = Column(Text)
     HeartBeatTime = Column(DateTime, primary_key=True)
 
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
@@ -157,10 +157,10 @@ class HeartBeatLoggingInfo(Base):
 class JobCommands(Base):
     __tablename__ = "JobCommands"
     JobID = Column(Integer, primary_key=True)
-    Command = Column(String(100), nullable=False)
-    Arguments = Column(String(100), nullable=False)
-    Status = Column(String(64), nullable=False, default="Received")
+    Command = Column(String(100))
+    Arguments = Column(String(100))
+    Status = Column(String(64), default="Received")
     ReceptionTime = Column(DateTime, primary_key=True)
-    ExecutionTime = Column(DateTime)
+    ExecutionTime = NullColumn(DateTime)
 
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
