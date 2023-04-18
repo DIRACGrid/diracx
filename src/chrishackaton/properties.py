@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import operator
 from enum import Enum
-from typing import Callable, Union
+from typing import Callable
 
 
 class SecurityProperty(str, Enum):
@@ -63,17 +63,23 @@ class SecurityProperty(str, Enum):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
 
-    def __and__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
+    def __and__(
+        self, value: SecurityProperty | UnevaluatedProperty
+    ) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) & value
 
-    def __or__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
+    def __or__(
+        self, value: SecurityProperty | UnevaluatedProperty
+    ) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) | value
 
-    def __xor__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
+    def __xor__(
+        self, value: SecurityProperty | UnevaluatedProperty
+    ) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) ^ value

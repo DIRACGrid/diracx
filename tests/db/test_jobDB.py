@@ -1,12 +1,11 @@
 from __future__ import annotations
+
+import asyncio
+
 from pytest import mark
 from pytest_asyncio import fixture
 
-import asyncio
 from chrishackaton.db.jobs.db import JobDB
-from chrishackaton.db.jobs.schema import Base as JobDBBase
-
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncEngine
 
 
 @fixture
@@ -17,7 +16,7 @@ async def job_engine():
 
 
 @mark.asyncio
-async def test_some_asyncio_code(job_engine:None):
+async def test_some_asyncio_code(job_engine: None):
     async with JobDB() as job_db:
         result = await job_db.list()
 

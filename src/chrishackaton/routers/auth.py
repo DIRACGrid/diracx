@@ -1,24 +1,31 @@
 from __future__ import annotations
-from typing import Annotated
-from uuid import uuid4, UUID
 
+import json
+import os
 import re
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Annotated, Literal, Optional
+from uuid import UUID, uuid4
 
+import httpx
 from authlib.integrations.starlette_client import OAuth, OAuthError, StarletteOAuth2App
-from authlib.jose import JsonWebKey, JsonWebToken, JoseError
+from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
-from fastapi import APIRouter, Header, status, HTTPException
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.security import OpenIdConnect
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 from ..config import Registry
-
-
-class LoginResponse(BaseModel):
-    device_auth_endpoint: HttpUrl
-    token_endpoint: HttpUrl
-    client_id: str
 
 
 class TokenResponse(BaseModel):
@@ -41,8 +48,12 @@ AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
+DIRAC_CLIENT_ID = "myDIRACClientID"
+
+
 oauth = OAuth()
 lhcb_iam_client_id = "5c0541bf-85c8-4d7f-b1df-beaeea19ff5b"
+lhcb_iam_client_secret = os.environ["LHCB_IAM_CLIENT_SECRET"]
 oauth.register(
     name="lhcb",
     server_metadata_url=f"{lhcb_iam_endpoint}/.well-known/openid-configuration",
@@ -56,24 +67,24 @@ oidc_scheme = OpenIdConnect(
 )
 
 
-@router.get("/login")
-async def login(vo: str) -> LoginResponse:
-    """Method called by dirac-login to be redirected to the OpenID endpoint"""
+# @router.get("/login")
+# async def login(vo: str) -> LoginResponse:
+#     """Method called by dirac-login to be redirected to the OpenID endpoint"""
 
-    client = oauth.create_client(vo)
-    await client.load_server_metadata()
+#     client = oauth.create_client(vo)
+#     await client.load_server_metadata()
 
-    # Take these two from CS/.well-known
-    device_auth_endpoint = client.server_metadata["device_authorization_endpoint"]
-    token_endpoint = client.server_metadata["token_endpoint"]
+#     # Take these two from CS/.well-known
+#     device_auth_endpoint = client.server_metadata["device_authorization_endpoint"]
+#     token_endpoint = client.server_metadata["token_endpoint"]
 
-    # That's a config parameter
-    client_id = lhcb_iam_client_id
-    return {
-        "device_auth_endpoint": device_auth_endpoint,
-        "token_endpoint": token_endpoint,
-        "client_id": client_id,
-    }
+#     # That's a config parameter
+#     client_id = lhcb_iam_client_id
+#     return {
+#         "device_auth_endpoint": device_auth_endpoint,
+#         "token_endpoint": token_endpoint,
+#         "client_id": client_id,
+#     }
 
 
 async def parse_jwt(authorization: str, audience: str, oauth2_app: StarletteOAuth2App):
@@ -123,6 +134,10 @@ class UserInfo(AuthInfo):
 
 
 async def verify_dirac_token(authorization: Annotated[str, Header()]) -> UserInfo:
+    """Verify dirac user token and return a UserInfo class
+    Used for each API endpoint
+    """
+
     if match := re.fullmatch(r"Bearer (.+)", authorization):
         raw_token = match.group(1)
     else:
@@ -171,7 +186,6 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
     return encoded_jwt
 
 
-@router.post("/login")
 async def exchange_token(
     diracGroup: str, authorization: Annotated[str, Header()]
 ) -> TokenResponse:
@@ -207,3 +221,163 @@ async def exchange_token(
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         state="None",
     )
+
+
+# This should be randomly generated and stored in a DB
+generated_user_code = "2QRKPY"
+generated_device_code = "b5dfda24-7dc1-498a-9409-82f1c72e6656"
+
+
+@router.post("/{vo}/device")
+async def initiate_device_flow(
+    vo: str, client_id: str, scope: str, audience: str, request: Request
+):
+    """Initiate the device flow against DIRAC authorization Server.
+    Scope must have exactly one `group` and
+    one or more `property` scope.
+
+    Offers the user to go with the browser to
+    `auth/<vo>/device?user_code=XYZ`
+    """
+    device_metadata = {}
+    device_metadata["scopes"] = scope.split()
+    device_metadata["group"] = "lhcb_user"
+    device_metadata["audience"] = audience
+    with open("/tmp/data.json", "wt") as f:
+        json.dump(device_metadata, f)
+
+    generated_verification_uri_complete = (
+        f"{request.url.replace(query={})}?user_code={generated_user_code}"
+    )
+    generated_verification_uri = str(request.url.replace(query={}))
+
+    return {
+        "user_code": generated_user_code,
+        "device_code": generated_device_code,
+        "verification_uri_complete": generated_verification_uri_complete,
+        "verification_uri": generated_verification_uri,
+        "expires_in": 600,
+        "interval": 5,
+    }
+
+
+@router.get("/{vo}/device")
+async def do_device_flow(
+    vo: str, request: Request, response: Response, user_code: Optional[str] = None
+):
+    """
+    This is called as the verification URI for the device flow.
+    It will redirect to the actual OpenID server (IAM, CheckIn) to
+    perform a authorization code flow.
+
+    We set the user_code obtained from the device flow in a cookie
+    to be able to map the authorization flow with the corresponding
+    device flow.
+    (note: it can't be put as parameter or in the URL)
+
+    TODO: replace cookie with js session storage
+    """
+    assert user_code == generated_user_code
+
+    client = oauth.create_client(vo)
+    await client.load_server_metadata()
+
+    # Take these two from CS/.well-known
+    authorization_endpoint = client.server_metadata["authorization_endpoint"]
+
+    response.set_cookie(key="user_code", value=user_code)
+    response.status_code = 200
+    response.media_type = "text/html"
+    response.body = (
+        f'<a href="{authorization_endpoint}?redirect_uri={request.url.replace(query="")}/complete'
+        f'&response_type=code&client_id={lhcb_iam_client_id}">click here to login</a>'
+    ).encode()
+    return response
+
+
+@router.get("/{vo}/device/complete")
+async def finish_device_flow(
+    vo: str,
+    request: Request,
+    response: Response,
+    code: str,
+    user_code: Annotated[str | None, Cookie()] = None,
+):
+    """
+    This the url callbacked by IAM/Checkin after the authorization
+    flow was granted.
+    It gets us the code we need for the authorization flow, and we
+    can map it to the corresponding device flow using the user_code
+    in the cookie/session
+    """
+    response.delete_cookie("user_code")
+
+    client = oauth.create_client(vo)
+    await client.load_server_metadata()
+
+    # Take these two from CS/.well-known
+    token_endpoint = client.server_metadata["token_endpoint"]
+
+    data = {
+        "grant_type": "authorization_code",
+        # "client_id": lhcb_iam_client_id,
+        # "client_secret": lhcb_iam_client_secret,
+        "code": code,
+        "redirect_uri": str(request.url.replace(query="")),
+    }
+
+    async with httpx.AsyncClient() as c:
+        res = await c.post(
+            token_endpoint, data=data, auth=(lhcb_iam_client_id, lhcb_iam_client_secret)
+        )
+
+        res.raise_for_status()
+
+    with open("/tmp/data.json", "rt") as f:
+        device_metadata = json.load(f)
+
+    dirac_token = await exchange_token(
+        device_metadata["group"], f"Bearer {res.json()['id_token']}"
+    )
+    device_metadata["dirac_token"] = dirac_token.dict()
+
+    with open("/tmp/data.json", "wt") as f:
+        json.dump(device_metadata, f)
+
+    response.body = b"<h1>Please close the window</h1>"
+    response.status_code = 200
+    response.media_type = "text/html"
+    return response
+
+
+class DeviceCodeTokenForm(BaseModel):
+    grant_type: Literal["urn:ietf:params:oauth:grant-type:device_code"]
+    device_code: str
+    client_id: str
+
+
+@router.post("/{vo}/token")
+def token(
+    vo: str,
+    # data: Annotated[DeviceCodeTokenForm, Form()],
+    grant_type: Annotated[
+        Literal["urn:ietf:params:oauth:grant-type:device_code"], Form()
+    ],
+    device_code: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+) -> TokenResponse:
+    """ " Token endpoint to retrieve the token at the end of a flow.
+    This is the endpoint being pulled by dirac-login when doing the device flow
+    """
+
+    if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
+        assert device_code == generated_device_code
+        assert client_id == DIRAC_CLIENT_ID
+        device_metadata = json.loads(Path("/tmp/data.json").read_text())
+        if "dirac_token" in device_metadata:
+            return device_metadata["dirac_token"]
+        return Response('{"error": "authorization_pending"}', status_code=400)
+        return Response('{"error": "slow_down"}', status_code=400)
+        return Response('{"error": "expired_token"}', status_code=400)
+        return Response('{"error": "access_denied"}', status_code=400)
+    raise NotImplementedError(grant_type)

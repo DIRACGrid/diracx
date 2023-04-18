@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import select, insert
+from sqlalchemy import insert, select
+from sqlalchemy.ext.asyncio import create_async_engine
 
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from .schema import Base as JobDBBase, JobJDLs
+from .schema import Base as JobDBBase
+from .schema import JobJDLs
 
 
 class BaseDB:

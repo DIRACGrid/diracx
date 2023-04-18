@@ -1,17 +1,13 @@
+import asyncio
 from enum import StrEnum
 from typing import Annotated
 
-import asyncio
-
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
-
-from fastapi import status, Depends, HTTPException
-from .auth import verify_dirac_token, UserInfo
-from ..properties import SecurityProperty, UnevaluatedProperty
-
 from ..db.jobs.db import JobDB, get_job_db
+from ..properties import SecurityProperty, UnevaluatedProperty
+from .auth import UserInfo, verify_dirac_token
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
@@ -112,7 +108,6 @@ class JobDefinition(BaseModel):
     group: str
     vo: str
     jdl: str
-
 
 
 @router.post("/")

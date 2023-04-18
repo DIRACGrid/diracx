@@ -1,6 +1,6 @@
-import time
-import json
 import base64
+import json
+import time
 from pprint import pprint
 
 import requests

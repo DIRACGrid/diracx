@@ -1,5 +1,4 @@
 # import databases
-import sqlalchemy
 
 # from .jobs import Base as JobsBase
 

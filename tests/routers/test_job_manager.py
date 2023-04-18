@@ -1,13 +1,11 @@
-from fastapi.testclient import TestClient
-
-from chrishackaton import app
-from chrishackaton.routers.auth import create_access_token
-from chrishackaton.properties import SecurityProperty
-from pytest import fixture
-
-
 from uuid import uuid4
 
+from fastapi.testclient import TestClient
+from pytest import fixture
+
+from chrishackaton import app
+from chrishackaton.properties import SecurityProperty
+from chrishackaton.routers.auth import create_access_token
 
 lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch/"
 # to get a string like this run:
@@ -32,7 +30,6 @@ def normal_user_client():
             "dirac_group": "test_group",
         }
         token = create_access_token(payload)
-        breakpoint()
         client.headers["Authorization"] = f"Bearer {token}"
         yield client
 

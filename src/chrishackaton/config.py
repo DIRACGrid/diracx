@@ -1,4 +1,5 @@
 from .properties import SecurityProperty
+
 Registry = {
     "lhcb": {
         "Users": [
@@ -11,7 +12,10 @@ Registry = {
         "Groups": {
             "lhcb_user": {
                 "members": ["cburr", "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"],
-                "properties": [SecurityProperty.NORMAL_USER, SecurityProperty.CS_ADMINISTRATOR],
+                "properties": [
+                    SecurityProperty.NORMAL_USER,
+                    SecurityProperty.CS_ADMINISTRATOR,
+                ],
             }
         },
     }
