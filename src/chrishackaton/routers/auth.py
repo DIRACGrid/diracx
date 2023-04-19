@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
 import json
 import os
 import re
@@ -52,8 +55,11 @@ DIRAC_CLIENT_ID = "myDIRACClientID"
 
 
 oauth = OAuth()
-lhcb_iam_client_id = "5c0541bf-85c8-4d7f-b1df-beaeea19ff5b"
-lhcb_iam_client_secret = os.environ["LHCB_IAM_CLIENT_SECRET"]
+# chris-hack-a-ton
+# lhcb_iam_client_id = "5c0541bf-85c8-4d7f-b1df-beaeea19ff5b"
+# chris-hack-a-ton-2
+lhcb_iam_client_id = "d396912e-2f04-439b-8ae7-d8c585a34790"
+# lhcb_iam_client_secret = os.environ["LHCB_IAM_CLIENT_SECRET"]
 oauth.register(
     name="lhcb",
     server_metadata_url=f"{lhcb_iam_endpoint}/.well-known/openid-configuration",
@@ -226,6 +232,7 @@ async def exchange_token(
 # This should be randomly generated and stored in a DB
 generated_user_code = "2QRKPY"
 generated_device_code = "b5dfda24-7dc1-498a-9409-82f1c72e6656"
+generated_state = "xyzABC12"
 
 
 @router.post("/{vo}/device")
@@ -277,7 +284,27 @@ async def do_device_flow(
 
     TODO: replace cookie with js session storage
     """
+
+    # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
+    # 48*2 = 96 characters, which is within 43-128 limits.
+    code_verifier = binascii.hexlify(os.urandom(48))
+
+    # code_challenge: https://www.rfc-editor.org/rfc/rfc7636#section-4.2
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier).digest())
+        .decode()
+        .replace("=", "")
+    )
+
     assert user_code == generated_user_code
+
+    with open("/tmp/data.json", "rt") as f:
+        device_metadata = json.load(f)
+
+    device_metadata["code_verifier"] = code_verifier.decode()
+
+    with open("/tmp/data.json", "wt") as f:
+        json.dump(device_metadata, f)
 
     client = oauth.create_client(vo)
     await client.load_server_metadata()
@@ -288,9 +315,19 @@ async def do_device_flow(
     response.set_cookie(key="user_code", value=user_code)
     response.status_code = 200
     response.media_type = "text/html"
+
+    urlParams = [
+        "response_type=code",
+        f"code_challenge={code_challenge}",
+        "code_challenge_method=S256",
+        f"client_id={lhcb_iam_client_id}",
+        f"redirect_uri={request.url.replace(query='')}/complete",
+        "scope=openid%20profile",
+        f"state={generated_state}",
+    ]
+
     response.body = (
-        f'<a href="{authorization_endpoint}?redirect_uri={request.url.replace(query="")}/complete'
-        f'&response_type=code&client_id={lhcb_iam_client_id}">click here to login</a>'
+        f'<a href="{authorization_endpoint}?{"&".join(urlParams)}">click here to login</a>'
     ).encode()
     return response
 
@@ -301,6 +338,7 @@ async def finish_device_flow(
     request: Request,
     response: Response,
     code: str,
+    state: str,
     user_code: Annotated[str | None, Cookie()] = None,
 ):
     """
@@ -310,6 +348,12 @@ async def finish_device_flow(
     can map it to the corresponding device flow using the user_code
     in the cookie/session
     """
+
+    with open("/tmp/data.json", "rt") as f:
+        device_metadata = json.load(f)
+
+    assert state == generated_state
+
     response.delete_cookie("user_code")
 
     client = oauth.create_client(vo)
@@ -320,21 +364,20 @@ async def finish_device_flow(
 
     data = {
         "grant_type": "authorization_code",
-        # "client_id": lhcb_iam_client_id,
-        # "client_secret": lhcb_iam_client_secret,
+        "client_id": lhcb_iam_client_id,
         "code": code,
+        "code_verifier": device_metadata["code_verifier"],
         "redirect_uri": str(request.url.replace(query="")),
     }
 
     async with httpx.AsyncClient() as c:
         res = await c.post(
-            token_endpoint, data=data, auth=(lhcb_iam_client_id, lhcb_iam_client_secret)
+            token_endpoint,
+            data=data,
+            # auth=(lhcb_iam_client_id, "123")
         )
-
-        res.raise_for_status()
-
-    with open("/tmp/data.json", "rt") as f:
-        device_metadata = json.load(f)
+        if res.status_code >= 400:
+            raise NotImplementedError(res, res.text)
 
     dirac_token = await exchange_token(
         device_metadata["group"], f"Bearer {res.json()['id_token']}"
