@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import base64
-import binascii
 import hashlib
 import json
-import os
 import re
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal, Optional
@@ -17,10 +16,8 @@ from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
 from fastapi import (
     APIRouter,
-    Cookie,
     Depends,
     Form,
-    Header,
     HTTPException,
     Request,
     Response,
@@ -29,6 +26,8 @@ from fastapi import (
 )
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel
+
+from chrishackaton.db.auth.db import AuthDB, get_auth_db
 
 from ..config import Registry
 
@@ -59,6 +58,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
+# This should be taken dynamically
+KNOWN_CLIENT_IDS = {DIRAC_CLIENT_ID}
+
+DEVICE_FLOW_EXPIRATION_SECONDS = 600
+DEFAULT_DIRAC_GROUP = "lhcb_user"
 
 oauth = OAuth()
 # chris-hack-a-ton
@@ -94,22 +98,16 @@ oauth.register(
 #     }
 
 
-async def parse_jwt(authorization: str, audience: str, oauth2_app: StarletteOAuth2App):
-    if match := re.fullmatch(r"Bearer (.+)", authorization):
-        token = match.group(1)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid authorization header",
-        )
-
+async def parse_id_token(
+    raw_id_token: str, audience: str, oauth2_app: StarletteOAuth2App
+):
     metadata = await oauth2_app.load_server_metadata()
     alg_values = metadata.get("id_token_signing_alg_values_supported") or ["RS256"]
     jwt = JsonWebToken(alg_values)
     jwk_set = await oauth2_app.fetch_jwk_set()
 
     token = jwt.decode(
-        token,
+        raw_id_token,
         key=JsonWebKey.import_key_set(jwk_set),
         claims_cls=IDToken,
         claims_options={
@@ -195,34 +193,24 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
     return encoded_jwt
 
 
-async def exchange_token(
-    diracGroup: str, authorization: Annotated[str, Header()]
-) -> TokenResponse:
+async def exchange_token(dirac_group: str, id_token: dict[str:str]) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
-    try:
-        token = await parse_jwt(
-            authorization=authorization,
-            audience=lhcb_iam_client_id,
-            oauth2_app=oauth.lhcb,
-        )
-    except OAuthError:
-        raise
 
-    vo = token["organisation_name"]
-    subId = token["sub"]
-    if subId not in Registry[vo]["Groups"][diracGroup]["members"]:
+    vo = id_token["organisation_name"]
+    subId = id_token["sub"]
+    if subId not in Registry[vo]["Groups"][dirac_group]["members"]:
         raise ValueError(
-            f"User is not a member of the requested group ({token['preferred_username']}, {diracGroup})"
+            f"User is not a member of the requested group ({id_token['preferred_username']}, {dirac_group})"
         )
 
     payload = {
         "sub": f"{vo}:{subId}",
         "aud": AUDIENCE,
         "iss": ISSUER,
-        "dirac_properties": Registry[vo]["Groups"][diracGroup]["properties"],
+        "dirac_properties": Registry[vo]["Groups"][dirac_group]["properties"],
         "jti": str(uuid4()),
-        "preferred_username": token["preferred_username"],
-        "dirac_group": diracGroup,
+        "preferred_username": id_token["preferred_username"],
+        "dirac_group": dirac_group,
     }
 
     return TokenResponse(
@@ -232,53 +220,56 @@ async def exchange_token(
     )
 
 
-# This should be randomly generated and stored in a DB
-generated_user_code = "2QRKPY"
-generated_device_code = "b5dfda24-7dc1-498a-9409-82f1c72e6656"
-generated_state = "xyzABC12"
-
-
 @router.post("/{vo}/device")
 async def initiate_device_flow(
-    vo: str, client_id: str, scope: str, audience: str, request: Request
+    vo: str,
+    client_id: str,
+    scope: str,
+    audience: str,
+    request: Request,
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
 ):
     """Initiate the device flow against DIRAC authorization Server.
-    Scope must have exactly one `group` and
+    Scope must have exactly up to one `group` (otherwise default) and
     one or more `property` scope.
+    If no property, then get default one
 
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
     """
-    device_metadata = {}
-    device_metadata["scopes"] = scope.split()
-    device_metadata["group"] = "lhcb_user"
-    device_metadata["audience"] = audience
-    with open("/tmp/data.json", "wt") as f:
-        json.dump(device_metadata, f)
+    # device_metadata = {}
+    # device_metadata["scopes"] = scope.split()
+    # device_metadata["group"] = "lhcb_user"
+    # device_metadata["audience"] = audience
+    # with open("/tmp/data.json", "wt") as f:
+    #     json.dump(device_metadata, f)
 
-    generated_verification_uri_complete = (
-        f"{request.url.replace(query={})}?user_code={generated_user_code}"
+    assert client_id in KNOWN_CLIENT_IDS, client_id
+
+    user_code, device_code = await auth_db.insert_device_flow(
+        client_id, scope, audience
     )
-    generated_verification_uri = str(request.url.replace(query={}))
+
+    verification_uri = str(request.url.replace(query={}))
 
     return {
-        "user_code": generated_user_code,
-        "device_code": generated_device_code,
-        "verification_uri_complete": generated_verification_uri_complete,
-        "verification_uri": generated_verification_uri,
-        "expires_in": 600,
-        "interval": 5,
+        "user_code": user_code,
+        "device_code": device_code,
+        "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
+        "verification_uri": verification_uri,
+        "expires_in": DEVICE_FLOW_EXPIRATION_SECONDS,
     }
 
 
-async def initiate_authorization_flow_with_iam(vo: str, redirect_uri: str):
+async def initiate_authorization_flow_with_iam(
+    vo: str, redirect_uri: str, state: dict[str, str]
+):
     # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
-    # 48*2 = 96 characters, which is within 43-128 limits.
-    code_verifier = binascii.hexlify(os.urandom(48))
+    code_verifier = secrets.token_hex()
 
     # code_challenge: https://www.rfc-editor.org/rfc/rfc7636#section-4.2
     code_challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(code_verifier).digest())
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
         .decode()
         .replace("=", "")
     )
@@ -289,6 +280,11 @@ async def initiate_authorization_flow_with_iam(vo: str, redirect_uri: str):
     # Take these two from CS/.well-known
     authorization_endpoint = client.server_metadata["authorization_endpoint"]
 
+    # TODO : encrypt it for good
+    encrypted_state = base64.urlsafe_b64encode(
+        json.dumps(state | {"code_verifier": code_verifier}).encode()
+    ).decode()
+
     urlParams = [
         "response_type=code",
         f"code_challenge={code_challenge}",
@@ -296,17 +292,13 @@ async def initiate_authorization_flow_with_iam(vo: str, redirect_uri: str):
         f"client_id={lhcb_iam_client_id}",
         f"redirect_uri={redirect_uri}",
         "scope=openid%20profile",
-        f"state={generated_state}",
+        f"state={encrypted_state}",
     ]
     authorization_flow_url = f"{authorization_endpoint}?{'&'.join(urlParams)}"
     return code_verifier, authorization_flow_url
 
 
-async def get_token_from_iam(
-    vo: str, code: str, state: str, code_verifier: str, redirect_uri: str
-) -> str:
-    assert state == generated_state
-
+async def get_token_from_iam(vo: str, code: str, state: str, redirect_uri: str) -> str:
     client = oauth.create_client(vo)
     await client.load_server_metadata()
 
@@ -317,7 +309,7 @@ async def get_token_from_iam(
         "grant_type": "authorization_code",
         "client_id": lhcb_iam_client_id,
         "code": code,
-        "code_verifier": code_verifier,
+        "code_verifier": state["code_verifier"],
         "redirect_uri": redirect_uri,
     }
 
@@ -330,12 +322,32 @@ async def get_token_from_iam(
         if res.status_code >= 400:
             raise NotImplementedError(res, res.text)
 
-    return res.json()["id_token"]
+    raw_id_token = res.json()["id_token"]
+    # Extract the payload and verify it
+    try:
+        id_token = await parse_id_token(
+            raw_id_token=raw_id_token,
+            audience=lhcb_iam_client_id,
+            oauth2_app=getattr(oauth, vo),
+        )
+        if id_token["organisation_name"] != vo:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="vo does not match organization_name",
+            )
+    except OAuthError:
+        raise
+
+    return id_token
 
 
 @router.get("/{vo}/device")
 async def do_device_flow(
-    vo: str, request: Request, response: Response, user_code: Optional[str] = None
+    vo: str,
+    request: Request,
+    response: Response,
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    user_code: Optional[str] = None,
 ):
     """
     This is called as the verification URI for the device flow.
@@ -347,23 +359,29 @@ async def do_device_flow(
     device flow.
     (note: it can't be put as parameter or in the URL)
 
-    TODO: replace cookie with js session storage
     """
 
-    assert user_code == generated_user_code
+    # Here we make sure the user_code actualy exists
+    await auth_db.get_device_flow(user_code=user_code)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
+
+    state = {
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "user_code": user_code,
+    }
+
     code_verifier, authorization_flow_url = await initiate_authorization_flow_with_iam(
-        vo, redirect_uri
+        vo, redirect_uri, state
     )
 
-    with open("/tmp/data.json", "rt") as f:
-        device_metadata = json.load(f)
+    # with open("/tmp/data.json", "rt") as f:
+    #     device_metadata = json.load(f)
 
-    device_metadata["code_verifier"] = code_verifier.decode()
+    # device_metadata["code_verifier"] = code_verifier.decode()
 
-    with open("/tmp/data.json", "wt") as f:
-        json.dump(device_metadata, f)
+    # with open("/tmp/data.json", "wt") as f:
+    #     json.dump(device_metadata, f)
 
     response.status_code = 200
     response.media_type = "text/html"
@@ -377,10 +395,9 @@ async def do_device_flow(
 async def finish_device_flow(
     vo: str,
     request: Request,
-    response: Response,
     code: str,
     state: str,
-    user_code: Annotated[str | None, Cookie()] = None,
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
 ):
     """
     This the url callbacked by IAM/Checkin after the authorization
@@ -389,24 +406,31 @@ async def finish_device_flow(
     can map it to the corresponding device flow using the user_code
     in the cookie/session
     """
-
-    with open("/tmp/data.json", "rt") as f:
-        device_metadata = json.load(f)
+    # TODO: There have been better schemes like rot13
+    decrypted_state = json.loads(base64.urlsafe_b64decode(state).decode())
+    assert (
+        decrypted_state["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
+    )
 
     id_token = await get_token_from_iam(
         vo,
         code,
-        state,
-        device_metadata["code_verifier"],
+        decrypted_state,
         str(request.url.replace(query="")),
     )
+    await auth_db.device_flow_insert_id_token(decrypted_state["user_code"], id_token)
 
-    dirac_token = await exchange_token(device_metadata["group"], f"Bearer {id_token}")
-    device_metadata["dirac_token"] = dirac_token.dict()
+    # dirac_token = await exchange_token(device_metadata["group"], f"Bearer {id_token}")
+    # device_metadata["dirac_token"] = dirac_token.dict()
 
-    with open("/tmp/data.json", "wt") as f:
-        json.dump(device_metadata, f)
+    # with open("/tmp/data.json", "wt") as f:
+    #     json.dump(device_metadata, f)
 
+    return responses.RedirectResponse(f"{request.url.replace(query='')}/finished")
+
+
+@router.get("/{vo}/device/complete/finished")
+def finished(response: Response):
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"
@@ -420,7 +444,7 @@ class DeviceCodeTokenForm(BaseModel):
 
 
 @router.post("/{vo}/token")
-def token(
+async def token(
     vo: str,
     # data: Annotated[DeviceCodeTokenForm, Form()],
     grant_type: Annotated[
@@ -429,6 +453,7 @@ def token(
         Form(),
     ],
     client_id: Annotated[str, Form()],
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     device_code: Annotated[Optional[str], Form()] = None,
     code: Annotated[Optional[str], Form()] = None,
     redirect_uri: Annotated[Optional[str], Form()] = None,
@@ -437,13 +462,35 @@ def token(
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
-    assert client_id == DIRAC_CLIENT_ID
-    if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
-        assert device_code == generated_device_code
+    assert client_id in KNOWN_CLIENT_IDS
 
-        device_metadata = json.loads(Path("/tmp/data.json").read_text())
-        if "dirac_token" in device_metadata:
-            return device_metadata["dirac_token"]
+    if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
+        info = await auth_db.get_device_flow(device_code=device_code)
+
+        if info["client_id"] != client_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bad client_id",
+            )
+
+        if info["id_token"]:
+            scopes = info["scope"].split(" ")
+
+            groups = [
+                scope.split(":")[1] for scope in scopes if scope.startswith("group:")
+            ]
+            if not groups:
+                groups = [DEFAULT_DIRAC_GROUP]
+            if len(groups) > 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only one DIRAC group allowed",
+                )
+            return await exchange_token(groups[0], info["id_token"])
+
+        # device_metadata = json.loads(Path("/tmp/data.json").read_text())
+        # if "dirac_token" in device_metadata:
+        #     return device_metadata["dirac_token"]
         return Response('{"error": "authorization_pending"}', status_code=400)
         return Response('{"error": "slow_down"}', status_code=400)
         return Response('{"error": "expired_token"}', status_code=400)
@@ -519,8 +566,6 @@ async def authorization_flow(
 
 @router.get("/{vo}/authorize/complete")
 async def authorization_flow_complete(vo: str, code: str, state: str, request: Request):
-    assert state == generated_state, state
-
     with open("/tmp/data.json", "rt") as f:
         device_metadata = json.load(f)
 

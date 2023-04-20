@@ -1,6 +1,3 @@
-from functools import partial
-
-from sqlalchemy import Column as RawColumn
 from sqlalchemy import (
     DateTime,
     Enum,
@@ -14,10 +11,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+from ..utils import Column, NullColumn
 
-Column = partial(RawColumn, nullable=False)
-NullColumn = partial(RawColumn, nullable=True)
+Base = declarative_base()
 
 
 class JobJDLs(Base):

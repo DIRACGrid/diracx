@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI
 
+from .db.auth.db import AuthDB
 from .db.jobs.db import JobDB
 from .routers import auth, job_manager
 
@@ -25,11 +26,13 @@ app.include_router(
 @app.on_event("startup")
 async def startup():
     await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
+    await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
 
 
 @app.on_event("shutdown")
 async def shutdown():
     await JobDB.destroy_engine()
+    await AuthDB.destroy_engine()
 
 
 @app.get("/")

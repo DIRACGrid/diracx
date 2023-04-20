@@ -1,1 +1,87 @@
-*.pyc
+# Python
+*.py[cod]
+
+# C extensions
+*.so
+var
+sdist
+lib
+lib64
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+develop-eggs
+.installed.cfg
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+
+# Eclipse
+.project
+.pydevproject
+.pyproject
+.settings
+.metadata
+
+#VSCode
+.vscode
+.env
+
+# Vim
+.*.sw[a-z]
+*.un~
+Session.vim
+*~
+
+# Intellij
+.idea/
+LHCbDIRAC.iml
+
+# MaxOSX files
+.DS_Store
+
+# test stuff
+.pytest_cache
+.cache
+__pycache__
+pytests.xml
+nosetests.xml
+coverage.xml
+Local_*
+.hypothesis
+*.gz
+htmlcov/
+*.xml.temp
+
+#remove in case we want a specific LHCb one
+.pylintrc
+
+# docs
+# this is auto generated
+docs/source/CodeDocumentation/
+docs/source/AdministratorGuide/Configuration/ExampleConfig.rst
+docs/source/AdministratorGuide/CommandReference
+docs/source/UserGuide/CommandReference
+docs/_build
+docs/source/_build
+
+
+# CMT junk
+/*/*/x86_64-*-*-*/
+*/*/cmt/Makefile
