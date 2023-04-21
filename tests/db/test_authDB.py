@@ -7,6 +7,7 @@ from pytest_asyncio import fixture
 from sqlalchemy.exc import NoResultFound
 
 from chrishackaton.db.auth.db import AuthDB
+from chrishackaton.db.auth.schema import USER_CODE_LENGTH
 
 
 @fixture
@@ -25,7 +26,7 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
         code, device = await auth_db.insert_device_flow(
             "client_id", "scope", "audience"
         )
-        assert code == "A"
+        assert code == "A" * USER_CODE_LENGTH
         assert device
 
     async with AuthDB() as auth_db:
@@ -38,7 +39,7 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
         code, device = await auth_db.insert_device_flow(
             "client_id", "scope", "audience"
         )
-        assert code == "B"
+        assert code == "B" * USER_CODE_LENGTH
         assert device
 
 
@@ -80,15 +81,24 @@ async def test_device_flow_lookup(auth_engine: None, monkeypatch):
         assert res2b["user_code"] == user_code2
         assert res2a == res2b
 
-    # async with AuthDB() as auth_db:
-    #     with raises(NotImplementedError, match="insert new device flow"):
-    #         await auth_db.insert_device_flow("client_id", "scope", "audience")
 
-    # monkeypatch.setattr(secrets, "choice", lambda _: "B")
+@mark.asyncio
+async def test_device_flow_insert_id_token(auth_engine: None):
+    # First insert
+    async with AuthDB() as auth_db:
+        user_code, device_code = await auth_db.insert_device_flow(
+            "client_id", "scope", "audience"
+        )
 
-    # async with AuthDB() as auth_db:
-    #     code, device = await auth_db.insert_device_flow(
-    #         "client_id", "scope", "audience"
-    #     )
-    #     assert code == "B"
-    #     assert device
+    async with AuthDB() as auth_db:
+        res = await auth_db.get_device_flow(user_code=user_code)
+        assert res["id_token"] is None
+
+    id_token = {"sub": "myIdToken"}
+
+    async with AuthDB() as auth_db:
+        await auth_db.device_flow_insert_id_token(user_code, id_token)
+
+    async with AuthDB() as auth_db:
+        res = await auth_db.get_device_flow(user_code=user_code)
+        assert res["id_token"] == id_token
