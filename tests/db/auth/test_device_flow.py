@@ -8,7 +8,10 @@ from sqlalchemy.exc import NoResultFound
 
 from chrishackaton.db.auth.db import AuthDB
 from chrishackaton.db.auth.schema import USER_CODE_LENGTH
-from chrishackaton.exceptions import AuthorizationError
+from chrishackaton.exceptions import AuthorizationError, ExpiredFlowError
+
+MAX_VALIDITY = 2
+EXPIRED = 0
 
 
 @fixture
@@ -48,11 +51,11 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
 async def test_device_flow_lookup(auth_engine: None, monkeypatch):
     async with AuthDB() as auth_db:
         with pytest.raises(NoResultFound):
-            await auth_db.device_flow_validate_user_code("NotInserted")
+            await auth_db.device_flow_validate_user_code("NotInserted", MAX_VALIDITY)
 
     async with AuthDB() as auth_db:
         with pytest.raises(NoResultFound):
-            await auth_db.get_device_flow("NotInserted")
+            await auth_db.get_device_flow("NotInserted", MAX_VALIDITY)
 
     # First insert
     async with AuthDB() as auth_db:
@@ -66,38 +69,55 @@ async def test_device_flow_lookup(auth_engine: None, monkeypatch):
         assert user_code1 != user_code2
 
     async with AuthDB() as auth_db:
-        await auth_db.device_flow_validate_user_code(user_code1)
+        with pytest.raises(NoResultFound):
+            await auth_db.device_flow_validate_user_code(user_code1, EXPIRED)
+
+        await auth_db.device_flow_validate_user_code(user_code1, MAX_VALIDITY)
 
         # Cannot get it with device_code because no id_token
         with pytest.raises(AuthorizationError):
-            await auth_db.get_device_flow(device_code1)
+            await auth_db.get_device_flow(device_code1, MAX_VALIDITY)
 
-        await auth_db.device_flow_validate_user_code(user_code2)
+        await auth_db.device_flow_validate_user_code(user_code2, MAX_VALIDITY)
 
         # Cannot get it with device_code because no id_token
         with pytest.raises(AuthorizationError):
-            await auth_db.get_device_flow(device_code2)
+            await auth_db.get_device_flow(device_code2, MAX_VALIDITY)
 
     async with AuthDB() as auth_db:
-        await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"})
+        with pytest.raises(AuthorizationError):
+            await auth_db.device_flow_insert_id_token(
+                user_code1, {"token": "mytoken"}, EXPIRED
+            )
+
+        await auth_db.device_flow_insert_id_token(
+            user_code1, {"token": "mytoken"}, MAX_VALIDITY
+        )
 
         # We should not be able to insert a id_token a second time
-        with pytest.raises(KeyError):
-            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken2"})
+        with pytest.raises(AuthorizationError):
+            await auth_db.device_flow_insert_id_token(
+                user_code1, {"token": "mytoken2"}, MAX_VALIDITY
+            )
 
-        res = await auth_db.get_device_flow(device_code1)
+        with pytest.raises(ExpiredFlowError):
+            await auth_db.get_device_flow(device_code1, EXPIRED)
+
+        res = await auth_db.get_device_flow(device_code1, MAX_VALIDITY)
         assert res["user_code"] == user_code1
         assert res["id_token"] == {"token": "mytoken"}
 
     # cannot get it a second time
     async with AuthDB() as auth_db:
         with pytest.raises(AuthorizationError):
-            await auth_db.get_device_flow(device_code1)
+            await auth_db.get_device_flow(device_code1, MAX_VALIDITY)
 
     # Re-adding a token should not work after it's been minted
     async with AuthDB() as auth_db:
-        with pytest.raises(KeyError):
-            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"})
+        with pytest.raises(AuthorizationError):
+            await auth_db.device_flow_insert_id_token(
+                user_code1, {"token": "mytoken"}, MAX_VALIDITY
+            )
 
 
 @pytest.mark.asyncio
@@ -110,18 +130,18 @@ async def test_device_flow_insert_id_token(auth_engine: None):
 
     # Make sure it exists, and is Pending
     async with AuthDB() as auth_db:
-        await auth_db.device_flow_validate_user_code(user_code)
+        await auth_db.device_flow_validate_user_code(user_code, MAX_VALIDITY)
 
     id_token = {"sub": "myIdToken"}
 
     async with AuthDB() as auth_db:
-        await auth_db.device_flow_insert_id_token(user_code, id_token)
+        await auth_db.device_flow_insert_id_token(user_code, id_token, MAX_VALIDITY)
 
     # The user code has been invalidated
     async with AuthDB() as auth_db:
         with pytest.raises(NoResultFound):
-            await auth_db.device_flow_validate_user_code(user_code)
+            await auth_db.device_flow_validate_user_code(user_code, MAX_VALIDITY)
 
     async with AuthDB() as auth_db:
-        res = await auth_db.get_device_flow(device_code)
+        res = await auth_db.get_device_flow(device_code, MAX_VALIDITY)
         assert res["id_token"] == id_token

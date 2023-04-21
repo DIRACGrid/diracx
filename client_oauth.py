@@ -28,6 +28,7 @@ while True:
             "client_id": DIRAC_CLIENT_ID,
         },
     )
+    print(r2.text)
     if r2.status_code == 200:
         break
     if r2.status_code != 400 or r2.json()["error"] != "authorization_pending":

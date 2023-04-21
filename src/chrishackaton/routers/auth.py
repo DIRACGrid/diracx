@@ -28,7 +28,10 @@ from pydantic import BaseModel
 
 from chrishackaton.db.auth.db import AuthDB, get_auth_db
 from chrishackaton.db.auth.schema import FlowStatus
-from chrishackaton.exceptions import PendingAuthorizationError
+from chrishackaton.exceptions import (
+    ExpiredFlowError,
+    PendingAuthorizationError,
+)
 
 from ..config import Registry
 from ..properties import SecurityProperty
@@ -47,6 +50,7 @@ class TokenResponse(BaseModel):
 
 
 router = APIRouter()
+
 
 lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch/"
 # to get a string like this run:
@@ -70,7 +74,9 @@ KNOWN_CLIENTS = {
 DEFAULT_DIRAC_GROUPS = {"lhcb": "lhcb_user"}
 DIRAC_GROUPS = {"lhcb": {"lhcb_user": set(["chaen", "cburr"])}}
 
+# Duration for which the flows against DIRAC AS are valid
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
+AUTHORIZATION_FLOW_EXPIRATION_SECONDS = 300
 
 oauth = OAuth()
 # chris-hack-a-ton
@@ -84,26 +90,6 @@ oauth.register(
     client_id=lhcb_iam_client_id,
     client_kwargs={"scope": "openid profile email"},
 )
-
-
-# @router.get("/login")
-# async def login(vo: str) -> LoginResponse:
-#     """Method called by dirac-login to be redirected to the OpenID endpoint"""
-
-#     client = oauth.create_client(vo)
-#     await client.load_server_metadata()
-
-#     # Take these two from CS/.well-known
-#     device_auth_endpoint = client.server_metadata["device_authorization_endpoint"]
-#     token_endpoint = client.server_metadata["token_endpoint"]
-
-#     # That's a config parameter
-#     client_id = lhcb_iam_client_id
-#     return {
-#         "device_auth_endpoint": device_auth_endpoint,
-#         "token_endpoint": token_endpoint,
-#         "client_id": client_id,
-#     }
 
 
 async def parse_id_token(
@@ -371,7 +357,9 @@ async def do_device_flow(
     """
 
     # Here we make sure the user_code actualy exists
-    await auth_db.device_flow_validate_user_code(user_code)
+    await auth_db.device_flow_validate_user_code(
+        user_code, DEVICE_FLOW_EXPIRATION_SECONDS
+    )
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
@@ -427,7 +415,9 @@ async def finish_device_flow(
         decrypted_state,
         str(request.url.replace(query="")),
     )
-    await auth_db.device_flow_insert_id_token(decrypted_state["user_code"], id_token)
+    await auth_db.device_flow_insert_id_token(
+        decrypted_state["user_code"], id_token, DEVICE_FLOW_EXPIRATION_SECONDS
+    )
 
     # dirac_token = await exchange_token(device_metadata["group"], f"Bearer {id_token}")
     # device_metadata["dirac_token"] = dirac_token.dict()
@@ -522,18 +512,23 @@ async def token(
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
-    # assert client_id in KNOWN_CLIENTS
-    # assert redirect_uri in KNOWN_CLIENTS[DIRAC_CLIENT_ID]["redirect_uri"]
 
     if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
         try:
-            info = await auth_db.get_device_flow(device_code)
+            info = await auth_db.get_device_flow(
+                device_code, DEVICE_FLOW_EXPIRATION_SECONDS
+            )
         except PendingAuthorizationError:
             # TODO: use HTTPException while still respecting the standard format
             # required by the RFC
 
             return Response(
                 '{"error": "authorization_pending"}',
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except ExpiredFlowError:
+            return Response(
+                '{"error": "expired_token"}',
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -547,7 +542,9 @@ async def token(
         # return Response('{"error": "expired_token"}', status_code=400)
 
     elif grant_type == "authorization_code":
-        info = await auth_db.get_authorization_flow(code)
+        info = await auth_db.get_authorization_flow(
+            code, AUTHORIZATION_FLOW_EXPIRATION_SECONDS
+        )
         if redirect_uri != info["redirect_uri"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -654,7 +651,7 @@ async def authorization_flow_complete(
     )
 
     code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
-        decrypted_state["uuid"], id_token
+        decrypted_state["uuid"], id_token, AUTHORIZATION_FLOW_EXPIRATION_SECONDS
     )
 
     return responses.RedirectResponse(

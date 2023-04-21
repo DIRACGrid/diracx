@@ -6,9 +6,13 @@ from uuid import uuid4
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError
 
-from chrishackaton.exceptions import AuthorizationError, PendingAuthorizationError
+from chrishackaton.exceptions import (
+    AuthorizationError,
+    ExpiredFlowError,
+    PendingAuthorizationError,
+)
 
-from ..utils import BaseDB
+from ..utils import BaseDB, substract_date
 from .schema import AuthorizationFlows, DeviceFlows, FlowStatus
 from .schema import Base as AuthDBBase
 
@@ -21,28 +25,44 @@ class AuthDB(BaseDB):
     # This needs to be here for the BaseDB to create the engine
     metadata = AuthDBBase.metadata
 
-    async def device_flow_validate_user_code(self, user_code: str) -> None:
-        """Validate that the user_code can be used (Pending status)
+    async def device_flow_validate_user_code(
+        self, user_code: str, max_validity: int
+    ) -> None:
+        """Validate that the user_code can be used (Pending status, not expired)
 
         :raises:
             NoResultFound if no such user code currently Pending
         """
         stmt = select(DeviceFlows.user_code).where(
-            DeviceFlows.user_code == user_code, DeviceFlows.status == FlowStatus.PENDING
+            DeviceFlows.user_code == user_code,
+            DeviceFlows.status == FlowStatus.PENDING,
+            DeviceFlows.creation_time > substract_date(seconds=max_validity),
         )
 
         (await self.conn.execute(stmt)).one()
 
-    async def get_device_flow(self, device_code: str) -> dict[str, str]:
+    async def get_device_flow(
+        self, device_code: str, max_validity: int
+    ) -> dict[str, str]:
         """
         :raises: NoResultFound
         """
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
-        stmt = select(DeviceFlows).with_for_update()
-        stmt = stmt.where(DeviceFlows.device_code == device_code)
+        stmt = select(
+            DeviceFlows,
+            (DeviceFlows.creation_time < substract_date(seconds=max_validity)).label(
+                "is_expired"
+            ),
+        ).with_for_update()
+        stmt = stmt.where(
+            DeviceFlows.device_code == device_code,
+        )
         res = (await self.conn.execute(stmt)).one()._mapping
+
+        if res["is_expired"]:
+            raise ExpiredFlowError()
 
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning
@@ -64,19 +84,23 @@ class AuthDB(BaseDB):
         raise AuthorizationError("Bad state in device flow")
 
     async def device_flow_insert_id_token(
-        self, user_code: str, id_token: dict[str, str]
+        self, user_code: str, id_token: dict[str, str], max_validity: int
     ):
         """
-        :raises: KeyError if no such code or status not pending
+        :raises: AuthorizationError if no such code or status not pending
         """
         stmt = update(DeviceFlows)
         stmt = stmt.where(
-            DeviceFlows.user_code == user_code, DeviceFlows.status == FlowStatus.PENDING
+            DeviceFlows.user_code == user_code,
+            DeviceFlows.status == FlowStatus.PENDING,
+            DeviceFlows.creation_time > substract_date(seconds=max_validity),
         )
         stmt = stmt.values(id_token=id_token, status=FlowStatus.READY)
         res = await self.conn.execute(stmt)
         if res.rowcount != 1:
-            raise KeyError(f"{res.rowcount} rows matched user_code {user_code}")
+            raise AuthorizationError(
+                f"{res.rowcount} rows matched user_code {user_code}"
+            )
 
     async def insert_device_flow(
         self,
@@ -135,11 +159,11 @@ class AuthDB(BaseDB):
         return uuid
 
     async def authorization_flow_insert_id_token(
-        self, uuid: str, id_token: dict[str, str]
+        self, uuid: str, id_token: dict[str, str], max_validity: int
     ) -> tuple[str, str]:
         """
         returns code, redirect_uri
-        :raises: KeyError if no such uuid or status not pending
+        :raises: AuthorizationError if no such uuid or status not pending
         """
 
         code = secrets.token_urlsafe()
@@ -148,25 +172,29 @@ class AuthDB(BaseDB):
         stmt = stmt.where(
             AuthorizationFlows.uuid == uuid,
             AuthorizationFlows.status == FlowStatus.PENDING,
+            AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
         )
 
         stmt = stmt.values(id_token=id_token, code=code, status=FlowStatus.READY)
         res = await self.conn.execute(stmt)
 
         if res.rowcount != 1:
-            raise KeyError(f"{res.rowcount} rows matched uuid {uuid}")
+            raise AuthorizationError(f"{res.rowcount} rows matched uuid {uuid}")
 
         stmt = select(AuthorizationFlows.code, AuthorizationFlows.redirect_uri)
         stmt = stmt.where(AuthorizationFlows.uuid == uuid)
         row = (await self.conn.execute(stmt)).one()
         return row.code, row.redirect_uri
 
-    async def get_authorization_flow(self, code: str):
+    async def get_authorization_flow(self, code: str, max_validity: int):
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
         stmt = select(AuthorizationFlows).with_for_update()
-        stmt = stmt.where(AuthorizationFlows.code == code)
+        stmt = stmt.where(
+            AuthorizationFlows.code == code,
+            AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
+        )
 
         res = (await self.conn.execute(stmt)).one()._mapping
 

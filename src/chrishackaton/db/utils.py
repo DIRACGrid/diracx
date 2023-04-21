@@ -1,5 +1,6 @@
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
+import datetime
 from functools import partial
 
 from sqlalchemy import Column as RawColumn
@@ -32,6 +33,12 @@ def mysql_utcnow(element, compiler, **kw):
 @compiles(utcnow, "sqlite")
 def sqlite_utcnow(element, compiler, **kw):
     return "DATETIME('now')"
+
+
+def substract_date(**kwargs):
+    return datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(
+        **kwargs
+    )
 
 
 Column = partial(RawColumn, nullable=False)

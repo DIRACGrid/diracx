@@ -1,7 +1,9 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from .db.auth.db import AuthDB
 from .db.jobs.db import JobDB
+from .exceptions import DIRACError
 from .routers import auth, job_manager
 
 app = FastAPI(
@@ -11,6 +13,14 @@ app = FastAPI(
         "usePkceWithAuthorizationCodeGrant": True,
     },
 )
+
+
+@app.exception_handler(DIRACError)
+async def authorization_error_handler(request: Request, exc: DIRACError):
+    return JSONResponse(
+        status_code=exc.http_status_code, content={"detail": exc.detail}
+    )
+
 
 app.include_router(
     auth.router,
