@@ -5,8 +5,6 @@ from pprint import pprint
 
 import requests
 
-# TODO: use pkci
-
 r = requests.get("http://localhost:8000/auth/login", params={"vo": "lhcb"})
 r.raise_for_status()
 

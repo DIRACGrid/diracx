@@ -231,19 +231,20 @@ async def initiate_device_flow(
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
     """
-    # device_metadata = {}
-    # device_metadata["scopes"] = scope.split()
-    # device_metadata["group"] = "lhcb_user"
-    # device_metadata["audience"] = audience
-    # with open("/tmp/data.json", "wt") as f:
-    #     json.dump(device_metadata, f)
 
     assert client_id in KNOWN_CLIENTS, client_id
+
+    try:
+        parse_and_validate_scope(scope, vo)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.args[0],
+        ) from e
 
     user_code, device_code = await auth_db.insert_device_flow(
         client_id, scope, audience
     )
-    # TODO: validate scopes
 
     verification_uri = str(request.url.replace(query={}))
 
@@ -372,14 +373,6 @@ async def do_device_flow(
         vo, redirect_uri, state_for_iam
     )
 
-    # with open("/tmp/data.json", "rt") as f:
-    #     device_metadata = json.load(f)
-
-    # device_metadata["code_verifier"] = code_verifier.decode()
-
-    # with open("/tmp/data.json", "wt") as f:
-    #     json.dump(device_metadata, f)
-
     response.status_code = 200
     response.media_type = "text/html"
     response.body = (
@@ -418,12 +411,6 @@ async def finish_device_flow(
     await auth_db.device_flow_insert_id_token(
         decrypted_state["user_code"], id_token, DEVICE_FLOW_EXPIRATION_SECONDS
     )
-
-    # dirac_token = await exchange_token(device_metadata["group"], f"Bearer {id_token}")
-    # device_metadata["dirac_token"] = dirac_token.dict()
-
-    # with open("/tmp/data.json", "wt") as f:
-    #     json.dump(device_metadata, f)
 
     return responses.RedirectResponse(f"{request.url.replace(query='')}/finished")
 

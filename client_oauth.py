@@ -3,8 +3,6 @@ from pprint import pprint
 
 import requests
 
-# TODO: use pkci
-
 DIRAC_CLIENT_ID = "myDIRACClientID"
 r = requests.post(
     "http://localhost:8000/auth/lhcb/device",
