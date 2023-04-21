@@ -3,7 +3,7 @@ __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 from functools import partial
 
 from sqlalchemy import Column as RawColumn
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Enum
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
@@ -37,6 +37,10 @@ def sqlite_utcnow(element, compiler, **kw):
 Column = partial(RawColumn, nullable=False)
 NullColumn = partial(RawColumn, nullable=True)
 DateNowColumn = partial(Column, DateTime(timezone=True), server_default=utcnow())
+
+
+def EnumColumn(enum_type, **kwargs):
+    return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
 class BaseDB:

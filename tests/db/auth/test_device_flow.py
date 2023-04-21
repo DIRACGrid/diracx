@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import secrets
 
-from pytest import mark, raises
+import pytest
 from pytest_asyncio import fixture
 from sqlalchemy.exc import NoResultFound
 
 from chrishackaton.db.auth.db import AuthDB
 from chrishackaton.db.auth.schema import USER_CODE_LENGTH
+from chrishackaton.exceptions import AuthorizationError
 
 
 @fixture
@@ -17,7 +18,7 @@ async def auth_engine():
     yield
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_device_user_code_collision(auth_engine: None, monkeypatch):
     monkeypatch.setattr(secrets, "choice", lambda _: "A")
 
@@ -30,7 +31,7 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
         assert device
 
     async with AuthDB() as auth_db:
-        with raises(NotImplementedError, match="insert new device flow"):
+        with pytest.raises(NotImplementedError, match="insert new device flow"):
             await auth_db.insert_device_flow("client_id", "scope", "audience")
 
     monkeypatch.setattr(secrets, "choice", lambda _: "B")
@@ -43,19 +44,15 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
         assert device
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_device_flow_lookup(auth_engine: None, monkeypatch):
     async with AuthDB() as auth_db:
-        with raises(AssertionError):
-            await auth_db.get_device_flow()
+        with pytest.raises(NoResultFound):
+            await auth_db.device_flow_validate_user_code("NotInserted")
 
     async with AuthDB() as auth_db:
-        with raises(NoResultFound):
-            await auth_db.get_device_flow(user_code="NotInserted")
-
-    async with AuthDB() as auth_db:
-        with raises(NoResultFound):
-            await auth_db.get_device_flow(device_code="NotInserted")
+        with pytest.raises(NoResultFound):
+            await auth_db.get_device_flow("NotInserted")
 
     # First insert
     async with AuthDB() as auth_db:
@@ -69,20 +66,41 @@ async def test_device_flow_lookup(auth_engine: None, monkeypatch):
         assert user_code1 != user_code2
 
     async with AuthDB() as auth_db:
-        res1a = await auth_db.get_device_flow(user_code=user_code1)
-        assert res1a["device_code"] == device_code1
-        res1b = await auth_db.get_device_flow(device_code=device_code1)
-        assert res1b["user_code"] == user_code1
-        assert res1a == res1b
+        await auth_db.device_flow_validate_user_code(user_code1)
 
-        res2a = await auth_db.get_device_flow(user_code=user_code2)
-        assert res2a["device_code"] == device_code2
-        res2b = await auth_db.get_device_flow(device_code=device_code2)
-        assert res2b["user_code"] == user_code2
-        assert res2a == res2b
+        # Cannot get it with device_code because no id_token
+        with pytest.raises(AuthorizationError):
+            await auth_db.get_device_flow(device_code1)
+
+        await auth_db.device_flow_validate_user_code(user_code2)
+
+        # Cannot get it with device_code because no id_token
+        with pytest.raises(AuthorizationError):
+            await auth_db.get_device_flow(device_code2)
+
+    async with AuthDB() as auth_db:
+        await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"})
+
+        # We should not be able to insert a id_token a second time
+        with pytest.raises(KeyError):
+            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken2"})
+
+        res = await auth_db.get_device_flow(device_code1)
+        assert res["user_code"] == user_code1
+        assert res["id_token"] == {"token": "mytoken"}
+
+    # cannot get it a second time
+    async with AuthDB() as auth_db:
+        with pytest.raises(AuthorizationError):
+            await auth_db.get_device_flow(device_code1)
+
+    # Re-adding a token should not work after it's been minted
+    async with AuthDB() as auth_db:
+        with pytest.raises(KeyError):
+            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"})
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_device_flow_insert_id_token(auth_engine: None):
     # First insert
     async with AuthDB() as auth_db:
@@ -90,15 +108,20 @@ async def test_device_flow_insert_id_token(auth_engine: None):
             "client_id", "scope", "audience"
         )
 
+    # Make sure it exists, and is Pending
     async with AuthDB() as auth_db:
-        res = await auth_db.get_device_flow(user_code=user_code)
-        assert res["id_token"] is None
+        await auth_db.device_flow_validate_user_code(user_code)
 
     id_token = {"sub": "myIdToken"}
 
     async with AuthDB() as auth_db:
         await auth_db.device_flow_insert_id_token(user_code, id_token)
 
+    # The user code has been invalidated
     async with AuthDB() as auth_db:
-        res = await auth_db.get_device_flow(user_code=user_code)
+        with pytest.raises(NoResultFound):
+            await auth_db.device_flow_validate_user_code(user_code)
+
+    async with AuthDB() as auth_db:
+        res = await auth_db.get_device_flow(device_code)
         assert res["id_token"] == id_token

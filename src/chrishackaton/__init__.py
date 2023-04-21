@@ -7,7 +7,7 @@ from .routers import auth, job_manager
 app = FastAPI(
     swagger_ui_init_oauth={
         "clientId": auth.DIRAC_CLIENT_ID,
-        "scopes": "group:lhcb_user property:normal_user",
+        "scopes": "group:lhcb_user property:NormalUser",
         "usePkceWithAuthorizationCodeGrant": True,
     },
 )
@@ -54,8 +54,8 @@ async def openid_configuration():
         ],
         "scopes_supported": [
             "group:lhcb_user",
-            "property:normal_user",
-            "property:fc_management",
+            "property:NormalUser",
+            "property:FileCatalogManagement",
         ],
         "response_types_supported": ["code"],
         "token_endpoint_auth_signing_alg_values_supported": [auth.ALGORITHM],

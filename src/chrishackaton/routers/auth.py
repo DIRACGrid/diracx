@@ -6,7 +6,6 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Annotated, Literal, Optional
 from uuid import UUID, uuid4
 
@@ -28,8 +27,11 @@ from fastapi.security import OpenIdConnect
 from pydantic import BaseModel
 
 from chrishackaton.db.auth.db import AuthDB, get_auth_db
+from chrishackaton.db.auth.schema import FlowStatus
+from chrishackaton.exceptions import PendingAuthorizationError
 
 from ..config import Registry
+from ..properties import SecurityProperty
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
@@ -59,10 +61,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
 # This should be taken dynamically
-KNOWN_CLIENT_IDS = {DIRAC_CLIENT_ID}
+KNOWN_CLIENTS = {
+    DIRAC_CLIENT_ID: {
+        "allowed_redirects": ["http://localhost:8000/docs/oauth2-redirect"]
+    }
+}
+
+DEFAULT_DIRAC_GROUPS = {"lhcb": "lhcb_user"}
+DIRAC_GROUPS = {"lhcb": {"lhcb_user": set(["chaen", "cburr"])}}
 
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
-DEFAULT_DIRAC_GROUP = "lhcb_user"
 
 oauth = OAuth()
 # chris-hack-a-ton
@@ -244,11 +252,12 @@ async def initiate_device_flow(
     # with open("/tmp/data.json", "wt") as f:
     #     json.dump(device_metadata, f)
 
-    assert client_id in KNOWN_CLIENT_IDS, client_id
+    assert client_id in KNOWN_CLIENTS, client_id
 
     user_code, device_code = await auth_db.insert_device_flow(
         client_id, scope, audience
     )
+    # TODO: validate scopes
 
     verification_uri = str(request.url.replace(query={}))
 
@@ -295,7 +304,7 @@ async def initiate_authorization_flow_with_iam(
         f"state={encrypted_state}",
     ]
     authorization_flow_url = f"{authorization_endpoint}?{'&'.join(urlParams)}"
-    return code_verifier, authorization_flow_url
+    return authorization_flow_url
 
 
 async def get_token_from_iam(vo: str, code: str, state: str, redirect_uri: str) -> str:
@@ -362,17 +371,17 @@ async def do_device_flow(
     """
 
     # Here we make sure the user_code actualy exists
-    await auth_db.get_device_flow(user_code=user_code)
+    await auth_db.device_flow_validate_user_code(user_code)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
-    state = {
+    state_for_iam = {
         "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
         "user_code": user_code,
     }
 
-    code_verifier, authorization_flow_url = await initiate_authorization_flow_with_iam(
-        vo, redirect_uri, state
+    authorization_flow_url = await initiate_authorization_flow_with_iam(
+        vo, redirect_uri, state_for_iam
     )
 
     # with open("/tmp/data.json", "rt") as f:
@@ -443,6 +452,57 @@ class DeviceCodeTokenForm(BaseModel):
     client_id: str
 
 
+def parse_and_validate_scope(scope: str, vo: str) -> dict[str, str]:
+    """
+    Check:
+        * At most one group
+        * group belongs to VO
+        * properties are known
+    return dict with group and properties
+
+    :raises:
+        * ValueError in case the scope isn't valide
+    """
+    scopes = set(scope.split(" "))
+
+    parsed_scope = {}
+
+    groups = []
+    properties = []
+    unrecognised = []
+    for scope in scopes:
+        if scope.startswith("group:"):
+            groups.append(scope.split(":", 1)[1])
+        elif scope.startswith("property:"):
+            properties.append(scope.split(":", 1)[1])
+        else:
+            unrecognised.append(scope)
+    if unrecognised:
+        raise ValueError(f"Unrecognised scopes: {unrecognised}")
+
+    if not groups:
+        default_group = DEFAULT_DIRAC_GROUPS.get(vo)
+        if not default_group:
+            raise ValueError(f"No group given and no default for vo {vo}")
+        group = default_group
+    elif len(groups) > 1:
+        raise ValueError(f"Only one DIRAC group allowed but got {groups}")
+    else:
+        group = groups[0]
+        if group not in DIRAC_GROUPS[vo]:
+            raise ValueError(f"{group} not in {vo} groups")
+    parsed_scope["group"] = group
+
+    if not set(properties).issubset(SecurityProperty):
+        raise ValueError(
+            f"{set(properties)-set(SecurityProperty)} are not valid properties"
+        )
+
+    parsed_scope["properties"] = properties
+
+    return parsed_scope
+
+
 @router.post("/{vo}/token")
 async def token(
     vo: str,
@@ -462,10 +522,20 @@ async def token(
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
-    assert client_id in KNOWN_CLIENT_IDS
+    # assert client_id in KNOWN_CLIENTS
+    # assert redirect_uri in KNOWN_CLIENTS[DIRAC_CLIENT_ID]["redirect_uri"]
 
     if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
-        info = await auth_db.get_device_flow(device_code=device_code)
+        try:
+            info = await auth_db.get_device_flow(device_code)
+        except PendingAuthorizationError:
+            # TODO: use HTTPException while still respecting the standard format
+            # required by the RFC
+
+            return Response(
+                '{"error": "authorization_pending"}',
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         if info["client_id"] != client_id:
             raise HTTPException(
@@ -473,57 +543,55 @@ async def token(
                 detail="Bad client_id",
             )
 
-        if info["id_token"]:
-            scopes = info["scope"].split(" ")
+        # return Response('{"error": "slow_down"}', status_code=400)
+        # return Response('{"error": "expired_token"}', status_code=400)
 
-            groups = [
-                scope.split(":")[1] for scope in scopes if scope.startswith("group:")
-            ]
-            if not groups:
-                groups = [DEFAULT_DIRAC_GROUP]
-            if len(groups) > 1:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Only one DIRAC group allowed",
+    elif grant_type == "authorization_code":
+        info = await auth_db.get_authorization_flow(code)
+        if redirect_uri != info["redirect_uri"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid redirect_uri",
+            )
+
+        try:
+            code_challenge = (
+                base64.urlsafe_b64encode(
+                    hashlib.sha256(code_verifier.encode()).digest()
                 )
-            return await exchange_token(groups[0], info["id_token"])
+                .decode()
+                .strip("=")
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Malformed code_verifier",
+            ) from e
 
-        # device_metadata = json.loads(Path("/tmp/data.json").read_text())
-        # if "dirac_token" in device_metadata:
-        #     return device_metadata["dirac_token"]
-        return Response('{"error": "authorization_pending"}', status_code=400)
-        return Response('{"error": "slow_down"}', status_code=400)
-        return Response('{"error": "expired_token"}', status_code=400)
-        return Response('{"error": "access_denied"}', status_code=400)
-    if grant_type == "authorization_code":
-        assert code_verifier, code_verifier
-        assert redirect_uri == REDIRECT_URI
-        assert (
-            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-            .decode()
-            .strip("=")
-            == DIRAC_CODE_CHALLENGE
-        )
+        if code_challenge != info["code_challenge"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid code_challenge",
+            )
 
-        assert code == DIRAC_AUTHORIZATION_CODE
-        device_metadata = json.loads(Path("/tmp/data.json").read_text())
+    else:
+        raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
-        return device_metadata["dirac_token"]
+    # TODO: use HTTPException while still respecting the standard format
+    # required by the RFC
+    if info["status"] != FlowStatus.READY:
+        # That should never ever happen
+        raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    raise NotImplementedError(grant_type)
+    parsed_scope = parse_and_validate_scope(info["scope"], vo)
 
-
-DIRAC_CODE_CHALLENGE = None
-STATE = None
-REDIRECT_URI = None
-DIRAC_AUTHORIZATION_CODE = "UVW"
+    return await exchange_token(parsed_scope["group"], info["id_token"])
 
 
 @router.get("/{vo}/authorize")
 async def authorization_flow(
     vo: str,
     request: Request,
-    response: Response,
     response_type: Literal["code"],
     code_challenge: str,
     code_challenge_method: Literal["S256"],
@@ -531,57 +599,64 @@ async def authorization_flow(
     redirect_uri: str,
     scope: str,
     state: str,
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
 ):
-    global DIRAC_CODE_CHALLENGE, STATE, REDIRECT_URI
-    assert client_id == DIRAC_CLIENT_ID
-    assert redirect_uri == "http://localhost:8000/docs/oauth2-redirect", redirect_uri
+    assert client_id in KNOWN_CLIENTS, client_id
+    assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
 
-    assert set(scope.split()).issubset(
-        {"group:lhcb_user", "property:fc_management", "property:normal_user"}
+    try:
+        parse_and_validate_scope(scope, vo)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.args[0],
+        ) from e
+
+    uuid = await auth_db.insert_authorization_flow(
+        client_id,
+        scope,
+        "audience",
+        code_challenge,
+        code_challenge_method,
+        redirect_uri,
     )
 
-    DIRAC_CODE_CHALLENGE = code_challenge
-    STATE = state
-    REDIRECT_URI = redirect_uri
+    state_for_iam = {
+        "external_state": state,
+        "uuid": uuid,
+        "grant_type": "authorization_code",
+    }
 
-    redirect_uri = f"{request.url.replace(query='')}/complete"
-    code_verifier, authorization_flow_url = await initiate_authorization_flow_with_iam(
-        vo, redirect_uri
+    authorization_flow_url = await initiate_authorization_flow_with_iam(
+        vo, f"{request.url.replace(query='')}/complete", state_for_iam
     )
 
-    device_metadata = {"code_verifier": code_verifier.decode()}
-    device_metadata["scopes"] = scope.split()
-    device_metadata["group"] = "lhcb_user"
-
-    with open("/tmp/data.json", "wt") as f:
-        json.dump(device_metadata, f)
-
-    response.status_code = 200
-    response.media_type = "text/html"
-    response.body = (
-        f'<a href="{authorization_flow_url}">click here to login</a>'
-    ).encode()
-    return response
+    return responses.RedirectResponse(authorization_flow_url)
 
 
 @router.get("/{vo}/authorize/complete")
-async def authorization_flow_complete(vo: str, code: str, state: str, request: Request):
-    with open("/tmp/data.json", "rt") as f:
-        device_metadata = json.load(f)
+async def authorization_flow_complete(
+    vo: str,
+    code: str,
+    state: str,
+    request: Request,
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+):
+    # TODO: There have been better schemes like rot13
+    decrypted_state = json.loads(base64.urlsafe_b64decode(state).decode())
+    assert decrypted_state["grant_type"] == "authorization_code"
 
     id_token = await get_token_from_iam(
         vo,
         code,
-        state,
-        device_metadata["code_verifier"],
+        decrypted_state,
         str(request.url.replace(query="")),
     )
-    dirac_token = await exchange_token(device_metadata["group"], f"Bearer {id_token}")
-    device_metadata["dirac_token"] = dirac_token.dict()
 
-    with open("/tmp/data.json", "wt") as f:
-        json.dump(device_metadata, f)
+    code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
+        decrypted_state["uuid"], id_token
+    )
 
     return responses.RedirectResponse(
-        f"{REDIRECT_URI}?code={DIRAC_AUTHORIZATION_CODE}&state={STATE}"
+        f"{redirect_uri}?code={code}&state={decrypted_state['external_state']}"
     )

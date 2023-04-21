@@ -11,7 +11,7 @@ r = requests.post(
     params={
         "client_id": DIRAC_CLIENT_ID,
         "audience": "Dirac server",
-        "scope": "group:lhcb_user property:fc_management property:normal_user",
+        "scope": "group:lhcb_user property:FileCatalogManagement property:NormalUser",
     },
 )
 r.raise_for_status()
