@@ -2,24 +2,12 @@ import asyncio
 from enum import StrEnum
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from ..db.jobs.db import JobDB, get_job_db
-from ..properties import SecurityProperty, UnevaluatedProperty
-from .auth import UserInfo, verify_dirac_token
-
-
-def has_properties(expression: UnevaluatedProperty | SecurityProperty):
-    if not isinstance(expression, UnevaluatedProperty):
-        expression = UnevaluatedProperty(expression)
-
-    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
-        if not expression(user.properties):
-            raise HTTPException(status.HTTP_403_FORBIDDEN)
-
-    return Depends(require_property)
-
+from ..properties import SecurityProperty
+from ..utils import has_properties
 
 router = APIRouter(
     tags=["jobs"],

@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from .db.auth.db import AuthDB
 from .db.jobs.db import JobDB
 from .exceptions import DIRACError
-from .routers import auth, job_manager
+from .routers import auth, configuration, job_manager
 
 app = FastAPI(
     swagger_ui_init_oauth={
@@ -29,6 +29,11 @@ app.include_router(
 app.include_router(
     job_manager.router,
     prefix="/jobs",
+    dependencies=[Depends(auth.verify_dirac_token)],
+)
+app.include_router(
+    configuration.router,
+    prefix="/config",
     dependencies=[Depends(auth.verify_dirac_token)],
 )
 

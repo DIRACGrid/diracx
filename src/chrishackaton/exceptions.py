@@ -22,3 +22,11 @@ class ExpiredFlowError(AuthorizationError):
     """Used only for the Device Flow when the polling is expired"""
 
     ...
+
+
+class ConfigurationError(DIRACError):
+    """Used whenever we encounter a problem with the configuration"""
+
+
+class BadConfigurationVersion(ConfigurationError):
+    """The requested version is not known"""

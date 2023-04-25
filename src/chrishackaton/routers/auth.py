@@ -33,7 +33,7 @@ from chrishackaton.exceptions import (
     PendingAuthorizationError,
 )
 
-from ..config import Registry
+from ..config import Config, get_config
 from ..properties import SecurityProperty
 
 oidc_scheme = OpenIdConnect(
@@ -71,8 +71,7 @@ KNOWN_CLIENTS = {
     }
 }
 
-DEFAULT_DIRAC_GROUPS = {"lhcb": "lhcb_user"}
-DIRAC_GROUPS = {"lhcb": {"lhcb_user": set(["chaen", "cburr"])}}
+SID_TO_USERNAME = {"b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen"}
 
 # Duration for which the flows against DIRAC AS are valid
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
@@ -187,12 +186,14 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
     return encoded_jwt
 
 
-async def exchange_token(dirac_group: str, id_token: dict[str:str]) -> TokenResponse:
+async def exchange_token(
+    dirac_group: str, id_token: dict[str:str], config: Config
+) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
 
     vo = id_token["organisation_name"]
-    subId = id_token["sub"]
-    if subId not in Registry[vo]["Groups"][dirac_group]["members"]:
+    subId = SID_TO_USERNAME[id_token["sub"]]
+    if subId not in config.Registry.Groups[vo][dirac_group].Users:
         raise ValueError(
             f"User is not a member of the requested group ({id_token['preferred_username']}, {dirac_group})"
         )
@@ -201,7 +202,7 @@ async def exchange_token(dirac_group: str, id_token: dict[str:str]) -> TokenResp
         "sub": f"{vo}:{subId}",
         "aud": AUDIENCE,
         "iss": ISSUER,
-        "dirac_properties": Registry[vo]["Groups"][dirac_group]["properties"],
+        "dirac_properties": config.Registry.Groups[vo][dirac_group].Properties,
         "jti": str(uuid4()),
         "preferred_username": id_token["preferred_username"],
         "dirac_group": dirac_group,
@@ -222,6 +223,7 @@ async def initiate_device_flow(
     audience: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
 ):
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
@@ -235,7 +237,7 @@ async def initiate_device_flow(
     assert client_id in KNOWN_CLIENTS, client_id
 
     try:
-        parse_and_validate_scope(scope, vo)
+        parse_and_validate_scope(scope, vo, config)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -429,7 +431,7 @@ class DeviceCodeTokenForm(BaseModel):
     client_id: str
 
 
-def parse_and_validate_scope(scope: str, vo: str) -> dict[str, str]:
+def parse_and_validate_scope(scope: str, vo: str, config: Config) -> dict[str, str]:
     """
     Check:
         * At most one group
@@ -458,15 +460,12 @@ def parse_and_validate_scope(scope: str, vo: str) -> dict[str, str]:
         raise ValueError(f"Unrecognised scopes: {unrecognised}")
 
     if not groups:
-        default_group = DEFAULT_DIRAC_GROUPS.get(vo)
-        if not default_group:
-            raise ValueError(f"No group given and no default for vo {vo}")
-        group = default_group
+        group = config.DIRAC.DefaultGroup[vo]
     elif len(groups) > 1:
         raise ValueError(f"Only one DIRAC group allowed but got {groups}")
     else:
         group = groups[0]
-        if group not in DIRAC_GROUPS[vo]:
+        if group not in config.Registry.Groups[vo]:
             raise ValueError(f"{group} not in {vo} groups")
     parsed_scope["group"] = group
 
@@ -491,6 +490,7 @@ async def token(
     ],
     client_id: Annotated[str, Form()],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
     device_code: Annotated[Optional[str], Form()] = None,
     code: Annotated[Optional[str], Form()] = None,
     redirect_uri: Annotated[Optional[str], Form()] = None,
@@ -567,9 +567,9 @@ async def token(
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    parsed_scope = parse_and_validate_scope(info["scope"], vo)
+    parsed_scope = parse_and_validate_scope(info["scope"], vo, config)
 
-    return await exchange_token(parsed_scope["group"], info["id_token"])
+    return await exchange_token(parsed_scope["group"], info["id_token"], config)
 
 
 @router.get("/{vo}/authorize")
@@ -584,12 +584,13 @@ async def authorization_flow(
     scope: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
 ):
     assert client_id in KNOWN_CLIENTS, client_id
     assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
 
     try:
-        parse_and_validate_scope(scope, vo)
+        parse_and_validate_scope(scope, vo, config)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
