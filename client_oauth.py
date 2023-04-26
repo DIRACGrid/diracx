@@ -1,3 +1,4 @@
+import time
 from pprint import pprint
 
 import requests
@@ -36,6 +37,7 @@ except Exception:
         if r2.status_code != 400 or r2.json()["error"] != "authorization_pending":
             pprint(r2.text)
             r2.raise_for_status()
+        time.sleep(1)
 
     tokenResponse = r2.json()
 

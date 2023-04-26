@@ -1,10 +1,23 @@
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 
 from .db.auth.db import AuthDB
 from .db.jobs.db import JobDB
 from .exceptions import DIRACError
 from .routers import auth, configuration, job_manager
+
+# Rules:
+# All routes must have tags (needed for auto gen of client)
+# Form headers must have a description (autogen)
+# methods name should follow the generate_unique_id_function pattern
+
+
+def generate_unique_id_function(route: APIRoute):
+    # breakpoint()
+
+    return f"{route.tags[0]}_{route.name}"
+
 
 app = FastAPI(
     swagger_ui_init_oauth={
@@ -12,6 +25,8 @@ app = FastAPI(
         "scopes": "group:lhcb_user property:NormalUser",
         "usePkceWithAuthorizationCodeGrant": True,
     },
+    generate_unique_id_function=generate_unique_id_function,
+    title="Dirac",
 )
 
 
@@ -50,12 +65,7 @@ async def shutdown():
     await AuthDB.destroy_engine()
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello Bigger Applications!"}
-
-
-@app.get("/.well-known/openid-configuration")
+@app.get("/.well-known/openid-configuration", tags=["well-known"])
 async def openid_configuration():
     return {
         "issuer": auth.ISSUER,

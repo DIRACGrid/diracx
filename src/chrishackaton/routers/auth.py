@@ -49,7 +49,7 @@ class TokenResponse(BaseModel):
     state: str
 
 
-router = APIRouter()
+router = APIRouter(tags=["auth"])
 
 
 lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch/"
@@ -59,7 +59,7 @@ SECRET_KEY = "21e98a30bb41420dc601dea1dc1f85ecee3b4d702547bea355c07ab44fd7f3c3"
 ALGORITHM = "HS256"
 ISSUER = "http://lhcbdirac.cern.ch/"
 AUDIENCE = "dirac"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
@@ -418,7 +418,7 @@ async def finish_device_flow(
 
 
 @router.get("/{vo}/device/complete/finished")
-def finished(response: Response):
+def finished(vo: str, response: Response):
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"
@@ -486,15 +486,27 @@ async def token(
     grant_type: Annotated[
         Literal["urn:ietf:params:oauth:grant-type:device_code"]
         | Literal["authorization_code"],
-        Form(),
+        Form(description="OAuth2 Grant type"),
     ],
-    client_id: Annotated[str, Form()],
+    client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-    device_code: Annotated[Optional[str], Form()] = None,
-    code: Annotated[Optional[str], Form()] = None,
-    redirect_uri: Annotated[Optional[str], Form()] = None,
-    code_verifier: Annotated[Optional[str], Form()] = None,
+    device_code: Annotated[
+        Optional[str], Form(description="device code for OAuth2 device flow")
+    ] = None,
+    code: Annotated[
+        Optional[str], Form(description="Code for OAuth2 authorization code flow")
+    ] = None,
+    redirect_uri: Annotated[
+        Optional[str],
+        Form(description="redirect_uri used with OAuth2 authorization code flow"),
+    ] = None,
+    code_verifier: Annotated[
+        Optional[str],
+        Form(
+            description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
+        ),
+    ] = None,
 ) -> TokenResponse:
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow

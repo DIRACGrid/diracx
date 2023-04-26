@@ -31,7 +31,7 @@ class Config(dict):
     #     return key in self._obj
 
     def __getitem__(self, key):
-        value = super(self).__getitem__[key]
+        value = super().__getitem__(key)
         if isinstance(value, dict):
             return self.__class__(value, self.hexsha, self.modified)
         return value

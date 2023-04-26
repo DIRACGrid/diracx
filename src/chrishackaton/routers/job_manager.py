@@ -77,7 +77,7 @@ async def kill_bulk_jobs(job_ids: Annotated[list[int], Query()]):
 
 
 @router.get("/status")
-async def get_bulk_job_status(job_ids: Annotated[list[int], Query()]):
+async def get_bulk_job_status(job_ids: Annotated[list[int], Query(max_items=10)]):
     return [{"job_id": job.job_id, "status": JobStatus.Running} for job in job_ids]
 
 
@@ -86,8 +86,16 @@ class JobStatusUpdate(BaseModel):
     status: JobStatus
 
 
+from typing import TypedDict
+
+
+class JobStatusReturn(TypedDict):
+    job_id: int
+    status: JobStatus
+
+
 @router.post("/status")
-async def set_bulk_job_status(job_update: list[JobStatusUpdate]):
+async def set_status_bulk(job_update: list[JobStatusUpdate]) -> list[JobStatusReturn]:
     return [{"job_id": job.job_id, "status": job.status} for job in job_update]
 
 
