@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import (
@@ -33,6 +33,15 @@ async def serve_config(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ):
+    """ "
+    Get the latest view of the config.
+
+
+    If If-None-Match header is given and matches the latest ETag, return 304
+
+    If If-Modified-Since is given and is newer than latest,
+        return 304: this is to avoid flip/flopping
+    """
     headers = {
         "ETag": config.hexsha,
         "Last-Modified": config.modified.strftime(LAST_MODIFIED_FORMAT),
@@ -44,10 +53,18 @@ async def serve_config(
     # This is to prevent flip/flopping in case
     # a server gets out of sync with disk
     if if_modified_since:
-        if datetime.strptime(if_modified_since, LAST_MODIFIED_FORMAT) > config.modified:
-            raise HTTPException(
-                status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
+        try:
+            if_modified_since = datetime.strptime(
+                if_modified_since, LAST_MODIFIED_FORMAT
             )
+        except ValueError:
+            pass
+        else:
+            if_modified_since = if_modified_since.astimezone(timezone.utc)
+            if if_modified_since > config.modified:
+                raise HTTPException(
+                    status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
+                )
 
     response.headers.update(headers)
 

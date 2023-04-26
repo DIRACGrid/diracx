@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -94,7 +95,9 @@ class LocalGitConfigSource:
 
 
 def get_config() -> Config:
-    return LocalGitConfigSource(Path("/tmp/csRepo")).read_config("master")
+    return LocalGitConfigSource(Path(os.environ["DIRAC_CS_SOURCE"])).read_config(
+        "master"
+    )
 
 
 Registry = {
