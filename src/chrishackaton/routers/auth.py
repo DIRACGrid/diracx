@@ -129,6 +129,7 @@ class UserInfo(AuthInfo):
     sub: str
     preferred_username: str
     dirac_group: str
+    vo: str
 
 
 async def verify_dirac_token(
@@ -170,6 +171,7 @@ async def verify_dirac_token(
         sub=token["sub"],
         preferred_username=token["preferred_username"],
         dirac_group=token["dirac_group"],
+        vo=token["vo"],
     )
 
 
@@ -200,6 +202,7 @@ async def exchange_token(
 
     payload = {
         "sub": f"{vo}:{subId}",
+        "vo": vo,
         "aud": AUDIENCE,
         "iss": ISSUER,
         "dirac_properties": config.Registry.Groups[vo][dirac_group].Properties,

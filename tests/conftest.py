@@ -27,7 +27,9 @@ def normal_user_client():
             "jti": str(uuid4()),
             "preferred_username": "preferred_username",
             "dirac_group": "test_group",
+            "vo": "lhcb",
         }
         token = create_access_token(payload)
         client.headers["Authorization"] = f"Bearer {token}"
+        client.dirac_token_payload = payload
         yield client

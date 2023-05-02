@@ -1731,6 +1731,7 @@ class Deserializer(object):
 
                 def is_a_text_parsing_type(x):
                     return x not in ["object", "[]", "{}"]
+
                 if (
                     isinstance(data, ET.Element)
                     and is_a_text_parsing_type(data_type)

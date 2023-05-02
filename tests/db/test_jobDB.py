@@ -24,7 +24,16 @@ async def test_some_asyncio_code(job_engine: None):
 
         result = await asyncio.gather(
             *(
-                job_db.insert(f"JDL{i}", f"None{i}", f"originalJDL{i}")
+                job_db.insert(
+                    f"JDL{i}",
+                    "owner",
+                    "owner_dn",
+                    "owner_group",
+                    "diracSetup",
+                    "New",
+                    "dfdfds",
+                    "lhcb",
+                )
                 for i in range(100)
             )
         )
