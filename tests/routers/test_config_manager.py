@@ -1,6 +1,3 @@
-import json
-
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -13,20 +10,7 @@ def test_unauthenticated():
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.fixture
-def create_fake_repo(tmp_path, monkeypatch):
-    monkeypatch.setenv("DIRAC_CS_SOURCE", str(tmp_path))
-    from git import Repo
-
-    repo = Repo.init(tmp_path, initial_branch="master")
-    cs_file = tmp_path / "default.yml"
-    cs_file.write_text(json.dumps({"key": "value"}))
-    repo.index.add([cs_file])  # add it to the index
-    repo.index.commit("Added a new file")
-    yield
-
-
-def test_get_config(normal_user_client, create_fake_repo):
+def test_get_config(normal_user_client):
     r = normal_user_client.get("/config/lhcb")
     assert r.status_code == status.HTTP_200_OK, r.json()
     assert r.json(), r.text
