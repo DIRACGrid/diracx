@@ -18,7 +18,7 @@ def create_fake_repo(tmp_path, monkeypatch):
     monkeypatch.setenv("DIRAC_CS_SOURCE", str(tmp_path))
     from git import Repo
 
-    repo = Repo.init(tmp_path)
+    repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
     cs_file.write_text(json.dumps({"key": "value"}))
     repo.index.add([cs_file])  # add it to the index
