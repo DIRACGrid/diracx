@@ -26,15 +26,14 @@ from fastapi import (
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel
 
-from diracx.db.auth.db import AuthDB, get_auth_db
-from diracx.db.auth.schema import FlowStatus
+from diracx.core.config import Config, get_config
 from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
-
-from diracx.core.config import Config, get_config
 from diracx.core.properties import SecurityProperty
+from diracx.db.auth.db import AuthDB, get_auth_db
+from diracx.db.auth.schema import FlowStatus
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"

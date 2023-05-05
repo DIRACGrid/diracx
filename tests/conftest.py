@@ -5,9 +5,9 @@ from git import Repo
 from pytest import fixture
 
 from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.properties import SecurityProperty
 from diracx.routers import app
 from diracx.routers.auth import create_access_token
-from diracx.core.properties import SecurityProperty
 
 # to get a string like this run:
 # openssl rand -hex 32

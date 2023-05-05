@@ -14,6 +14,7 @@ from fastapi import (
 
 from diracx.core.config import Config, get_config
 from diracx.core.properties import SecurityProperty
+
 from .utils import has_properties
 
 router = APIRouter(

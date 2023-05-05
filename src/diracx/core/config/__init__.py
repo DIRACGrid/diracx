@@ -6,8 +6,8 @@ import git
 import yaml
 from cachetools import LRUCache, TTLCache, cachedmethod
 
-from .schema import Config
 from ..exceptions import BadConfigurationVersion
+from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_CS_CACHE_TTL = 5

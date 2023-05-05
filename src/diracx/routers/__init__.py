@@ -2,8 +2,9 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
-from diracx.db import AuthDB, JobDB
 from diracx.core.exceptions import DIRACError
+from diracx.db import AuthDB, JobDB
+
 from . import auth, configuration, job_manager
 
 # Rules:

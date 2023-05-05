@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.properties import SecurityProperty, UnevaluatedProperty
+
 from .auth import UserInfo, verify_dirac_token
 
 

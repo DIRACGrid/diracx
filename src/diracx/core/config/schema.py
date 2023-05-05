@@ -17,7 +17,9 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
         for field, hint in cls.__annotations__.items():
-            if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(v.get(field), str):
+            if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(
+                v.get(field), str
+            ):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
         return v
 
@@ -52,8 +54,8 @@ class RegistryConfig(BaseModel):
     DefaultStorageQuota: int
     DefaultProxyLifeTime: int
 
-    Users: dict[str,dict[str,UserConfig]]
-    Groups: dict[str,dict[str,GroupConfig]]
+    Users: dict[str, dict[str, UserConfig]]
+    Groups: dict[str, dict[str, GroupConfig]]
 
     BannedIPs: Any
     Hosts: Any

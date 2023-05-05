@@ -4,10 +4,10 @@ from typing import Annotated, TypedDict
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from diracx.core.utils import JobStatus
-
-from diracx.db.jobs.db import JobDB, get_job_db
 from diracx.core.properties import SecurityProperty
+from diracx.core.utils import JobStatus
+from diracx.db.jobs.db import JobDB, get_job_db
+
 from ..auth import UserInfo, verify_dirac_token
 from ..utils import has_properties
 
