@@ -6,8 +6,8 @@ import git
 import yaml
 from cachetools import LRUCache, TTLCache, cachedmethod
 
-from .exceptions import BadConfigurationVersion
-from .properties import SecurityProperty
+from ..exceptions import BadConfigurationVersion
+from ..properties import SecurityProperty
 
 DEFAULT_CONFIG_FILE = "default.yml"
 
