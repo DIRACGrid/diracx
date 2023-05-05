@@ -7,7 +7,7 @@ from typing import Any, Optional
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, PrivateAttr, root_validator
 
-from chrishackaton.properties import SecurityProperty
+from ..properties import SecurityProperty
 
 
 class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):

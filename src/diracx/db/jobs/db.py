@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import insert, select, update
 
-from chrishackaton.utils import JobStatus
+from diracx.core.utils import JobStatus
 
 from ..utils import BaseDB
 from .schema import Base as JobDBBase

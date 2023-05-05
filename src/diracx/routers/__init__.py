@@ -2,10 +2,9 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
-from .db.auth.db import AuthDB
-from .db.jobs.db import JobDB
-from .exceptions import DIRACError
-from .routers import auth, configuration, job_manager
+from diracx.db import AuthDB, JobDB
+from diracx.core.exceptions import DIRACError
+from . import auth, configuration, job_manager
 
 # Rules:
 # All routes must have tags (needed for auto gen of client)
