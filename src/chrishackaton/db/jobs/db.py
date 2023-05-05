@@ -203,7 +203,7 @@ class JobDB(BaseDB):
             inputData = class_ad_job.getListFromExpression("InputData")
             lfns = [lfn for lfn in inputData if lfn]
             if lfns:
-                self._insertInputData(job_id, lfns)
+                await self._insertInputData(job_id, lfns)
 
         return {
             "JobID": job_id,
