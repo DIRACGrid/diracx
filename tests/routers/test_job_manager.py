@@ -89,3 +89,37 @@ def test_insert_and_list_jobs(normal_user_client):
     assert len(listed_jobs) == len(job_definitions)
 
     assert submitted_job_ids == sorted([job_dict["JobID"] for job_dict in listed_jobs])
+
+
+def test_insert_and_search(normal_user_client):
+    # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+
+    submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
+
+    r = normal_user_client.post("/jobs/search")
+    assert r.status_code == 200, r.json()
+    assert [x["JobID"] for x in r.json()] == submitted_job_ids
+
+    r = normal_user_client.post(
+        "/jobs/search", json={"search": [["Status", "eq", "NEW"]]}
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == []
+
+    r = normal_user_client.post(
+        "/jobs/search", json={"search": [["Status", "eq", "RECEIVED"]]}
+    )
+    assert r.status_code == 200, r.json()
+    assert [x["JobID"] for x in r.json()] == submitted_job_ids
+
+    r = normal_user_client.post(
+        "/jobs/search", json={"parameters": ["JobID", "Status"]}
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == [
+        {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
+    ]

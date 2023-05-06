@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import insert, select, update
 
+from diracx.core.exceptions import InvalidQueryError
 from diracx.core.utils import JobStatus
 
 from ..utils import BaseDB
@@ -19,6 +20,57 @@ class JobDB(BaseDB):
     # but is overwriten in LHCbDIRAC, so we need
     # to find a way to make it dynamic
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
+
+    async def search(
+        self, parameters, search, sort, *, per_page: int = 100, page: int | None = None
+    ):
+        # Find which columns to select
+        columns = [x for x in Jobs.__table__.columns]
+        if parameters:
+            if unrecognised_parameters := set(parameters) - set(
+                Jobs.__table__.columns.keys()
+            ):
+                raise InvalidQueryError(
+                    f"Unrecognised parameters requested {unrecognised_parameters}"
+                )
+            columns = [c for c in columns if c.name in parameters]
+        stmt = select(*columns)
+
+        # Apply any filters
+        for column, operator, value in search:
+            column = Jobs.__table__.columns[column]
+            if operator == "eq":
+                expr = column == value
+            elif operator == "neq":
+                expr = column != value
+            elif operator == "gt":
+                expr = column > value
+            elif operator == "lt":
+                expr = column < value
+            elif operator in "lt":
+                expr = column.in_(value)
+            elif operator in "like":
+                expr = column.like(value)
+            else:
+                raise InvalidQueryError(f"Unknown filter {operator=}")
+            stmt = stmt.where(expr)
+
+        # Apply any sort constraints
+        for column, direction in sort:
+            column = Jobs.__table__.columns[column]
+            if direction == "asc":
+                column = column.asc()
+            elif direction == "desc":
+                column = column.desc()
+            else:
+                raise InvalidQueryError(f"Unknown sort {direction=}")
+
+        # Apply pagination
+        if page is not None:
+            raise NotImplementedError("Not yet implemented")
+
+        # Execute the query
+        return [row._mapping async for row in (await self.conn.stream(stmt))]
 
     async def list(self):
         stmt = select(JobJDLs)

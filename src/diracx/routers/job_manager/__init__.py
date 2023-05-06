@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import asyncio
-from typing import Annotated, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, root_validator
 
+from diracx.core.config import Config, get_config
 from diracx.core.properties import SecurityProperty
 from diracx.core.utils import JobStatus
 from diracx.db.jobs.db import JobDB, get_job_db
@@ -21,6 +24,44 @@ router = APIRouter(
         )
     ],
 )
+
+ScalarSearchField = tuple[
+    str,
+    Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal["like"],
+    str,
+]
+
+VectorSearchField = tuple[
+    str,
+    Literal["not in"] | Literal["in"],
+    str,
+]
+
+
+class JobSearchParams(BaseModel):
+    parameters: list[str] | None = None
+    search: list[ScalarSearchField | VectorSearchField] = []
+    sort: list[tuple[str, Literal["asc"] | Literal["dsc"]]] = []
+
+    @root_validator
+    def validate_fields(cls, v):
+        # TODO
+        return v
+
+
+@router.post("/search")
+async def search(
+    config: Annotated[Config, Depends(get_config)],
+    job_db: Annotated[JobDB, Depends(get_job_db)],
+    user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
+    body: JobSearchParams | None = None,
+):
+    if body is None:
+        body = JobSearchParams()
+    # TODO: Apply all the job policy stuff properly using user_info
+    if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
+        body.search.append(["Owner", "eq", "ownerDN"])
+    return await job_db.search(body.parameters, body.search, body.sort)
 
 
 # def get_jobdb():
@@ -217,3 +258,18 @@ async def submit_bulk_jobs(
     return await asyncio.gather(
         *(job_db.insert(j.owner, j.group, j.vo) for j in job_definitions)
     )
+
+
+# def summary()
+# TODO Show information suitable for plotting
+#    result = self.jobDB.getCounters(
+#         "Jobs", ["Status"], selectDict, newer=startDate, older=endDate, timeStamp="LastUpdateTime"
+#     )
+#     if not result["OK"]:
+#         return result
+
+#     statusDict = {}
+#     nJobs = 0
+#     for stDict, count in result["Value"]:
+#         nJobs += count
+#         statusDict[stDict["Status"]] = count
