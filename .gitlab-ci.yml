@@ -1,0 +1,17 @@
+.defaults:
+  image: registry.cern.ch/docker.io/library/python:3.11
+  only:
+    - merge_requests
+    - master@chaen/chrissquare-hack-a-ton
+
+pre-commit:
+  extends: .defaults
+  variables:
+    PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+  cache:
+    paths:
+      - ${PRE_COMMIT_HOME}
+  before_script:
+    - pip install pre-commit
+  script:
+    - pre-commit run --all-files

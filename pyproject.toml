@@ -17,7 +17,7 @@ src = ["src", "tests"]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
 
 [tool.mypy]
-plugins = ["sqlalchemy.ext.mypy.plugin"]
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 exclude = ["src/diracx/client"]
 allow_redefinition = true
 
