@@ -100,9 +100,11 @@ def test_insert_and_search(normal_user_client):
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
+    # Test /jobs/search
     r = normal_user_client.post("/jobs/search")
     assert r.status_code == 200, r.json()
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
+    assert {x["VerifiedFlag"] for x in r.json()} == {True}
 
     r = normal_user_client.post(
         "/jobs/search", json={"search": [["Status", "eq", "NEW"]]}
@@ -124,6 +126,7 @@ def test_insert_and_search(normal_user_client):
         {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
     ]
 
+    # Test /jobs/summary
     r = normal_user_client.post(
         "/jobs/summary", json={"grouping": ["Status", "OwnerDN"]}
     )

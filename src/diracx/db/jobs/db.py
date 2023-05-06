@@ -257,6 +257,7 @@ class JobDB(BaseDB):
             job_attrs,
             initial_status,
             initial_minor_status,
+            modern=True,
         )
 
         await self.setJobJDL(job_id, jobJDL)
