@@ -1,11 +1,11 @@
 .defaults:
-  image: registry.cern.ch/docker.io/library/python:3.11
   only:
     - merge_requests
     - master@chaen/chrissquare-hack-a-ton
 
 pre-commit:
   extends: .defaults
+  image: registry.cern.ch/docker.io/library/python:3.11
   variables:
     PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
   cache:
@@ -15,3 +15,17 @@ pre-commit:
     - pip install pre-commit
   script:
     - pre-commit run --all-files
+
+pytest:
+  extends: .defaults
+  image: registry.cern.ch/docker.io/mambaorg/micromamba
+  before_script:
+    - micromamba create --yes -c conda-forge --name test-env \
+      dirac-grid python pytest-asyncio pytest fastapi pydantic httpx \
+      gitpython git pyyaml email-validator python-multipart aiosqlite
+    - eval "$(micromamba shell hook --shell=bash)"
+    - micromamba activate test-env
+    - pip install git+https://github.com/chrisburr/DIRAC.git@chris-hack-a-ton
+    - pip install .
+  script:
+    - pytest -v
