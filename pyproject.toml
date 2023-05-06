@@ -15,3 +15,12 @@ src = ["src", "tests"]
 [tool.ruff.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
+
+[tool.mypy]
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+exclude = ["src/diracx/client"]
+allow_redefinition = true
+
+[[tool.mypy.overrides]]
+module = 'authlib.*'
+ignore_missing_imports = true

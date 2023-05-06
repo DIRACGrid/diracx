@@ -4,7 +4,7 @@ from pathlib import Path
 
 import git
 import yaml
-from cachetools import LRUCache, TTLCache, cachedmethod
+from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 
 from ..exceptions import BadConfigurationVersion
 from .schema import Config
@@ -27,18 +27,20 @@ class LocalGitConfigSource:
         cls._latest_revision_cache.clear()
         cls._read_raw_cache.clear()
 
-    _latest_revision_cache = TTLCache(MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL)
+    _latest_revision_cache: Cache = TTLCache(
+        MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
+    )
 
     @cachedmethod(lambda self: self._latest_revision_cache)
     def latest_revision(self) -> tuple[str, datetime]:
         print("config latest_revision")
         try:
             rev = self.repo.rev_parse("master")
-        except git.exc.ODBError as e:
+        except git.exc.ODBError as e:  # type: ignore
             raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
         return rev.hexsha, rev.committed_datetime.astimezone(timezone.utc)
 
-    _read_raw_cache = LRUCache(MAX_CS_CACHED_VERSIONS)
+    _read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
 
     @cachedmethod(lambda self: self._read_raw_cache)
     def read_raw(self, hexsha: str, modified: datetime) -> Config:

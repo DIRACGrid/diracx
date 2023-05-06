@@ -62,7 +62,7 @@ def test_insert_and_list_parametric_jobs(normal_user_client):
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    r = normal_user_client.get("/jobs")
+    r = normal_user_client.post("/jobs/search")
     assert r.status_code == 200, r.json()
 
     listed_jobs = r.json()
@@ -81,7 +81,7 @@ def test_insert_and_list_jobs(normal_user_client):
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    r = normal_user_client.get("/jobs")
+    r = normal_user_client.post("/jobs/search")
     assert r.status_code == 200, r.json()
 
     listed_jobs = r.json()

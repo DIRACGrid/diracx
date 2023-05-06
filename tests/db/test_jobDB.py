@@ -18,8 +18,7 @@ async def job_engine():
 @mark.asyncio
 async def test_some_asyncio_code(job_engine: None):
     async with JobDB() as job_db:
-        result = await job_db.list()
-
+        result = await job_db.search(["JobID"], [], [])
         assert not result
 
         result = await asyncio.gather(
@@ -39,6 +38,5 @@ async def test_some_asyncio_code(job_engine: None):
         )
 
     async with JobDB() as job_db:
-        result = await job_db.list()
-
+        result = await job_db.search(["JobID"], [], [])
         assert result

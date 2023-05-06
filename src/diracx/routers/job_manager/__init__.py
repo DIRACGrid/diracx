@@ -70,7 +70,7 @@ async def search(
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append(["Owner", "eq", "ownerDN"])
+        body.search.append(("Owner", "eq", "ownerDN"))
     # TODO: Pagination
     return await job_db.search(body.parameters, body.search, body.sort)
 
@@ -85,7 +85,7 @@ async def summary(
     """Show information suitable for plotting"""
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append(["Owner", "eq", "ownerDN"])
+        body.search.append(("Owner", "eq", "ownerDN"))
     return await job_db.summary(body.grouping, body.search)
 
 
@@ -116,11 +116,6 @@ async def set_single_job_status(job_id: int, status: JobStatus):
     return f"Updating Job {job_id} to {status}"
 
 
-@router.get("/")
-async def get_bulk_jobs(job_db: Annotated[JobDB, Depends(get_job_db)]) -> list:
-    return await job_db.list()
-
-
 class JobID(BaseModel):
     job_id: int
 
@@ -137,7 +132,7 @@ async def kill_bulk_jobs(job_ids: Annotated[list[int], Query()]):
 
 @router.get("/status")
 async def get_bulk_job_status(job_ids: Annotated[list[int], Query(max_items=10)]):
-    return [{"job_id": job.job_id, "status": JobStatus.Running} for job in job_ids]
+    return [{"job_id": jid, "status": JobStatus.Running} for jid in job_ids]
 
 
 class JobStatusUpdate(BaseModel):
