@@ -52,7 +52,10 @@ class LocalGitConfigSource:
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
         raw_obj = yaml.safe_load(blob.data_stream.read().decode())
-        return Config.parse_obj(raw_obj | {"hexsha": hexsha, "modified": modified})
+        config = Config.parse_obj(raw_obj)
+        config._hexsha = hexsha
+        config._modified = modified
+        return config
 
     def read_config(self) -> Config:
         """

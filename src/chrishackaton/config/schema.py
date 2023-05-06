@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Annotated, Any, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, PrivateAttr, root_validator
@@ -117,6 +117,5 @@ class Config(BaseModel):
     Systems: Any
     WebApp: Any
 
-    # TODO: Might need a better way of handling these two
-    _hexsha: Annotated[Optional[str], PrivateAttr()]
-    _modified: Annotated[Optional[datetime], PrivateAttr()]
+    _hexsha: str = PrivateAttr()
+    _modified: datetime = PrivateAttr()
