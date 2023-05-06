@@ -38,6 +38,16 @@ VectorSearchField = tuple[
 ]
 
 
+class JobSummaryParams(BaseModel):
+    grouping: list[str]
+    search: list[ScalarSearchField | VectorSearchField] = []
+
+    @root_validator
+    def validate_fields(cls, v):
+        # TODO
+        return v
+
+
 class JobSearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[ScalarSearchField | VectorSearchField] = []
@@ -61,12 +71,22 @@ async def search(
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
         body.search.append(["Owner", "eq", "ownerDN"])
+    # TODO: Pagination
     return await job_db.search(body.parameters, body.search, body.sort)
 
 
-# def get_jobdb():
-#     async with sessionmaker() as session:
-#         return JobDB(session)
+@router.post("/summary")
+async def summary(
+    config: Annotated[Config, Depends(get_config)],
+    job_db: Annotated[JobDB, Depends(get_job_db)],
+    user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
+    body: JobSummaryParams,
+):
+    """Show information suitable for plotting"""
+    # TODO: Apply all the job policy stuff properly using user_info
+    if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
+        body.search.append(["Owner", "eq", "ownerDN"])
+    return await job_db.summary(body.grouping, body.search)
 
 
 @router.get("/{job_id}")
@@ -258,18 +278,3 @@ async def submit_bulk_jobs(
     return await asyncio.gather(
         *(job_db.insert(j.owner, j.group, j.vo) for j in job_definitions)
     )
-
-
-# def summary()
-# TODO Show information suitable for plotting
-#    result = self.jobDB.getCounters(
-#         "Jobs", ["Status"], selectDict, newer=startDate, older=endDate, timeStamp="LastUpdateTime"
-#     )
-#     if not result["OK"]:
-#         return result
-
-#     statusDict = {}
-#     nJobs = 0
-#     for stDict, count in result["Value"]:
-#         nJobs += count
-#         statusDict[stDict["Status"]] = count

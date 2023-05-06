@@ -123,3 +123,23 @@ def test_insert_and_search(normal_user_client):
     assert r.json() == [
         {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
     ]
+
+    r = normal_user_client.post(
+        "/jobs/summary", json={"grouping": ["Status", "OwnerDN"]}
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == [{"Status": "RECEIVED", "OwnerDN": "ownerDN", "count": 1}]
+
+    r = normal_user_client.post(
+        "/jobs/summary",
+        json={"grouping": ["Status"], "search": [["Status", "eq", "RECEIVED"]]},
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == [{"Status": "RECEIVED", "count": 1}]
+
+    r = normal_user_client.post(
+        "/jobs/summary",
+        json={"grouping": ["Status"], "search": [["Status", "eq", "NEW"]]},
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == []
