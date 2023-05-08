@@ -59,7 +59,7 @@ class AuthDB(BaseDB):
         stmt = stmt.where(
             DeviceFlows.device_code == device_code,
         )
-        res = (await self.conn.execute(stmt)).one()._mapping
+        res = dict((await self.conn.execute(stmt)).one()._mapping)
 
         if res["is_expired"]:
             raise ExpiredFlowError()

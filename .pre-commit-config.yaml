@@ -34,3 +34,4 @@ repos:
           - types-PyYAML
           - types-cachetools
           - types-requests
+        exclude: ^(src/diracx/client/|tests/)

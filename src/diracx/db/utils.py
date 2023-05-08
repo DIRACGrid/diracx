@@ -5,36 +5,40 @@ __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 import datetime
 from abc import ABCMeta
 from functools import partial
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 
+if TYPE_CHECKING:
+    from sqlalchemy.types import TypeEngine
+
 
 class utcnow(expression.FunctionElement):
-    type = DateTime()
-    inherit_cache = True
+    type: TypeEngine = DateTime()
+    inherit_cache: bool = True
 
 
 @compiles(utcnow, "postgresql")
-def pg_utcnow(element, compiler, **kw):
+def pg_utcnow(element, compiler, **kw) -> str:
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
 @compiles(utcnow, "mssql")
-def ms_utcnow(element, compiler, **kw):
+def ms_utcnow(element, compiler, **kw) -> str:
     return "GETUTCDATE()"
 
 
 @compiles(utcnow, "mysql")
-def mysql_utcnow(element, compiler, **kw):
+def mysql_utcnow(element, compiler, **kw) -> str:
     return "(UTC_TIMESTAMP)"
 
 
 @compiles(utcnow, "sqlite")
-def sqlite_utcnow(element, compiler, **kw):
+def sqlite_utcnow(element, compiler, **kw) -> str:
     return "DATETIME('now')"
 
 
@@ -57,11 +61,11 @@ class BaseDB(metaclass=ABCMeta):
     engine: AsyncEngine
     metadata: MetaData
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._conn = None
 
     @classmethod
-    async def make_engine(cls, db_url: str):
+    async def make_engine(cls, db_url: str) -> None:
         """TODO make metadata an abastract property"""
         cls.engine = create_async_engine(
             db_url,
@@ -71,11 +75,11 @@ class BaseDB(metaclass=ABCMeta):
             await conn.run_sync(cls.metadata.create_all)
 
     @classmethod
-    async def destroy_engine(cls):
+    async def destroy_engine(cls) -> None:
         await cls.engine.dispose()
 
     @property
-    def conn(self):
+    def conn(self) -> AsyncConnection:
         if self._conn is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return self._conn
