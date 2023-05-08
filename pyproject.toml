@@ -18,7 +18,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 
 [tool.mypy]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
-exclude = ["^src/diracx/client", "^tests/"]
+exclude = ["^src/diracx/client", "^tests/", "^build/"]
 allow_redefinition = true
 # strict = true
 enable_error_code = ["import", "attr-defined"]
