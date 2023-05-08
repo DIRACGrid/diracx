@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, root_validator
@@ -65,7 +65,7 @@ async def search(
     job_db: Annotated[JobDB, Depends(get_job_db)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     body: JobSearchParams | None = None,
-):
+) -> list[dict[str, Any]]:
     if body is None:
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info

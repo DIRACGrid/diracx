@@ -2,8 +2,8 @@ from __future__ import annotations
 
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
-import datetime
 from abc import ABCMeta
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -42,10 +42,8 @@ def sqlite_utcnow(element, compiler, **kw) -> str:
     return "DATETIME('now')"
 
 
-def substract_date(**kwargs):
-    return datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(
-        **kwargs
-    )
+def substract_date(**kwargs: float) -> datetime:
+    return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
 
 
 Column = partial(RawColumn, nullable=False)

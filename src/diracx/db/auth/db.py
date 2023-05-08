@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import AsyncGenerator
 from uuid import uuid4
 
 from sqlalchemy import insert, select, update
@@ -84,7 +85,7 @@ class AuthDB(BaseDB):
 
     async def device_flow_insert_id_token(
         self, user_code: str, id_token: dict[str, str], max_validity: int
-    ):
+    ) -> None:
         """
         :raises: AuthorizationError if no such code or status not pending
         """
@@ -106,7 +107,7 @@ class AuthDB(BaseDB):
         client_id: str,
         scope: str,
         audience: str,
-    ):
+    ) -> tuple[str, str]:
         for _ in range(MAX_RETRY):
             user_code = "".join(
                 secrets.choice(USER_CODE_ALPHABET)
@@ -213,6 +214,6 @@ class AuthDB(BaseDB):
         raise AuthorizationError("Bad state in authorization flow")
 
 
-async def get_auth_db():
+async def get_auth_db() -> AsyncGenerator[AuthDB, None]:
     async with AuthDB() as db:
         yield db

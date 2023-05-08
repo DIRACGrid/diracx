@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from sqlalchemy import func, insert, select, update
 
@@ -44,7 +44,7 @@ class JobDB(BaseDB):
     # to find a way to make it dynamic
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
 
-    async def summary(self, group_by, search):
+    async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = [Jobs.__table__.columns[x] for x in group_by]
 
         stmt = select(*columns, func.count(Jobs.JobID).label("count"))
@@ -53,14 +53,14 @@ class JobDB(BaseDB):
 
         # Execute the query
         return [
-            row._mapping
+            dict(row._mapping)
             async for row in (await self.conn.stream(stmt))
-            if row.count > 0
+            if row.count > 0  # type: ignore
         ]
 
     async def search(
         self, parameters, search, sort, *, per_page: int = 100, page: int | None = None
-    ):
+    ) -> list[dict[str, Any]]:
         # Find which columns to select
         columns = [x for x in Jobs.__table__.columns]
         if parameters:
@@ -90,7 +90,7 @@ class JobDB(BaseDB):
             raise NotImplementedError("TODO Not yet implemented")
 
         # Execute the query
-        return [row._mapping async for row in (await self.conn.stream(stmt))]
+        return [dict(row._mapping) async for row in (await self.conn.stream(stmt))]
 
     async def _insertNewJDL(self, jdl) -> int:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
@@ -278,6 +278,6 @@ class JobDB(BaseDB):
         }
 
 
-async def get_job_db():
+async def get_job_db() -> AsyncGenerator[JobDB, None]:
     async with JobDB() as job_db:
         yield job_db

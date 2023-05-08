@@ -378,11 +378,6 @@ async def do_device_flow(
         vo, redirect_uri, state_for_iam
     )
 
-    # response.status_code = 200
-    # response.media_type = "text/html"
-    # response.body = (
-    #     f'<a href="{authorization_flow_url}">click here to login</a>'
-    # ).encode()
     return HTMLResponse(f'<a href="{authorization_flow_url}">click here to login</a>')
 
 
