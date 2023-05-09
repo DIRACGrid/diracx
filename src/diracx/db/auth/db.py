@@ -42,9 +42,7 @@ class AuthDB(BaseDB):
 
         (await self.conn.execute(stmt)).one()
 
-    async def get_device_flow(
-        self, device_code: str, max_validity: int
-    ) -> dict[str, str]:
+    async def get_device_flow(self, device_code: str, max_validity: int):
         """
         :raises: NoResultFound
         """
@@ -196,7 +194,7 @@ class AuthDB(BaseDB):
             AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
         )
 
-        res = (await self.conn.execute(stmt)).one()._mapping
+        res = dict((await self.conn.execute(stmt)).one()._mapping)
 
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning

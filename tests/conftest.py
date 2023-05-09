@@ -36,7 +36,14 @@ def with_config_repo(tmp_path, monkeypatch):
                 "DefaultStorageQuota": 2000,
                 "DefaultVOMSAttribute": "/lhcb/Role=user",
                 "Users": {},
-                "Groups": {},
+                "Groups": {
+                    "lhcb": {
+                        "lhcb_user": {
+                            "Properties": ["NormalUser", "PrivateLimitedDelegation"],
+                            "Users": ["chaen"],
+                        }
+                    }
+                },
             },
             "Operations": {"Defaults": {}},
         }
@@ -49,19 +56,24 @@ def with_config_repo(tmp_path, monkeypatch):
 
 
 @fixture
-def normal_user_client(with_config_repo):
-    with TestClient(app) as client:
-        payload = {
-            "sub": "testingVO:yellow-sub",
-            "aud": AUDIENCE,
-            "iss": ISSUER,
-            "dirac_properties": [SecurityProperty.NORMAL_USER],
-            "jti": str(uuid4()),
-            "preferred_username": "preferred_username",
-            "dirac_group": "test_group",
-            "vo": "lhcb",
-        }
-        token = create_access_token(payload)
-        client.headers["Authorization"] = f"Bearer {token}"
-        client.dirac_token_payload = payload
-        yield client
+def test_client(with_config_repo):
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@fixture
+def normal_user_client(test_client):
+    payload = {
+        "sub": "testingVO:yellow-sub",
+        "aud": AUDIENCE,
+        "iss": ISSUER,
+        "dirac_properties": [SecurityProperty.NORMAL_USER],
+        "jti": str(uuid4()),
+        "preferred_username": "preferred_username",
+        "dirac_group": "test_group",
+        "vo": "lhcb",
+    }
+    token = create_access_token(payload)
+    test_client.headers["Authorization"] = f"Bearer {token}"
+    test_client.dirac_token_payload = payload
+    yield test_client

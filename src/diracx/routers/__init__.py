@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 
-from diracx.core.exceptions import DIRACError
+from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.db import AuthDB, JobDB
 
 from . import auth, configuration, job_manager
@@ -28,11 +28,16 @@ app = FastAPI(
 )
 
 
-@app.exception_handler(DIRACError)
-async def authorization_error_handler(request: Request, exc: DIRACError) -> Response:
+@app.exception_handler(DiracError)
+async def dirac_error_handler(request: Request, exc: DiracError) -> Response:
     return JSONResponse(
         status_code=exc.http_status_code, content={"detail": exc.detail}
     )
+
+
+@app.exception_handler(DiracHttpResponse)
+async def http_response_handler(request: Request, exc: DiracHttpResponse) -> Response:
+    return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
 app.include_router(
