@@ -25,22 +25,32 @@ router = APIRouter(
     ],
 )
 
-ScalarSearchField = tuple[
-    str,
-    Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal["like"],
-    str,
-]
 
-VectorSearchField = tuple[
-    str,
-    Literal["not in"] | Literal["in"],
-    str,
-]
+# TODO: TypedDict vs pydnatic?
+class SortSpec(TypedDict):
+    parameter: str
+    direction: Literal["asc"] | Literal["dsc"]
+
+
+class ScalarSearchSpec(TypedDict):
+    parameter: str
+    operator: Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal[
+        "like"
+    ]
+    value: str
+
+
+class VectorSearchSpec(TypedDict):
+    parameter: str
+    operator: Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal[
+        "like"
+    ]
+    values: list[str]
 
 
 class JobSummaryParams(BaseModel):
     grouping: list[str]
-    search: list[ScalarSearchField | VectorSearchField] = []
+    search: list[ScalarSearchSpec | VectorSearchSpec] = []
 
     @root_validator
     def validate_fields(cls, v):
@@ -50,8 +60,8 @@ class JobSummaryParams(BaseModel):
 
 class JobSearchParams(BaseModel):
     parameters: list[str] | None = None
-    search: list[ScalarSearchField | VectorSearchField] = []
-    sort: list[tuple[str, Literal["asc"] | Literal["dsc"]]] = []
+    search: list[ScalarSearchSpec | VectorSearchSpec] = []
+    sort: list[str | SortSpec] = []
 
     @root_validator
     def validate_fields(cls, v):
@@ -70,7 +80,7 @@ async def search(
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append(("Owner", "eq", "ownerDN"))
+        body.search.append({"parameter": "Owner", "operator": "eq", "value": "ownerDN"})
     # TODO: Pagination
     return await job_db.search(body.parameters, body.search, body.sort)
 
@@ -85,7 +95,7 @@ async def summary(
     """Show information suitable for plotting"""
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append(("Owner", "eq", "ownerDN"))
+        body.search.append({"parameter": "Owner", "operator": "eq", "value": "ownerDN"})
     return await job_db.summary(body.grouping, body.search)
 
 

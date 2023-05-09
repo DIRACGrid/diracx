@@ -15,22 +15,22 @@ from .schema import InputData, JobJDLs, Jobs
 
 def apply_search_filters(table, stmt, search):
     # Apply any filters
-    for column, operator, value in search:
-        column = table.columns[column]
-        if operator == "eq":
-            expr = column == value
-        elif operator == "neq":
-            expr = column != value
-        elif operator == "gt":
-            expr = column > value
-        elif operator == "lt":
-            expr = column < value
-        elif operator in "in":
-            expr = column.in_(value)
-        elif operator in "like":
-            expr = column.like(value)
+    for query in search:
+        column = table.columns[query["parameter"]]
+        if query["operator"] == "eq":
+            expr = column == query["value"]
+        elif query["operator"] == "neq":
+            expr = column != query["value"]
+        elif query["operator"] == "gt":
+            expr = column > query["value"]
+        elif query["operator"] == "lt":
+            expr = column < query["value"]
+        elif query["operator"] in "in":
+            expr = column.in_(query["values"])
+        elif query["operator"] in "like":
+            expr = column.like(query["values"])
         else:
-            raise InvalidQueryError(f"Unknown filter {operator=}")
+            raise InvalidQueryError(f"Unknown filter {query=}")
         stmt = stmt.where(expr)
     return stmt
 
