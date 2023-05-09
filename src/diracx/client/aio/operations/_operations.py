@@ -5,7 +5,8 @@
 # Changes may cause incorrect behavior and will be lost if the code is regenerated.
 # --------------------------------------------------------------------------
 from io import IOBase
-from typing import IO, Any, Callable, Dict, List, Optional, TypeVar, Union, overload
+import sys
+from typing import Any, Callable, Dict, IO, List, Optional, TypeVar, Union, overload
 
 from azure.core.exceptions import (
     ClientAuthenticationError,
@@ -33,22 +34,28 @@ from ...operations._operations import (
     build_jobs_delete_bulk_jobs_request,
     build_jobs_delete_single_job_request,
     build_jobs_get_bulk_job_status_request,
-    build_jobs_get_bulk_jobs_request,
     build_jobs_get_single_job_request,
     build_jobs_get_single_job_status_request,
     build_jobs_kill_bulk_jobs_request,
     build_jobs_kill_single_job_request,
+    build_jobs_search_request,
     build_jobs_set_single_job_status_request,
     build_jobs_set_status_bulk_request,
     build_jobs_submit_bulk_jobs_request,
+    build_jobs_summary_request,
     build_well_known_openid_configuration_request,
 )
 from .._vendor import raise_if_not_implemented
 
+if sys.version_info >= (3, 9):
+    from collections.abc import MutableMapping
+else:
+    from typing import MutableMapping  # type: ignore  # pylint: disable=ungrouped-imports
 T = TypeVar("T")
 ClsType = Optional[
     Callable[[PipelineResponse[HttpRequest, AsyncHttpResponse], T, Dict[str, Any]], Any]
 ]
+JSON = MutableMapping[str, Any]  # pylint: disable=unsubscriptable-object
 
 
 class AuthOperations:
@@ -57,7 +64,7 @@ class AuthOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~dirac.aio.Dirac`'s
+        :class:`~client.aio.Dirac`'s
         :attr:`auth` attribute.
     """
 
@@ -80,7 +87,7 @@ class AuthOperations:
 
     @distributed_trace_async
     async def do_device_flow(
-        self, vo: str, *, user_code: Optional[str] = None, **kwargs: Any
+        self, vo: str, *, user_code: str, **kwargs: Any
     ) -> Union[Any, _models.HTTPValidationError]:
         """Do Device Flow.
 
@@ -95,10 +102,10 @@ class AuthOperations:
 
         :param vo: Required.
         :type vo: str
-        :keyword user_code: Default value is None.
+        :keyword user_code: Required.
         :paramtype user_code: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -171,7 +178,7 @@ class AuthOperations:
         :keyword audience: Required.
         :paramtype audience: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -242,7 +249,7 @@ class AuthOperations:
         :keyword state: Required.
         :paramtype state: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -304,7 +311,7 @@ class AuthOperations:
         :param vo: Required.
         :type vo: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -374,11 +381,11 @@ class AuthOperations:
         :param vo: Required.
         :type vo: str
         :keyword response_type: "code" Required.
-        :paramtype response_type: str or ~dirac.models.Enum2
+        :paramtype response_type: str or ~client.models.Enum2
         :keyword code_challenge: Required.
         :paramtype code_challenge: str
         :keyword code_challenge_method: "S256" Required.
-        :paramtype code_challenge_method: str or ~dirac.models.Enum3
+        :paramtype code_challenge_method: str or ~client.models.Enum3
         :keyword client_id: Required.
         :paramtype client_id: str
         :keyword redirect_uri: Required.
@@ -388,7 +395,7 @@ class AuthOperations:
         :keyword state: Required.
         :paramtype state: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -459,7 +466,7 @@ class AuthOperations:
         :keyword state: Required.
         :paramtype state: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -517,7 +524,7 @@ class JobsOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~dirac.aio.Dirac`'s
+        :class:`~client.aio.Dirac`'s
         :attr:`jobs` attribute.
     """
 
@@ -532,6 +539,247 @@ class JobsOperations:
             input_args.pop(0) if input_args else kwargs.pop("deserializer")
         )
 
+    @overload
+    async def search(
+        self,
+        body: Optional[_models.JobSearchParams] = None,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> Union[List[JSON], _models.HTTPValidationError]:
+        """Search.
+
+        Search.
+
+        :param body: Default value is None.
+        :type body: ~client.models.JobSearchParams
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JSON or HTTPValidationError
+        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def search(
+        self,
+        body: Optional[IO] = None,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> Union[List[JSON], _models.HTTPValidationError]:
+        """Search.
+
+        Search.
+
+        :param body: Default value is None.
+        :type body: IO
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JSON or HTTPValidationError
+        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def search(
+        self, body: Optional[Union[_models.JobSearchParams, IO]] = None, **kwargs: Any
+    ) -> Union[List[JSON], _models.HTTPValidationError]:
+        """Search.
+
+        Search.
+
+        :param body: Is either a JobSearchParams type or a IO type. Default value is None.
+        :type body: ~client.models.JobSearchParams or IO
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: list of JSON or HTTPValidationError
+        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Union[List[JSON], _models.HTTPValidationError]] = kwargs.pop(
+            "cls", None
+        )
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "JobSearchParams")
+            else:
+                _json = None
+
+        request = build_jobs_search_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200, 422]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        if response.status_code == 200:
+            deserialized = self._deserialize("[object]", pipeline_response)
+
+        if response.status_code == 422:
+            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    async def summary(
+        self,
+        body: _models.JobSummaryParams,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> Union[Any, _models.HTTPValidationError]:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: ~client.models.JobSummaryParams
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any or HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def summary(
+        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
+    ) -> Union[Any, _models.HTTPValidationError]:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: IO
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any or HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def summary(
+        self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any
+    ) -> Union[Any, _models.HTTPValidationError]:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Is either a JobSummaryParams type or a IO type. Required.
+        :type body: ~client.models.JobSummaryParams or IO
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: any or HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "JobSummaryParams")
+
+        request = build_jobs_summary_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200, 422]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        if response.status_code == 200:
+            deserialized = self._deserialize("object", pipeline_response)
+
+        if response.status_code == 422:
+            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
     @distributed_trace_async
     async def get_single_job(
         self, job_id: int, **kwargs: Any
@@ -543,7 +791,7 @@ class JobsOperations:
         :param job_id: Required.
         :type job_id: int
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -603,7 +851,7 @@ class JobsOperations:
         :param job_id: Required.
         :type job_id: int
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -663,7 +911,7 @@ class JobsOperations:
         :param job_id: Required.
         :type job_id: int
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -723,7 +971,7 @@ class JobsOperations:
         :param job_id: Required.
         :type job_id: int
         :return: JobStatus or HTTPValidationError
-        :rtype: str or ~dirac.models.JobStatus or ~dirac.models.HTTPValidationError
+        :rtype: str or ~client.models.JobStatus or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -784,10 +1032,11 @@ class JobsOperations:
 
         :param job_id: Required.
         :type job_id: int
-        :keyword status: Known values are: "Running", "Stalled", and "Killed". Required.
-        :paramtype status: str or ~dirac.models.JobStatus
+        :keyword status: Known values are: "Running", "Stalled", "Killed", "Failed", "RECEIVED", and
+         "Submitting". Required.
+        :paramtype status: str or ~client.models.JobStatus
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -837,76 +1086,21 @@ class JobsOperations:
 
         return deserialized  # type: ignore
 
-    @distributed_trace_async
-    async def get_bulk_jobs(self, **kwargs: Any) -> List[Any]:
-        """Get Bulk Jobs.
-
-        Get Bulk Jobs.
-
-        :return: list of any
-        :rtype: list[any]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[List[Any]] = kwargs.pop("cls", None)
-
-        request = build_jobs_get_bulk_jobs_request(
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            await self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("[object]", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
     @overload
     async def submit_bulk_jobs(
-        self,
-        body: List[_models.JobDefinition],
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any
+        self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
     ) -> Union[Any, _models.HTTPValidationError]:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
 
         :param body: Required.
-        :type body: list[~dirac.models.JobDefinition]
+        :type body: list[str]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -924,25 +1118,25 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace_async
     async def submit_bulk_jobs(
-        self, body: Union[List[_models.JobDefinition], IO], **kwargs: Any
+        self, body: Union[List[str], IO], **kwargs: Any
     ) -> Union[Any, _models.HTTPValidationError]:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
 
-        :param body: Is either a [JobDefinition] type or a IO type. Required.
-        :type body: list[~dirac.models.JobDefinition] or IO
+        :param body: Is either a [str] type or a IO type. Required.
+        :type body: list[str] or IO
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -967,7 +1161,7 @@ class JobsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "[JobDefinition]")
+            _json = self._serialize.body(body, "[str]")
 
         request = build_jobs_submit_bulk_jobs_request(
             content_type=content_type,
@@ -1015,7 +1209,7 @@ class JobsOperations:
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1075,7 +1269,7 @@ class JobsOperations:
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1135,7 +1329,7 @@ class JobsOperations:
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1197,12 +1391,12 @@ class JobsOperations:
         Set Status Bulk.
 
         :param body: Required.
-        :type body: list[~dirac.models.JobStatusUpdate]
+        :type body: list[~client.models.JobStatusUpdate]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
         :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~dirac.models.JobStatusReturn] or ~dirac.models.HTTPValidationError
+        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1220,7 +1414,7 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~dirac.models.JobStatusReturn] or ~dirac.models.HTTPValidationError
+        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1233,12 +1427,12 @@ class JobsOperations:
         Set Status Bulk.
 
         :param body: Is either a [JobStatusUpdate] type or a IO type. Required.
-        :type body: list[~dirac.models.JobStatusUpdate] or IO
+        :type body: list[~client.models.JobStatusUpdate] or IO
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
         :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~dirac.models.JobStatusReturn] or ~dirac.models.HTTPValidationError
+        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1309,7 +1503,7 @@ class ConfigOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~dirac.aio.Dirac`'s
+        :class:`~client.aio.Dirac`'s
         :attr:`config` attribute.
     """
 
@@ -1350,7 +1544,7 @@ class ConfigOperations:
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
         :return: any or HTTPValidationError
-        :rtype: any or ~dirac.models.HTTPValidationError
+        :rtype: any or ~client.models.HTTPValidationError
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1408,7 +1602,7 @@ class WellKnownOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~dirac.aio.Dirac`'s
+        :class:`~client.aio.Dirac`'s
         :attr:`well_known` attribute.
     """
 

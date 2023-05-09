@@ -5,7 +5,7 @@
 # Changes may cause incorrect behavior and will be lost if the code is regenerated.
 # --------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 from .. import _serialization
 
@@ -20,7 +20,7 @@ class BodyAuthToken(_serialization.Model):
     All required parameters must be populated in order to send to Azure.
 
     :ivar grant_type: OAuth2 Grant type. Required.
-    :vartype grant_type: ~dirac.models.BodyAuthTokenGrantType
+    :vartype grant_type: ~client.models.BodyAuthTokenGrantType
     :ivar client_id: OAuth2 client id. Required.
     :vartype client_id: str
     :ivar device_code: device code for OAuth2 device flow.
@@ -61,7 +61,7 @@ class BodyAuthToken(_serialization.Model):
     ) -> None:
         """
         :keyword grant_type: OAuth2 Grant type. Required.
-        :paramtype grant_type: ~dirac.models.BodyAuthTokenGrantType
+        :paramtype grant_type: ~client.models.BodyAuthTokenGrantType
         :keyword client_id: OAuth2 client id. Required.
         :paramtype client_id: str
         :keyword device_code: device code for OAuth2 device flow.
@@ -97,7 +97,7 @@ class HTTPValidationError(_serialization.Model):
     """HTTPValidationError.
 
     :ivar detail: Detail.
-    :vartype detail: list[~dirac.models.ValidationError]
+    :vartype detail: list[~client.models.ValidationError]
     """
 
     _attribute_map = {
@@ -109,59 +109,69 @@ class HTTPValidationError(_serialization.Model):
     ) -> None:
         """
         :keyword detail: Detail.
-        :paramtype detail: list[~dirac.models.ValidationError]
+        :paramtype detail: list[~client.models.ValidationError]
         """
         super().__init__(**kwargs)
         self.detail = detail
 
 
-class JobDefinition(_serialization.Model):
-    """JobDefinition.
+class JobSearchParams(_serialization.Model):
+    """JobSearchParams.
 
-    All required parameters must be populated in order to send to Azure.
-
-    :ivar owner: Owner. Required.
-    :vartype owner: str
-    :ivar group: Group. Required.
-    :vartype group: str
-    :ivar vo: Vo. Required.
-    :vartype vo: str
-    :ivar jdl: Jdl. Required.
-    :vartype jdl: str
+    :ivar parameters: Parameters.
+    :vartype parameters: list[str]
+    :ivar search: Search.
+    :vartype search: list[~client.models.JobSearchParamsSearchItem]
+    :ivar sort: Sort.
+    :vartype sort: list[~client.models.JobSearchParamsSortItem]
     """
 
-    _validation = {
-        "owner": {"required": True},
-        "group": {"required": True},
-        "vo": {"required": True},
-        "jdl": {"required": True},
-    }
-
     _attribute_map = {
-        "owner": {"key": "owner", "type": "str"},
-        "group": {"key": "group", "type": "str"},
-        "vo": {"key": "vo", "type": "str"},
-        "jdl": {"key": "jdl", "type": "str"},
+        "parameters": {"key": "parameters", "type": "[str]"},
+        "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
+        "sort": {"key": "sort", "type": "[JobSearchParamsSortItem]"},
     }
 
     def __init__(
-        self, *, owner: str, group: str, vo: str, jdl: str, **kwargs: Any
+        self,
+        *,
+        parameters: Optional[List[str]] = None,
+        search: List["_models.JobSearchParamsSearchItem"] = [],
+        sort: List["_models.JobSearchParamsSortItem"] = [],
+        **kwargs: Any
     ) -> None:
         """
-        :keyword owner: Owner. Required.
-        :paramtype owner: str
-        :keyword group: Group. Required.
-        :paramtype group: str
-        :keyword vo: Vo. Required.
-        :paramtype vo: str
-        :keyword jdl: Jdl. Required.
-        :paramtype jdl: str
+        :keyword parameters: Parameters.
+        :paramtype parameters: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~client.models.JobSearchParamsSearchItem]
+        :keyword sort: Sort.
+        :paramtype sort: list[~client.models.JobSearchParamsSortItem]
         """
         super().__init__(**kwargs)
-        self.owner = owner
-        self.group = group
-        self.vo = vo
-        self.jdl = jdl
+        self.parameters = parameters
+        self.search = search
+        self.sort = sort
+
+
+class JobSearchParamsSearchItem(_serialization.Model):
+    """JobSearchParamsSearchItem."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
+
+
+class JobSearchParamsSortItem(_serialization.Model):
+    """JobSearchParamsSortItem."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
 
 
 class JobStatusReturn(_serialization.Model):
@@ -171,8 +181,9 @@ class JobStatusReturn(_serialization.Model):
 
     :ivar job_id: Job Id. Required.
     :vartype job_id: int
-    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", and "Killed".
-    :vartype status: str or ~dirac.models.JobStatus
+    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
+     "Failed", "RECEIVED", and "Submitting".
+    :vartype status: str or ~client.models.JobStatus
     """
 
     _validation = {
@@ -191,9 +202,9 @@ class JobStatusReturn(_serialization.Model):
         """
         :keyword job_id: Job Id. Required.
         :paramtype job_id: int
-        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", and
-         "Killed".
-        :paramtype status: str or ~dirac.models.JobStatus
+        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
+         "Failed", "RECEIVED", and "Submitting".
+        :paramtype status: str or ~client.models.JobStatus
         """
         super().__init__(**kwargs)
         self.job_id = job_id
@@ -207,8 +218,9 @@ class JobStatusUpdate(_serialization.Model):
 
     :ivar job_id: Job Id. Required.
     :vartype job_id: int
-    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", and "Killed".
-    :vartype status: str or ~dirac.models.JobStatus
+    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
+     "Failed", "RECEIVED", and "Submitting".
+    :vartype status: str or ~client.models.JobStatus
     """
 
     _validation = {
@@ -227,13 +239,163 @@ class JobStatusUpdate(_serialization.Model):
         """
         :keyword job_id: Job Id. Required.
         :paramtype job_id: int
-        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", and
-         "Killed".
-        :paramtype status: str or ~dirac.models.JobStatus
+        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
+         "Failed", "RECEIVED", and "Submitting".
+        :paramtype status: str or ~client.models.JobStatus
         """
         super().__init__(**kwargs)
         self.job_id = job_id
         self.status = status
+
+
+class JobSummaryParams(_serialization.Model):
+    """JobSummaryParams.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar grouping: Grouping. Required.
+    :vartype grouping: list[str]
+    :ivar search: Search.
+    :vartype search: list[~client.models.JobSummaryParamsSearchItem]
+    """
+
+    _validation = {
+        "grouping": {"required": True},
+    }
+
+    _attribute_map = {
+        "grouping": {"key": "grouping", "type": "[str]"},
+        "search": {"key": "search", "type": "[JobSummaryParamsSearchItem]"},
+    }
+
+    def __init__(
+        self,
+        *,
+        grouping: List[str],
+        search: List["_models.JobSummaryParamsSearchItem"] = [],
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword grouping: Grouping. Required.
+        :paramtype grouping: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~client.models.JobSummaryParamsSearchItem]
+        """
+        super().__init__(**kwargs)
+        self.grouping = grouping
+        self.search = search
+
+
+class JobSummaryParamsSearchItem(_serialization.Model):
+    """JobSummaryParamsSearchItem."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
+
+
+class ScalarSearchSpec(_serialization.Model):
+    """ScalarSearchSpec.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar parameter: Parameter. Required.
+    :vartype parameter: str
+    :ivar operator: Operator. Required.
+    :vartype operator: ~client.models.ScalarSearchSpecOperator
+    :ivar value: Value. Required.
+    :vartype value: str
+    """
+
+    _validation = {
+        "parameter": {"required": True},
+        "operator": {"required": True},
+        "value": {"required": True},
+    }
+
+    _attribute_map = {
+        "parameter": {"key": "parameter", "type": "str"},
+        "operator": {"key": "operator", "type": "ScalarSearchSpecOperator"},
+        "value": {"key": "value", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        parameter: str,
+        operator: "_models.ScalarSearchSpecOperator",
+        value: str,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword parameter: Parameter. Required.
+        :paramtype parameter: str
+        :keyword operator: Operator. Required.
+        :paramtype operator: ~client.models.ScalarSearchSpecOperator
+        :keyword value: Value. Required.
+        :paramtype value: str
+        """
+        super().__init__(**kwargs)
+        self.parameter = parameter
+        self.operator = operator
+        self.value = value
+
+
+class ScalarSearchSpecOperator(_serialization.Model):
+    """Operator."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
+
+
+class SortSpec(_serialization.Model):
+    """SortSpec.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar parameter: Parameter. Required.
+    :vartype parameter: str
+    :ivar direction: Direction. Required.
+    :vartype direction: ~client.models.SortSpecDirection
+    """
+
+    _validation = {
+        "parameter": {"required": True},
+        "direction": {"required": True},
+    }
+
+    _attribute_map = {
+        "parameter": {"key": "parameter", "type": "str"},
+        "direction": {"key": "direction", "type": "SortSpecDirection"},
+    }
+
+    def __init__(
+        self, *, parameter: str, direction: "_models.SortSpecDirection", **kwargs: Any
+    ) -> None:
+        """
+        :keyword parameter: Parameter. Required.
+        :paramtype parameter: str
+        :keyword direction: Direction. Required.
+        :paramtype direction: ~client.models.SortSpecDirection
+        """
+        super().__init__(**kwargs)
+        self.parameter = parameter
+        self.direction = direction
+
+
+class SortSpecDirection(_serialization.Model):
+    """Direction."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
 
 
 class TokenResponse(_serialization.Model):
@@ -284,7 +446,7 @@ class ValidationError(_serialization.Model):
     All required parameters must be populated in order to send to Azure.
 
     :ivar loc: Location. Required.
-    :vartype loc: list[~dirac.models.ValidationErrorLocItem]
+    :vartype loc: list[~client.models.ValidationErrorLocItem]
     :ivar msg: Message. Required.
     :vartype msg: str
     :ivar type: Error Type. Required.
@@ -313,7 +475,7 @@ class ValidationError(_serialization.Model):
     ) -> None:
         """
         :keyword loc: Location. Required.
-        :paramtype loc: list[~dirac.models.ValidationErrorLocItem]
+        :paramtype loc: list[~client.models.ValidationErrorLocItem]
         :keyword msg: Message. Required.
         :paramtype msg: str
         :keyword type: Error Type. Required.
@@ -327,6 +489,63 @@ class ValidationError(_serialization.Model):
 
 class ValidationErrorLocItem(_serialization.Model):
     """ValidationErrorLocItem."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
+
+
+class VectorSearchSpec(_serialization.Model):
+    """VectorSearchSpec.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar parameter: Parameter. Required.
+    :vartype parameter: str
+    :ivar operator: Operator. Required.
+    :vartype operator: ~client.models.VectorSearchSpecOperator
+    :ivar values: Values. Required.
+    :vartype values: list[str]
+    """
+
+    _validation = {
+        "parameter": {"required": True},
+        "operator": {"required": True},
+        "values": {"required": True},
+    }
+
+    _attribute_map = {
+        "parameter": {"key": "parameter", "type": "str"},
+        "operator": {"key": "operator", "type": "VectorSearchSpecOperator"},
+        "values": {"key": "values", "type": "[str]"},
+    }
+
+    def __init__(
+        self,
+        *,
+        parameter: str,
+        operator: "_models.VectorSearchSpecOperator",
+        values: List[str],
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword parameter: Parameter. Required.
+        :paramtype parameter: str
+        :keyword operator: Operator. Required.
+        :paramtype operator: ~client.models.VectorSearchSpecOperator
+        :keyword values: Values. Required.
+        :paramtype values: list[str]
+        """
+        super().__init__(**kwargs)
+        self.parameter = parameter
+        self.operator = operator
+        self.values = values
+
+
+class VectorSearchSpecOperator(_serialization.Model):
+    """Operator."""
 
     _attribute_map = {}
 

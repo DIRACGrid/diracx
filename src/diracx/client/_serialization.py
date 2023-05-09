@@ -27,31 +27,32 @@
 # pylint: skip-file
 # pyright: reportUnnecessaryTypeIgnoreComment=false
 
+from base64 import b64decode, b64encode
 import calendar
-import codecs
 import datetime
 import decimal
 import email
+from enum import Enum
 import json
 import logging
 import re
 import sys
-from base64 import b64decode, b64encode
-from enum import Enum
+import codecs
 from typing import (
-    IO,
-    Any,
-    AnyStr,
-    Callable,
     Dict,
+    Any,
+    cast,
+    Optional,
+    Union,
+    AnyStr,
+    IO,
+    Mapping,
+    Callable,
+    TypeVar,
+    MutableMapping,
+    Type,
     List,
     Mapping,
-    MutableMapping,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    cast,
 )
 
 try:
@@ -61,6 +62,7 @@ except ImportError:
 import xml.etree.ElementTree as ET
 
 import isodate  # type: ignore
+
 from azure.core.exceptions import (
     DeserializationError,
     SerializationError,
@@ -1729,9 +1731,7 @@ class Deserializer(object):
                 ):
                     return data
 
-                def is_a_text_parsing_type(x):
-                    return x not in ["object", "[]", "{}"]
-
+                is_a_text_parsing_type = lambda x: x not in ["object", "[]", r"{}"]
                 if (
                     isinstance(data, ET.Element)
                     and is_a_text_parsing_type(data_type)

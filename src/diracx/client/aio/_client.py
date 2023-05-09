@@ -25,13 +25,13 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     """Dirac.
 
     :ivar auth: AuthOperations operations
-    :vartype auth: dirac.aio.operations.AuthOperations
+    :vartype auth: client.aio.operations.AuthOperations
     :ivar jobs: JobsOperations operations
-    :vartype jobs: dirac.aio.operations.JobsOperations
+    :vartype jobs: client.aio.operations.JobsOperations
     :ivar config: ConfigOperations operations
-    :vartype config: dirac.aio.operations.ConfigOperations
+    :vartype config: client.aio.operations.ConfigOperations
     :ivar well_known: WellKnownOperations operations
-    :vartype well_known: dirac.aio.operations.WellKnownOperations
+    :vartype well_known: client.aio.operations.WellKnownOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """

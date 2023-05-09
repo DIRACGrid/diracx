@@ -5,22 +5,57 @@
 # --------------------------------------------------------------------------
 
 from enum import Enum
-
 from azure.core import CaseInsensitiveEnumMeta
 
 
 class Enum0(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum0."""
 
-    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = (
-        "urn:ietf:params:oauth:grant-type:device_code"
-    )
+    AUTHORIZATION_CODE = "authorization_code"
 
 
 class Enum1(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum1."""
 
-    AUTHORIZATION_CODE = "authorization_code"
+    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = (
+        "urn:ietf:params:oauth:grant-type:device_code"
+    )
+
+
+class Enum10(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum10."""
+
+    NEQ = "neq"
+
+
+class Enum11(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum11."""
+
+    GT = "gt"
+
+
+class Enum12(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum12."""
+
+    LT = "lt"
+
+
+class Enum13(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum13."""
+
+    LIKE = "like"
+
+
+class Enum14(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum14."""
+
+    ASC = "asc"
+
+
+class Enum15(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum15."""
+
+    DSC = "dsc"
 
 
 class Enum2(str, Enum, metaclass=CaseInsensitiveEnumMeta):
@@ -35,9 +70,48 @@ class Enum3(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     S256 = "S256"
 
 
+class Enum4(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum4."""
+
+    EQ = "eq"
+
+
+class Enum5(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum5."""
+
+    NEQ = "neq"
+
+
+class Enum6(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum6."""
+
+    GT = "gt"
+
+
+class Enum7(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum7."""
+
+    LT = "lt"
+
+
+class Enum8(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum8."""
+
+    LIKE = "like"
+
+
+class Enum9(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum9."""
+
+    EQ = "eq"
+
+
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """An enumeration."""
 
     RUNNING = "Running"
     STALLED = "Stalled"
     KILLED = "Killed"
+    FAILED = "Failed"
+    RECEIVED = "RECEIVED"
+    SUBMITTING = "Submitting"
