@@ -7,6 +7,7 @@
 from ._models import BodyAuthToken
 from ._models import BodyAuthTokenGrantType
 from ._models import HTTPValidationError
+from ._models import InitiateDeviceFlowResponse
 from ._models import JobSearchParams
 from ._models import JobSearchParamsSearchItem
 from ._models import JobSearchParamsSortItem
@@ -49,6 +50,7 @@ __all__ = [
     "BodyAuthToken",
     "BodyAuthTokenGrantType",
     "HTTPValidationError",
+    "InitiateDeviceFlowResponse",
     "JobSearchParams",
     "JobSearchParamsSearchItem",
     "JobSearchParamsSortItem",

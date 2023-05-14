@@ -115,6 +115,72 @@ class HTTPValidationError(_serialization.Model):
         self.detail = detail
 
 
+class InitiateDeviceFlowResponse(_serialization.Model):
+    """InitiateDeviceFlowResponse.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar user_code: User Code. Required.
+    :vartype user_code: str
+    :ivar device_code: Device Code. Required.
+    :vartype device_code: str
+    :ivar verification_uri_complete: Verification Uri Complete. Required.
+    :vartype verification_uri_complete: str
+    :ivar verification_uri: Verification Uri. Required.
+    :vartype verification_uri: str
+    :ivar expires_in: Expires In. Required.
+    :vartype expires_in: int
+    """
+
+    _validation = {
+        "user_code": {"required": True},
+        "device_code": {"required": True},
+        "verification_uri_complete": {"required": True},
+        "verification_uri": {"required": True},
+        "expires_in": {"required": True},
+    }
+
+    _attribute_map = {
+        "user_code": {"key": "user_code", "type": "str"},
+        "device_code": {"key": "device_code", "type": "str"},
+        "verification_uri_complete": {
+            "key": "verification_uri_complete",
+            "type": "str",
+        },
+        "verification_uri": {"key": "verification_uri", "type": "str"},
+        "expires_in": {"key": "expires_in", "type": "int"},
+    }
+
+    def __init__(
+        self,
+        *,
+        user_code: str,
+        device_code: str,
+        verification_uri_complete: str,
+        verification_uri: str,
+        expires_in: int,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword user_code: User Code. Required.
+        :paramtype user_code: str
+        :keyword device_code: Device Code. Required.
+        :paramtype device_code: str
+        :keyword verification_uri_complete: Verification Uri Complete. Required.
+        :paramtype verification_uri_complete: str
+        :keyword verification_uri: Verification Uri. Required.
+        :paramtype verification_uri: str
+        :keyword expires_in: Expires In. Required.
+        :paramtype expires_in: int
+        """
+        super().__init__(**kwargs)
+        self.user_code = user_code
+        self.device_code = device_code
+        self.verification_uri_complete = verification_uri_complete
+        self.verification_uri = verification_uri
+        self.expires_in = expires_in
+
+
 class JobSearchParams(_serialization.Model):
     """JobSearchParams.
 

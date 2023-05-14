@@ -547,9 +547,7 @@ class AuthOperations:
         )
 
     @distributed_trace
-    def do_device_flow(
-        self, vo: str, *, user_code: str, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def do_device_flow(self, vo: str, *, user_code: str, **kwargs: Any) -> Any:
         """Do Device Flow.
 
         This is called as the verification URI for the device flow.
@@ -565,8 +563,8 @@ class AuthOperations:
         :type vo: str
         :keyword user_code: Required.
         :paramtype user_code: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -580,7 +578,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_do_device_flow_request(
             vo=vo,
@@ -599,27 +597,23 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def initiate_device_flow(
         self, vo: str, *, client_id: str, scope: str, audience: str, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
         Initiate the device flow against DIRAC authorization Server.
@@ -638,8 +632,8 @@ class AuthOperations:
         :paramtype scope: str
         :keyword audience: Required.
         :paramtype audience: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: InitiateDeviceFlowResponse
+        :rtype: ~client.models.InitiateDeviceFlowResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -653,7 +647,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[_models.InitiateDeviceFlowResponse] = kwargs.pop("cls", None)
 
         request = build_auth_initiate_device_flow_request(
             vo=vo,
@@ -674,27 +668,25 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize(
+            "InitiateDeviceFlowResponse", pipeline_response
+        )
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def finish_device_flow(
         self, vo: str, *, code: str, state: str, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Finish Device Flow.
 
         This the url callbacked by IAM/Checkin after the authorization
@@ -709,8 +701,8 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -724,7 +716,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_finish_device_flow_request(
             vo=vo,
@@ -744,35 +736,29 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def finished(
-        self, vo: str, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def finished(self, vo: str, **kwargs: Any) -> Any:
         """Finished.
 
         Finished.
 
         :param vo: Required.
         :type vo: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -786,7 +772,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_finished_request(
             vo=vo,
@@ -804,22 +790,18 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def authorization_flow(
@@ -834,7 +816,7 @@ class AuthOperations:
         scope: str,
         state: str,
         **kwargs: Any,
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Authorization Flow.
 
         Authorization Flow.
@@ -855,8 +837,8 @@ class AuthOperations:
         :paramtype scope: str
         :keyword state: Required.
         :paramtype state: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -870,7 +852,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_authorization_flow_request(
             vo=vo,
@@ -895,27 +877,23 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def authorization_flow_complete(
         self, vo: str, *, code: str, state: str, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Authorization Flow Complete.
 
         Authorization Flow Complete.
@@ -926,8 +904,8 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -941,7 +919,7 @@ class AuthOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_authorization_flow_complete_request(
             vo=vo,
@@ -961,22 +939,18 @@ class AuthOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
 
 class JobsOperations:
@@ -1007,7 +981,7 @@ class JobsOperations:
         *,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> Union[List[JSON], _models.HTTPValidationError]:
+    ) -> List[JSON]:
         """Search.
 
         Search.
@@ -1017,8 +991,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON or HTTPValidationError
-        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :return: list of JSON
+        :rtype: list[JSON]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1029,7 +1003,7 @@ class JobsOperations:
         *,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> Union[List[JSON], _models.HTTPValidationError]:
+    ) -> List[JSON]:
         """Search.
 
         Search.
@@ -1039,15 +1013,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON or HTTPValidationError
-        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :return: list of JSON
+        :rtype: list[JSON]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
     def search(
         self, body: Optional[Union[_models.JobSearchParams, IO]] = None, **kwargs: Any
-    ) -> Union[List[JSON], _models.HTTPValidationError]:
+    ) -> List[JSON]:
         """Search.
 
         Search.
@@ -1057,8 +1031,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: list of JSON or HTTPValidationError
-        :rtype: list[JSON] or ~client.models.HTTPValidationError
+        :return: list of JSON
+        :rtype: list[JSON]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1075,9 +1049,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[Union[List[JSON], _models.HTTPValidationError]] = kwargs.pop(
-            "cls", None
-        )
+        cls: ClsType[List[JSON]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1108,22 +1080,18 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("[object]", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("[object]", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @overload
     def summary(
@@ -1132,7 +1100,7 @@ class JobsOperations:
         *,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -1142,15 +1110,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
     def summary(
         self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -1160,15 +1128,13 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def summary(
-        self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def summary(self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -1178,8 +1144,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1196,7 +1162,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1224,35 +1190,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def get_single_job(
-        self, job_id: int, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def get_single_job(self, job_id: int, **kwargs: Any) -> Any:
         """Get Single Job.
 
         Get Single Job.
 
         :param job_id: Required.
         :type job_id: int
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1266,7 +1226,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_get_single_job_request(
             job_id=job_id,
@@ -1284,35 +1244,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def delete_single_job(
-        self, job_id: int, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def delete_single_job(self, job_id: int, **kwargs: Any) -> Any:
         """Delete Single Job.
 
         Delete Single Job.
 
         :param job_id: Required.
         :type job_id: int
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1326,7 +1280,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_delete_single_job_request(
             job_id=job_id,
@@ -1344,35 +1298,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def kill_single_job(
-        self, job_id: int, **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def kill_single_job(self, job_id: int, **kwargs: Any) -> Any:
         """Kill Single Job.
 
         Kill Single Job.
 
         :param job_id: Required.
         :type job_id: int
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1386,7 +1334,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_kill_single_job_request(
             job_id=job_id,
@@ -1404,35 +1352,31 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def get_single_job_status(
         self, job_id: int, **kwargs: Any
-    ) -> Union[Union[str, _models.JobStatus], _models.HTTPValidationError]:
+    ) -> Union[str, _models.JobStatus]:
         """Get Single Job Status.
 
         Get Single Job Status.
 
         :param job_id: Required.
         :type job_id: int
-        :return: JobStatus or HTTPValidationError
-        :rtype: str or ~client.models.JobStatus or ~client.models.HTTPValidationError
+        :return: JobStatus
+        :rtype: str or ~client.models.JobStatus
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1446,9 +1390,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[
-            Union[Union[str, _models.JobStatus], _models.HTTPValidationError]
-        ] = kwargs.pop("cls", None)
+        cls: ClsType[Union[str, _models.JobStatus]] = kwargs.pop("cls", None)
 
         request = build_jobs_get_single_job_status_request(
             job_id=job_id,
@@ -1466,27 +1408,23 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("str", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("str", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
     def set_single_job_status(
         self, job_id: int, *, status: Union[str, _models.JobStatus], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Set Single Job Status.
 
         Set Single Job Status.
@@ -1496,8 +1434,8 @@ class JobsOperations:
         :keyword status: Known values are: "Running", "Stalled", "Killed", "Failed", "RECEIVED", and
          "Submitting". Required.
         :paramtype status: str or ~client.models.JobStatus
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1511,7 +1449,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_set_single_job_status_request(
             job_id=job_id,
@@ -1530,27 +1468,23 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @overload
     def submit_bulk_jobs(
         self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1560,15 +1494,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
     def submit_bulk_jobs(
         self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1578,15 +1512,13 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def submit_bulk_jobs(
-        self, body: Union[List[str], IO], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def submit_bulk_jobs(self, body: Union[List[str], IO], **kwargs: Any) -> Any:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1596,8 +1528,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1614,7 +1546,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1642,35 +1574,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def delete_bulk_jobs(
-        self, *, job_ids: List[int], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def delete_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
         """Delete Bulk Jobs.
 
         Delete Bulk Jobs.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1684,7 +1610,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_delete_bulk_jobs_request(
             job_ids=job_ids,
@@ -1702,35 +1628,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def kill_bulk_jobs(
-        self, *, job_ids: List[int], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def kill_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
         """Kill Bulk Jobs.
 
         Kill Bulk Jobs.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1744,7 +1664,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_kill_bulk_jobs_request(
             job_ids=job_ids,
@@ -1762,35 +1682,29 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @distributed_trace
-    def get_bulk_job_status(
-        self, *, job_ids: List[int], **kwargs: Any
-    ) -> Union[Any, _models.HTTPValidationError]:
+    def get_bulk_job_status(self, *, job_ids: List[int], **kwargs: Any) -> Any:
         """Get Bulk Job Status.
 
         Get Bulk Job Status.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1804,7 +1718,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_jobs_get_bulk_job_status_request(
             job_ids=job_ids,
@@ -1822,22 +1736,18 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
     @overload
     def set_status_bulk(
@@ -1846,7 +1756,7 @@ class JobsOperations:
         *,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> Union[List[_models.JobStatusReturn], _models.HTTPValidationError]:
+    ) -> List[_models.JobStatusReturn]:
         """Set Status Bulk.
 
         Set Status Bulk.
@@ -1856,15 +1766,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
+        :return: list of JobStatusReturn
+        :rtype: list[~client.models.JobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
     def set_status_bulk(
         self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Union[List[_models.JobStatusReturn], _models.HTTPValidationError]:
+    ) -> List[_models.JobStatusReturn]:
         """Set Status Bulk.
 
         Set Status Bulk.
@@ -1874,15 +1784,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
+        :return: list of JobStatusReturn
+        :rtype: list[~client.models.JobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
     def set_status_bulk(
         self, body: Union[List[_models.JobStatusUpdate], IO], **kwargs: Any
-    ) -> Union[List[_models.JobStatusReturn], _models.HTTPValidationError]:
+    ) -> List[_models.JobStatusReturn]:
         """Set Status Bulk.
 
         Set Status Bulk.
@@ -1892,8 +1802,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: list of JobStatusReturn or HTTPValidationError
-        :rtype: list[~client.models.JobStatusReturn] or ~client.models.HTTPValidationError
+        :return: list of JobStatusReturn
+        :rtype: list[~client.models.JobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1910,9 +1820,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[
-            Union[List[_models.JobStatusReturn], _models.HTTPValidationError]
-        ] = kwargs.pop("cls", None)
+        cls: ClsType[List[_models.JobStatusReturn]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1940,22 +1848,18 @@ class JobsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("[JobStatusReturn]", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("[JobStatusReturn]", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
 
 class ConfigOperations:
@@ -1987,7 +1891,7 @@ class ConfigOperations:
         if_none_match: Optional[str] = None,
         if_modified_since: Optional[str] = None,
         **kwargs: Any,
-    ) -> Union[Any, _models.HTTPValidationError]:
+    ) -> Any:
         """Serve Config.
 
         "
@@ -2004,8 +1908,8 @@ class ConfigOperations:
         :paramtype if_none_match: str
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
-        :return: any or HTTPValidationError
-        :rtype: any or ~client.models.HTTPValidationError
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -2019,7 +1923,7 @@ class ConfigOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Union[Any, _models.HTTPValidationError]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_config_serve_config_request(
             vo=vo,
@@ -2039,22 +1943,18 @@ class ConfigOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 422]:
+        if response.status_code not in [200]:
             map_error(
                 status_code=response.status_code, response=response, error_map=error_map
             )
             raise HttpResponseError(response=response)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize("object", pipeline_response)
-
-        if response.status_code == 422:
-            deserialized = self._deserialize("HTTPValidationError", pipeline_response)
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})
 
-        return deserialized  # type: ignore
+        return deserialized
 
 
 class WellKnownOperations:
