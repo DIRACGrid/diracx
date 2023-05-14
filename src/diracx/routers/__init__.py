@@ -17,15 +17,31 @@ def generate_unique_id_function(route: APIRoute) -> str:
     return f"{route.tags[0]}_{route.name}"
 
 
-app = FastAPI(
-    swagger_ui_init_oauth={
-        "clientId": auth.DIRAC_CLIENT_ID,
-        "scopes": "group:lhcb_user property:NormalUser",
-        "usePkceWithAuthorizationCodeGrant": True,
-    },
-    generate_unique_id_function=generate_unique_id_function,
-    title="Dirac",
-)
+class DiracFastAPI(FastAPI):
+    def __init__(self):
+        super().__init__(
+            swagger_ui_init_oauth={
+                "clientId": auth.DIRAC_CLIENT_ID,
+                "scopes": "group:lhcb_user property:NormalUser",
+                "usePkceWithAuthorizationCodeGrant": True,
+            },
+            generate_unique_id_function=generate_unique_id_function,
+            title="Dirac",
+        )
+
+    def openapi(self, *args, **kwargs):
+        if not app.openapi_schema:
+            super().openapi(*args, **kwargs)
+            for _, method_item in app.openapi_schema.get("paths").items():
+                for _, param in method_item.items():
+                    responses = param.get("responses")
+                    # remove 422 response, also can remove other status code
+                    if "422" in responses:
+                        del responses["422"]
+        return app.openapi_schema
+
+
+app = DiracFastAPI()
 
 
 @app.exception_handler(DiracError)

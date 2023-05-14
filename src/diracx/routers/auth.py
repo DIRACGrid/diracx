@@ -72,7 +72,10 @@ KNOWN_CLIENTS = {
     }
 }
 
-SID_TO_USERNAME = {"b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen"}
+SID_TO_USERNAME = {
+    "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen",
+    "59382c3f-181c-4df8-981d-ec3e9015fcb9": "cburr",
+}
 
 # Duration for which the flows against DIRAC AS are valid
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
@@ -219,6 +222,14 @@ async def exchange_token(
     )
 
 
+class InitiateDeviceFlowResponse(TypedDict):
+    user_code: str
+    device_code: str
+    verification_uri_complete: str
+    verification_uri: str
+    expires_in: int
+
+
 @router.post("/{vo}/device")
 async def initiate_device_flow(
     vo: str,
@@ -228,7 +239,7 @@ async def initiate_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-):
+) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
     one or more `property` scope.
@@ -258,7 +269,7 @@ async def initiate_device_flow(
         "user_code": user_code,
         "device_code": device_code,
         "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
-        "verification_uri": verification_uri,
+        "verification_uri": str(request.url.replace(query={})),
         "expires_in": DEVICE_FLOW_EXPIRATION_SECONDS,
     }
 
