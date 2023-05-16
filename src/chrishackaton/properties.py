@@ -56,6 +56,8 @@ class SecurityProperty(str, Enum):
     FC_MANAGEMENT = "FileCatalogManagement"
     #: Allow staging files
     STAGE_ALLOWED = "StageAllowed"
+    # TODO: LHCb specific
+    STEP_ADMINISTRATOR = "StepAdministrator"
 
     def __str__(self) -> str:
         return str(self.name)

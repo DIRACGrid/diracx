@@ -6,46 +6,11 @@ import git
 import yaml
 from cachetools import LRUCache, TTLCache, cachedmethod
 
-from .exceptions import BadConfigurationVersion
-from .properties import SecurityProperty
+from .schema import Config
+from ..exceptions import BadConfigurationVersion
+from ..properties import SecurityProperty
 
 DEFAULT_CONFIG_FILE = "default.yml"
-
-
-class Config(dict):
-    """Object that represents a configuration
-    Attributes are the way to access the elements
-
-    Make it a dict such that it is json serializable
-
-    TODO: hack until we have proper pydantic model
-    """
-
-    def __init__(self, obj, hexsha: str, modified: datetime):
-        self._obj = obj
-        self.hexsha = hexsha
-        self.modified = modified
-        super().__init__(obj)
-
-    # def __contains__(self, key):
-    #     return key in self._obj
-
-    def __getitem__(self, key):
-        value = super().__getitem__(key)
-        if isinstance(value, dict):
-            return self.__class__(value, self.hexsha, self.modified)
-        return value
-
-    def __getattr__(self, key):
-        try:
-            value = self[key]
-        except KeyError:
-            raise AttributeError(
-                f"type object '{self.__class__.__name__}' has no attribute '{key}'"
-            ) from None
-        return value
-
-
 DEFAULT_CS_CACHE_TTL = 5
 MAX_CS_CACHED_VERSIONS = 1
 
@@ -57,6 +22,11 @@ class LocalGitConfigSource:
 
     def __hash__(self):
         return hash(self.repo_location)
+
+    @classmethod
+    def clear_caches(cls):
+        cls._latest_revision_cache.clear()
+        cls._read_raw_cache.clear()
 
     _latest_revision_cache = TTLCache(MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL)
 
@@ -72,7 +42,7 @@ class LocalGitConfigSource:
     _read_raw_cache = LRUCache(MAX_CS_CACHED_VERSIONS)
 
     @cachedmethod(lambda self: self._read_raw_cache)
-    def read_raw(self, hexsha: str, modified: datetime) -> str:
+    def read_raw(self, hexsha: str, modified: datetime) -> Config:
         """ "
         Returns the raw data from the git repo
 
@@ -81,11 +51,13 @@ class LocalGitConfigSource:
         print("config read_raw")
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
-        return Config(
-            yaml.safe_load(blob.data_stream.read().decode()), hexsha, modified
-        )
+        raw_obj = yaml.safe_load(blob.data_stream.read().decode())
+        config = Config.parse_obj(raw_obj)
+        config._hexsha = hexsha
+        config._modified = modified
+        return config
 
-    def read_config(self, version: str = "master") -> Config:
+    def read_config(self) -> Config:
         """
         :raises:
             git.exc.BadName if version does not exist
@@ -95,9 +67,7 @@ class LocalGitConfigSource:
 
 
 def get_config() -> Config:
-    return LocalGitConfigSource(Path(os.environ["DIRAC_CS_SOURCE"])).read_config(
-        "master"
-    )
+    return LocalGitConfigSource(Path(os.environ["DIRAC_CS_SOURCE"])).read_config()
 
 
 Registry = {

@@ -43,11 +43,11 @@ async def serve_config(
         return 304: this is to avoid flip/flopping
     """
     headers = {
-        "ETag": config.hexsha,
-        "Last-Modified": config.modified.strftime(LAST_MODIFIED_FORMAT),
+        "ETag": config._hexsha,
+        "Last-Modified": config._modified.strftime(LAST_MODIFIED_FORMAT),
     }
 
-    if if_none_match == config.hexsha:
+    if if_none_match == config._hexsha:
         raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
 
     # This is to prevent flip/flopping in case
@@ -61,7 +61,7 @@ async def serve_config(
             pass
         else:
             if_modified_since = if_modified_since.astimezone(timezone.utc)
-            if if_modified_since > config.modified:
+            if if_modified_since > config._modified:
                 raise HTTPException(
                     status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
                 )

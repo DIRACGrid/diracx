@@ -15,13 +15,9 @@ class AuthorizationError(DIRACError):
 class PendingAuthorizationError(AuthorizationError):
     """Used to signal the device flow the authentication is still ongoing"""
 
-    ...
-
 
 class ExpiredFlowError(AuthorizationError):
     """Used only for the Device Flow when the polling is expired"""
-
-    ...
 
 
 class ConfigurationError(DIRACError):

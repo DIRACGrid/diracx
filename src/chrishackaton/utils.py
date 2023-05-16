@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -18,7 +18,7 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
     return Depends(require_property)
 
 
-class JobStatus(StrEnum):
+class JobStatus(str, Enum):
     Running = "Running"
     Stalled = "Stalled"
     Killed = "Killed"
