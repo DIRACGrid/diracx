@@ -6,9 +6,9 @@ import pytest
 from pytest_asyncio import fixture
 from sqlalchemy.exc import NoResultFound
 
-from chrishackaton.db.auth.db import AuthDB
-from chrishackaton.db.auth.schema import USER_CODE_LENGTH
-from chrishackaton.exceptions import AuthorizationError, ExpiredFlowError
+from diracx.core.exceptions import AuthorizationError, ExpiredFlowError
+from diracx.db.auth.db import AuthDB
+from diracx.db.auth.schema import USER_CODE_LENGTH
 
 MAX_VALIDITY = 2
 EXPIRED = 0

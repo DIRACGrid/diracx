@@ -4,10 +4,10 @@ from fastapi.testclient import TestClient
 from git import Repo
 from pytest import fixture
 
-from chrishackaton.config import Config, LocalGitConfigSource
-from chrishackaton import app
-from chrishackaton.properties import SecurityProperty
-from chrishackaton.routers.auth import create_access_token
+from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.properties import SecurityProperty
+from diracx.routers import app
+from diracx.routers.auth import create_access_token
 
 # to get a string like this run:
 # openssl rand -hex 32

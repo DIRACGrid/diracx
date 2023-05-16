@@ -4,12 +4,12 @@ from typing import Annotated, TypedDict
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from chrishackaton.utils import JobStatus
+from diracx.core.properties import SecurityProperty
+from diracx.core.utils import JobStatus
+from diracx.db.jobs.db import JobDB, get_job_db
 
-from ...db.jobs.db import JobDB, get_job_db
-from ...properties import SecurityProperty
-from ...utils import has_properties
 from ..auth import UserInfo, verify_dirac_token
+from ..utils import has_properties
 
 MAX_PARAMETRIC_JOBS = 20
 

@@ -1,10 +1,12 @@
-from enum import Enum
+__all__ = ("has_properties",)
+
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from .properties import SecurityProperty, UnevaluatedProperty
-from .routers.auth import UserInfo, verify_dirac_token
+from diracx.core.properties import SecurityProperty, UnevaluatedProperty
+
+from .auth import UserInfo, verify_dirac_token
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
@@ -16,12 +18,3 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
     return Depends(require_property)
-
-
-class JobStatus(str, Enum):
-    Running = "Running"
-    Stalled = "Stalled"
-    Killed = "Killed"
-    Failed = "Failed"
-    RECEIVED = "RECEIVED"
-    SUBMITTING = "Submitting"

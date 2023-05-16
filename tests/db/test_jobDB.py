@@ -5,7 +5,7 @@ import asyncio
 from pytest import mark
 from pytest_asyncio import fixture
 
-from chrishackaton.db.jobs.db import JobDB
+from diracx.db.jobs.db import JobDB
 
 
 @fixture

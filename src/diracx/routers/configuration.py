@@ -12,9 +12,10 @@ from fastapi import (
     status,
 )
 
-from ..config import Config, get_config
-from ..properties import SecurityProperty
-from ..utils import has_properties
+from diracx.core.config import Config, get_config
+from diracx.core.properties import SecurityProperty
+
+from .utils import has_properties
 
 router = APIRouter(
     tags=["config"],

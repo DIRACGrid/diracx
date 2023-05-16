@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from chrishackaton import app
+from diracx.routers import app
 
 
 def test_unauthenticated():

@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError
 
-from chrishackaton.exceptions import (
+from diracx.core.exceptions import (
     AuthorizationError,
     ExpiredFlowError,
     PendingAuthorizationError,
