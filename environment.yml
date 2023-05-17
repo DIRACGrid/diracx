@@ -1,0 +1,35 @@
+name: diracx-dev
+channels:
+  - diracgrid
+  - conda-forge
+  - defaults
+dependencies:
+  - authlib
+  - aiohttp
+  - aiosqlite
+  - azure-core
+  - dirac-grid
+  - email-validator
+  - fastapi
+  - git
+  - gitpython
+  - httpx
+  - isodate
+  - mypy
+  - pydantic
+  - pytest
+  - pytest-asyncio
+  - pytest-cov
+  - pytest-httpx
+  - python
+  - python-jose
+  - python-multipart
+  - pyyaml
+  - requests
+  - sqlalchemy
+  - types-cachetools
+  - types-PyYAML
+  - types-requests
+  - uvicorn
+  - pip:
+    - git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
