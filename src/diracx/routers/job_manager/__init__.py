@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Annotated, Any, Literal, TypedDict
 
 from fastapi import APIRouter, Depends, Query
@@ -167,12 +168,19 @@ class JobDefinition(BaseModel):
     jdl: str
 
 
+class InsertedJob(TypedDict):
+    JobID: int
+    Status: str
+    MinorStatus: str
+    TimeStamp: datetime
+
+
 @router.post("/")
 async def submit_bulk_jobs(
     job_definitions: list[str],
     job_db: Annotated[JobDB, Depends(get_job_db)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
-):
+) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.DErrno import EWMSJDL
     from DIRAC.WorkloadManagementSystem.Utilities.ParametricJob import (

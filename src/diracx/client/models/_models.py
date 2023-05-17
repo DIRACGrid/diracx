@@ -5,6 +5,7 @@
 # Changes may cause incorrect behavior and will be lost if the code is regenerated.
 # --------------------------------------------------------------------------
 
+import datetime
 from typing import Any, List, Optional, TYPE_CHECKING, Union
 
 from .. import _serialization
@@ -179,6 +180,61 @@ class InitiateDeviceFlowResponse(_serialization.Model):
         self.verification_uri_complete = verification_uri_complete
         self.verification_uri = verification_uri
         self.expires_in = expires_in
+
+
+class InsertedJob(_serialization.Model):
+    """InsertedJob.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar job_id: Jobid. Required.
+    :vartype job_id: int
+    :ivar status: Status. Required.
+    :vartype status: str
+    :ivar minor_status: Minorstatus. Required.
+    :vartype minor_status: str
+    :ivar time_stamp: Timestamp. Required.
+    :vartype time_stamp: ~datetime.datetime
+    """
+
+    _validation = {
+        "job_id": {"required": True},
+        "status": {"required": True},
+        "minor_status": {"required": True},
+        "time_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "job_id": {"key": "JobID", "type": "int"},
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "time_stamp": {"key": "TimeStamp", "type": "iso-8601"},
+    }
+
+    def __init__(
+        self,
+        *,
+        job_id: int,
+        status: str,
+        minor_status: str,
+        time_stamp: datetime.datetime,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword job_id: Jobid. Required.
+        :paramtype job_id: int
+        :keyword status: Status. Required.
+        :paramtype status: str
+        :keyword minor_status: Minorstatus. Required.
+        :paramtype minor_status: str
+        :keyword time_stamp: Timestamp. Required.
+        :paramtype time_stamp: ~datetime.datetime
+        """
+        super().__init__(**kwargs)
+        self.job_id = job_id
+        self.status = status
+        self.minor_status = minor_status
+        self.time_stamp = time_stamp
 
 
 class JobSearchParams(_serialization.Model):

@@ -1484,7 +1484,7 @@ class JobsOperations:
     @overload
     def submit_bulk_jobs(
         self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
-    ) -> Any:
+    ) -> List[_models.InsertedJob]:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1494,15 +1494,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any
-        :rtype: any
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
     def submit_bulk_jobs(
         self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Any:
+    ) -> List[_models.InsertedJob]:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1512,13 +1512,15 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any
-        :rtype: any
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def submit_bulk_jobs(self, body: Union[List[str], IO], **kwargs: Any) -> Any:
+    def submit_bulk_jobs(
+        self, body: Union[List[str], IO], **kwargs: Any
+    ) -> List[_models.InsertedJob]:
         """Submit Bulk Jobs.
 
         Submit Bulk Jobs.
@@ -1528,8 +1530,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: any
-        :rtype: any
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1546,7 +1548,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[List[_models.InsertedJob]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1580,7 +1582,7 @@ class JobsOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response)
+        deserialized = self._deserialize("[InsertedJob]", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
