@@ -107,13 +107,17 @@ def test_insert_and_search(normal_user_client):
     assert {x["VerifiedFlag"] for x in r.json()} == {True}
 
     r = normal_user_client.post(
-        "/jobs/search", json={"search": [["Status", "eq", "NEW"]]}
+        "/jobs/search",
+        json={"search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}]},
     )
     assert r.status_code == 200, r.json()
     assert r.json() == []
 
     r = normal_user_client.post(
-        "/jobs/search", json={"search": [["Status", "eq", "RECEIVED"]]}
+        "/jobs/search",
+        json={
+            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]
+        },
     )
     assert r.status_code == 200, r.json()
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
@@ -135,14 +139,20 @@ def test_insert_and_search(normal_user_client):
 
     r = normal_user_client.post(
         "/jobs/summary",
-        json={"grouping": ["Status"], "search": [["Status", "eq", "RECEIVED"]]},
+        json={
+            "grouping": ["Status"],
+            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}],
+        },
     )
     assert r.status_code == 200, r.json()
     assert r.json() == [{"Status": "RECEIVED", "count": 1}]
 
     r = normal_user_client.post(
         "/jobs/summary",
-        json={"grouping": ["Status"], "search": [["Status", "eq", "NEW"]]},
+        json={
+            "grouping": ["Status"],
+            "search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}],
+        },
     )
     assert r.status_code == 200, r.json()
     assert r.json() == []

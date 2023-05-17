@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+__all__ = ("Config", "get_config", "LocalGitConfigSource")
+
 import os
 from datetime import datetime, timezone
 from pathlib import Path

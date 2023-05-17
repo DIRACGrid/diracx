@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 
 from diracx.core.exceptions import DIRACError
@@ -13,9 +13,7 @@ from . import auth, configuration, job_manager
 # methods name should follow the generate_unique_id_function pattern
 
 
-def generate_unique_id_function(route: APIRoute):
-    # breakpoint()
-
+def generate_unique_id_function(route: APIRoute) -> str:
     return f"{route.tags[0]}_{route.name}"
 
 
@@ -31,7 +29,7 @@ app = FastAPI(
 
 
 @app.exception_handler(DIRACError)
-async def authorization_error_handler(request: Request, exc: DIRACError):
+async def authorization_error_handler(request: Request, exc: DIRACError) -> Response:
     return JSONResponse(
         status_code=exc.http_status_code, content={"detail": exc.detail}
     )
@@ -54,13 +52,13 @@ app.include_router(
 
 
 @app.on_event("startup")
-async def startup():
+async def startup() -> None:
     await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
     await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
 
 
 @app.on_event("shutdown")
-async def shutdown():
+async def shutdown() -> None:
     await JobDB.destroy_engine()
     await AuthDB.destroy_engine()
 
