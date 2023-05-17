@@ -2,8 +2,6 @@ from __future__ import annotations
 
 __all__ = ("app",)
 
-from typing import List
-
 from rich.console import Console
 from rich.table import Table
 from typer import FileText
@@ -68,9 +66,9 @@ def display_rich(data, unit: str) -> None:
 
 
 @app.async_command()
-async def submit(jdl: List[FileText]):
+async def submit(jdl: list[FileText]):
     async with Dirac(endpoint="http://localhost:8000") as api:
-        jobs = await api.jobs.submit_bulk_jobs(jdl)
+        jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl])
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )
