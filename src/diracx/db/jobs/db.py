@@ -48,7 +48,7 @@ class JobDB(BaseDB):
 
         stmt = select(*columns, func.count(Jobs.JobID).label("count"))
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
-        stmt.group_by(*columns)
+        stmt = stmt.group_by(*columns)
 
         # Execute the query
         return [
