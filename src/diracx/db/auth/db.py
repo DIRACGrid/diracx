@@ -66,12 +66,11 @@ class AuthDB(BaseDB):
 
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning
-            stmt = (
+            await self.conn.execute(
                 update(DeviceFlows)
                 .where(DeviceFlows.device_code == device_code)
                 .values(status=FlowStatus.DONE)
             )
-            await self.conn.execute(stmt)
 
             return res
 
@@ -111,7 +110,7 @@ class AuthDB(BaseDB):
         for _ in range(MAX_RETRY):
             user_code = "".join(
                 secrets.choice(USER_CODE_ALPHABET)
-                for _ in range(DeviceFlows.user_code.type.length)
+                for _ in range(DeviceFlows.user_code.type.length)  # type: ignore
             )
             # user_code = "2QRKPY"
             device_code = secrets.token_urlsafe()
@@ -200,12 +199,11 @@ class AuthDB(BaseDB):
 
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning
-            stmt = (
+            await self.conn.execute(
                 update(AuthorizationFlows)
                 .where(AuthorizationFlows.code == code)
                 .values(status=FlowStatus.DONE)
             )
-            await self.conn.execute(stmt)
 
             return res
 

@@ -10,11 +10,14 @@ from .auth import UserInfo, verify_dirac_token
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
-    if not isinstance(expression, UnevaluatedProperty):
-        expression = UnevaluatedProperty(expression)
+    evaluator = (
+        expression
+        if isinstance(expression, UnevaluatedProperty)
+        else UnevaluatedProperty(expression)
+    )
 
     async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
-        if not expression(user.properties):
+        if not evaluator(user.properties):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
     return Depends(require_property)

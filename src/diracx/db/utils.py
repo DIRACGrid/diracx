@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
 import datetime
+from abc import ABCMeta
 from functools import partial
 
 from sqlalchemy import Column as RawColumn
-from sqlalchemy import DateTime, Enum
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import DateTime, Enum, MetaData
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 
@@ -50,7 +53,10 @@ def EnumColumn(enum_type, **kwargs):
     return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
-class BaseDB:
+class BaseDB(metaclass=ABCMeta):
+    engine: AsyncEngine
+    metadata: MetaData
+
     def __init__(self):
         self._conn = None
 

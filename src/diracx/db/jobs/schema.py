@@ -1,3 +1,4 @@
+import sqlalchemy.types as types
 from sqlalchemy import (
     DateTime,
     Enum,
@@ -14,6 +15,32 @@ from sqlalchemy.orm import declarative_base
 from ..utils import Column, NullColumn
 
 Base = declarative_base()
+
+
+class EnumBackedBool(types.TypeDecorator):
+    """Maps a ``EnumBackedBool()`` column to True/False in Python"""
+
+    impl = types.Enum
+    cache_ok = True
+
+    def __init__(self):
+        super().__init__("True", "False")
+
+    def process_bind_param(self, value, dialect):
+        if value is True:
+            return "True"
+        elif value is False:
+            return "False"
+        else:
+            raise NotImplementedError(value, dialect)
+
+    def process_result_value(self, value, dialect):
+        if value == "True":
+            return True
+        elif value == "False":
+            return False
+        else:
+            raise NotImplementedError(f"Unknown {value=}")
 
 
 class JobJDLs(Base):
@@ -54,18 +81,14 @@ class Jobs(Base):
     UserPriority = Column("UserPriority", Integer, default=0)
     SystemPriority = Column("SystemPriority", Integer, default=0)
     RescheduleCounter = Column("RescheduleCounter", Integer, default=0)
-    # TODO: Map these to True/False in Python
-    VerifiedFlag = Column("VerifiedFlag", Enum("True", "False"), default="False")
-    DeletedFlag = Column("DeletedFlag", Enum("True", "False"), default="False")
-    KilledFlag = Column("KilledFlag", Enum("True", "False"), default="False")
-    FailedFlag = Column("FailedFlag", Enum("True", "False"), default="False")
-    ISandboxReadyFlag = Column(
-        "ISandboxReadyFlag", Enum("True", "False"), default="False"
-    )
-    OSandboxReadyFlag = Column(
-        "OSandboxReadyFlag", Enum("True", "False"), default="False"
-    )
-    RetrievedFlag = Column("RetrievedFlag", Enum("True", "False"), default="False")
+    VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
+    DeletedFlag = Column("DeletedFlag", EnumBackedBool(), default=False)
+    KilledFlag = Column("KilledFlag", EnumBackedBool(), default=False)
+    FailedFlag = Column("FailedFlag", EnumBackedBool(), default=False)
+    ISandboxReadyFlag = Column("ISandboxReadyFlag", EnumBackedBool(), default=False)
+    OSandboxReadyFlag = Column("OSandboxReadyFlag", EnumBackedBool(), default=False)
+    RetrievedFlag = Column("RetrievedFlag", EnumBackedBool(), default=False)
+    # TODO: Should this be True/False/"Failed"? Or True/False/Null?
     AccountedFlag = Column(
         "AccountedFlag", Enum("True", "False", "Failed"), default="False"
     )

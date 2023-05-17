@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import func, insert, select, update
 
@@ -91,14 +92,6 @@ class JobDB(BaseDB):
         # Execute the query
         return [row._mapping async for row in (await self.conn.stream(stmt))]
 
-    async def list(self):
-        stmt = select(JobJDLs)
-        res = [row._mapping async for row in (await self.conn.stream(stmt))]
-        # return
-        return res
-        # result = await self.conn.execute(stmt)
-        # return result.fetchall()
-
     async def _insertNewJDL(self, jdl) -> int:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
@@ -109,11 +102,11 @@ class JobDB(BaseDB):
         # await self.engine.commit()
         return result.lastrowid
 
-    async def _insertJob(self, jobData: dict):
+    async def _insertJob(self, jobData: dict[str, Any]):
         stmt = insert(Jobs).values(jobData)
         await self.conn.execute(stmt)
 
-    async def _insertInputData(self, job_id: int, lfns: list):
+    async def _insertInputData(self, job_id: int, lfns: list[str]):
         stmt = insert(InputData).values([{"JobID": job_id, "LFN": lfn} for lfn in lfns])
         await self.conn.execute(stmt)
 
@@ -257,6 +250,7 @@ class JobDB(BaseDB):
             job_attrs,
             initial_status,
             initial_minor_status,
+            modern=True,
         )
 
         await self.setJobJDL(job_id, jobJDL)

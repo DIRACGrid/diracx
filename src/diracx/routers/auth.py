@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, TypedDict, overload
 from uuid import UUID, uuid4
 
 import httpx
@@ -120,7 +120,7 @@ class AuthInfo(BaseModel):
     token_id: UUID
 
     # list of DIRAC properties
-    properties: list[str]
+    properties: list[SecurityProperty]
 
 
 class UserInfo(AuthInfo):
@@ -188,7 +188,7 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
 
 
 async def exchange_token(
-    dirac_group: str, id_token: dict[str:str], config: Config
+    dirac_group: str, id_token: dict[str, str], config: Config
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
 
@@ -298,7 +298,9 @@ async def initiate_authorization_flow_with_iam(
     return authorization_flow_url
 
 
-async def get_token_from_iam(vo: str, code: str, state: str, redirect_uri: str) -> str:
+async def get_token_from_iam(
+    vo: str, code: str, state: dict[str, str], redirect_uri: str
+) -> dict[str, str]:
     client = oauth.create_client(vo)
     await client.load_server_metadata()
 
@@ -347,7 +349,7 @@ async def do_device_flow(
     request: Request,
     response: Response,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
-    user_code: Optional[str] = None,
+    user_code: str,
 ):
     """
     This is called as the verification URI for the device flow.
@@ -358,7 +360,6 @@ async def do_device_flow(
     to be able to map the authorization flow with the corresponding
     device flow.
     (note: it can't be put as parameter or in the URL)
-
     """
 
     # Here we make sure the user_code actualy exists
@@ -433,7 +434,12 @@ class DeviceCodeTokenForm(BaseModel):
     client_id: str
 
 
-def parse_and_validate_scope(scope: str, vo: str, config: Config) -> dict[str, str]:
+class ScopeInfoDict(TypedDict):
+    group: str
+    properties: list[str]
+
+
+def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDict:
     """
     Check:
         * At most one group
@@ -445,8 +451,6 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> dict[str, s
         * ValueError in case the scope isn't valide
     """
     scopes = set(scope.split(" "))
-
-    parsed_scope = {}
 
     groups = []
     properties = []
@@ -469,47 +473,75 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> dict[str, s
         group = groups[0]
         if group not in config.Registry.Groups[vo]:
             raise ValueError(f"{group} not in {vo} groups")
-    parsed_scope["group"] = group
 
     if not set(properties).issubset(SecurityProperty):
         raise ValueError(
             f"{set(properties)-set(SecurityProperty)} are not valid properties"
         )
 
-    parsed_scope["properties"] = properties
+    return {
+        "group": group,
+        "properties": properties,
+    }
 
-    return parsed_scope
 
-
+@overload
 @router.post("/{vo}/token")
 async def token(
     vo: str,
-    # data: Annotated[DeviceCodeTokenForm, Form()],
     grant_type: Annotated[
-        Literal["urn:ietf:params:oauth:grant-type:device_code"]
-        | Literal["authorization_code"],
+        Literal["urn:ietf:params:oauth:grant-type:device_code"],
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-    device_code: Annotated[
-        Optional[str], Form(description="device code for OAuth2 device flow")
-    ] = None,
-    code: Annotated[
-        Optional[str], Form(description="Code for OAuth2 authorization code flow")
-    ] = None,
+    device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
+    code: None,
+    redirect_uri: None,
+    code_verifier: None,
+) -> TokenResponse:
+    ...
+
+
+@overload
+@router.post("/{vo}/token")
+async def token(
+    vo: str,
+    grant_type: Annotated[
+        Literal["authorization_code"],
+        Form(description="OAuth2 Grant type"),
+    ],
+    client_id: Annotated[str, Form(description="OAuth2 client id")],
+    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
+    device_code: None,
+    code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
     redirect_uri: Annotated[
-        Optional[str],
-        Form(description="redirect_uri used with OAuth2 authorization code flow"),
-    ] = None,
+        str, Form(description="redirect_uri used with OAuth2 authorization code flow")
+    ],
     code_verifier: Annotated[
-        Optional[str],
+        str,
         Form(
             description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
         ),
-    ] = None,
+    ],
 ) -> TokenResponse:
+    ...
+
+
+@router.post("/{vo}/token")
+async def token(
+    vo,
+    grant_type,
+    client_id,
+    auth_db,
+    config,
+    device_code,
+    code,
+    redirect_uri,
+    code_verifier,
+):
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
