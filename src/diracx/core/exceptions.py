@@ -26,3 +26,7 @@ class ConfigurationError(DIRACError):
 
 class BadConfigurationVersion(ConfigurationError):
     """The requested version is not known"""
+
+
+class InvalidQueryError(DIRACError):
+    """It was not possible to build a valid database query from the given input"""

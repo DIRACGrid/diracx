@@ -54,6 +54,7 @@ class Jobs(Base):
     UserPriority = Column("UserPriority", Integer, default=0)
     SystemPriority = Column("SystemPriority", Integer, default=0)
     RescheduleCounter = Column("RescheduleCounter", Integer, default=0)
+    # TODO: Map these to True/False in Python
     VerifiedFlag = Column("VerifiedFlag", Enum("True", "False"), default="False")
     DeletedFlag = Column("DeletedFlag", Enum("True", "False"), default="False")
     KilledFlag = Column("KilledFlag", Enum("True", "False"), default="False")
