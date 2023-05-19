@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from typer import Option
@@ -11,9 +12,11 @@ from diracx.client.models import DeviceFlowErrorResponse
 from diracx.routers.auth import DIRAC_CLIENT_ID
 
 from . import jobs
-from .utils import AsyncTyper
+from .utils import CREDENTIALS_PATH, AsyncTyper
 
 app = AsyncTyper()
+
+EXPIRES_GRACE_SECONDS = 15
 
 
 @app.async_command()
@@ -63,7 +66,25 @@ async def login(
         else:
             raise RuntimeError("Device authorization flow expired")
 
-    print(f"Got token {response}")
+    CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    expires = datetime.now(tz=timezone.utc) + timedelta(
+        seconds=response.expires_in - EXPIRES_GRACE_SECONDS
+    )
+    credential_data = {
+        "access_token": response.access_token,
+        # TODO: "refresh_token":
+        # TODO: "refresh_token_expires":
+        "expires": expires.isoformat(),
+    }
+    CREDENTIALS_PATH.write_text(json.dumps(credential_data))
+    print(f"Saved credentials to {CREDENTIALS_PATH}")
+
+
+@app.async_command()
+async def logout():
+    CREDENTIALS_PATH.unlink(missing_ok=True)
+    # TODO: This should also revoke the refresh token
+    print(f"Removed credentials from {CREDENTIALS_PATH}")
 
 
 app.add_typer(jobs.app, name="jobs")

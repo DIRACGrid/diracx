@@ -9,7 +9,7 @@ from typer import FileText
 from diracx.client.aio import Dirac
 from diracx.client.models import JobSearchParams
 
-from .utils import AsyncTyper
+from .utils import AsyncTyper, get_auth_headers
 
 app = AsyncTyper()
 
@@ -31,7 +31,8 @@ async def search(
 ):
     async with Dirac(endpoint="http://localhost:8000") as api:
         jobs = await api.jobs.search(
-            JobSearchParams(parameters=None if all else parameter)
+            JobSearchParams(parameters=None if all else parameter),
+            headers=get_auth_headers(),
         )
     display_rich(jobs, "jobs")
 
@@ -68,7 +69,9 @@ def display_rich(data, unit: str) -> None:
 @app.async_command()
 async def submit(jdl: list[FileText]):
     async with Dirac(endpoint="http://localhost:8000") as api:
-        jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl])
+        jobs = await api.jobs.submit_bulk_jobs(
+            [x.read() for x in jdl], headers=get_auth_headers()
+        )
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )
