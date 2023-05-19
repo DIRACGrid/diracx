@@ -43,9 +43,7 @@ class ScalarSearchSpec(TypedDict):
 
 class VectorSearchSpec(TypedDict):
     parameter: str
-    operator: Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal[
-        "like"
-    ]
+    operator: Literal["in"] | Literal["not in"]
     values: list[str]
 
 
