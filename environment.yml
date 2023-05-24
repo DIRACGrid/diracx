@@ -15,6 +15,7 @@ dependencies:
   #- dirac-grid
   - m2crypto >=0.38.0
   - python-gfal2
+  - importlib_resources
   #######
   - email-validator
   - fastapi
