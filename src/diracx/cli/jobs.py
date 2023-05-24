@@ -1,17 +1,40 @@
-from __future__ import annotations
+# Can't using PEP-604 with typer: https://github.com/tiangolo/typer/issues/348
+# from __future__ import annotations
 
 __all__ = ("app",)
 
+import json
+import os
+from typing import Annotated
+
 from rich.console import Console
 from rich.table import Table
-from typer import FileText
+from typer import FileText, Option
 
 from diracx.client.aio import Dirac
-from diracx.client.models import JobSearchParams
+from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
 
 from .utils import AsyncTyper, get_auth_headers
 
 app = AsyncTyper()
+
+
+def parse_condition(value: str) -> SearchSpec:
+    parameter, operator, rest = value.split(" ", 2)
+    if operator in set(ScalarSearchOperator):
+        return {
+            "parameter": parameter,
+            "operator": ScalarSearchOperator(operator),
+            "value": rest,
+        }
+    elif operator in set(VectorSearchOperator):
+        return {
+            "parameter": parameter,
+            "operator": VectorSearchOperator(operator),
+            "values": json.loads(rest),
+        }
+    else:
+        raise ValueError(f"Unknown operator {operator}")
 
 
 @app.async_command()
@@ -27,14 +50,26 @@ async def search(
         "Owner",
         "LastUpdateTime",
     ],
+    condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
 ):
     async with Dirac(endpoint="http://localhost:8000") as api:
         jobs = await api.jobs.search(
-            JobSearchParams(parameters=None if all else parameter),
+            parameters=None if all else parameter,
+            search=condition if condition else None,
             headers=get_auth_headers(),
         )
-    display_rich(jobs, "jobs")
+    display(jobs, "jobs")
+
+
+def display(data, unit: str):
+    format = os.environ["DIRACX_OUTPUT_FORMAT"]
+    if format == "json":
+        print(json.dumps(data, indent=2))
+    elif format == "rich":
+        display_rich(data, unit)
+    else:
+        raise NotImplementedError(format)
 
 
 def display_rich(data, unit: str) -> None:

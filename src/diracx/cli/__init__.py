@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -85,6 +86,14 @@ async def logout():
     CREDENTIALS_PATH.unlink(missing_ok=True)
     # TODO: This should also revoke the refresh token
     print(f"Removed credentials from {CREDENTIALS_PATH}")
+
+
+@app.callback()
+def callback(output_format: Optional[str] = None):
+    if "DIRACX_OUTPUT_FORMAT" not in os.environ:
+        output_format = output_format or "rich"
+    if output_format is not None:
+        os.environ["DIRACX_OUTPUT_FORMAT"] = output_format
 
 
 app.add_typer(jobs.app, name="jobs")
