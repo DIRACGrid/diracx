@@ -1,0 +1,45 @@
+name: diracx-dev
+channels:
+  - diracgrid
+  - conda-forge
+  - nodefaults
+dependencies:
+  - authlib
+  - aiohttp
+  - aiomysql
+  - aiosqlite
+  - azure-core
+  - cachetools
+  ########
+  # fucking dirac cant be installed so just install some of it's dependencies
+  #- dirac-grid
+  - m2crypto >=0.38.0
+  - python-gfal2
+  - importlib_resources
+  #######
+  - email-validator
+  - fastapi
+  - git
+  - gitpython
+  - httpx
+  - isodate
+  - mypy
+  - pydantic
+  - pytest
+  - pytest-asyncio
+  - pytest-cov
+  - pytest-httpx
+  - python
+  - python-jose
+  - python-multipart
+  - pyyaml
+  - requests
+  - rich
+  - sqlalchemy
+  - typer
+  - types-cachetools
+  - types-PyYAML
+  - types-requests
+  - uvicorn
+  # - pip:
+  #   - git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton

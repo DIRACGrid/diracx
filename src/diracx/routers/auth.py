@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, TypedDict, overload
+from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
 import httpx
@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 from diracx.core.config import Config, get_config
 from diracx.core.exceptions import (
+    DiracHttpResponse,
     ExpiredFlowError,
     PendingAuthorizationError,
 )
@@ -52,7 +53,7 @@ class TokenResponse(BaseModel):
 router = APIRouter(tags=["auth"])
 
 
-lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch/"
+lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch"
 # to get a string like this run:
 # openssl rand -hex 32
 SECRET_KEY = "21e98a30bb41420dc601dea1dc1f85ecee3b4d702547bea355c07ab44fd7f3c3"
@@ -71,7 +72,10 @@ KNOWN_CLIENTS = {
     }
 }
 
-SID_TO_USERNAME = {"b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen"}
+SID_TO_USERNAME = {
+    "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen",
+    "59382c3f-181c-4df8-981d-ec3e9015fcb9": "cburr",
+}
 
 # Duration for which the flows against DIRAC AS are valid
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
@@ -218,6 +222,14 @@ async def exchange_token(
     )
 
 
+class InitiateDeviceFlowResponse(TypedDict):
+    user_code: str
+    device_code: str
+    verification_uri_complete: str
+    verification_uri: str
+    expires_in: int
+
+
 @router.post("/{vo}/device")
 async def initiate_device_flow(
     vo: str,
@@ -227,7 +239,7 @@ async def initiate_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-):
+) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
     one or more `property` scope.
@@ -257,7 +269,7 @@ async def initiate_device_flow(
         "user_code": user_code,
         "device_code": device_code,
         "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
-        "verification_uri": verification_uri,
+        "verification_uri": str(request.url.replace(query={})),
         "expires_in": DEVICE_FLOW_EXPIRATION_SECONDS,
     }
 
@@ -320,10 +332,13 @@ async def get_token_from_iam(
         res = await c.post(
             token_endpoint,
             data=data,
-            # auth=(lhcb_iam_client_id, "123")
         )
-        if res.status_code >= 400:
-            raise NotImplementedError(res, res.text)
+        if res.status_code >= 500:
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY, "Failed to contact IAM token endpoint"
+            )
+        elif res.status_code >= 400:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid code")
 
     raw_id_token = res.json()["id_token"]
     # Extract the payload and verify it
@@ -381,6 +396,16 @@ async def do_device_flow(
     return HTMLResponse(f'<a href="{authorization_flow_url}">click here to login</a>')
 
 
+def decrypt_state(state):
+    try:
+        # TODO: There have been better schemes like rot13
+        return json.loads(base64.urlsafe_b64decode(state).decode())
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
+        ) from e
+
+
 @router.get("/{vo}/device/complete")
 async def finish_device_flow(
     vo: str,
@@ -396,8 +421,7 @@ async def finish_device_flow(
     can map it to the corresponding device flow using the user_code
     in the cookie/session
     """
-    # TODO: There have been better schemes like rot13
-    decrypted_state = json.loads(base64.urlsafe_b64decode(state).decode())
+    decrypted_state = decrypt_state(state)
     assert (
         decrypted_state["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
     )
@@ -480,85 +504,99 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
     }
 
 
-@overload
+# @overload
+# @router.post("/{vo}/token")
+# async def token(
+#     vo: str,
+#     grant_type: Annotated[
+#         Literal["urn:ietf:params:oauth:grant-type:device_code"],
+#         Form(description="OAuth2 Grant type"),
+#     ],
+#     client_id: Annotated[str, Form(description="OAuth2 client id")],
+#     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+#     config: Annotated[Config, Depends(get_config)],
+#     device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
+#     code: None,
+#     redirect_uri: None,
+#     code_verifier: None,
+# ) -> TokenResponse:
+#     ...
+
+
+# @overload
+# @router.post("/{vo}/token")
+# async def token(
+#     vo: str,
+#     grant_type: Annotated[
+#         Literal["authorization_code"],
+#         Form(description="OAuth2 Grant type"),
+#     ],
+#     client_id: Annotated[str, Form(description="OAuth2 client id")],
+#     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+#     config: Annotated[Config, Depends(get_config)],
+#     device_code: None,
+#     code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
+#     redirect_uri: Annotated[
+#         str, Form(description="redirect_uri used with OAuth2 authorization code flow")
+#     ],
+#     code_verifier: Annotated[
+#         str,
+#         Form(
+#             description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
+#         ),
+#     ],
+# ) -> TokenResponse:
+#     ...
+
+
 @router.post("/{vo}/token")
 async def token(
     vo: str,
     grant_type: Annotated[
-        Literal["urn:ietf:params:oauth:grant-type:device_code"],
+        Literal["authorization_code"]
+        | Literal["urn:ietf:params:oauth:grant-type:device_code"],
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-    device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
-    code: None,
-    redirect_uri: None,
-    code_verifier: None,
-) -> TokenResponse:
-    ...
-
-
-@overload
-@router.post("/{vo}/token")
-async def token(
-    vo: str,
-    grant_type: Annotated[
-        Literal["authorization_code"],
-        Form(description="OAuth2 Grant type"),
-    ],
-    client_id: Annotated[str, Form(description="OAuth2 client id")],
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
-    config: Annotated[Config, Depends(get_config)],
-    device_code: None,
-    code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
+    device_code: Annotated[
+        str | None, Form(description="device code for OAuth2 device flow")
+    ] = None,
+    code: Annotated[
+        str | None, Form(description="Code for OAuth2 authorization code flow")
+    ] = None,
     redirect_uri: Annotated[
-        str, Form(description="redirect_uri used with OAuth2 authorization code flow")
-    ],
+        str | None,
+        Form(description="redirect_uri used with OAuth2 authorization code flow"),
+    ] = None,
     code_verifier: Annotated[
-        str,
+        str | None,
         Form(
             description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
         ),
-    ],
+    ] = None,
 ) -> TokenResponse:
-    ...
-
-
-@router.post("/{vo}/token")
-async def token(
-    vo,
-    grant_type,
-    client_id,
-    auth_db,
-    config,
-    device_code,
-    code,
-    redirect_uri,
-    code_verifier,
-):
     """ " Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
 
     if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
+        assert device_code is not None
         try:
             info = await auth_db.get_device_flow(
                 device_code, DEVICE_FLOW_EXPIRATION_SECONDS
             )
-        except PendingAuthorizationError:
-            # TODO: use HTTPException while still respecting the standard format
-            # required by the RFC
-
-            return Response(
-                '{"error": "authorization_pending"}',
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-        except ExpiredFlowError:
-            return Response(
-                '{"error": "expired_token"}',
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
+        except PendingAuthorizationError as e:
+            raise DiracHttpResponse(
+                status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}
+            ) from e
+        except ExpiredFlowError as e:
+            raise DiracHttpResponse(
+                status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}
+            ) from e
+        # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
+        # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
 
         if info["client_id"] != client_id:
             raise HTTPException(
@@ -566,10 +604,8 @@ async def token(
                 detail="Bad client_id",
             )
 
-        # return Response('{"error": "slow_down"}', status_code=400)
-        # return Response('{"error": "expired_token"}', status_code=400)
-
     elif grant_type == "authorization_code":
+        assert code is not None
         info = await auth_db.get_authorization_flow(
             code, AUTHORIZATION_FLOW_EXPIRATION_SECONDS
         )
@@ -580,6 +616,7 @@ async def token(
             )
 
         try:
+            assert code_verifier is not None
             code_challenge = (
                 base64.urlsafe_b64encode(
                     hashlib.sha256(code_verifier.encode()).digest()
@@ -668,8 +705,7 @@ async def authorization_flow_complete(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
 ):
-    # TODO: There have been better schemes like rot13
-    decrypted_state = json.loads(base64.urlsafe_b64decode(state).decode())
+    decrypted_state = decrypt_state(state)
     assert decrypted_state["grant_type"] == "authorization_code"
 
     id_token = await get_token_from_iam(

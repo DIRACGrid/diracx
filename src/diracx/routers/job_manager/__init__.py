@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Any, Literal, TypedDict
+from datetime import datetime
+from typing import Annotated, Any, TypedDict
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, root_validator
 
 from diracx.core.config import Config, get_config
+from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import SecurityProperty
 from diracx.core.utils import JobStatus
 from diracx.db.jobs.db import JobDB, get_job_db
@@ -26,31 +28,9 @@ router = APIRouter(
 )
 
 
-# TODO: TypedDict vs pydnatic?
-class SortSpec(TypedDict):
-    parameter: str
-    direction: Literal["asc"] | Literal["dsc"]
-
-
-class ScalarSearchSpec(TypedDict):
-    parameter: str
-    operator: Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal[
-        "like"
-    ]
-    value: str
-
-
-class VectorSearchSpec(TypedDict):
-    parameter: str
-    operator: Literal["eq"] | Literal["neq"] | Literal["gt"] | Literal["lt"] | Literal[
-        "like"
-    ]
-    values: list[str]
-
-
 class JobSummaryParams(BaseModel):
     grouping: list[str]
-    search: list[ScalarSearchSpec | VectorSearchSpec] = []
+    search: list[SearchSpec] = []
 
     @root_validator
     def validate_fields(cls, v):
@@ -60,7 +40,7 @@ class JobSummaryParams(BaseModel):
 
 class JobSearchParams(BaseModel):
     parameters: list[str] | None = None
-    search: list[ScalarSearchSpec | VectorSearchSpec] = []
+    search: list[SearchSpec] = []
     sort: list[str | SortSpec] = []
 
     @root_validator
@@ -80,7 +60,13 @@ async def search(
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append({"parameter": "Owner", "operator": "eq", "value": "ownerDN"})
+        body.search.append(
+            {
+                "parameter": "Owner",
+                "operator": ScalarSearchOperator.EQUAL,
+                "value": "lhcb:cburr",
+            }
+        )
     # TODO: Pagination
     return await job_db.search(body.parameters, body.search, body.sort)
 
@@ -95,7 +81,13 @@ async def summary(
     """Show information suitable for plotting"""
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
-        body.search.append({"parameter": "Owner", "operator": "eq", "value": "ownerDN"})
+        body.search.append(
+            {
+                "parameter": "Owner",
+                "operator": ScalarSearchOperator.EQUAL,
+                "value": "ownerDN",
+            }
+        )
     return await job_db.summary(body.grouping, body.search)
 
 
@@ -167,12 +159,19 @@ class JobDefinition(BaseModel):
     jdl: str
 
 
+class InsertedJob(TypedDict):
+    JobID: int
+    Status: str
+    MinorStatus: str
+    TimeStamp: datetime
+
+
 @router.post("/")
 async def submit_bulk_jobs(
     job_definitions: list[str],
     job_db: Annotated[JobDB, Depends(get_job_db)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
-):
+) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.DErrno import EWMSJDL
     from DIRAC.WorkloadManagementSystem.Utilities.ParametricJob import (

@@ -25,7 +25,7 @@ def apply_search_filters(table, stmt, search):
             expr = column > query["value"]
         elif query["operator"] == "lt":
             expr = column < query["value"]
-        elif query["operator"] in "in":
+        elif query["operator"] == "in":
             expr = column.in_(query["values"])
         elif query["operator"] in "like":
             expr = column.like(query["values"])

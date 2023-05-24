@@ -4,37 +4,68 @@
 # Changes may cause incorrect behavior and will be lost if the code is regenerated.
 # --------------------------------------------------------------------------
 
-from ._enums import Enum0, Enum1, Enum2, Enum3, JobStatus
-from ._models import (
-    BodyAuthToken,
-    BodyAuthTokenGrantType,
-    HTTPValidationError,
-    JobDefinition,
-    JobStatusReturn,
-    JobStatusUpdate,
-    TokenResponse,
-    ValidationError,
-    ValidationErrorLocItem,
-)
-from ._patch import *  # pylint: disable=unused-wildcard-import
+from ._models import BodyAuthToken
+from ._models import BodyAuthTokenGrantType
+from ._models import HTTPValidationError
+from ._models import InitiateDeviceFlowResponse
+from ._models import InsertedJob
+from ._models import JobSearchParams
+from ._models import JobSearchParamsSearchItem
+from ._models import JobSearchParamsSortItem
+from ._models import JobStatusReturn
+from ._models import JobStatusUpdate
+from ._models import JobSummaryParams
+from ._models import JobSummaryParamsSearchItem
+from ._models import ScalarSearchSpec
+from ._models import SortSpec
+from ._models import SortSpecDirection
+from ._models import TokenResponse
+from ._models import ValidationError
+from ._models import ValidationErrorLocItem
+from ._models import VectorSearchSpec
+
+from ._enums import Enum0
+from ._enums import Enum1
+from ._enums import Enum2
+from ._enums import Enum3
+from ._enums import Enum6
+from ._enums import Enum7
+from ._enums import JobStatus
+from ._enums import ScalarSearchOperator
+from ._enums import VectorSearchOperator
 from ._patch import __all__ as _patch_all
+from ._patch import *  # pylint: disable=unused-wildcard-import
 from ._patch import patch_sdk as _patch_sdk
 
 __all__ = [
     "BodyAuthToken",
     "BodyAuthTokenGrantType",
     "HTTPValidationError",
-    "JobDefinition",
+    "InitiateDeviceFlowResponse",
+    "InsertedJob",
+    "JobSearchParams",
+    "JobSearchParamsSearchItem",
+    "JobSearchParamsSortItem",
     "JobStatusReturn",
     "JobStatusUpdate",
+    "JobSummaryParams",
+    "JobSummaryParamsSearchItem",
+    "ScalarSearchSpec",
+    "SortSpec",
+    "SortSpecDirection",
     "TokenResponse",
     "ValidationError",
     "ValidationErrorLocItem",
+    "VectorSearchSpec",
     "Enum0",
     "Enum1",
     "Enum2",
     "Enum3",
+    "Enum6",
+    "Enum7",
     "JobStatus",
+    "ScalarSearchOperator",
+    "VectorSearchOperator",
 ]
 __all__.extend([p for p in _patch_all if p not in __all__])
 _patch_sdk()

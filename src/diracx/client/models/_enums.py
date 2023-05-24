@@ -5,22 +5,21 @@
 # --------------------------------------------------------------------------
 
 from enum import Enum
-
 from azure.core import CaseInsensitiveEnumMeta
 
 
 class Enum0(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum0."""
 
-    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = (
-        "urn:ietf:params:oauth:grant-type:device_code"
-    )
+    AUTHORIZATION_CODE = "authorization_code"
 
 
 class Enum1(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum1."""
 
-    AUTHORIZATION_CODE = "authorization_code"
+    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = (
+        "urn:ietf:params:oauth:grant-type:device_code"
+    )
 
 
 class Enum2(str, Enum, metaclass=CaseInsensitiveEnumMeta):
@@ -35,9 +34,41 @@ class Enum3(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     S256 = "S256"
 
 
+class Enum6(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum6."""
+
+    ASC = "asc"
+
+
+class Enum7(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum7."""
+
+    DSC = "dsc"
+
+
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """An enumeration."""
 
     RUNNING = "Running"
     STALLED = "Stalled"
     KILLED = "Killed"
+    FAILED = "Failed"
+    RECEIVED = "RECEIVED"
+    SUBMITTING = "Submitting"
+
+
+class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    EQ = "eq"
+    NEQ = "neq"
+    GT = "gt"
+    LT = "lt"
+    LIKE = "like"
+
+
+class VectorSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    IN = "in"
+    NOT_IN = "not in"
