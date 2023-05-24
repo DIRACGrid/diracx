@@ -11,7 +11,7 @@ RUN micromamba install --yes --file diracx/environment.yml --name=base git &&  m
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
-RUN  pip install ./diracx git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton 
+RUN  pip install ./diracx git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
 
 # activate mamba for run commands
 # RUN pip install ./diracx
