@@ -6,21 +6,27 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
-
-
+import io
+import json
 from typing import Any, List
 
 from azure.core.rest import HttpRequest
 from azure.core.exceptions import map_error, HttpResponseError
 from azure.core.pipeline import PipelineResponse
 from azure.core.utils import case_insensitive_dict
-from azure.core.tracing.decorator import distributed_trace
+from azure.core.tracing.decorator_async import distributed_trace_async
 
 from ...operations._operations import _SERIALIZER, _format_url_section
-from ._operations import AuthOperations as AuthOperationsGenerated, _models
+from ._operations import (
+    AuthOperations as AuthOperationsGenerated,
+    JobsOperations as JobsOperationsGenerated,
+    _models,
+    JSON,
+)
 
 __all__: List[str] = [
-    "AuthOperations"
+    "AuthOperations",
+    "JobsOperations",
 ]  # Add all objects you want publicly available to users at this package level
 
 
@@ -52,7 +58,7 @@ def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
 
 
 class AuthOperations(AuthOperationsGenerated):
-    @distributed_trace
+    @distributed_trace_async
     async def token(
         self, vo: str, device_code: str, client_id: str, **kwargs
     ) -> _models.TokenResponse | _models.DeviceFlowErrorResponse:
@@ -82,3 +88,46 @@ class AuthOperations(AuthOperationsGenerated):
         else:
             map_error(status_code=response.status_code, response=response, error_map={})
             raise HttpResponseError(response=response)
+
+
+class JobsOperations(JobsOperationsGenerated):
+    @distributed_trace_async
+    async def search(
+        self,
+        *,
+        parameters: list[str] | None = None,
+        search: list[str] | None = None,
+        sort: list[str] | None = None,
+        **kwargs: Any,
+    ) -> List[JSON]:
+        """TODO"""
+        body = {}
+        if parameters is not None:
+            body["parameters"] = parameters
+        if search is not None:
+            body["search"] = search
+        if sort is not None:
+            body["sort"] = sort
+        # TODO: The BytesIO here is only needed to satify the typing
+        # Probably an autorest bug
+        body_data = io.BytesIO(json.dumps(body).encode("utf-8"))
+        return await super().search(body_data, **kwargs)
+
+    @distributed_trace_async
+    async def summary(
+        self,
+        *,
+        grouping: list[str] | None = None,
+        search: list[str] | None = None,
+        **kwargs: Any,
+    ) -> List[JSON]:
+        """TODO"""
+        body = {}
+        if grouping is not None:
+            body["grouping"] = grouping
+        if search is not None:
+            body["search"] = search
+        # TODO: The BytesIO here is only needed to satify the typing
+        # Probably an autorest bug
+        body_data = io.BytesIO(json.dumps(body).encode("utf-8"))
+        return await super().search(body_data, **kwargs)

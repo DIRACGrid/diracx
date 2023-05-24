@@ -22,42 +22,6 @@ class Enum1(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     )
 
 
-class Enum10(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum10."""
-
-    NEQ = "neq"
-
-
-class Enum11(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum11."""
-
-    GT = "gt"
-
-
-class Enum12(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum12."""
-
-    LT = "lt"
-
-
-class Enum13(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum13."""
-
-    LIKE = "like"
-
-
-class Enum14(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum14."""
-
-    ASC = "asc"
-
-
-class Enum15(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum15."""
-
-    DSC = "dsc"
-
-
 class Enum2(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Response Type."""
 
@@ -70,40 +34,16 @@ class Enum3(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     S256 = "S256"
 
 
-class Enum4(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum4."""
-
-    EQ = "eq"
-
-
-class Enum5(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum5."""
-
-    NEQ = "neq"
-
-
 class Enum6(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum6."""
 
-    GT = "gt"
+    ASC = "asc"
 
 
 class Enum7(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum7."""
 
-    LT = "lt"
-
-
-class Enum8(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum8."""
-
-    LIKE = "like"
-
-
-class Enum9(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum9."""
-
-    EQ = "eq"
+    DSC = "dsc"
 
 
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
@@ -115,3 +55,20 @@ class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     FAILED = "Failed"
     RECEIVED = "RECEIVED"
     SUBMITTING = "Submitting"
+
+
+class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    EQ = "eq"
+    NEQ = "neq"
+    GT = "gt"
+    LT = "lt"
+    LIKE = "like"
+
+
+class VectorSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    IN = "in"
+    NOT_IN = "not in"

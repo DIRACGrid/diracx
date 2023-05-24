@@ -17,32 +17,22 @@ from ._models import JobStatusUpdate
 from ._models import JobSummaryParams
 from ._models import JobSummaryParamsSearchItem
 from ._models import ScalarSearchSpec
-from ._models import ScalarSearchSpecOperator
 from ._models import SortSpec
 from ._models import SortSpecDirection
 from ._models import TokenResponse
 from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
-from ._models import VectorSearchSpecOperator
 
 from ._enums import Enum0
 from ._enums import Enum1
-from ._enums import Enum10
-from ._enums import Enum11
-from ._enums import Enum12
-from ._enums import Enum13
-from ._enums import Enum14
-from ._enums import Enum15
 from ._enums import Enum2
 from ._enums import Enum3
-from ._enums import Enum4
-from ._enums import Enum5
 from ._enums import Enum6
 from ._enums import Enum7
-from ._enums import Enum8
-from ._enums import Enum9
 from ._enums import JobStatus
+from ._enums import ScalarSearchOperator
+from ._enums import VectorSearchOperator
 from ._patch import __all__ as _patch_all
 from ._patch import *  # pylint: disable=unused-wildcard-import
 from ._patch import patch_sdk as _patch_sdk
@@ -61,31 +51,21 @@ __all__ = [
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
     "ScalarSearchSpec",
-    "ScalarSearchSpecOperator",
     "SortSpec",
     "SortSpecDirection",
     "TokenResponse",
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",
-    "VectorSearchSpecOperator",
     "Enum0",
     "Enum1",
-    "Enum10",
-    "Enum11",
-    "Enum12",
-    "Enum13",
-    "Enum14",
-    "Enum15",
     "Enum2",
     "Enum3",
-    "Enum4",
-    "Enum5",
     "Enum6",
     "Enum7",
-    "Enum8",
-    "Enum9",
     "JobStatus",
+    "ScalarSearchOperator",
+    "VectorSearchOperator",
 ]
 __all__.extend([p for p in _patch_all if p not in __all__])
 _patch_sdk()

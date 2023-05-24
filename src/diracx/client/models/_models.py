@@ -425,8 +425,9 @@ class ScalarSearchSpec(_serialization.Model):
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar operator: Operator. Required.
-    :vartype operator: ~client.models.ScalarSearchSpecOperator
+    :ivar operator: An enumeration. Required. Known values are: "eq", "neq", "gt", "lt", and
+     "like".
+    :vartype operator: str or ~client.models.ScalarSearchOperator
     :ivar value: Value. Required.
     :vartype value: str
     """
@@ -439,7 +440,7 @@ class ScalarSearchSpec(_serialization.Model):
 
     _attribute_map = {
         "parameter": {"key": "parameter", "type": "str"},
-        "operator": {"key": "operator", "type": "ScalarSearchSpecOperator"},
+        "operator": {"key": "operator", "type": "str"},
         "value": {"key": "value", "type": "str"},
     }
 
@@ -447,15 +448,16 @@ class ScalarSearchSpec(_serialization.Model):
         self,
         *,
         parameter: str,
-        operator: "_models.ScalarSearchSpecOperator",
+        operator: Union[str, "_models.ScalarSearchOperator"],
         value: str,
         **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
-        :keyword operator: Operator. Required.
-        :paramtype operator: ~client.models.ScalarSearchSpecOperator
+        :keyword operator: An enumeration. Required. Known values are: "eq", "neq", "gt", "lt", and
+         "like".
+        :paramtype operator: str or ~client.models.ScalarSearchOperator
         :keyword value: Value. Required.
         :paramtype value: str
         """
@@ -463,16 +465,6 @@ class ScalarSearchSpec(_serialization.Model):
         self.parameter = parameter
         self.operator = operator
         self.value = value
-
-
-class ScalarSearchSpecOperator(_serialization.Model):
-    """Operator."""
-
-    _attribute_map = {}
-
-    def __init__(self, **kwargs: Any) -> None:
-        """ """
-        super().__init__(**kwargs)
 
 
 class SortSpec(_serialization.Model):
@@ -626,8 +618,8 @@ class VectorSearchSpec(_serialization.Model):
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar operator: Operator. Required.
-    :vartype operator: ~client.models.VectorSearchSpecOperator
+    :ivar operator: An enumeration. Required. Known values are: "in" and "not in".
+    :vartype operator: str or ~client.models.VectorSearchOperator
     :ivar values: Values. Required.
     :vartype values: list[str]
     """
@@ -640,7 +632,7 @@ class VectorSearchSpec(_serialization.Model):
 
     _attribute_map = {
         "parameter": {"key": "parameter", "type": "str"},
-        "operator": {"key": "operator", "type": "VectorSearchSpecOperator"},
+        "operator": {"key": "operator", "type": "str"},
         "values": {"key": "values", "type": "[str]"},
     }
 
@@ -648,15 +640,15 @@ class VectorSearchSpec(_serialization.Model):
         self,
         *,
         parameter: str,
-        operator: "_models.VectorSearchSpecOperator",
+        operator: Union[str, "_models.VectorSearchOperator"],
         values: List[str],
         **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
-        :keyword operator: Operator. Required.
-        :paramtype operator: ~client.models.VectorSearchSpecOperator
+        :keyword operator: An enumeration. Required. Known values are: "in" and "not in".
+        :paramtype operator: str or ~client.models.VectorSearchOperator
         :keyword values: Values. Required.
         :paramtype values: list[str]
         """
@@ -664,13 +656,3 @@ class VectorSearchSpec(_serialization.Model):
         self.parameter = parameter
         self.operator = operator
         self.values = values
-
-
-class VectorSearchSpecOperator(_serialization.Model):
-    """Operator."""
-
-    _attribute_map = {}
-
-    def __init__(self, **kwargs: Any) -> None:
-        """ """
-        super().__init__(**kwargs)

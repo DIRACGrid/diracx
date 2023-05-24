@@ -12,6 +12,7 @@ from typing import Any, List
 __all__: List[str] = ["DeviceFlowErrorResponse"]
 
 from .. import _serialization
+from . import _models
 
 
 def patch_sdk():
