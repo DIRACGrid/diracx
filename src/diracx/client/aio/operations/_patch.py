@@ -92,7 +92,7 @@ class AuthOperations(AuthOperationsGenerated):
 
 class JobsOperations(JobsOperationsGenerated):
     @distributed_trace_async
-    async def search(
+    async def search(  # type: ignore[override]
         self,
         *,
         parameters: list[str] | None = None,
@@ -114,7 +114,7 @@ class JobsOperations(JobsOperationsGenerated):
         return await super().search(body_data, **kwargs)
 
     @distributed_trace_async
-    async def summary(
+    async def summary(  # type: ignore[override]
         self,
         *,
         grouping: list[str] | None = None,
