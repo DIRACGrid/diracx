@@ -59,7 +59,7 @@ class JobDB(BaseDB):
         ]
 
     async def search(
-        self, parameters, search, sort, *, per_page: int = 100, page: int | None = None
+        self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
     ) -> list[dict[str, Any]]:
         # Find which columns to select
         columns = [x for x in Jobs.__table__.columns]
@@ -76,17 +76,17 @@ class JobDB(BaseDB):
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
         # Apply any sort constraints
-        for column, direction in sort:
-            column = Jobs.__table__.columns[column]
-            if direction == "asc":
+        for sort in sorts:
+            column = Jobs.__table__.columns[sort["parameter"]]
+            if sort["direction"] == "asc":
                 column = column.asc()
-            elif direction == "desc":
+            elif sort["direction"] == "desc":
                 column = column.desc()
             else:
-                raise InvalidQueryError(f"Unknown sort {direction=}")
+                raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
 
         # Apply pagination
-        if page is not None:
+        if page:
             raise NotImplementedError("TODO Not yet implemented")
 
         # Execute the query
