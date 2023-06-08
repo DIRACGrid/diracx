@@ -289,42 +289,40 @@ EXAMPLE_SEARCHES = {
         },
     },
 }
-
-
-@router.post(
-    "/search",
-    responses={
-        200: {
-            "description": "List of matching results",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "JobID": 1,
-                            "JobGroup": "jobGroup",
-                            "Owner": "myvo:my_nickname",
-                            "SubmissionTime": "2023-05-25T07:03:35.602654",
-                            "LastUpdateTime": "2023-05-25T07:03:35.602652",
-                            "Status": "RECEIVED",
-                            "MinorStatus": "Job accepted",
-                            "ApplicationStatus": "Unknown",
-                        },
-                        {
-                            "JobID": 2,
-                            "JobGroup": "my_nickname",
-                            "Owner": "myvo:cburr",
-                            "SubmissionTime": "2023-05-25T07:03:36.256378",
-                            "LastUpdateTime": "2023-05-25T07:10:11.974324",
-                            "Status": "Done",
-                            "MinorStatus": "Application Exited Successfully",
-                            "ApplicationStatus": "All events processed",
-                        },
-                    ]
-                }
-            },
+EXAMPLE_RESPONSES = {
+    200: {
+        "description": "List of matching results",
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "JobID": 1,
+                        "JobGroup": "jobGroup",
+                        "Owner": "myvo:my_nickname",
+                        "SubmissionTime": "2023-05-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-05-25T07:03:35.602652",
+                        "Status": "RECEIVED",
+                        "MinorStatus": "Job accepted",
+                        "ApplicationStatus": "Unknown",
+                    },
+                    {
+                        "JobID": 2,
+                        "JobGroup": "my_nickname",
+                        "Owner": "myvo:cburr",
+                        "SubmissionTime": "2023-05-25T07:03:36.256378",
+                        "LastUpdateTime": "2023-05-25T07:10:11.974324",
+                        "Status": "Done",
+                        "MinorStatus": "Application Exited Successfully",
+                        "ApplicationStatus": "All events processed",
+                    },
+                ]
+            }
         },
     },
-)
+}
+
+
+@router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
     config: Annotated[Config, Depends(get_config)],
     job_db: Annotated[JobDB, Depends(get_job_db)],
