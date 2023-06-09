@@ -2,6 +2,7 @@
 omit =
     tests/*
     src/diracx/client/*
+    */site-packages/diracx/client/*
 
 [report]
 exclude_lines =
