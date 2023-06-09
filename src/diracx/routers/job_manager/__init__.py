@@ -289,7 +289,8 @@ EXAMPLE_SEARCHES = {
         },
     },
 }
-EXAMPLE_RESPONSES = {
+
+EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
     200: {
         "description": "List of matching results",
         "content": {

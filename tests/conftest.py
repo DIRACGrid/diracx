@@ -1,11 +1,14 @@
 from uuid import uuid4
 
+import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from git import Repo
-from pytest import fixture
 
-from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.config import Config, LocalGitConfigSource, get_config
 from diracx.core.properties import SecurityProperty
+from diracx.db.auth.db import AuthDB
+from diracx.db.jobs.db import JobDB
 from diracx.routers import app
 from diracx.routers.auth import create_access_token
 
@@ -18,9 +21,13 @@ AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
-@fixture
+@pytest.fixture
 def with_config_repo(tmp_path, monkeypatch):
-    monkeypatch.setenv("DIRAC_CS_SOURCE", str(tmp_path))
+    monkeypatch.setattr(
+        app,
+        "dependency_overrides",
+        {get_config: lambda: LocalGitConfigSource(tmp_path).read_config()},
+    )
 
     repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
@@ -55,13 +62,34 @@ def with_config_repo(tmp_path, monkeypatch):
     LocalGitConfigSource.clear_caches()
 
 
-@fixture
-def test_client(with_config_repo):
+@pytest.fixture
+def disable_events(monkeypatch):
+    monkeypatch.setattr(app.router, "on_startup", [])
+    monkeypatch.setattr(app.router, "on_shutdown", [])
+    yield
+
+
+@pytest_asyncio.fixture
+async def job_engine():
+    await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
+    yield
+    await JobDB.destroy_engine()
+
+
+@pytest_asyncio.fixture
+async def auth_engine():
+    await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
+    yield
+    await AuthDB.destroy_engine()
+
+
+@pytest.fixture
+def test_client(with_config_repo, disable_events, auth_engine, job_engine):
     with TestClient(app) as test_client:
         yield test_client
 
 
-@fixture
+@pytest.fixture
 def normal_user_client(test_client):
     payload = {
         "sub": "testingVO:yellow-sub",

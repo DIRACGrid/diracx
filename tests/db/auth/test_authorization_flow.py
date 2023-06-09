@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from pytest_asyncio import fixture
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import AuthorizationError
@@ -9,13 +8,6 @@ from diracx.db.auth.db import AuthDB
 
 MAX_VALIDITY = 2
 EXPIRED = 0
-
-
-@fixture
-async def auth_engine():
-    await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
-
-    yield
 
 
 @pytest.mark.asyncio

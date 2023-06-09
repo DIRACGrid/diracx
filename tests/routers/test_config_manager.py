@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from diracx.routers import app
 
 
-def test_unauthenticated():
+def test_unauthenticated(disable_events):
     with TestClient(app) as client:
         response = client.get("/config/lhcb/")
         assert response.status_code == status.HTTP_403_FORBIDDEN
