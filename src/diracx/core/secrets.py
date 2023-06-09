@@ -39,6 +39,7 @@ class ConfigUrl(AnyUrl):
 class DiracxSecrets(BaseSettings, env_prefix="DIRACX_SECRET_", allow_mutation=False):
     config: ConfigUrl
     token_key: TokenSigningKey
+    token_algorithm: str = "RS256"
     db_url: DbUrls = Field(default_factory=DbUrls)
 
     @classmethod

@@ -34,6 +34,7 @@ from diracx.core.exceptions import (
     PendingAuthorizationError,
 )
 from diracx.core.properties import SecurityProperty
+from diracx.core.secrets import get_secrets
 from diracx.db.auth.db import AuthDB, get_auth_db
 from diracx.db.auth.schema import FlowStatus
 
@@ -54,15 +55,9 @@ router = APIRouter(tags=["auth"])
 
 
 lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch"
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = "21e98a30bb41420dc601dea1dc1f85ecee3b4d702547bea355c07ab44fd7f3c3"
-ALGORITHM = "HS256"
 ISSUER = "http://lhcbdirac.cern.ch/"
 AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
-
-
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
 # This should be taken dynamically
@@ -142,7 +137,6 @@ async def verify_dirac_token(
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
     """
-
     if match := re.fullmatch(r"Bearer (.+)", authorization):
         raw_token = match.group(1)
     else:
@@ -151,11 +145,13 @@ async def verify_dirac_token(
             detail="Invalid authorization header",
         )
 
+    secrets = get_secrets()
+
     try:
-        jwt = JsonWebToken(ALGORITHM)
+        jwt = JsonWebToken(secrets.token_algorithm)
         token = jwt.decode(
             raw_token,
-            key=SECRET_KEY,
+            key=secrets.token_key.jwk,
             claims_options={
                 "iss": {"values": [ISSUER]},
                 "aud": {"values": [AUDIENCE]},
@@ -187,9 +183,12 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
 
-    jwt = JsonWebToken(ALGORITHM)
-    encoded_jwt = jwt.encode({"alg": ALGORITHM}, to_encode, SECRET_KEY).decode("ascii")
-    return encoded_jwt
+    secrets = get_secrets()
+    jwt = JsonWebToken(secrets.token_algorithm)
+    encoded_jwt = jwt.encode(
+        {"alg": secrets.token_algorithm}, payload, secrets.token_key.jwk
+    )
+    return encoded_jwt.decode("ascii")
 
 
 async def exchange_token(

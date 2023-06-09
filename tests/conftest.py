@@ -2,6 +2,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
 
@@ -60,6 +62,22 @@ def with_config_repo(tmp_path, monkeypatch):
     repo.index.commit("Added a new file")
     yield tmp_path
     LocalGitConfigSource.clear_caches()
+
+
+@pytest.fixture
+def fake_secrets(monkeypatch, with_config_repo):
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+
+    monkeypatch.setenv("DIRACX_SECRET_DB_URL_AUTH", "sqlite+aiosqlite:///:memory:")
+    monkeypatch.setenv("DIRACX_SECRET_DB_URL_JOBS", "sqlite+aiosqlite:///:memory:")
+    monkeypatch.setenv("DIRACX_SECRET_TOKEN_KEY", pem)
+    monkeypatch.setenv("DIRACX_SECRET_CONFIG", f"file://{with_config_repo}")
+    yield
 
 
 @pytest.fixture

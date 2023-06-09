@@ -66,7 +66,9 @@ async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs)
 
 
 @pytest.mark.asyncio
-async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
+async def test_authorization_flow(
+    test_client, auth_httpx_mock: HTTPXMock, fake_secrets
+):
     code_verifier = secrets.token_hex()
     code_challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
