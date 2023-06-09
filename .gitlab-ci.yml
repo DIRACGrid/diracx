@@ -29,10 +29,12 @@ pre-commit:
 pytest:
   extends: .defaults-micromamba
   script:
-    - pytest . --cov-report xml:coverage.xml
+    - pytest . --cov-report=xml:coverage.xml --junitxml=report.xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
+    when: always
     reports:
+      junit: report.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
