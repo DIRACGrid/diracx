@@ -60,7 +60,7 @@ class JobDB(BaseDB):
 
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[int, int, int, list[dict[str, Any]]]:
         # Find which columns to select
         columns = [x for x in Jobs.__table__.columns]
         if parameters:
@@ -75,8 +75,14 @@ class JobDB(BaseDB):
 
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
+        # Get the total before applying sorting/pagination
+        total_stmt = apply_search_filters(
+            Jobs.__table__, select(func.count(Jobs.JobID)), search
+        )
+        total = (await self.conn.execute(total_stmt)).scalar_one()
+
         # Apply any sort constraints
-        for sort in sorts:
+        for sort in sorts or [{"direction": "desc", "parameter": "JobID"}]:
             column = Jobs.__table__.columns[sort["parameter"]]
             if sort["direction"] == "asc":
                 column = column.asc()
@@ -87,10 +93,16 @@ class JobDB(BaseDB):
 
         # Apply pagination
         if page:
-            raise NotImplementedError("TODO Not yet implemented")
+            stmt = stmt.offset(per_page * (page - 1)).limit(per_page)
 
         # Execute the query
-        return [dict(row._mapping) async for row in (await self.conn.stream(stmt))]
+        results = [dict(row._mapping) async for row in (await self.conn.stream(stmt))]
+        first_idx = per_page * (page - 1) if page else 0
+        if total == 0:
+            last_idx = 0
+        else:
+            last_idx = min(first_idx + len(results), total) - 1
+        return first_idx, last_idx, total, results
 
     async def _insertNewJDL(self, jdl) -> int:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL

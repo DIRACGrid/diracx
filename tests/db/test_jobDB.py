@@ -10,8 +10,11 @@ from diracx.db.jobs.db import JobDB
 @mark.asyncio
 async def test_some_asyncio_code(job_engine):
     async with JobDB() as job_db:
-        result = await job_db.search(["JobID"], [], [])
+        start, end, total, result = await job_db.search(["JobID"], [], [])
         assert not result
+        assert start == 0
+        assert end == 0
+        assert total == 0
 
         result = await asyncio.gather(
             *(

@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 from typing import Annotated, Any, TypedDict
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query, Response
 from pydantic import BaseModel, root_validator
 
 from diracx.core.config import Config, get_config
@@ -328,7 +328,8 @@ async def search(
     config: Annotated[Config, Depends(get_config)],
     job_db: Annotated[JobDB, Depends(get_job_db)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
-    page: int = 0,
+    response: Response,
+    page: int = 1,
     per_page: int = 100,
     body: Annotated[JobSearchParams | None, Body(examples=EXAMPLE_SEARCHES)] = None,
 ) -> list[dict[str, Any]]:
@@ -347,10 +348,11 @@ async def search(
                 "value": user_info.sub,
             }
         )
-    # TODO: Pagination
-    return await job_db.search(
+    first_idx, last_idx, total, results = await job_db.search(
         body.parameters, body.search, body.sort, page=page, per_page=per_page
     )
+    response.headers["Content-Range"] = f"jobs {first_idx}-{last_idx}/{total}"
+    return results
 
 
 @router.post("/summary")
