@@ -105,7 +105,9 @@ async def openid_configuration():
             "property:FileCatalogManagement",
         ],
         "response_types_supported": ["code"],
-        "token_endpoint_auth_signing_alg_values_supported": [auth.ALGORITHM],
+        "token_endpoint_auth_signing_alg_values_supported": [
+            DiracxSecrets.from_env().token_algorithm
+        ],
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
         "device_authorization_endpoint": "http://localhost:8000/auth/lhcb/device",

@@ -484,7 +484,8 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
         raise ValueError(f"Unrecognised scopes: {unrecognised}")
 
     if not groups:
-        group = config.DIRAC.DefaultGroup[vo]
+        # TODO: Handle multiple groups correctly
+        group = config.Registry.DefaultGroup[vo][0]
     elif len(groups) > 1:
         raise ValueError(f"Only one DIRAC group allowed but got {groups}")
     else:
