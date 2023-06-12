@@ -64,7 +64,7 @@ class BaseDB(metaclass=ABCMeta):
 
     @classmethod
     async def make_engine(cls, db_url: str) -> None:
-        """TODO make metadata an abastract property"""
+        """TODO make metadata an abstract property"""
         cls.engine = create_async_engine(
             db_url,
             echo=True,

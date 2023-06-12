@@ -2,7 +2,6 @@ from __future__ import annotations
 
 __all__ = ("Config", "get_config", "LocalGitConfigSource")
 
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +10,7 @@ import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 
 from ..exceptions import BadConfigurationVersion
+from ..secrets import DiracxSecrets
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -72,4 +72,8 @@ class LocalGitConfigSource:
 
 
 def get_config() -> Config:
-    return LocalGitConfigSource(Path(os.environ["DIRAC_CS_SOURCE"])).read_config()
+    secrets = DiracxSecrets.from_env()
+    if secrets.config.scheme == "file":
+        return LocalGitConfigSource(Path(secrets.config.path)).read_config()
+    else:
+        raise NotImplementedError(secrets.config.scheme)

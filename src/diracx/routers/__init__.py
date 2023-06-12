@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 
 from diracx.core.exceptions import DiracError, DiracHttpResponse
+from diracx.core.secrets import DiracxSecrets
 from diracx.db import AuthDB, JobDB
 
 from . import auth, configuration, job_manager
@@ -74,8 +75,10 @@ app.include_router(
 
 @app.on_event("startup")
 async def startup() -> None:
-    await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
-    await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
+    secrets = DiracxSecrets.from_env()
+
+    await AuthDB.make_engine(secrets.db_url.auth)
+    await JobDB.make_engine(secrets.db_url.jobs)
 
 
 @app.on_event("shutdown")
