@@ -28,11 +28,11 @@ class UserConfig(BaseModel):
     CA: str
     DN: str
     Email: EmailStr
-    Suspended: Optional[str]
-    Quota: Optional[int]
+    Suspended: list[str] = []
+    Quota: int | None = None
     # TODO: These should be LHCbDIRAC specific
-    CERNAccountType: str
-    PrimaryCERNAccount: str
+    CERNAccountType: str | None = None
+    PrimaryCERNAccount: str | None = None
 
 
 class GroupConfig(BaseModel):
@@ -50,20 +50,20 @@ class GroupConfig(BaseModel):
 
 class RegistryConfig(BaseModel):
     DefaultGroup: dict[str, list[str]]
-    DefaultVOMSAttribute: str
-    DefaultStorageQuota: int
-    DefaultProxyLifeTime: int
+    DefaultVOMSAttribute: str | None = None
+    DefaultStorageQuota: float = 0
+    DefaultProxyLifeTime: int = 12 * 60 * 60
 
     Users: dict[str, dict[str, UserConfig]]
     Groups: dict[str, dict[str, GroupConfig]]
 
-    BannedIPs: Any
-    Hosts: Any
-    VO: Any
+    BannedIPs: Any = None
+    Hosts: Any = None
+    VO: Any = None
 
 
 class DIRACConfig(BaseModel):
-    DefaultGroup: dict[str, str]
+    pass
 
 
 class JobMonitoringConfig(BaseModel):
@@ -80,30 +80,30 @@ class OperationsConfig(BaseModel):
     EnableSecurityLogging: bool = False
     Services: ServicesConfig = ServicesConfig()
 
-    DataConsistency: dict[str, Any] | None
-    DataManagement: dict[str, Any] | None
-    EMail: dict[str, Any] | None
-    ExternalsPolicy: dict[str, Any] | None
-    GaudiExecution: dict[str, Any] | None
-    Hospital: dict[str, Any] | None
-    InputDataPolicy: dict[str, Any] | None
-    JobDescription: dict[str, Any] | None
-    JobScheduling: dict[str, Any] | None
-    JobTypeMapping: dict[str, Any] | None
-    LogFiles: dict[str, Any] | None
-    LogStorage: dict[str, Any] | None
-    Logging: dict[str, Any] | None
-    Matching: dict[str, Any] | None
-    MonitoringBackends: dict[str, Any] | None
-    NagiosConnector: dict[str, Any] | None
-    Pilot: dict[str, Any] | None
-    Productions: dict[str, Any] | None
-    Shares: dict[str, Any] | None
-    Shifter: dict[str, Any] | None
-    SiteSEMappingByProtocol: dict[str, Any] | None
-    TransformationPlugins: dict[str, Any] | None
-    Transformations: dict[str, Any] | None
-    ResourceStatus: dict[str, Any] | None
+    DataConsistency: dict[str, Any] | None = None
+    DataManagement: dict[str, Any] | None = None
+    EMail: dict[str, Any] | None = None
+    ExternalsPolicy: dict[str, Any] | None = None
+    GaudiExecution: dict[str, Any] | None = None
+    Hospital: dict[str, Any] | None = None
+    InputDataPolicy: dict[str, Any] | None = None
+    JobDescription: dict[str, Any] | None = None
+    JobScheduling: dict[str, Any] | None = None
+    JobTypeMapping: dict[str, Any] | None = None
+    LogFiles: dict[str, Any] | None = None
+    LogStorage: dict[str, Any] | None = None
+    Logging: dict[str, Any] | None = None
+    Matching: dict[str, Any] | None = None
+    MonitoringBackends: dict[str, Any] | None = None
+    NagiosConnector: dict[str, Any] | None = None
+    Pilot: dict[str, Any] | None = None
+    Productions: dict[str, Any] | None = None
+    Shares: dict[str, Any] | None = None
+    Shifter: dict[str, Any] | None = None
+    SiteSEMappingByProtocol: dict[str, Any] | None = None
+    TransformationPlugins: dict[str, Any] | None = None
+    Transformations: dict[str, Any] | None = None
+    ResourceStatus: dict[str, Any] | None = None
 
 
 class Config(BaseModel):

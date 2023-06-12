@@ -12,7 +12,7 @@ from diracx.client.aio import Dirac
 from diracx.client.models import DeviceFlowErrorResponse
 from diracx.routers.auth import DIRAC_CLIENT_ID
 
-from . import jobs
+from . import internal, jobs
 from .utils import CREDENTIALS_PATH, AsyncTyper
 
 app = AsyncTyper()
@@ -97,6 +97,7 @@ def callback(output_format: Optional[str] = None):
 
 
 app.add_typer(jobs.app, name="jobs")
+app.add_typer(internal.app, name="internal", hidden=True)
 
 
 if __name__ == "__main__":

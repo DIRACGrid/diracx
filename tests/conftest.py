@@ -35,12 +35,10 @@ def with_config_repo(tmp_path, monkeypatch):
     cs_file = tmp_path / "default.yml"
     example_cs = Config.parse_obj(
         {
-            "DIRAC": {"DefaultGroup": {"lhcb": "lhcb_user"}},
+            "DIRAC": {},
             "Registry": {
                 "BannedIPs": "",
-                "DefaultGroup": {
-                    "lhcb": ["lhcb_lowpriouser", "lhcb_priouser", "lhcb_user"]
-                },
+                "DefaultGroup": {"lhcb": ["lhcb_user"]},
                 "DefaultProxyLifeTime": 432000,
                 "DefaultStorageQuota": 2000,
                 "DefaultVOMSAttribute": "/lhcb/Role=user",
