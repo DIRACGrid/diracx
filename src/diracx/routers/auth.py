@@ -238,9 +238,8 @@ class InitiateDeviceFlowResponse(TypedDict):
     expires_in: int
 
 
-@router.post("/{vo}/device")
+@router.post("/device")
 async def initiate_device_flow(
-    vo: str,
     client_id: str,
     scope: str,
     audience: str,
@@ -260,7 +259,7 @@ async def initiate_device_flow(
     assert client_id in KNOWN_CLIENTS, client_id
 
     try:
-        parse_and_validate_scope(scope, vo, config)
+        parse_and_validate_scope(scope, config)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -304,7 +303,7 @@ async def initiate_authorization_flow_with_iam(
 
     # TODO : encrypt it for good
     encrypted_state = base64.urlsafe_b64encode(
-        json.dumps(state | {"code_verifier": code_verifier}).encode()
+        json.dumps(state | {"vo": vo, "code_verifier": code_verifier}).encode()
     ).decode()
 
     urlParams = [
@@ -365,9 +364,8 @@ async def get_token_from_iam(
     return id_token
 
 
-@router.get("/{vo}/device")
+@router.get("/device")
 async def do_device_flow(
-    vo: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     user_code: str,
@@ -385,9 +383,10 @@ async def do_device_flow(
     """
 
     # Here we make sure the user_code actualy exists
-    await auth_db.device_flow_validate_user_code(
+    scope = await auth_db.device_flow_validate_user_code(
         user_code, DEVICE_FLOW_EXPIRATION_SECONDS
     )
+    parsed_scope = parse_and_validate_scope(scope, config)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
@@ -397,7 +396,7 @@ async def do_device_flow(
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
-        config, vo, redirect_uri, state_for_iam
+        config, parsed_scope["vo"], redirect_uri, state_for_iam
     )
     return RedirectResponse(authorization_flow_url)
 
@@ -412,9 +411,8 @@ def decrypt_state(state):
         ) from e
 
 
-@router.get("/{vo}/device/complete")
+@router.get("/device/complete")
 async def finish_device_flow(
-    vo: str,
     request: Request,
     code: str,
     state: str,
@@ -435,7 +433,7 @@ async def finish_device_flow(
 
     id_token = await get_token_from_iam(
         config,
-        vo,
+        decrypted_state["vo"],
         code,
         decrypted_state,
         str(request.url.replace(query="")),
@@ -447,8 +445,8 @@ async def finish_device_flow(
     return responses.RedirectResponse(f"{request.url.replace(query='')}/finished")
 
 
-@router.get("/{vo}/device/complete/finished")
-def finished(vo: str, response: Response):
+@router.get("/device/complete/finished")
+def finished(response: Response):
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"
@@ -467,9 +465,10 @@ class ScopeInfoDict(TypedDict):
     vo: str
 
 
-def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDict:
+def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
     """
     Check:
+        * At most one VO
         * At most one group
         * group belongs to VO
         * properties are known
@@ -482,16 +481,33 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
 
     groups = []
     properties = []
+    vos = []
     unrecognised = []
     for scope in scopes:
         if scope.startswith("group:"):
             groups.append(scope.split(":", 1)[1])
         elif scope.startswith("property:"):
             properties.append(scope.split(":", 1)[1])
+        elif scope.startswith("vo:"):
+            vos.append(scope.split(":", 1)[1])
         else:
             unrecognised.append(scope)
     if unrecognised:
         raise ValueError(f"Unrecognised scopes: {unrecognised}")
+
+    if not vos:
+        if len(config.Registry) == 1:
+            vo = list(config.Registry)[0]
+        else:
+            raise ValueError(
+                "Multiple VOs are available but no vo:* scope was specified"
+            )
+    elif len(vos) > 1:
+        raise ValueError(f"Only one DIRAC group allowed but got {vos}")
+    else:
+        vo = vos[0]
+        if vo not in config.Registry:
+            raise ValueError(f"VO {vo} is not known to his installation")
 
     if not groups:
         # TODO: Handle multiple groups correctly
@@ -502,6 +518,10 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
         group = groups[0]
         if group not in config.Registry[vo].Groups:
             raise ValueError(f"{group} not in {vo} groups")
+
+    if not properties:
+        # If there are no properties set get the defaults from the CS
+        properties = [p.value for p in config.Registry[vo].Groups[group].Properties]
 
     if not set(properties).issubset(SecurityProperty):
         raise ValueError(
@@ -560,9 +580,8 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
 #     ...
 
 
-@router.post("/{vo}/token")
+@router.post("/token")
 async def token(
-    vo: str,
     grant_type: Annotated[
         Literal["authorization_code"]
         | Literal["urn:ietf:params:oauth:grant-type:device_code"],
@@ -656,16 +675,15 @@ async def token(
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    parsed_scope = parse_and_validate_scope(info["scope"], vo, config)
+    parsed_scope = parse_and_validate_scope(info["scope"], config)
 
     return await exchange_token(
         parsed_scope["vo"], parsed_scope["group"], info["id_token"], config
     )
 
 
-@router.get("/{vo}/authorize")
+@router.get("/authorize")
 async def authorization_flow(
-    vo: str,
     request: Request,
     response_type: Literal["code"],
     code_challenge: str,
@@ -681,7 +699,7 @@ async def authorization_flow(
     assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
 
     try:
-        parse_and_validate_scope(scope, vo, config)
+        parsed_scope = parse_and_validate_scope(scope, config)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -704,15 +722,17 @@ async def authorization_flow(
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
-        config, vo, f"{request.url.replace(query='')}/complete", state_for_iam
+        config,
+        parsed_scope["vo"],
+        f"{request.url.replace(query='')}/complete",
+        state_for_iam,
     )
 
     return responses.RedirectResponse(authorization_flow_url)
 
 
-@router.get("/{vo}/authorize/complete")
+@router.get("/authorize/complete")
 async def authorization_flow_complete(
-    vo: str,
     code: str,
     state: str,
     request: Request,
@@ -724,7 +744,7 @@ async def authorization_flow_complete(
 
     id_token = await get_token_from_iam(
         config,
-        vo,
+        decrypted_state["vo"],
         code,
         decrypted_state,
         str(request.url.replace(query="")),

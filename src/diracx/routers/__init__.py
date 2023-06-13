@@ -91,8 +91,8 @@ async def shutdown() -> None:
 async def openid_configuration():
     return {
         "issuer": auth.ISSUER,
-        "token_endpoint": "http://localhost:8000/auth/lhcb/token",
-        "authorization_endpoint": "http://localhost:8000/auth/lhcb/authorize",
+        "token_endpoint": "http://localhost:8000/auth/token",
+        "authorization_endpoint": "http://localhost:8000/auth/authorize",
         # "introspection_endpoint":"",
         # "userinfo_endpoint":"",
         "grant_types_supported": [
@@ -110,5 +110,5 @@ async def openid_configuration():
         ],
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
-        "device_authorization_endpoint": "http://localhost:8000/auth/lhcb/device",
+        "device_authorization_endpoint": "http://localhost:8000/auth/device",
     }

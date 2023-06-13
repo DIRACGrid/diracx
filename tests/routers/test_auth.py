@@ -9,7 +9,12 @@ import pytest
 import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
-from diracx.routers.auth import _server_metadata_cache, get_server_metadata
+from diracx.core.config import Config
+from diracx.routers.auth import (
+    _server_metadata_cache,
+    get_server_metadata,
+    parse_and_validate_scope,
+)
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
@@ -73,7 +78,7 @@ async def test_authorization_flow(
     )
 
     r = test_client.get(
-        "/auth/lhcb/authorize",
+        "/auth/authorize",
         params={
             "response_type": "code",
             "code_challenge": code_challenge,
@@ -131,7 +136,7 @@ async def test_authorization_flow(
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
-        "/auth/lhcb/device",
+        "/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
@@ -148,7 +153,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
 
     # Check that token requests return "authorization_pending"
     r = test_client.post(
-        "/auth/lhcb/token",
+        "/auth/token",
         data={
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": data["device_code"],
@@ -199,7 +204,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
 
 def _get_token(test_client, request_data):
     # Check that token request now works
-    r = test_client.post("/auth/lhcb/token", data=request_data)
+    r = test_client.post("/auth/token", data=request_data)
     assert r.status_code == 200, r.json()
     response_data = r.json()
     assert response_data["access_token"]
@@ -208,8 +213,49 @@ def _get_token(test_client, request_data):
     assert response_data["state"]
 
     # Ensure the token request doesn't work a second time
-    r = test_client.post("/auth/lhcb/token", data=request_data)
+    r = test_client.post("/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
 
     return response_data
+
+
+@pytest.mark.parametrize(
+    "vos, groups, scope, expected",
+    [
+        [
+            ["lhcb"],
+            ["lhcb_user"],
+            "group:lhcb_user",
+            {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user"],
+            "vo:lhcb group:lhcb_user",
+            {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
+        ],
+    ],
+)
+def test_parse_scopes(vos, groups, scope, expected):
+    # TODO: Extend test for extra properties
+    config = Config.parse_obj(
+        {
+            "DIRAC": {},
+            "Registry": {
+                vo: {
+                    "DefaultGroup": "lhcb_user",
+                    "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
+                    "Users": {},
+                    "Groups": {
+                        group: {"Properties": ["NormalUser"], "Users": []}
+                        for group in groups
+                    },
+                }
+                for vo in vos
+            },
+            "Operations": {"Defaults": {}},
+        }
+    )
+
+    assert parse_and_validate_scope(scope, config) == expected

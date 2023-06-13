@@ -28,22 +28,18 @@ async def login(
         None, help="Override the default(s) with one or more properties"
     ),
 ):
-    # TODO: The default should probably be server side
-    # TODO: vo should probably be a scope
     scopes = []
-    if vo is None:
-        vo = "lhcb"
-    if group is None:
-        group = "lhcb_user"
-    scopes.append(f"group:{group}")
-    scopes += [
-        f"property:{p}" for p in property or ["FileCatalogManagement", "NormalUser"]
-    ]
+    if vo is not None:
+        scopes.append(f"vo:{vo}")
+    if group is not None:
+        scopes.append(f"group:{group}")
+    if property is not None:
+        scopes += [f"property:{p}" for p in property]
 
-    print(f"Logging in to {vo}")
+    print(f"Logging in with scopes: {scopes}")
+    # TODO set endpoint URL from preferences
     async with Dirac(endpoint="http://localhost:8000") as api:
         data = await api.auth.initiate_device_flow(
-            vo=vo,
             client_id=DIRAC_CLIENT_ID,
             audience="Dirac server",
             scope=" ".join(scopes),

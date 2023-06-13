@@ -34,14 +34,14 @@ class Enum3(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     S256 = "S256"
 
 
-class Enum6(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum6."""
+class Enum7(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum7."""
 
     ASC = "asc"
 
 
-class Enum7(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum7."""
+class Enum8(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum8."""
 
     DSC = "dsc"
 
