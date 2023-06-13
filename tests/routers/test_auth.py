@@ -10,7 +10,7 @@ import pytest
 import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
-from diracx.routers.auth import oauth
+from diracx.routers.auth import _server_metadata_cache, get_server_metadata
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
@@ -26,23 +26,20 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
     httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
 
-    client = oauth.create_client("lhcb")
-    await client.load_server_metadata()
+    server_metadata = await get_server_metadata(f"https://{path}")
 
     def custom_response(request: httpx.Request):
         if b"&code=valid-code&" in request.content:
             return httpx.Response(status_code=200, json={"id_token": "my-id-token"})
         return httpx.Response(status_code=401)
 
-    httpx_mock.add_callback(
-        custom_response, url=client.server_metadata["token_endpoint"]
-    )
+    httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
     monkeypatch.setattr("diracx.routers.auth.parse_id_token", fake_parse_id_token)
 
     yield httpx_mock
 
-    del client.server_metadata["_loaded_at"]
+    _server_metadata_cache.clear()
 
 
 async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs):

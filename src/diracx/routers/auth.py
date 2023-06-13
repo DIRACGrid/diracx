@@ -10,9 +10,10 @@ from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
 import httpx
-from authlib.integrations.starlette_client import OAuth, OAuthError, StarletteOAuth2App
+from authlib.integrations.starlette_client import OAuthError
 from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
+from cachetools import TTLCache
 from fastapi import (
     APIRouter,
     Depends,
@@ -53,57 +54,67 @@ class TokenResponse(BaseModel):
 
 router = APIRouter(tags=["auth"])
 
-
-lhcb_iam_endpoint = "https://lhcb-auth.web.cern.ch"
 ISSUER = "http://lhcbdirac.cern.ch/"
 AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 DIRAC_CLIENT_ID = "myDIRACClientID"
-
 # This should be taken dynamically
 KNOWN_CLIENTS = {
     DIRAC_CLIENT_ID: {
         "allowed_redirects": ["http://localhost:8000/docs/oauth2-redirect"]
     }
 }
-
-SID_TO_USERNAME = {
-    "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": "chaen",
-    "59382c3f-181c-4df8-981d-ec3e9015fcb9": "cburr",
-}
-
 # Duration for which the flows against DIRAC AS are valid
 DEVICE_FLOW_EXPIRATION_SECONDS = 600
 AUTHORIZATION_FLOW_EXPIRATION_SECONDS = 300
 
-oauth = OAuth()
-# chris-hack-a-ton
-# lhcb_iam_client_id = "5c0541bf-85c8-4d7f-b1df-beaeea19ff5b"
-# chris-hack-a-ton-2
-lhcb_iam_client_id = "d396912e-2f04-439b-8ae7-d8c585a34790"
-# lhcb_iam_client_secret = os.environ["LHCB_IAM_CLIENT_SECRET"]
-oauth.register(
-    name="lhcb",
-    server_metadata_url=f"{lhcb_iam_endpoint}/.well-known/openid-configuration",
-    client_id=lhcb_iam_client_id,
-    client_kwargs={"scope": "openid profile email"},
-)
+_server_metadata_cache: TTLCache = TTLCache(maxsize=1024, ttl=3600)
 
 
-async def parse_id_token(
-    raw_id_token: str, audience: str, oauth2_app: StarletteOAuth2App
-):
-    metadata = await oauth2_app.load_server_metadata()
-    alg_values = metadata.get("id_token_signing_alg_values_supported") or ["RS256"]
-    jwt = JsonWebToken(alg_values)
-    jwk_set = await oauth2_app.fetch_jwk_set()
+async def get_server_metadata(url: str):
+    server_metadata = _server_metadata_cache.get(url)
+    if server_metadata is None:
+        async with httpx.AsyncClient() as c:
+            res = await c.get(url)
+            if res.status_code != 200:
+                # TODO: Better error handling
+                raise NotImplementedError(res)
+            server_metadata = res.json()
+            _server_metadata_cache[url] = server_metadata
+    return server_metadata
 
-    token = jwt.decode(
+
+async def fetch_jwk_set(url: str):
+    server_metadata = await get_server_metadata(url)
+
+    jwks_uri = server_metadata.get("jwks_uri")
+    if not jwks_uri:
+        raise RuntimeError('Missing "jwks_uri" in metadata')
+
+    async with httpx.AsyncClient() as c:
+        res = await c.get(jwks_uri)
+        if res.status_code != 200:
+            # TODO: Better error handling
+            raise NotImplementedError(res)
+        jwk_set = res.json()
+
+    # self.server_metadata['jwks'] = jwk_set
+    return JsonWebKey.import_key_set(jwk_set)
+
+
+async def parse_id_token(config, vo, raw_id_token: str, audience: str):
+    server_metadata = await get_server_metadata(
+        config.Registry[vo].IdP.server_metadata_url
+    )
+    alg_values = server_metadata.get("id_token_signing_alg_values_supported", ["RS256"])
+    jwk_set = await fetch_jwk_set(config.Registry[vo].IdP.server_metadata_url)
+
+    token = JsonWebToken(alg_values).decode(
         raw_id_token,
-        key=JsonWebKey.import_key_set(jwk_set),
+        key=jwk_set,
         claims_cls=IDToken,
         claims_options={
-            "iss": {"values": [metadata["issuer"]]},
+            "iss": {"values": [server_metadata["issuer"]]},
             "aud": {"values": [audience]},
         },
     )
@@ -192,23 +203,21 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
 
 
 async def exchange_token(
-    dirac_group: str, id_token: dict[str, str], config: Config
+    vo: str, dirac_group: str, id_token: dict[str, str], config: Config
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
-
-    vo = id_token["organisation_name"]
-    subId = SID_TO_USERNAME[id_token["sub"]]
-    if subId not in config.Registry.Groups[vo][dirac_group].Users:
+    sub = id_token["sub"]
+    if sub not in config.Registry[vo].Groups[dirac_group].Users:
         raise ValueError(
             f"User is not a member of the requested group ({id_token['preferred_username']}, {dirac_group})"
         )
 
     payload = {
-        "sub": f"{vo}:{subId}",
+        "sub": f"{vo}:{sub}",
         "vo": vo,
         "aud": AUDIENCE,
         "iss": ISSUER,
-        "dirac_properties": config.Registry.Groups[vo][dirac_group].Properties,
+        "dirac_properties": config.Registry[vo].Groups[dirac_group].Properties,
         "jti": str(uuid4()),
         "preferred_username": id_token["preferred_username"],
         "dirac_group": dirac_group,
@@ -274,7 +283,7 @@ async def initiate_device_flow(
 
 
 async def initiate_authorization_flow_with_iam(
-    vo: str, redirect_uri: str, state: dict[str, str]
+    config, vo: str, redirect_uri: str, state: dict[str, str]
 ):
     # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
     code_verifier = secrets.token_hex()
@@ -286,11 +295,12 @@ async def initiate_authorization_flow_with_iam(
         .replace("=", "")
     )
 
-    client = oauth.create_client(vo)
-    await client.load_server_metadata()
+    server_metadata = await get_server_metadata(
+        config.Registry[vo].IdP.server_metadata_url
+    )
 
     # Take these two from CS/.well-known
-    authorization_endpoint = client.server_metadata["authorization_endpoint"]
+    authorization_endpoint = server_metadata["authorization_endpoint"]
 
     # TODO : encrypt it for good
     encrypted_state = base64.urlsafe_b64encode(
@@ -301,7 +311,7 @@ async def initiate_authorization_flow_with_iam(
         "response_type=code",
         f"code_challenge={code_challenge}",
         "code_challenge_method=S256",
-        f"client_id={lhcb_iam_client_id}",
+        f"client_id={config.Registry[vo].IdP.ClientID}",
         f"redirect_uri={redirect_uri}",
         "scope=openid%20profile",
         f"state={encrypted_state}",
@@ -311,17 +321,18 @@ async def initiate_authorization_flow_with_iam(
 
 
 async def get_token_from_iam(
-    vo: str, code: str, state: dict[str, str], redirect_uri: str
+    config, vo: str, code: str, state: dict[str, str], redirect_uri: str
 ) -> dict[str, str]:
-    client = oauth.create_client(vo)
-    await client.load_server_metadata()
+    server_metadata = await get_server_metadata(
+        config.Registry[vo].IdP.server_metadata_url
+    )
 
     # Take these two from CS/.well-known
-    token_endpoint = client.server_metadata["token_endpoint"]
+    token_endpoint = server_metadata["token_endpoint"]
 
     data = {
         "grant_type": "authorization_code",
-        "client_id": lhcb_iam_client_id,
+        "client_id": config.Registry[vo].IdP.ClientID,
         "code": code,
         "code_verifier": state["code_verifier"],
         "redirect_uri": redirect_uri,
@@ -334,7 +345,7 @@ async def get_token_from_iam(
         )
         if res.status_code >= 500:
             raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY, "Failed to contact IAM token endpoint"
+                status.HTTP_502_BAD_GATEWAY, "Failed to contact token endpoint"
             )
         elif res.status_code >= 400:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid code")
@@ -343,15 +354,11 @@ async def get_token_from_iam(
     # Extract the payload and verify it
     try:
         id_token = await parse_id_token(
+            config=config,
+            vo=vo,
             raw_id_token=raw_id_token,
-            audience=lhcb_iam_client_id,
-            oauth2_app=getattr(oauth, vo),
+            audience=config.Registry[vo].IdP.ClientID,
         )
-        if id_token["organisation_name"] != vo:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="vo does not match organization_name",
-            )
     except OAuthError:
         raise
 
@@ -364,6 +371,7 @@ async def do_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     user_code: str,
+    config: Annotated[Config, Depends(get_config)],
 ) -> HTMLResponse:
     """
     This is called as the verification URI for the device flow.
@@ -389,7 +397,7 @@ async def do_device_flow(
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
-        vo, redirect_uri, state_for_iam
+        config, vo, redirect_uri, state_for_iam
     )
 
     return HTMLResponse(f'<a href="{authorization_flow_url}">click here to login</a>')
@@ -412,6 +420,7 @@ async def finish_device_flow(
     code: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
 ):
     """
     This the url callbacked by IAM/Checkin after the authorization
@@ -426,6 +435,7 @@ async def finish_device_flow(
     )
 
     id_token = await get_token_from_iam(
+        config,
         vo,
         code,
         decrypted_state,
@@ -455,6 +465,7 @@ class DeviceCodeTokenForm(BaseModel):
 class ScopeInfoDict(TypedDict):
     group: str
     properties: list[str]
+    vo: str
 
 
 def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDict:
@@ -485,12 +496,12 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
 
     if not groups:
         # TODO: Handle multiple groups correctly
-        group = config.Registry.DefaultGroup[vo][0]
+        group = config.Registry[vo].DefaultGroup
     elif len(groups) > 1:
         raise ValueError(f"Only one DIRAC group allowed but got {groups}")
     else:
         group = groups[0]
-        if group not in config.Registry.Groups[vo]:
+        if group not in config.Registry[vo].Groups:
             raise ValueError(f"{group} not in {vo} groups")
 
     if not set(properties).issubset(SecurityProperty):
@@ -501,6 +512,7 @@ def parse_and_validate_scope(scope: str, vo: str, config: Config) -> ScopeInfoDi
     return {
         "group": group,
         "properties": properties,
+        "vo": vo,
     }
 
 
@@ -647,7 +659,9 @@ async def token(
 
     parsed_scope = parse_and_validate_scope(info["scope"], vo, config)
 
-    return await exchange_token(parsed_scope["group"], info["id_token"], config)
+    return await exchange_token(
+        parsed_scope["vo"], parsed_scope["group"], info["id_token"], config
+    )
 
 
 @router.get("/{vo}/authorize")
@@ -691,7 +705,7 @@ async def authorization_flow(
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
-        vo, f"{request.url.replace(query='')}/complete", state_for_iam
+        config, vo, f"{request.url.replace(query='')}/complete", state_for_iam
     )
 
     return responses.RedirectResponse(authorization_flow_url)
@@ -704,11 +718,13 @@ async def authorization_flow_complete(
     state: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    config: Annotated[Config, Depends(get_config)],
 ):
     decrypted_state = decrypt_state(state)
     assert decrypted_state["grant_type"] == "authorization_code"
 
     id_token = await get_token_from_iam(
+        config,
         vo,
         code,
         decrypted_state,

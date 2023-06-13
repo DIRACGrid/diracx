@@ -37,20 +37,29 @@ def with_config_repo(tmp_path, monkeypatch):
         {
             "DIRAC": {},
             "Registry": {
-                "BannedIPs": "",
-                "DefaultGroup": {"lhcb": ["lhcb_user"]},
-                "DefaultProxyLifeTime": 432000,
-                "DefaultStorageQuota": 2000,
-                "DefaultVOMSAttribute": "/lhcb/Role=user",
-                "Users": {},
-                "Groups": {
-                    "lhcb": {
+                "lhcb": {
+                    "DefaultGroup": "lhcb_user",
+                    "DefaultProxyLifeTime": 432000,
+                    "DefaultStorageQuota": 2000,
+                    "IdP": {
+                        "URL": "https://lhcb-auth.web.cern.ch",
+                        "ClientID": "test-idp",
+                    },
+                    "Users": {
+                        "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": {
+                            "PreferedUsername": "chaen",
+                            "Email": None,
+                            "DN": "/DC=invalid/DC=testca/OU=Organic Units/OU=Users/CN=chaen/CN=1234/CN=Christophe Haen",
+                            "CA": "/DC=invalid/DC=testca/CN=Test CA",
+                        }
+                    },
+                    "Groups": {
                         "lhcb_user": {
                             "Properties": ["NormalUser", "PrivateLimitedDelegation"],
-                            "Users": ["chaen"],
+                            "Users": ["b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"],
                         }
-                    }
-                },
+                    },
+                }
             },
             "Operations": {"Defaults": {}},
         }

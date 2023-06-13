@@ -12,6 +12,7 @@ from diracx.core.config.schema import (
     Config,
     DIRACConfig,
     GroupConfig,
+    IdpConfig,
     OperationsConfig,
     RegistryConfig,
 )
@@ -36,6 +37,8 @@ def generate_cs(
     *,
     vo: str = "testvo",
     user_group: str = "user",
+    idp_url: str = "https://idp.invalid",
+    idp_client_id: str = "idp-client-id",
 ):
     """Generate a minimal DiracX configuration repository"""
     if config_repo.exists():
@@ -43,18 +46,17 @@ def generate_cs(
         raise typer.Exit(1)
 
     registry = RegistryConfig(
-        DefaultGroup={vo: [user_group]},
-        Users={vo: {}},
+        IdP=IdpConfig(URL=idp_url, ClientID=idp_client_id),
+        DefaultGroup=user_group,
+        Users={},
         Groups={
-            vo: {
-                user_group: GroupConfig(
-                    JobShare=None, Properties=["NormalUser"], Quota=None, Users=[]
-                )
-            }
+            user_group: GroupConfig(
+                JobShare=None, Properties=["NormalUser"], Quota=None, Users=[]
+            )
         },
     )
     config = Config(
-        Registry=registry,
+        Registry={vo: registry},
         DIRAC=DIRACConfig(),
         Operations={"Defaults": OperationsConfig()},
     )
