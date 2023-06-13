@@ -5,7 +5,8 @@ __all__ = ("app",)
 
 import json
 import os
-from typing import Annotated
+import re
+from typing import Annotated, Any, cast
 
 from rich.console import Console
 from rich.table import Table
@@ -52,29 +53,40 @@ async def search(
     ],
     condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
+    page: int = 1,
+    per_page: int = 10,
 ):
     async with Dirac(endpoint="http://localhost:8000") as api:
-        jobs = await api.jobs.search(
-            parameters=None if all else parameter,
-            search=condition if condition else None,
-            headers=get_auth_headers(),
+        content_range, jobs = cast(
+            tuple[ContentRange, dict[str, Any]],
+            await api.jobs.search(
+                parameters=None if all else parameter,
+                search=condition if condition else None,
+                headers=get_auth_headers(),
+                page=page,
+                per_page=per_page,
+                cls=lambda a, b, c: (
+                    ContentRange(a.http_response.headers["Content-Range"]),
+                    b,
+                ),
+            ),
         )
-    display(jobs, "jobs")
+    display(jobs, content_range)
 
 
-def display(data, unit: str):
+def display(data, content_range: "ContentRange"):
     format = os.environ["DIRACX_OUTPUT_FORMAT"]
     if format == "json":
         print(json.dumps(data, indent=2))
     elif format == "rich":
-        display_rich(data, unit)
+        display_rich(data, content_range)
     else:
         raise NotImplementedError(format)
 
 
-def display_rich(data, unit: str) -> None:
+def display_rich(data, content_range: "ContentRange") -> None:
     if not data:
-        print(f"No {unit} found")
+        print(f"No {content_range.unit} found")
         return
 
     console = Console()
@@ -83,7 +95,7 @@ def display_rich(data, unit: str) -> None:
         table = Table(
             "Parameter",
             "Value",
-            caption=f"Showing {len(data)} of {len(data)} {unit}",
+            caption=content_range.caption,
             caption_justify="right",
         )
         for job in data:
@@ -93,7 +105,7 @@ def display_rich(data, unit: str) -> None:
     else:
         table = Table(
             *columns,
-            caption=f"Showing {len(data)} of {len(data)} {unit}",
+            caption=content_range.caption,
             caption_justify="right",
         )
         for job in data:
@@ -110,3 +122,25 @@ async def submit(jdl: list[FileText]):
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )
+
+
+class ContentRange:
+    unit: str | None = None
+    start: int | None = None
+    end: int | None = None
+    total: int | None = None
+
+    def __init__(self, header):
+        if match := re.fullmatch(r"(\w+) (\d+-\d+|\*)/(\d+|\*)", header):
+            self.unit, range, total = match.groups()
+            self.total = int(total)
+            if range != "*":
+                self.start, self.end = map(int, range.split("-"))
+
+    @property
+    def caption(self):
+        if self.start is None or self.end is None:
+            range_str = "unknown"
+        else:
+            range_str = f"{self.start}-{self.end}"
+        return f"Showing {range_str} of {self.total or 'unknown'} {self.unit}"
