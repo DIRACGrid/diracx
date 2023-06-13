@@ -22,15 +22,13 @@ EXPIRES_GRACE_SECONDS = 15
 
 @app.async_command()
 async def login(
-    vo: Optional[str] = None,
+    vo: str,
     group: Optional[str] = None,
     property: Optional[list[str]] = Option(
         None, help="Override the default(s) with one or more properties"
     ),
 ):
-    scopes = []
-    if vo is not None:
-        scopes.append(f"vo:{vo}")
+    scopes = [f"vo:{vo}"]
     if group is not None:
         scopes.append(f"group:{group}")
     if property is not None:

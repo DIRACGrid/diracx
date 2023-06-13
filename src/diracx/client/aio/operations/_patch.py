@@ -45,12 +45,8 @@ def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/{vo}/token"
-    path_format_arguments = {
-        "vo": _SERIALIZER.url("vo", vo, "str"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+    _url = "/auth/token"
+    _url: str = _format_url_section(_url)
 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 

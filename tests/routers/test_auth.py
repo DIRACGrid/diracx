@@ -85,7 +85,7 @@ async def test_authorization_flow(
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
             "redirect_uri": "http://localhost:8000/docs/oauth2-redirect",
-            "scope": "property:NormalUser",
+            "scope": "vo:lhcb property:NormalUser",
             "state": "external-state",
         },
         follow_redirects=False,
@@ -140,7 +140,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
-            "scope": "group:lhcb_user property:FileCatalogManagement property:NormalUser",
+            "scope": "vo:lhcb group:lhcb_user property:FileCatalogManagement property:NormalUser",
         },
     )
     assert r.status_code == 200, r.json()
@@ -226,12 +226,6 @@ def _get_token(test_client, request_data):
         [
             ["lhcb"],
             ["lhcb_user"],
-            "group:lhcb_user",
-            {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
-        ],
-        [
-            ["lhcb"],
-            ["lhcb_user"],
             "vo:lhcb group:lhcb_user",
             {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
         ],
@@ -259,3 +253,38 @@ def test_parse_scopes(vos, groups, scope, expected):
     )
 
     assert parse_and_validate_scope(scope, config) == expected
+
+
+@pytest.mark.parametrize(
+    "vos, groups, scope, expected_error",
+    [
+        [
+            ["lhcb"],
+            ["lhcb_user"],
+            "group:lhcb_user",
+            "No vo scope requested",
+        ],
+    ],
+)
+def test_parse_scopes_invalid(vos, groups, scope, expected_error):
+    # TODO: Extend test for extra properties
+    config = Config.parse_obj(
+        {
+            "DIRAC": {},
+            "Registry": {
+                vo: {
+                    "DefaultGroup": "lhcb_user",
+                    "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
+                    "Users": {},
+                    "Groups": {
+                        group: {"Properties": ["NormalUser"], "Users": []}
+                        for group in groups
+                    },
+                }
+                for vo in vos
+            },
+            "Operations": {"Defaults": {}},
+        }
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        parse_and_validate_scope(scope, config)

@@ -496,14 +496,13 @@ def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
         raise ValueError(f"Unrecognised scopes: {unrecognised}")
 
     if not vos:
-        if len(config.Registry) == 1:
-            vo = list(config.Registry)[0]
-        else:
-            raise ValueError(
-                "Multiple VOs are available but no vo:* scope was specified"
-            )
+        available_vo_scopes = [repr(f"vo:{vo}") for vo in config.Registry]
+        raise ValueError(
+            "No vo scope requested, available values: "
+            f"{' '.join(available_vo_scopes)}"
+        )
     elif len(vos) > 1:
-        raise ValueError(f"Only one DIRAC group allowed but got {vos}")
+        raise ValueError(f"Only one vo is allowed but got {vos}")
     else:
         vo = vos[0]
         if vo not in config.Registry:
