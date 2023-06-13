@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import re
 import secrets
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -160,10 +159,10 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.json()["error"] == "authorization_pending"
 
     # Open the DIRAC login page and ensure it redirects to the IdP
-    r = test_client.get(data["verification_uri_complete"])
-    assert r.status_code == 200, r.text
-    assert "/authorize?response_type=code" in r.text
-    login_url = re.search(r'href="([^"]+)"', r.text).groups()[0]
+    r = test_client.get(data["verification_uri_complete"], follow_redirects=False)
+    assert r.status_code == 307, r.text
+    login_url = r.headers["Location"]
+    assert "/authorize?response_type=code" in login_url
     query_paramers = parse_qs(urlparse(login_url).query)
     redirect_uri = query_paramers["redirect_uri"][0]
     state = query_paramers["state"][0]

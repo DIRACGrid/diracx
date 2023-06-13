@@ -24,7 +24,7 @@ from fastapi import (
     responses,
     status,
 )
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel
 
@@ -372,7 +372,7 @@ async def do_device_flow(
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     user_code: str,
     config: Annotated[Config, Depends(get_config)],
-) -> HTMLResponse:
+) -> RedirectResponse:
     """
     This is called as the verification URI for the device flow.
     It will redirect to the actual OpenID server (IAM, CheckIn) to
@@ -399,8 +399,7 @@ async def do_device_flow(
     authorization_flow_url = await initiate_authorization_flow_with_iam(
         config, vo, redirect_uri, state_for_iam
     )
-
-    return HTMLResponse(f'<a href="{authorization_flow_url}">click here to login</a>')
+    return RedirectResponse(authorization_flow_url)
 
 
 def decrypt_state(state):
