@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import json
 from pathlib import Path
-from typing import Annotated
 
 import git
 import typer
@@ -24,16 +23,7 @@ app = AsyncTyper()
 
 @app.command()
 def generate_cs(
-    config_repo: Annotated[
-        Path,
-        typer.Argument(
-            file_okay=False,
-            dir_okay=True,
-            writable=True,
-            readable=True,
-            resolve_path=True,
-        ),
-    ],
+    config_repo: str,
     *,
     vo: str = "testvo",
     user_group: str = "user",
@@ -41,7 +31,12 @@ def generate_cs(
     idp_client_id: str = "idp-client-id",
 ):
     """Generate a minimal DiracX configuration repository"""
-    if config_repo.exists():
+    if config_repo.startswith("file://"):
+        config_repo = config_repo[len("file://") :]
+    if "://" in config_repo:
+        raise NotImplementedError(f"Unsupported scheme on {config_repo}")
+    config_repo = Path(config_repo)
+    if config_repo.exists() and list(config_repo.iterdir()):
         typer.echo(f"ERROR: Directory {config_repo} already exists", err=True)
         raise typer.Exit(1)
 
