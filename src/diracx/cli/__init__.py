@@ -29,9 +29,9 @@ async def login(
     ),
 ):
     scopes = [f"vo:{vo}"]
-    if group is not None:
+    if group:
         scopes.append(f"group:{group}")
-    if property is not None:
+    if property:
         scopes += [f"property:{p}" for p in property]
 
     print(f"Logging in with scopes: {scopes}")
