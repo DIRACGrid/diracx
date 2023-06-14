@@ -2,7 +2,9 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 
+from diracx.core.config import Config, get_config
 from diracx.core.exceptions import DiracError, DiracHttpResponse
+from diracx.core.properties import SecurityProperty
 from diracx.core.secrets import DiracxSecrets
 from diracx.db import AuthDB, JobDB
 
@@ -23,7 +25,7 @@ class DiracFastAPI(FastAPI):
         super().__init__(
             swagger_ui_init_oauth={
                 "clientId": auth.DIRAC_CLIENT_ID,
-                "scopes": "group:lhcb_user property:NormalUser",
+                "scopes": "vo:dteam group:dteam_user property:NormalUser",
                 "usePkceWithAuthorizationCodeGrant": True,
             },
             generate_unique_id_function=generate_unique_id_function,
@@ -88,27 +90,29 @@ async def shutdown() -> None:
 
 
 @app.get("/.well-known/openid-configuration", tags=["well-known"])
-async def openid_configuration():
+async def openid_configuration(config: Config = Depends(get_config)):
+    scopes_supported = []
+    for vo in config.Registry:
+        scopes_supported.append(f"vo:{vo}")
+        scopes_supported += [f"group:{vo}" for vo in config.Registry[vo].Groups]
+    scopes_supported += [f"property:{p.value}" for p in SecurityProperty]
+
     return {
         "issuer": auth.ISSUER,
-        "token_endpoint": "http://localhost:8000/auth/lhcb/token",
-        "authorization_endpoint": "http://localhost:8000/auth/lhcb/authorize",
+        "token_endpoint": "http://localhost:8000/auth/token",
+        "authorization_endpoint": "http://localhost:8000/auth/authorize",
         # "introspection_endpoint":"",
         # "userinfo_endpoint":"",
         "grant_types_supported": [
             "authorization_code",
             "urn:ietf:params:oauth:grant-type:device_code",
         ],
-        "scopes_supported": [
-            "group:lhcb_user",
-            "property:NormalUser",
-            "property:FileCatalogManagement",
-        ],
+        "scopes_supported": scopes_supported,
         "response_types_supported": ["code"],
         "token_endpoint_auth_signing_alg_values_supported": [
             DiracxSecrets.from_env().token_algorithm
         ],
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
-        "device_authorization_endpoint": "http://localhost:8000/auth/lhcb/device",
+        "device_authorization_endpoint": "http://localhost:8000/auth/device",
     }

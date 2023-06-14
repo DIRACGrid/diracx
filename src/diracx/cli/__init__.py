@@ -22,28 +22,22 @@ EXPIRES_GRACE_SECONDS = 15
 
 @app.async_command()
 async def login(
-    vo: Optional[str] = None,
+    vo: str,
     group: Optional[str] = None,
     property: Optional[list[str]] = Option(
         None, help="Override the default(s) with one or more properties"
     ),
 ):
-    # TODO: The default should probably be server side
-    # TODO: vo should probably be a scope
-    scopes = []
-    if vo is None:
-        vo = "lhcb"
-    if group is None:
-        group = "lhcb_user"
-    scopes.append(f"group:{group}")
-    scopes += [
-        f"property:{p}" for p in property or ["FileCatalogManagement", "NormalUser"]
-    ]
+    scopes = [f"vo:{vo}"]
+    if group:
+        scopes.append(f"group:{group}")
+    if property:
+        scopes += [f"property:{p}" for p in property]
 
-    print(f"Logging in to {vo}")
+    print(f"Logging in with scopes: {scopes}")
+    # TODO set endpoint URL from preferences
     async with Dirac(endpoint="http://localhost:8000") as api:
         data = await api.auth.initiate_device_flow(
-            vo=vo,
             client_id=DIRAC_CLIENT_ID,
             audience="Dirac server",
             scope=" ".join(scopes),

@@ -11,7 +11,6 @@ from ._models import InitiateDeviceFlowResponse
 from ._models import InsertedJob
 from ._models import JobSearchParams
 from ._models import JobSearchParamsSearchItem
-from ._models import JobSearchParamsSortItem
 from ._models import JobStatusReturn
 from ._models import JobStatusUpdate
 from ._models import JobSummaryParams
@@ -28,8 +27,8 @@ from ._enums import Enum0
 from ._enums import Enum1
 from ._enums import Enum2
 from ._enums import Enum3
-from ._enums import Enum6
 from ._enums import Enum7
+from ._enums import Enum8
 from ._enums import JobStatus
 from ._enums import ScalarSearchOperator
 from ._enums import VectorSearchOperator
@@ -45,7 +44,6 @@ __all__ = [
     "InsertedJob",
     "JobSearchParams",
     "JobSearchParamsSearchItem",
-    "JobSearchParamsSortItem",
     "JobStatusReturn",
     "JobStatusUpdate",
     "JobSummaryParams",
@@ -61,8 +59,8 @@ __all__ = [
     "Enum1",
     "Enum2",
     "Enum3",
-    "Enum6",
     "Enum7",
+    "Enum8",
     "JobStatus",
     "ScalarSearchOperator",
     "VectorSearchOperator",

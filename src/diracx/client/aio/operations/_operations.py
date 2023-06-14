@@ -86,7 +86,7 @@ class AuthOperations:
         )
 
     @distributed_trace_async
-    async def do_device_flow(self, vo: str, *, user_code: str, **kwargs: Any) -> Any:
+    async def do_device_flow(self, *, user_code: str, **kwargs: Any) -> Any:
         """Do Device Flow.
 
         This is called as the verification URI for the device flow.
@@ -98,8 +98,6 @@ class AuthOperations:
         device flow.
         (note: it can't be put as parameter or in the URL).
 
-        :param vo: Required.
-        :type vo: str
         :keyword user_code: Required.
         :paramtype user_code: str
         :return: any
@@ -120,7 +118,6 @@ class AuthOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_do_device_flow_request(
-            vo=vo,
             user_code=user_code,
             headers=_headers,
             params=_params,
@@ -151,7 +148,7 @@ class AuthOperations:
 
     @distributed_trace_async
     async def initiate_device_flow(
-        self, vo: str, *, client_id: str, scope: str, audience: str, **kwargs: Any
+        self, *, client_id: str, scope: str, audience: str, **kwargs: Any
     ) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
@@ -163,8 +160,6 @@ class AuthOperations:
         Offers the user to go with the browser to
         ``auth/<vo>/device?user_code=XYZ``.
 
-        :param vo: Required.
-        :type vo: str
         :keyword client_id: Required.
         :paramtype client_id: str
         :keyword scope: Required.
@@ -189,7 +184,6 @@ class AuthOperations:
         cls: ClsType[_models.InitiateDeviceFlowResponse] = kwargs.pop("cls", None)
 
         request = build_auth_initiate_device_flow_request(
-            vo=vo,
             client_id=client_id,
             scope=scope,
             audience=audience,
@@ -223,9 +217,7 @@ class AuthOperations:
         return deserialized
 
     @distributed_trace_async
-    async def finish_device_flow(
-        self, vo: str, *, code: str, state: str, **kwargs: Any
-    ) -> Any:
+    async def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Finish Device Flow.
 
         This the url callbacked by IAM/Checkin after the authorization
@@ -234,8 +226,6 @@ class AuthOperations:
         can map it to the corresponding device flow using the user_code
         in the cookie/session.
 
-        :param vo: Required.
-        :type vo: str
         :keyword code: Required.
         :paramtype code: str
         :keyword state: Required.
@@ -258,7 +248,6 @@ class AuthOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_finish_device_flow_request(
-            vo=vo,
             code=code,
             state=state,
             headers=_headers,
@@ -289,13 +278,11 @@ class AuthOperations:
         return deserialized
 
     @distributed_trace_async
-    async def finished(self, vo: str, **kwargs: Any) -> Any:
+    async def finished(self, **kwargs: Any) -> Any:
         """Finished.
 
         Finished.
 
-        :param vo: Required.
-        :type vo: str
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -314,7 +301,6 @@ class AuthOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_finished_request(
-            vo=vo,
             headers=_headers,
             params=_params,
         )
@@ -345,7 +331,6 @@ class AuthOperations:
     @distributed_trace_async
     async def authorization_flow(
         self,
-        vo: str,
         *,
         response_type: Union[str, _models.Enum2],
         code_challenge: str,
@@ -360,8 +345,6 @@ class AuthOperations:
 
         Authorization Flow.
 
-        :param vo: Required.
-        :type vo: str
         :keyword response_type: "code" Required.
         :paramtype response_type: str or ~client.models.Enum2
         :keyword code_challenge: Required.
@@ -394,7 +377,6 @@ class AuthOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_authorization_flow_request(
-            vo=vo,
             response_type=response_type,
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
@@ -431,14 +413,12 @@ class AuthOperations:
 
     @distributed_trace_async
     async def authorization_flow_complete(
-        self, vo: str, *, code: str, state: str, **kwargs: Any
+        self, *, code: str, state: str, **kwargs: Any
     ) -> Any:
         """Authorization Flow Complete.
 
         Authorization Flow Complete.
 
-        :param vo: Required.
-        :type vo: str
         :keyword code: Required.
         :paramtype code: str
         :keyword state: Required.
@@ -461,7 +441,6 @@ class AuthOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_auth_authorization_flow_complete_request(
-            vo=vo,
             code=code,
             state=state,
             headers=_headers,
@@ -514,64 +493,56 @@ class JobsOperations:
         )
 
     @overload
-    async def search(
-        self,
-        body: Optional[_models.JobSearchParams] = None,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any
-    ) -> List[JSON]:
-        """Search.
+    async def submit_bulk_jobs(
+        self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
+    ) -> List[_models.InsertedJob]:
+        """Submit Bulk Jobs.
 
-        Search.
+        Submit Bulk Jobs.
 
-        :param body: Default value is None.
-        :type body: ~client.models.JobSearchParams
+        :param body: Required.
+        :type body: list[str]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
-    async def search(
-        self,
-        body: Optional[IO] = None,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any
-    ) -> List[JSON]:
-        """Search.
+    async def submit_bulk_jobs(
+        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
+    ) -> List[_models.InsertedJob]:
+        """Submit Bulk Jobs.
 
-        Search.
+        Submit Bulk Jobs.
 
-        :param body: Default value is None.
+        :param body: Required.
         :type body: IO
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace_async
-    async def search(
-        self, body: Optional[Union[_models.JobSearchParams, IO]] = None, **kwargs: Any
-    ) -> List[JSON]:
-        """Search.
+    async def submit_bulk_jobs(
+        self, body: Union[List[str], IO], **kwargs: Any
+    ) -> List[_models.InsertedJob]:
+        """Submit Bulk Jobs.
 
-        Search.
+        Submit Bulk Jobs.
 
-        :param body: Is either a JobSearchParams type or a IO type. Default value is None.
-        :type body: ~client.models.JobSearchParams or IO
+        :param body: Is either a [str] type or a IO type. Required.
+        :type body: list[str] or IO
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of InsertedJob
+        :rtype: list[~client.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -588,7 +559,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[List[JSON]] = kwargs.pop("cls", None)
+        cls: ClsType[List[_models.InsertedJob]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -596,12 +567,9 @@ class JobsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            if body is not None:
-                _json = self._serialize.body(body, "JobSearchParams")
-            else:
-                _json = None
+            _json = self._serialize.body(body, "[str]")
 
-        request = build_jobs_search_request(
+        request = build_jobs_submit_bulk_jobs_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -625,66 +593,21 @@ class JobsOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("[object]", pipeline_response)
+        deserialized = self._deserialize("[InsertedJob]", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
 
         return deserialized
 
-    @overload
-    async def summary(
-        self,
-        body: _models.JobSummaryParams,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any
-    ) -> Any:
-        """Summary.
-
-        Show information suitable for plotting.
-
-        :param body: Required.
-        :type body: ~client.models.JobSummaryParams
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    async def summary(
-        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Any:
-        """Summary.
-
-        Show information suitable for plotting.
-
-        :param body: Required.
-        :type body: IO
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
     @distributed_trace_async
-    async def summary(
-        self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any
-    ) -> Any:
-        """Summary.
+    async def delete_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
+        """Delete Bulk Jobs.
 
-        Show information suitable for plotting.
+        Delete Bulk Jobs.
 
-        :param body: Is either a JobSummaryParams type or a IO type. Required.
-        :type body: ~client.models.JobSummaryParams or IO
-        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
-         Default value is None.
-        :paramtype content_type: str
+        :keyword job_ids: Required.
+        :paramtype job_ids: list[int]
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -697,26 +620,13 @@ class JobsOperations:
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "JobSummaryParams")
-
-        request = build_jobs_summary_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
+        request = build_jobs_delete_bulk_jobs_request(
+            job_ids=job_ids,
             headers=_headers,
             params=_params,
         )
@@ -1022,168 +932,6 @@ class JobsOperations:
 
         return deserialized
 
-    @overload
-    async def submit_bulk_jobs(
-        self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
-    ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
-
-        Submit Bulk Jobs.
-
-        :param body: Required.
-        :type body: list[str]
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: list of InsertedJob
-        :rtype: list[~client.models.InsertedJob]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    async def submit_bulk_jobs(
-        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
-
-        Submit Bulk Jobs.
-
-        :param body: Required.
-        :type body: IO
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: list of InsertedJob
-        :rtype: list[~client.models.InsertedJob]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace_async
-    async def submit_bulk_jobs(
-        self, body: Union[List[str], IO], **kwargs: Any
-    ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
-
-        Submit Bulk Jobs.
-
-        :param body: Is either a [str] type or a IO type. Required.
-        :type body: list[str] or IO
-        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
-         Default value is None.
-        :paramtype content_type: str
-        :return: list of InsertedJob
-        :rtype: list[~client.models.InsertedJob]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
-        cls: ClsType[List[_models.InsertedJob]] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "[str]")
-
-        request = build_jobs_submit_bulk_jobs_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            await self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("[InsertedJob]", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace_async
-    async def delete_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
-        """Delete Bulk Jobs.
-
-        Delete Bulk Jobs.
-
-        :keyword job_ids: Required.
-        :paramtype job_ids: list[int]
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_jobs_delete_bulk_jobs_request(
-            job_ids=job_ids,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            await self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
     @distributed_trace_async
     async def kill_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
         """Kill Bulk Jobs.
@@ -1398,6 +1146,266 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[JobStatusReturn]", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @overload
+    async def search(
+        self,
+        body: Optional[_models.JobSearchParams] = None,
+        *,
+        page: int = 0,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> List[JSON]:
+        """Search.
+
+        Retrieve information about jobs.
+
+        **TODO: Add more docs**.
+
+        :param body: Default value is None.
+        :type body: ~client.models.JobSearchParams
+        :keyword page: Default value is 0.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JSON
+        :rtype: list[JSON]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def search(
+        self,
+        body: Optional[IO] = None,
+        *,
+        page: int = 0,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> List[JSON]:
+        """Search.
+
+        Retrieve information about jobs.
+
+        **TODO: Add more docs**.
+
+        :param body: Default value is None.
+        :type body: IO
+        :keyword page: Default value is 0.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JSON
+        :rtype: list[JSON]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def search(
+        self,
+        body: Optional[Union[_models.JobSearchParams, IO]] = None,
+        *,
+        page: int = 0,
+        per_page: int = 100,
+        **kwargs: Any
+    ) -> List[JSON]:
+        """Search.
+
+        Retrieve information about jobs.
+
+        **TODO: Add more docs**.
+
+        :param body: Is either a JobSearchParams type or a IO type. Default value is None.
+        :type body: ~client.models.JobSearchParams or IO
+        :keyword page: Default value is 0.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: list of JSON
+        :rtype: list[JSON]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[List[JSON]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "JobSearchParams")
+            else:
+                _json = None
+
+        request = build_jobs_search_request(
+            page=page,
+            per_page=per_page,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("[object]", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @overload
+    async def summary(
+        self,
+        body: _models.JobSummaryParams,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> Any:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: ~client.models.JobSummaryParams
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def summary(
+        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
+    ) -> Any:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: IO
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def summary(
+        self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any
+    ) -> Any:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Is either a JobSummaryParams type or a IO type. Required.
+        :type body: ~client.models.JobSummaryParams or IO
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "JobSummaryParams")
+
+        request = build_jobs_summary_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

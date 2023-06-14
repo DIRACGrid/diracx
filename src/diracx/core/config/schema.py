@@ -16,18 +16,28 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
         """Applies transformations to interpret the legacy DIRAC CFG format"""
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
+        # If we're running with DIRAC_COMPAT_ENABLE_CS_CONVERSION set we apply
+        # some hacky transformations to the content to ease the transition from
+        # a CFG file. This is done by analysing the type hints as strings
+        # though ideally we should parse the type hints properly.
         for field, hint in cls.__annotations__.items():
+            # Convert comma separated lists to actual lists
             if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(
                 v.get(field), str
             ):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
+            # If the field is optional and the value is "None" convert it to None
+            if "| None" in hint and field in v:
+                if v[field] == "None":
+                    v[field] = None
         return v
 
 
 class UserConfig(BaseModel):
     CA: str
     DN: str
-    Email: EmailStr
+    PreferedUsername: str
+    Email: EmailStr | None
     Suspended: list[str] = []
     Quota: int | None = None
     # TODO: These should be LHCbDIRAC specific
@@ -48,18 +58,23 @@ class GroupConfig(BaseModel):
     AutoSyncVOMS: bool = False
 
 
+class IdpConfig(BaseModel):
+    URL: str
+    ClientID: str
+
+    @property
+    def server_metadata_url(self):
+        return f"{self.URL}/.well-known/openid-configuration"
+
+
 class RegistryConfig(BaseModel):
-    DefaultGroup: dict[str, list[str]]
-    DefaultVOMSAttribute: str | None = None
+    IdP: IdpConfig
+    DefaultGroup: str
     DefaultStorageQuota: float = 0
     DefaultProxyLifeTime: int = 12 * 60 * 60
 
-    Users: dict[str, dict[str, UserConfig]]
-    Groups: dict[str, dict[str, GroupConfig]]
-
-    BannedIPs: Any = None
-    Hosts: Any = None
-    VO: Any = None
+    Users: dict[str, UserConfig]
+    Groups: dict[str, GroupConfig]
 
 
 class DIRACConfig(BaseModel):
@@ -80,6 +95,7 @@ class OperationsConfig(BaseModel):
     EnableSecurityLogging: bool = False
     Services: ServicesConfig = ServicesConfig()
 
+    Cloud: dict[str, Any] | None = None
     DataConsistency: dict[str, Any] | None = None
     DataManagement: dict[str, Any] | None = None
     EMail: dict[str, Any] | None = None
@@ -107,7 +123,7 @@ class OperationsConfig(BaseModel):
 
 
 class Config(BaseModel):
-    Registry: RegistryConfig
+    Registry: dict[str, RegistryConfig]
     DIRAC: DIRACConfig
     # TODO: Should this be split by vo rather than setup?
     Operations: dict[str, OperationsConfig]

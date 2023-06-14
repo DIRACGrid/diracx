@@ -245,13 +245,13 @@ class JobSearchParams(_serialization.Model):
     :ivar search: Search.
     :vartype search: list[~client.models.JobSearchParamsSearchItem]
     :ivar sort: Sort.
-    :vartype sort: list[~client.models.JobSearchParamsSortItem]
+    :vartype sort: list[~client.models.SortSpec]
     """
 
     _attribute_map = {
         "parameters": {"key": "parameters", "type": "[str]"},
         "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
-        "sort": {"key": "sort", "type": "[JobSearchParamsSortItem]"},
+        "sort": {"key": "sort", "type": "[SortSpec]"},
     }
 
     def __init__(
@@ -259,7 +259,7 @@ class JobSearchParams(_serialization.Model):
         *,
         parameters: Optional[List[str]] = None,
         search: List["_models.JobSearchParamsSearchItem"] = [],
-        sort: List["_models.JobSearchParamsSortItem"] = [],
+        sort: List["_models.SortSpec"] = [],
         **kwargs: Any
     ) -> None:
         """
@@ -268,7 +268,7 @@ class JobSearchParams(_serialization.Model):
         :keyword search: Search.
         :paramtype search: list[~client.models.JobSearchParamsSearchItem]
         :keyword sort: Sort.
-        :paramtype sort: list[~client.models.JobSearchParamsSortItem]
+        :paramtype sort: list[~client.models.SortSpec]
         """
         super().__init__(**kwargs)
         self.parameters = parameters
@@ -278,16 +278,6 @@ class JobSearchParams(_serialization.Model):
 
 class JobSearchParamsSearchItem(_serialization.Model):
     """JobSearchParamsSearchItem."""
-
-    _attribute_map = {}
-
-    def __init__(self, **kwargs: Any) -> None:
-        """ """
-        super().__init__(**kwargs)
-
-
-class JobSearchParamsSortItem(_serialization.Model):
-    """JobSearchParamsSortItem."""
 
     _attribute_map = {}
 

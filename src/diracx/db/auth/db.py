@@ -28,19 +28,21 @@ class AuthDB(BaseDB):
 
     async def device_flow_validate_user_code(
         self, user_code: str, max_validity: int
-    ) -> None:
+    ) -> str:
         """Validate that the user_code can be used (Pending status, not expired)
+
+        Returns the scope field for the given user_code
 
         :raises:
             NoResultFound if no such user code currently Pending
         """
-        stmt = select(DeviceFlows.user_code).where(
+        stmt = select(DeviceFlows.scope).where(
             DeviceFlows.user_code == user_code,
             DeviceFlows.status == FlowStatus.PENDING,
             DeviceFlows.creation_time > substract_date(seconds=max_validity),
         )
 
-        (await self.conn.execute(stmt)).one()
+        return (await self.conn.execute(stmt)).scalar_one()
 
     async def get_device_flow(self, device_code: str, max_validity: int):
         """

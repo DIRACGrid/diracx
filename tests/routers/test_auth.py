@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import re
 import secrets
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -10,7 +9,12 @@ import pytest
 import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
-from diracx.routers.auth import oauth
+from diracx.core.config import Config
+from diracx.routers.auth import (
+    _server_metadata_cache,
+    get_server_metadata,
+    parse_and_validate_scope,
+)
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 
@@ -26,23 +30,20 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
     httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
 
-    client = oauth.create_client("lhcb")
-    await client.load_server_metadata()
+    server_metadata = await get_server_metadata(f"https://{path}")
 
     def custom_response(request: httpx.Request):
         if b"&code=valid-code&" in request.content:
             return httpx.Response(status_code=200, json={"id_token": "my-id-token"})
         return httpx.Response(status_code=401)
 
-    httpx_mock.add_callback(
-        custom_response, url=client.server_metadata["token_endpoint"]
-    )
+    httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
     monkeypatch.setattr("diracx.routers.auth.parse_id_token", fake_parse_id_token)
 
     yield httpx_mock
 
-    del client.server_metadata["_loaded_at"]
+    _server_metadata_cache.clear()
 
 
 async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs):
@@ -77,14 +78,14 @@ async def test_authorization_flow(
     )
 
     r = test_client.get(
-        "/auth/lhcb/authorize",
+        "/auth/authorize",
         params={
             "response_type": "code",
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
             "redirect_uri": "http://localhost:8000/docs/oauth2-redirect",
-            "scope": "property:NormalUser",
+            "scope": "vo:lhcb property:NormalUser",
             "state": "external-state",
         },
         follow_redirects=False,
@@ -135,11 +136,11 @@ async def test_authorization_flow(
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
-        "/auth/lhcb/device",
+        "/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
-            "scope": "group:lhcb_user property:FileCatalogManagement property:NormalUser",
+            "scope": "vo:lhcb group:lhcb_user property:FileCatalogManagement property:NormalUser",
         },
     )
     assert r.status_code == 200, r.json()
@@ -152,7 +153,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
 
     # Check that token requests return "authorization_pending"
     r = test_client.post(
-        "/auth/lhcb/token",
+        "/auth/token",
         data={
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": data["device_code"],
@@ -163,10 +164,10 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.json()["error"] == "authorization_pending"
 
     # Open the DIRAC login page and ensure it redirects to the IdP
-    r = test_client.get(data["verification_uri_complete"])
-    assert r.status_code == 200, r.text
-    assert "/authorize?response_type=code" in r.text
-    login_url = re.search(r'href="([^"]+)"', r.text).groups()[0]
+    r = test_client.get(data["verification_uri_complete"], follow_redirects=False)
+    assert r.status_code == 307, r.text
+    login_url = r.headers["Location"]
+    assert "/authorize?response_type=code" in login_url
     query_paramers = parse_qs(urlparse(login_url).query)
     redirect_uri = query_paramers["redirect_uri"][0]
     state = query_paramers["state"][0]
@@ -203,7 +204,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
 
 def _get_token(test_client, request_data):
     # Check that token request now works
-    r = test_client.post("/auth/lhcb/token", data=request_data)
+    r = test_client.post("/auth/token", data=request_data)
     assert r.status_code == 200, r.json()
     response_data = r.json()
     assert response_data["access_token"]
@@ -212,8 +213,78 @@ def _get_token(test_client, request_data):
     assert response_data["state"]
 
     # Ensure the token request doesn't work a second time
-    r = test_client.post("/auth/lhcb/token", data=request_data)
+    r = test_client.post("/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
 
     return response_data
+
+
+@pytest.mark.parametrize(
+    "vos, groups, scope, expected",
+    [
+        [
+            ["lhcb"],
+            ["lhcb_user"],
+            "vo:lhcb group:lhcb_user",
+            {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
+        ],
+    ],
+)
+def test_parse_scopes(vos, groups, scope, expected):
+    # TODO: Extend test for extra properties
+    config = Config.parse_obj(
+        {
+            "DIRAC": {},
+            "Registry": {
+                vo: {
+                    "DefaultGroup": "lhcb_user",
+                    "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
+                    "Users": {},
+                    "Groups": {
+                        group: {"Properties": ["NormalUser"], "Users": []}
+                        for group in groups
+                    },
+                }
+                for vo in vos
+            },
+            "Operations": {"Defaults": {}},
+        }
+    )
+
+    assert parse_and_validate_scope(scope, config) == expected
+
+
+@pytest.mark.parametrize(
+    "vos, groups, scope, expected_error",
+    [
+        [
+            ["lhcb"],
+            ["lhcb_user"],
+            "group:lhcb_user",
+            "No vo scope requested",
+        ],
+    ],
+)
+def test_parse_scopes_invalid(vos, groups, scope, expected_error):
+    # TODO: Extend test for extra properties
+    config = Config.parse_obj(
+        {
+            "DIRAC": {},
+            "Registry": {
+                vo: {
+                    "DefaultGroup": "lhcb_user",
+                    "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
+                    "Users": {},
+                    "Groups": {
+                        group: {"Properties": ["NormalUser"], "Users": []}
+                        for group in groups
+                    },
+                }
+                for vo in vos
+            },
+            "Operations": {"Defaults": {}},
+        }
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        parse_and_validate_scope(scope, config)
