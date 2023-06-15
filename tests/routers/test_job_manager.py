@@ -108,7 +108,7 @@ def test_insert_and_search(normal_user_client):
 
     r = normal_user_client.post(
         "/jobs/search",
-        json={"search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}]},
+        json={"search": [{"parameter": "Status", "operator": "eq", "value": "New"}]},
     )
     assert r.status_code == 200, r.json()
     assert r.json() == []
@@ -116,7 +116,7 @@ def test_insert_and_search(normal_user_client):
     r = normal_user_client.post(
         "/jobs/search",
         json={
-            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]
+            "search": [{"parameter": "Status", "operator": "eq", "value": "Received"}]
         },
     )
     assert r.status_code == 200, r.json()
@@ -127,7 +127,7 @@ def test_insert_and_search(normal_user_client):
     )
     assert r.status_code == 200, r.json()
     assert r.json() == [
-        {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
+        {"JobID": jid, "Status": "Received"} for jid in submitted_job_ids
     ]
 
     # Test /jobs/summary
@@ -135,23 +135,25 @@ def test_insert_and_search(normal_user_client):
         "/jobs/summary", json={"grouping": ["Status", "OwnerDN"]}
     )
     assert r.status_code == 200, r.json()
-    assert r.json() == [{"Status": "RECEIVED", "OwnerDN": "ownerDN", "count": 1}]
+    assert r.json() == [
+        {"Status": "Received", "OwnerDN": "/DC=invalid/DC=testca/OU=...", "count": 1}
+    ]
 
     r = normal_user_client.post(
         "/jobs/summary",
         json={
             "grouping": ["Status"],
-            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}],
+            "search": [{"parameter": "Status", "operator": "eq", "value": "Received"}],
         },
     )
     assert r.status_code == 200, r.json()
-    assert r.json() == [{"Status": "RECEIVED", "count": 1}]
+    assert r.json() == [{"Status": "Received", "count": 1}]
 
     r = normal_user_client.post(
         "/jobs/summary",
         json={
             "grouping": ["Status"],
-            "search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}],
+            "search": [{"parameter": "Status", "operator": "eq", "value": "New"}],
         },
     )
     assert r.status_code == 200, r.json()

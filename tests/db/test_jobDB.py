@@ -23,7 +23,6 @@ async def test_some_asyncio_code(job_engine):
                     "owner",
                     "owner_dn",
                     "owner_group",
-                    "diracSetup",
                     "New",
                     "dfdfds",
                     "lhcb",

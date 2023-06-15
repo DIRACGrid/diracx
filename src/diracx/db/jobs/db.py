@@ -90,6 +90,7 @@ class JobDB(BaseDB):
                 column = column.desc()
             else:
                 raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
+            stmt = stmt.order_by(column)
 
         # Apply pagination
         if page:
@@ -139,7 +140,6 @@ class JobDB(BaseDB):
         owner,
         owner_dn,
         owner_group,
-        dirac_setup,
         job_attrs,
         vo,
     ):
@@ -160,7 +160,7 @@ class JobDB(BaseDB):
             owner,
             owner_dn,
             owner_group,
-            dirac_setup,
+            "DIRAC-Certification",
             job_attrs,
             vo,
         )
@@ -185,7 +185,6 @@ class JobDB(BaseDB):
         owner,
         owner_dn,
         owner_group,
-        dirac_setup,
         initial_status,
         initial_minor_status,
         vo,
@@ -204,11 +203,10 @@ class JobDB(BaseDB):
             "Owner": owner,
             "OwnerDN": owner_dn,
             "OwnerGroup": owner_group,
-            "DIRACSetup": dirac_setup,
         }
 
         jobManifest = returnValueOrRaise(
-            checkAndAddOwner(jdl, owner, owner_dn, owner_group, dirac_setup)
+            checkAndAddOwner(jdl, owner, owner_dn, owner_group, "DIRAC-Certification")
         )
 
         jdl = fixJDL(jdl)
@@ -250,7 +248,6 @@ class JobDB(BaseDB):
             owner,
             owner_dn,
             owner_group,
-            dirac_setup,
             job_attrs,
             vo,
         )
