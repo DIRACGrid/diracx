@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -84,10 +85,9 @@ async def logout():
 
 @app.callback()
 def callback(output_format: Optional[str] = None):
-    if "DIRACX_OUTPUT_FORMAT" not in os.environ:
-        output_format = output_format or "rich"
-    if output_format is not None:
-        os.environ["DIRACX_OUTPUT_FORMAT"] = output_format
+    if output_format is None:
+        output_format = "rich" if sys.stdout.isatty() else "json"
+    os.environ.setdefault("DIRACX_OUTPUT_FORMAT", output_format)
 
 
 app.add_typer(jobs.app, name="jobs")
