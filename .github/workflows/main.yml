@@ -1,0 +1,68 @@
+name: Basic Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up pre-commit
+        run: |
+          pip install pre-commit
+      - name: Run pre-commit checks
+        run: |
+          pre-commit run --all-files
+
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        shell: bash -el {0}
+        run: |
+          pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+          pip install .
+      - name: Run pytest
+        shell: bash -el {0}
+        run: |
+          pytest . --cov-report=xml:coverage.xml --junitxml=report.xml
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test reports
+          path: |
+            report.xml
+            coverage.xml
+
+  # mypy:
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: registry.cern.ch/docker.io/mambaorg/micromamba
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: Set up environment
+  #       run: |
+  #         micromamba env create --file environment.yml --name test-env
+  #         eval "$(micromamba shell hook --shell=bash)"
+  #         micromamba activate test-env
+  #         pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+  #         pip install .
+  #     - name: Run mypy
+  #       run: |
+  #         mypy .

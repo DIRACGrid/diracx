@@ -11,8 +11,7 @@ dependencies:
   - azure-core
   - cachetools
   ########
-  # fucking dirac cant be installed so just install some of it's dependencies
-  #- dirac-grid
+  - dirac-grid
   - m2crypto >=0.38.0
   - python-gfal2
   - importlib_resources
