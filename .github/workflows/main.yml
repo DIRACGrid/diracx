@@ -34,6 +34,7 @@ jobs:
       - name: Set up environment
         shell: bash -el {0}
         run: |
+          pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
           pip install .
       - name: Run pytest
