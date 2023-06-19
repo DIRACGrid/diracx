@@ -16,7 +16,7 @@ from diracx.core.config.schema import (
     OperationsConfig,
     RegistryConfig,
 )
-from diracx.core.secrets import ConfigUrl
+from diracx.core.secrets import LocalFileUrl
 
 from .utils import AsyncTyper
 
@@ -34,7 +34,7 @@ def generate_cs(
 ):
     """Generate a minimal DiracX configuration repository"""
     # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(ConfigUrl, config_repo)
+    config_repo = parse_obj_as(LocalFileUrl, config_repo)
     if config_repo.scheme != "file":
         raise NotImplementedError("Only file:// URLs are supported")
     repo_path = Path(config_repo.path)
