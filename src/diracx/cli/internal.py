@@ -6,6 +6,7 @@ from pathlib import Path
 import git
 import typer
 import yaml
+from pydantic import parse_obj_as
 
 from diracx.core.config.schema import (
     Config,
@@ -15,6 +16,7 @@ from diracx.core.config.schema import (
     OperationsConfig,
     RegistryConfig,
 )
+from diracx.core.secrets import LocalFileUrl
 
 from .utils import AsyncTyper
 
@@ -31,13 +33,13 @@ def generate_cs(
     idp_client_id: str = "idp-client-id",
 ):
     """Generate a minimal DiracX configuration repository"""
-    if config_repo.startswith("file://"):
-        config_repo = config_repo[len("file://") :]
-    if "://" in config_repo:
-        raise NotImplementedError(f"Unsupported scheme on {config_repo}")
-    config_repo = Path(config_repo)
-    if config_repo.exists() and list(config_repo.iterdir()):
-        typer.echo(f"ERROR: Directory {config_repo} already exists", err=True)
+    # TODO: The use of parse_obj_as should be moved in to typer itself
+    config_repo = parse_obj_as(LocalFileUrl, config_repo)
+    if config_repo.scheme != "file":
+        raise NotImplementedError("Only file:// URLs are supported")
+    repo_path = Path(config_repo.path)
+    if repo_path.exists() and list(repo_path.iterdir()):
+        typer.echo(f"ERROR: Directory {repo_path} already exists", err=True)
         raise typer.Exit(1)
 
     registry = RegistryConfig(
@@ -56,8 +58,8 @@ def generate_cs(
         Operations={"Defaults": OperationsConfig()},
     )
 
-    repo = git.Repo.init(config_repo, initial_branch="master")
-    yaml_path = config_repo / "default.yml"
+    repo = git.Repo.init(repo_path, initial_branch="master")
+    yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing configuration to {yaml_path}", err=True)
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
