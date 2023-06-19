@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up pre-commit
         run: |
           pip install pre-commit
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: environment.yml
@@ -43,7 +43,7 @@ jobs:
           pytest . --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Test reports
           path: |
@@ -56,7 +56,7 @@ jobs:
   #     image: registry.cern.ch/docker.io/mambaorg/micromamba
   #   steps:
   #     - name: Checkout code
-  #       uses: actions/checkout@v2
+  #       uses: actions/checkout@v3
   #     - name: Set up environment
   #       run: |
   #         micromamba env create --file environment.yml --name test-env
