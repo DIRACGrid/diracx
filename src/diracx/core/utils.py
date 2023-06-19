@@ -19,4 +19,4 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
     for key, value in os.environ.items():
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
             env_files[int(match.group(1) or -1)] = value
-    return [v for k, v in sorted(env_files.items())]
+    return [v for _, v in sorted(env_files.items())]

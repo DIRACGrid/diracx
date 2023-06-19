@@ -2,13 +2,17 @@ from __future__ import annotations
 
 __all__ = ("get_secrets",)
 
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from authlib.jose import JsonWebKey
 from cachetools import LRUCache, cached
 from pydantic import AnyUrl, BaseSettings, Field, SecretStr
 
 from .utils import dotenv_files_from_environment
+
+if TYPE_CHECKING:
+    from pydantic.config import BaseConfig
+    from pydantic.fields import ModelField
 
 
 class RawSqlalchemyDsn(AnyUrl):
@@ -34,6 +38,14 @@ class TokenSigningKey(SecretStr):
 class ConfigUrl(AnyUrl):
     host_required = False
     allowed_schemes = {"file"}
+
+    @classmethod
+    # TODO: This should return ConfigUrl but pydantic's type hints are wrong
+    def validate(cls, value: Any, field: ModelField, config: BaseConfig) -> AnyUrl:
+        """Overrides AnyUrl.validate to add file:// scheme if not present."""
+        if isinstance(value, str) and "://" not in value:
+            value = f"file://{value}"
+        return super().validate(value, field, config)
 
 
 class DiracxSecrets(BaseSettings, env_prefix="DIRACX_SECRET_", allow_mutation=False):
