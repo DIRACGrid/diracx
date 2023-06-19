@@ -15,6 +15,7 @@ class JobStatus(str, Enum):
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
+    """Get the sorted list of .env files to use for configuration"""
     env_files = {}
     for key, value in os.environ.items():
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
