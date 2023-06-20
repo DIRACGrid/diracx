@@ -10,7 +10,7 @@ class JobStatus(str, Enum):
     Stalled = "Stalled"
     Killed = "Killed"
     Failed = "Failed"
-    RECEIVED = "RECEIVED"
+    RECEIVED = "Received"
     SUBMITTING = "Submitting"
 
 

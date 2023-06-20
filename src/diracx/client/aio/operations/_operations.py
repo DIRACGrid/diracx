@@ -1157,7 +1157,7 @@ class JobsOperations:
         self,
         body: Optional[_models.JobSearchParams] = None,
         *,
-        page: int = 0,
+        page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
@@ -1170,7 +1170,7 @@ class JobsOperations:
 
         :param body: Default value is None.
         :type body: ~client.models.JobSearchParams
-        :keyword page: Default value is 0.
+        :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
@@ -1187,7 +1187,7 @@ class JobsOperations:
         self,
         body: Optional[IO] = None,
         *,
-        page: int = 0,
+        page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
@@ -1200,7 +1200,7 @@ class JobsOperations:
 
         :param body: Default value is None.
         :type body: IO
-        :keyword page: Default value is 0.
+        :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
@@ -1217,7 +1217,7 @@ class JobsOperations:
         self,
         body: Optional[Union[_models.JobSearchParams, IO]] = None,
         *,
-        page: int = 0,
+        page: int = 1,
         per_page: int = 100,
         **kwargs: Any
     ) -> List[JSON]:
@@ -1229,7 +1229,7 @@ class JobsOperations:
 
         :param body: Is either a JobSearchParams type or a IO type. Default value is None.
         :type body: ~client.models.JobSearchParams or IO
-        :keyword page: Default value is 0.
+        :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int

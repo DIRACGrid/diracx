@@ -49,7 +49,7 @@ def with_config_repo(tmp_path, monkeypatch):
                         "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": {
                             "PreferedUsername": "chaen",
                             "Email": None,
-                            "DN": "/DC=invalid/DC=testca/OU=Organic Units/OU=Users/CN=chaen/CN=1234/CN=Christophe Haen",
+                            "DN": ["/DC=invalid/DC=testca/OU=..."],
                             "CA": "/DC=invalid/DC=testca/CN=Test CA",
                         }
                     },
@@ -117,13 +117,13 @@ def test_client(with_config_repo, disable_events, auth_engine, job_engine):
 @pytest.fixture
 def normal_user_client(test_client):
     payload = {
-        "sub": "testingVO:yellow-sub",
+        "sub": "lhcb:b824d4dc-1f9d-4ee8-8df5-c0ae55d46041",
         "aud": AUDIENCE,
         "iss": ISSUER,
         "dirac_properties": [SecurityProperty.NORMAL_USER],
         "jti": str(uuid4()),
         "preferred_username": "preferred_username",
-        "dirac_group": "test_group",
+        "dirac_group": "lhcb_user",
         "vo": "lhcb",
     }
     token = create_access_token(payload)

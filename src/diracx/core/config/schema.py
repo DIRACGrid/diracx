@@ -35,7 +35,7 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
 
 class UserConfig(BaseModel):
     CA: str
-    DN: str
+    DN: list[str]
     PreferedUsername: str
     Email: EmailStr | None
     Suspended: list[str] = []

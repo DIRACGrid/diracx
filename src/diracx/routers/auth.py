@@ -341,6 +341,7 @@ async def get_token_from_iam(
         res = await c.post(
             token_endpoint,
             data=data,
+            timeout=60,
         )
         if res.status_code >= 500:
             raise HTTPException(
