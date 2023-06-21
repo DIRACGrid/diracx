@@ -10,7 +10,7 @@ MAX_VALIDITY = 2
 EXPIRED = 0
 
 
-@pytest.mark.asyncio
+@pytest.fixture
 async def test_insert_id_token(auth_engine: None):
     # First insert
     async with AuthDB() as auth_db:
@@ -56,7 +56,6 @@ async def test_insert_id_token(auth_engine: None):
             res = await auth_db.get_authorization_flow(code, MAX_VALIDITY)
 
 
-@pytest.mark.asyncio
 async def test_insert(auth_engine: None):
     # First insert
     async with AuthDB() as auth_db:

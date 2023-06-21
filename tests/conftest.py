@@ -1,7 +1,6 @@
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
@@ -94,14 +93,14 @@ def disable_events(monkeypatch):
     yield
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def job_engine():
     await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
     yield
     await JobDB.destroy_engine()
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def auth_engine():
     await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
     yield

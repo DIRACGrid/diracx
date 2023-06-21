@@ -6,7 +6,6 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
-import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
@@ -24,7 +23,7 @@ def non_mocked_hosts(test_client) -> list[str]:
     return [test_client.base_url.host]
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     data_dir = Path(__file__).parent.parent / "data"
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
@@ -66,7 +65,6 @@ async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs)
     raise NotImplementedError(raw_id_token)
 
 
-@pytest.mark.asyncio
 async def test_authorization_flow(
     test_client, auth_httpx_mock: HTTPXMock, fake_secrets
 ):
@@ -132,7 +130,6 @@ async def test_authorization_flow(
     )
 
 
-@pytest.mark.asyncio
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(

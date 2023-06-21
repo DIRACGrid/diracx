@@ -3,7 +3,6 @@ from __future__ import annotations
 import secrets
 
 import pytest
-from pytest_asyncio import fixture
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import AuthorizationError, ExpiredFlowError
@@ -14,14 +13,13 @@ MAX_VALIDITY = 2
 EXPIRED = 0
 
 
-@fixture
+@pytest.fixture
 async def auth_engine():
     await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
 
     yield
 
 
-@pytest.mark.asyncio
 async def test_device_user_code_collision(auth_engine: None, monkeypatch):
     monkeypatch.setattr(secrets, "choice", lambda _: "A")
 
@@ -47,7 +45,6 @@ async def test_device_user_code_collision(auth_engine: None, monkeypatch):
         assert device
 
 
-@pytest.mark.asyncio
 async def test_device_flow_lookup(auth_engine: None, monkeypatch):
     async with AuthDB() as auth_db:
         with pytest.raises(NoResultFound):
@@ -120,7 +117,6 @@ async def test_device_flow_lookup(auth_engine: None, monkeypatch):
             )
 
 
-@pytest.mark.asyncio
 async def test_device_flow_insert_id_token(auth_engine: None):
     # First insert
     async with AuthDB() as auth_db:
