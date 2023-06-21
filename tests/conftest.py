@@ -8,6 +8,7 @@ from git import Repo
 
 from diracx.core.config import Config, LocalGitConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.routers import create_app_inner
 from diracx.routers.auth import create_access_token
 
 # to get a string like this run:
@@ -43,19 +44,8 @@ async def test_secrets(with_config_repo, tmp_path):
 
 
 @pytest.fixture
-def with_app(test_secrets, monkeypatch):
-    from diracx.core.secrets import get_secrets
-    from diracx.routers import create_app_inner
-
-    app = create_app_inner(**dict(test_secrets._iter()))
-
-    monkeypatch.setattr(
-        app,
-        "dependency_overrides",
-        {get_secrets: lambda: test_secrets},
-    )
-
-    yield app
+def with_app(test_secrets):
+    yield create_app_inner(**dict(test_secrets._iter()))
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 
 from diracx.core.exceptions import DiracError, DiracHttpResponse
-from diracx.core.secrets import AuthSecrets, ConfigSecrets, JobsSecrets, get_secrets
+from diracx.core.secrets import AuthSecrets, ConfigSecrets, DiracxSecrets, JobsSecrets
 from diracx.core.utils import dotenv_files_from_environment
 
 from .auth import DIRAC_CLIENT_ID, verify_dirac_token
@@ -70,6 +70,7 @@ def create_app_inner(
             dependencies=[Depends(verify_dirac_token)],
         )
         app.lifetime_functions.append(jobs.db.engine_context)
+        app.dependency_overrides[JobsSecrets.create] = lambda: jobs
 
     if config:
         app.include_router(
@@ -77,10 +78,12 @@ def create_app_inner(
             prefix="/config",
             dependencies=[Depends(verify_dirac_token)],
         )
+        app.dependency_overrides[ConfigSecrets.create] = lambda: config
 
     if auth:
         app.include_router(auth_router, prefix="/auth")
         app.lifetime_functions.append(auth.db.engine_context)
+        app.dependency_overrides[AuthSecrets.create] = lambda: auth
 
     app.include_router(well_known_router)
 
@@ -92,14 +95,10 @@ def create_app_inner(
 
 
 def create_app() -> DiracFastAPI:
-    get_secrets.cache_clear()  # type: ignore
-    secrets = get_secrets()
-
     for env_file in dotenv_files_from_environment("DIRACX_SECRET_DOTENV"):
         if not dotenv.load_dotenv(env_file):
             raise NotImplementedError(f"Could not load dotenv file {env_file}")
-
-    return create_app_inner(**dict(secrets._iter()))
+    return create_app_inner(**dict(DiracxSecrets()._iter()))
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:

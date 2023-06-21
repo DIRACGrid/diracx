@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-__all__ = ("get_secrets",)
+__all__ = (
+    "AuthSecrets",
+    "ConfigSecrets",
+    "JobsSecrets",
+    "DiracxSecrets",
+)
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from authlib.jose import JsonWebKey
-from cachetools import LRUCache, cached
 from pydantic import AnyUrl, BaseSettings, Field, PrivateAttr, SecretStr, parse_obj_as
 
 from diracx.db import AuthDB, JobDB
@@ -53,7 +57,13 @@ class LocalFileUrl(AnyUrl):
         return super().validate(value, field, config)
 
 
-class AuthSecrets(BaseSettings, env_prefix="DIRACX_SECRET_AUTH_"):
+class SecretsBase(BaseSettings):
+    @classmethod
+    def create(cls):
+        return cls()
+
+
+class AuthSecrets(SecretsBase, env_prefix="DIRACX_SECRET_AUTH_"):
     db_url: SqlalchemyDsn
     db: Annotated[AuthDB, PrivateAttr()]
     token_issuer: str = "http://lhcbdirac.cern.ch/"
@@ -66,11 +76,11 @@ class AuthSecrets(BaseSettings, env_prefix="DIRACX_SECRET_AUTH_"):
         self.db._db_url = self.db_url
 
 
-class ConfigSecrets(BaseSettings, env_prefix="DIRACX_SECRET_CONFIG_"):
+class ConfigSecrets(SecretsBase, env_prefix="DIRACX_SECRET_CONFIG_"):
     backend_url: LocalFileUrl
 
 
-class JobsSecrets(BaseSettings, env_prefix="DIRACX_SECRET_JOBS_"):
+class JobsSecrets(SecretsBase, env_prefix="DIRACX_SECRET_JOBS_"):
     db_url: SqlalchemyDsn
     db: Annotated[JobDB, PrivateAttr()]
 
@@ -83,8 +93,3 @@ class DiracxSecrets(BaseSettings, env_prefix="DIRACX_SECRET_", allow_mutation=Fa
     auth: AuthSecrets | None = Field(default_factory=AuthSecrets)
     config: ConfigSecrets | None = Field(default_factory=ConfigSecrets)
     jobs: JobsSecrets | None = Field(default_factory=JobsSecrets)
-
-
-@cached(cache=LRUCache(maxsize=1))
-def get_secrets() -> DiracxSecrets:
-    return DiracxSecrets()

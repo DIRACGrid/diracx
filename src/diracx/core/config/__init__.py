@@ -12,7 +12,7 @@ from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 from fastapi import Depends
 
 from ..exceptions import BadConfigurationVersion
-from ..secrets import DiracxSecrets, get_secrets
+from ..secrets import ConfigSecrets
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -73,9 +73,10 @@ class LocalGitConfigSource:
         return self.read_raw(hexsha, modified)
 
 
-def get_config(secrets: Annotated[DiracxSecrets, Depends(get_secrets)]) -> Config:
-    assert secrets.config
-    backend_url = secrets.config.backend_url
+def get_config(
+    secrets: Annotated[ConfigSecrets, Depends(ConfigSecrets.create)]
+) -> Config:
+    backend_url = secrets.backend_url
     if backend_url.scheme == "file":
         assert backend_url.path
         return LocalGitConfigSource(Path(backend_url.path)).read_config()

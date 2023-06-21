@@ -10,7 +10,7 @@ from pydantic import BaseModel, root_validator
 from diracx.core.config import Config, get_config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import DiracxSecrets, get_secrets
+from diracx.core.secrets import JobsSecrets
 from diracx.core.utils import JobStatus
 from diracx.db.jobs.db import JobDB
 
@@ -30,10 +30,9 @@ router = APIRouter(
 
 
 async def get_job_db(
-    secrets: Annotated[DiracxSecrets, Depends(get_secrets)]
+    secrets: Annotated[JobsSecrets, Depends(JobsSecrets.create)]
 ) -> AsyncGenerator[JobDB, None]:
-    assert secrets.jobs is not None
-    async with secrets.jobs.db as job_db:
+    async with secrets.db as job_db:
         yield job_db
 
 

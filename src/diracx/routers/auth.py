@@ -35,7 +35,7 @@ from diracx.core.exceptions import (
     PendingAuthorizationError,
 )
 from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import AuthSecrets, DiracxSecrets, get_secrets
+from diracx.core.secrets import AuthSecrets
 from diracx.db.auth.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
 
@@ -45,10 +45,9 @@ oidc_scheme = OpenIdConnect(
 
 
 async def get_auth_db(
-    secrets: Annotated[DiracxSecrets, Depends(get_secrets)]
+    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)]
 ) -> AsyncGenerator[AuthDB, None]:
-    assert secrets.auth is not None
-    async with secrets.auth.db as db:
+    async with secrets.db as db:
         yield db
 
 
@@ -150,7 +149,7 @@ class UserInfo(AuthInfo):
 
 async def verify_dirac_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
-    secrets: Annotated[DiracxSecrets, Depends(get_secrets)],
+    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)],
 ) -> UserInfo:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
@@ -163,16 +162,14 @@ async def verify_dirac_token(
             detail="Invalid authorization header",
         )
 
-    assert secrets.auth
-
     try:
-        jwt = JsonWebToken(secrets.auth.token_algorithm)
+        jwt = JsonWebToken(secrets.token_algorithm)
         token = jwt.decode(
             raw_token,
-            key=secrets.auth.token_key.jwk,
+            key=secrets.token_key.jwk,
             claims_options={
-                "iss": {"values": [secrets.auth.token_issuer]},
-                "aud": {"values": [secrets.auth.token_audience]},
+                "iss": {"values": [secrets.token_issuer]},
+                "aud": {"values": [secrets.token_audience]},
             },
         )
         token.validate()
@@ -601,7 +598,7 @@ async def token(
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-    secrets: Annotated[DiracxSecrets, Depends(get_secrets)],
+    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)],
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
     ] = None,
@@ -689,13 +686,12 @@ async def token(
 
     parsed_scope = parse_and_validate_scope(info["scope"], config)
 
-    assert secrets.auth
     return await exchange_token(
         parsed_scope["vo"],
         parsed_scope["group"],
         info["id_token"],
         config,
-        secrets.auth,
+        secrets,
     )
 
 
