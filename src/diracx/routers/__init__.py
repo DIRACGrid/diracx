@@ -32,22 +32,12 @@ def create_app_inner(
 
     # Add routers
     if jobs:
-        app.dependency_overrides[JobsSettings.create] = lambda: jobs
-
         app.include_router(
             job_manager_router,
             prefix="/jobs",
-            dependencies=[
-                Depends(verify_dirac_token),
-                has_properties(SecurityProperty.NORMAL_USER),
-            ],
+            settings=jobs,
+            dependencies=[Depends(verify_dirac_token)],
         )
-
-        from diracx.db import JobDB
-
-        job_db = JobDB(jobs.db_url)
-        app.lifetime_functions.append(job_db.engine_context)
-        app.dependency_overrides[JobDB] = lambda: job_db
 
     if config:
         app.include_router(
@@ -55,20 +45,13 @@ def create_app_inner(
             prefix="/config",
             dependencies=[
                 Depends(verify_dirac_token),
+                has_properties(SecurityProperty.NORMAL_USER),
             ],
+            settings=config,
         )
-        app.dependency_overrides[ConfigSettings.create] = lambda: config
 
     if auth:
-        app.dependency_overrides[AuthSettings.create] = lambda: auth
-
-        app.include_router(auth_router, prefix="/auth")
-
-        from diracx.db import AuthDB
-
-        auth_db = AuthDB(auth.db_url)
-        app.lifetime_functions.append(auth_db.engine_context)
-        app.dependency_overrides[AuthDB] = lambda: auth_db
+        app.include_router(auth_router, prefix="/auth", settings=auth)
 
     app.include_router(well_known_router)
 

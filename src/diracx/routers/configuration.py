@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import (
-    APIRouter,
     Depends,
     Header,
     HTTPException,
@@ -16,7 +15,7 @@ from fastapi import (
 from diracx.core.config import Config, LocalGitConfigSource
 from diracx.core.secrets import LocalFileUrl
 
-from .fastapi_classes import ServiceSettingsBase
+from .fastapi_classes import DiracRouter, ServiceSettingsBase
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
@@ -36,7 +35,7 @@ def get_config(
         raise NotImplementedError(backend_url.scheme)
 
 
-router = APIRouter(tags=["config"])
+router = DiracRouter(tags=["config"], settings_class=ConfigSettings)
 
 
 @router.get("/{vo}")

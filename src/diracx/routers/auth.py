@@ -15,7 +15,6 @@ from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from fastapi import (
-    APIRouter,
     Depends,
     Form,
     HTTPException,
@@ -40,7 +39,7 @@ from diracx.db.auth.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
 
 from .configuration import get_config
-from .fastapi_classes import ServiceSettingsBase
+from .fastapi_classes import DiracRouter, ServiceSettingsBase
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
@@ -48,7 +47,7 @@ oidc_scheme = OpenIdConnect(
 
 
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
-    db_url: SqlalchemyDsn
+    db_url: Annotated[SqlalchemyDsn, AuthDB]
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
@@ -93,7 +92,7 @@ class TokenResponse(BaseModel):
     state: str
 
 
-router = APIRouter(tags=["auth"])
+router = DiracRouter(tags=["auth"], settings_class=AuthSettings)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 # This should be taken dynamically

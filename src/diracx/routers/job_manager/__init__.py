@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 from typing import Annotated, Any, AsyncGenerator, TypedDict
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import Body, Depends, Query
 from pydantic import BaseModel, root_validator
 
 from diracx.core.config import Config
@@ -16,11 +16,17 @@ from diracx.db import JobDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
 from ..configuration import get_config
-from ..fastapi_classes import ServiceSettingsBase
+from ..fastapi_classes import DiracRouter, ServiceSettingsBase
 
 MAX_PARAMETRIC_JOBS = 20
 
-router = APIRouter(
+
+class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
+    db_url: Annotated[SqlalchemyDsn, JobDB]
+
+
+router = DiracRouter(
+    settings_class=JobsSettings,
     tags=["jobs"],
     dependencies=[
         has_properties(
@@ -28,10 +34,6 @@ router = APIRouter(
         )
     ],
 )
-
-
-class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
-    db_url: SqlalchemyDsn
 
 
 async def get_job_db(
