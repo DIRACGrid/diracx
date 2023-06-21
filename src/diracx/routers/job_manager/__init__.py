@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, AsyncGenerator, TypedDict
 
 from fastapi import APIRouter, Body, Depends, Query
 from pydantic import BaseModel, root_validator
@@ -10,8 +10,9 @@ from pydantic import BaseModel, root_validator
 from diracx.core.config import Config, get_config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import SecurityProperty
+from diracx.core.secrets import DiracxSecrets, get_secrets
 from diracx.core.utils import JobStatus
-from diracx.db.jobs.db import JobDB, get_job_db
+from diracx.db.jobs.db import JobDB
 
 from ..auth import UserInfo, verify_dirac_token
 from ..utils import has_properties
@@ -26,6 +27,14 @@ router = APIRouter(
         )
     ],
 )
+
+
+async def get_job_db(
+    secrets: Annotated[DiracxSecrets, Depends(get_secrets)]
+) -> AsyncGenerator[JobDB, None]:
+    assert secrets.jobs is not None
+    async with secrets.jobs.db as job_db:
+        yield job_db
 
 
 class JobSummaryParams(BaseModel):

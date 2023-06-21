@@ -2,10 +2,11 @@ from __future__ import annotations
 
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
+import contextlib
 from abc import ABCMeta
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncIterator
 
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData
@@ -56,25 +57,44 @@ def EnumColumn(enum_type, **kwargs):
 
 
 class BaseDB(metaclass=ABCMeta):
-    engine: AsyncEngine
+    # engine: AsyncEngine
+    # TODO: Make metadata an abstract property
     metadata: MetaData
 
-    def __init__(self) -> None:
+    def __init__(self, db_url: str) -> None:
         self._conn = None
+        self._db_url = db_url
+        self._engine: AsyncEngine | None = None
 
-    @classmethod
-    async def make_engine(cls, db_url: str) -> None:
-        """TODO make metadata an abstract property"""
-        cls.engine = create_async_engine(
-            db_url,
+    @property
+    def engine(self) -> AsyncEngine:
+        """The engine to use for database operations.
+
+        Requires that the engine_context has been entered.
+        """
+        assert self._engine is not None, "engine_context must be entered"
+        return self._engine
+
+    @contextlib.asynccontextmanager
+    async def engine_context(self) -> AsyncIterator[None]:
+        """Context manage to manage the engine lifecycle.
+
+        Tables are automatically created upon entering
+        """
+        assert self._engine is None, "engine_context cannot be nested"
+
+        engine = create_async_engine(
+            self._db_url,
             echo=True,
         )
-        async with cls.engine.begin() as conn:
-            await conn.run_sync(cls.metadata.create_all)
+        async with engine.begin() as conn:
+            await conn.run_sync(self.metadata.create_all)
+        self._engine = engine
 
-    @classmethod
-    async def destroy_engine(cls) -> None:
-        await cls.engine.dispose()
+        yield
+
+        self._engine = None
+        await engine.dispose()
 
     @property
     def conn(self) -> AsyncConnection:

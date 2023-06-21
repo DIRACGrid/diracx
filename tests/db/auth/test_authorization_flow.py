@@ -11,16 +11,22 @@ EXPIRED = 0
 
 
 @pytest.fixture
-async def test_insert_id_token(auth_engine: None):
+async def auth_db(tmp_path):
+    auth_db = AuthDB("sqlite+aiosqlite:///:memory:")
+    async with auth_db.engine_context():
+        yield auth_db
+
+
+async def test_insert_id_token(auth_db: AuthDB):
     # First insert
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         uuid = await auth_db.insert_authorization_flow(
             "client_id", "scope", "audience", "code_challenge", "S256", "redirect_uri"
         )
 
     id_token = {"sub": "myIdToken"}
 
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
             code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
                 uuid, id_token, EXPIRED
@@ -31,34 +37,34 @@ async def test_insert_id_token(auth_engine: None):
         assert redirect_uri == "redirect_uri"
 
     # Cannot add a id_token a second time
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
             await auth_db.authorization_flow_insert_id_token(
                 uuid, id_token, MAX_VALIDITY
             )
 
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         with pytest.raises(NoResultFound):
             await auth_db.get_authorization_flow(code, EXPIRED)
         res = await auth_db.get_authorization_flow(code, MAX_VALIDITY)
         assert res["id_token"] == id_token
 
     # Cannot add a id_token after finishing the flow
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
             await auth_db.authorization_flow_insert_id_token(
                 uuid, id_token, MAX_VALIDITY
             )
 
     # We shouldn't be able to retrieve it twice
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         with pytest.raises(AuthorizationError, match="already used"):
             res = await auth_db.get_authorization_flow(code, MAX_VALIDITY)
 
 
-async def test_insert(auth_engine: None):
+async def test_insert(auth_db: AuthDB):
     # First insert
-    async with AuthDB() as auth_db:
+    async with auth_db as auth_db:
         uuid1 = await auth_db.insert_authorization_flow(
             "client_id", "scope", "audience", "code_challenge", "S256", "redirect_uri"
         )

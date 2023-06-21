@@ -29,6 +29,7 @@ dependencies:
   - pytest-cov
   - pytest-httpx
   - python
+  - python-dotenv
   - python-jose
   - python-multipart
   - pyyaml

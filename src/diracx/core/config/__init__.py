@@ -4,13 +4,15 @@ __all__ = ("Config", "get_config", "LocalGitConfigSource")
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
 import git
 import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
+from fastapi import Depends
 
 from ..exceptions import BadConfigurationVersion
-from ..secrets import DiracxSecrets
+from ..secrets import DiracxSecrets, get_secrets
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -71,9 +73,11 @@ class LocalGitConfigSource:
         return self.read_raw(hexsha, modified)
 
 
-def get_config() -> Config:
-    secrets = DiracxSecrets.from_env()
-    if secrets.config.scheme == "file":
-        return LocalGitConfigSource(Path(secrets.config.path)).read_config()
+def get_config(secrets: Annotated[DiracxSecrets, Depends(get_secrets)]) -> Config:
+    assert secrets.config
+    backend_url = secrets.config.backend_url
+    if backend_url.scheme == "file":
+        assert backend_url.path
+        return LocalGitConfigSource(Path(backend_url.path)).read_config()
     else:
-        raise NotImplementedError(secrets.config.scheme)
+        raise NotImplementedError(backend_url.scheme)
