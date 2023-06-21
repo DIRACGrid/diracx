@@ -9,7 +9,9 @@ from git import Repo
 from diracx.core.config import Config, LocalGitConfigSource
 from diracx.core.properties import SecurityProperty
 from diracx.routers import create_app_inner
-from diracx.routers.auth import create_access_token
+from diracx.routers.auth import AuthSettings, create_access_token
+from diracx.routers.configuration import ConfigSettings
+from diracx.routers.job_manager import JobsSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -21,11 +23,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 @pytest.fixture
 async def test_secrets(with_config_repo, tmp_path):
-    from diracx.core.secrets import (
-        AuthSecrets,
-        ConfigSecrets,
-        DiracxSecrets,
-        JobsSecrets,
+    from diracx.routers import (
+        DiracxSettings,
     )
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
@@ -35,10 +34,10 @@ async def test_secrets(with_config_repo, tmp_path):
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
-    secrets = DiracxSecrets(
-        auth=AuthSecrets(db_url="sqlite+aiosqlite:///:memory:", token_key=pem),
-        config=ConfigSecrets(backend_url=f"file://{with_config_repo}"),
-        jobs=JobsSecrets(db_url="sqlite+aiosqlite:///:memory:"),
+    secrets = DiracxSettings(
+        auth=AuthSettings(db_url="sqlite+aiosqlite:///:memory:", token_key=pem),
+        config=ConfigSettings(backend_url=f"file://{with_config_repo}"),
+        jobs=JobsSettings(db_url="sqlite+aiosqlite:///:memory:"),
     )
     yield secrets
 

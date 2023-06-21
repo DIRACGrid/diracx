@@ -10,7 +10,6 @@ from typer import Option
 
 from diracx.client.aio import Dirac
 from diracx.client.models import DeviceFlowErrorResponse
-from diracx.routers.auth import DIRAC_CLIENT_ID
 
 from . import internal, jobs
 from .utils import CREDENTIALS_PATH, AsyncTyper
@@ -38,7 +37,7 @@ async def login(
     # TODO set endpoint URL from preferences
     async with Dirac(endpoint="http://localhost:8000") as api:
         data = await api.auth.initiate_device_flow(
-            client_id=DIRAC_CLIENT_ID,
+            client_id="myDIRACClientID",
             audience="Dirac server",
             scope=" ".join(scopes),
         )
@@ -47,7 +46,7 @@ async def login(
         while expires > datetime.now():
             print(".", end="", flush=True)
             response = await api.auth.token(  # type: ignore
-                vo, device_code=data.device_code, client_id=DIRAC_CLIENT_ID
+                vo, device_code=data.device_code, client_id="myDIRACClientID"
             )
             if isinstance(response, DeviceFlowErrorResponse):
                 if response.error == "authorization_pending":

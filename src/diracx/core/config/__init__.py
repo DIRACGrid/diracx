@@ -4,15 +4,12 @@ __all__ = ("Config", "get_config", "LocalGitConfigSource")
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated
 
 import git
 import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
-from fastapi import Depends
 
 from ..exceptions import BadConfigurationVersion
-from ..secrets import ConfigSecrets
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -71,14 +68,3 @@ class LocalGitConfigSource:
         """
         hexsha, modified = self.latest_revision()
         return self.read_raw(hexsha, modified)
-
-
-def get_config(
-    secrets: Annotated[ConfigSecrets, Depends(ConfigSecrets.create)]
-) -> Config:
-    backend_url = secrets.backend_url
-    if backend_url.scheme == "file":
-        assert backend_url.path
-        return LocalGitConfigSource(Path(backend_url.path)).read_config()
-    else:
-        raise NotImplementedError(backend_url.scheme)

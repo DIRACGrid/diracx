@@ -28,27 +28,61 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel
 
-from diracx.core.config import Config, get_config
+from diracx.core.config import Config
 from diracx.core.exceptions import (
     DiracHttpResponse,
     ExpiredFlowError,
     PendingAuthorizationError,
 )
-from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import AuthSecrets
+from diracx.core.properties import SecurityProperty, UnevaluatedProperty
+from diracx.core.secrets import SqlalchemyDsn, TokenSigningKey
 from diracx.db.auth.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
+
+from .configuration import get_config
+from .fastapi_classes import ServiceSettingsBase
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
 )
 
 
+class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
+    db_url: SqlalchemyDsn
+
+    dirac_client_id: str = "myDIRACClientID"
+    # TODO: This should be taken dynamically
+    allowed_redirects: list[str] = ["http://localhost:8000/docs/oauth2-redirect"]
+    device_flow_expiration_seconds: int = 600
+    authorization_flow_expiration_seconds: int = 300
+
+    token_issuer: str = "http://lhcbdirac.cern.ch/"
+    token_audience: str = "dirac"
+    token_key: TokenSigningKey
+    token_algorithm: str = "RS256"
+    access_token_expire_minutes: int = 3000
+    refresh_token_expire_minutes: int = 3000
+
+
 async def get_auth_db(
-    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)]
+    auth_db: Annotated[AuthDB, Depends(AuthDB)]
 ) -> AsyncGenerator[AuthDB, None]:
-    async with secrets.db as db:
+    async with auth_db as db:
         yield db
+
+
+def has_properties(expression: UnevaluatedProperty | SecurityProperty):
+    evaluator = (
+        expression
+        if isinstance(expression, UnevaluatedProperty)
+        else UnevaluatedProperty(expression)
+    )
+
+    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
+        if not evaluator(user.properties):
+            raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    return Depends(require_property)
 
 
 class TokenResponse(BaseModel):
@@ -62,10 +96,9 @@ class TokenResponse(BaseModel):
 router = APIRouter(tags=["auth"])
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
-DIRAC_CLIENT_ID = "myDIRACClientID"
 # This should be taken dynamically
 KNOWN_CLIENTS = {
-    DIRAC_CLIENT_ID: {
+    "myDIRACClientID": {
         "allowed_redirects": ["http://localhost:8000/docs/oauth2-redirect"]
     }
 }
@@ -149,7 +182,7 @@ class UserInfo(AuthInfo):
 
 async def verify_dirac_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
-    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> UserInfo:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
@@ -163,13 +196,13 @@ async def verify_dirac_token(
         )
 
     try:
-        jwt = JsonWebToken(secrets.token_algorithm)
+        jwt = JsonWebToken(settings.token_algorithm)
         token = jwt.decode(
             raw_token,
-            key=secrets.token_key.jwk,
+            key=settings.token_key.jwk,
             claims_options={
-                "iss": {"values": [secrets.token_issuer]},
-                "aud": {"values": [secrets.token_audience]},
+                "iss": {"values": [settings.token_issuer]},
+                "aud": {"values": [settings.token_audience]},
             },
         )
         token.validate()
@@ -191,7 +224,7 @@ async def verify_dirac_token(
 
 
 def create_access_token(
-    payload: dict, secrets: AuthSecrets, expires_delta: timedelta | None = None
+    payload: dict, settings: AuthSettings, expires_delta: timedelta | None = None
 ) -> str:
     to_encode = payload.copy()
     if expires_delta:
@@ -200,9 +233,9 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
 
-    jwt = JsonWebToken(secrets.token_algorithm)
+    jwt = JsonWebToken(settings.token_algorithm)
     encoded_jwt = jwt.encode(
-        {"alg": secrets.token_algorithm}, payload, secrets.token_key.jwk
+        {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
     )
     return encoded_jwt.decode("ascii")
 
@@ -212,7 +245,7 @@ async def exchange_token(
     dirac_group: str,
     id_token: dict[str, str],
     config: Config,
-    secrets: AuthSecrets,
+    settings: AuthSettings,
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
     sub = id_token["sub"]
@@ -224,8 +257,8 @@ async def exchange_token(
     payload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
-        "aud": secrets.token_audience,
-        "iss": secrets.token_issuer,
+        "aud": settings.token_audience,
+        "iss": settings.token_issuer,
         "dirac_properties": config.Registry[vo].Groups[dirac_group].Properties,
         "jti": str(uuid4()),
         "preferred_username": id_token["preferred_username"],
@@ -233,7 +266,7 @@ async def exchange_token(
     }
 
     return TokenResponse(
-        access_token=create_access_token(payload, secrets),
+        access_token=create_access_token(payload, settings),
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         state="None",
     )
@@ -598,7 +631,7 @@ async def token(
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
     config: Annotated[Config, Depends(get_config)],
-    secrets: Annotated[AuthSecrets, Depends(AuthSecrets.create)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
     ] = None,
@@ -691,7 +724,7 @@ async def token(
         parsed_scope["group"],
         info["id_token"],
         config,
-        secrets,
+        settings,
     )
 
 

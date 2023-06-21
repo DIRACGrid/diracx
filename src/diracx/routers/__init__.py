@@ -1,19 +1,21 @@
 from __future__ import annotations
 
-import asyncio
-import contextlib
-
 import dotenv
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
+from pydantic import Field
 
 from diracx.core.exceptions import DiracError, DiracHttpResponse
-from diracx.core.secrets import AuthSecrets, ConfigSecrets, DiracxSecrets, JobsSecrets
+from diracx.core.properties import SecurityProperty
 from diracx.core.utils import dotenv_files_from_environment
+from diracx.routers.auth import AuthSettings
+from diracx.routers.configuration import ConfigSettings
+from diracx.routers.job_manager import JobsSettings
 
-from .auth import DIRAC_CLIENT_ID, verify_dirac_token
+from .auth import has_properties, verify_dirac_token
 from .auth import router as auth_router
 from .configuration import router as configuration_router
+from .fastapi_classes import DiracFastAPI, ServiceSettingsBase
 from .job_manager import router as job_manager_router
 from .well_known import router as well_known_router
 
@@ -23,67 +25,50 @@ from .well_known import router as well_known_router
 # methods name should follow the generate_unique_id_function pattern
 
 
-class DiracFastAPI(FastAPI):
-    def __init__(self):
-        @contextlib.asynccontextmanager
-        async def lifespan(app: DiracFastAPI):
-            async with contextlib.AsyncExitStack() as stack:
-                await asyncio.gather(
-                    *(stack.enter_async_context(f()) for f in app.lifetime_functions)
-                )
-                yield
-
-        self.lifetime_functions = []
-        super().__init__(
-            swagger_ui_init_oauth={
-                "clientId": DIRAC_CLIENT_ID,
-                "scopes": "property:NormalUser",
-                "usePkceWithAuthorizationCodeGrant": True,
-            },
-            generate_unique_id_function=lambda route: f"{route.tags[0]}_{route.name}",
-            title="Dirac",
-            lifespan=lifespan,
-        )
-
-    def openapi(self, *args, **kwargs):
-        if not self.openapi_schema:
-            super().openapi(*args, **kwargs)
-            for _, method_item in self.openapi_schema.get("paths").items():
-                for _, param in method_item.items():
-                    responses = param.get("responses")
-                    # remove 422 response, also can remove other status code
-                    if "422" in responses:
-                        del responses["422"]
-        return self.openapi_schema
-
-
 def create_app_inner(
-    jobs: JobsSecrets | None, config: ConfigSecrets | None, auth: AuthSecrets | None
+    jobs: JobsSettings | None, config: ConfigSettings | None, auth: AuthSettings | None
 ) -> DiracFastAPI:
     app = DiracFastAPI()
 
     # Add routers
     if jobs:
+        app.dependency_overrides[JobsSettings.create] = lambda: jobs
+
         app.include_router(
             job_manager_router,
             prefix="/jobs",
-            dependencies=[Depends(verify_dirac_token)],
+            dependencies=[
+                Depends(verify_dirac_token),
+                has_properties(SecurityProperty.NORMAL_USER),
+            ],
         )
-        app.lifetime_functions.append(jobs.db.engine_context)
-        app.dependency_overrides[JobsSecrets.create] = lambda: jobs
+
+        from diracx.db import JobDB
+
+        job_db = JobDB(jobs.db_url)
+        app.lifetime_functions.append(job_db.engine_context)
+        app.dependency_overrides[JobDB] = lambda: job_db
 
     if config:
         app.include_router(
             configuration_router,
             prefix="/config",
-            dependencies=[Depends(verify_dirac_token)],
+            dependencies=[
+                Depends(verify_dirac_token),
+            ],
         )
-        app.dependency_overrides[ConfigSecrets.create] = lambda: config
+        app.dependency_overrides[ConfigSettings.create] = lambda: config
 
     if auth:
+        app.dependency_overrides[AuthSettings.create] = lambda: auth
+
         app.include_router(auth_router, prefix="/auth")
-        app.lifetime_functions.append(auth.db.engine_context)
-        app.dependency_overrides[AuthSecrets.create] = lambda: auth
+
+        from diracx.db import AuthDB
+
+        auth_db = AuthDB(auth.db_url)
+        app.lifetime_functions.append(auth_db.engine_context)
+        app.dependency_overrides[AuthDB] = lambda: auth_db
 
     app.include_router(well_known_router)
 
@@ -94,11 +79,17 @@ def create_app_inner(
     return app
 
 
+class DiracxSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_ENABLED_"):
+    auth: AuthSettings | None = Field(default_factory=AuthSettings)
+    config: ConfigSettings | None = Field(default_factory=ConfigSettings)
+    jobs: JobsSettings | None = Field(default_factory=JobsSettings)
+
+
 def create_app() -> DiracFastAPI:
-    for env_file in dotenv_files_from_environment("DIRACX_SECRET_DOTENV"):
+    for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
         if not dotenv.load_dotenv(env_file):
             raise NotImplementedError(f"Could not load dotenv file {env_file}")
-    return create_app_inner(**dict(DiracxSecrets()._iter()))
+    return create_app_inner(**dict(DiracxSettings()._iter()))
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:

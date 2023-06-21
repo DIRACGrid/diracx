@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-__all__ = (
-    "AuthSecrets",
-    "ConfigSecrets",
-    "JobsSecrets",
-    "DiracxSecrets",
-)
-
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from authlib.jose import JsonWebKey
-from pydantic import AnyUrl, BaseSettings, Field, PrivateAttr, SecretStr, parse_obj_as
-
-from diracx.db import AuthDB, JobDB
+from pydantic import AnyUrl, SecretStr, parse_obj_as
 
 if TYPE_CHECKING:
     from pydantic.config import BaseConfig
@@ -55,41 +46,3 @@ class LocalFileUrl(AnyUrl):
         if isinstance(value, str) and "://" not in value:
             value = f"file://{value}"
         return super().validate(value, field, config)
-
-
-class SecretsBase(BaseSettings):
-    @classmethod
-    def create(cls):
-        return cls()
-
-
-class AuthSecrets(SecretsBase, env_prefix="DIRACX_SECRET_AUTH_"):
-    db_url: SqlalchemyDsn
-    db: Annotated[AuthDB, PrivateAttr()]
-    token_issuer: str = "http://lhcbdirac.cern.ch/"
-    token_audience: str = "dirac"
-    token_key: TokenSigningKey
-    token_algorithm: str = "RS256"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, db=AuthDB(None))
-        self.db._db_url = self.db_url
-
-
-class ConfigSecrets(SecretsBase, env_prefix="DIRACX_SECRET_CONFIG_"):
-    backend_url: LocalFileUrl
-
-
-class JobsSecrets(SecretsBase, env_prefix="DIRACX_SECRET_JOBS_"):
-    db_url: SqlalchemyDsn
-    db: Annotated[JobDB, PrivateAttr()]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, db=JobDB(None))
-        self.db._db_url = self.db_url
-
-
-class DiracxSecrets(BaseSettings, env_prefix="DIRACX_SECRET_", allow_mutation=False):
-    auth: AuthSecrets | None = Field(default_factory=AuthSecrets)
-    config: ConfigSecrets | None = Field(default_factory=ConfigSecrets)
-    jobs: JobsSecrets | None = Field(default_factory=JobsSecrets)

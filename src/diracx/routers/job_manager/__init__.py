@@ -7,15 +7,16 @@ from typing import Annotated, Any, AsyncGenerator, TypedDict
 from fastapi import APIRouter, Body, Depends, Query
 from pydantic import BaseModel, root_validator
 
-from diracx.core.config import Config, get_config
+from diracx.core.config import Config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import JobsSecrets
+from diracx.core.secrets import SqlalchemyDsn
 from diracx.core.utils import JobStatus
-from diracx.db.jobs.db import JobDB
+from diracx.db import JobDB
 
-from ..auth import UserInfo, verify_dirac_token
-from ..utils import has_properties
+from ..auth import UserInfo, has_properties, verify_dirac_token
+from ..configuration import get_config
+from ..fastapi_classes import ServiceSettingsBase
 
 MAX_PARAMETRIC_JOBS = 20
 
@@ -29,10 +30,14 @@ router = APIRouter(
 )
 
 
+class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
+    db_url: SqlalchemyDsn
+
+
 async def get_job_db(
-    secrets: Annotated[JobsSecrets, Depends(JobsSecrets.create)]
+    job_db: Annotated[JobDB, Depends(JobDB)]
 ) -> AsyncGenerator[JobDB, None]:
-    async with secrets.db as job_db:
+    async with job_db as job_db:
         yield job_db
 
 
