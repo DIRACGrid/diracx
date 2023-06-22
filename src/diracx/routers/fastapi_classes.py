@@ -50,14 +50,11 @@ class DiracFastAPI(FastAPI):
                         del responses["422"]
         return self.openapi_schema
 
-    def include_router(self, router: APIRouter, *args, settings=None, **kwargs):
-        super().include_router(router, *args, **kwargs)
-        # If the router is a DiracRouter
-        if not isinstance(router, DiracRouter):
-            assert settings is None
-            return
+    def include_router(self, router: APIRouter, *args, settings: ServiceSettingsBase, **kwargs):  # type: ignore
+        assert isinstance(router, DiracxRouter)
 
-        assert settings is not None
+        super().include_router(router, *args, **kwargs)
+
         self.dependency_overrides[settings.create] = lambda: settings
         for db in settings.databases:
             assert db.__class__ not in self.dependency_overrides
@@ -80,7 +77,9 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
                 for entry_point in entry_points().select(
                     group="diracx.dbs", name=annotation.name
                 ):
-                    yield entry_point.load()(getattr(self, field))
+                    DBClass = entry_point.load()
+                    url = getattr(self, field)
+                    yield DBClass(url)
                     break
                 else:
                     raise NotImplementedError(
@@ -88,7 +87,7 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
                     )
 
 
-class DiracRouter(APIRouter):
+class DiracxRouter(APIRouter):
     def __init__(
         self,
         *,

@@ -1,21 +1,18 @@
 from __future__ import annotations
 
+import os
 from importlib.metadata import entry_points
 
 import dotenv
 from fastapi import Depends, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import Field
+from pydantic import parse_raw_as
 
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.routers.auth import AuthSettings
-from diracx.routers.configuration import ConfigSettings
-from diracx.routers.job_manager import JobsSettings
 
 from .auth import verify_dirac_token
-from .fastapi_classes import DiracFastAPI, DiracRouter, ServiceSettingsBase
-from .well_known import WellKnownSettings
+from .fastapi_classes import DiracFastAPI, DiracxRouter, ServiceSettingsBase
 
 # Rules:
 # All routes must have tags (needed for auto gen of client)
@@ -35,7 +32,9 @@ def create_app_inner(
         class_to_settings[type(service_settings)] = service_settings
 
     for entry_point in entry_points().select(group="diracx.services"):
-        router: DiracRouter = entry_point.load()
+        router: DiracxRouter = entry_point.load()
+        if router.diracx_settings_class not in class_to_settings:
+            continue
         app.include_router(
             router,
             settings=class_to_settings[router.diracx_settings_class],
@@ -53,18 +52,20 @@ def create_app_inner(
     return app
 
 
-class DiracxSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_ENABLED_"):
-    auth: AuthSettings | None = Field(default_factory=AuthSettings)
-    config: ConfigSettings | None = Field(default_factory=ConfigSettings)
-    jobs: JobsSettings | None = Field(default_factory=JobsSettings)
-    well_known: WellKnownSettings | None = Field(default_factory=WellKnownSettings)
-
-
 def create_app() -> DiracFastAPI:
     for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
         if not dotenv.load_dotenv(env_file):
             raise NotImplementedError(f"Could not load dotenv file {env_file}")
-    return create_app_inner(*dict(DiracxSettings()._iter()).values())
+
+    all_service_settings = []
+    for entry_point in entry_points().select(group="diracx.services"):
+        router: DiracxRouter = entry_point.load()
+        env_prefix = router.diracx_settings_class.__config__.env_prefix
+        enabled = parse_raw_as(bool, os.environ.get(f"{env_prefix}ENABLED", "true"))
+        if enabled:
+            all_service_settings.append(router.diracx_settings_class())
+
+    return create_app_inner(*all_service_settings)
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:

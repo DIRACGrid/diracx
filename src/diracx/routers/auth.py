@@ -40,7 +40,7 @@ from diracx.db.auth.schema import FlowStatus
 from diracx.db.utils import DiracDB
 
 from .configuration import get_config
-from .fastapi_classes import DiracRouter, ServiceSettingsBase
+from .fastapi_classes import DiracxRouter, ServiceSettingsBase
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
@@ -93,7 +93,7 @@ class TokenResponse(BaseModel):
     state: str
 
 
-router = DiracRouter(settings_class=AuthSettings, require_auth=False)
+router = DiracxRouter(settings_class=AuthSettings, require_auth=False)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 # This should be taken dynamically

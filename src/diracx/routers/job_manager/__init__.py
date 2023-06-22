@@ -17,7 +17,7 @@ from diracx.db.utils import DiracDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
 from ..configuration import get_config
-from ..fastapi_classes import DiracRouter, ServiceSettingsBase
+from ..fastapi_classes import DiracxRouter, ServiceSettingsBase
 
 MAX_PARAMETRIC_JOBS = 20
 
@@ -26,7 +26,7 @@ class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
     db_url: Annotated[SqlalchemyDsn, DiracDB("JobDB")]
 
 
-router = DiracRouter(
+router = DiracxRouter(
     settings_class=JobsSettings,
     dependencies=[
         has_properties(

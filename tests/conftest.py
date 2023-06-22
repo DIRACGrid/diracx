@@ -11,7 +11,9 @@ from diracx.core.properties import SecurityProperty
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_access_token
 from diracx.routers.configuration import ConfigSettings
+from diracx.routers.fastapi_classes import ServiceSettingsBase
 from diracx.routers.job_manager import JobsSettings
+from diracx.routers.well_known import WellKnownSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -22,11 +24,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 @pytest.fixture
-async def test_secrets(with_config_repo, tmp_path):
-    from diracx.routers import (
-        DiracxSettings,
-    )
-
+def test_auth_settings() -> AuthSettings:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
     pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -34,17 +32,22 @@ async def test_secrets(with_config_repo, tmp_path):
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
-    secrets = DiracxSettings(
-        auth=AuthSettings(db_url="sqlite+aiosqlite:///:memory:", token_key=pem),
-        config=ConfigSettings(backend_url=f"file://{with_config_repo}"),
-        jobs=JobsSettings(db_url="sqlite+aiosqlite:///:memory:"),
-    )
-    yield secrets
+    yield AuthSettings(db_url="sqlite+aiosqlite:///:memory:", token_key=pem)
 
 
 @pytest.fixture
-def with_app(test_secrets):
-    yield create_app_inner(*dict(test_secrets._iter()).values())
+def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsBase]:
+    yield [
+        test_auth_settings,
+        ConfigSettings(backend_url=f"file://{with_config_repo}"),
+        JobsSettings(db_url="sqlite+aiosqlite:///:memory:"),
+        WellKnownSettings(),
+    ]
+
+
+@pytest.fixture
+def with_app(test_settings):
+    yield create_app_inner(*test_settings)
 
 
 @pytest.fixture
@@ -96,7 +99,7 @@ def test_client(with_app):
 
 
 @pytest.fixture
-def normal_user_client(test_client, test_secrets):
+def normal_user_client(test_client, test_auth_settings):
     payload = {
         "sub": "testingVO:yellow-sub",
         "aud": AUDIENCE,
@@ -107,7 +110,7 @@ def normal_user_client(test_client, test_secrets):
         "dirac_group": "test_group",
         "vo": "lhcb",
     }
-    token = create_access_token(payload, test_secrets.auth)
+    token = create_access_token(payload, test_auth_settings)
     test_client.headers["Authorization"] = f"Bearer {token}"
     test_client.dirac_token_payload = payload
     yield test_client
