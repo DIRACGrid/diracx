@@ -13,6 +13,7 @@ from diracx.core.properties import SecurityProperty
 from diracx.core.secrets import SqlalchemyDsn
 from diracx.core.utils import JobStatus
 from diracx.db import JobDB
+from diracx.db.utils import DiracDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
 from ..configuration import get_config
@@ -22,7 +23,7 @@ MAX_PARAMETRIC_JOBS = 20
 
 
 class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
-    db_url: Annotated[SqlalchemyDsn, JobDB]
+    db_url: Annotated[SqlalchemyDsn, DiracDB("JobDB")]
 
 
 router = DiracRouter(

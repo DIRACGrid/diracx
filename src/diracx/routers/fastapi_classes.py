@@ -4,11 +4,12 @@ import asyncio
 import contextlib
 import inspect
 from functools import partial
+from importlib.metadata import entry_points
 
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseSettings
 
-from diracx.db.utils import BaseDB
+from diracx.db.utils import DiracDB
 
 # Rules:
 # All routes must have tags (needed for auto gen of client)
@@ -73,9 +74,18 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
     def databases(self):
         annotations = inspect.get_annotations(self.__class__, eval_str=True)
         for field, metadata in annotations.items():
-            for type_ in getattr(metadata, "__metadata__", tuple()):
-                if issubclass(type_, BaseDB):
-                    yield type_(getattr(self, field))
+            for annotation in getattr(metadata, "__metadata__", tuple()):
+                if not isinstance(annotation, DiracDB):
+                    continue
+                for entry_point in entry_points().select(
+                    group="diracx.dbs", name=annotation.name
+                ):
+                    yield entry_point.load()(getattr(self, field))
+                    break
+                else:
+                    raise NotImplementedError(
+                        f"Failed to find DB named {annotation.name}"
+                    )
 
 
 class DiracRouter(APIRouter):

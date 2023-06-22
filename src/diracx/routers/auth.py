@@ -35,8 +35,9 @@ from diracx.core.exceptions import (
 )
 from diracx.core.properties import SecurityProperty, UnevaluatedProperty
 from diracx.core.secrets import SqlalchemyDsn, TokenSigningKey
-from diracx.db.auth.db import AuthDB
+from diracx.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
+from diracx.db.utils import DiracDB
 
 from .configuration import get_config
 from .fastapi_classes import DiracRouter, ServiceSettingsBase
@@ -47,7 +48,7 @@ oidc_scheme = OpenIdConnect(
 
 
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
-    db_url: Annotated[SqlalchemyDsn, AuthDB]
+    db_url: Annotated[SqlalchemyDsn, DiracDB("AuthDB")]
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically

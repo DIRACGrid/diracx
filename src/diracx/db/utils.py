@@ -111,3 +111,10 @@ class BaseDB(metaclass=ABCMeta):
             await self._conn.commit()
         await self._conn.__aexit__(exc_type, exc, tb)
         self._conn = None
+
+
+class DiracDB(str):
+    """Class for annotating DB connection strings in settings classes."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
