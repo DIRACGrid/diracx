@@ -3,18 +3,26 @@ from __future__ import annotations
 from typing import Annotated
 
 # from cachetools import TTLCache
-from fastapi import APIRouter, Depends, Request
+from fastapi import Depends, Request
 
 from diracx.core.config import Config
 from diracx.core.properties import SecurityProperty
 from diracx.routers.auth import AuthSettings
 
 from .configuration import get_config
+from .fastapi_classes import DiracRouter, ServiceSettingsBase
 
-router = APIRouter(tags=["well-known"])
+
+class WellKnownSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_WELL_KNOWN_"):
+    pass
 
 
-@router.get("/.well-known/openid-configuration")
+router = DiracRouter(
+    tags=[".well-known"], prefix="/.well-known", settings_class=WellKnownSettings
+)
+
+
+@router.get("/openid-configuration")
 async def openid_configuration(
     request: Request,
     config: Annotated[Config, Depends(get_config)],

@@ -81,8 +81,6 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
 
 
 class DiracRouter(APIRouter):
-    _registry: dict[type[ServiceSettingsBase], DiracRouter] = {}
-
     def __init__(
         self,
         *,
@@ -92,6 +90,5 @@ class DiracRouter(APIRouter):
         prefix: str,
     ):
         super().__init__(tags=tags, dependencies=dependencies)
-        assert settings_class not in self._registry
-        self._registry[settings_class] = self
         self.prefix = prefix
+        self.settings_class = settings_class

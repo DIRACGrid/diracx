@@ -44,7 +44,7 @@ async def test_secrets(with_config_repo, tmp_path):
 
 @pytest.fixture
 def with_app(test_secrets):
-    yield create_app_inner(**dict(test_secrets._iter()))
+    yield create_app_inner(*dict(test_secrets._iter()).values())
 
 
 @pytest.fixture
