@@ -13,11 +13,9 @@ from diracx.routers.auth import AuthSettings
 from diracx.routers.configuration import ConfigSettings
 from diracx.routers.job_manager import JobsSettings
 
-from .auth import router as auth_router
 from .auth import verify_dirac_token
-from .fastapi_classes import DiracFastAPI, ServiceSettingsBase
+from .fastapi_classes import DiracFastAPI, DiracRouter, ServiceSettingsBase
 from .well_known import WellKnownSettings
-from .well_known import router as well_known_router
 
 # Rules:
 # All routes must have tags (needed for auto gen of client)
@@ -30,23 +28,23 @@ def create_app_inner(
 ) -> DiracFastAPI:
     app = DiracFastAPI()
 
-    class_to_settings = {}
+    class_to_settings: dict[type[ServiceSettingsBase], ServiceSettingsBase] = {}
     for service_settings in all_service_settings:
         if type(service_settings) in class_to_settings:
             raise NotImplementedError(f"{type(service_settings)} has been reused")
         class_to_settings[type(service_settings)] = service_settings
 
     for entry_point in entry_points().select(group="diracx.services"):
-        router = entry_point.load()
-        service_settings = class_to_settings[router.settings_class]
-        if router is auth_router or router is well_known_router:
-            app.include_router(router, settings=service_settings)
-        else:
-            app.include_router(
-                router,
-                settings=service_settings,
-                dependencies=[Depends(verify_dirac_token)],
-            )
+        router: DiracRouter = entry_point.load()
+        app.include_router(
+            router,
+            settings=class_to_settings[router.diracx_settings_class],
+            prefix=f"/{entry_point.name}",
+            tags=[entry_point.name],
+            dependencies=[Depends(verify_dirac_token)]
+            if router.diracx_require_auth
+            else [],
+        )
 
     # Add exception handlers
     app.add_exception_handler(DiracError, dirac_error_handler)

@@ -92,7 +92,7 @@ class TokenResponse(BaseModel):
     state: str
 
 
-router = DiracRouter(tags=["auth"], prefix="/auth", settings_class=AuthSettings)
+router = DiracRouter(settings_class=AuthSettings, require_auth=False)
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 # This should be taken dynamically

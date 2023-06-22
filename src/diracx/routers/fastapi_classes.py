@@ -56,8 +56,6 @@ class DiracFastAPI(FastAPI):
             assert settings is None
             return
 
-        assert router.prefix
-
         assert settings is not None
         self.dependency_overrides[settings.create] = lambda: settings
         for db in settings.databases:
@@ -84,11 +82,10 @@ class DiracRouter(APIRouter):
     def __init__(
         self,
         *,
-        tags,
         dependencies=None,
         settings_class: type[ServiceSettingsBase],
-        prefix: str,
+        require_auth: bool = True,
     ):
-        super().__init__(tags=tags, dependencies=dependencies)
-        self.prefix = prefix
-        self.settings_class = settings_class
+        super().__init__(dependencies=dependencies)
+        self.diracx_settings_class = settings_class
+        self.diracx_require_auth = require_auth

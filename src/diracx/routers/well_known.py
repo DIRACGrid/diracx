@@ -17,9 +17,7 @@ class WellKnownSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_WELL_KNO
     pass
 
 
-router = DiracRouter(
-    tags=[".well-known"], prefix="/.well-known", settings_class=WellKnownSettings
-)
+router = DiracRouter(settings_class=WellKnownSettings, require_auth=False)
 
 
 @router.get("/openid-configuration")
