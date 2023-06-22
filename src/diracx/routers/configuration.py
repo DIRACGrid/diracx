@@ -35,7 +35,7 @@ def get_config(
         raise NotImplementedError(backend_url.scheme)
 
 
-router = DiracRouter(tags=["config"], settings_class=ConfigSettings)
+router = DiracRouter(tags=["config"], prefix="/config", settings_class=ConfigSettings)
 
 
 @router.get("/{vo}")

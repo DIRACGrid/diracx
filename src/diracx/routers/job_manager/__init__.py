@@ -28,6 +28,7 @@ class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
 router = DiracRouter(
     settings_class=JobsSettings,
     tags=["jobs"],
+    prefix="/jobs",
     dependencies=[
         has_properties(
             SecurityProperty.NORMAL_USER | SecurityProperty.JOB_ADMINISTRATOR

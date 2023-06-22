@@ -56,8 +56,10 @@ class DiracFastAPI(FastAPI):
             assert settings is None
             return
 
-        assert isinstance(settings, router.settings_class)
-        self.dependency_overrides[router.settings_class.create] = lambda: settings
+        assert router.prefix
+
+        assert settings is not None
+        self.dependency_overrides[settings.create] = lambda: settings
         for db in settings.databases:
             assert db.__class__ not in self.dependency_overrides
             self.lifetime_functions.append(db.engine_context)
@@ -79,6 +81,17 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
 
 
 class DiracRouter(APIRouter):
-    def __init__(self, *, tags, dependencies=None, settings_class):
+    _registry: dict[type[ServiceSettingsBase], DiracRouter] = {}
+
+    def __init__(
+        self,
+        *,
+        tags,
+        dependencies=None,
+        settings_class: type[ServiceSettingsBase],
+        prefix: str,
+    ):
         super().__init__(tags=tags, dependencies=dependencies)
-        self.settings_class = settings_class
+        assert settings_class not in self._registry
+        self._registry[settings_class] = self
+        self.prefix = prefix
