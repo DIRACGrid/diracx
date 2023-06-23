@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 
-from diracx.core.extensions import select
+from diracx.core.extensions import select_from_extension
 from diracx.core.settings import SqlalchemyDsn
 
 if TYPE_CHECKING:
@@ -79,7 +79,7 @@ class BaseDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select(group="diracx.dbs"):
+        for entry_point in select_from_extension(group="diracx.dbs"):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:

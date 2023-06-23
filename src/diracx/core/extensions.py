@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-__all__ = ("select",)
+__all__ = ("select_from_extension",)
 
 import os
 from collections import defaultdict
@@ -17,7 +17,9 @@ def extensions_by_priority() -> Iterator[str]:
         yield module_name
 
 
-def select(*, group: str, name: str | None = None) -> Iterator[EntryPoint]:
+def select_from_extension(
+    *, group: str, name: str | None = None
+) -> Iterator[EntryPoint]:
     """Select entry points by group and name, in order of priority.
 
     Similar to ``importlib.metadata.entry_points.select`` except only modules

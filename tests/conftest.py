@@ -44,7 +44,8 @@ def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsB
 @pytest.fixture
 def with_app(test_settings):
     yield create_app_inner(
-        *test_settings,
+        enabled_systems={".well-known", "auth", "config", "jobs"},
+        all_service_settings=test_settings,
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",
             "AuthDB": "sqlite+aiosqlite:///:memory:",

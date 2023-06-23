@@ -7,15 +7,14 @@ from functools import partial
 from typing import AsyncContextManager, AsyncGenerator, Iterable, TypeVar
 
 import dotenv
-import starlette
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.dependencies.models import Dependant
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from pydantic import parse_raw_as
 
 from diracx.core.exceptions import DiracError, DiracHttpResponse
-from diracx.core.extensions import select
+from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.utils import BaseDB
 
@@ -35,57 +34,77 @@ logger = logging.getLogger(__name__)
 
 
 def create_app_inner(
-    *all_service_settings: ServiceSettingsBase,
+    *,
+    enabled_systems: set[str],
+    all_service_settings: Iterable[ServiceSettingsBase],
     database_urls: dict[str, str],
 ) -> DiracFastAPI:
     app = DiracFastAPI()
 
-    class_to_settings: dict[type[ServiceSettingsBase], ServiceSettingsBase] = {}
+    # Find which settings classes are available and add them to dependency_overrides
+    available_settings_classes: set[type[ServiceSettingsBase]] = set()
     for service_settings in all_service_settings:
-        if type(service_settings) in class_to_settings:
-            raise NotImplementedError(f"{type(service_settings)} has been reused")
-        class_to_settings[type(service_settings)] = service_settings
-        app.dependency_overrides[type(service_settings).create] = partial(
-            lambda x: x, service_settings
-        )
+        cls = type(service_settings)
+        assert cls not in available_settings_classes
+        available_settings_classes.add(cls)
+        app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
 
-    required_db_classes = set()
-    for entry_point in select(group="diracx.services"):
-        router: DiracxRouter = entry_point.load()
-        prefix = f"/{entry_point.name}"
-
-        # Apply the settings cache
-        if not settings_are_available(router, prefix, class_to_settings):
-            continue
-
-        for route in router.routes:
-            if not isinstance(route, APIRoute):
-                continue
-            required_db_classes |= set(
-                find_dependents(route.dependant.dependencies, BaseDB)
-            )
-
-        app.include_router(
-            router,
-            prefix=f"/{entry_point.name}",
-            tags=[entry_point.name],
-            dependencies=[Depends(verify_dirac_token)]
-            if router.diracx_require_auth
-            else [],
-        )
-
+    # Add the DBs to the application
+    available_db_classes: set[type[BaseDB]] = set()
     for db_name, db_url in database_urls.items():
         db_classes: list[type[BaseDB]] = [
             entry_point.load()
-            for entry_point in select(group="diracx.dbs", name=db_name)
+            for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
         ]
-        if not any(c in required_db_classes for c in db_classes):
-            continue
+        assert db_classes, f"Could not find {db_name=}"
+        # The first DB is the highest priority one
         db = db_classes[0](db_url=db_url)
         app.lifetime_functions.append(db.engine_context)
+        # Add overrides for all the DB classes, including those from extensions
+        # This means vanilla DiracX routers get an instance of the extension's DB
         for db_class in db_classes:
             assert db_class.transaction not in app.dependency_overrides
+            available_db_classes.add(db_class)
             app.dependency_overrides[db_class.transaction] = partial(db_transaction, db)
+
+    # Load the requested routers
+    routers: dict[str, APIRouter] = {}
+    for system_name in enabled_systems:
+        assert system_name not in routers
+        for entry_point in select_from_extension(
+            group="diracx.services", name=system_name
+        ):
+            routers[system_name] = entry_point.load()
+            break
+        else:
+            raise NotImplementedError(f"Could not find {system_name=}")
+
+    # Add routers ensuring that all the required settings are available
+    for system_name, router in routers.items():
+        # Ensure required settings are available
+        for cls in find_dependents(router, ServiceSettingsBase):
+            if cls not in available_settings_classes:
+                raise NotImplementedError(
+                    f"Cannot enable {system_name=} as it requires {cls=}"
+                )
+
+        # Ensure required DBs are available
+        missing_dbs = set(find_dependents(router, BaseDB)) - available_db_classes
+        if missing_dbs:
+            raise NotImplementedError(
+                f"Cannot enable {system_name=} as it requires {missing_dbs=}"
+            )
+
+        # Add the router to the application
+        dependencies = []
+        if isinstance(router, DiracxRouter) and router.diracx_require_auth:
+            dependencies.append(Depends(verify_dirac_token))
+        app.include_router(
+            router,
+            prefix=f"/{system_name}",
+            tags=[system_name],
+            dependencies=dependencies,
+        )
 
     # Add exception handlers
     app.add_exception_handler(DiracError, dirac_error_handler)
@@ -95,25 +114,29 @@ def create_app_inner(
 
 
 def create_app() -> DiracFastAPI:
+    """Load settings from the environment and create the application object"""
     for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
         if not dotenv.load_dotenv(env_file):
             raise NotImplementedError(f"Could not load dotenv file {env_file}")
 
     # Load all available routers
+    enabled_systems = set()
     settings_classes = set()
-    for entry_point in select(group="diracx.services"):
-        router: starlette.routing.Router = entry_point.load()
+    for entry_point in select_from_extension(group="diracx.services"):
+        env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
+        if not parse_raw_as(bool, os.environ.get(env_var, "true")):
+            continue
+        router: APIRouter = entry_point.load()
+        enabled_systems.add(entry_point.name)
         settings_classes |= set(find_dependents(router, ServiceSettingsBase))
 
-    all_service_settings = []
-    for settings_class in settings_classes:
-        env_prefix = settings_class.__config__.env_prefix
-        enabled = parse_raw_as(bool, os.environ.get(f"{env_prefix}ENABLED", "true"))
-        if enabled:
-            all_service_settings.append(settings_class())
+    # Load settings classes required by the routers
+    all_service_settings = [settings_class() for settings_class in settings_classes]
 
     return create_app_inner(
-        *all_service_settings, database_urls=BaseDB.available_urls()
+        enabled_systems=enabled_systems,
+        all_service_settings=all_service_settings,
+        database_urls=BaseDB.available_urls(),
     )
 
 
@@ -128,9 +151,11 @@ def http_response_handler(request: Request, exc: DiracHttpResponse) -> Response:
 
 
 def find_dependents(
-    obj: starlette.routing.Router | Iterable[Dependant], cls: type[T]
+    obj: APIRouter | Iterable[Dependant], cls: type[T]
 ) -> Iterable[type[T]]:
-    if isinstance(obj, starlette.routing.Router):
+    if isinstance(obj, APIRouter):
+        # TODO: Support dependencies of the router itself
+        # yield from find_dependents(obj.dependencies, cls)
         for route in obj.routes:
             if isinstance(route, APIRoute):
                 yield from find_dependents(route.dependant.dependencies, cls)
@@ -146,15 +171,3 @@ def find_dependents(
 async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
     async with db:
         yield db
-
-
-def settings_are_available(
-    router: starlette.routing.Router,
-    prefix: str,
-    available_settings_classes: Iterable[type[ServiceSettingsBase]],
-):
-    for cls in find_dependents(router, ServiceSettingsBase):
-        if cls not in available_settings_classes:
-            logger.info(f"Not enabling {prefix} as it requires {cls}")
-            return False
-    return True
