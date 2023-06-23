@@ -8,6 +8,7 @@ import typer
 import yaml
 from pydantic import parse_obj_as
 
+from diracx.core.config import LocalGitConfigSource
 from diracx.core.config.schema import (
     Config,
     DIRACConfig,
@@ -15,6 +16,7 @@ from diracx.core.config.schema import (
     IdpConfig,
     OperationsConfig,
     RegistryConfig,
+    UserConfig,
 )
 from diracx.core.settings import LocalFileUrl
 
@@ -66,3 +68,45 @@ def generate_cs(
     repo.index.add([yaml_path])
     repo.index.commit("Initial commit")
     typer.echo(f"Successfully created repo in {config_repo}", err=True)
+
+
+@app.command()
+def add_user(
+    config_repo: str,
+    *,
+    vo: str = "testvo",
+    user_group: str = "user",
+    sub: str = "usersub",
+    dn: str = "DN",
+    ca: str = "CA",
+    preferred_username: str = "preferred_username",
+):
+    """Add a user to an existing vo and group"""
+
+    # TODO: The use of parse_obj_as should be moved in to typer itself
+    config_repo = parse_obj_as(LocalFileUrl, config_repo)
+
+    repo_path = Path(config_repo.path)
+
+    new_user = UserConfig(CA=ca, DN=dn, PreferedUsername=preferred_username)
+
+    config = LocalGitConfigSource(repo_path).read_config()
+
+    if sub in config.Registry[vo].Users:
+        typer.echo(f"ERROR: User {sub} already exists", err=True)
+        raise typer.Exit(1)
+
+    config.Registry[vo].Users[sub] = new_user
+
+    config.Registry[vo].Groups[user_group].Users.append(sub)
+
+    repo = git.Repo.init(repo_path)
+    yaml_path = repo_path / "default.yml"
+    typer.echo(f"Writing back configuration to {yaml_path}", err=True)
+    config_data = json.loads(config.json(exclude_unset=True))
+    yaml_path.write_text(yaml.safe_dump(config_data))
+    repo.index.add([yaml_path])
+    repo.index.commit(
+        f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}"
+    )
+    typer.echo(f"Successfully added user to {config_repo}", err=True)
