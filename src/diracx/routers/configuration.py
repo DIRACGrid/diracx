@@ -13,9 +13,9 @@ from fastapi import (
 )
 
 from diracx.core.config import Config, LocalGitConfigSource
-from diracx.core.secrets import LocalFileUrl
+from diracx.core.settings import LocalFileUrl, ServiceSettingsBase
 
-from .fastapi_classes import DiracxRouter, ServiceSettingsBase
+from .fastapi_classes import DiracxRouter
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
@@ -35,7 +35,7 @@ def get_config(
         raise NotImplementedError(backend_url.scheme)
 
 
-router = DiracxRouter(settings_class=ConfigSettings)
+router = DiracxRouter()
 
 
 @router.get("/{vo}")

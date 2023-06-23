@@ -10,14 +10,9 @@ from diracx.core.properties import SecurityProperty
 from diracx.routers.auth import AuthSettings
 
 from .configuration import get_config
-from .fastapi_classes import DiracxRouter, ServiceSettingsBase
+from .fastapi_classes import DiracxRouter
 
-
-class WellKnownSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_WELL_KNOWN_"):
-    pass
-
-
-router = DiracxRouter(settings_class=WellKnownSettings, require_auth=False)
+router = DiracxRouter(require_auth=False)
 
 
 @router.get("/openid-configuration")

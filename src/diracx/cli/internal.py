@@ -16,7 +16,7 @@ from diracx.core.config.schema import (
     OperationsConfig,
     RegistryConfig,
 )
-from diracx.core.secrets import LocalFileUrl
+from diracx.core.settings import LocalFileUrl
 
 from .utils import AsyncTyper
 

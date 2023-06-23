@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import parse_obj_as
 
-from diracx.core.secrets import TokenSigningKey
+from diracx.core.settings import TokenSigningKey
 
 
 def compare_keys(key1, key2):

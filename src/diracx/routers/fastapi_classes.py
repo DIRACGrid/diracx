@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import inspect
-from functools import partial
-from importlib.metadata import entry_points
+from typing import TypeVar
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseSettings
 
-from diracx.db.utils import DiracDB
+T = TypeVar("T")
 
 # Rules:
 # All routes must have tags (needed for auto gen of client)
@@ -50,51 +47,13 @@ class DiracFastAPI(FastAPI):
                         del responses["422"]
         return self.openapi_schema
 
-    def include_router(self, router: APIRouter, *args, settings: ServiceSettingsBase, **kwargs):  # type: ignore
-        assert isinstance(router, DiracxRouter)
-
-        super().include_router(router, *args, **kwargs)
-
-        self.dependency_overrides[settings.create] = lambda: settings
-        for db in settings.databases:
-            assert db.__class__ not in self.dependency_overrides
-            self.lifetime_functions.append(db.engine_context)
-            self.dependency_overrides[db.__class__] = partial(lambda xxx: xxx, db)
-
-
-class ServiceSettingsBase(BaseSettings, allow_mutation=False):
-    @classmethod
-    def create(cls):
-        return cls()
-
-    @property
-    def databases(self):
-        annotations = inspect.get_annotations(self.__class__, eval_str=True)
-        for field, metadata in annotations.items():
-            for annotation in getattr(metadata, "__metadata__", tuple()):
-                if not isinstance(annotation, DiracDB):
-                    continue
-                for entry_point in entry_points().select(
-                    group="diracx.dbs", name=annotation.name
-                ):
-                    DBClass = entry_point.load()
-                    url = getattr(self, field)
-                    yield DBClass(url)
-                    break
-                else:
-                    raise NotImplementedError(
-                        f"Failed to find DB named {annotation.name}"
-                    )
-
 
 class DiracxRouter(APIRouter):
     def __init__(
         self,
         *,
         dependencies=None,
-        settings_class: type[ServiceSettingsBase],
         require_auth: bool = True,
     ):
         super().__init__(dependencies=dependencies)
-        self.diracx_settings_class = settings_class
         self.diracx_require_auth = require_auth

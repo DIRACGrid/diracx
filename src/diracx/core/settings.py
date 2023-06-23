@@ -1,21 +1,27 @@
 from __future__ import annotations
 
+__all__ = (
+    "SqlalchemyDsn",
+    "LocalFileUrl",
+    "ServiceSettingsBase",
+)
+
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from authlib.jose import JsonWebKey
-from pydantic import AnyUrl, SecretStr, parse_obj_as
+from pydantic import AnyUrl, BaseSettings, SecretStr, parse_obj_as
 
 if TYPE_CHECKING:
     from pydantic.config import BaseConfig
     from pydantic.fields import ModelField
 
 
-class RawSqlalchemyDsn(AnyUrl):
+T = TypeVar("T")
+
+
+class SqlalchemyDsn(AnyUrl):
     allowed_schemes = {"sqlite+aiosqlite", "mysql+aiomysql"}
-
-
-SqlalchemyDsn = Literal["sqlite+aiosqlite:///:memory:"] | RawSqlalchemyDsn
 
 
 class TokenSigningKey(SecretStr):
@@ -46,3 +52,9 @@ class LocalFileUrl(AnyUrl):
         if isinstance(value, str) and "://" not in value:
             value = f"file://{value}"
         return super().validate(value, field, config)
+
+
+class ServiceSettingsBase(BaseSettings, allow_mutation=False):
+    @classmethod
+    def create(cls) -> Self:
+        raise NotImplementedError("This should never be called")

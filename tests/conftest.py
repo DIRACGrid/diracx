@@ -8,12 +8,10 @@ from git import Repo
 
 from diracx.core.config import Config, LocalGitConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.core.settings import ServiceSettingsBase
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_access_token
 from diracx.routers.configuration import ConfigSettings
-from diracx.routers.fastapi_classes import ServiceSettingsBase
-from diracx.routers.job_manager import JobsSettings
-from diracx.routers.well_known import WellKnownSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -32,7 +30,7 @@ def test_auth_settings() -> AuthSettings:
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
-    yield AuthSettings(db_url="sqlite+aiosqlite:///:memory:", token_key=pem)
+    yield AuthSettings(token_key=pem)
 
 
 @pytest.fixture
@@ -40,14 +38,18 @@ def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsB
     yield [
         test_auth_settings,
         ConfigSettings(backend_url=f"file://{with_config_repo}"),
-        JobsSettings(db_url="sqlite+aiosqlite:///:memory:"),
-        WellKnownSettings(),
     ]
 
 
 @pytest.fixture
 def with_app(test_settings):
-    yield create_app_inner(*test_settings)
+    yield create_app_inner(
+        *test_settings,
+        database_urls={
+            "JobDB": "sqlite+aiosqlite:///:memory:",
+            "AuthDB": "sqlite+aiosqlite:///:memory:",
+        },
+    )
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Annotated, Any, AsyncGenerator, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from fastapi import Body, Depends, Query
 from pydantic import BaseModel, root_validator
@@ -10,37 +10,23 @@ from pydantic import BaseModel, root_validator
 from diracx.core.config import Config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import SqlalchemyDsn
 from diracx.core.utils import JobStatus
 from diracx.db import JobDB
-from diracx.db.utils import DiracDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
 from ..configuration import get_config
-from ..fastapi_classes import DiracxRouter, ServiceSettingsBase
+from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
 
 
-class JobsSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_JOBS_"):
-    db_url: Annotated[SqlalchemyDsn, DiracDB("JobDB")]
-
-
 router = DiracxRouter(
-    settings_class=JobsSettings,
     dependencies=[
         has_properties(
             SecurityProperty.NORMAL_USER | SecurityProperty.JOB_ADMINISTRATOR
         )
     ],
 )
-
-
-async def get_job_db(
-    job_db: Annotated[JobDB, Depends(JobDB)]
-) -> AsyncGenerator[JobDB, None]:
-    async with job_db as job_db:
-        yield job_db
 
 
 class JobSummaryParams(BaseModel):
@@ -119,7 +105,7 @@ StdOutput = std.out;"""
 async def submit_bulk_jobs(
     # FIXME: Using mutliple doesn't work with swagger?
     job_definitions: Annotated[list[str], Body(example=EXAMPLE_JDLS["Simple JDL"])],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
 ) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
@@ -341,7 +327,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 @router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
     config: Annotated[Config, Depends(get_config)],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     page: int = 0,
     per_page: int = 100,
@@ -371,7 +357,7 @@ async def search(
 @router.post("/summary")
 async def summary(
     config: Annotated[Config, Depends(get_config)],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     body: JobSummaryParams,
 ):

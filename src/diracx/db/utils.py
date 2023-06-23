@@ -3,16 +3,21 @@ from __future__ import annotations
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
 import contextlib
+import os
 from abc import ABCMeta
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator, Self
 
+from pydantic import parse_obj_as
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
+
+from diracx.core.extensions import select
+from diracx.core.settings import SqlalchemyDsn
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -66,6 +71,29 @@ class BaseDB(metaclass=ABCMeta):
         self._db_url = db_url
         self._engine: AsyncEngine | None = None
 
+    @classmethod
+    def available_urls(cls) -> dict[str, str]:
+        """Return a dict of available database urls.
+
+        The list of available URLs is determined by environment variables
+        prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
+        """
+        db_urls: dict[str, str] = {}
+        for entry_point in select(group="diracx.dbs"):
+            db_name = entry_point.name
+            var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
+            if var_name in os.environ:
+                db_url = os.environ[var_name]
+                if db_url == "sqlite+aiosqlite:///:memory:":
+                    db_urls[db_name] = db_url
+                else:
+                    db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
+        return db_urls
+
+    @classmethod
+    def transaction(cls) -> Self:
+        raise NotImplementedError("This should never be called")
+
     @property
     def engine(self) -> AsyncEngine:
         """The engine to use for database operations.
@@ -111,10 +139,3 @@ class BaseDB(metaclass=ABCMeta):
             await self._conn.commit()
         await self._conn.__aexit__(exc_type, exc, tb)
         self._conn = None
-
-
-class DiracDB(str):
-    """Class for annotating DB connection strings in settings classes."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
