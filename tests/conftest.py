@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from git import Repo
 
 from diracx.core.config import Config, LocalGitConfigSource
-from diracx.core.properties import SecurityProperty
+from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import ServiceSettingsBase
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_access_token
@@ -107,7 +107,7 @@ def normal_user_client(test_client, test_auth_settings):
         "sub": "testingVO:yellow-sub",
         "aud": AUDIENCE,
         "iss": ISSUER,
-        "dirac_properties": [SecurityProperty.NORMAL_USER],
+        "dirac_properties": [NORMAL_USER],
         "jti": str(uuid4()),
         "preferred_username": "preferred_username",
         "dirac_group": "test_group",

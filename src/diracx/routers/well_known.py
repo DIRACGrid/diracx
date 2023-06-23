@@ -6,7 +6,6 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from diracx.core.config import Config
-from diracx.core.properties import SecurityProperty
 from diracx.routers.auth import AuthSettings
 
 from .configuration import get_config
@@ -25,7 +24,7 @@ async def openid_configuration(
     for vo in config.Registry:
         scopes_supported.append(f"vo:{vo}")
         scopes_supported += [f"group:{vo}" for vo in config.Registry[vo].Groups]
-    scopes_supported += [f"property:{p.value}" for p in SecurityProperty]
+    scopes_supported += [f"property:{p}" for p in settings.available_properties]
 
     return {
         "issuer": settings.token_issuer,

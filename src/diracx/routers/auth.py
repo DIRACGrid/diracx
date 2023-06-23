@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, TypeAlias, TypedDict
 from uuid import UUID, uuid4
 
 import httpx
@@ -25,7 +25,7 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 from fastapi.security import OpenIdConnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (
@@ -45,6 +45,10 @@ oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
 )
 
+AvailableSecurityProperties: TypeAlias = Annotated[
+    set[SecurityProperty], Depends(SecurityProperty.available_properties)
+]
+
 
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     dirac_client_id: str = "myDIRACClientID"
@@ -59,6 +63,10 @@ class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     token_algorithm: str = "RS256"
     access_token_expire_minutes: int = 3000
     refresh_token_expire_minutes: int = 3000
+
+    available_properties: set[SecurityProperty] = Field(
+        default_factory=SecurityProperty.available_properties
+    )
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
@@ -278,6 +286,7 @@ async def initiate_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
@@ -291,7 +300,7 @@ async def initiate_device_flow(
     assert client_id in KNOWN_CLIENTS, client_id
 
     try:
-        parse_and_validate_scope(scope, config)
+        parse_and_validate_scope(scope, config, available_properties)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -402,6 +411,7 @@ async def do_device_flow(
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     user_code: str,
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ) -> RedirectResponse:
     """
     This is called as the verification URI for the device flow.
@@ -418,7 +428,7 @@ async def do_device_flow(
     scope = await auth_db.device_flow_validate_user_code(
         user_code, DEVICE_FLOW_EXPIRATION_SECONDS
     )
-    parsed_scope = parse_and_validate_scope(scope, config)
+    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
@@ -497,7 +507,9 @@ class ScopeInfoDict(TypedDict):
     vo: str
 
 
-def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
+def parse_and_validate_scope(
+    scope: str, config: Config, available_properties: set[SecurityProperty]
+) -> ScopeInfoDict:
     """
     Check:
         * At most one VO
@@ -552,11 +564,11 @@ def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
 
     if not properties:
         # If there are no properties set get the defaults from the CS
-        properties = [p.value for p in config.Registry[vo].Groups[group].Properties]
+        properties = [str(p) for p in config.Registry[vo].Groups[group].Properties]
 
-    if not set(properties).issubset(SecurityProperty):
+    if not set(properties).issubset(available_properties):
         raise ValueError(
-            f"{set(properties)-set(SecurityProperty)} are not valid properties"
+            f"{set(properties)-set(available_properties)} are not valid properties"
         )
 
     return {
@@ -622,6 +634,7 @@ async def token(
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    available_properties: AvailableSecurityProperties,
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
     ] = None,
@@ -707,7 +720,7 @@ async def token(
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    parsed_scope = parse_and_validate_scope(info["scope"], config)
+    parsed_scope = parse_and_validate_scope(info["scope"], config, available_properties)
 
     return await exchange_token(
         parsed_scope["vo"],
@@ -730,12 +743,13 @@ async def authorization_flow(
     state: str,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ):
     assert client_id in KNOWN_CLIENTS, client_id
     assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
 
     try:
-        parsed_scope = parse_and_validate_scope(scope, config)
+        parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

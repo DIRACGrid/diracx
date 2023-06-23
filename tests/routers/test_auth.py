@@ -9,6 +9,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
+from diracx.core.properties import SecurityProperty
 from diracx.routers.auth import (
     _server_metadata_cache,
     get_server_metadata,
@@ -246,8 +247,8 @@ def test_parse_scopes(vos, groups, scope, expected):
             "Operations": {"Defaults": {}},
         }
     )
-
-    assert parse_and_validate_scope(scope, config) == expected
+    available_properties = SecurityProperty.available_properties()
+    assert parse_and_validate_scope(scope, config, available_properties) == expected
 
 
 @pytest.mark.parametrize(
@@ -281,5 +282,6 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
             "Operations": {"Defaults": {}},
         }
     )
+    available_properties = SecurityProperty.available_properties()
     with pytest.raises(ValueError, match=expected_error):
-        parse_and_validate_scope(scope, config)
+        parse_and_validate_scope(scope, config, available_properties)

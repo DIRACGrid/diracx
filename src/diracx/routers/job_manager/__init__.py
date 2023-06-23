@@ -9,7 +9,7 @@ from pydantic import BaseModel, root_validator
 
 from diracx.core.config import Config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
-from diracx.core.properties import SecurityProperty
+from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
 from diracx.db import JobDB
 
@@ -20,13 +20,7 @@ from ..fastapi_classes import DiracxRouter
 MAX_PARAMETRIC_JOBS = 20
 
 
-router = DiracxRouter(
-    dependencies=[
-        has_properties(
-            SecurityProperty.NORMAL_USER | SecurityProperty.JOB_ADMINISTRATOR
-        )
-    ],
-)
+router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
 
 
 class JobSummaryParams(BaseModel):
@@ -235,9 +229,7 @@ async def delete_single_job(job_id: int):
     return f"I am deleting {job_id}"
 
 
-@router.post(
-    "/{job_id}/kill", dependencies=[has_properties(SecurityProperty.JOB_ADMINISTRATOR)]
-)
+@router.post("/{job_id}/kill", dependencies=[has_properties(JOB_ADMINISTRATOR)])
 async def kill_single_job(job_id: int):
     return f"I am killing {job_id}"
 
