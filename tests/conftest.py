@@ -1,22 +1,20 @@
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
 
-from diracx.core.config import Config, LocalGitConfigSource, get_config
-from diracx.core.properties import SecurityProperty
-from diracx.db.auth.db import AuthDB
-from diracx.db.jobs.db import JobDB
-from diracx.routers import app
-from diracx.routers.auth import create_access_token
+from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.properties import NORMAL_USER
+from diracx.core.settings import ServiceSettingsBase
+from diracx.routers import create_app_inner
+from diracx.routers.auth import AuthSettings, create_access_token
+from diracx.routers.configuration import ConfigSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
-SECRET_KEY = "21e98a30bb41420dc601dea1dc1f85ecee3b4d702547bea355c07ab44fd7f3c3"
 ALGORITHM = "HS256"
 ISSUER = "http://lhcbdirac.cern.ch/"
 AUDIENCE = "dirac"
@@ -24,13 +22,39 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 @pytest.fixture
-def with_config_repo(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        app,
-        "dependency_overrides",
-        {get_config: lambda: LocalGitConfigSource(tmp_path).read_config()},
+def test_auth_settings() -> AuthSettings:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+
+    yield AuthSettings(token_key=pem)
+
+
+@pytest.fixture
+def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsBase]:
+    yield [
+        test_auth_settings,
+        ConfigSettings(backend_url=f"file://{with_config_repo}"),
+    ]
+
+
+@pytest.fixture
+def with_app(test_settings):
+    yield create_app_inner(
+        enabled_systems={".well-known", "auth", "config", "jobs"},
+        all_service_settings=test_settings,
+        database_urls={
+            "JobDB": "sqlite+aiosqlite:///:memory:",
+            "AuthDB": "sqlite+aiosqlite:///:memory:",
+        },
     )
 
+
+@pytest.fixture
+def with_config_repo(tmp_path):
     repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
     example_cs = Config.parse_obj(
@@ -72,61 +96,24 @@ def with_config_repo(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def fake_secrets(monkeypatch, with_config_repo):
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
-    pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
-
-    monkeypatch.setenv("DIRACX_SECRET_DB_URL_AUTH", "sqlite+aiosqlite:///:memory:")
-    monkeypatch.setenv("DIRACX_SECRET_DB_URL_JOBS", "sqlite+aiosqlite:///:memory:")
-    monkeypatch.setenv("DIRACX_SECRET_TOKEN_KEY", pem)
-    monkeypatch.setenv("DIRACX_SECRET_CONFIG", f"file://{with_config_repo}")
-    yield
-
-
-@pytest.fixture
-def disable_events(monkeypatch):
-    monkeypatch.setattr(app.router, "on_startup", [])
-    monkeypatch.setattr(app.router, "on_shutdown", [])
-    yield
-
-
-@pytest_asyncio.fixture
-async def job_engine():
-    await JobDB.make_engine("sqlite+aiosqlite:///:memory:")
-    yield
-    await JobDB.destroy_engine()
-
-
-@pytest_asyncio.fixture
-async def auth_engine():
-    await AuthDB.make_engine("sqlite+aiosqlite:///:memory:")
-    yield
-    await AuthDB.destroy_engine()
-
-
-@pytest.fixture
-def test_client(with_config_repo, disable_events, auth_engine, job_engine):
-    with TestClient(app) as test_client:
+def test_client(with_app):
+    with TestClient(with_app) as test_client:
         yield test_client
 
 
 @pytest.fixture
-def normal_user_client(test_client):
+def normal_user_client(test_client, test_auth_settings):
     payload = {
         "sub": "testingVO:yellow-sub",
         "aud": AUDIENCE,
         "iss": ISSUER,
-        "dirac_properties": [SecurityProperty.NORMAL_USER],
+        "dirac_properties": [NORMAL_USER],
         "jti": str(uuid4()),
         "preferred_username": "preferred_username",
         "dirac_group": "test_group",
         "vo": "lhcb",
     }
-    token = create_access_token(payload)
+    token = create_access_token(payload, test_auth_settings)
     test_client.headers["Authorization"] = f"Bearer {token}"
     test_client.dirac_token_payload = payload
     yield test_client

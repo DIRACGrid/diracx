@@ -3,67 +3,28 @@ This module contains list of Properties that can be assigned to users and groups
 """
 from __future__ import annotations
 
+import inspect
 import operator
-from enum import Enum
 from typing import Callable
 
+from diracx.core.extensions import select_from_extension
 
-class SecurityProperty(str, Enum):
-    #: A host property. This property is used::
-    #: * For a host to forward credentials in an RPC call
-    TRUSTED_HOST = "TrustedHost"
-    #: Normal user operations
-    NORMAL_USER = "NormalUser"
-    #: CS Administrator - possibility to edit the Configuration Service
-    CS_ADMINISTRATOR = "CSAdministrator"
-    #: Job sharing among members of a group
-    JOB_SHARING = "JobSharing"
-    #: DIRAC Service Administrator
-    SERVICE_ADMINISTRATOR = "ServiceAdministrator"
-    #: Job Administrator can manipulate everybody's jobs
-    JOB_ADMINISTRATOR = "JobAdministrator"
-    #: Job Monitor - can get job monitoring information
-    JOB_MONITOR = "JobMonitor"
-    #: Accounting Monitor - can see accounting data for all groups
-    ACCOUNTING_MONITOR = "AccountingMonitor"
-    #: Private pilot
-    PILOT = "Pilot"
-    #: Generic pilot
-    GENERIC_PILOT = "GenericPilot"
-    #: Site Manager
-    SITE_MANAGER = "SiteManager"
-    #: User, group, VO Registry management
-    USER_MANAGER = "UserManager"
-    #: Operator
-    OPERATOR = "Operator"
-    #: Allow getting full delegated proxies
-    FULL_DELEGATION = "FullDelegation"
-    #: Allow getting only limited proxies (ie. pilots)
-    LIMITED_DELEGATION = "LimitedDelegation"
-    #: Allow getting only limited proxies for one self
-    PRIVATE_LIMITED_DELEGATION = "PrivateLimitedDelegation"
-    #: Allow managing proxies
-    PROXY_MANAGEMENT = "ProxyManagement"
-    #: Allow managing production
-    PRODUCTION_MANAGEMENT = "ProductionManagement"
-    #: Allow production request approval on behalf of PPG
-    PPG_AUTHORITY = "PPGAuthority"
-    #: Allow Bookkeeping Management
-    BOOKKEEPING_MANAGEMENT = "BookkeepingManagement"
-    #: Allow to set notifications and manage alarms
-    ALARMS_MANAGEMENT = "AlarmsManagement"
-    #: Allow FC Management - FC root user
-    FC_MANAGEMENT = "FileCatalogManagement"
-    #: Allow staging files
-    STAGE_ALLOWED = "StageAllowed"
-    # TODO: LHCb specific
-    STEP_ADMINISTRATOR = "StepAdministrator"
 
-    def __str__(self) -> str:
-        return str(self.name)
+class SecurityProperty(str):
+    @classmethod
+    def available_properties(cls) -> set[SecurityProperty]:
+        properties = set()
+        for entry_point in select_from_extension(
+            group="diracx", name="properties_module"
+        ):
+            properties_module = entry_point.load()
+            for _, obj in inspect.getmembers(properties_module):
+                if isinstance(obj, SecurityProperty):
+                    properties.add(obj)
+        return properties
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}.{self.name}"
+        return f"{self.__class__.__name__}({self!r})"
 
     def __and__(
         self, value: SecurityProperty | UnevaluatedProperty
@@ -138,27 +99,52 @@ class UnevaluatedExpression(UnevaluatedProperty):
         return self.operator(*(a(properties) for a in self.args))
 
 
-# Backwards compatibility hack
-TRUSTED_HOST = SecurityProperty.TRUSTED_HOST.value
-NORMAL_USER = SecurityProperty.NORMAL_USER.value
-CS_ADMINISTRATOR = SecurityProperty.CS_ADMINISTRATOR.value
-JOB_SHARING = SecurityProperty.JOB_SHARING.value
-SERVICE_ADMINISTRATOR = SecurityProperty.SERVICE_ADMINISTRATOR.value
-JOB_ADMINISTRATOR = SecurityProperty.JOB_ADMINISTRATOR.value
-JOB_MONITOR = SecurityProperty.JOB_MONITOR.value
-ACCOUNTING_MONITOR = SecurityProperty.ACCOUNTING_MONITOR.value
-PILOT = SecurityProperty.PILOT.value
-GENERIC_PILOT = SecurityProperty.GENERIC_PILOT.value
-SITE_MANAGER = SecurityProperty.SITE_MANAGER.value
-USER_MANAGER = SecurityProperty.USER_MANAGER.value
-OPERATOR = SecurityProperty.OPERATOR.value
-FULL_DELEGATION = SecurityProperty.FULL_DELEGATION.value
-LIMITED_DELEGATION = SecurityProperty.LIMITED_DELEGATION.value
-PRIVATE_LIMITED_DELEGATION = SecurityProperty.PRIVATE_LIMITED_DELEGATION.value
-PROXY_MANAGEMENT = SecurityProperty.PROXY_MANAGEMENT.value
-PRODUCTION_MANAGEMENT = SecurityProperty.PRODUCTION_MANAGEMENT.value
-PPG_AUTHORITY = SecurityProperty.PPG_AUTHORITY.value
-BOOKKEEPING_MANAGEMENT = SecurityProperty.BOOKKEEPING_MANAGEMENT.value
-ALARMS_MANAGEMENT = SecurityProperty.ALARMS_MANAGEMENT.value
-FC_MANAGEMENT = SecurityProperty.FC_MANAGEMENT.value
-STAGE_ALLOWED = SecurityProperty.STAGE_ALLOWED.value
+# A host property. This property is used::
+# * For a host to forward credentials in an RPC call
+TRUSTED_HOST = SecurityProperty("TrustedHost")
+# Normal user operations
+NORMAL_USER = SecurityProperty("NormalUser")
+# CS Administrator - possibility to edit the Configuration Service
+CS_ADMINISTRATOR = SecurityProperty("CSAdministrator")
+# Job sharing among members of a group
+JOB_SHARING = SecurityProperty("JobSharing")
+# DIRAC Service Administrator
+SERVICE_ADMINISTRATOR = SecurityProperty("ServiceAdministrator")
+# Job Administrator can manipulate everybody's jobs
+JOB_ADMINISTRATOR = SecurityProperty("JobAdministrator")
+# Job Monitor - can get job monitoring information
+JOB_MONITOR = SecurityProperty("JobMonitor")
+# Accounting Monitor - can see accounting data for all groups
+ACCOUNTING_MONITOR = SecurityProperty("AccountingMonitor")
+# Private pilot
+PILOT = SecurityProperty("Pilot")
+# Generic pilot
+GENERIC_PILOT = SecurityProperty("GenericPilot")
+# Site Manager
+SITE_MANAGER = SecurityProperty("SiteManager")
+# User, group, VO Registry management
+USER_MANAGER = SecurityProperty("UserManager")
+# Operator
+OPERATOR = SecurityProperty("Operator")
+# Allow getting full delegated proxies
+FULL_DELEGATION = SecurityProperty("FullDelegation")
+# Allow getting only limited proxies (ie. pilots)
+LIMITED_DELEGATION = SecurityProperty("LimitedDelegation")
+# Allow getting only limited proxies for one self
+PRIVATE_LIMITED_DELEGATION = SecurityProperty("PrivateLimitedDelegation")
+# Allow managing proxies
+PROXY_MANAGEMENT = SecurityProperty("ProxyManagement")
+# Allow managing production
+PRODUCTION_MANAGEMENT = SecurityProperty("ProductionManagement")
+# Allow production request approval on behalf of PPG
+PPG_AUTHORITY = SecurityProperty("PPGAuthority")
+# Allow Bookkeeping Management
+BOOKKEEPING_MANAGEMENT = SecurityProperty("BookkeepingManagement")
+# Allow to set notifications and manage alarms
+ALARMS_MANAGEMENT = SecurityProperty("AlarmsManagement")
+# Allow FC Management - FC root user
+FC_MANAGEMENT = SecurityProperty("FileCatalogManagement")
+# Allow staging files
+STAGE_ALLOWED = SecurityProperty("StageAllowed")
+# # TODO: LHCb specific
+# STEP_ADMINISTRATOR = SecurityProperty("StepAdministrator")

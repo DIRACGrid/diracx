@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, TypeAlias, TypedDict
 from uuid import UUID, uuid4
 
 import httpx
@@ -15,7 +15,6 @@ from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from fastapi import (
-    APIRouter,
     Depends,
     Form,
     HTTPException,
@@ -26,22 +25,62 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 from fastapi.security import OpenIdConnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from diracx.core.config import Config, get_config
+from diracx.core.config import Config
 from diracx.core.exceptions import (
     DiracHttpResponse,
     ExpiredFlowError,
     PendingAuthorizationError,
 )
-from diracx.core.properties import SecurityProperty
-from diracx.core.secrets import get_secrets
-from diracx.db.auth.db import AuthDB, get_auth_db
+from diracx.core.properties import SecurityProperty, UnevaluatedProperty
+from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
+from diracx.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
+
+from .configuration import get_config
+from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
 )
+
+AvailableSecurityProperties: TypeAlias = Annotated[
+    set[SecurityProperty], Depends(SecurityProperty.available_properties)
+]
+
+
+class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
+    dirac_client_id: str = "myDIRACClientID"
+    # TODO: This should be taken dynamically
+    allowed_redirects: list[str] = ["http://localhost:8000/docs/oauth2-redirect"]
+    device_flow_expiration_seconds: int = 600
+    authorization_flow_expiration_seconds: int = 300
+
+    token_issuer: str = "http://lhcbdirac.cern.ch/"
+    token_audience: str = "dirac"
+    token_key: TokenSigningKey
+    token_algorithm: str = "RS256"
+    access_token_expire_minutes: int = 3000
+    refresh_token_expire_minutes: int = 3000
+
+    available_properties: set[SecurityProperty] = Field(
+        default_factory=SecurityProperty.available_properties
+    )
+
+
+def has_properties(expression: UnevaluatedProperty | SecurityProperty):
+    evaluator = (
+        expression
+        if isinstance(expression, UnevaluatedProperty)
+        else UnevaluatedProperty(expression)
+    )
+
+    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
+        if not evaluator(user.properties):
+            raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    return Depends(require_property)
 
 
 class TokenResponse(BaseModel):
@@ -52,15 +91,12 @@ class TokenResponse(BaseModel):
     state: str
 
 
-router = APIRouter(tags=["auth"])
+router = DiracxRouter(require_auth=False)
 
-ISSUER = "http://lhcbdirac.cern.ch/"
-AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3000
-DIRAC_CLIENT_ID = "myDIRACClientID"
 # This should be taken dynamically
 KNOWN_CLIENTS = {
-    DIRAC_CLIENT_ID: {
+    "myDIRACClientID": {
         "allowed_redirects": ["http://localhost:8000/docs/oauth2-redirect"]
     }
 }
@@ -143,7 +179,8 @@ class UserInfo(AuthInfo):
 
 
 async def verify_dirac_token(
-    authorization: Annotated[str, Depends(oidc_scheme)]
+    authorization: Annotated[str, Depends(oidc_scheme)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> UserInfo:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
@@ -156,16 +193,14 @@ async def verify_dirac_token(
             detail="Invalid authorization header",
         )
 
-    secrets = get_secrets()
-
     try:
-        jwt = JsonWebToken(secrets.token_algorithm)
+        jwt = JsonWebToken(settings.token_algorithm)
         token = jwt.decode(
             raw_token,
-            key=secrets.token_key.jwk,
+            key=settings.token_key.jwk,
             claims_options={
-                "iss": {"values": [ISSUER]},
-                "aud": {"values": [AUDIENCE]},
+                "iss": {"values": [settings.token_issuer]},
+                "aud": {"values": [settings.token_audience]},
             },
         )
         token.validate()
@@ -186,7 +221,9 @@ async def verify_dirac_token(
     )
 
 
-def create_access_token(payload: dict, expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    payload: dict, settings: AuthSettings, expires_delta: timedelta | None = None
+) -> str:
     to_encode = payload.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -194,16 +231,19 @@ def create_access_token(payload: dict, expires_delta: timedelta | None = None) -
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
 
-    secrets = get_secrets()
-    jwt = JsonWebToken(secrets.token_algorithm)
+    jwt = JsonWebToken(settings.token_algorithm)
     encoded_jwt = jwt.encode(
-        {"alg": secrets.token_algorithm}, payload, secrets.token_key.jwk
+        {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
     )
     return encoded_jwt.decode("ascii")
 
 
 async def exchange_token(
-    vo: str, dirac_group: str, id_token: dict[str, str], config: Config
+    vo: str,
+    dirac_group: str,
+    id_token: dict[str, str],
+    config: Config,
+    settings: AuthSettings,
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
     sub = id_token["sub"]
@@ -215,8 +255,8 @@ async def exchange_token(
     payload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
-        "aud": AUDIENCE,
-        "iss": ISSUER,
+        "aud": settings.token_audience,
+        "iss": settings.token_issuer,
         "dirac_properties": config.Registry[vo].Groups[dirac_group].Properties,
         "jti": str(uuid4()),
         "preferred_username": id_token["preferred_username"],
@@ -224,7 +264,7 @@ async def exchange_token(
     }
 
     return TokenResponse(
-        access_token=create_access_token(payload),
+        access_token=create_access_token(payload, settings),
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         state="None",
     )
@@ -244,8 +284,9 @@ async def initiate_device_flow(
     scope: str,
     audience: str,
     request: Request,
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
@@ -259,7 +300,7 @@ async def initiate_device_flow(
     assert client_id in KNOWN_CLIENTS, client_id
 
     try:
-        parse_and_validate_scope(scope, config)
+        parse_and_validate_scope(scope, config, available_properties)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -367,9 +408,10 @@ async def get_token_from_iam(
 @router.get("/device")
 async def do_device_flow(
     request: Request,
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     user_code: str,
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ) -> RedirectResponse:
     """
     This is called as the verification URI for the device flow.
@@ -386,7 +428,7 @@ async def do_device_flow(
     scope = await auth_db.device_flow_validate_user_code(
         user_code, DEVICE_FLOW_EXPIRATION_SECONDS
     )
-    parsed_scope = parse_and_validate_scope(scope, config)
+    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
@@ -416,7 +458,7 @@ async def finish_device_flow(
     request: Request,
     code: str,
     state: str,
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
 ):
     """
@@ -465,7 +507,9 @@ class ScopeInfoDict(TypedDict):
     vo: str
 
 
-def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
+def parse_and_validate_scope(
+    scope: str, config: Config, available_properties: set[SecurityProperty]
+) -> ScopeInfoDict:
     """
     Check:
         * At most one VO
@@ -520,11 +564,11 @@ def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
 
     if not properties:
         # If there are no properties set get the defaults from the CS
-        properties = [p.value for p in config.Registry[vo].Groups[group].Properties]
+        properties = [str(p) for p in config.Registry[vo].Groups[group].Properties]
 
-    if not set(properties).issubset(SecurityProperty):
+    if not set(properties).issubset(available_properties):
         raise ValueError(
-            f"{set(properties)-set(SecurityProperty)} are not valid properties"
+            f"{set(properties)-set(available_properties)} are not valid properties"
         )
 
     return {
@@ -543,7 +587,7 @@ def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
 #         Form(description="OAuth2 Grant type"),
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
-#     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+#     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
 #     config: Annotated[Config, Depends(get_config)],
 #     device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
 #     code: None,
@@ -562,7 +606,7 @@ def parse_and_validate_scope(scope: str, config: Config) -> ScopeInfoDict:
 #         Form(description="OAuth2 Grant type"),
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
-#     auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+#     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
 #     config: Annotated[Config, Depends(get_config)],
 #     device_code: None,
 #     code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
@@ -587,8 +631,10 @@ async def token(
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    available_properties: AvailableSecurityProperties,
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
     ] = None,
@@ -674,10 +720,14 @@ async def token(
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    parsed_scope = parse_and_validate_scope(info["scope"], config)
+    parsed_scope = parse_and_validate_scope(info["scope"], config, available_properties)
 
     return await exchange_token(
-        parsed_scope["vo"], parsed_scope["group"], info["id_token"], config
+        parsed_scope["vo"],
+        parsed_scope["group"],
+        info["id_token"],
+        config,
+        settings,
     )
 
 
@@ -691,14 +741,15 @@ async def authorization_flow(
     redirect_uri: str,
     scope: str,
     state: str,
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
+    available_properties: AvailableSecurityProperties,
 ):
     assert client_id in KNOWN_CLIENTS, client_id
     assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
 
     try:
-        parsed_scope = parse_and_validate_scope(scope, config)
+        parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -735,7 +786,7 @@ async def authorization_flow_complete(
     code: str,
     state: str,
     request: Request,
-    auth_db: Annotated[AuthDB, Depends(get_auth_db)],
+    auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     config: Annotated[Config, Depends(get_config)],
 ):
     decrypted_state = decrypt_state(state)

@@ -6,10 +6,10 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
-import pytest_asyncio
 from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
+from diracx.core.properties import SecurityProperty
 from diracx.routers.auth import (
     _server_metadata_cache,
     get_server_metadata,
@@ -24,7 +24,7 @@ def non_mocked_hosts(test_client) -> list[str]:
     return [test_client.base_url.host]
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     data_dir = Path(__file__).parent.parent / "data"
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
@@ -66,10 +66,7 @@ async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs)
     raise NotImplementedError(raw_id_token)
 
 
-@pytest.mark.asyncio
-async def test_authorization_flow(
-    test_client, auth_httpx_mock: HTTPXMock, fake_secrets
-):
+async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     code_verifier = secrets.token_hex()
     code_challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
@@ -132,7 +129,6 @@ async def test_authorization_flow(
     )
 
 
-@pytest.mark.asyncio
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
@@ -251,8 +247,8 @@ def test_parse_scopes(vos, groups, scope, expected):
             "Operations": {"Defaults": {}},
         }
     )
-
-    assert parse_and_validate_scope(scope, config) == expected
+    available_properties = SecurityProperty.available_properties()
+    assert parse_and_validate_scope(scope, config, available_properties) == expected
 
 
 @pytest.mark.parametrize(
@@ -286,5 +282,6 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
             "Operations": {"Defaults": {}},
         }
     )
+    available_properties = SecurityProperty.available_properties()
     with pytest.raises(ValueError, match=expected_error):
-        parse_and_validate_scope(scope, config)
+        parse_and_validate_scope(scope, config, available_properties)

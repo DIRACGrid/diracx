@@ -10,7 +10,6 @@ import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 
 from ..exceptions import BadConfigurationVersion
-from ..secrets import DiracxSecrets
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -69,11 +68,3 @@ class LocalGitConfigSource:
         """
         hexsha, modified = self.latest_revision()
         return self.read_raw(hexsha, modified)
-
-
-def get_config() -> Config:
-    secrets = DiracxSecrets.from_env()
-    if secrets.config.scheme == "file":
-        return LocalGitConfigSource(Path(secrets.config.path)).read_config()
-    else:
-        raise NotImplementedError(secrets.config.scheme)

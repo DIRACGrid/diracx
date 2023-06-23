@@ -2,16 +2,22 @@ from __future__ import annotations
 
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
+import contextlib
+import os
 from abc import ABCMeta
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, AsyncIterator, Self
 
+from pydantic import parse_obj_as
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
+
+from diracx.core.extensions import select_from_extension
+from diracx.core.settings import SqlalchemyDsn
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -56,25 +62,67 @@ def EnumColumn(enum_type, **kwargs):
 
 
 class BaseDB(metaclass=ABCMeta):
-    engine: AsyncEngine
+    # engine: AsyncEngine
+    # TODO: Make metadata an abstract property
     metadata: MetaData
 
-    def __init__(self) -> None:
+    def __init__(self, db_url: str) -> None:
         self._conn = None
+        self._db_url = db_url
+        self._engine: AsyncEngine | None = None
 
     @classmethod
-    async def make_engine(cls, db_url: str) -> None:
-        """TODO make metadata an abstract property"""
-        cls.engine = create_async_engine(
-            db_url,
+    def available_urls(cls) -> dict[str, str]:
+        """Return a dict of available database urls.
+
+        The list of available URLs is determined by environment variables
+        prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
+        """
+        db_urls: dict[str, str] = {}
+        for entry_point in select_from_extension(group="diracx.dbs"):
+            db_name = entry_point.name
+            var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
+            if var_name in os.environ:
+                db_url = os.environ[var_name]
+                if db_url == "sqlite+aiosqlite:///:memory:":
+                    db_urls[db_name] = db_url
+                else:
+                    db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
+        return db_urls
+
+    @classmethod
+    def transaction(cls) -> Self:
+        raise NotImplementedError("This should never be called")
+
+    @property
+    def engine(self) -> AsyncEngine:
+        """The engine to use for database operations.
+
+        Requires that the engine_context has been entered.
+        """
+        assert self._engine is not None, "engine_context must be entered"
+        return self._engine
+
+    @contextlib.asynccontextmanager
+    async def engine_context(self) -> AsyncIterator[None]:
+        """Context manage to manage the engine lifecycle.
+
+        Tables are automatically created upon entering
+        """
+        assert self._engine is None, "engine_context cannot be nested"
+
+        engine = create_async_engine(
+            self._db_url,
             echo=True,
         )
-        async with cls.engine.begin() as conn:
-            await conn.run_sync(cls.metadata.create_all)
+        async with engine.begin() as conn:
+            await conn.run_sync(self.metadata.create_all)
+        self._engine = engine
 
-    @classmethod
-    async def destroy_engine(cls) -> None:
-        await cls.engine.dispose()
+        yield
+
+        self._engine = None
+        await engine.dispose()
 
     @property
     def conn(self) -> AsyncConnection:

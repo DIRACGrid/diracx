@@ -28,6 +28,6 @@ ENTRYPOINT [ "/dockerEntrypoint.sh" ]
 # activate mamba for run commands
 # RUN pip install ./diracx
 
-# CMD ["uvicorn", "diracx.routers:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["uvicorn", "--factory", "diracx.routers:create_app", "--host", "0.0.0.0", "--port", "8000"]
 
 #  "--reload-dir", "/opt/conda/lib/python3.11/site-packages/diracx", "--reload"

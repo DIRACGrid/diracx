@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import asyncio
 
-from pytest import mark
+import pytest
 
 from diracx.db.jobs.db import JobDB
 
 
-@mark.asyncio
-async def test_some_asyncio_code(job_engine):
-    async with JobDB() as job_db:
+@pytest.fixture
+async def job_db(tmp_path):
+    job_db = JobDB("sqlite+aiosqlite:///:memory:")
+    async with job_db.engine_context():
+        yield job_db
+
+
+async def test_some_asyncio_code(job_db):
+    async with job_db as job_db:
         result = await job_db.search(["JobID"], [], [])
         assert not result
 
@@ -29,6 +35,6 @@ async def test_some_asyncio_code(job_engine):
             )
         )
 
-    async with JobDB() as job_db:
+    async with job_db as job_db:
         result = await job_db.search(["JobID"], [], [])
         assert result

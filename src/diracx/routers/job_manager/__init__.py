@@ -4,28 +4,23 @@ import asyncio
 from datetime import datetime
 from typing import Annotated, Any, TypedDict
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import Body, Depends, Query
 from pydantic import BaseModel, root_validator
 
-from diracx.core.config import Config, get_config
+from diracx.core.config import Config
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
-from diracx.core.properties import SecurityProperty
+from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
-from diracx.db.jobs.db import JobDB, get_job_db
+from diracx.db import JobDB
 
-from ..auth import UserInfo, verify_dirac_token
-from ..utils import has_properties
+from ..auth import UserInfo, has_properties, verify_dirac_token
+from ..configuration import get_config
+from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
 
-router = APIRouter(
-    tags=["jobs"],
-    dependencies=[
-        has_properties(
-            SecurityProperty.NORMAL_USER | SecurityProperty.JOB_ADMINISTRATOR
-        )
-    ],
-)
+
+router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
 
 
 class JobSummaryParams(BaseModel):
@@ -104,7 +99,7 @@ StdOutput = std.out;"""
 async def submit_bulk_jobs(
     # FIXME: Using mutliple doesn't work with swagger?
     job_definitions: Annotated[list[str], Body(example=EXAMPLE_JDLS["Simple JDL"])],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
 ) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
@@ -234,9 +229,7 @@ async def delete_single_job(job_id: int):
     return f"I am deleting {job_id}"
 
 
-@router.post(
-    "/{job_id}/kill", dependencies=[has_properties(SecurityProperty.JOB_ADMINISTRATOR)]
-)
+@router.post("/{job_id}/kill", dependencies=[has_properties(JOB_ADMINISTRATOR)])
 async def kill_single_job(job_id: int):
     return f"I am killing {job_id}"
 
@@ -326,7 +319,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 @router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
     config: Annotated[Config, Depends(get_config)],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     page: int = 0,
     per_page: int = 100,
@@ -356,7 +349,7 @@ async def search(
 @router.post("/summary")
 async def summary(
     config: Annotated[Config, Depends(get_config)],
-    job_db: Annotated[JobDB, Depends(get_job_db)],
+    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     body: JobSummaryParams,
 ):

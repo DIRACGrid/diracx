@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from sqlalchemy import func, insert, select, update
 
@@ -276,8 +276,3 @@ class JobDB(BaseDB):
             "MinorStatus": initial_minor_status,
             "TimeStamp": datetime.now(tz=timezone.utc),
         }
-
-
-async def get_job_db() -> AsyncGenerator[JobDB, None]:
-    async with JobDB() as job_db:
-        yield job_db

@@ -1,31 +1,27 @@
 from __future__ import annotations
 
-__all__ = ("get_secrets",)
+__all__ = (
+    "SqlalchemyDsn",
+    "LocalFileUrl",
+    "ServiceSettingsBase",
+)
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from authlib.jose import JsonWebKey
-from cachetools import LRUCache, cached
-from pydantic import AnyUrl, BaseSettings, Field, SecretStr, parse_obj_as
-
-from .utils import dotenv_files_from_environment
+from pydantic import AnyUrl, BaseSettings, SecretStr, parse_obj_as
 
 if TYPE_CHECKING:
     from pydantic.config import BaseConfig
     from pydantic.fields import ModelField
 
 
-class RawSqlalchemyDsn(AnyUrl):
+T = TypeVar("T")
+
+
+class SqlalchemyDsn(AnyUrl):
     allowed_schemes = {"sqlite+aiosqlite", "mysql+aiomysql"}
-
-
-SqlalchemyDsn = Literal["sqlite+aiosqlite:///:memory:"] | RawSqlalchemyDsn
-
-
-class DbUrls(BaseSettings, env_prefix="DIRACX_SECRET_DB_URL_"):
-    auth: SqlalchemyDsn
-    jobs: SqlalchemyDsn | None = None
 
 
 class TokenSigningKey(SecretStr):
@@ -58,17 +54,7 @@ class LocalFileUrl(AnyUrl):
         return super().validate(value, field, config)
 
 
-class DiracxSecrets(BaseSettings, env_prefix="DIRACX_SECRET_", allow_mutation=False):
-    config: LocalFileUrl
-    token_key: TokenSigningKey
-    token_algorithm: str = "RS256"
-    db_url: DbUrls = Field(default_factory=DbUrls)
-
+class ServiceSettingsBase(BaseSettings, allow_mutation=False):
     @classmethod
-    def from_env(cls):
-        return cls(_env_file=dotenv_files_from_environment("DIRACX_SECRET_DOTENV"))
-
-
-@cached(cache=LRUCache(maxsize=1))
-def get_secrets() -> DiracxSecrets:
-    return DiracxSecrets.from_env()
+    def create(cls) -> Self:
+        raise NotImplementedError("This should never be called")

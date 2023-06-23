@@ -13,19 +13,19 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.244'
+    rev: 'v0.0.274'
     hooks:
       - id: ruff
         args: ["--fix"]
         exclude: ^src/diracx/client/
 
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 23.3.0
     hooks:
       - id: black
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.2.0
+    rev: v1.4.0
     hooks:
       - id: mypy
         additional_dependencies:

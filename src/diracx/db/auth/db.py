@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import secrets
-from typing import AsyncGenerator
 from uuid import uuid4
 
 from sqlalchemy import insert, select, update
@@ -212,8 +211,3 @@ class AuthDB(BaseDB):
             raise AuthorizationError("Code was already used")
 
         raise AuthorizationError("Bad state in authorization flow")
-
-
-async def get_auth_db() -> AsyncGenerator[AuthDB, None]:
-    async with AuthDB() as db:
-        yield db

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import (
-    APIRouter,
     Depends,
     Header,
     HTTPException,
@@ -12,18 +12,30 @@ from fastapi import (
     status,
 )
 
-from diracx.core.config import Config, get_config
-from diracx.core.properties import SecurityProperty
+from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.settings import LocalFileUrl, ServiceSettingsBase
 
-from .utils import has_properties
-
-router = APIRouter(
-    tags=["config"],
-    dependencies=[has_properties(SecurityProperty.NORMAL_USER)],
-)
-
+from .fastapi_classes import DiracxRouter
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+
+
+class ConfigSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_CONFIG_"):
+    backend_url: LocalFileUrl
+
+
+def get_config(
+    settings: Annotated[ConfigSettings, Depends(ConfigSettings.create)]
+) -> Config:
+    backend_url = settings.backend_url
+    if backend_url.scheme == "file":
+        assert backend_url.path
+        return LocalGitConfigSource(Path(backend_url.path)).read_config()
+    else:
+        raise NotImplementedError(backend_url.scheme)
+
+
+router = DiracxRouter()
 
 
 @router.get("/{vo}")
