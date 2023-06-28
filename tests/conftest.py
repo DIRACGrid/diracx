@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
 
-from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import ServiceSettingsBase
 from diracx.routers import create_app_inner
@@ -45,7 +45,7 @@ def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsB
     """
     yield [
         test_auth_settings,
-        ConfigSettings(backend_url=f"file://{with_config_repo}"),
+        ConfigSettings(backend_url=f"git+file://{with_config_repo}"),
     ]
 
 
@@ -103,7 +103,6 @@ def with_config_repo(tmp_path):
     repo.index.add([cs_file])  # add it to the index
     repo.index.commit("Added a new file")
     yield tmp_path
-    LocalGitConfigSource.clear_caches()
 
 
 @pytest.fixture

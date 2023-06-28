@@ -4,16 +4,16 @@ import pytest
 from typer.testing import CliRunner
 
 from diracx.cli import app
-from diracx.core.config import LocalGitConfigSource
+from diracx.core.config import ConfigSource
 
 runner = CliRunner()
 
 
-@pytest.mark.parametrize("protocol", [None, "file://"])
+@pytest.mark.parametrize("protocol", [None, "git+file://"])
 def test_generate_cs(tmp_path, protocol):
     cs_repo = f"{tmp_path}"
     if protocol is None:
-        cs_repo = f"file://{cs_repo}"
+        cs_repo = f"git+file://{cs_repo}"
 
     result = runner.invoke(app, ["internal", "generate-cs", cs_repo])
     assert result.exit_code == 0
@@ -28,7 +28,7 @@ def test_generate_cs(tmp_path, protocol):
 @pytest.mark.parametrize("vo", ["nonexistingvo", "testvo"])
 @pytest.mark.parametrize("user_group", ["nonexisting_group", "user"])
 def test_add_user(tmp_path, vo, user_group):
-    cs_repo = f"{tmp_path}"
+    cs_repo = f"git+file://{tmp_path}"
 
     sub = "lhcb:chaen"
     dn = "/something/somethin/DN"
@@ -38,8 +38,7 @@ def test_add_user(tmp_path, vo, user_group):
     # Create the CS
     runner.invoke(app, ["internal", "generate-cs", cs_repo])
 
-    LocalGitConfigSource.clear_caches()
-    config = LocalGitConfigSource(cs_repo).read_config()
+    config = ConfigSource.create(cs_repo).read_config()
 
     # Check the user isn't in it
     if vo in config.Registry:
@@ -71,7 +70,9 @@ def test_add_user(tmp_path, vo, user_group):
         assert result.exit_code != 0
         return
 
-    config = LocalGitConfigSource(cs_repo).read_config()
+    assert result.exit_code == 0, result.output
+
+    config = ConfigSource.create(cs_repo).read_config()
     # check the user is defined
     assert vo in config.Registry
     assert sub in config.Registry[vo].Users

@@ -8,7 +8,7 @@ import typer
 import yaml
 from pydantic import parse_obj_as
 
-from diracx.core.config import LocalGitConfigSource
+from diracx.core.config import ConfigSource, ConfigSourceUrl
 from diracx.core.config.schema import (
     Config,
     DIRACConfig,
@@ -18,7 +18,6 @@ from diracx.core.config.schema import (
     RegistryConfig,
     UserConfig,
 )
-from diracx.core.settings import LocalFileUrl
 
 from .utils import AsyncTyper
 
@@ -36,9 +35,9 @@ def generate_cs(
 ):
     """Generate a minimal DiracX configuration repository"""
     # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(LocalFileUrl, config_repo)
-    if config_repo.scheme != "file":
-        raise NotImplementedError("Only file:// URLs are supported")
+    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
+    if config_repo.scheme != "git+file":
+        raise NotImplementedError("Only git+file:// URLs are supported")
     repo_path = Path(config_repo.path)
     if repo_path.exists() and list(repo_path.iterdir()):
         typer.echo(f"ERROR: Directory {repo_path} already exists", err=True)
@@ -84,13 +83,13 @@ def add_user(
     """Add a user to an existing vo and group"""
 
     # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(LocalFileUrl, config_repo)
+    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
 
     repo_path = Path(config_repo.path)
 
     new_user = UserConfig(CA=ca, DN=dn, PreferedUsername=preferred_username)
 
-    config = LocalGitConfigSource(repo_path).read_config()
+    config = ConfigSource.create(repo_path).read_config()
 
     if sub in config.Registry[vo].Users:
         typer.echo(f"ERROR: User {sub} already exists", err=True)

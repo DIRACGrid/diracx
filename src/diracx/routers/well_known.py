@@ -8,7 +8,7 @@ from fastapi import Depends, Request
 from diracx.core.config import Config
 from diracx.routers.auth import AuthSettings
 
-from .configuration import get_config
+from .configuration import ConfigSource
 from .fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)
@@ -17,7 +17,7 @@ router = DiracxRouter(require_auth=False)
 @router.get("/openid-configuration")
 async def openid_configuration(
     request: Request,
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
     print(dir(request))

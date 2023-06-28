@@ -38,7 +38,7 @@ from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
 from diracx.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
 
-from .configuration import get_config
+from .configuration import ConfigSource
 from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(
@@ -287,7 +287,7 @@ async def initiate_device_flow(
     audience: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> InitiateDeviceFlowResponse:
@@ -415,7 +415,7 @@ async def do_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     user_code: str,
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> RedirectResponse:
@@ -465,7 +465,7 @@ async def finish_device_flow(
     code: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
     """
@@ -595,7 +595,7 @@ def parse_and_validate_scope(
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
 #     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-#     config: Annotated[Config, Depends(get_config)],
+#     config: Annotated[Config, Depends(ConfigSource.create)],
 #     device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
 #     code: None,
 #     redirect_uri: None,
@@ -614,7 +614,7 @@ def parse_and_validate_scope(
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
 #     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-#     config: Annotated[Config, Depends(get_config)],
+#     config: Annotated[Config, Depends(ConfigSource.create)],
 #     device_code: None,
 #     code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
 #     redirect_uri: Annotated[
@@ -639,7 +639,7 @@ async def token(
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
     available_properties: AvailableSecurityProperties,
     device_code: Annotated[
@@ -749,7 +749,7 @@ async def authorization_flow(
     scope: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
@@ -801,7 +801,7 @@ async def authorization_flow_complete(
     state: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
     decrypted_state = decrypt_state(state)
