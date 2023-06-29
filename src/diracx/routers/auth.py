@@ -40,9 +40,7 @@ from diracx.db.auth.schema import FlowStatus
 
 from .fastapi_classes import DiracxRouter
 
-oidc_scheme = OpenIdConnect(
-    openIdConnectUrl="http://pclhcb211:8000/.well-known/openid-configuration"
-)
+oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
 
 AvailableSecurityProperties: TypeAlias = Annotated[
     set[SecurityProperty], Depends(SecurityProperty.available_properties)
