@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 
+from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import SqlalchemyDsn
 
@@ -62,6 +63,8 @@ def EnumColumn(enum_type, **kwargs):
 
 
 class BaseDB(metaclass=ABCMeta):
+    """This should be the base class of all the DiracX DBs"""
+
     # engine: AsyncEngine
     # TODO: Make metadata an abstract property
     metadata: MetaData
@@ -139,3 +142,25 @@ class BaseDB(metaclass=ABCMeta):
             await self._conn.commit()
         await self._conn.__aexit__(exc_type, exc, tb)
         self._conn = None
+
+
+def apply_search_filters(table, stmt, search):
+    # Apply any filters
+    for query in search:
+        column = table.columns[query["parameter"]]
+        if query["operator"] == "eq":
+            expr = column == query["value"]
+        elif query["operator"] == "neq":
+            expr = column != query["value"]
+        elif query["operator"] == "gt":
+            expr = column > query["value"]
+        elif query["operator"] == "lt":
+            expr = column < query["value"]
+        elif query["operator"] == "in":
+            expr = column.in_(query["values"])
+        elif query["operator"] in "like":
+            expr = column.like(query["values"])
+        else:
+            raise InvalidQueryError(f"Unknown filter {query=}")
+        stmt = stmt.where(expr)
+    return stmt
