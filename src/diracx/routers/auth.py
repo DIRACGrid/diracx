@@ -27,7 +27,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel, Field
 
-from diracx.core.config import Config
+from diracx.core.config import Config, ConfigSource
 from diracx.core.exceptions import (
     DiracHttpResponse,
     ExpiredFlowError,
@@ -38,7 +38,6 @@ from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
 from diracx.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
 
-from .configuration import ConfigSource
 from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(

@@ -11,17 +11,11 @@ from fastapi import (
     status,
 )
 
-from diracx.core.config import Config, ConfigSource, ConfigSourceUrl
-from diracx.core.settings import ServiceSettingsBase
+from diracx.core.config import Config, ConfigSource
 
 from .fastapi_classes import DiracxRouter
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-
-
-class ConfigSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_CONFIG_"):
-    backend_url: ConfigSourceUrl
-
 
 router = DiracxRouter()
 

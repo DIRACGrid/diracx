@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = ("Config", "ConfigSource", "LocalGitConfigSource")
 
+import os
 from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,7 +51,9 @@ class ConfigSource(metaclass=ABCMeta):
         ...
 
     @classmethod
-    def create(cls, backend_url):
+    def create(cls, backend_url=None):
+        if backend_url is None:
+            backend_url = os.environ["DIRACX_CONFIG_BACKEND_URL"]
         if isinstance(backend_url, (str, Path)):
             backend_url = parse_obj_as(ConfigSourceUrl, str(backend_url))
         return cls.__registry[backend_url.scheme](backend_url)
