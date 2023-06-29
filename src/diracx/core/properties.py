@@ -24,7 +24,7 @@ class SecurityProperty(str):
         return properties
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self!r})"
+        return f"{self.__class__.__name__}({self})"
 
     def __and__(
         self, value: SecurityProperty | UnevaluatedProperty
