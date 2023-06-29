@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-# from cachetools import TTLCache
 from fastapi import Depends, Request
 
-from diracx.core.config import Config
+from diracx.core.config import Config, ConfigSource
 from diracx.routers.auth import AuthSettings
 
-from .configuration import ConfigSource
 from .fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)

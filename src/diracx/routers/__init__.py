@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from pydantic import parse_raw_as
 
+from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
@@ -38,10 +39,9 @@ def create_app_inner(
     enabled_systems: set[str],
     all_service_settings: Iterable[ServiceSettingsBase],
     database_urls: dict[str, str],
+    config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
-
-    from diracx.routers.configuration import ConfigSettings, ConfigSource
 
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
@@ -51,9 +51,8 @@ def create_app_inner(
         available_settings_classes.add(cls)
         app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
 
-    config_settings = app.dependency_overrides[ConfigSettings.create]
-    config = ConfigSource.create(config_settings().backend_url)
-    app.dependency_overrides[ConfigSource.create] = config.read_config
+    # Override the configuration source
+    app.dependency_overrides[ConfigSource.create] = config_source.read_config
 
     # Add the DBs to the application
     available_db_classes: set[type[BaseDB]] = set()
@@ -130,11 +129,15 @@ def create_app() -> DiracFastAPI:
     settings_classes = set()
     for entry_point in select_from_extension(group="diracx.services"):
         env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
-        if not parse_raw_as(bool, os.environ.get(env_var, "true")):
+        enabled = parse_raw_as(bool, os.environ.get(env_var, "true"))
+        print(f"Found service {entry_point}: {enabled=}")
+        if not enabled:
             continue
         router: APIRouter = entry_point.load()
         enabled_systems.add(entry_point.name)
-        settings_classes |= set(find_dependents(router, ServiceSettingsBase))
+        dependencies = set(find_dependents(router, ServiceSettingsBase))
+        print(f"Found dependencies: {dependencies}")
+        settings_classes |= dependencies
 
     # Load settings classes required by the routers
     all_service_settings = [settings_class() for settings_class in settings_classes]
@@ -143,6 +146,7 @@ def create_app() -> DiracFastAPI:
         enabled_systems=enabled_systems,
         all_service_settings=all_service_settings,
         database_urls=BaseDB.available_urls(),
+        config_source=ConfigSource.create(),
     )
 
 

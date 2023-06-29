@@ -6,12 +6,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
 
-from diracx.core.config import Config
+from diracx.core.config import Config, ConfigSource
 from diracx.core.properties import NORMAL_USER
-from diracx.core.settings import ServiceSettingsBase
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_access_token
-from diracx.routers.configuration import ConfigSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -39,28 +37,18 @@ def test_auth_settings() -> AuthSettings:
 
 
 @pytest.fixture
-def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsBase]:
-    """
-    Generate the Settings for the services
-    """
-    yield [
-        test_auth_settings,
-        ConfigSettings(backend_url=f"git+file://{with_config_repo}"),
-    ]
-
-
-@pytest.fixture
-def with_app(test_settings):
+def with_app(test_auth_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
     """
     yield create_app_inner(
         enabled_systems={".well-known", "auth", "config", "jobs"},
-        all_service_settings=test_settings,
+        all_service_settings=[test_auth_settings],
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",
             "AuthDB": "sqlite+aiosqlite:///:memory:",
         },
+        config_source=ConfigSource.create(backend_url=f"git+file://{with_config_repo}"),
     )
 
 
