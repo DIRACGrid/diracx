@@ -38,11 +38,11 @@ from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
 from diracx.db import AuthDB
 from diracx.db.auth.schema import FlowStatus
 
-from .configuration import get_config
+from .configuration import ConfigSource
 from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(
-    openIdConnectUrl="http://localhost:8000/.well-known/openid-configuration"
+    openIdConnectUrl="http://pclhcb211:8000/.well-known/openid-configuration"
 )
 
 AvailableSecurityProperties: TypeAlias = Annotated[
@@ -53,7 +53,8 @@ AvailableSecurityProperties: TypeAlias = Annotated[
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
-    allowed_redirects: list[str] = ["http://localhost:8000/docs/oauth2-redirect"]
+    # ["http://pclhcb211:8000/docs/oauth2-redirect"]
+    allowed_redirects: list[str] = []
     device_flow_expiration_seconds: int = 600
     authorization_flow_expiration_seconds: int = 300
 
@@ -93,16 +94,13 @@ class TokenResponse(BaseModel):
 
 router = DiracxRouter(require_auth=False)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 3000
 # This should be taken dynamically
-KNOWN_CLIENTS = {
-    "myDIRACClientID": {
-        "allowed_redirects": ["http://localhost:8000/docs/oauth2-redirect"]
-    }
-}
+# KNOWN_CLIENTS = {
+#     "myDIRACClientID": {
+#         "allowed_redirects": ["http://pclhcb211:8000/docs/oauth2-redirect"]
+#     }
+# }
 # Duration for which the flows against DIRAC AS are valid
-DEVICE_FLOW_EXPIRATION_SECONDS = 600
-AUTHORIZATION_FLOW_EXPIRATION_SECONDS = 300
 
 _server_metadata_cache: TTLCache = TTLCache(maxsize=1024, ttl=3600)
 
@@ -228,7 +226,9 @@ def create_access_token(
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.access_token_expire_minutes
+        )
     to_encode.update({"exp": expire})
 
     jwt = JsonWebToken(settings.token_algorithm)
@@ -247,9 +247,11 @@ async def exchange_token(
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
     sub = id_token["sub"]
+    preferred_username = id_token.get("preferred_username", sub)
+
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
         raise ValueError(
-            f"User is not a member of the requested group ({id_token['preferred_username']}, {dirac_group})"
+            f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
         )
 
     payload = {
@@ -259,13 +261,13 @@ async def exchange_token(
         "iss": settings.token_issuer,
         "dirac_properties": config.Registry[vo].Groups[dirac_group].Properties,
         "jti": str(uuid4()),
-        "preferred_username": id_token["preferred_username"],
+        "preferred_username": preferred_username,
         "dirac_group": dirac_group,
     }
 
     return TokenResponse(
         access_token=create_access_token(payload, settings),
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires_in=settings.access_token_expire_minutes * 60,
         state="None",
     )
 
@@ -285,8 +287,9 @@ async def initiate_device_flow(
     audience: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
@@ -296,8 +299,10 @@ async def initiate_device_flow(
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
     """
-
-    assert client_id in KNOWN_CLIENTS, client_id
+    if settings.dirac_client_id != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
+        )
 
     try:
         parse_and_validate_scope(scope, config, available_properties)
@@ -318,7 +323,7 @@ async def initiate_device_flow(
         "device_code": device_code,
         "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
         "verification_uri": str(request.url.replace(query={})),
-        "expires_in": DEVICE_FLOW_EXPIRATION_SECONDS,
+        "expires_in": settings.device_flow_expiration_seconds,
     }
 
 
@@ -410,8 +415,9 @@ async def do_device_flow(
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
     user_code: str,
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ) -> RedirectResponse:
     """
     This is called as the verification URI for the device flow.
@@ -426,7 +432,7 @@ async def do_device_flow(
 
     # Here we make sure the user_code actualy exists
     scope = await auth_db.device_flow_validate_user_code(
-        user_code, DEVICE_FLOW_EXPIRATION_SECONDS
+        user_code, settings.device_flow_expiration_seconds
     )
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
 
@@ -459,7 +465,8 @@ async def finish_device_flow(
     code: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
     """
     This the url callbacked by IAM/Checkin after the authorization
@@ -481,7 +488,7 @@ async def finish_device_flow(
         str(request.url.replace(query="")),
     )
     await auth_db.device_flow_insert_id_token(
-        decrypted_state["user_code"], id_token, DEVICE_FLOW_EXPIRATION_SECONDS
+        decrypted_state["user_code"], id_token, settings.device_flow_expiration_seconds
     )
 
     return responses.RedirectResponse(f"{request.url.replace(query='')}/finished")
@@ -588,7 +595,7 @@ def parse_and_validate_scope(
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
 #     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-#     config: Annotated[Config, Depends(get_config)],
+#     config: Annotated[Config, Depends(ConfigSource.create)],
 #     device_code: Annotated[str, Form(description="device code for OAuth2 device flow")],
 #     code: None,
 #     redirect_uri: None,
@@ -607,7 +614,7 @@ def parse_and_validate_scope(
 #     ],
 #     client_id: Annotated[str, Form(description="OAuth2 client id")],
 #     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-#     config: Annotated[Config, Depends(get_config)],
+#     config: Annotated[Config, Depends(ConfigSource.create)],
 #     device_code: None,
 #     code: Annotated[str, Form(description="Code for OAuth2 authorization code flow")],
 #     redirect_uri: Annotated[
@@ -632,7 +639,7 @@ async def token(
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
     available_properties: AvailableSecurityProperties,
     device_code: Annotated[
@@ -660,7 +667,7 @@ async def token(
         assert device_code is not None
         try:
             info = await auth_db.get_device_flow(
-                device_code, DEVICE_FLOW_EXPIRATION_SECONDS
+                device_code, settings.device_flow_expiration_seconds
             )
         except PendingAuthorizationError as e:
             raise DiracHttpResponse(
@@ -682,7 +689,7 @@ async def token(
     elif grant_type == "authorization_code":
         assert code is not None
         info = await auth_db.get_authorization_flow(
-            code, AUTHORIZATION_FLOW_EXPIRATION_SECONDS
+            code, settings.authorization_flow_expiration_seconds
         )
         if redirect_uri != info["redirect_uri"]:
             raise HTTPException(
@@ -742,11 +749,18 @@ async def authorization_flow(
     scope: str,
     state: str,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     available_properties: AvailableSecurityProperties,
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
-    assert client_id in KNOWN_CLIENTS, client_id
-    assert redirect_uri in KNOWN_CLIENTS[client_id]["allowed_redirects"]
+    if settings.dirac_client_id != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
+        )
+    if redirect_uri not in settings.allowed_redirects:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised redirect_uri"
+        )
 
     try:
         parsed_scope = parse_and_validate_scope(scope, config, available_properties)
@@ -787,7 +801,8 @@ async def authorization_flow_complete(
     state: str,
     request: Request,
     auth_db: Annotated[AuthDB, Depends(AuthDB.transaction)],
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
+    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
     decrypted_state = decrypt_state(state)
     assert decrypted_state["grant_type"] == "authorization_code"
@@ -801,7 +816,9 @@ async def authorization_flow_complete(
     )
 
     code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
-        decrypted_state["uuid"], id_token, AUTHORIZATION_FLOW_EXPIRATION_SECONDS
+        decrypted_state["uuid"],
+        id_token,
+        settings.authorization_flow_expiration_seconds,
     )
 
     return responses.RedirectResponse(

@@ -7,14 +7,13 @@ from typing import Annotated, Any, TypedDict
 from fastapi import Body, Depends, Query
 from pydantic import BaseModel, root_validator
 
-from diracx.core.config import Config
+from diracx.core.config import Config, ConfigSource
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
 from diracx.db import JobDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
-from ..configuration import get_config
 from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
@@ -318,7 +317,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 
 @router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     page: int = 0,
@@ -348,7 +347,7 @@ async def search(
 
 @router.post("/summary")
 async def summary(
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     body: JobSummaryParams,

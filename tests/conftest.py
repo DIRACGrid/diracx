@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
 
-from diracx.core.config import Config, LocalGitConfigSource
+from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import ServiceSettingsBase
 from diracx.routers import create_app_inner
@@ -30,19 +30,30 @@ def test_auth_settings() -> AuthSettings:
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
-    yield AuthSettings(token_key=pem)
+    yield AuthSettings(
+        token_key=pem,
+        allowed_redirects=[
+            "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+        ],
+    )
 
 
 @pytest.fixture
 def test_settings(with_config_repo, test_auth_settings) -> list[ServiceSettingsBase]:
+    """
+    Generate the Settings for the services
+    """
     yield [
         test_auth_settings,
-        ConfigSettings(backend_url=f"file://{with_config_repo}"),
+        ConfigSettings(backend_url=f"git+file://{with_config_repo}"),
     ]
 
 
 @pytest.fixture
 def with_app(test_settings):
+    """
+    Create a DiracxApp with hard coded configuration for test
+    """
     yield create_app_inner(
         enabled_systems={".well-known", "auth", "config", "jobs"},
         all_service_settings=test_settings,
@@ -92,7 +103,6 @@ def with_config_repo(tmp_path):
     repo.index.add([cs_file])  # add it to the index
     repo.index.commit("Added a new file")
     yield tmp_path
-    LocalGitConfigSource.clear_caches()
 
 
 @pytest.fixture

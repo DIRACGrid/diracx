@@ -41,6 +41,8 @@ def create_app_inner(
 ) -> DiracFastAPI:
     app = DiracFastAPI()
 
+    from diracx.routers.configuration import ConfigSettings, ConfigSource
+
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
     for service_settings in all_service_settings:
@@ -48,6 +50,10 @@ def create_app_inner(
         assert cls not in available_settings_classes
         available_settings_classes.add(cls)
         app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
+
+    config_settings = app.dependency_overrides[ConfigSettings.create]
+    config = ConfigSource.create(config_settings().backend_url)
+    app.dependency_overrides[ConfigSource.create] = config.read_config
 
     # Add the DBs to the application
     available_db_classes: set[type[BaseDB]] = set()

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import (
@@ -12,8 +11,8 @@ from fastapi import (
     status,
 )
 
-from diracx.core.config import Config, LocalGitConfigSource
-from diracx.core.settings import LocalFileUrl, ServiceSettingsBase
+from diracx.core.config import Config, ConfigSource, ConfigSourceUrl
+from diracx.core.settings import ServiceSettingsBase
 
 from .fastapi_classes import DiracxRouter
 
@@ -21,18 +20,7 @@ LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 
 class ConfigSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_CONFIG_"):
-    backend_url: LocalFileUrl
-
-
-def get_config(
-    settings: Annotated[ConfigSettings, Depends(ConfigSettings.create)]
-) -> Config:
-    backend_url = settings.backend_url
-    if backend_url.scheme == "file":
-        assert backend_url.path
-        return LocalGitConfigSource(Path(backend_url.path)).read_config()
-    else:
-        raise NotImplementedError(backend_url.scheme)
+    backend_url: ConfigSourceUrl
 
 
 router = DiracxRouter()
@@ -41,7 +29,7 @@ router = DiracxRouter()
 @router.get("/{vo}")
 async def serve_config(
     vo: str,
-    config: Annotated[Config, Depends(get_config)],
+    config: Annotated[Config, Depends(ConfigSource.create)],
     response: Response,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
