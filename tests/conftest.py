@@ -19,6 +19,29 @@ AUDIENCE = "dirac"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--regenerate-client",
+        action="store_true",
+        default=False,
+        help="Regenerate the AutoREST client",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--regenerate-client"):
+        # --regenerate-client given in cli: allow client re-generation
+        return
+    skip_regen = pytest.mark.skip(reason="need --regenerate-client option to run")
+    found = False
+    for item in items:
+        if item.name == "test_regenerate_client":
+            item.add_marker(skip_regen)
+            found = True
+    if not found:
+        raise RuntimeError("Could not find test_regenerate_client")
+
+
 @pytest.fixture
 def test_auth_settings() -> AuthSettings:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
