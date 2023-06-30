@@ -24,14 +24,14 @@ from .operations import (
 class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     """Dirac.
 
-    :ivar auth: AuthOperations operations
-    :vartype auth: client.operations.AuthOperations
-    :ivar jobs: JobsOperations operations
-    :vartype jobs: client.operations.JobsOperations
-    :ivar config: ConfigOperations operations
-    :vartype config: client.operations.ConfigOperations
     :ivar well_known: WellKnownOperations operations
     :vartype well_known: client.operations.WellKnownOperations
+    :ivar auth: AuthOperations operations
+    :vartype auth: client.operations.AuthOperations
+    :ivar config: ConfigOperations operations
+    :vartype config: client.operations.ConfigOperations
+    :ivar jobs: JobsOperations operations
+    :vartype jobs: client.operations.JobsOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -50,16 +50,16 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
-        self.auth = AuthOperations(  # pylint: disable=abstract-class-instantiated
+        self.well_known = WellKnownOperations(
             self._client, self._config, self._serialize, self._deserialize
         )
-        self.jobs = JobsOperations(
+        self.auth = AuthOperations(  # pylint: disable=abstract-class-instantiated
             self._client, self._config, self._serialize, self._deserialize
         )
         self.config = ConfigOperations(
             self._client, self._config, self._serialize, self._deserialize
         )
-        self.well_known = WellKnownOperations(
+        self.jobs = JobsOperations(
             self._client, self._config, self._serialize, self._deserialize
         )
 

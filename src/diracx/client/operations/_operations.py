@@ -40,7 +40,32 @@ _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
 
 
-def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpRequest:
+def build_well_known_openid_configuration_request(  # pylint: disable=name-too-long
+    *, backend_url: Optional[Any] = None, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/.well-known/openid-configuration"
+
+    # Construct parameters
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="GET", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_auth_do_device_flow_request(
+    *, user_code: str, backend_url: Optional[Any] = None, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
@@ -51,6 +76,8 @@ def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpR
 
     # Construct parameters
     _params["user_code"] = _SERIALIZER.query("user_code", user_code, "str")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -61,7 +88,12 @@ def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpR
 
 
 def build_auth_initiate_device_flow_request(
-    *, client_id: str, scope: str, audience: str, **kwargs: Any
+    *,
+    client_id: str,
+    scope: str,
+    audience: str,
+    backend_url: Optional[Any] = None,
+    **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -75,6 +107,8 @@ def build_auth_initiate_device_flow_request(
     _params["client_id"] = _SERIALIZER.query("client_id", client_id, "str")
     _params["scope"] = _SERIALIZER.query("scope", scope, "str")
     _params["audience"] = _SERIALIZER.query("audience", audience, "str")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -85,7 +119,7 @@ def build_auth_initiate_device_flow_request(
 
 
 def build_auth_finish_device_flow_request(
-    *, code: str, state: str, **kwargs: Any
+    *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -98,6 +132,8 @@ def build_auth_finish_device_flow_request(
     # Construct parameters
     _params["code"] = _SERIALIZER.query("code", code, "str")
     _params["state"] = _SERIALIZER.query("state", state, "str")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -130,7 +166,8 @@ def build_auth_authorization_flow_request(
     redirect_uri: str,
     scope: str,
     state: str,
-    **kwargs: Any,
+    backend_url: Optional[Any] = None,
+    **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -152,6 +189,8 @@ def build_auth_authorization_flow_request(
     _params["redirect_uri"] = _SERIALIZER.query("redirect_uri", redirect_uri, "str")
     _params["scope"] = _SERIALIZER.query("scope", scope, "str")
     _params["state"] = _SERIALIZER.query("state", state, "str")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -162,7 +201,7 @@ def build_auth_authorization_flow_request(
 
 
 def build_auth_authorization_flow_complete_request(  # pylint: disable=name-too-long
-    *, code: str, state: str, **kwargs: Any
+    *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -175,8 +214,51 @@ def build_auth_authorization_flow_complete_request(  # pylint: disable=name-too-
     # Construct parameters
     _params["code"] = _SERIALIZER.query("code", code, "str")
     _params["state"] = _SERIALIZER.query("state", state, "str")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="GET", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_config_serve_config_request(
+    vo: str,
+    *,
+    backend_url: Optional[Any] = None,
+    if_none_match: Optional[str] = None,
+    if_modified_since: Optional[str] = None,
+    **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/config/{vo}"
+    path_format_arguments = {
+        "vo": _SERIALIZER.url("vo", vo, "str"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct parameters
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
+
+    # Construct headers
+    if if_none_match is not None:
+        _headers["if-none-match"] = _SERIALIZER.header(
+            "if_none_match", if_none_match, "str"
+        )
+    if if_modified_since is not None:
+        _headers["if-modified-since"] = _SERIALIZER.header(
+            "if_modified_since", if_modified_since, "str"
+        )
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(
@@ -396,7 +478,11 @@ def build_jobs_set_status_bulk_request(**kwargs: Any) -> HttpRequest:
 
 
 def build_jobs_search_request(
-    *, page: int = 0, per_page: int = 100, **kwargs: Any
+    *,
+    page: int = 0,
+    per_page: int = 100,
+    backend_url: Optional[Any] = None,
+    **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -414,6 +500,8 @@ def build_jobs_search_request(
         _params["page"] = _SERIALIZER.query("page", page, "int")
     if per_page is not None:
         _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
 
     # Construct headers
     if content_type is not None:
@@ -427,8 +515,11 @@ def build_jobs_search_request(
     )
 
 
-def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
+def build_jobs_summary_request(
+    *, backend_url: Optional[Any] = None, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     content_type: Optional[str] = kwargs.pop(
         "content_type", _headers.pop("Content-Type", None)
@@ -438,6 +529,10 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
     # Construct URL
     _url = "/jobs/summary"
 
+    # Construct parameters
+    if backend_url is not None:
+        _params["backend_url"] = _SERIALIZER.query("backend_url", backend_url, "object")
+
     # Construct headers
     if content_type is not None:
         _headers["Content-Type"] = _SERIALIZER.header(
@@ -445,56 +540,87 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
         )
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
 
 
-def build_config_serve_config_request(
-    vo: str,
-    *,
-    if_none_match: Optional[str] = None,
-    if_modified_since: Optional[str] = None,
-    **kwargs: Any,
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+class WellKnownOperations:
+    """
+    .. warning::
+        **DO NOT** instantiate this class directly.
 
-    accept = _headers.pop("Accept", "application/json")
+        Instead, you should access the following operations through
+        :class:`~client.Dirac`'s
+        :attr:`well_known` attribute.
+    """
 
-    # Construct URL
-    _url = "/config/{vo}"
-    path_format_arguments = {
-        "vo": _SERIALIZER.url("vo", vo, "str"),
-    }
+    models = _models
 
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct headers
-    if if_none_match is not None:
-        _headers["if-none-match"] = _SERIALIZER.header(
-            "if_none_match", if_none_match, "str"
+    def __init__(self, *args, **kwargs):
+        input_args = list(args)
+        self._client = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
         )
-    if if_modified_since is not None:
-        _headers["if-modified-since"] = _SERIALIZER.header(
-            "if_modified_since", if_modified_since, "str"
+
+    @distributed_trace
+    def openid_configuration(
+        self, *, backend_url: Optional[Any] = None, **kwargs: Any
+    ) -> Any:
+        """Openid Configuration.
+
+        Openid Configuration.
+
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        request = build_well_known_openid_configuration_request(
+            backend_url=backend_url,
+            headers=_headers,
+            params=_params,
         )
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+        request.url = self._client.format_url(request.url)
 
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
 
+        response = pipeline_response.http_response
 
-def build_well_known_openid_configuration_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
 
-    accept = _headers.pop("Accept", "application/json")
+        deserialized = self._deserialize("object", pipeline_response)
 
-    # Construct URL
-    _url = "/.well-known/openid-configuration"
+        if cls:
+            return cls(pipeline_response, deserialized, {})
 
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+        return deserialized
 
 
 class AuthOperations:
@@ -525,7 +651,9 @@ class AuthOperations:
         )
 
     @distributed_trace
-    def do_device_flow(self, *, user_code: str, **kwargs: Any) -> Any:
+    def do_device_flow(
+        self, *, user_code: str, backend_url: Optional[Any] = None, **kwargs: Any
+    ) -> Any:
         """Do Device Flow.
 
         This is called as the verification URI for the device flow.
@@ -539,6 +667,8 @@ class AuthOperations:
 
         :keyword user_code: Required.
         :paramtype user_code: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -558,6 +688,7 @@ class AuthOperations:
 
         request = build_auth_do_device_flow_request(
             user_code=user_code,
+            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -587,7 +718,13 @@ class AuthOperations:
 
     @distributed_trace
     def initiate_device_flow(
-        self, *, client_id: str, scope: str, audience: str, **kwargs: Any
+        self,
+        *,
+        client_id: str,
+        scope: str,
+        audience: str,
+        backend_url: Optional[Any] = None,
+        **kwargs: Any
     ) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
@@ -605,6 +742,8 @@ class AuthOperations:
         :paramtype scope: str
         :keyword audience: Required.
         :paramtype audience: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :return: InitiateDeviceFlowResponse
         :rtype: ~client.models.InitiateDeviceFlowResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -626,6 +765,7 @@ class AuthOperations:
             client_id=client_id,
             scope=scope,
             audience=audience,
+            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -656,7 +796,9 @@ class AuthOperations:
         return deserialized
 
     @distributed_trace
-    def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
+    def finish_device_flow(
+        self, *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
+    ) -> Any:
         """Finish Device Flow.
 
         This the url callbacked by IAM/Checkin after the authorization
@@ -669,6 +811,8 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -689,6 +833,7 @@ class AuthOperations:
         request = build_auth_finish_device_flow_request(
             code=code,
             state=state,
+            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -778,7 +923,8 @@ class AuthOperations:
         redirect_uri: str,
         scope: str,
         state: str,
-        **kwargs: Any,
+        backend_url: Optional[Any] = None,
+        **kwargs: Any
     ) -> Any:
         """Authorization Flow.
 
@@ -798,6 +944,8 @@ class AuthOperations:
         :paramtype scope: str
         :keyword state: Required.
         :paramtype state: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -823,6 +971,7 @@ class AuthOperations:
             redirect_uri=redirect_uri,
             scope=scope,
             state=state,
+            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -852,7 +1001,7 @@ class AuthOperations:
 
     @distributed_trace
     def authorization_flow_complete(
-        self, *, code: str, state: str, **kwargs: Any
+        self, *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
     ) -> Any:
         """Authorization Flow Complete.
 
@@ -862,6 +1011,8 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -882,6 +1033,106 @@ class AuthOperations:
         request = build_auth_authorization_flow_complete_request(
             code=code,
             state=state,
+            backend_url=backend_url,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+
+class ConfigOperations:
+    """
+    .. warning::
+        **DO NOT** instantiate this class directly.
+
+        Instead, you should access the following operations through
+        :class:`~client.Dirac`'s
+        :attr:`config` attribute.
+    """
+
+    models = _models
+
+    def __init__(self, *args, **kwargs):
+        input_args = list(args)
+        self._client = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
+        )
+
+    @distributed_trace
+    def serve_config(
+        self,
+        vo: str,
+        *,
+        backend_url: Optional[Any] = None,
+        if_none_match: Optional[str] = None,
+        if_modified_since: Optional[str] = None,
+        **kwargs: Any
+    ) -> Any:
+        """Serve Config.
+
+        "
+        Get the latest view of the config.
+
+        If If-None-Match header is given and matches the latest ETag, return 304
+
+        If If-Modified-Since is given and is newer than latest,
+            return 304: this is to avoid flip/flopping.
+
+        :param vo: Required.
+        :type vo: str
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
+        :keyword if_none_match: Default value is None.
+        :paramtype if_none_match: str
+        :keyword if_modified_since: Default value is None.
+        :paramtype if_modified_since: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        request = build_config_serve_config_request(
+            vo=vo,
+            backend_url=backend_url,
+            if_none_match=if_none_match,
+            if_modified_since=if_modified_since,
             headers=_headers,
             params=_params,
         )
@@ -1485,7 +1736,7 @@ class JobsOperations:
         body: List[_models.JobStatusUpdate],
         *,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[_models.JobStatusReturn]:
         """Set Status Bulk.
 
@@ -1598,8 +1849,9 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
+        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[JSON]:
         """Search.
 
@@ -1613,6 +1865,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1628,8 +1882,9 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
+        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[JSON]:
         """Search.
 
@@ -1643,6 +1898,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1658,7 +1915,8 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
-        **kwargs: Any,
+        backend_url: Optional[Any] = None,
+        **kwargs: Any
     ) -> List[JSON]:
         """Search.
 
@@ -1672,6 +1930,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
@@ -1709,6 +1969,7 @@ class JobsOperations:
         request = build_jobs_search_request(
             page=page,
             per_page=per_page,
+            backend_url=backend_url,
             content_type=content_type,
             json=_json,
             content=_content,
@@ -1744,8 +2005,9 @@ class JobsOperations:
         self,
         body: _models.JobSummaryParams,
         *,
+        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> Any:
         """Summary.
 
@@ -1753,6 +2015,8 @@ class JobsOperations:
 
         :param body: Required.
         :type body: ~client.models.JobSummaryParams
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1763,7 +2027,12 @@ class JobsOperations:
 
     @overload
     def summary(
-        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
+        self,
+        body: IO,
+        *,
+        backend_url: Optional[Any] = None,
+        content_type: str = "application/json",
+        **kwargs: Any
     ) -> Any:
         """Summary.
 
@@ -1771,6 +2040,8 @@ class JobsOperations:
 
         :param body: Required.
         :type body: IO
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1780,13 +2051,21 @@ class JobsOperations:
         """
 
     @distributed_trace
-    def summary(self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any) -> Any:
+    def summary(
+        self,
+        body: Union[_models.JobSummaryParams, IO],
+        *,
+        backend_url: Optional[Any] = None,
+        **kwargs: Any
+    ) -> Any:
         """Summary.
 
         Show information suitable for plotting.
 
         :param body: Is either a JobSummaryParams type or a IO type. Required.
         :type body: ~client.models.JobSummaryParams or IO
+        :keyword backend_url: Default value is None.
+        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
@@ -1819,177 +2098,10 @@ class JobsOperations:
             _json = self._serialize.body(body, "JobSummaryParams")
 
         request = build_jobs_summary_request(
+            backend_url=backend_url,
             content_type=content_type,
             json=_json,
             content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-
-class ConfigOperations:
-    """
-    .. warning::
-        **DO NOT** instantiate this class directly.
-
-        Instead, you should access the following operations through
-        :class:`~client.Dirac`'s
-        :attr:`config` attribute.
-    """
-
-    models = _models
-
-    def __init__(self, *args, **kwargs):
-        input_args = list(args)
-        self._client = input_args.pop(0) if input_args else kwargs.pop("client")
-        self._config = input_args.pop(0) if input_args else kwargs.pop("config")
-        self._serialize = input_args.pop(0) if input_args else kwargs.pop("serializer")
-        self._deserialize = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
-
-    @distributed_trace
-    def serve_config(
-        self,
-        vo: str,
-        *,
-        if_none_match: Optional[str] = None,
-        if_modified_since: Optional[str] = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Serve Config.
-
-        "
-        Get the latest view of the config.
-
-        If If-None-Match header is given and matches the latest ETag, return 304
-
-        If If-Modified-Since is given and is newer than latest,
-            return 304: this is to avoid flip/flopping.
-
-        :param vo: Required.
-        :type vo: str
-        :keyword if_none_match: Default value is None.
-        :paramtype if_none_match: str
-        :keyword if_modified_since: Default value is None.
-        :paramtype if_modified_since: str
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_config_serve_config_request(
-            vo=vo,
-            if_none_match=if_none_match,
-            if_modified_since=if_modified_since,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-
-class WellKnownOperations:
-    """
-    .. warning::
-        **DO NOT** instantiate this class directly.
-
-        Instead, you should access the following operations through
-        :class:`~client.Dirac`'s
-        :attr:`well_known` attribute.
-    """
-
-    models = _models
-
-    def __init__(self, *args, **kwargs):
-        input_args = list(args)
-        self._client = input_args.pop(0) if input_args else kwargs.pop("client")
-        self._config = input_args.pop(0) if input_args else kwargs.pop("config")
-        self._serialize = input_args.pop(0) if input_args else kwargs.pop("serializer")
-        self._deserialize = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
-
-    @distributed_trace
-    def openid_configuration(self, **kwargs: Any) -> Any:
-        """Openid Configuration.
-
-        Openid Configuration.
-
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_well_known_openid_configuration_request(
             headers=_headers,
             params=_params,
         )
