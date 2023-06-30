@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = ("Config", "ConfigSource", "LocalGitConfigSource")
 
+import logging
 import os
 from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_CS_CACHE_TTL = 5
 MAX_CS_CACHED_VERSIONS = 1
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigSourceUrl(AnyUrl):
@@ -102,21 +105,24 @@ class LocalGitConfigSource(ConfigSource):
 
     @cachedmethod(lambda self: self._latest_revision_cache)
     def latest_revision(self) -> tuple[str, datetime]:
-        print("config latest_revision")
         try:
             rev = self.repo.rev_parse("master")
         except git.exc.ODBError as e:  # type: ignore
             raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
-        return rev.hexsha, rev.committed_datetime.astimezone(timezone.utc)
+        modified = rev.committed_datetime.astimezone(timezone.utc)
+        logger.debug(
+            "Latest revision for %s is %s with mtime %s", self, rev.hexsha, modified
+        )
+        return rev.hexsha, modified
 
     @cachedmethod(lambda self: self._read_raw_cache)
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """ "
+        """
         Returns the raw data from the git repo
 
         :returns hexsha, commit time, data
         """
-        print("config read_raw")
+        logger.debug("Reading %s for %s with mtime %s", self, hexsha, modified)
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
         raw_obj = yaml.safe_load(blob.data_stream.read().decode())

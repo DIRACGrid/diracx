@@ -25,6 +25,7 @@ from .fastapi_classes import DiracFastAPI, DiracxRouter
 
 T = TypeVar("T")
 T2 = TypeVar("T2", bound=AsyncContextManager)
+
 logger = logging.getLogger(__name__)
 
 
@@ -121,6 +122,7 @@ def create_app_inner(
 def create_app() -> DiracFastAPI:
     """Load settings from the environment and create the application object"""
     for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
+        logger.debug("Loading dotenv file: %s", env_file)
         if not dotenv.load_dotenv(env_file):
             raise NotImplementedError(f"Could not load dotenv file {env_file}")
 
@@ -130,13 +132,13 @@ def create_app() -> DiracFastAPI:
     for entry_point in select_from_extension(group="diracx.services"):
         env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
         enabled = parse_raw_as(bool, os.environ.get(env_var, "true"))
-        print(f"Found service {entry_point}: {enabled=}")
+        logger.debug("Found service %r: enabled=%s", entry_point, enabled)
         if not enabled:
             continue
         router: APIRouter = entry_point.load()
         enabled_systems.add(entry_point.name)
         dependencies = set(find_dependents(router, ServiceSettingsBase))
-        print(f"Found dependencies: {dependencies}")
+        logger.debug("Found dependencies for %r: enabled=%s", entry_point, dependencies)
         settings_classes |= dependencies
 
     # Load settings classes required by the routers
