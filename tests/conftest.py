@@ -71,7 +71,9 @@ def with_app(test_auth_settings, with_config_repo):
             "JobDB": "sqlite+aiosqlite:///:memory:",
             "AuthDB": "sqlite+aiosqlite:///:memory:",
         },
-        config_source=ConfigSource.create(backend_url=f"git+file://{with_config_repo}"),
+        config_source=ConfigSource.create_from_url(
+            backend_url=f"git+file://{with_config_repo}"
+        ),
     )
 
 

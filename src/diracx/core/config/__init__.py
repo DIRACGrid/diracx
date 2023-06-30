@@ -41,22 +41,9 @@ class ConfigSource(metaclass=ABCMeta):
     __registry: dict[str, type[ConfigSource]] = {}
     scheme: str
 
-    def __init_subclass__(cls) -> None:
-        if cls.scheme in cls.__registry:
-            raise TypeError(f"{cls.scheme=} is already define")
-        cls.__registry[cls.scheme] = cls
-
     @abstractmethod
-    def __init__(self, backend_url: AnyUrl):
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         ...
-
-    @classmethod
-    def create(cls, backend_url=None):
-        if backend_url is None:
-            backend_url = os.environ["DIRACX_CONFIG_BACKEND_URL"]
-        if isinstance(backend_url, (str, Path)):
-            backend_url = parse_obj_as(ConfigSourceUrl, str(backend_url))
-        return cls.__registry[backend_url.scheme](backend_url)
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
@@ -65,6 +52,20 @@ class ConfigSource(metaclass=ABCMeta):
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
         ...
+
+    def __init_subclass__(cls) -> None:
+        if cls.scheme in cls.__registry:
+            raise TypeError(f"{cls.scheme=} is already define")
+        cls.__registry[cls.scheme] = cls
+
+    @classmethod
+    def create(cls):
+        return cls.create_from_url(backend_url=os.environ["DIRACX_CONFIG_BACKEND_URL"])
+
+    @classmethod
+    def create_from_url(cls, *, backend_url: ConfigSourceUrl | Path | str):
+        url = parse_obj_as(ConfigSourceUrl, str(backend_url))
+        return cls.__registry[url.scheme](backend_url=url)
 
     def read_config(self) -> Config:
         """
@@ -81,7 +82,7 @@ class ConfigSource(metaclass=ABCMeta):
 class LocalGitConfigSource(ConfigSource):
     scheme = "git+file"
 
-    def __init__(self, backend_url: ConfigSourceUrl):
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         if not backend_url.path:
             raise ValueError("Empty path for LocalGitConfigSource")
 

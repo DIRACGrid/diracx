@@ -89,7 +89,7 @@ def add_user(
 
     new_user = UserConfig(CA=ca, DN=dn, PreferedUsername=preferred_username)
 
-    config = ConfigSource.create(repo_path).read_config()
+    config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
     if sub in config.Registry[vo].Users:
         typer.echo(f"ERROR: User {sub} already exists", err=True)
