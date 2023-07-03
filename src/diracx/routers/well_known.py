@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
-
-from fastapi import Depends, Request
+from fastapi import Request
 
 from diracx.routers.auth import AuthSettings
 
@@ -16,7 +14,7 @@ router = DiracxRouter(require_auth=False)
 async def openid_configuration(
     request: Request,
     config: Config,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ):
     print(dir(request))
     scopes_supported = []

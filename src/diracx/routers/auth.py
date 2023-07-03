@@ -40,12 +40,14 @@ from .dependencies import (
     AuthDB,
     AvailableSecurityProperties,
     Config,
+    add_settings_annotation,
 )
 from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
 
 
+@add_settings_annotation
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
@@ -89,14 +91,6 @@ class TokenResponse(BaseModel):
 
 
 router = DiracxRouter(require_auth=False)
-
-# This should be taken dynamically
-# KNOWN_CLIENTS = {
-#     "myDIRACClientID": {
-#         "allowed_redirects": ["http://pclhcb211:8000/docs/oauth2-redirect"]
-#     }
-# }
-# Duration for which the flows against DIRAC AS are valid
 
 _server_metadata_cache: TTLCache = TTLCache(maxsize=1024, ttl=3600)
 
@@ -174,7 +168,7 @@ class UserInfo(AuthInfo):
 
 async def verify_dirac_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ) -> UserInfo:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
@@ -285,7 +279,7 @@ async def initiate_device_flow(
     auth_db: AuthDB,
     config: Config,
     available_properties: AvailableSecurityProperties,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
@@ -413,7 +407,7 @@ async def do_device_flow(
     user_code: str,
     config: Config,
     available_properties: AvailableSecurityProperties,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ) -> RedirectResponse:
     """
     This is called as the verification URI for the device flow.
@@ -462,7 +456,7 @@ async def finish_device_flow(
     state: str,
     auth_db: AuthDB,
     config: Config,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ):
     """
     This the url callbacked by IAM/Checkin after the authorization
@@ -636,7 +630,7 @@ async def token(
     client_id: Annotated[str, Form(description="OAuth2 client id")],
     auth_db: AuthDB,
     config: Config,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
@@ -747,7 +741,7 @@ async def authorization_flow(
     auth_db: AuthDB,
     config: Config,
     available_properties: AvailableSecurityProperties,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ):
     if settings.dirac_client_id != client_id:
         raise HTTPException(
@@ -798,7 +792,7 @@ async def authorization_flow_complete(
     request: Request,
     auth_db: AuthDB,
     config: Config,
-    settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
+    settings: AuthSettings,
 ):
     decrypted_state = decrypt_state(state)
     assert decrypted_state["grant_type"] == "authorization_code"

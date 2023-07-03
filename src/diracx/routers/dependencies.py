@@ -4,6 +4,7 @@ __all__ = (
     "Config",
     "AuthDB",
     "JobDB",
+    "add_settings_annotation",
     "AvailableSecurityProperties",
 )
 
@@ -18,6 +19,11 @@ from diracx.db import AuthDB as _AuthDB
 from diracx.db import JobDB as _JobDB
 
 T = TypeVar("T")
+
+
+def add_settings_annotation(cls: T) -> T:
+    """Add a `Depends` annotation to a class that has a `create` classmethod."""
+    return Annotated[cls, Depends(cls.create)]  # type: ignore
 
 
 # Databases
