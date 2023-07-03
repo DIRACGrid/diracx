@@ -80,15 +80,11 @@ class WellKnownOperations:
         )
 
     @distributed_trace_async
-    async def openid_configuration(
-        self, *, backend_url: Optional[Any] = None, **kwargs: Any
-    ) -> Any:
+    async def openid_configuration(self, **kwargs: Any) -> Any:
         """Openid Configuration.
 
         Openid Configuration.
 
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -107,7 +103,6 @@ class WellKnownOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_well_known_openid_configuration_request(
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -164,9 +159,7 @@ class AuthOperations:
         )
 
     @distributed_trace_async
-    async def do_device_flow(
-        self, *, user_code: str, backend_url: Optional[Any] = None, **kwargs: Any
-    ) -> Any:
+    async def do_device_flow(self, *, user_code: str, **kwargs: Any) -> Any:
         """Do Device Flow.
 
         This is called as the verification URI for the device flow.
@@ -180,8 +173,6 @@ class AuthOperations:
 
         :keyword user_code: Required.
         :paramtype user_code: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -201,7 +192,6 @@ class AuthOperations:
 
         request = build_auth_do_device_flow_request(
             user_code=user_code,
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -231,13 +221,7 @@ class AuthOperations:
 
     @distributed_trace_async
     async def initiate_device_flow(
-        self,
-        *,
-        client_id: str,
-        scope: str,
-        audience: str,
-        backend_url: Optional[Any] = None,
-        **kwargs: Any
+        self, *, client_id: str, scope: str, audience: str, **kwargs: Any
     ) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
@@ -255,8 +239,6 @@ class AuthOperations:
         :paramtype scope: str
         :keyword audience: Required.
         :paramtype audience: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: InitiateDeviceFlowResponse
         :rtype: ~client.models.InitiateDeviceFlowResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -278,7 +260,6 @@ class AuthOperations:
             client_id=client_id,
             scope=scope,
             audience=audience,
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -309,9 +290,7 @@ class AuthOperations:
         return deserialized
 
     @distributed_trace_async
-    async def finish_device_flow(
-        self, *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
-    ) -> Any:
+    async def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Finish Device Flow.
 
         This the url callbacked by IAM/Checkin after the authorization
@@ -324,8 +303,6 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -346,7 +323,6 @@ class AuthOperations:
         request = build_auth_finish_device_flow_request(
             code=code,
             state=state,
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -436,7 +412,6 @@ class AuthOperations:
         redirect_uri: str,
         scope: str,
         state: str,
-        backend_url: Optional[Any] = None,
         **kwargs: Any
     ) -> Any:
         """Authorization Flow.
@@ -457,8 +432,6 @@ class AuthOperations:
         :paramtype scope: str
         :keyword state: Required.
         :paramtype state: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -484,7 +457,6 @@ class AuthOperations:
             redirect_uri=redirect_uri,
             scope=scope,
             state=state,
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -514,7 +486,7 @@ class AuthOperations:
 
     @distributed_trace_async
     async def authorization_flow_complete(
-        self, *, code: str, state: str, backend_url: Optional[Any] = None, **kwargs: Any
+        self, *, code: str, state: str, **kwargs: Any
     ) -> Any:
         """Authorization Flow Complete.
 
@@ -524,8 +496,6 @@ class AuthOperations:
         :paramtype code: str
         :keyword state: Required.
         :paramtype state: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -546,7 +516,6 @@ class AuthOperations:
         request = build_auth_authorization_flow_complete_request(
             code=code,
             state=state,
-            backend_url=backend_url,
             headers=_headers,
             params=_params,
         )
@@ -601,7 +570,6 @@ class ConfigOperations:
         self,
         vo: str,
         *,
-        backend_url: Optional[Any] = None,
         if_none_match: Optional[str] = None,
         if_modified_since: Optional[str] = None,
         **kwargs: Any
@@ -618,8 +586,6 @@ class ConfigOperations:
 
         :param vo: Required.
         :type vo: str
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword if_none_match: Default value is None.
         :paramtype if_none_match: str
         :keyword if_modified_since: Default value is None.
@@ -643,7 +609,6 @@ class ConfigOperations:
 
         request = build_config_serve_config_request(
             vo=vo,
-            backend_url=backend_url,
             if_none_match=if_none_match,
             if_modified_since=if_modified_since,
             headers=_headers,
@@ -1362,7 +1327,6 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
-        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
         **kwargs: Any
     ) -> List[JSON]:
@@ -1378,8 +1342,6 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1395,7 +1357,6 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
-        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
         **kwargs: Any
     ) -> List[JSON]:
@@ -1411,8 +1372,6 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1428,7 +1387,6 @@ class JobsOperations:
         *,
         page: int = 0,
         per_page: int = 100,
-        backend_url: Optional[Any] = None,
         **kwargs: Any
     ) -> List[JSON]:
         """Search.
@@ -1443,8 +1401,6 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
@@ -1482,7 +1438,6 @@ class JobsOperations:
         request = build_jobs_search_request(
             page=page,
             per_page=per_page,
-            backend_url=backend_url,
             content_type=content_type,
             json=_json,
             content=_content,
@@ -1518,7 +1473,6 @@ class JobsOperations:
         self,
         body: _models.JobSummaryParams,
         *,
-        backend_url: Optional[Any] = None,
         content_type: str = "application/json",
         **kwargs: Any
     ) -> Any:
@@ -1528,8 +1482,6 @@ class JobsOperations:
 
         :param body: Required.
         :type body: ~client.models.JobSummaryParams
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1540,12 +1492,7 @@ class JobsOperations:
 
     @overload
     async def summary(
-        self,
-        body: IO,
-        *,
-        backend_url: Optional[Any] = None,
-        content_type: str = "application/json",
-        **kwargs: Any
+        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
     ) -> Any:
         """Summary.
 
@@ -1553,8 +1500,6 @@ class JobsOperations:
 
         :param body: Required.
         :type body: IO
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1565,11 +1510,7 @@ class JobsOperations:
 
     @distributed_trace_async
     async def summary(
-        self,
-        body: Union[_models.JobSummaryParams, IO],
-        *,
-        backend_url: Optional[Any] = None,
-        **kwargs: Any
+        self, body: Union[_models.JobSummaryParams, IO], **kwargs: Any
     ) -> Any:
         """Summary.
 
@@ -1577,8 +1518,6 @@ class JobsOperations:
 
         :param body: Is either a JobSummaryParams type or a IO type. Required.
         :type body: ~client.models.JobSummaryParams or IO
-        :keyword backend_url: Default value is None.
-        :paramtype backend_url: any
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
@@ -1611,7 +1550,6 @@ class JobsOperations:
             _json = self._serialize.body(body, "JobSummaryParams")
 
         request = build_jobs_summary_request(
-            backend_url=backend_url,
             content_type=content_type,
             json=_json,
             content=_content,
