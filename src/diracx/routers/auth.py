@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import Annotated, Literal, TypeAlias, TypedDict
+from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
 import httpx
@@ -36,14 +36,14 @@ from diracx.core.properties import SecurityProperty, UnevaluatedProperty
 from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
 from diracx.db.auth.schema import FlowStatus
 
-from .dependencies import AuthDB, Config
+from .dependencies import (
+    AuthDB,
+    AvailableSecurityProperties,
+    Config,
+)
 from .fastapi_classes import DiracxRouter
 
 oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
-
-AvailableSecurityProperties: TypeAlias = Annotated[
-    set[SecurityProperty], Depends(SecurityProperty.available_properties)
-]
 
 
 class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
