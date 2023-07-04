@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import Annotated, Any, TypedDict
 
@@ -18,6 +19,7 @@ from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
 
+logger = logging.getLogger(__name__)
 
 router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
 
@@ -140,7 +142,7 @@ async def submit_bulk_jobs(
     jobClassAd = ClassAd(jobDesc)
     result = getParameterVectorLength(jobClassAd)
     if not result["OK"]:
-        print("Issue with getParameterVectorLength", result["Message"])
+        logger.error("Issue with getParameterVectorLength: %s", result["Message"])
         return result
     nJobs = result["Value"]
     parametricJob = False
@@ -186,7 +188,7 @@ async def submit_bulk_jobs(
             user_info.vo,
         )
 
-        print(
+        logging.debug(
             f'Job added to the JobDB", "{job_id} for {fixme_ownerDN}/{fixme_ownerGroup}'
         )
 
