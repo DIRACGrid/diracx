@@ -74,7 +74,9 @@ def create_app_inner(
 
     # Load the requested routers
     routers: dict[str, APIRouter] = {}
-    for system_name in enabled_systems:
+    # The enabled systems must be sorted to ensure the openapi.json is deterministic
+    # Without this AutoREST generates different client sources for each ordering
+    for system_name in sorted(enabled_systems):
         assert system_name not in routers
         for entry_point in select_from_extension(
             group="diracx.services", name=system_name

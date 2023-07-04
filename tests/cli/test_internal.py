@@ -38,7 +38,7 @@ def test_add_user(tmp_path, vo, user_group):
     # Create the CS
     runner.invoke(app, ["internal", "generate-cs", cs_repo])
 
-    config = ConfigSource.create(cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
 
     # Check the user isn't in it
     if vo in config.Registry:
@@ -72,7 +72,7 @@ def test_add_user(tmp_path, vo, user_group):
 
     assert result.exit_code == 0, result.output
 
-    config = ConfigSource.create(cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
     # check the user is defined
     assert vo in config.Registry
     assert sub in config.Registry[vo].Users

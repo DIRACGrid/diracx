@@ -18,7 +18,6 @@ async def openid_configuration(
     config: Annotated[Config, Depends(ConfigSource.create)],
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
 ):
-    print(dir(request))
     scopes_supported = []
     for vo in config.Registry:
         scopes_supported.append(f"vo:{vo}")
