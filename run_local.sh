@@ -13,7 +13,7 @@ ssh-keygen -P "" -t rsa -b 4096 -m PEM -f "${tmp_dir}/signing-key/rs256.key"
 
 diracx internal generate-cs "${tmp_dir}/cs_store/initialRepo" --vo=diracAdmin --user-group=admin --idp-url=runlocal.diracx.invalid
 
-export DIRACX_SERVICE_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
+export DIRACX_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
 export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${tmp_dir}/signing-key/rs256.key"
