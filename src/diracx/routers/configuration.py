@@ -4,15 +4,13 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import (
-    Depends,
     Header,
     HTTPException,
     Response,
     status,
 )
 
-from diracx.core.config import Config, ConfigSource
-
+from .dependencies import Config
 from .fastapi_classes import DiracxRouter
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
@@ -23,7 +21,7 @@ router = DiracxRouter()
 @router.get("/{vo}")
 async def serve_config(
     vo: str,
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     response: Response,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,

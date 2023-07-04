@@ -12,9 +12,9 @@ from diracx.core.config import Config, ConfigSource
 from diracx.core.models import ScalarSearchOperator, SearchSpec, SortSpec
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
-from diracx.db import JobDB
 
 from ..auth import UserInfo, has_properties, verify_dirac_token
+from ..dependencies import JobDB
 from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
@@ -100,7 +100,7 @@ StdOutput = std.out;"""
 async def submit_bulk_jobs(
     # FIXME: Using mutliple doesn't work with swagger?
     job_definitions: Annotated[list[str], Body(example=EXAMPLE_JDLS["Simple JDL"])],
-    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
+    job_db: JobDB,
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
 ) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
@@ -320,7 +320,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 @router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
-    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
+    job_db: JobDB,
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     page: int = 0,
     per_page: int = 100,
@@ -350,7 +350,7 @@ async def search(
 @router.post("/summary")
 async def summary(
     config: Annotated[Config, Depends(ConfigSource.create)],
-    job_db: Annotated[JobDB, Depends(JobDB.transaction)],
+    job_db: JobDB,
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     body: JobSummaryParams,
 ):
