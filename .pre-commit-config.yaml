@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
-          - pydantic
+          - pydantic==1.10.10
           - sqlalchemy
           - types-PyYAML
           - types-cachetools
