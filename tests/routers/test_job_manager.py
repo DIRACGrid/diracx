@@ -182,7 +182,7 @@ def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
     """Test that a user cannot submit a parametric JDL greater than the max parametric jobs"""
     job_definitions = [TEST_LARGE_PARAMETRIC_JDL]
     res = normal_user_client.post("/jobs/", json=job_definitions)
-    assert res.status_code == HTTPStatus.UNAUTHORIZED, res.json()
+    assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
 def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
@@ -191,7 +191,7 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
     """Test that a user cannot submit a list of JDL greater than the max number of jobs"""
     job_definitions = [TEST_JDL for _ in range(100)]
     res = normal_user_client.post("/jobs/", json=job_definitions)
-    assert res.status_code == HTTPStatus.UNAUTHORIZED, res.json()
+    assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
 @pytest.mark.parametrize(
