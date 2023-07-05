@@ -58,13 +58,13 @@ def generate_cs(
         DIRAC=DIRACConfig(),
         Operations={"Defaults": OperationsConfig()},
     )
-
     repo = git.Repo.init(repo_path, initial_branch="master")
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing configuration to {yaml_path}", err=True)
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
-    repo.index.add([yaml_path])
+    # MacOS adds a "/private" in front, so we need to resolve the path when adding
+    repo.index.add([yaml_path.resolve()])
     repo.index.commit("Initial commit")
     typer.echo(f"Successfully created repo in {config_repo}", err=True)
 
@@ -104,7 +104,8 @@ def add_user(
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
-    repo.index.add([yaml_path])
+    # MacOS adds a "/private" in front, so we need to resolve the path when adding
+    repo.index.add([yaml_path.resolve()])
     repo.index.commit(
         f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}"
     )
