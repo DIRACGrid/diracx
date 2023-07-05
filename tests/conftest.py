@@ -29,6 +29,9 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
+    """
+    Disable the test_regenerate_client if not explicitly asked for
+    """
     if config.getoption("--regenerate-client"):
         # --regenerate-client given in cli: allow client re-generation
         return
@@ -38,7 +41,8 @@ def pytest_collection_modifyitems(config, items):
         if item.name == "test_regenerate_client":
             item.add_marker(skip_regen)
             found = True
-    if not found:
+    # It's ok not to find it if we run only specific tests
+    if not found and not config.getoption("file_or_dir"):
         raise RuntimeError("Could not find test_regenerate_client")
 
 
