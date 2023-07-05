@@ -63,3 +63,39 @@ class AuthorizationFlows(Base):
     redirect_uri = Column(String(255))
     code = NullColumn(String(255))  # hash it ?
     id_token = NullColumn(JSON())
+
+
+class RefreshTokenStatus(Enum):
+    """
+    The normal flow is
+    CREATED -> REVOKED
+
+    Note1: There is no EXPIRED status as it can be calculated from a creation time
+    Note2: As part of the refresh token rotation mechanism, the revoked token should be retained
+    """
+
+    # The token has been created
+    # It does not indicate whether the token is valid or not
+    CREATED = auto()
+
+    # The token has been revoked
+    REVOKED = auto()
+
+
+class RefreshTokens(Base):
+    """Store attributes bound to a refresh token, as well as specific user attributes
+    that might be then used to generate access tokens
+    """
+
+    __tablename__ = "RefreshTokens"
+    # Refresh token attributes
+    jti = Column(Uuid(as_uuid=False), primary_key=True)
+    status = EnumColumn(
+        RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
+    )
+    creation_time = DateNowColumn()
+    scope = Column(String(1024))
+
+    # User attributes bound to the refresh token
+    sub = Column(String(1024))
+    preferred_username = Column(String(255))
