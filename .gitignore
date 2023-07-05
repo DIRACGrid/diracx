@@ -1,6 +1,9 @@
 # Python
 *.py[cod]
 
+# Conda
+.conda
+
 # C extensions
 *.so
 var

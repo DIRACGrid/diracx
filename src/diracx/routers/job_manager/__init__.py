@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
+from http import HTTPStatus
 from typing import Annotated, Any, TypedDict
 
-from fastapi import Body, Depends, Query
+from fastapi import Body, Depends, HTTPException, Query
 from pydantic import BaseModel, root_validator
 
 from diracx.core.config import Config, ConfigSource
@@ -104,64 +105,78 @@ async def submit_bulk_jobs(
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
 ) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
-    from DIRAC.Core.Utilities.DErrno import EWMSJDL
+    from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
+    from DIRAC.WorkloadManagementSystem.Service.JobPolicy import RIGHT_SUBMIT, JobPolicy
     from DIRAC.WorkloadManagementSystem.Utilities.ParametricJob import (
         generateParametricJobs,
         getParameterVectorLength,
     )
 
-    fixme_ownerDN = "ownerDN"
-    fixme_ownerGroup = "ownerGroup"
-    fixme_diracSetup = "diracSetup"
+    class DiracxJobPolicy(JobPolicy):
+        def __init__(self, user_info: UserInfo, allInfo: bool = True):
+            self.userName = user_info.preferred_username
+            self.userGroup = user_info.dirac_group
+            self.userProperties = user_info.properties
+            self.jobDB = None
+            self.allInfo = allInfo
+            self._permissions: dict[str, bool] = {}
+            self._getUserJobPolicy()
 
-    # TODO: implement actual job policy checking
-    # # Check job submission permission
-    # result = JobPolicy(
-    #     fixme_ownerDN, fixme_ownerGroup, fixme_userProperties
-    # ).getJobPolicy()
-    # if not result["OK"]:
-    #     raise NotImplementedError(EWMSSUBM, "Failed to get job policies")
-    # policyDict = result["Value"]
-    # if not policyDict[RIGHT_SUBMIT]:
-    #     raise NotImplementedError(EWMSSUBM, "Job submission not authorized")
+    # Check job submission permission
+    policyDict = returnValueOrRaise(DiracxJobPolicy(user_info).getJobPolicy())
+    if not policyDict[RIGHT_SUBMIT]:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "You are not allowed to submit jobs")
 
-    # TODO make it bulk compatible
-    assert len(job_definitions) == 1
+    # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
+    for i in range(len(job_definitions)):
+        job_definition = job_definitions[i].strip()
+        if not (job_definition.startswith("[") and job_definition.endswith("]")):
+            job_definition = f"[{job_definition}]"
+        job_definitions[i] = job_definition
 
-    jobDesc = f"[{job_definitions[0]}]"
-
-    # TODO: that needs to go in the legacy adapter
-    # # jobDesc is JDL for now
-    # jobDesc = jobDesc.strip()
-    # if jobDesc[0] != "[":
-    #     jobDesc = f"[{jobDesc}"
-    # if jobDesc[-1] != "]":
-    #     jobDesc = f"{jobDesc}]"
-
-    # Check if the job is a parametric one
-    jobClassAd = ClassAd(jobDesc)
-    result = getParameterVectorLength(jobClassAd)
-    if not result["OK"]:
-        logger.error("Issue with getParameterVectorLength: %s", result["Message"])
-        return result
-    nJobs = result["Value"]
-    parametricJob = False
-    if nJobs is not None and nJobs > 0:
-        # if we are here, then jobDesc was the description of a parametric job. So we start unpacking
-        parametricJob = True
-        if nJobs > MAX_PARAMETRIC_JOBS:
-            raise NotImplementedError(
-                EWMSJDL,
-                "Number of parametric jobs exceeds the limit of %d"
-                % MAX_PARAMETRIC_JOBS,
-            )
-        result = generateParametricJobs(jobClassAd)
+    if len(job_definitions) == 1:
+        # Check if the job is a parametric one
+        jobClassAd = ClassAd(job_definitions[0])
+        result = getParameterVectorLength(jobClassAd)
         if not result["OK"]:
+            print("Issue with getParameterVectorLength", result["Message"])
             return result
-        jobDescList = result["Value"]
+        nJobs = result["Value"]
+        parametricJob = False
+        if nJobs is not None and nJobs > 0:
+            # if we are here, then jobDesc was the description of a parametric job. So we start unpacking
+            parametricJob = True
+            result = generateParametricJobs(jobClassAd)
+            if not result["OK"]:
+                return result
+            jobDescList = result["Value"]
+        else:
+            # if we are here, then jobDesc was the description of a single job.
+            jobDescList = job_definitions
     else:
-        # if we are here, then jobDesc was the description of a single job.
-        jobDescList = [jobDesc]
+        # if we are here, then jobDesc is a list of JDLs
+        # we need to check that none of them is a parametric
+        for job_definition in job_definitions:
+            res = getParameterVectorLength(ClassAd(job_definition))
+            if not res["OK"]:
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST, detail=res["Message"]
+                )
+            if res["Value"]:
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    detail="You cannot submit parametric jobs in a bulk fashion",
+                )
+
+        jobDescList = job_definitions
+        parametricJob = True
+
+    # TODO: make the max number of jobs configurable in the CS
+    if len(jobDescList) > MAX_PARAMETRIC_JOBS:
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail=f"Normal user cannot submit more than {MAX_PARAMETRIC_JOBS} jobs at once",
+        )
 
     jobIDList = []
 
@@ -179,17 +194,15 @@ async def submit_bulk_jobs(
     ):  # jobDescList because there might be a list generated by a parametric job
         job_id = await job_db.insert(
             jobDescription,
-            user_info.sub,
-            fixme_ownerDN,
-            fixme_ownerGroup,
-            fixme_diracSetup,
+            user_info.preferred_username,
+            user_info.dirac_group,
             initialStatus,
             initialMinorStatus,
             user_info.vo,
         )
 
         logging.debug(
-            f'Job added to the JobDB", "{job_id} for {fixme_ownerDN}/{fixme_ownerGroup}'
+            f'Job added to the JobDB", "{job_id} for {user_info.preferred_username}/{user_info.dirac_group}'
         )
 
         # TODO comment out for test just now

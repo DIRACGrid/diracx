@@ -24,9 +24,7 @@ async def test_some_asyncio_code(job_db):
                 job_db.insert(
                     f"JDL{i}",
                     "owner",
-                    "owner_dn",
                     "owner_group",
-                    "diracSetup",
                     "New",
                     "dfdfds",
                     "lhcb",
