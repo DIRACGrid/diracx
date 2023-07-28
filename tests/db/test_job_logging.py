@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from diracx.db.job_logging.db import JobLoggingDB

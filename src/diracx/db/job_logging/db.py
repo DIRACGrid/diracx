@@ -17,14 +17,15 @@ class JobLoggingDB(BaseDB):
     metadata = JobLoggingDBBase.metadata
 
     async def insert(
-        self, jobID: int,
+        self,
+        jobID: int,
         status: str = "idem",
         minorStatus: str = "idem",
         applicationStatus: str = "idem",
         date: str | datetime = "",
         source: str = "Unknown",
     ):
-        """"equivalent" of DIRAC's addLoggingRecord
+        """ "equivalent" of DIRAC's addLoggingRecord
 
         Args:
             jobID (int): _description_
@@ -34,7 +35,6 @@ class JobLoggingDB(BaseDB):
             date (str | datetime, optional): _description_. Defaults to None.
             source (str, optional): _description_. Defaults to "Unknown".
         """
-        event = f"status/minor/app={status}/{minorStatus}/{applicationStatus}"
         # self.log.info("Adding record for job ", str(jobID) + ": '" + event + "' from " + source)
 
         try:
@@ -44,6 +44,7 @@ class JobLoggingDB(BaseDB):
             elif isinstance(date, str):
                 # The date is provided as a string in UTC
                 from DIRAC.Core.Utilities import TimeUtilities
+
                 _date = TimeUtilities.fromString(date)
             elif isinstance(date, datetime):
                 _date = date
@@ -53,8 +54,12 @@ class JobLoggingDB(BaseDB):
         except Exception:
             # self.log.exception("Exception while date evaluation")
             _date = datetime.utcnow()
-            
-        epoc = time.mktime(_date.timetuple()) + _date.microsecond / 1000000.0 - MAGIC_EPOC_NUMBER
+
+        epoc = (
+            time.mktime(_date.timetuple())
+            + _date.microsecond / 1000000.0
+            - MAGIC_EPOC_NUMBER
+        )
 
         stmt = sqlalchemy.insert(LoggingInfo).values(
             JobID=jobID,
@@ -67,4 +72,3 @@ class JobLoggingDB(BaseDB):
         )
         result = await self.conn.execute(stmt)
         return result.lastrowid
-

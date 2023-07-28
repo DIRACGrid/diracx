@@ -1,11 +1,11 @@
 from sqlalchemy import (
+    DDL,
     DateTime,
     Integer,
     Numeric,
     PrimaryKeyConstraint,
     String,
-    DDL,
-    event
+    event,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -18,9 +18,9 @@ class LoggingInfo(Base):
     __tablename__ = "LoggingInfo"
     JobID = Column(Integer)
     SeqNum = Column(Integer, default=0)
-    Status = Column(String(32), default='')
-    MinorStatus = Column(String(128), default='')
-    ApplicationStatus = Column(String(255), default='')
+    Status = Column(String(32), default="")
+    MinorStatus = Column(String(128), default="")
+    ApplicationStatus = Column(String(255), default="")
     StatusTime = Column(DateTime)
     StatusTimeOrder = Column(Numeric(precision=12, scale=3))
     StatusSource = Column(String(32), default="Unknown")
