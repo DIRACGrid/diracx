@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from diracx.core.exceptions import InvalidQueryError
 from diracx.db.dummy.db import DummyDB
 
 # Each DB test class must defined a fixture looking like this one
@@ -43,3 +44,24 @@ async def test_insert_and_summary(dummy_db: DummyDB):
         result = await dummy_db.summary(["ownerID"], [])
 
         assert result[0]["count"] == 10
+
+    # Test the selection
+    async with dummy_db as dummy_db:
+        result = await dummy_db.summary(
+            ["ownerID"], [{"parameter": "model", "operator": "eq", "value": "model_1"}]
+        )
+
+        assert result[0]["count"] == 1
+
+    async with dummy_db as dummy_db:
+        with pytest.raises(InvalidQueryError):
+            result = await dummy_db.summary(
+                ["ownerID"],
+                [
+                    {
+                        "parameter": "model",
+                        "operator": "BADSELECTION",
+                        "value": "model_1",
+                    }
+                ],
+            )
