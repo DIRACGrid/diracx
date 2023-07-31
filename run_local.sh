@@ -11,7 +11,7 @@ mkdir -p "${tmp_dir}/signing-key" "${tmp_dir}/cs_store/"
 
 ssh-keygen -P "" -t rsa -b 4096 -m PEM -f "${tmp_dir}/signing-key/rs256.key"
 
-diracx internal generate-cs "${tmp_dir}/cs_store/initialRepo" --vo=diracAdmin --user-group=admin --idp-url=runlocal.diracx.invalid
+dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo" --vo=diracAdmin --user-group=admin --idp-url=runlocal.diracx.invalid
 
 export DIRACX_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
 export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
