@@ -64,7 +64,7 @@ def generate_cs(
     typer.echo(f"Writing configuration to {yaml_path}", err=True)
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
-    repo.index.add([yaml_path])
+    repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit("Initial commit")
     typer.echo(f"Successfully created repo in {config_repo}", err=True)
 
@@ -104,7 +104,7 @@ def add_user(
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
-    repo.index.add([yaml_path])
+    repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit(
         f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}"
     )
