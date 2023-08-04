@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-__all__ = ("DiracxPreferences", "OutputFormats")
+__all__ = ("DiracxPreferences", "OutputFormats", "get_diracx_preferences")
 
 import logging
-from enum import Enum
+from enum import Enum, StrEnum
+from functools import lru_cache
 
 from pydantic import AnyHttpUrl, BaseSettings, validator
 
 from .utils import dotenv_files_from_environment
 
 
-class OutputFormats(Enum):
+class OutputFormats(StrEnum):
     RICH = "RICH"
     JSON = "JSON"
 
@@ -36,3 +37,9 @@ class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
         if isinstance(v, str):
             return getattr(LogLevels, v.upper())
         return v
+
+
+@lru_cache(maxsize=1)
+def get_diracx_preferences() -> DiracxPreferences:
+    """Caches the preferences."""
+    return DiracxPreferences()

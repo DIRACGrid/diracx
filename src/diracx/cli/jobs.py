@@ -13,6 +13,7 @@ from typer import FileText, Option
 
 from diracx.client.aio import Dirac
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
+from diracx.core.preferences import get_diracx_preferences
 
 from .utils import AsyncTyper, get_auth_headers
 
@@ -53,7 +54,7 @@ async def search(
     condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
 ):
-    async with Dirac(endpoint="http://localhost:8000") as api:
+    async with Dirac(endpoint=get_diracx_preferences().url) as api:
         jobs = await api.jobs.search(
             parameters=None if all else parameter,
             search=condition if condition else None,
@@ -63,7 +64,7 @@ async def search(
 
 
 def display(data, unit: str):
-    format = os.environ["DIRACX_OUTPUT_FORMAT"]
+    format = os.environ["DIRACX_OUTPUT_FORMAT"].lower()
     if format == "json":
         print(json.dumps(data, indent=2))
     elif format == "rich":
