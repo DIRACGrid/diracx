@@ -11,6 +11,13 @@ dependencies:
   - azure-core
   - cachetools
   ########
+  # Building the docker image on some system may fail
+  # as long as this bug is still present
+  # https://github.com/DaanDeMeyer/reproc/pull/103
+  # or that this is merged
+  # https://github.com/conda-forge/reproc-feedstock/pull/10
+  # If it does, we need to comment out `dirac-grid` here
+  # and install it via pip
   - dirac-grid
   - m2crypto >=0.38.0
   - python-gfal2
