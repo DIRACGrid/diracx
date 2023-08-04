@@ -1,0 +1,42 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  dirac-integration-tests:
+    name: DIRAC Integration tests
+    if: github.repository == 'DIRACGrid/diracx'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dirac-branch:
+          - integration
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Prepare environment
+        run: |
+          pip install typer pyyaml gitpython packaging
+          #git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          git clone https://github.com/chaen/DIRAC.git -b "getToken_integration" /tmp/DIRACRepo
+      - name: Run tests
+        run: |
+          # We need to cd in the directory for the integration_tests.py to work
+          diracxDir=$(pwd)
+          cd /tmp/DIRACRepo
+          ./integration_tests.py create \
+            "TEST_DIRACX=Yes"\
+           --extra-module "diracx=${diracxDir}" || true
