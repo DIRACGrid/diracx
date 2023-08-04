@@ -8,31 +8,9 @@ from sqlalchemy import func, insert, select, update
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.utils import JobStatus
 
-from ..utils import BaseDB
+from ..utils import BaseDB, apply_search_filters
 from .schema import Base as JobDBBase
 from .schema import InputData, JobJDLs, Jobs
-
-
-def apply_search_filters(table, stmt, search):
-    # Apply any filters
-    for query in search:
-        column = table.columns[query["parameter"]]
-        if query["operator"] == "eq":
-            expr = column == query["value"]
-        elif query["operator"] == "neq":
-            expr = column != query["value"]
-        elif query["operator"] == "gt":
-            expr = column > query["value"]
-        elif query["operator"] == "lt":
-            expr = column < query["value"]
-        elif query["operator"] == "in":
-            expr = column.in_(query["values"])
-        elif query["operator"] in "like":
-            expr = column.like(query["values"])
-        else:
-            raise InvalidQueryError(f"Unknown filter {query=}")
-        stmt = stmt.where(expr)
-    return stmt
 
 
 class JobDB(BaseDB):

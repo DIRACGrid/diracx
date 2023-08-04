@@ -41,6 +41,10 @@ class ConfigSourceUrl(AnyUrl):
 
 
 class ConfigSource(metaclass=ABCMeta):
+    """
+    This classe is the one
+    """
+
     __registry: dict[str, type[ConfigSource]] = {}
     scheme: str
 
