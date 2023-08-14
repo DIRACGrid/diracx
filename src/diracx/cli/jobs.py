@@ -104,9 +104,5 @@ def display_rich(data, unit: str) -> None:
 @app.async_command()
 async def submit(jdl: list[FileText]):
     async with Dirac(endpoint="http://localhost:8000") as api:
-        jobs = await api.jobs.submit_bulk_jobs(
-            [x.read() for x in jdl], headers=get_auth_headers()
-        )
-    print(
-        f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
-    )
+        jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl], headers=get_auth_headers())
+    print(f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}")

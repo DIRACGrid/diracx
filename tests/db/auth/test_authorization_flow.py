@@ -28,20 +28,14 @@ async def test_insert_id_token(auth_db: AuthDB):
 
     async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
-            code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
-                uuid, id_token, EXPIRED
-            )
-        code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
-            uuid, id_token, MAX_VALIDITY
-        )
+            code, redirect_uri = await auth_db.authorization_flow_insert_id_token(uuid, id_token, EXPIRED)
+        code, redirect_uri = await auth_db.authorization_flow_insert_id_token(uuid, id_token, MAX_VALIDITY)
         assert redirect_uri == "redirect_uri"
 
     # Cannot add a id_token a second time
     async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
-            await auth_db.authorization_flow_insert_id_token(
-                uuid, id_token, MAX_VALIDITY
-            )
+            await auth_db.authorization_flow_insert_id_token(uuid, id_token, MAX_VALIDITY)
 
     async with auth_db as auth_db:
         with pytest.raises(NoResultFound):
@@ -52,9 +46,7 @@ async def test_insert_id_token(auth_db: AuthDB):
     # Cannot add a id_token after finishing the flow
     async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
-            await auth_db.authorization_flow_insert_id_token(
-                uuid, id_token, MAX_VALIDITY
-            )
+            await auth_db.authorization_flow_insert_id_token(uuid, id_token, MAX_VALIDITY)
 
     # We shouldn't be able to retrieve it twice
     async with auth_db as auth_db:

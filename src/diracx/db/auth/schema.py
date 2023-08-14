@@ -1,10 +1,6 @@
 from enum import Enum, auto
 
-from sqlalchemy import (
-    JSON,
-    String,
-    Uuid,
-)
+from sqlalchemy import JSON, String, Uuid
 from sqlalchemy.orm import declarative_base
 
 from ..utils import Column, DateNowColumn, EnumColumn, NullColumn

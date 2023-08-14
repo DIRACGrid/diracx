@@ -6,7 +6,7 @@
 # --------------------------------------------------------------------------
 
 import datetime
-from typing import Any, List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from .. import _serialization
 
@@ -105,9 +105,7 @@ class HTTPValidationError(_serialization.Model):
         "detail": {"key": "detail", "type": "[ValidationError]"},
     }
 
-    def __init__(
-        self, *, detail: Optional[List["_models.ValidationError"]] = None, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, detail: Optional[List["_models.ValidationError"]] = None, **kwargs: Any) -> None:
         """
         :keyword detail: Detail.
         :paramtype detail: list[~client.models.ValidationError]
@@ -212,13 +210,7 @@ class InsertedJob(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        job_id: int,
-        status: str,
-        minor_status: str,
-        time_stamp: datetime.datetime,
-        **kwargs: Any
+        self, *, job_id: int, status: str, minor_status: str, time_stamp: datetime.datetime, **kwargs: Any
     ) -> None:
         """
         :keyword job_id: Jobid. Required.
@@ -308,9 +300,7 @@ class JobStatusReturn(_serialization.Model):
         "status": {"key": "status", "type": "str"},
     }
 
-    def __init__(
-        self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any
-    ) -> None:
+    def __init__(self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any) -> None:
         """
         :keyword job_id: Job Id. Required.
         :paramtype job_id: int
@@ -345,9 +335,7 @@ class JobStatusUpdate(_serialization.Model):
         "status": {"key": "status", "type": "str"},
     }
 
-    def __init__(
-        self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any
-    ) -> None:
+    def __init__(self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any) -> None:
         """
         :keyword job_id: Job Id. Required.
         :paramtype job_id: int
@@ -381,11 +369,7 @@ class JobSummaryParams(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        grouping: List[str],
-        search: List["_models.JobSummaryParamsSearchItem"] = [],
-        **kwargs: Any
+        self, *, grouping: List[str], search: List["_models.JobSummaryParamsSearchItem"] = [], **kwargs: Any
     ) -> None:
         """
         :keyword grouping: Grouping. Required.
@@ -435,12 +419,7 @@ class ScalarSearchSpec(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        parameter: str,
-        operator: Union[str, "_models.ScalarSearchOperator"],
-        value: str,
-        **kwargs: Any
+        self, *, parameter: str, operator: Union[str, "_models.ScalarSearchOperator"], value: str, **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.
@@ -478,9 +457,7 @@ class SortSpec(_serialization.Model):
         "direction": {"key": "direction", "type": "SortSpecDirection"},
     }
 
-    def __init__(
-        self, *, parameter: str, direction: "_models.SortSpecDirection", **kwargs: Any
-    ) -> None:
+    def __init__(self, *, parameter: str, direction: "_models.SortSpecDirection", **kwargs: Any) -> None:
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
@@ -527,9 +504,7 @@ class TokenResponse(_serialization.Model):
         "state": {"key": "state", "type": "str"},
     }
 
-    def __init__(
-        self, *, access_token: str, expires_in: int, state: str, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, access_token: str, expires_in: int, state: str, **kwargs: Any) -> None:
         """
         :keyword access_token: Access Token. Required.
         :paramtype access_token: str
@@ -569,14 +544,7 @@ class ValidationError(_serialization.Model):
         "type": {"key": "type", "type": "str"},
     }
 
-    def __init__(
-        self,
-        *,
-        loc: List["_models.ValidationErrorLocItem"],
-        msg: str,
-        type: str,
-        **kwargs: Any
-    ) -> None:
+    def __init__(self, *, loc: List["_models.ValidationErrorLocItem"], msg: str, type: str, **kwargs: Any) -> None:
         """
         :keyword loc: Location. Required.
         :paramtype loc: list[~client.models.ValidationErrorLocItem]
@@ -627,12 +595,7 @@ class VectorSearchSpec(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        parameter: str,
-        operator: Union[str, "_models.VectorSearchOperator"],
-        values: List[str],
-        **kwargs: Any
+        self, *, parameter: str, operator: Union[str, "_models.VectorSearchOperator"], values: List[str], **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.

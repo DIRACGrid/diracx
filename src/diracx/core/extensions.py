@@ -17,9 +17,7 @@ def extensions_by_priority() -> Iterator[str]:
         yield module_name
 
 
-def select_from_extension(
-    *, group: str, name: str | None = None
-) -> Iterator[EntryPoint]:
+def select_from_extension(*, group: str, name: str | None = None) -> Iterator[EntryPoint]:
     """Select entry points by group and name, in order of priority.
 
     Similar to ``importlib.metadata.entry_points.select`` except only modules

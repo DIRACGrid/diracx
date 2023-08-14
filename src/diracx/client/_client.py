@@ -40,28 +40,18 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self, *, endpoint: str = "", **kwargs: Any
     ) -> None:
         self._config = DiracConfiguration(**kwargs)
-        self._client: PipelineClient = PipelineClient(
-            base_url=endpoint, config=self._config, **kwargs
-        )
+        self._client: PipelineClient = PipelineClient(base_url=endpoint, config=self._config, **kwargs)
 
-        client_models = {
-            k: v for k, v in _models.__dict__.items() if isinstance(v, type)
-        }
+        client_models = {k: v for k, v in _models.__dict__.items() if isinstance(v, type)}
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
-        self.well_known = WellKnownOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
+        self.well_known = WellKnownOperations(self._client, self._config, self._serialize, self._deserialize)
         self.auth = AuthOperations(  # pylint: disable=abstract-class-instantiated
             self._client, self._config, self._serialize, self._deserialize
         )
-        self.config = ConfigOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.jobs = JobsOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
+        self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         """Runs the network request through the client's chained policies.

@@ -34,9 +34,7 @@ async def test_insert_and_summary(dummy_db: DummyDB):
         assert owner_id
 
         # Add cars, belonging to the same guy
-        result = await asyncio.gather(
-            *(dummy_db.insert_car(uuid4(), f"model_{i}", owner_id) for i in range(10))
-        )
+        result = await asyncio.gather(*(dummy_db.insert_car(uuid4(), f"model_{i}", owner_id) for i in range(10)))
         assert result
 
     # Check that there are now 10 cars assigned to a single driver
@@ -47,9 +45,7 @@ async def test_insert_and_summary(dummy_db: DummyDB):
 
     # Test the selection
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(
-            ["ownerID"], [{"parameter": "model", "operator": "eq", "value": "model_1"}]
-        )
+        result = await dummy_db.summary(["ownerID"], [{"parameter": "model", "operator": "eq", "value": "model_1"}])
 
         assert result[0]["count"] == 1
 

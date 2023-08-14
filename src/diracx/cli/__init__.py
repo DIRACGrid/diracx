@@ -23,9 +23,7 @@ EXPIRES_GRACE_SECONDS = 15
 async def login(
     vo: str,
     group: Optional[str] = None,
-    property: Optional[list[str]] = Option(
-        None, help="Override the default(s) with one or more properties"
-    ),
+    property: Optional[list[str]] = Option(None, help="Override the default(s) with one or more properties"),
 ):
     scopes = [f"vo:{vo}"]
     if group:
@@ -61,9 +59,7 @@ async def login(
             raise RuntimeError("Device authorization flow expired")
 
     CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    expires = datetime.now(tz=timezone.utc) + timedelta(
-        seconds=response.expires_in - EXPIRES_GRACE_SECONDS
-    )
+    expires = datetime.now(tz=timezone.utc) + timedelta(seconds=response.expires_in - EXPIRES_GRACE_SECONDS)
     credential_data = {
         "access_token": response.access_token,
         # TODO: "refresh_token":

@@ -47,11 +47,7 @@ def generate_cs(
         IdP=IdpConfig(URL=idp_url, ClientID=idp_client_id),
         DefaultGroup=user_group,
         Users={},
-        Groups={
-            user_group: GroupConfig(
-                JobShare=None, Properties=["NormalUser"], Quota=None, Users=[]
-            )
-        },
+        Groups={user_group: GroupConfig(JobShare=None, Properties=["NormalUser"], Quota=None, Users=[])},
     )
     config = Config(
         Registry={vo: registry},
@@ -105,7 +101,5 @@ def add_user(
     config_data = json.loads(config.json(exclude_unset=True))
     yaml_path.write_text(yaml.safe_dump(config_data))
     repo.index.add([yaml_path.relative_to(repo_path)])
-    repo.index.commit(
-        f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}"
-    )
+    repo.index.commit(f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}")
     typer.echo(f"Successfully added user to {config_repo}", err=True)

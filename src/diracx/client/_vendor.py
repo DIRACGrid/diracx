@@ -14,16 +14,12 @@ def _format_url_section(template, **kwargs):
         except KeyError as key:
             # Need the cast, as for some reasons "split" is typed as list[str | Any]
             formatted_components = cast(List[str], template.split("/"))
-            components = [
-                c for c in formatted_components if "{}".format(key.args[0]) not in c
-            ]
+            components = [c for c in formatted_components if "{}".format(key.args[0]) not in c]
             template = "/".join(components)
 
 
 def raise_if_not_implemented(cls, abstract_methods):
-    not_implemented = [
-        f for f in abstract_methods if not callable(getattr(cls, f, None))
-    ]
+    not_implemented = [f for f in abstract_methods if not callable(getattr(cls, f, None))]
     if not_implemented:
         raise NotImplementedError(
             "The following methods on operation group '{}' are not implemented: '{}'."

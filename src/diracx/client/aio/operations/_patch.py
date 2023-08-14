@@ -10,19 +10,17 @@ import io
 import json
 from typing import Any, List
 
-from azure.core.rest import HttpRequest
-from azure.core.exceptions import map_error, HttpResponseError
+from azure.core.exceptions import HttpResponseError, map_error
 from azure.core.pipeline import PipelineResponse
-from azure.core.utils import case_insensitive_dict
+from azure.core.rest import HttpRequest
 from azure.core.tracing.decorator_async import distributed_trace_async
+from azure.core.utils import case_insensitive_dict
 
 from ...operations._operations import _SERIALIZER, _format_url_section
-from ._operations import (
-    AuthOperations as AuthOperationsGenerated,
-    JobsOperations as JobsOperationsGenerated,
-    _models,
-    JSON,
-)
+from ._operations import JSON
+from ._operations import AuthOperations as AuthOperationsGenerated
+from ._operations import JobsOperations as JobsOperationsGenerated
+from ._operations import _models
 
 __all__: List[str] = [
     "AuthOperations",
@@ -69,10 +67,8 @@ class AuthOperations(AuthOperationsGenerated):
         request.url = self._client.format_url(request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            await self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response

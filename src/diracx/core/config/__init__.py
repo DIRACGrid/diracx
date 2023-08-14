@@ -96,9 +96,7 @@ class LocalGitConfigSource(ConfigSource):
         repo_location = Path(backend_url.path)
         self.repo_location = repo_location
         self.repo = git.Repo(repo_location)
-        self._latest_revision_cache: Cache = TTLCache(
-            MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
-        )
+        self._latest_revision_cache: Cache = TTLCache(MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL)
         self._read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
 
     def __hash__(self):
@@ -115,9 +113,7 @@ class LocalGitConfigSource(ConfigSource):
         except git.exc.ODBError as e:  # type: ignore
             raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
         modified = rev.committed_datetime.astimezone(timezone.utc)
-        logger.debug(
-            "Latest revision for %s is %s with mtime %s", self, rev.hexsha, modified
-        )
+        logger.debug("Latest revision for %s is %s with mtime %s", self, rev.hexsha, modified)
         return rev.hexsha, modified
 
     @cachedmethod(lambda self: self._read_raw_cache)

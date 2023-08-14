@@ -25,9 +25,7 @@ async def test_device_user_code_collision(auth_db: AuthDB, monkeypatch):
 
     # First insert should work
     async with auth_db as auth_db:
-        code, device = await auth_db.insert_device_flow(
-            "client_id", "scope", "audience"
-        )
+        code, device = await auth_db.insert_device_flow("client_id", "scope", "audience")
         assert code == "A" * USER_CODE_LENGTH
         assert device
 
@@ -38,9 +36,7 @@ async def test_device_user_code_collision(auth_db: AuthDB, monkeypatch):
     monkeypatch.setattr(secrets, "choice", lambda _: "B")
 
     async with auth_db as auth_db:
-        code, device = await auth_db.insert_device_flow(
-            "client_id", "scope", "audience"
-        )
+        code, device = await auth_db.insert_device_flow("client_id", "scope", "audience")
         assert code == "B" * USER_CODE_LENGTH
         assert device
 
@@ -56,12 +52,8 @@ async def test_device_flow_lookup(auth_db: AuthDB, monkeypatch):
 
     # First insert
     async with auth_db as auth_db:
-        user_code1, device_code1 = await auth_db.insert_device_flow(
-            "client_id1", "scope1", "audience1"
-        )
-        user_code2, device_code2 = await auth_db.insert_device_flow(
-            "client_id2", "scope2", "audience2"
-        )
+        user_code1, device_code1 = await auth_db.insert_device_flow("client_id1", "scope1", "audience1")
+        user_code2, device_code2 = await auth_db.insert_device_flow("client_id2", "scope2", "audience2")
 
         assert user_code1 != user_code2
 
@@ -83,19 +75,13 @@ async def test_device_flow_lookup(auth_db: AuthDB, monkeypatch):
 
     async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
-            await auth_db.device_flow_insert_id_token(
-                user_code1, {"token": "mytoken"}, EXPIRED
-            )
+            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"}, EXPIRED)
 
-        await auth_db.device_flow_insert_id_token(
-            user_code1, {"token": "mytoken"}, MAX_VALIDITY
-        )
+        await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"}, MAX_VALIDITY)
 
         # We should not be able to insert a id_token a second time
         with pytest.raises(AuthorizationError):
-            await auth_db.device_flow_insert_id_token(
-                user_code1, {"token": "mytoken2"}, MAX_VALIDITY
-            )
+            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken2"}, MAX_VALIDITY)
 
         with pytest.raises(ExpiredFlowError):
             await auth_db.get_device_flow(device_code1, EXPIRED)
@@ -112,17 +98,13 @@ async def test_device_flow_lookup(auth_db: AuthDB, monkeypatch):
     # Re-adding a token should not work after it's been minted
     async with auth_db as auth_db:
         with pytest.raises(AuthorizationError):
-            await auth_db.device_flow_insert_id_token(
-                user_code1, {"token": "mytoken"}, MAX_VALIDITY
-            )
+            await auth_db.device_flow_insert_id_token(user_code1, {"token": "mytoken"}, MAX_VALIDITY)
 
 
 async def test_device_flow_insert_id_token(auth_db: AuthDB):
     # First insert
     async with auth_db as auth_db:
-        user_code, device_code = await auth_db.insert_device_flow(
-            "client_id", "scope", "audience"
-        )
+        user_code, device_code = await auth_db.insert_device_flow("client_id", "scope", "audience")
 
     # Make sure it exists, and is Pending
     async with auth_db as auth_db:

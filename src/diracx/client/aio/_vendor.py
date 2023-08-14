@@ -5,9 +5,7 @@
 
 
 def raise_if_not_implemented(cls, abstract_methods):
-    not_implemented = [
-        f for f in abstract_methods if not callable(getattr(cls, f, None))
-    ]
+    not_implemented = [f for f in abstract_methods if not callable(getattr(cls, f, None))]
     if not_implemented:
         raise NotImplementedError(
             "The following methods on operation group '{}' are not implemented: '{}'."

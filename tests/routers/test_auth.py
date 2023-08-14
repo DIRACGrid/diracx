@@ -68,11 +68,7 @@ async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs)
 
 async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     code_verifier = secrets.token_hex()
-    code_challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-        .decode()
-        .replace("=", "")
-    )
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().replace("=", "")
 
     r = test_client.get(
         "/auth/authorize",
@@ -97,9 +93,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.status_code == 401, r.text
 
     # Check that an invalid state returns an error
-    r = test_client.get(
-        redirect_uri, params={"code": "invalid-code", "state": "invalid-state"}
-    )
+    r = test_client.get(redirect_uri, params={"code": "invalid-code", "state": "invalid-state"})
     assert r.status_code == 400, r.text
     assert "Invalid state" in r.text
 
@@ -173,9 +167,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.status_code == 401, r.text
 
     # Check that an invalid state returns an error
-    r = test_client.get(
-        redirect_uri, params={"code": "invalid-code", "state": "invalid-state"}
-    )
+    r = test_client.get(redirect_uri, params={"code": "invalid-code", "state": "invalid-state"})
     assert r.status_code == 400, r.text
     assert "Invalid state" in r.text
 
@@ -237,10 +229,7 @@ def test_parse_scopes(vos, groups, scope, expected):
                     "DefaultGroup": "lhcb_user",
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
-                    "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
-                    },
+                    "Groups": {group: {"Properties": ["NormalUser"], "Users": []} for group in groups},
                 }
                 for vo in vos
             },
@@ -272,10 +261,7 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
                     "DefaultGroup": "lhcb_user",
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
-                    "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
-                    },
+                    "Groups": {group: {"Properties": ["NormalUser"], "Users": []} for group in groups},
                 }
                 for vo in vos
             },

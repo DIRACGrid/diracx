@@ -115,25 +115,17 @@ def test_insert_and_search(normal_user_client):
 
     r = normal_user_client.post(
         "/jobs/search",
-        json={
-            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]
-        },
+        json={"search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]},
     )
     assert r.status_code == 200, r.json()
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
 
-    r = normal_user_client.post(
-        "/jobs/search", json={"parameters": ["JobID", "Status"]}
-    )
+    r = normal_user_client.post("/jobs/search", json={"parameters": ["JobID", "Status"]})
     assert r.status_code == 200, r.json()
-    assert r.json() == [
-        {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
-    ]
+    assert r.json() == [{"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids]
 
     # Test /jobs/summary
-    r = normal_user_client.post(
-        "/jobs/summary", json={"grouping": ["Status", "OwnerDN"]}
-    )
+    r = normal_user_client.post("/jobs/summary", json={"grouping": ["Status", "OwnerDN"]})
     assert r.status_code == 200, r.json()
     assert r.json() == [{"Status": "RECEIVED", "OwnerDN": "ownerDN", "count": 1}]
 
