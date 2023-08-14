@@ -17,6 +17,12 @@ exclude = ["src/diracx/client/"]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
 
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+
 [tool.mypy]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 exclude = ["^src/diracx/client", "^tests/", "^build/"]
