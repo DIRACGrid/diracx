@@ -18,12 +18,16 @@ repos:
       - id: ruff
         args: ["--fix"]
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+  - repo: https://github.com/ikamensh/flynt/
+    rev: "1.0.1"
     hooks:
-      - id: isort
-        args: ["--profile", "black", "--filter-files"]
-        name: isort (python)
+      - id: flynt
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.10.1
+    hooks:
+    -   id: pyupgrade
+        args: ["--py311-plus"]
 
   - repo: https://github.com/psf/black
     rev: 23.7.0
