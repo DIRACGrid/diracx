@@ -9,7 +9,7 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 from typing import Any, List
 
 # Add all objects you want publicly available to users at this package level
-__all__: List[str] = ["DeviceFlowErrorResponse"]
+__all__: list[str] = ["DeviceFlowErrorResponse"]
 
 from .. import _serialization
 from . import _models

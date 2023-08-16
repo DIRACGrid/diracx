@@ -13,9 +13,8 @@ from diracx.core.exceptions import (
 )
 
 from ..utils import BaseDB, substract_date
-from .schema import AuthorizationFlows
+from .schema import AuthorizationFlows, DeviceFlows, FlowStatus
 from .schema import Base as AuthDBBase
-from .schema import DeviceFlows, FlowStatus
 
 # https://datatracker.ietf.org/doc/html/rfc8628#section-6.1
 USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ"

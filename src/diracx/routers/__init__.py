@@ -3,8 +3,9 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+from collections.abc import AsyncGenerator, Iterable
 from functools import partial
-from typing import AsyncContextManager, AsyncGenerator, Iterable, TypeVar
+from typing import AsyncContextManager, TypeVar
 
 import dotenv
 from fastapi import APIRouter, Depends, Request

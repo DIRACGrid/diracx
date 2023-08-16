@@ -5,9 +5,10 @@ __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 import contextlib
 import os
 from abc import ABCMeta
+from collections.abc import AsyncIterator
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING, AsyncIterator, Self
+from typing import TYPE_CHECKING, Self
 
 from pydantic import parse_obj_as
 from sqlalchemy import Column as RawColumn

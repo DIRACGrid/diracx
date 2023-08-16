@@ -15,7 +15,7 @@ from azure.core.tracing.decorator import distributed_trace
 from .. import models as _models
 from ._operations import AuthOperations as AuthOperationsGenerated
 
-__all__: List[str] = ["AuthOperations"]  # Add all objects you want publicly available to users at this package level
+__all__: list[str] = ["AuthOperations"]  # Add all objects you want publicly available to users at this package level
 
 
 def patch_sdk():
@@ -29,5 +29,5 @@ def patch_sdk():
 
 class AuthOperations(AuthOperationsGenerated):
     @distributed_trace
-    def token(self, vo: str, **kwargs: Any) -> Union[Any, _models.HTTPValidationError]:
+    def token(self, vo: str, **kwargs: Any) -> Any | _models.HTTPValidationError:
         raise NotImplementedError("TODO")

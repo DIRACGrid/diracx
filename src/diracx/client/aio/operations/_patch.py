@@ -22,7 +22,7 @@ from ._operations import AuthOperations as AuthOperationsGenerated
 from ._operations import JobsOperations as JobsOperationsGenerated
 from ._operations import _models
 
-__all__: List[str] = [
+__all__: list[str] = [
     "AuthOperations",
     "JobsOperations",
 ]  # Add all objects you want publicly available to users at this package level
@@ -91,7 +91,7 @@ class JobsOperations(JobsOperationsGenerated):
         search: list[str] | None = None,
         sort: list[str] | None = None,
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> list[JSON]:
         """TODO"""
         body = {}
         if parameters is not None:
@@ -112,7 +112,7 @@ class JobsOperations(JobsOperationsGenerated):
         grouping: list[str] | None = None,
         search: list[str] | None = None,
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> list[JSON]:
         """TODO"""
         body = {}
         if grouping is not None:

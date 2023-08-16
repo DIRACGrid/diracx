@@ -1,12 +1,10 @@
-from __future__ import absolute_import
-
 __all__ = ("select_from_extension",)
 
 import os
 from collections import defaultdict
+from collections.abc import Iterator
 from importlib.metadata import EntryPoint, entry_points
 from importlib.util import find_spec
-from typing import Iterator
 
 
 def extensions_by_priority() -> Iterator[str]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import inspect
 import operator
-from typing import Callable
+from collections.abc import Callable
 
 from diracx.core.extensions import select_from_extension
 
