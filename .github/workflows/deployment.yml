@@ -1,0 +1,128 @@
+name: Deployment
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      check-ci:
+        description: "Require the CI to have passed for this commit"
+        required: true
+        default: "yes"
+      version:
+        description: "Override the release version number (e.g. 8.0.0a5)"
+
+jobs:
+  deploy-pypi:
+    name: PyPI deployment
+    runs-on: "ubuntu-latest"
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing on pypi
+      actions: write
+      checks: write
+      contents: write
+      deployments: write
+      discussions: write
+      issues: write
+      packages: write
+      pages: write
+      pull-requests: write
+      repository-projects: write
+      security-events: write
+      statuses: write
+    defaults:
+      run:
+        # We need extglob for REFERENCE_BRANCH substitution
+        shell: bash -l -O extglob {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ github.token }}
+      - run: |
+          git fetch --prune --unshallow
+          git config --global user.email "ci@diracgrid.org"
+          git config --global user.name "DIRACGrid CI"
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+      - name: Installing dependencies
+        run: |
+          python -m pip install \
+              build \
+              python-dateutil \
+              pytz \
+              readme_renderer[md] \
+              requests \
+              setuptools_scm
+      - name: Validate README for PyPI
+        run: |
+          python -m readme_renderer README.md -o /tmp/README.html
+      - name: Prepare release notes
+        run: |
+          set -xeuo pipefail
+          IFS=$'\n\t'
+          # Needed for the advanced patter matching used in REFERENCE_BRANCH
+          PREV_VERSION=$(git describe --tags --abbrev=0)
+          # In case of manual trigger,
+          # GITHUB_REF is of the form refs/heads/main -> we want main
+          # In case of PR it is of the form refs/pull/59/merge -> we want pull/59/merge
+          REFERENCE_BRANCH=${GITHUB_REF##refs*(/heads)/}
+          echo "Making release notes for ${REFERENCE_BRANCH} since ${PREV_VERSION}"
+          (git log ${PREV_VERSION}...${REFERENCE_BRANCH} --oneline --no-merges --) > release.notes.new
+          cat release.notes.new
+      - name: Create tag if required
+        id: check-tag
+        run: |
+          set -xeuo pipefail
+          IFS=$'\n\t'
+          # Only do a real release for workflow_dispatch events
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Will create a real release"
+            export NEW_VERSION="v${{ github.event.inputs.version }}"
+            if [[ "${NEW_VERSION}" == "v" ]]; then
+              # If version wasn't given as an input to the workflow, use setuptools_scm to guess while removing "dev" portion of the version number
+              NEW_VERSION=v$(python -m setuptools_scm | sed 's@Guessed Version @@g' | sed -E 's@(\.dev|\+g).+@@g')
+              export NEW_VERSION
+            fi
+            echo "Release will be named $NEW_VERSION"
+            # Validate the version
+            # Ensure the version doesn't look like a PEP-440 "dev release" (which might happen if the automatic version bump has issues)
+            python -c $'from packaging.version import Version; v = Version('"'$NEW_VERSION'"$')\nif v.is_devrelease:\n    raise ValueError(v)'
+            # Make sure we always only create pre-releases
+            python -c $'from packaging.version import Version; v = Version('"'$NEW_VERSION'"$')\nif not v.is_prerelease:\n    raise ValueError("integration should only be used for pre-releases")'
+            # Commit the release notes
+            mv release.notes release.notes.old
+            cat release.notes.old
+            (echo -e "[${NEW_VERSION}]" &&  cat release.notes.new release.notes.old) > release.notes
+            git add release.notes
+            git commit -m "docs: Add release notes for $NEW_VERSION"
+            git show
+            # Create the tag
+            git tag "$NEW_VERSION"
+            echo "create-release=true" >> $GITHUB_OUTPUT
+            echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          fi
+      - name: Build distributions
+        run: |
+          python -m build
+      - name: Make release on GitHub
+        if: steps.check-tag.outputs.create-release == 'true'
+        run: |
+          set -e
+          export NEW_VERSION=${{ steps.check-tag.outputs.new-version }}
+          REFERENCE_BRANCH=${GITHUB_REF##refs*(/heads)/}
+          echo "Pushing tagged release notes to ${REFERENCE_BRANCH}"
+          git push "origin" "${REFERENCE_BRANCH}"
+          echo "Making GitHub release for ${NEW_VERSION}"
+          .github/workflows/make_release.py \
+            --repo="${{ github.repository }}" \
+            --token="${{ secrets.GITHUB_TOKEN }}" \
+            --version="${NEW_VERSION}" \
+            --rev="$(git rev-parse HEAD)" \
+            --release-notes-fn="release.notes.new"
+      # Use trusted publisher for pypi
+      # https://docs.pypi.org/trusted-publishers/
+      - name: Publish package on PyPI
+        if: steps.check-tag.outputs.create-release == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
