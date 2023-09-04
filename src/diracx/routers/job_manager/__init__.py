@@ -272,6 +272,57 @@ async def get_bulk_job_status(job_ids: Annotated[list[int], Query(max_items=10)]
 async def set_status_bulk(job_update: list[JobStatusUpdate]) -> list[JobStatusReturn]:
     return [{"job_id": job.job_id, "status": job.status} for job in job_update]
 
+@router.post("/reschedule")
+async def reschedule_bulk_jobs(
+    job_ids: Annotated[list[int], Query()],
+    job_db: JobDB
+    ):
+    rescheduled_jobs = []
+    #TODO: 
+    #validJobList, invalidJobList, nonauthJobList, ownerJobList = self.jobPolicy.evaluateJobRights(
+    #        jobList, RIGHT_RESCHEDULE
+    #    )
+    # For the moment all jobs are valid:
+    valid_job_list = job_ids
+    for job_id in valid_job_list:
+        #TODO: delete job in TaskQueueDB
+        #self.taskQueueDB.deleteJob(jobID)
+        result = job_db.rescheduleJob(job_id)
+        #TODO: add reschedule logging in JobLoggingDB
+        # self.jobLoggingDB.addLoggingRecord(
+        #         result["JobID"],
+        #         status=result["Status"],
+        #         minorStatus=result["MinorStatus"],
+        #         applicationStatus="Unknown",
+        #         source="JobManager",
+        #     )
+        if result:
+            rescheduled_jobs.append(job_id)
+    # To uncomment when jobPolicy is setup:
+    # if invalid_job_list or non_auth_job_list:
+    #     logging.error("Some jobs failed to reschedule")
+    #     if invalid_job_list:
+    #         logging.info(f"Invalid jobs: {invalid_job_list}")
+    #     if non_auth_job_list:
+    #         logging.info(f"Non authorized jobs: {nonauthJobList}")
+
+    #TODO: send jobs to OtimizationMind
+    #  self.__sendJobsToOptimizationMind(validJobList)
+    return rescheduled_jobs
+
+@router.post("/{job_id}/reschedule")
+async def reschedule_single_job(
+    job_id: int,
+    job_db: JobDB
+):
+    try:
+        result = await job_db.rescheduleJob(job_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=str(e)
+        ) from e
+    return result
 
 EXAMPLE_SEARCHES = {
     "Show all": {

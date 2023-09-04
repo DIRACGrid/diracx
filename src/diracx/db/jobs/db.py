@@ -7,7 +7,7 @@ from sqlalchemy import func, insert, select, update
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.utils import JobStatus
-
+from diracx.core.models import ScalarSearchOperator, ScalarSearchSpec
 from ..utils import BaseDB, apply_search_filters
 from .schema import Base as JobDBBase
 from .schema import InputData, JobJDLs, Jobs
@@ -242,3 +242,35 @@ class JobDB(BaseDB):
             "MinorStatus": initial_minor_status,
             "TimeStamp": datetime.now(tz=timezone.utc),
         }
+
+    async def rescheduleJob(self, job_id):
+        """Reschedule given job"""
+        result = self.search(
+            parameters=[
+                "Status",
+                "MinorStatus",
+                "VerifiedFlag",
+                "RescheduleCounter",
+                "Owner",
+                "OwnerGroup",
+            ],
+            search=[
+                ScalarSearchSpec(
+                    parameter="JobID",
+                    operator=ScalarSearchOperator.EQUAL,
+                    value=job_id
+                )
+            ],
+        )
+        if not result:
+            raise ValueError(f"Job {job_id} not found.")
+
+        job_attributes = result[0]
+
+        if "VerifiedFlag" not in job_attributes:
+            raise ValueError(f"Job {job_id} not found in the system")
+
+        if not job_attributes["VerifiedFlag"]:
+            raise ValueError(f"Job {job_id} not Verified: Status {job_attributes['Status']}, Minor Status: {job_attributes['MinorStatus']}")
+
+            

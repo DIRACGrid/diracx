@@ -208,3 +208,22 @@ def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
 def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_client):
     res = admin_user_client.post("/jobs/", json=[TEST_JDL])
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
+
+
+def test_insert_and_reschedule(normal_user_client):
+    # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+
+    submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
+
+    # Test /jobs/reschedule
+    r = normal_user_client.post(
+        "/jobs/reschedule",
+        json={
+            "JobIDs" : submitted_job_ids
+        },
+    )
+    assert r.status_code == 200, r.json()
