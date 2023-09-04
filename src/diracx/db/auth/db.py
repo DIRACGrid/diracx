@@ -268,14 +268,6 @@ class AuthDB(BaseDB):
 
         return res
 
-    async def revoke_refresh_token(self, jti: str):
-        """Revoke a token given by its JWT ID"""
-        await self.conn.execute(
-            update(RefreshTokens)
-            .where(RefreshTokens.jti == jti)
-            .values(status=RefreshTokenStatus.REVOKED)
-        )
-
     async def get_user_refresh_tokens(self, subject: str | None = None) -> list[dict]:
         """Get a list of refresh token details based on a subject ID (not revoked)"""
         # Get a list of refresh tokens
@@ -295,3 +287,19 @@ class AuthDB(BaseDB):
             refresh_tokens.append(dict(refresh_token._mapping))
 
         return refresh_tokens
+
+    async def revoke_refresh_token(self, jti: str):
+        """Revoke a token given by its JWT ID"""
+        await self.conn.execute(
+            update(RefreshTokens)
+            .where(RefreshTokens.jti == jti)
+            .values(status=RefreshTokenStatus.REVOKED)
+        )
+
+    async def revoke_user_refresh_tokens(self, subject):
+        """Revoke all the refresh tokens belonging to a user (subject ID)"""
+        await self.conn.execute(
+            update(RefreshTokens)
+            .where(RefreshTokens.sub == subject)
+            .values(status=RefreshTokenStatus.REVOKED)
+        )

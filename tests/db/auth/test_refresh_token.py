@@ -66,27 +66,6 @@ async def test_get(auth_db: AuthDB):
     assert result == refresh_token_details
 
 
-async def test_revoke(auth_db: AuthDB):
-    """Insert a refresh token in the DB, revoke it, and make sure it appears as REVOKED in the db"""
-    # Insert a refresh token details
-    async with auth_db as auth_db:
-        jti, _ = await auth_db.insert_refresh_token(
-            "subject",
-            "username",
-            "scope",
-        )
-
-    # Revoke the token
-    async with auth_db as auth_db:
-        await auth_db.revoke_refresh_token(jti)
-
-    # Make sure it is revoked
-    async with auth_db as auth_db:
-        refresh_token_details = await auth_db.get_refresh_token(jti)
-
-    assert refresh_token_details["status"] == RefreshTokenStatus.REVOKED
-
-
 async def test_get_user_refresh_tokens(auth_db: AuthDB):
     """Insert refresh tokens belonging to different users in the DB and
     get the refresh tokens of each user
@@ -121,6 +100,68 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
     assert len(refresh_tokens_user2) == 1
     for refresh_token in refresh_tokens_user2:
         assert refresh_token["sub"] == sub2
+
+
+async def test_revoke(auth_db: AuthDB):
+    """Insert a refresh token in the DB, revoke it, and make sure it appears as REVOKED in the db"""
+    # Insert a refresh token details
+    async with auth_db as auth_db:
+        jti, _ = await auth_db.insert_refresh_token(
+            "subject",
+            "username",
+            "scope",
+        )
+
+    # Revoke the token
+    async with auth_db as auth_db:
+        await auth_db.revoke_refresh_token(jti)
+
+    # Make sure it is revoked
+    async with auth_db as auth_db:
+        refresh_token_details = await auth_db.get_refresh_token(jti)
+
+    assert refresh_token_details["status"] == RefreshTokenStatus.REVOKED
+
+
+async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
+    """Insert refresh tokens in the DB, revoke them, and make sure it appears as REVOKED in the db"""
+    # Two users
+    sub1 = "subject1"
+    sub2 = "subject2"
+
+    # Insert tokens
+    # - 2 of them belongs to sub1
+    # - 1 of them belongs to sub2
+    subjects = [sub1, sub1, sub2]
+    async with auth_db as auth_db:
+        for sub in subjects:
+            await auth_db.insert_refresh_token(
+                sub,
+                "username",
+                "scope",
+            )
+
+    # Revoke the tokens of sub1
+    async with auth_db as auth_db:
+        await auth_db.revoke_user_refresh_tokens(sub1)
+
+    # Make sure they are revoked (but not the ones belonging to sub2)
+    async with auth_db as auth_db:
+        refresh_token_details = await auth_db.get_user_refresh_tokens(sub1)
+        assert len(refresh_token_details) == 0
+        refresh_token_details = await auth_db.get_user_refresh_tokens(sub2)
+        assert len(refresh_token_details) == 1
+
+    # Revoke the tokens of sub2
+    async with auth_db as auth_db:
+        await auth_db.revoke_user_refresh_tokens(sub2)
+
+    # Make sure they are all revoked
+    async with auth_db as auth_db:
+        refresh_token_details = await auth_db.get_user_refresh_tokens(sub1)
+        assert len(refresh_token_details) == 0
+        refresh_token_details = await auth_db.get_user_refresh_tokens(sub2)
+        assert len(refresh_token_details) == 0
 
 
 async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):

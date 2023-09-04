@@ -852,13 +852,8 @@ async def get_oidc_token_info_from_refresh_flow(
     # In such case, all the refresh tokens bound to a given user (subject) should be revoked
     # Forcing the user to reauthenticate interactively through an authorization/device flow (recommended practice)
     if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
-        # Get all the user tokens from the subject
-        res = await auth_db.get_user_refresh_tokens(sub)
-
-        # Revoke each of them
-        for refresh_token_to_revoke in res:
-            await auth_db.revoke_refresh_token(refresh_token_to_revoke["jti"])
-            # TODO: what if revoke_refresh_token() raises an exception?
+        # Revoke all the user tokens from the subject
+        await auth_db.revoke_user_refresh_tokens(sub)
 
         # Commit here, otherwise the revokation operation will not be taken into account
         # as we return an error to the user
@@ -877,7 +872,7 @@ async def get_oidc_token_info_from_refresh_flow(
     oidc_token_info = {
         # The sub attribute coming from the DB contains the VO name
         # We need to remove it as if it were coming from an ID token from an external IdP
-        "sub": sub.split(":")[1],
+        "sub": sub.split(":", 1)[1],
         "preferred_username": refresh_token_attributes["preferred_username"],
     }
     scope = refresh_token_attributes["scope"]
