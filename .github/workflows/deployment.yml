@@ -43,7 +43,7 @@ jobs:
           git fetch --prune --unshallow
           git config --global user.email "ci@diracgrid.org"
           git config --global user.name "DIRACGrid CI"
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
       - name: Installing dependencies
