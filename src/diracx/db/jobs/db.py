@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, insert, select, update
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.utils import JobStatus
 from diracx.core.models import ScalarSearchOperator, ScalarSearchSpec
+from diracx.core.utils import JobStatus
+
 from ..utils import BaseDB, apply_search_filters
 from .schema import Base as JobDBBase
 from .schema import InputData, JobJDLs, Jobs
@@ -21,6 +23,11 @@ class JobDB(BaseDB):
     # but is overwriten in LHCbDIRAC, so we need
     # to find a way to make it dynamic
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
+
+    # TODO: set maxRescheduling value from CS
+    # maxRescheduling = self.getCSOption("MaxRescheduling", 3)
+    # For now:
+    maxRescheduling = 3
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = [Jobs.__table__.columns[x] for x in group_by]
@@ -256,9 +263,7 @@ class JobDB(BaseDB):
             ],
             search=[
                 ScalarSearchSpec(
-                    parameter="JobID",
-                    operator=ScalarSearchOperator.EQUAL,
-                    value=job_id
+                    parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
                 )
             ],
         )
@@ -271,6 +276,14 @@ class JobDB(BaseDB):
             raise ValueError(f"Job {job_id} not found in the system")
 
         if not job_attributes["VerifiedFlag"]:
-            raise ValueError(f"Job {job_id} not Verified: Status {job_attributes['Status']}, Minor Status: {job_attributes['MinorStatus']}")
+            raise ValueError(
+                f"Job {job_id} not Verified: Status {job_attributes['Status']}, Minor Status: {job_attributes['MinorStatus']}"
+            )
 
-            
+        reschedule_counter = int(job_attributes["RescheduleCounter"]) + 1
+
+        # TODO:
+        # self.maxRescheduling = self.getCSOption("MaxRescheduling", self.maxRescheduling)
+
+        if reschedule_counter > self.maxRescheduling:
+            logging.warn("Maximum number of reschedulings is reached", f"Job {job_id}")
