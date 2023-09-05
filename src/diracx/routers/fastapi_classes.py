@@ -35,6 +35,10 @@ class DiracFastAPI(FastAPI):
             title="Dirac",
             lifespan=lifespan,
         )
+        # FIXME: when autorest will support 3.1.0
+        # From 0.99.0, FastAPI is using openapi 3.1.0 by default
+        # This version is not supported by autorest yet
+        self.openapi_version = "3.0.2"
 
     def openapi(self, *args, **kwargs):
         if not self.openapi_schema:
@@ -45,6 +49,7 @@ class DiracFastAPI(FastAPI):
                     # remove 422 response, also can remove other status code
                     if "422" in responses:
                         del responses["422"]
+
         return self.openapi_schema
 
 
