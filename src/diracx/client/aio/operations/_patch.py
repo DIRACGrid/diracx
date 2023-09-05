@@ -39,7 +39,7 @@ def patch_sdk():
     """
 
 
-def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
+def build_token_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
@@ -56,10 +56,9 @@ def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
 class AuthOperations(AuthOperationsGenerated):
     @distributed_trace_async
     async def token(
-        self, vo: str, device_code: str, client_id: str, **kwargs
+        self, device_code: str, client_id: str, **kwargs
     ) -> _models.TokenResponse | _models.DeviceFlowErrorResponse:
         request = build_token_request(
-            vo=vo,
             data={
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 "device_code": device_code,
