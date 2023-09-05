@@ -30,7 +30,7 @@ dependencies:
   - httpx
   - isodate
   - mypy
-  - pydantic =1.10.10
+  - pydantic =1.10.12
   - pyjwt
   - pytest
   - pytest-asyncio
