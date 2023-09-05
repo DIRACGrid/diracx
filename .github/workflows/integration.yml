@@ -30,8 +30,7 @@ jobs:
       - name: Prepare environment
         run: |
           pip install typer pyyaml gitpython packaging
-          #git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
-          git clone https://github.com/chaen/DIRAC.git -b "getToken_integration" /tmp/DIRACRepo
+          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
       - name: Run tests
         run: |
           # We need to cd in the directory for the integration_tests.py to work
