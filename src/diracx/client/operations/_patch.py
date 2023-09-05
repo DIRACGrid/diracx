@@ -15,9 +15,7 @@ from azure.core.tracing.decorator import distributed_trace
 from .. import models as _models
 from ._operations import AuthOperations as AuthOperationsGenerated
 
-__all__: List[str] = [
-    "AuthOperations"
-]  # Add all objects you want publicly available to users at this package level
+__all__: List[str] = ["AuthOperations"]  # Add all objects you want publicly available to users at this package level
 
 
 def patch_sdk():

@@ -17,9 +17,7 @@ class Enum0(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 class Enum1(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum1."""
 
-    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = (
-        "urn:ietf:params:oauth:grant-type:device_code"
-    )
+    URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code"
 
 
 class Enum2(str, Enum, metaclass=CaseInsensitiveEnumMeta):

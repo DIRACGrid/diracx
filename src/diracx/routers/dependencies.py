@@ -32,6 +32,4 @@ JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]
-AvailableSecurityProperties = Annotated[
-    set[SecurityProperty], Depends(SecurityProperty.available_properties)
-]
+AvailableSecurityProperties = Annotated[set[SecurityProperty], Depends(SecurityProperty.available_properties)]

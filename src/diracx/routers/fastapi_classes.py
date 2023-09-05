@@ -19,9 +19,7 @@ class DiracFastAPI(FastAPI):
         @contextlib.asynccontextmanager
         async def lifespan(app: DiracFastAPI):
             async with contextlib.AsyncExitStack() as stack:
-                await asyncio.gather(
-                    *(stack.enter_async_context(f()) for f in app.lifetime_functions)
-                )
+                await asyncio.gather(*(stack.enter_async_context(f()) for f in app.lifetime_functions))
                 yield
 
         self.lifetime_functions = []

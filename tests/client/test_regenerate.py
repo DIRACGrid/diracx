@@ -29,9 +29,7 @@ def test_regenerate_client(test_client, tmp_path):
     assert (repo_root / ".git").is_dir()
     repo = git.Repo(repo_root)
     if repo.is_dirty(path=repo_root / "src" / "diracx" / "client"):
-        raise AssertionError(
-            "Client is currently in a modified state, skipping regeneration"
-        )
+        raise AssertionError("Client is currently in a modified state, skipping regeneration")
 
     cmd = [
         "autorest",
