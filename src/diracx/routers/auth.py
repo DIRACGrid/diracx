@@ -432,7 +432,7 @@ async def get_token_from_iam(
     token_endpoint = server_metadata["token_endpoint"]
 
     data = {
-        "grant_type": GrantType.authorization_code,
+        "grant_type": GrantType.authorization_code.value,
         "client_id": config.Registry[vo].IdP.ClientID,
         "code": code,
         "code_verifier": state["code_verifier"],
@@ -495,7 +495,7 @@ async def do_device_flow(
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
     state_for_iam = {
-        "grant_type": GrantType.device_code,
+        "grant_type": GrantType.device_code.value,
         "user_code": user_code,
     }
 
@@ -958,7 +958,7 @@ async def authorization_flow(
     state_for_iam = {
         "external_state": state,
         "uuid": uuid,
-        "grant_type": GrantType.authorization_code,
+        "grant_type": GrantType.authorization_code.value,
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
