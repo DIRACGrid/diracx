@@ -1,6 +1,8 @@
 from http import HTTPStatus
 
 import pytest
+from fastapi.testclient import TestClient
+
 
 TEST_JDL = """
     Arguments = "jobDescription.xml -o LogLevel=INFO";
@@ -210,8 +212,7 @@ def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_clie
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
 
 
-def test_insert_and_reschedule(normal_user_client):
-    # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
+def test_insert_and_reschedule(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
@@ -222,8 +223,6 @@ def test_insert_and_reschedule(normal_user_client):
     # Test /jobs/reschedule
     r = normal_user_client.post(
         "/jobs/reschedule",
-        json={
-            "JobIDs" : submitted_job_ids
-        },
+        params={"job_ids": submitted_job_ids},
     )
     assert r.status_code == 200, r.json()
