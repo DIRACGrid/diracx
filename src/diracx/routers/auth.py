@@ -686,8 +686,12 @@ def parse_and_validate_scope(
 
 @router.post("/token")
 async def token(
+    # Autorest does not support the GrantType annotation
+    # We need to specify each option with Literal[]
     grant_type: Annotated[
-        GrantType,
+        Literal[GrantType.authorization_code]
+        | Literal[GrantType.device_code]
+        | Literal[GrantType.refresh_token],
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
