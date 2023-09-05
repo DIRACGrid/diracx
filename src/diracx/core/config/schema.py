@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, PrivateAttr, root_validator
@@ -22,9 +22,7 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
         # though ideally we should parse the type hints properly.
         for field, hint in cls.__annotations__.items():
             # Convert comma separated lists to actual lists
-            if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(
-                v.get(field), str
-            ):
+            if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(v.get(field), str):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
             # If the field is optional and the value is "None" convert it to None
             if "| None" in hint and field in v:
@@ -49,12 +47,12 @@ class GroupConfig(BaseModel):
     AutoAddVOMS: bool = False
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
-    JobShare: Optional[int]
+    JobShare: int | None
     Properties: list[SecurityProperty]
-    Quota: Optional[int]
+    Quota: int | None
     Users: list[str]
     AllowBackgroundTQs: bool = False
-    VOMSRole: Optional[str]
+    VOMSRole: str | None
     AutoSyncVOMS: bool = False
 
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+from collections.abc import AsyncGenerator, Iterable
 from functools import partial
-from typing import AsyncContextManager, AsyncGenerator, Iterable, TypeVar
+from typing import AsyncContextManager, TypeVar
 
 import dotenv
 from fastapi import APIRouter, Depends, Request
@@ -59,8 +60,7 @@ def create_app_inner(
     available_db_classes: set[type[BaseDB]] = set()
     for db_name, db_url in database_urls.items():
         db_classes: list[type[BaseDB]] = [
-            entry_point.load()
-            for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
+            entry_point.load() for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
         ]
         assert db_classes, f"Could not find {db_name=}"
         # The first DB is the highest priority one
@@ -79,9 +79,7 @@ def create_app_inner(
     # Without this AutoREST generates different client sources for each ordering
     for system_name in sorted(enabled_systems):
         assert system_name not in routers
-        for entry_point in select_from_extension(
-            group="diracx.services", name=system_name
-        ):
+        for entry_point in select_from_extension(group="diracx.services", name=system_name):
             routers[system_name] = entry_point.load()
             break
         else:
@@ -92,16 +90,12 @@ def create_app_inner(
         # Ensure required settings are available
         for cls in find_dependents(router, ServiceSettingsBase):
             if cls not in available_settings_classes:
-                raise NotImplementedError(
-                    f"Cannot enable {system_name=} as it requires {cls=}"
-                )
+                raise NotImplementedError(f"Cannot enable {system_name=} as it requires {cls=}")
 
         # Ensure required DBs are available
         missing_dbs = set(find_dependents(router, BaseDB)) - available_db_classes
         if missing_dbs:
-            raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_dbs=}"
-            )
+            raise NotImplementedError(f"Cannot enable {system_name=} as it requires {missing_dbs=}")
 
         # Add the router to the application
         dependencies = []
@@ -155,18 +149,14 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
-    return JSONResponse(
-        status_code=exc.http_status_code, content={"detail": exc.detail}
-    )
+    return JSONResponse(status_code=exc.http_status_code, content={"detail": exc.detail})
 
 
 def http_response_handler(request: Request, exc: DiracHttpResponse) -> Response:
     return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
-def find_dependents(
-    obj: APIRouter | Iterable[Dependant], cls: type[T]
-) -> Iterable[type[T]]:
+def find_dependents(obj: APIRouter | Iterable[Dependant], cls: type[T]) -> Iterable[type[T]]:
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)

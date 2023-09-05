@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import inspect
 import operator
-from typing import Callable
+from collections.abc import Callable
 
 from diracx.core.extensions import select_from_extension
 
@@ -14,9 +14,7 @@ class SecurityProperty(str):
     @classmethod
     def available_properties(cls) -> set[SecurityProperty]:
         properties = set()
-        for entry_point in select_from_extension(
-            group="diracx", name="properties_module"
-        ):
+        for entry_point in select_from_extension(group="diracx", name="properties_module"):
             properties_module = entry_point.load()
             for _, obj in inspect.getmembers(properties_module):
                 if isinstance(obj, SecurityProperty):
@@ -26,23 +24,17 @@ class SecurityProperty(str):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self})"
 
-    def __and__(
-        self, value: SecurityProperty | UnevaluatedProperty
-    ) -> UnevaluatedExpression:
+    def __and__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) & value
 
-    def __or__(
-        self, value: SecurityProperty | UnevaluatedProperty
-    ) -> UnevaluatedExpression:
+    def __or__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) | value
 
-    def __xor__(
-        self, value: SecurityProperty | UnevaluatedProperty
-    ) -> UnevaluatedExpression:
+    def __xor__(self, value: SecurityProperty | UnevaluatedProperty) -> UnevaluatedExpression:
         if not isinstance(value, UnevaluatedProperty):
             value = UnevaluatedProperty(value)
         return UnevaluatedProperty(self) ^ value
