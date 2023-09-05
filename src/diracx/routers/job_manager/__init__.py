@@ -324,7 +324,9 @@ async def search(
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
     page: int = 0,
     per_page: int = 100,
-    body: Annotated[JobSearchParams | None, Body(examples=EXAMPLE_SEARCHES)] = None,
+    body: Annotated[
+        JobSearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
+    ] = None,
 ) -> list[dict[str, Any]]:
     """Retrieve information about jobs.
 
