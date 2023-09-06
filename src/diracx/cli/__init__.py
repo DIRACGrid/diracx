@@ -1,3 +1,5 @@
+# ruff: noqa: UP007  # because of https://github.com/tiangolo/typer/issues/533
+
 from __future__ import annotations
 
 import asyncio
@@ -22,8 +24,8 @@ EXPIRES_GRACE_SECONDS = 15
 @app.async_command()
 async def login(
     vo: str,
-    group: str | None = None,
-    property: list[str] | None = Option(
+    group: Optional[str] = None,
+    property: Optional[list[str]] = Option(
         None, help="Override the default(s) with one or more properties"
     ),
 ):
@@ -81,7 +83,7 @@ async def logout():
 
 
 @app.callback()
-def callback(output_format: str | None = None):
+def callback(output_format: Optional[str] = None):
     if "DIRACX_OUTPUT_FORMAT" not in os.environ:
         output_format = output_format or "RICH"
     if output_format is not None:
