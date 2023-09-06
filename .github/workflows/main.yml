@@ -27,7 +27,7 @@ jobs:
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install .
       - name: Run pytest
         run: |
@@ -47,7 +47,7 @@ jobs:
           post-cleanup: 'all'
       - name: Set up environment
         run: |
-          pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install .
       - name: Run mypy
         run: |

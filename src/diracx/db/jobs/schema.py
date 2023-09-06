@@ -46,9 +46,9 @@ class EnumBackedBool(types.TypeDecorator):
 class JobJDLs(Base):
     __tablename__ = "JobJDLs"
     JobID = Column(Integer, autoincrement=True)
-    JDL = Column(String(2**24))
+    JDL = Column(Text)
     JobRequirements = Column(Text)
-    OriginalJDL = Column(String(2**24))
+    OriginalJDL = Column(Text)
     __table_args__ = (PrimaryKeyConstraint("JobID"),)
 
 
@@ -107,8 +107,6 @@ class Jobs(Base):
             "Status",
             "MinorStatus",
             "ApplicationStatus",
-            "Status",
-            "Site",
             "LastUpdateTime",
         ),
     )

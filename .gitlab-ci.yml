@@ -10,7 +10,7 @@
     - micromamba env create --file environment.yml --name test-env
     - eval "$(micromamba shell hook --shell=bash)"
     - micromamba activate test-env
-    - pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+    - pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
     - pip install .
 
 pre-commit:

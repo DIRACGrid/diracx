@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
 
 import contextlib
+import logging
 import os
 from abc import ABCMeta
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,8 @@ from diracx.core.settings import SqlalchemyDsn
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
+
+logger = logging.getLogger(__name__)
 
 
 class utcnow(expression.FunctionElement):
@@ -86,11 +89,15 @@ class BaseDB(metaclass=ABCMeta):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:
-                db_url = os.environ[var_name]
-                if db_url == "sqlite+aiosqlite:///:memory:":
-                    db_urls[db_name] = db_url
-                else:
-                    db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
+                try:
+                    db_url = os.environ[var_name]
+                    if db_url == "sqlite+aiosqlite:///:memory:":
+                        db_urls[db_name] = db_url
+                    else:
+                        db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
+                except Exception:
+                    logger.error("Error loading URL %s for %s", db_name, db_url)
+                    raise
         return db_urls
 
     @classmethod

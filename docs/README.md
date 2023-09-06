@@ -49,7 +49,7 @@ conda activate diracx-dev
 pip install -e .
 
 # Install the patched DIRAC version
-pip install git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
 
 # Enable pre-commit
 mamba install pre-commit

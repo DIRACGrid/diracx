@@ -19,7 +19,7 @@ RUN micromamba install --yes --file diracx/environment.yml --name=base git opens
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
-RUN  pip install ./diracx git+https://github.com/chaen/DIRAC.git@chris-hack-a-ton
+RUN  pip install ./diracx git+https://github.com/DIRACGrid/DIRAC.git@integration
 # Copying in ENTRYPOINT script
 COPY --chown=$MAMBA_USER:$MAMBA_USER dockerEntrypoint.sh /
 RUN chmod 755 /dockerEntrypoint.sh

@@ -1,0 +1,53 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  dirac-integration-tests:
+    name: DIRAC Integration tests
+    if: github.repository == 'DIRACGrid/diracx'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dirac-branch:
+          - integration
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Prepare environment
+        run: |
+          pip install typer pyyaml gitpython packaging
+          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          # We need to cd in the directory for the integration_tests.py to work
+      - name: Prepare environment
+        run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --extra-module "diracx=${GITHUB_WORKSPACE}"
+      - name: Install server
+        run:  cd /tmp/DIRACRepo && ./integration_tests.py install-server
+      - name: Install client
+        run: cd /tmp/DIRACRepo && ./integration_tests.py install-client
+      - name: Server tests
+        run: cd /tmp/DIRACRepo && ./integration_tests.py test-server || touch server-tests-failed
+      - name: Client tests
+        run: cd /tmp/DIRACRepo && ./integration_tests.py test-client || touch client-tests-failed
+      - name: diracx logs
+        run: docker logs diracx
+      - name: Check test status
+        run: |
+          has_error=0
+          # TODO: set has_error=1 when we are ready to really run the tests
+          if [ -f server-tests-failed ]; then has_error=0; echo "Server tests failed"; fi
+          if [ -f client-tests-failed ]; then has_error=0; echo "Client tests failed"; fi
+          if [ ${has_error} = 1 ]; then exit 1; fi

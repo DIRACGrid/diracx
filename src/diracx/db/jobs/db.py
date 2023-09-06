@@ -103,9 +103,7 @@ class JobDB(BaseDB):
         class_ad_job,
         class_ad_req,
         owner,
-        owner_dn,
         owner_group,
-        dirac_setup,
         job_attrs,
         vo,
     ):
@@ -124,9 +122,7 @@ class JobDB(BaseDB):
             class_ad_job,
             class_ad_req,
             owner,
-            owner_dn,
             owner_group,
-            dirac_setup,
             job_attrs,
             vo,
         )
@@ -149,9 +145,7 @@ class JobDB(BaseDB):
         self,
         jdl,
         owner,
-        owner_dn,
         owner_group,
-        dirac_setup,
         initial_status,
         initial_minor_status,
         vo,
@@ -168,14 +162,10 @@ class JobDB(BaseDB):
             "LastUpdateTime": datetime.now(tz=timezone.utc),
             "SubmissionTime": datetime.now(tz=timezone.utc),
             "Owner": owner,
-            "OwnerDN": owner_dn,
             "OwnerGroup": owner_group,
-            "DIRACSetup": dirac_setup,
         }
 
-        jobManifest = returnValueOrRaise(
-            checkAndAddOwner(jdl, owner, owner_dn, owner_group, dirac_setup)
-        )
+        jobManifest = returnValueOrRaise(checkAndAddOwner(jdl, owner, owner_group))
 
         jdl = fixJDL(jdl)
 
@@ -214,9 +204,7 @@ class JobDB(BaseDB):
             class_ad_job,
             class_ad_req,
             owner,
-            owner_dn,
             owner_group,
-            dirac_setup,
             job_attrs,
             vo,
         )

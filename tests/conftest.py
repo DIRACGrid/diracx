@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from git import Repo
 
 from diracx.core.config import Config, ConfigSource
-from diracx.core.properties import NORMAL_USER
+from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_access_token
 
@@ -135,6 +135,24 @@ def normal_user_client(test_client, test_auth_settings):
         "aud": AUDIENCE,
         "iss": ISSUER,
         "dirac_properties": [NORMAL_USER],
+        "jti": str(uuid4()),
+        "preferred_username": "preferred_username",
+        "dirac_group": "test_group",
+        "vo": "lhcb",
+    }
+    token = create_access_token(payload, test_auth_settings)
+    test_client.headers["Authorization"] = f"Bearer {token}"
+    test_client.dirac_token_payload = payload
+    yield test_client
+
+
+@pytest.fixture
+def admin_user_client(test_client, test_auth_settings):
+    payload = {
+        "sub": "testingVO:yellow-sub",
+        "aud": AUDIENCE,
+        "iss": ISSUER,
+        "dirac_properties": [JOB_ADMINISTRATOR],
         "jti": str(uuid4()),
         "preferred_username": "preferred_username",
         "dirac_group": "test_group",
