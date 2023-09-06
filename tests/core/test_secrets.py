@@ -23,9 +23,7 @@ def test_token_signing_key(tmp_path):
     key_file.write_text(private_key_pem)
 
     # Test that we can load a key from a file
-    compare_keys(
-        parse_obj_as(TokenSigningKey, f"{key_file}").jwk.get_private_key(), private_key
-    )
+    compare_keys(parse_obj_as(TokenSigningKey, f"{key_file}").jwk.get_private_key(), private_key)
     compare_keys(
         parse_obj_as(TokenSigningKey, f"file://{key_file}").jwk.get_private_key(),
         private_key,

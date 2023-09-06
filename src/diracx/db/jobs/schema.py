@@ -59,9 +59,7 @@ class Jobs(Base):
     JobType = Column("JobType", String(32), default="user")
     DIRACSetup = Column("DIRACSetup", String(32), default="test")
     JobGroup = Column("JobGroup", String(32), default="00000000")
-    JobSplitType = Column(
-        "JobSplitType", Enum("Single", "Master", "Subjob", "DAGNode"), default="Single"
-    )
+    JobSplitType = Column("JobSplitType", Enum("Single", "Master", "Subjob", "DAGNode"), default="Single")
     MasterJobID = Column("MasterJobID", Integer, default=0)
     Site = Column("Site", String(100), default="ANY")
     JobName = Column("JobName", String(128), default="Unknown")
@@ -89,9 +87,7 @@ class Jobs(Base):
     OSandboxReadyFlag = Column("OSandboxReadyFlag", EnumBackedBool(), default=False)
     RetrievedFlag = Column("RetrievedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
-    AccountedFlag = Column(
-        "AccountedFlag", Enum("True", "False", "Failed"), default="False"
-    )
+    AccountedFlag = Column("AccountedFlag", Enum("True", "False", "Failed"), default="False")
 
     __table_args__ = (
         ForeignKeyConstraint(["JobID"], ["JobJDLs.JobID"]),

@@ -23,9 +23,7 @@ class SandboxMetadataDB(BaseDB):
             owner (str): user name
             owner_group (str): group of the owner
         """
-        stmt = sqlalchemy.select(sb_Owners.OwnerID).where(
-            sb_Owners.Owner == owner, sb_Owners.OwnerGroup == owner_group
-        )
+        stmt = sqlalchemy.select(sb_Owners.OwnerID).where(sb_Owners.Owner == owner, sb_Owners.OwnerGroup == owner_group)
         result = await self.conn.execute(stmt)
         if owner_id := result.scalar_one_or_none():
             return owner_id
@@ -34,9 +32,7 @@ class SandboxMetadataDB(BaseDB):
         result = await self.conn.execute(stmt)
         return result.lastrowid
 
-    async def insert(
-        self, owner: str, owner_group: str, sb_SE: str, se_PFN: str, size: int = 0
-    ) -> tuple[int, bool]:
+    async def insert(self, owner: str, owner_group: str, sb_SE: str, se_PFN: str, size: int = 0) -> tuple[int, bool]:
         """inserts a new sandbox in SandboxMetadataDB
         this is "equivalent" of DIRAC registerAndGetSandbox
 
@@ -48,9 +44,7 @@ class SandboxMetadataDB(BaseDB):
             size (int, optional): _description_. Defaults to 0.
         """
         owner_id = await self._get_put_owner(owner, owner_group)
-        stmt = sqlalchemy.insert(sb_SandBoxes).values(
-            OwnerId=owner_id, SEName=sb_SE, SEPFN=se_PFN, Bytes=size
-        )
+        stmt = sqlalchemy.insert(sb_SandBoxes).values(OwnerId=owner_id, SEName=sb_SE, SEPFN=se_PFN, Bytes=size)
         try:
             result = await self.conn.execute(stmt)
             return result.lastrowid
@@ -72,9 +66,7 @@ class SandboxMetadataDB(BaseDB):
             return sb_ID
 
     async def delete(self, sandbox_ids: list[int]) -> bool:
-        stmt: sqlalchemy.Executable = sqlalchemy.delete(sb_SandBoxes).where(
-            sb_SandBoxes.SBId.in_(sandbox_ids)
-        )
+        stmt: sqlalchemy.Executable = sqlalchemy.delete(sb_SandBoxes).where(sb_SandBoxes.SBId.in_(sandbox_ids))
         await self.conn.execute(stmt)
 
         return True

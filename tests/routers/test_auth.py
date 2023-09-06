@@ -95,11 +95,7 @@ async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs)
 
 async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     code_verifier = secrets.token_hex()
-    code_challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-        .decode()
-        .replace("=", "")
-    )
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().replace("=", "")
 
     r = test_client.get(
         "/auth/authorize",
@@ -124,9 +120,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.status_code == 401, r.text
 
     # Check that an invalid state returns an error
-    r = test_client.get(
-        redirect_uri, params={"code": "invalid-code", "state": "invalid-state"}
-    )
+    r = test_client.get(redirect_uri, params={"code": "invalid-code", "state": "invalid-state"})
     assert r.status_code == 400, r.text
     assert "Invalid state" in r.text
 
@@ -207,9 +201,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.status_code == 401, r.text
 
     # Check that an invalid state returns an error
-    r = test_client.get(
-        redirect_uri, params={"code": "invalid-code", "state": "invalid-state"}
-    )
+    r = test_client.get(redirect_uri, params={"code": "invalid-code", "state": "invalid-state"})
     assert r.status_code == 400, r.text
     assert "Invalid state" in r.text
 
@@ -260,9 +252,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
         "refresh_token": initial_refresh_token,
         "client_id": DIRAC_CLIENT_ID,
     }
-    response_data = _get_and_check_token_response(
-        test_client, request_data=request_data
-    )
+    response_data = _get_and_check_token_response(test_client, request_data=request_data)
     new_refresh_token = response_data["refresh_token"]
 
     # Make sure it is different from the initial refresh token
@@ -278,10 +268,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.post("/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 400, data
-    assert (
-        data["detail"]
-        == "Revoked refresh token reused: potential attack detected. You must authenticate again"
-    )
+    assert data["detail"] == "Revoked refresh token reused: potential attack detected. You must authenticate again"
 
     # Make sure that Malicious attacker cannot get a new refresh token from the latest refresh token obtained
     # In theory, new_refresh_token has not been revoked since it is the latest one
@@ -290,15 +277,10 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.post("/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 400, data
-    assert (
-        data["detail"]
-        == "Revoked refresh token reused: potential attack detected. You must authenticate again"
-    )
+    assert data["detail"] == "Revoked refresh token reused: potential attack detected. You must authenticate again"
 
 
-async def test_refresh_token_expired(
-    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
-):
+async def test_refresh_token_expired(test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock):
     """Test the expiration date of the passed refresh token.
     - get a refresh token
     - decode it and change the expiration time
@@ -308,9 +290,7 @@ async def test_refresh_token_expired(
     initial_refresh_token = _get_tokens(test_client)["refresh_token"]
 
     # Decode it
-    refresh_payload = jwt.decode(
-        initial_refresh_token, options={"verify_signature": False}
-    )
+    refresh_payload = jwt.decode(initial_refresh_token, options={"verify_signature": False})
 
     # Modify the expiration time (utc now - 5 hours)
     refresh_payload["exp"] = int((datetime.utcnow() - timedelta(hours=5)).timestamp())
@@ -341,9 +321,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     initial_refresh_token = _get_tokens(test_client)["refresh_token"]
 
     # Decode it
-    refresh_payload = jwt.decode(
-        initial_refresh_token, options={"verify_signature": False}
-    )
+    refresh_payload = jwt.decode(initial_refresh_token, options={"verify_signature": False})
 
     # Encode it differently (using another algorithm)
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
@@ -400,9 +378,9 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     assert len(data) == 1
 
     # token manager gets a pair of tokens
-    token_manager_access_token = _get_tokens(
-        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
-    )["access_token"]
+    token_manager_access_token = _get_tokens(test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT)[
+        "access_token"
+    ]
 
     # Token manager lists refresh tokens: should get his/her own and the normal user's one
     r = test_client.get(
@@ -419,9 +397,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
         "refresh_token": normal_user_refresh_token,
         "client_id": DIRAC_CLIENT_ID,
     }
-    response_data = _get_and_check_token_response(
-        test_client, request_data=request_data
-    )
+    response_data = _get_and_check_token_response(test_client, request_data=request_data)
 
     # Normal user lists his/her refresh tokens again
     r = test_client.get(
@@ -442,9 +418,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     assert len(data) == 3
 
 
-async def test_revoke_refresh_tokens_normal_user(
-    test_client, auth_httpx_mock: HTTPXMock
-):
+async def test_revoke_refresh_tokens_normal_user(test_client, auth_httpx_mock: HTTPXMock):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
     - normal user gets a refresh token
     - token manager gets a refresh token
@@ -456,18 +430,12 @@ async def test_revoke_refresh_tokens_normal_user(
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
     normal_user_access_token = normal_user_tokens["access_token"]
     normal_user_refresh_token = normal_user_tokens["refresh_token"]
-    normal_user_refresh_payload = jwt.decode(
-        normal_user_refresh_token, options={"verify_signature": False}
-    )
+    normal_user_refresh_payload = jwt.decode(normal_user_refresh_token, options={"verify_signature": False})
 
     # Token manager gets a pair of tokens
-    token_manager_tokens = _get_tokens(
-        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
-    )
+    token_manager_tokens = _get_tokens(test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT)
     token_manager_refresh_token = token_manager_tokens["refresh_token"]
-    token_manager_refresh_payload = jwt.decode(
-        token_manager_refresh_token, options={"verify_signature": False}
-    )
+    token_manager_refresh_payload = jwt.decode(token_manager_refresh_token, options={"verify_signature": False})
 
     # Normal user tries to delete a random and non-existing RT: should raise an error
     r = test_client.delete(
@@ -502,9 +470,7 @@ async def test_revoke_refresh_tokens_normal_user(
     assert r.status_code == 200, data
 
 
-async def test_revoke_refresh_tokens_token_manager(
-    test_client, auth_httpx_mock: HTTPXMock
-):
+async def test_revoke_refresh_tokens_token_manager(test_client, auth_httpx_mock: HTTPXMock):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
     - normal user gets a refresh token
     - token manager gets a refresh token
@@ -514,19 +480,13 @@ async def test_revoke_refresh_tokens_token_manager(
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
     normal_user_refresh_token = normal_user_tokens["refresh_token"]
-    normal_user_refresh_payload = jwt.decode(
-        normal_user_refresh_token, options={"verify_signature": False}
-    )
+    normal_user_refresh_payload = jwt.decode(normal_user_refresh_token, options={"verify_signature": False})
 
     # Token manager gets a pair of tokens
-    token_manager_tokens = _get_tokens(
-        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
-    )
+    token_manager_tokens = _get_tokens(test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT)
     token_manager_access_token = token_manager_tokens["access_token"]
     token_manager_refresh_token = token_manager_tokens["refresh_token"]
-    token_manager_refresh_payload = jwt.decode(
-        token_manager_refresh_token, options={"verify_signature": False}
-    )
+    token_manager_refresh_payload = jwt.decode(token_manager_refresh_token, options={"verify_signature": False})
 
     # Token manager tries to delete token manager's RT: should work
     r = test_client.delete(
@@ -545,9 +505,7 @@ async def test_revoke_refresh_tokens_token_manager(
     assert r.status_code == 200, data
 
 
-def _get_tokens(
-    test_client, group: str = "lhcb_user", property: SecurityProperty = NORMAL_USER
-):
+def _get_tokens(test_client, group: str = "lhcb_user", property: SecurityProperty = NORMAL_USER):
     """Get a pair of tokens (access, refresh) through a device flow code"""
     # User Initiates a device flow (would normally be done from CLI)
     r = test_client.post(
@@ -618,10 +576,7 @@ def test_parse_scopes(vos, groups, scope, expected):
                     "DefaultGroup": "lhcb_user",
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
-                    "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
-                    },
+                    "Groups": {group: {"Properties": ["NormalUser"], "Users": []} for group in groups},
                 }
                 for vo in vos
             },
@@ -653,10 +608,7 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
                     "DefaultGroup": "lhcb_user",
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
-                    "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
-                    },
+                    "Groups": {group: {"Properties": ["NormalUser"], "Users": []} for group in groups},
                 }
                 for vo in vos
             },

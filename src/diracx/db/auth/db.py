@@ -32,9 +32,7 @@ class AuthDB(BaseDB):
     # This needs to be here for the BaseDB to create the engine
     metadata = AuthDBBase.metadata
 
-    async def device_flow_validate_user_code(
-        self, user_code: str, max_validity: int
-    ) -> str:
+    async def device_flow_validate_user_code(self, user_code: str, max_validity: int) -> str:
         """Validate that the user_code can be used (Pending status, not expired)
 
         Returns the scope field for the given user_code
@@ -59,9 +57,7 @@ class AuthDB(BaseDB):
         # multiple time concurrently
         stmt = select(
             DeviceFlows,
-            (DeviceFlows.creation_time < substract_date(seconds=max_validity)).label(
-                "is_expired"
-            ),
+            (DeviceFlows.creation_time < substract_date(seconds=max_validity)).label("is_expired"),
         ).with_for_update()
         stmt = stmt.where(
             DeviceFlows.device_code == device_code,
@@ -74,9 +70,7 @@ class AuthDB(BaseDB):
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning
             await self.conn.execute(
-                update(DeviceFlows)
-                .where(DeviceFlows.device_code == device_code)
-                .values(status=FlowStatus.DONE)
+                update(DeviceFlows).where(DeviceFlows.device_code == device_code).values(status=FlowStatus.DONE)
             )
             return res
 
@@ -88,9 +82,7 @@ class AuthDB(BaseDB):
 
         raise AuthorizationError("Bad state in device flow")
 
-    async def device_flow_insert_id_token(
-        self, user_code: str, id_token: dict[str, str], max_validity: int
-    ) -> None:
+    async def device_flow_insert_id_token(self, user_code: str, id_token: dict[str, str], max_validity: int) -> None:
         """
         :raises: AuthorizationError if no such code or status not pending
         """
@@ -103,9 +95,7 @@ class AuthDB(BaseDB):
         stmt = stmt.values(id_token=id_token, status=FlowStatus.READY)
         res = await self.conn.execute(stmt)
         if res.rowcount != 1:
-            raise AuthorizationError(
-                f"{res.rowcount} rows matched user_code {user_code}"
-            )
+            raise AuthorizationError(f"{res.rowcount} rows matched user_code {user_code}")
 
     async def insert_device_flow(
         self,
@@ -117,8 +107,7 @@ class AuthDB(BaseDB):
         # This is why we retry multiple times
         for _ in range(MAX_RETRY):
             user_code = "".join(
-                secrets.choice(USER_CODE_ALPHABET)
-                for _ in range(DeviceFlows.user_code.type.length)  # type: ignore
+                secrets.choice(USER_CODE_ALPHABET) for _ in range(DeviceFlows.user_code.type.length)  # type: ignore
             )
             # user_code = "2QRKPY"
             device_code = secrets.token_urlsafe()
@@ -136,9 +125,7 @@ class AuthDB(BaseDB):
                 continue
 
             return user_code, device_code
-        raise NotImplementedError(
-            f"Could not insert new device flow after {MAX_RETRY} retries"
-        )
+        raise NotImplementedError(f"Could not insert new device flow after {MAX_RETRY} retries")
 
     async def insert_authorization_flow(
         self,
@@ -208,9 +195,7 @@ class AuthDB(BaseDB):
         if res["status"] == FlowStatus.READY:
             # Update the status to Done before returning
             await self.conn.execute(
-                update(AuthorizationFlows)
-                .where(AuthorizationFlows.code == code)
-                .values(status=FlowStatus.DONE)
+                update(AuthorizationFlows).where(AuthorizationFlows.code == code).values(status=FlowStatus.DONE)
             )
 
             return res
@@ -291,15 +276,11 @@ class AuthDB(BaseDB):
     async def revoke_refresh_token(self, jti: str):
         """Revoke a token given by its JWT ID"""
         await self.conn.execute(
-            update(RefreshTokens)
-            .where(RefreshTokens.jti == jti)
-            .values(status=RefreshTokenStatus.REVOKED)
+            update(RefreshTokens).where(RefreshTokens.jti == jti).values(status=RefreshTokenStatus.REVOKED)
         )
 
     async def revoke_user_refresh_tokens(self, subject):
         """Revoke all the refresh tokens belonging to a user (subject ID)"""
         await self.conn.execute(
-            update(RefreshTokens)
-            .where(RefreshTokens.sub == subject)
-            .values(status=RefreshTokenStatus.REVOKED)
+            update(RefreshTokens).where(RefreshTokens.sub == subject).values(status=RefreshTokenStatus.REVOKED)
         )

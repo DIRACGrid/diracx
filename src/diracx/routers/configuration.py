@@ -47,16 +47,12 @@ async def serve_config(
     # a server gets out of sync with disk
     if if_modified_since:
         try:
-            not_before = datetime.strptime(
-                if_modified_since, LAST_MODIFIED_FORMAT
-            ).astimezone(timezone.utc)
+            not_before = datetime.strptime(if_modified_since, LAST_MODIFIED_FORMAT).astimezone(timezone.utc)
         except ValueError:
             pass
         else:
             if not_before > config._modified:
-                raise HTTPException(
-                    status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
-                )
+                raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
 
     response.headers.update(headers)
 

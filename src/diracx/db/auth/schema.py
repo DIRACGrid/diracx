@@ -90,9 +90,7 @@ class RefreshTokens(Base):
     __tablename__ = "RefreshTokens"
     # Refresh token attributes
     jti = Column(Uuid(as_uuid=False), primary_key=True)
-    status = EnumColumn(
-        RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
-    )
+    status = EnumColumn(RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name)
     creation_time = DateNowColumn()
     scope = Column(String(1024))
 

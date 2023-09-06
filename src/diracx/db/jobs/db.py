@@ -30,11 +30,7 @@ class JobDB(BaseDB):
         stmt = stmt.group_by(*columns)
 
         # Execute the query
-        return [
-            dict(row._mapping)
-            async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
-        ]
+        return [dict(row._mapping) async for row in (await self.conn.stream(stmt)) if row.count > 0]  # type: ignore
 
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
@@ -42,12 +38,8 @@ class JobDB(BaseDB):
         # Find which columns to select
         columns = [x for x in Jobs.__table__.columns]
         if parameters:
-            if unrecognised_parameters := set(parameters) - set(
-                Jobs.__table__.columns.keys()
-            ):
-                raise InvalidQueryError(
-                    f"Unrecognised parameters requested {unrecognised_parameters}"
-                )
+            if unrecognised_parameters := set(parameters) - set(Jobs.__table__.columns.keys()):
+                raise InvalidQueryError(f"Unrecognised parameters requested {unrecognised_parameters}")
             columns = [c for c in columns if c.name in parameters]
         stmt = select(*columns)
 
@@ -73,9 +65,7 @@ class JobDB(BaseDB):
     async def _insertNewJDL(self, jdl) -> int:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
-        stmt = insert(JobJDLs).values(
-            JDL="", JobRequirements="", OriginalJDL=compressJDL(jdl)
-        )
+        stmt = insert(JobJDLs).values(JDL="", JobRequirements="", OriginalJDL=compressJDL(jdl))
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
         return result.lastrowid
@@ -136,9 +126,7 @@ class JobDB(BaseDB):
     async def setJobJDL(self, job_id, jdl):
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
-        stmt = (
-            update(JobJDLs).where(JobJDLs.JobID == job_id).values(JDL=compressJDL(jdl))
-        )
+        stmt = update(JobJDLs).where(JobJDLs.JobID == job_id).values(JDL=compressJDL(jdl))
         await self.conn.execute(stmt)
 
     async def insert(

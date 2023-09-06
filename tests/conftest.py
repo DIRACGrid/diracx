@@ -76,9 +76,7 @@ def with_app(test_auth_settings, with_config_repo):
             "AuthDB": "sqlite+aiosqlite:///:memory:",
             "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
         },
-        config_source=ConfigSource.create_from_url(
-            backend_url=f"git+file://{with_config_repo}"
-        ),
+        config_source=ConfigSource.create_from_url(backend_url=f"git+file://{with_config_repo}"),
     )
 
 
@@ -146,8 +144,7 @@ def test_client(with_app):
 def normal_user_client(test_client, test_auth_settings):
     payload = {
         "sub": "testingVO:yellow-sub",
-        "exp": datetime.now()
-        + timedelta(test_auth_settings.access_token_expire_minutes),
+        "exp": datetime.now() + timedelta(test_auth_settings.access_token_expire_minutes),
         "aud": AUDIENCE,
         "iss": ISSUER,
         "dirac_properties": [NORMAL_USER],

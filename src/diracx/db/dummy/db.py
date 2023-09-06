@@ -30,11 +30,7 @@ class DummyDB(BaseDB):
         stmt = stmt.group_by(*columns)
 
         # Execute the query
-        return [
-            dict(row._mapping)
-            async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
-        ]
+        return [dict(row._mapping) async for row in (await self.conn.stream(stmt)) if row.count > 0]  # type: ignore
 
     async def insert_owner(self, name: str) -> int:
         stmt = insert(Owners).values(name=name)
@@ -43,9 +39,7 @@ class DummyDB(BaseDB):
         return result.lastrowid
 
     async def insert_car(self, license_plate: UUID, model: str, owner_id: int) -> int:
-        stmt = insert(Cars).values(
-            licensePlate=license_plate, model=model, ownerID=owner_id
-        )
+        stmt = insert(Cars).values(licensePlate=license_plate, model=model, ownerID=owner_id)
 
         result = await self.conn.execute(stmt)
         # await self.engine.commit()

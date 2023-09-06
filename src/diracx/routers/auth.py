@@ -68,21 +68,13 @@ class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
 
-    available_properties: set[SecurityProperty] = Field(
-        default_factory=SecurityProperty.available_properties
-    )
+    available_properties: set[SecurityProperty] = Field(default_factory=SecurityProperty.available_properties)
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):
-    evaluator = (
-        expression
-        if isinstance(expression, UnevaluatedProperty)
-        else UnevaluatedProperty(expression)
-    )
+    evaluator = expression if isinstance(expression, UnevaluatedProperty) else UnevaluatedProperty(expression)
 
-    async def require_property(
-        user: Annotated[UserInfo, Depends(verify_dirac_access_token)]
-    ):
+    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_access_token)]):
         if not evaluator(user.properties):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
@@ -141,9 +133,7 @@ async def fetch_jwk_set(url: str):
 
 
 async def parse_id_token(config, vo, raw_id_token: str, audience: str):
-    server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
-    )
+    server_metadata = await get_server_metadata(config.Registry[vo].IdP.server_metadata_url)
     alg_values = server_metadata.get("id_token_signing_alg_values_supported", ["RS256"])
     jwk_set = await fetch_jwk_set(config.Registry[vo].IdP.server_metadata_url)
 
@@ -251,9 +241,7 @@ async def verify_dirac_refresh_token(
 
 def create_token(payload: dict, settings: AuthSettings) -> str:
     jwt = JsonWebToken(settings.token_algorithm)
-    encoded_jwt = jwt.encode(
-        {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
-    )
+    encoded_jwt = jwt.encode({"alg": settings.token_algorithm}, payload, settings.token_key.jwk)
     return encoded_jwt.decode("ascii")
 
 
@@ -281,9 +269,7 @@ async def exchange_token(
 
     # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
-        raise ValueError(
-            f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
-        )
+        raise ValueError(f"User is not a member of the requested group ({preferred_username}, {dirac_group})")
 
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
@@ -355,9 +341,7 @@ async def initiate_device_flow(
     `auth/<vo>/device?user_code=XYZ`
     """
     if settings.dirac_client_id != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID")
 
     try:
         parse_and_validate_scope(scope, config, available_properties)
@@ -367,9 +351,7 @@ async def initiate_device_flow(
             detail=e.args[0],
         ) from e
 
-    user_code, device_code = await auth_db.insert_device_flow(
-        client_id, scope, audience
-    )
+    user_code, device_code = await auth_db.insert_device_flow(client_id, scope, audience)
 
     verification_uri = str(request.url.replace(query={}))
 
@@ -382,22 +364,14 @@ async def initiate_device_flow(
     }
 
 
-async def initiate_authorization_flow_with_iam(
-    config, vo: str, redirect_uri: str, state: dict[str, str]
-):
+async def initiate_authorization_flow_with_iam(config, vo: str, redirect_uri: str, state: dict[str, str]):
     # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
     code_verifier = secrets.token_hex()
 
     # code_challenge: https://www.rfc-editor.org/rfc/rfc7636#section-4.2
-    code_challenge = (
-        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-        .decode()
-        .replace("=", "")
-    )
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().replace("=", "")
 
-    server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
-    )
+    server_metadata = await get_server_metadata(config.Registry[vo].IdP.server_metadata_url)
 
     # Take these two from CS/.well-known
     authorization_endpoint = server_metadata["authorization_endpoint"]
@@ -420,12 +394,8 @@ async def initiate_authorization_flow_with_iam(
     return authorization_flow_url
 
 
-async def get_token_from_iam(
-    config, vo: str, code: str, state: dict[str, str], redirect_uri: str
-) -> dict[str, str]:
-    server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
-    )
+async def get_token_from_iam(config, vo: str, code: str, state: dict[str, str], redirect_uri: str) -> dict[str, str]:
+    server_metadata = await get_server_metadata(config.Registry[vo].IdP.server_metadata_url)
 
     # Take these two from CS/.well-known
     token_endpoint = server_metadata["token_endpoint"]
@@ -444,9 +414,7 @@ async def get_token_from_iam(
             data=data,
         )
         if res.status_code >= 500:
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY, "Failed to contact token endpoint"
-            )
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Failed to contact token endpoint")
         elif res.status_code >= 400:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid code")
 
@@ -486,9 +454,7 @@ async def do_device_flow(
     """
 
     # Here we make sure the user_code actualy exists
-    scope = await auth_db.device_flow_validate_user_code(
-        user_code, settings.device_flow_expiration_seconds
-    )
+    scope = await auth_db.device_flow_validate_user_code(user_code, settings.device_flow_expiration_seconds)
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
 
     redirect_uri = f"{request.url.replace(query='')}/complete"
@@ -509,9 +475,7 @@ def decrypt_state(state):
         # TODO: There have been better schemes like rot13
         return json.loads(base64.urlsafe_b64decode(state).decode())
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state") from e
 
 
 @router.get("/device/complete")
@@ -567,9 +531,7 @@ class ScopeInfoDict(TypedDict):
     vo: str
 
 
-def parse_and_validate_scope(
-    scope: str, config: Config, available_properties: set[SecurityProperty]
-) -> ScopeInfoDict:
+def parse_and_validate_scope(scope: str, config: Config, available_properties: set[SecurityProperty]) -> ScopeInfoDict:
     """
     Check:
         * At most one VO
@@ -601,10 +563,7 @@ def parse_and_validate_scope(
 
     if not vos:
         available_vo_scopes = [repr(f"vo:{vo}") for vo in config.Registry]
-        raise ValueError(
-            "No vo scope requested, available values: "
-            f"{' '.join(available_vo_scopes)}"
-        )
+        raise ValueError("No vo scope requested, available values: " f"{' '.join(available_vo_scopes)}")
     elif len(vos) > 1:
         raise ValueError(f"Only one vo is allowed but got {vos}")
     else:
@@ -627,9 +586,7 @@ def parse_and_validate_scope(
         properties = [str(p) for p in config.Registry[vo].Groups[group].Properties]
 
     if not set(properties).issubset(available_properties):
-        raise ValueError(
-            f"{set(properties)-set(available_properties)} are not valid properties"
-        )
+        raise ValueError(f"{set(properties)-set(available_properties)} are not valid properties")
 
     return {
         "group": group,
@@ -688,9 +645,7 @@ async def token(
     # Autorest does not support the GrantType annotation
     # We need to specify each option with Literal[]
     grant_type: Annotated[
-        Literal[GrantType.authorization_code]
-        | Literal[GrantType.device_code]
-        | Literal[GrantType.refresh_token],
+        Literal[GrantType.authorization_code] | Literal[GrantType.device_code] | Literal[GrantType.refresh_token],
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
@@ -698,21 +653,15 @@ async def token(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
-    device_code: Annotated[
-        str | None, Form(description="device code for OAuth2 device flow")
-    ] = None,
-    code: Annotated[
-        str | None, Form(description="Code for OAuth2 authorization code flow")
-    ] = None,
+    device_code: Annotated[str | None, Form(description="device code for OAuth2 device flow")] = None,
+    code: Annotated[str | None, Form(description="Code for OAuth2 authorization code flow")] = None,
     redirect_uri: Annotated[
         str | None,
         Form(description="redirect_uri used with OAuth2 authorization code flow"),
     ] = None,
     code_verifier: Annotated[
         str | None,
-        Form(
-            description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
-        ),
+        Form(description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"),
     ] = None,
     refresh_token: Annotated[
         str | None,
@@ -723,9 +672,7 @@ async def token(
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
     if grant_type == GrantType.device_code:
-        oidc_token_info, scope = await get_oidc_token_info_from_device_flow(
-            device_code, client_id, auth_db, settings
-        )
+        oidc_token_info, scope = await get_oidc_token_info_from_device_flow(device_code, client_id, auth_db, settings)
 
     elif grant_type == GrantType.authorization_code:
         oidc_token_info, scope = await get_oidc_token_info_from_authorization_flow(
@@ -733,9 +680,7 @@ async def token(
         )
 
     elif grant_type == GrantType.refresh_token:
-        oidc_token_info, scope = await get_oidc_token_info_from_refresh_flow(
-            refresh_token, auth_db, settings
-        )
+        oidc_token_info, scope = await get_oidc_token_info_from_refresh_flow(refresh_token, auth_db, settings)
     else:
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
@@ -756,17 +701,11 @@ async def get_oidc_token_info_from_device_flow(
     """Get OIDC token information from the device flow DB and check few parameters before returning it"""
     assert device_code is not None
     try:
-        info = await auth_db.get_device_flow(
-            device_code, settings.device_flow_expiration_seconds
-        )
+        info = await auth_db.get_device_flow(device_code, settings.device_flow_expiration_seconds)
     except PendingAuthorizationError as e:
-        raise DiracHttpResponse(
-            status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}
-        ) from e
+        raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}) from e
     except ExpiredFlowError as e:
-        raise DiracHttpResponse(
-            status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}
-        ) from e
+        raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}) from e
     # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
     # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
 
@@ -795,9 +734,7 @@ async def get_oidc_token_info_from_authorization_flow(
 ):
     """Get OIDC token information from the authorization flow DB and check few parameters before returning it"""
     assert code is not None
-    info = await auth_db.get_authorization_flow(
-        code, settings.authorization_flow_expiration_seconds
-    )
+    info = await auth_db.get_authorization_flow(code, settings.authorization_flow_expiration_seconds)
     if redirect_uri != info["redirect_uri"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -806,11 +743,7 @@ async def get_oidc_token_info_from_authorization_flow(
 
     try:
         assert code_verifier is not None
-        code_challenge = (
-            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-            .decode()
-            .strip("=")
-        )
+        code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().strip("=")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -835,9 +768,7 @@ async def get_oidc_token_info_from_authorization_flow(
     return (oidc_token_info, scope)
 
 
-async def get_oidc_token_info_from_refresh_flow(
-    refresh_token: str | None, auth_db: AuthDB, settings: AuthSettings
-):
+async def get_oidc_token_info_from_refresh_flow(refresh_token: str | None, auth_db: AuthDB, settings: AuthSettings):
     """Get OIDC token information from the refresh token DB and check few parameters before returning it"""
     assert refresh_token is not None
 
@@ -933,13 +864,9 @@ async def authorization_flow(
     settings: AuthSettings,
 ):
     if settings.dirac_client_id != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID")
     if redirect_uri not in settings.allowed_redirects:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised redirect_uri"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised redirect_uri")
 
     try:
         parsed_scope = parse_and_validate_scope(scope, config, available_properties)
@@ -1000,6 +927,4 @@ async def authorization_flow_complete(
         settings.authorization_flow_expiration_seconds,
     )
 
-    return responses.RedirectResponse(
-        f"{redirect_uri}?code={code}&state={decrypted_state['external_state']}"
-    )
+    return responses.RedirectResponse(f"{redirect_uri}?code={code}&state={decrypted_state['external_state']}")

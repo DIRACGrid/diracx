@@ -133,25 +133,17 @@ def test_insert_and_search(normal_user_client):
 
     r = normal_user_client.post(
         "/jobs/search",
-        json={
-            "search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]
-        },
+        json={"search": [{"parameter": "Status", "operator": "eq", "value": "RECEIVED"}]},
     )
     assert r.status_code == 200, r.json()
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
 
-    r = normal_user_client.post(
-        "/jobs/search", json={"parameters": ["JobID", "Status"]}
-    )
+    r = normal_user_client.post("/jobs/search", json={"parameters": ["JobID", "Status"]})
     assert r.status_code == 200, r.json()
-    assert r.json() == [
-        {"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids
-    ]
+    assert r.json() == [{"JobID": jid, "Status": "RECEIVED"} for jid in submitted_job_ids]
 
     # Test /jobs/summary
-    r = normal_user_client.post(
-        "/jobs/summary", json={"grouping": ["Status", "OwnerGroup"]}
-    )
+    r = normal_user_client.post("/jobs/summary", json={"grouping": ["Status", "OwnerGroup"]})
     assert r.status_code == 200, r.json()
     assert r.json() == [{"Status": "RECEIVED", "OwnerGroup": "test_group", "count": 1}]
 
@@ -198,9 +190,7 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
     "job_definitions",
     [[TEST_PARAMETRIC_JDL, TEST_JDL], [TEST_PARAMETRIC_JDL, TEST_PARAMETRIC_JDL]],
 )
-def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
-    normal_user_client, job_definitions
-):
+def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(normal_user_client, job_definitions):
     res = normal_user_client.post("/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
