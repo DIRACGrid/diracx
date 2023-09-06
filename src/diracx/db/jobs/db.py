@@ -358,12 +358,6 @@ class JobDB(BaseDB):
                 classAdReq,
                 jobAttrs["Owner"],
                 jobAttrs["OwnerGroup"],
-                # TODO: OwnerDN doesn't exist anymore
-                # set empty string
-                "",
-                # TODO: DiracSetup doesn't exist anymore
-                # set empty string
-                "",
                 new_job_attributes,
                 classAdJob.getAttributeString("VirtualOrganization"),
             )
