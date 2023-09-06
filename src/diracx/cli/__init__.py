@@ -66,8 +66,7 @@ async def login(
     )
     credential_data = {
         "access_token": response.access_token,
-        # TODO: "refresh_token":
-        # TODO: "refresh_token_expires":
+        "refresh_token": response.refresh_token,
         "expires": expires.isoformat(),
     }
     CREDENTIALS_PATH.write_text(json.dumps(credential_data))

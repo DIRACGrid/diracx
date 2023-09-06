@@ -5,7 +5,8 @@ import hashlib
 import json
 import re
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
+from enum import Enum
 from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
@@ -32,9 +33,13 @@ from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
-from diracx.core.properties import SecurityProperty, UnevaluatedProperty
+from diracx.core.properties import (
+    PROXY_MANAGEMENT,
+    SecurityProperty,
+    UnevaluatedProperty,
+)
 from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
-from diracx.db.auth.schema import FlowStatus
+from diracx.db.auth.schema import FlowStatus, RefreshTokenStatus
 
 from .dependencies import (
     AuthDB,
@@ -60,8 +65,8 @@ class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     token_audience: str = "dirac"
     token_key: TokenSigningKey
     token_algorithm: str = "RS256"
-    access_token_expire_minutes: int = 3000
-    refresh_token_expire_minutes: int = 3000
+    access_token_expire_minutes: int = 20
+    refresh_token_expire_minutes: int = 60
 
     available_properties: set[SecurityProperty] = Field(
         default_factory=SecurityProperty.available_properties
@@ -75,7 +80,9 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
         else UnevaluatedProperty(expression)
     )
 
-    async def require_property(user: Annotated[UserInfo, Depends(verify_dirac_token)]):
+    async def require_property(
+        user: Annotated[UserInfo, Depends(verify_dirac_access_token)]
+    ):
         if not evaluator(user.properties):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
@@ -85,9 +92,16 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
 class TokenResponse(BaseModel):
     # Base on RFC 6749
     access_token: str
-    # refresh_token: str
+    refresh_token: str | None
     expires_in: int
+    token_type: str = "Bearer"
     state: str
+
+
+class GrantType(str, Enum):
+    authorization_code = "authorization_code"
+    device_code = "urn:ietf:params:oauth:grant-type:device_code"
+    refresh_token = "refresh_token"
 
 
 router = DiracxRouter(require_auth=False)
@@ -166,7 +180,7 @@ class UserInfo(AuthInfo):
     vo: str
 
 
-async def verify_dirac_token(
+async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,
 ) -> UserInfo:
@@ -209,18 +223,33 @@ async def verify_dirac_token(
     )
 
 
-def create_access_token(
-    payload: dict, settings: AuthSettings, expires_delta: timedelta | None = None
-) -> str:
-    to_encode = payload.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.access_token_expire_minutes
+async def verify_dirac_refresh_token(
+    refresh_token: str,
+    settings: AuthSettings,
+) -> tuple[str, float]:
+    """Verify dirac user token and return a UserInfo class
+    Used for each API endpoint
+    """
+    try:
+        jwt = JsonWebToken(settings.token_algorithm)
+        token = jwt.decode(
+            refresh_token,
+            key=settings.token_key.jwk,
         )
-    to_encode.update({"exp": expire})
+        token.validate()
+    # Handle problematic tokens such as:
+    # - tokens signed with an invalid JWK
+    # - expired tokens
+    except JoseError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid JWT: {e.args[0]}",
+        ) from e
 
+    return (token["jti"], float(token["exp"]))
+
+
+def create_token(payload: dict, settings: AuthSettings) -> str:
     jwt = JsonWebToken(settings.token_algorithm)
     encoded_jwt = jwt.encode(
         {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
@@ -229,34 +258,70 @@ def create_access_token(
 
 
 async def exchange_token(
-    vo: str,
-    dirac_group: str,
-    id_token: dict[str, str],
+    auth_db: AuthDB,
+    scope: str,
+    oidc_token_info: dict,
     config: Config,
     settings: AuthSettings,
+    available_properties: AvailableSecurityProperties,
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
-    sub = id_token["sub"]
-    preferred_username = id_token.get("preferred_username", sub)
+    # Extract dirac attributes from the OIDC scope
+    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+    vo = parsed_scope["vo"]
+    dirac_group = parsed_scope["group"]
 
+    # Extract attributes from the OIDC token details
+    sub = oidc_token_info["sub"]
+    preferred_username = oidc_token_info.get("preferred_username", sub)
+
+    # Extract attributes from the settings and configuration
+    issuer = settings.token_issuer
+    dirac_properties = config.Registry[vo].Groups[dirac_group].Properties
+
+    # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
         raise ValueError(
             f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
         )
 
-    payload = {
-        "sub": f"{vo}:{sub}",
+    # Merge the VO with the subject to get a unique DIRAC sub
+    sub = f"{vo}:{sub}"
+
+    # Insert the refresh token with user details into the RefreshTokens table
+    # User details are needed to regenerate access tokens later
+    jti, creation_time = await auth_db.insert_refresh_token(
+        subject=sub,
+        preferred_username=preferred_username,
+        scope=scope,
+    )
+
+    # Generate refresh token payload
+    refresh_payload = {
+        "jti": jti,
+        "exp": creation_time + timedelta(minutes=settings.refresh_token_expire_minutes),
+    }
+
+    # Generate access token payload
+    access_payload = {
+        "sub": sub,
         "vo": vo,
         "aud": settings.token_audience,
-        "iss": settings.token_issuer,
-        "dirac_properties": config.Registry[vo].Groups[dirac_group].Properties,
+        "iss": issuer,
+        "dirac_properties": dirac_properties,
         "jti": str(uuid4()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
+        "exp": creation_time + timedelta(minutes=settings.access_token_expire_minutes),
     }
 
+    # Generate the token: encode the payloads
+    access_token = create_token(access_payload, settings)
+    refresh_token = create_token(refresh_payload, settings)
+
     return TokenResponse(
-        access_token=create_access_token(payload, settings),
+        access_token=access_token,
+        refresh_token=refresh_token,
         expires_in=settings.access_token_expire_minutes * 60,
         state="None",
     )
@@ -366,7 +431,7 @@ async def get_token_from_iam(
     token_endpoint = server_metadata["token_endpoint"]
 
     data = {
-        "grant_type": "authorization_code",
+        "grant_type": GrantType.authorization_code.value,
         "client_id": config.Registry[vo].IdP.ClientID,
         "code": code,
         "code_verifier": state["code_verifier"],
@@ -429,7 +494,7 @@ async def do_device_flow(
     redirect_uri = f"{request.url.replace(query='')}/complete"
 
     state_for_iam = {
-        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "grant_type": GrantType.device_code.value,
         "user_code": user_code,
     }
 
@@ -466,9 +531,7 @@ async def finish_device_flow(
     in the cookie/session
     """
     decrypted_state = decrypt_state(state)
-    assert (
-        decrypted_state["grant_type"] == "urn:ietf:params:oauth:grant-type:device_code"
-    )
+    assert decrypted_state["grant_type"] == GrantType.device_code
 
     id_token = await get_token_from_iam(
         config,
@@ -493,7 +556,7 @@ def finished(response: Response):
 
 
 class DeviceCodeTokenForm(BaseModel):
-    grant_type: Literal["urn:ietf:params:oauth:grant-type:device_code"]
+    grant_type: Literal[GrantType.device_code]
     device_code: str
     client_id: str
 
@@ -622,9 +685,12 @@ def parse_and_validate_scope(
 
 @router.post("/token")
 async def token(
+    # Autorest does not support the GrantType annotation
+    # We need to specify each option with Literal[]
     grant_type: Annotated[
-        Literal["authorization_code"]
-        | Literal["urn:ietf:params:oauth:grant-type:device_code"],
+        Literal[GrantType.authorization_code]
+        | Literal[GrantType.device_code]
+        | Literal[GrantType.refresh_token],
         Form(description="OAuth2 Grant type"),
     ],
     client_id: Annotated[str, Form(description="OAuth2 client id")],
@@ -648,68 +714,117 @@ async def token(
             description="Verifier for the code challenge for the OAuth2 authorization flow with PKCE"
         ),
     ] = None,
+    refresh_token: Annotated[
+        str | None,
+        Form(description="Refresh token used with OAuth2 refresh token flow"),
+    ] = None,
 ) -> TokenResponse:
-    """ " Token endpoint to retrieve the token at the end of a flow.
+    """Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
-
-    if grant_type == "urn:ietf:params:oauth:grant-type:device_code":
-        assert device_code is not None
-        try:
-            info = await auth_db.get_device_flow(
-                device_code, settings.device_flow_expiration_seconds
-            )
-        except PendingAuthorizationError as e:
-            raise DiracHttpResponse(
-                status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}
-            ) from e
-        except ExpiredFlowError as e:
-            raise DiracHttpResponse(
-                status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}
-            ) from e
-        # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
-        # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
-
-        if info["client_id"] != client_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bad client_id",
-            )
-
-    elif grant_type == "authorization_code":
-        assert code is not None
-        info = await auth_db.get_authorization_flow(
-            code, settings.authorization_flow_expiration_seconds
+    if grant_type == GrantType.device_code:
+        oidc_token_info, scope = await get_oidc_token_info_from_device_flow(
+            device_code, client_id, auth_db, settings
         )
-        if redirect_uri != info["redirect_uri"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid redirect_uri",
-            )
 
-        try:
-            assert code_verifier is not None
-            code_challenge = (
-                base64.urlsafe_b64encode(
-                    hashlib.sha256(code_verifier.encode()).digest()
-                )
-                .decode()
-                .strip("=")
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Malformed code_verifier",
-            ) from e
+    elif grant_type == GrantType.authorization_code:
+        oidc_token_info, scope = await get_oidc_token_info_from_authorization_flow(
+            code, redirect_uri, code_verifier, auth_db, settings
+        )
 
-        if code_challenge != info["code_challenge"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid code_challenge",
-            )
-
+    elif grant_type == GrantType.refresh_token:
+        oidc_token_info, scope = await get_oidc_token_info_from_refresh_flow(
+            refresh_token, auth_db, settings
+        )
     else:
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
+
+    # Get a TokenResponse to return to the user
+    return await exchange_token(
+        auth_db,
+        scope,
+        oidc_token_info,
+        config,
+        settings,
+        available_properties,
+    )
+
+
+async def get_oidc_token_info_from_device_flow(
+    device_code: str | None, client_id: str, auth_db: AuthDB, settings: AuthSettings
+):
+    """Get OIDC token information from the device flow DB and check few parameters before returning it"""
+    assert device_code is not None
+    try:
+        info = await auth_db.get_device_flow(
+            device_code, settings.device_flow_expiration_seconds
+        )
+    except PendingAuthorizationError as e:
+        raise DiracHttpResponse(
+            status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}
+        ) from e
+    except ExpiredFlowError as e:
+        raise DiracHttpResponse(
+            status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}
+        ) from e
+    # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
+    # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
+
+    if info["client_id"] != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bad client_id",
+        )
+    oidc_token_info = info["id_token"]
+    scope = info["scope"]
+
+    # TODO: use HTTPException while still respecting the standard format
+    # required by the RFC
+    if info["status"] != FlowStatus.READY:
+        # That should never ever happen
+        raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
+    return (oidc_token_info, scope)
+
+
+async def get_oidc_token_info_from_authorization_flow(
+    code: str | None,
+    redirect_uri: str | None,
+    code_verifier: str | None,
+    auth_db: AuthDB,
+    settings: AuthSettings,
+):
+    """Get OIDC token information from the authorization flow DB and check few parameters before returning it"""
+    assert code is not None
+    info = await auth_db.get_authorization_flow(
+        code, settings.authorization_flow_expiration_seconds
+    )
+    if redirect_uri != info["redirect_uri"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid redirect_uri",
+        )
+
+    try:
+        assert code_verifier is not None
+        code_challenge = (
+            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+            .decode()
+            .strip("=")
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Malformed code_verifier",
+        ) from e
+
+    if code_challenge != info["code_challenge"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid code_challenge",
+        )
+
+    oidc_token_info = info["id_token"]
+    scope = info["scope"]
 
     # TODO: use HTTPException while still respecting the standard format
     # required by the RFC
@@ -717,15 +832,89 @@ async def token(
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
-    parsed_scope = parse_and_validate_scope(info["scope"], config, available_properties)
+    return (oidc_token_info, scope)
 
-    return await exchange_token(
-        parsed_scope["vo"],
-        parsed_scope["group"],
-        info["id_token"],
-        config,
-        settings,
-    )
+
+async def get_oidc_token_info_from_refresh_flow(
+    refresh_token: str | None, auth_db: AuthDB, settings: AuthSettings
+):
+    """Get OIDC token information from the refresh token DB and check few parameters before returning it"""
+    assert refresh_token is not None
+
+    # Decode the refresh token to get the JWT ID
+    jti, _ = await verify_dirac_refresh_token(refresh_token, settings)
+
+    # Get some useful user information from the refresh token entry in the DB
+    refresh_token_attributes = await auth_db.get_refresh_token(jti)
+
+    sub = refresh_token_attributes["sub"]
+
+    # Refresh token rotation: https://datatracker.ietf.org/doc/html/rfc6749#section-10.4
+    # Check that the refresh token has not been already revoked
+    # This might indicate that a potential attacker try to impersonate someone
+    # In such case, all the refresh tokens bound to a given user (subject) should be revoked
+    # Forcing the user to reauthenticate interactively through an authorization/device flow (recommended practice)
+    if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
+        # Revoke all the user tokens from the subject
+        await auth_db.revoke_user_refresh_tokens(sub)
+
+        # Commit here, otherwise the revokation operation will not be taken into account
+        # as we return an error to the user
+        await auth_db.conn.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Revoked refresh token reused: potential attack detected. You must authenticate again",
+        )
+
+    # Part of the refresh token rotation mechanism:
+    # Revoke the refresh token provided, a new one needs to be generated
+    await auth_db.revoke_refresh_token(jti)
+
+    # Build an ID token and get scope from the refresh token attributes received
+    oidc_token_info = {
+        # The sub attribute coming from the DB contains the VO name
+        # We need to remove it as if it were coming from an ID token from an external IdP
+        "sub": sub.split(":", 1)[1],
+        "preferred_username": refresh_token_attributes["preferred_username"],
+    }
+    scope = refresh_token_attributes["scope"]
+    return (oidc_token_info, scope)
+
+
+@router.get("/refresh-tokens")
+async def get_refresh_tokens(
+    auth_db: AuthDB,
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+) -> list:
+    subject: str | None = user_info.sub
+    if PROXY_MANAGEMENT in user_info.properties:
+        subject = None
+
+    res = await auth_db.get_user_refresh_tokens(subject)
+    return res
+
+
+@router.delete("/refresh-tokens/{jti}")
+async def revoke_refresh_token(
+    auth_db: AuthDB,
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    jti: str,
+) -> str:
+    res = await auth_db.get_refresh_token(jti)
+    if not res:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="JTI provided does not exist",
+        )
+
+    if PROXY_MANAGEMENT not in user_info.properties and user_info.sub != res["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cannot revoke a refresh token owned by someone else",
+        )
+    await auth_db.revoke_refresh_token(jti)
+    return f"Refresh token {jti} revoked"
 
 
 @router.get("/authorize")
@@ -772,7 +961,7 @@ async def authorization_flow(
     state_for_iam = {
         "external_state": state,
         "uuid": uuid,
-        "grant_type": "authorization_code",
+        "grant_type": GrantType.authorization_code.value,
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
@@ -795,7 +984,7 @@ async def authorization_flow_complete(
     settings: AuthSettings,
 ):
     decrypted_state = decrypt_state(state)
-    assert decrypted_state["grant_type"] == "authorization_code"
+    assert decrypted_state["grant_type"] == GrantType.authorization_code
 
     id_token = await get_token_from_iam(
         config,

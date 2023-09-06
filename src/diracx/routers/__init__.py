@@ -20,7 +20,7 @@ from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.utils import BaseDB
 
 from ..core.settings import ServiceSettingsBase
-from .auth import verify_dirac_token
+from .auth import verify_dirac_access_token
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 
 T = TypeVar("T")
@@ -106,7 +106,7 @@ def create_app_inner(
         # Add the router to the application
         dependencies = []
         if isinstance(router, DiracxRouter) and router.diracx_require_auth:
-            dependencies.append(Depends(verify_dirac_token))
+            dependencies.append(Depends(verify_dirac_access_token))
         app.include_router(
             router,
             prefix=f"/{system_name}",
