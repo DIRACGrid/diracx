@@ -3,7 +3,6 @@ from http import HTTPStatus
 import pytest
 from fastapi.testclient import TestClient
 
-
 TEST_JDL = """
     Arguments = "jobDescription.xml -o LogLevel=INFO";
     Executable = "dirac-jobexec";
