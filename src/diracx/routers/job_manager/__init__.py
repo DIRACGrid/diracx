@@ -174,7 +174,7 @@ async def submit_bulk_jobs(
     # TODO: make the max number of jobs configurable in the CS
     if len(jobDescList) > MAX_PARAMETRIC_JOBS:
         raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=f"Normal user cannot submit more than {MAX_PARAMETRIC_JOBS} jobs at once",
         )
 
