@@ -92,9 +92,9 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
 class TokenResponse(BaseModel):
     # Base on RFC 6749
     access_token: str
-    refresh_token: str
+    refresh_token: str | None
     expires_in: int
-    token_type: str
+    token_type: str = "Bearer"
     state: str
 
 
@@ -323,7 +323,6 @@ async def exchange_token(
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=settings.access_token_expire_minutes * 60,
-        token_type="Bearer",
         state="None",
     )
 
