@@ -173,7 +173,7 @@ def admin_user_client(test_client, test_auth_settings):
         "dirac_group": "test_group",
         "vo": "lhcb",
     }
-    token = create_access_token(payload, test_auth_settings)
+    token = create_token(payload, test_auth_settings)
     test_client.headers["Authorization"] = f"Bearer {token}"
     test_client.dirac_token_payload = payload
     yield test_client
