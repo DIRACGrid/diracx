@@ -4,7 +4,8 @@ import inspect
 import logging
 import os
 from functools import partial
-from typing import AsyncContextManager, AsyncGenerator, Iterable, TypeVar
+from typing import AsyncContextManager, TypeVar
+from collections.abc import AsyncGenerator, Iterable
 
 import dotenv
 from fastapi import APIRouter, Depends, Request

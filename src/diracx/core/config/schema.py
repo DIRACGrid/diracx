@@ -49,12 +49,12 @@ class GroupConfig(BaseModel):
     AutoAddVOMS: bool = False
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
-    JobShare: Optional[int]
+    JobShare: int | None
     Properties: list[SecurityProperty]
-    Quota: Optional[int]
+    Quota: int | None
     Users: list[str]
     AllowBackgroundTQs: bool = False
-    VOMSRole: Optional[str]
+    VOMSRole: str | None
     AutoSyncVOMS: bool = False
 
 
