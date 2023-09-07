@@ -15,7 +15,7 @@ from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
 
 from ..auth import UserInfo, has_properties, verify_dirac_access_token
-from ..dependencies import JobDB
+from ..dependencies import JobDB, OpenSearchJobParametersDB
 from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
@@ -95,6 +95,23 @@ StdOutput = std.out;"""
     ],
     "Parametric JDL": ["""Arguments = "jobDescription.xml -o LogLevel=INFO"""],
 }
+
+
+@router.post("/{job_id}/set_single_job_parameters")
+async def set_single_job_parameters(job_id: int, client: OpenSearchJobParametersDB):
+    # create an index with dummy job parameters
+    indexName_base = "opensearchjobparameters_index"
+    indexSplit = job_id // 1e6
+    indexName = f"{indexName_base}_{indexSplit}"
+    # dummy parameters dict
+    parametersDict = {}
+    parametersDict["JobID"] = job_id
+    parametersDict["CPUNormalizationFactor"] = 14
+    # create the index
+    client.index(indexName, body=parametersDict, id=str(job_id))
+    # get parameters from the index
+    params = client.get(indexName, str(job_id))["_source"]
+    return f"Updating Job {job_id} with parameters {params}"
 
 
 @router.post("/")

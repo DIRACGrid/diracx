@@ -17,6 +17,7 @@ from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
 from diracx.db import AuthDB as _AuthDB
 from diracx.db import JobDB as _JobDB
+from diracx.db import OpenSearchJobParametersDB as _OpenSearchJobParametersDB
 
 T = TypeVar("T")
 
@@ -29,6 +30,9 @@ def add_settings_annotation(cls: T) -> T:
 # Databases
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
+OpenSearchJobParametersDB = Annotated[
+    _OpenSearchJobParametersDB, Depends(_OpenSearchJobParametersDB.set_client)
+]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]
