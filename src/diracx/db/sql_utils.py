@@ -96,6 +96,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
+        # TODO: rename diracx.dbs to diracx.sql_dbs
         for entry_point in select_from_extension(group="diracx.dbs"):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
@@ -107,7 +108,7 @@ class BaseSQLDB(metaclass=ABCMeta):
                     else:
                         db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
                 except Exception:
-                    logger.error("Error loading URL %s for %s", db_name, db_url)
+                    logger.error("Error loading URL for %s", db_name)
                     raise
         return db_urls
 
