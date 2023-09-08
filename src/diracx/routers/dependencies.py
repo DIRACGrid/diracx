@@ -4,6 +4,7 @@ __all__ = (
     "Config",
     "AuthDB",
     "JobDB",
+    "JobLoggingDB",
     "add_settings_annotation",
     "AvailableSecurityProperties",
 )
@@ -17,6 +18,7 @@ from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
 from diracx.db import AuthDB as _AuthDB
 from diracx.db import JobDB as _JobDB
+from diracx.db import JobLoggingDB as _JobLoggingDB
 
 T = TypeVar("T")
 
@@ -29,6 +31,7 @@ def add_settings_annotation(cls: T) -> T:
 # Databases
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
+JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]

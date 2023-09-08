@@ -73,6 +73,7 @@ def with_app(test_auth_settings, with_config_repo):
         all_service_settings=[test_auth_settings],
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",
+            "JobLoggingDB": "sqlite+aiosqlite:///:memory:",
             "AuthDB": "sqlite+aiosqlite:///:memory:",
             "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
         },
