@@ -29,7 +29,6 @@ MAX_RETRY = 5
 
 
 class AuthDB(BaseSQLDB):
-    # This needs to be here for the BaseDB to create the engine
     metadata = AuthDBBase.metadata
 
     async def device_flow_validate_user_code(

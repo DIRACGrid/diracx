@@ -13,7 +13,6 @@ from .schema import sb_Owners, sb_SandBoxes
 
 
 class SandboxMetadataDB(BaseSQLDB):
-    # This needs to be here for the BaseDB to create the engine
     metadata = SandboxMetadataDBBase.metadata
 
     async def _get_put_owner(self, owner: str, owner_group: str) -> int:

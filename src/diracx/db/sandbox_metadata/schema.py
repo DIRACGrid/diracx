@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, DateNowColumn
+from ..sql_utils import Column, DateNowColumn
 
 Base = declarative_base()
 

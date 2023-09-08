@@ -19,7 +19,7 @@ class DummyDB(BaseSQLDB):
     Document the secrets
     """
 
-    # This needs to be here for the BaseDB to create the engine
+    # This needs to be here for the BaseSQLDB to create the engine
     metadata = DummyDBBase.metadata
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:

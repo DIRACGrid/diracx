@@ -23,7 +23,6 @@ from .schema import (
 
 
 class JobDB(BaseSQLDB):
-    # This needs to be here for the BaseDB to create the engine
     metadata = JobDBBase.metadata
 
     # TODO: this is copied from the DIRAC JobDB
@@ -264,10 +263,9 @@ class JobDB(BaseSQLDB):
 MAGIC_EPOC_NUMBER = 1270000000
 
 
-class JobLoggingDB(BaseDB):
+class JobLoggingDB(BaseSQLDB):
     """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps"""
 
-    # This needs to be here for the BaseDB to create the engine
     metadata = JobLoggingDBBase.metadata
 
     async def insert_record(

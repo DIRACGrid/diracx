@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, DateNowColumn, NullColumn
+from ..sql_utils import Column, DateNowColumn, NullColumn
 
 JobDBBase = declarative_base()
 JobLoggingDBBase = declarative_base()
