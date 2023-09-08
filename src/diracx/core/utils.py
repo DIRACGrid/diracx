@@ -6,12 +6,21 @@ from enum import Enum
 
 
 class JobStatus(str, Enum):
-    Running = "Running"
-    Stalled = "Stalled"
-    Killed = "Killed"
-    Failed = "Failed"
-    RECEIVED = "RECEIVED"
     SUBMITTING = "Submitting"
+    RECEIVED = "Received"
+    CHECKING = "Checking"
+    STAGING = "Staging"
+    WAITING = "Waiting"
+    MATCHED = "Matched"
+    RUNNING = "Running"
+    STALLED = "Stalled"
+    COMPLETING = "Completing"
+    DONE = "Done"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    DELETED = "Deleted"
+    KILLED = "Killed"
+    RESCHEDULED = "Rescheduled"
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
