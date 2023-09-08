@@ -7,12 +7,12 @@ import datetime
 
 import sqlalchemy
 
-from ..utils import BaseDB
+from ..sql_utils import BaseSQLDB
 from .schema import Base as SandboxMetadataDBBase
 from .schema import sb_Owners, sb_SandBoxes
 
 
-class SandboxMetadataDB(BaseDB):
+class SandboxMetadataDB(BaseSQLDB):
     # This needs to be here for the BaseDB to create the engine
     metadata = SandboxMetadataDBBase.metadata
 

@@ -11,7 +11,7 @@ from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobStatusReturn, LimitedJobStatusReturn
 from diracx.core.utils import JobStatus
 
-from ..utils import BaseDB, apply_search_filters
+from ..sql_utils import BaseSQLDB, apply_search_filters
 from .schema import (
     InputData,
     JobDBBase,
@@ -22,7 +22,7 @@ from .schema import (
 )
 
 
-class JobDB(BaseDB):
+class JobDB(BaseSQLDB):
     # This needs to be here for the BaseDB to create the engine
     metadata = JobDBBase.metadata
 

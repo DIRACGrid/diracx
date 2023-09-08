@@ -17,7 +17,7 @@ from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.db.utils import BaseDB
+from diracx.db.sql_utils import BaseSQLDB
 
 from ..core.settings import ServiceSettingsBase
 from .auth import verify_dirac_access_token
@@ -56,9 +56,9 @@ def create_app_inner(
     app.dependency_overrides[ConfigSource.create] = config_source.read_config
 
     # Add the DBs to the application
-    available_db_classes: set[type[BaseDB]] = set()
+    available_db_classes: set[type[BaseSQLDB]] = set()
     for db_name, db_url in database_urls.items():
-        db_classes = BaseDB.available_implementations(db_name)
+        db_classes = BaseSQLDB.available_implementations(db_name)
         # The first DB is the highest priority one
         db = db_classes[0](db_url=db_url)
         app.lifetime_functions.append(db.engine_context)
@@ -93,7 +93,7 @@ def create_app_inner(
                 )
 
         # Ensure required DBs are available
-        missing_dbs = set(find_dependents(router, BaseDB)) - available_db_classes
+        missing_dbs = set(find_dependents(router, BaseSQLDB)) - available_db_classes
         if missing_dbs:
             raise NotImplementedError(
                 f"Cannot enable {system_name=} as it requires {missing_dbs=}"
@@ -145,7 +145,7 @@ def create_app() -> DiracFastAPI:
     return create_app_inner(
         enabled_systems=enabled_systems,
         all_service_settings=all_service_settings,
-        database_urls=BaseDB.available_urls(),
+        database_urls=BaseSQLDB.available_urls(),
         config_source=ConfigSource.create(),
     )
 

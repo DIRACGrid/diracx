@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
+__all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseSQLDB")
 
 import contextlib
 import logging
@@ -65,7 +65,7 @@ def EnumColumn(enum_type, **kwargs):
     return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
-class BaseDB(metaclass=ABCMeta):
+class BaseSQLDB(metaclass=ABCMeta):
     """This should be the base class of all the DiracX DBs"""
 
     # engine: AsyncEngine
