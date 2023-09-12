@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 from typer import FileText, Option
 
-from diracx.client.aio import Dirac
+from diracx.client.aio import DiracClient
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
 
 from .utils import AsyncTyper
@@ -53,7 +53,7 @@ async def search(
     condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
 ):
-    async with Dirac() as api:
+    async with DiracClient() as api:
         jobs = await api.jobs.search(
             parameters=None if all else parameter,
             search=condition if condition else None,
@@ -102,7 +102,7 @@ def display_rich(data, unit: str) -> None:
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
-    async with Dirac() as api:
+    async with DiracClient() as api:
         # api.valid(enforce_https=False)
         jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl])
     print(

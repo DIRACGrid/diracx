@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-__all__ = ("AsyncTyper", "CREDENTIALS_PATH")
+__all__ = ("AsyncTyper",)
 
 from asyncio import run
 from functools import wraps
-from pathlib import Path
 
 import typer
-
-CREDENTIALS_PATH = Path.home() / ".cache" / "diracx" / "credentials.json"
 
 
 class AsyncTyper(typer.Typer):

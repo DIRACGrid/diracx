@@ -5,7 +5,7 @@ from typing import Optional
 
 from typer import Option
 
-from diracx.client.aio import Dirac
+from diracx.client.aio import DiracClient
 
 from . import internal, jobs
 from .utils import AsyncTyper
@@ -28,14 +28,14 @@ async def login(
         scopes += [f"property:{p}" for p in property]
 
     print(f"Logging in with scopes: {scopes}")
-    async with Dirac() as api:
+    async with DiracClient() as api:
         await api.login(scopes)
     print("\nLogin successful!")
 
 
 @app.async_command()
 async def logout():
-    async with Dirac() as api:
+    async with DiracClient() as api:
         await api.logout()
     print("\nLogout successful!")
 
