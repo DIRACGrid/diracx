@@ -288,11 +288,11 @@ class JobLoggingDB(BaseDB):
         UTC time is used.
         """
 
-        seqnum_stmt = (
-            select(func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1))
-            .where(LoggingInfo.JobID == job_id)
-            .scalar_subquery()
+        # First, fetch the maximum SeqNum for the given job_id
+        seqnum_stmt = select(func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)).where(
+            LoggingInfo.JobID == job_id
         )
+        seqnum = await self.conn.scalar(seqnum_stmt)
 
         epoc = (
             time.mktime(date.timetuple())
@@ -302,7 +302,7 @@ class JobLoggingDB(BaseDB):
 
         stmt = insert(LoggingInfo).values(
             JobID=int(job_id),
-            SeqNum=seqnum_stmt,
+            SeqNum=seqnum,
             Status=status,
             MinorStatus=minor_status,
             ApplicationStatus=application_status[:255],
