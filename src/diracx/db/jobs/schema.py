@@ -97,20 +97,17 @@ class Jobs(JobDBBase):
 
     __table_args__ = (
         ForeignKeyConstraint(["JobID"], ["JobJDLs.JobID"]),
-        Index(
-            "JobType",
-            "DIRACSetup",
-            "JobGroup",
-            "JobSplitType",
-            "Site",
-            "Owner",
-            "OwnerDN",
-            "OwnerGroup",
-            "Status",
-            "MinorStatus",
-            "ApplicationStatus",
-            "LastUpdateTime",
-        ),
+        Index("JobType", "JobType"),
+        Index("JobGroup", "JobGroup"),
+        Index("JobSplitType", "JobSplitType"),
+        Index("Site", "Site"),
+        Index("Owner", "Owner"),
+        Index("OwnerGroup", "OwnerGroup"),
+        Index("Status", "Status"),
+        Index("MinorStatus", "MinorStatus"),
+        Index("ApplicationStatus", "ApplicationStatus"),
+        Index("StatusSite", "Status", "Site"),
+        Index("LastUpdateTime", "LastUpdateTime"),
     )
 
 
