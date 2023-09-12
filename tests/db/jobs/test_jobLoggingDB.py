@@ -10,6 +10,8 @@ from diracx.db import JobLoggingDB
 async def job_logging_db():
     job_logging_db = JobLoggingDB("sqlite+aiosqlite:///:memory:")
     async with job_logging_db.engine_context():
+        async with job_logging_db.engine.begin() as conn:
+            await conn.run_sync(job_logging_db.metadata.create_all)
         yield job_logging_db
 
 

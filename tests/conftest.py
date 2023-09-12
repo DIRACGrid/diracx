@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import contextlib
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -68,7 +71,7 @@ def with_app(test_auth_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
     """
-    yield create_app_inner(
+    app = create_app_inner(
         enabled_systems={".well-known", "auth", "config", "jobs"},
         all_service_settings=[test_auth_settings],
         database_urls={
@@ -81,6 +84,31 @@ def with_app(test_auth_settings, with_config_repo):
             backend_url=f"git+file://{with_config_repo}"
         ),
     )
+
+    @contextlib.asynccontextmanager
+    async def create_db_schemas(app=app):
+        """Create DB schema's based on the DBs available in app.dependency_overrides"""
+        from diracx.db.utils import BaseDB
+
+        for k, v in app.dependency_overrides.items():
+            # Ignore dependency overrides which aren't BaseDB.transaction
+            if k.__func__ != BaseDB.transaction.__func__:
+                continue
+            # The first argument of the overridden BaseDB.transaction is the DB object
+            db = v.args[0]
+            assert isinstance(db, BaseDB), (k, db)
+            # Fill the DB schema
+            async with db.engine.begin() as conn:
+                await conn.run_sync(db.metadata.create_all)
+
+        yield
+
+    # Add create_db_schemas to the end of the lifetime_functions so that the
+    # other lifetime_functions (i.e. those which run db.engine_context) have
+    # already been ran
+    app.lifetime_functions.append(create_db_schemas)
+
+    yield app
 
 
 @pytest.fixture
