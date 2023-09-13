@@ -6,7 +6,7 @@ import contextlib
 import json
 import logging
 import os
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing import Any, AsyncIterator, Self
 
 from opensearchpy import AsyncOpenSearch
@@ -16,13 +16,39 @@ from diracx.core.extensions import select_from_extension
 logger = logging.getLogger(__name__)
 
 
+class OpenSearchDBError(Exception):
+    pass
+
+
+class OpenSearchDBUnavailable(OpenSearchDBError):
+    pass
+
+
 class BaseOSDB(metaclass=ABCMeta):
     # TODO: Make metadata an abstract property
     mapping: dict
+    index_prefix: str
+
+    @abstractmethod
+    def index_name(self, doc_id: int) -> str:
+        ...
 
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
         self._client: AsyncOpenSearch | None = None
         self._connection_kwargs = connection_kwargs
+
+    @classmethod
+    def available_implementations(cls, db_name: str) -> list[type[BaseOSDB]]:
+        """Return the available implementations of the DB in reverse priority order."""
+        db_classes: list[type[BaseOSDB]] = [
+            entry_point.load()
+            for entry_point in select_from_extension(
+                group="diracx.os_dbs", name=db_name
+            )
+        ]
+        if not db_classes:
+            raise NotImplementedError(f"Could not find any matches for {db_name=}")
+        return db_classes
 
     @classmethod
     def available_urls(cls) -> dict[str, dict[str, Any]]:
@@ -65,6 +91,10 @@ class BaseOSDB(metaclass=ABCMeta):
         """
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
+            if not await self._client.ping():
+                raise OpenSearchDBUnavailable(
+                    f"Failed to connect to {self.__class__.__qualname__}"
+                )
             yield
         self._client = None
 
@@ -77,11 +107,23 @@ class BaseOSDB(metaclass=ABCMeta):
         self._client = None
         return
 
+    async def upsert(self, doc_id, document) -> None:
+        # TODO: Implement properly
+        response = await self.client.update(
+            index=self.index_name(doc_id),
+            id=doc_id,
+            body={"doc": document, "doc_as_upsert": True},
+            params=dict(retry_on_conflict=10),
+        )
+        print(f"{response=}")
+
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
     ) -> list[dict[str, Any]]:
-        return self.client.search(
-            body={"query": {"bool": {"must": [{"term": {"JobID": 123}}]}}},
+        # TODO: Implement properly
+        response = await self.client.search(
+            body={"query": {"bool": {"must": [{"term": {"JobID": 798811207}}]}}},
             params=dict(size=per_page),
-            index="lhcb-production_elasticjobparameters_index*",
+            index=f"{self.index_prefix}*",
         )
+        return [hit["_source"] for hit in response["hits"]["hits"]]

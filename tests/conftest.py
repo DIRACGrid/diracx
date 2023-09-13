@@ -80,6 +80,9 @@ def with_app(test_auth_settings, with_config_repo):
             "AuthDB": "sqlite+aiosqlite:///:memory:",
             "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
         },
+        os_database_conn_kwargs={
+            # TODO: JobParametersDB
+        },
         config_source=ConfigSource.create_from_url(
             backend_url=f"git+file://{with_config_repo}"
         ),
@@ -88,15 +91,15 @@ def with_app(test_auth_settings, with_config_repo):
     @contextlib.asynccontextmanager
     async def create_db_schemas(app=app):
         """Create DB schema's based on the DBs available in app.dependency_overrides"""
-        from diracx.db.utils import BaseDB
+        from diracx.db.sql_utils import BaseSQLDB
 
         for k, v in app.dependency_overrides.items():
-            # Ignore dependency overrides which aren't BaseDB.transaction
-            if k.__func__ != BaseDB.transaction.__func__:
+            # Ignore dependency overrides which aren't BaseSQLDB.transaction
+            if k.__func__ != BaseSQLDB.transaction.__func__:
                 continue
-            # The first argument of the overridden BaseDB.transaction is the DB object
+            # The first argument of the overridden BaseSQLDB.transaction is the DB object
             db = v.args[0]
-            assert isinstance(db, BaseDB), (k, db)
+            assert isinstance(db, BaseSQLDB), (k, db)
             # Fill the DB schema
             async with db.engine.begin() as conn:
                 await conn.run_sync(db.metadata.create_all)
