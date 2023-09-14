@@ -78,6 +78,17 @@ class BaseDB(metaclass=ABCMeta):
         self._engine: AsyncEngine | None = None
 
     @classmethod
+    def available_implementations(cls, db_name: str) -> list[type[BaseDB]]:
+        """Return the available implementations of the DB in reverse priority order."""
+        db_classes: list[type[BaseDB]] = [
+            entry_point.load()
+            for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
+        ]
+        if not db_classes:
+            raise NotImplementedError(f"Could not find any matches for {db_name=}")
+        return db_classes
+
+    @classmethod
     def available_urls(cls) -> dict[str, str]:
         """Return a dict of available database urls.
 
@@ -125,8 +136,6 @@ class BaseDB(metaclass=ABCMeta):
             self._db_url,
             echo=True,
         )
-        async with engine.begin() as conn:
-            await conn.run_sync(self.metadata.create_all)
         self._engine = engine
 
         yield

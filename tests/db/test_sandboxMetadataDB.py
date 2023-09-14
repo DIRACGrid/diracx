@@ -10,6 +10,8 @@ from diracx.db.sandbox_metadata.db import SandboxMetadataDB
 async def sandbox_metadata_db(tmp_path):
     sandbox_metadata_db = SandboxMetadataDB("sqlite+aiosqlite:///:memory:")
     async with sandbox_metadata_db.engine_context():
+        async with sandbox_metadata_db.engine.begin() as conn:
+            await conn.run_sync(sandbox_metadata_db.metadata.create_all)
         yield sandbox_metadata_db
 
 
