@@ -28,7 +28,7 @@ def parse_args():
 
 async def init_sql():
     logger.info("Initialising SQL databases")
-    from diracx.db.sql_utils import BaseSQLDB
+    from diracx.db.sql.utils import BaseSQLDB
 
     for db_name, db_url in BaseSQLDB.available_urls().items():
         logger.info("Initialising %s", db_name)
@@ -40,7 +40,7 @@ async def init_sql():
 
 async def init_os():
     logger.info("Initialising OpenSearch databases")
-    from diracx.db.os_utils import BaseOSDB
+    from diracx.db.os.utils import BaseOSDB
 
     for db_name, db_url in BaseOSDB.available_urls().items():
         logger.info("Initialising %s", db_name)

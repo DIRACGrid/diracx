@@ -17,8 +17,8 @@ from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.db.os_utils import BaseOSDB
-from diracx.db.sql_utils import BaseSQLDB
+from diracx.db.os.utils import BaseOSDB
+from diracx.db.sql.utils import BaseSQLDB
 
 from ..core.settings import ServiceSettingsBase
 from .auth import verify_dirac_access_token

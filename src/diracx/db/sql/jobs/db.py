@@ -11,7 +11,7 @@ from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobStatusReturn, LimitedJobStatusReturn
 from diracx.core.utils import JobStatus
 
-from ..sql_utils import BaseSQLDB, apply_search_filters
+from ..utils import BaseSQLDB, apply_search_filters
 from .schema import (
     InputData,
     JobDBBase,

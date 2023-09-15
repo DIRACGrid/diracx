@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from diracx.db.os_utils import BaseOSDB
+from diracx.db.os.utils import BaseOSDB
 
 
 class JobParametersDB(BaseOSDB):

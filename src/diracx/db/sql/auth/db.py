@@ -12,8 +12,8 @@ from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
+from diracx.db.sql.utils import BaseSQLDB, substract_date
 
-from ..sql_utils import BaseSQLDB, substract_date
 from .schema import (
     AuthorizationFlows,
     DeviceFlows,

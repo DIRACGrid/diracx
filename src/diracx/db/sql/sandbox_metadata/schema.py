@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from ..sql_utils import Column, DateNowColumn
+from diracx.db.sql.utils import Column, DateNowColumn
 
 Base = declarative_base()
 

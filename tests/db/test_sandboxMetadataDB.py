@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import sqlalchemy
 
-from diracx.db.sandbox_metadata.db import SandboxMetadataDB
+from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 
 
 @pytest.fixture

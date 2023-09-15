@@ -91,7 +91,7 @@ def with_app(test_auth_settings, with_config_repo):
     @contextlib.asynccontextmanager
     async def create_db_schemas(app=app):
         """Create DB schema's based on the DBs available in app.dependency_overrides"""
-        from diracx.db.sql_utils import BaseSQLDB
+        from diracx.db.sql.utils import BaseSQLDB
 
         for k, v in app.dependency_overrides.items():
             # Ignore dependency overrides which aren't BaseSQLDB.transaction

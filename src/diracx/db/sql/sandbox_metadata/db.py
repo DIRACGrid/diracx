@@ -7,7 +7,8 @@ import datetime
 
 import sqlalchemy
 
-from ..sql_utils import BaseSQLDB
+from diracx.db.sql.utils import BaseSQLDB
+
 from .schema import Base as SandboxMetadataDBBase
 from .schema import sb_Owners, sb_SandBoxes
 

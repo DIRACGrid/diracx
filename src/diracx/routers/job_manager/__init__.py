@@ -22,7 +22,7 @@ from diracx.core.models import (
 )
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.utils import JobStatus
-from diracx.db.jobs.status_utility import (
+from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 

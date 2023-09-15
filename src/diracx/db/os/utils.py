@@ -42,9 +42,7 @@ class BaseOSDB(metaclass=ABCMeta):
         """Return the available implementations of the DB in reverse priority order."""
         db_classes: list[type[BaseOSDB]] = [
             entry_point.load()
-            for entry_point in select_from_extension(
-                group="diracx.os_dbs", name=db_name
-            )
+            for entry_point in select_from_extension(group="diracx.db.os", name=db_name)
         ]
         if not db_classes:
             raise NotImplementedError(f"Could not find any matches for {db_name=}")
@@ -58,7 +56,7 @@ class BaseOSDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
         """
         conn_kwargs: dict[str, dict[str, Any]] = {}
-        for entry_point in select_from_extension(group="diracx.os_dbs"):
+        for entry_point in select_from_extension(group="diracx.db.os"):
             db_name = entry_point.name
             var_name = f"DIRACX_OS_DB_{entry_point.name.upper()}"
             if var_name in os.environ:
