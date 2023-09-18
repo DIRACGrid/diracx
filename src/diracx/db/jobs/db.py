@@ -323,7 +323,7 @@ class JobDB(BaseDB):
                 job_id,
                 {
                     "Status": JobStatus.FAILED,
-                    "MinorStatus": "Maximum of reschedulings reached",
+                    "MinorStatus": JobStatus.MAXRESCHEDULING,
                 },
             )
             raise ValueError(

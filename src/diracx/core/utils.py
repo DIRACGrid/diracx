@@ -21,6 +21,7 @@ class JobStatus(str, Enum):
     DELETED = "Deleted"
     KILLED = "Killed"
     RESCHEDULED = "Rescheduled"
+    MAXRESCHEDULING = "Maximum of reschedulings reached"
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
