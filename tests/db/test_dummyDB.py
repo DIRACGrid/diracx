@@ -16,6 +16,8 @@ from diracx.db.dummy.db import DummyDB
 async def dummy_db(tmp_path) -> DummyDB:
     dummy_db = DummyDB("sqlite+aiosqlite:///:memory:")
     async with dummy_db.engine_context():
+        async with dummy_db.engine.begin() as conn:
+            await conn.run_sync(dummy_db.metadata.create_all)
         yield dummy_db
 
 

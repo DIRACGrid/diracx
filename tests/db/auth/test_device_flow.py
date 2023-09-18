@@ -17,6 +17,8 @@ EXPIRED = 0
 async def auth_db(tmp_path):
     auth_db = AuthDB("sqlite+aiosqlite:///:memory:")
     async with auth_db.engine_context():
+        async with auth_db.engine.begin() as conn:
+            await conn.run_sync(auth_db.metadata.create_all)
         yield auth_db
 
 

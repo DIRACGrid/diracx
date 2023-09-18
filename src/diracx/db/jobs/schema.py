@@ -6,15 +6,17 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Integer,
+    Numeric,
     PrimaryKeyConstraint,
     String,
     Text,
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, NullColumn
+from ..utils import Column, DateNowColumn, NullColumn
 
-Base = declarative_base()
+JobDBBase = declarative_base()
+JobLoggingDBBase = declarative_base()
 
 
 class EnumBackedBool(types.TypeDecorator):
@@ -43,7 +45,7 @@ class EnumBackedBool(types.TypeDecorator):
             raise NotImplementedError(f"Unknown {value=}")
 
 
-class JobJDLs(Base):
+class JobJDLs(JobDBBase):
     __tablename__ = "JobJDLs"
     JobID = Column(Integer, autoincrement=True)
     JDL = Column(Text)
@@ -52,7 +54,7 @@ class JobJDLs(Base):
     __table_args__ = (PrimaryKeyConstraint("JobID"),)
 
 
-class Jobs(Base):
+class Jobs(JobDBBase):
     __tablename__ = "Jobs"
 
     JobID = Column("JobID", Integer, primary_key=True, default=0)
@@ -95,24 +97,21 @@ class Jobs(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(["JobID"], ["JobJDLs.JobID"]),
-        Index(
-            "JobType",
-            "DIRACSetup",
-            "JobGroup",
-            "JobSplitType",
-            "Site",
-            "Owner",
-            "OwnerDN",
-            "OwnerGroup",
-            "Status",
-            "MinorStatus",
-            "ApplicationStatus",
-            "LastUpdateTime",
-        ),
+        Index("JobType", "JobType"),
+        Index("JobGroup", "JobGroup"),
+        Index("JobSplitType", "JobSplitType"),
+        Index("Site", "Site"),
+        Index("Owner", "Owner"),
+        Index("OwnerGroup", "OwnerGroup"),
+        Index("Status", "Status"),
+        Index("MinorStatus", "MinorStatus"),
+        Index("ApplicationStatus", "ApplicationStatus"),
+        Index("StatusSite", "Status", "Site"),
+        Index("LastUpdateTime", "LastUpdateTime"),
     )
 
 
-class InputData(Base):
+class InputData(JobDBBase):
     __tablename__ = "InputData"
     JobID = Column(Integer, primary_key=True)
     LFN = Column(String(255), default="", primary_key=True)
@@ -120,7 +119,7 @@ class InputData(Base):
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
-class JobParameters(Base):
+class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
     JobID = Column(Integer, primary_key=True)
     Name = Column(String(100), primary_key=True)
@@ -128,7 +127,7 @@ class JobParameters(Base):
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
-class OptimizerParameters(Base):
+class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
     JobID = Column(Integer, primary_key=True)
     Name = Column(String(100), primary_key=True)
@@ -136,7 +135,7 @@ class OptimizerParameters(Base):
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
-class AtticJobParameters(Base):
+class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
     JobID = Column(Integer, ForeignKey("Jobs.JobID"), primary_key=True)
     Name = Column(String(100), primary_key=True)
@@ -144,7 +143,7 @@ class AtticJobParameters(Base):
     RescheduleCycle = Column(Integer)
 
 
-class SiteMask(Base):
+class SiteMask(JobDBBase):
     __tablename__ = "SiteMask"
     Site = Column(String(64), primary_key=True)
     Status = Column(String(64))
@@ -153,7 +152,7 @@ class SiteMask(Base):
     Comment = Column(Text)
 
 
-class SiteMaskLogging(Base):
+class SiteMaskLogging(JobDBBase):
     __tablename__ = "SiteMaskLogging"
     Site = Column(String(64), primary_key=True)
     UpdateTime = Column(DateTime, primary_key=True)
@@ -162,7 +161,7 @@ class SiteMaskLogging(Base):
     Comment = Column(Text)
 
 
-class HeartBeatLoggingInfo(Base):
+class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
     JobID = Column(Integer, primary_key=True)
     Name = Column(String(100), primary_key=True)
@@ -172,7 +171,7 @@ class HeartBeatLoggingInfo(Base):
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
-class JobCommands(Base):
+class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
     JobID = Column(Integer, primary_key=True)
     Command = Column(String(100))
@@ -182,3 +181,17 @@ class JobCommands(Base):
     ExecutionTime = NullColumn(DateTime)
 
     __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
+
+
+class LoggingInfo(JobLoggingDBBase):
+    __tablename__ = "LoggingInfo"
+    JobID = Column(Integer)
+    SeqNum = Column(Integer)
+    Status = Column(String(32), default="")
+    MinorStatus = Column(String(128), default="")
+    ApplicationStatus = Column(String(255), default="")
+    StatusTime = DateNowColumn()
+    # TODO: Check that this corresponds to the DOUBLE(12,3) type in MySQL
+    StatusTimeOrder = Column(Numeric(precision=12, scale=3), default=0)
+    StatusSource = Column(String(32), default="Unknown")
+    __table_args__ = (PrimaryKeyConstraint("JobID", "SeqNum"),)

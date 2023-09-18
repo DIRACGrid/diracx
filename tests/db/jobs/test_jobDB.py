@@ -11,6 +11,8 @@ from diracx.db.jobs.db import JobDB
 async def job_db(tmp_path):
     job_db = JobDB("sqlite+aiosqlite:///:memory:")
     async with job_db.engine_context():
+        async with job_db.engine.begin() as conn:
+            await conn.run_sync(job_db.metadata.create_all)
         yield job_db
 
 

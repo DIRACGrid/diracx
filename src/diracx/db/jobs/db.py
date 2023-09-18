@@ -1,18 +1,33 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import ScalarSearchOperator, ScalarSearchSpec
+from diracx.core.models import (
+    JobStatusReturn,
+    LimitedJobStatusReturn,
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+)
 from diracx.core.utils import JobStatus
 
 from ..utils import BaseDB, apply_search_filters
-from .schema import Base as JobDBBase
-from .schema import InputData, JobJDLs, JobParameters, Jobs, OptimizerParameters
+from .schema import (
+    InputData,
+    JobDBBase,
+    JobJDLs,
+    JobLoggingDBBase,
+    JobParameters,
+    Jobs,
+    LoggingInfo,
+    OptimizerParameters,
+)
 
 
 class JobDB(BaseDB):
@@ -206,7 +221,7 @@ class JobDB(BaseDB):
         class_ad_job = ClassAd(jobJDL)
         class_ad_req = ClassAd("[]")
         if not class_ad_job.isOK():
-            job_attrs["Status"] = JobStatus.Failed
+            job_attrs["Status"] = JobStatus.FAILED
 
             job_attrs["MinorStatus"] = "Error in JDL syntax"
 
@@ -317,7 +332,7 @@ class JobDB(BaseDB):
             self.setJobAttributes(
                 job_id,
                 {
-                    "Status": JobStatus.Failed,
+                    "Status": JobStatus.FAILED,
                     "MinorStatus": "Maximum of reschedulings reached",
                 },
             )
@@ -409,3 +424,157 @@ class JobDB(BaseDB):
         retVal["MinorStatus"] = JobMinorStatus.RESCHEDULED
 
         return retVal
+
+    async def get_job_status(self, job_id: int) -> LimitedJobStatusReturn:
+        stmt = select(Jobs.Status, Jobs.MinorStatus, Jobs.ApplicationStatus).where(
+            Jobs.JobID == job_id
+        )
+        return LimitedJobStatusReturn(
+            **dict((await self.conn.execute(stmt)).one()._mapping)
+        )
+
+
+MAGIC_EPOC_NUMBER = 1270000000
+
+
+class JobLoggingDB(BaseDB):
+    """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps"""
+
+    # This needs to be here for the BaseDB to create the engine
+    metadata = JobLoggingDBBase.metadata
+
+    async def insert_record(
+        self,
+        job_id: int,
+        status: JobStatus,
+        minor_status: str,
+        application_status: str,
+        date: datetime,
+        source: str,
+    ):
+        """
+        Add a new entry to the JobLoggingDB table. One, two or all the three status
+        components (status, minorStatus, applicationStatus) can be specified.
+        Optionally the time stamp of the status can
+        be provided in a form of a string in a format '%Y-%m-%d %H:%M:%S' or
+        as datetime.datetime object. If the time stamp is not provided the current
+        UTC time is used.
+        """
+
+        # First, fetch the maximum SeqNum for the given job_id
+        seqnum_stmt = select(func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)).where(
+            LoggingInfo.JobID == job_id
+        )
+        seqnum = await self.conn.scalar(seqnum_stmt)
+
+        epoc = (
+            time.mktime(date.timetuple())
+            + date.microsecond / 1000000.0
+            - MAGIC_EPOC_NUMBER
+        )
+
+        stmt = insert(LoggingInfo).values(
+            JobID=int(job_id),
+            SeqNum=seqnum,
+            Status=status,
+            MinorStatus=minor_status,
+            ApplicationStatus=application_status[:255],
+            StatusTime=date,
+            StatusTimeOrder=epoc,
+            StatusSource=source[:32],
+        )
+        await self.conn.execute(stmt)
+
+    async def get_records(self, job_id: int) -> list[JobStatusReturn]:
+        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,StatusSource tuple
+        for each record found for job specified by its jobID in historical order
+        """
+
+        stmt = (
+            select(
+                LoggingInfo.Status,
+                LoggingInfo.MinorStatus,
+                LoggingInfo.ApplicationStatus,
+                LoggingInfo.StatusTime,
+                LoggingInfo.StatusSource,
+            )
+            .where(LoggingInfo.JobID == int(job_id))
+            .order_by(LoggingInfo.StatusTimeOrder, LoggingInfo.StatusTime)
+        )
+        rows = await self.conn.execute(stmt)
+
+        values = []
+        for (
+            status,
+            minor_status,
+            application_status,
+            status_time,
+            status_source,
+        ) in rows:
+            values.append(
+                [
+                    status,
+                    minor_status,
+                    application_status,
+                    status_time.replace(tzinfo=timezone.utc),
+                    status_source,
+                ]
+            )
+
+        # If no value has been set for the application status in the first place,
+        # We put this status to unknown
+        res = []
+        if values:
+            if values[0][2] == "idem":
+                values[0][2] = "Unknown"
+
+            # We replace "idem" values by the value previously stated
+            for i in range(1, len(values)):
+                for j in range(3):
+                    if values[i][j] == "idem":
+                        values[i][j] = values[i - 1][j]
+
+            # And we replace arrays with tuples
+            for (
+                status,
+                minor_status,
+                application_status,
+                status_time,
+                status_source,
+            ) in values:
+                res.append(
+                    JobStatusReturn(
+                        Status=status,
+                        MinorStatus=minor_status,
+                        ApplicationStatus=application_status,
+                        StatusTime=status_time,
+                        StatusSource=status_source,
+                    )
+                )
+
+        return res
+
+    async def delete_records(self, job_id: int):
+        """Delete logging records for given jobs"""
+
+        stmt = delete(LoggingInfo).where(LoggingInfo.JobID == job_id)
+        await self.conn.execute(stmt)
+
+    async def get_wms_time_stamps(self, job_id):
+        """Get TimeStamps for job MajorState transitions
+        return a {State:timestamp} dictionary
+        """
+
+        result = {}
+        stmt = select(
+            LoggingInfo.Status,
+            LoggingInfo.StatusTimeOrder,
+        ).where(LoggingInfo.JobID == job_id)
+        rows = await self.conn.execute(stmt)
+        if not rows.rowcount:
+            raise NoResultFound(f"No Logging Info for job {job_id}")
+
+        for event, etime in rows:
+            result[event] = str(etime + MAGIC_EPOC_NUMBER)
+
+        return result

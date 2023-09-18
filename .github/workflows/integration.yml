@@ -23,7 +23,7 @@ jobs:
         dirac-branch:
           - integration
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -31,6 +31,8 @@ jobs:
         run: |
           pip install typer pyyaml gitpython packaging
           git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          # HACK: Workaround the issues which will be fixed in https://github.com/DIRACGrid/diracx/pull/87
+          git --git-dir /tmp/DIRACRepo/.git checkout 208bb7983c3530fc0aa125df6011fc32c3f482fd
           # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment
         run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --extra-module "diracx=${GITHUB_WORKSPACE}"

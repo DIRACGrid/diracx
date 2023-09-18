@@ -16,6 +16,7 @@ dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo" --vo=diracAdmin --u
 export DIRACX_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
 export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///:memory:"
+export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${tmp_dir}/signing-key/rs256.key"
 export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
 

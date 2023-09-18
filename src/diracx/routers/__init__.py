@@ -20,7 +20,7 @@ from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.utils import BaseDB
 
 from ..core.settings import ServiceSettingsBase
-from .auth import verify_dirac_token
+from .auth import verify_dirac_access_token
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 
 T = TypeVar("T")
@@ -58,11 +58,7 @@ def create_app_inner(
     # Add the DBs to the application
     available_db_classes: set[type[BaseDB]] = set()
     for db_name, db_url in database_urls.items():
-        db_classes: list[type[BaseDB]] = [
-            entry_point.load()
-            for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
-        ]
-        assert db_classes, f"Could not find {db_name=}"
+        db_classes = BaseDB.available_implementations(db_name)
         # The first DB is the highest priority one
         db = db_classes[0](db_url=db_url)
         app.lifetime_functions.append(db.engine_context)
@@ -106,7 +102,7 @@ def create_app_inner(
         # Add the router to the application
         dependencies = []
         if isinstance(router, DiracxRouter) and router.diracx_require_auth:
-            dependencies.append(Depends(verify_dirac_token))
+            dependencies.append(Depends(verify_dirac_access_token))
         app.include_router(
             router,
             prefix=f"/{system_name}",

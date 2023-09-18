@@ -36,7 +36,7 @@ jobs:
         # We need extglob for REFERENCE_BRANCH substitution
         shell: bash -l -O extglob {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
       - run: |
@@ -95,8 +95,15 @@ jobs:
             mv release.notes release.notes.old
             cat release.notes.old
             (echo -e "[${NEW_VERSION}]" &&  cat release.notes.new release.notes.old) > release.notes
-            git add release.notes
-            git commit -m "docs: Add release notes for $NEW_VERSION"
+            ###################3
+            # TODO: we should add the release notes somewhere at some point
+            # now we just don't do it because main branch is protected
+            # and we can't push directly from the CI
+            #git add release.notes
+            #git commit -m "docs: Add release notes for $NEW_VERSION"
+            # Stash is mandatory not to leave the repo dirty
+            git stash
+            ########################
             git show
             # Create the tag
             git tag "$NEW_VERSION"
