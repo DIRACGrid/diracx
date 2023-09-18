@@ -33,6 +33,7 @@ from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
+from diracx.core.models import TokenResponse
 from diracx.core.properties import (
     PROXY_MANAGEMENT,
     SecurityProperty,
@@ -87,15 +88,6 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
     return Depends(require_property)
-
-
-class TokenResponse(BaseModel):
-    # Base on RFC 6749
-    access_token: str
-    refresh_token: str | None
-    expires_in: int
-    token_type: str = "Bearer"
-    state: str
 
 
 class GrantType(str, Enum):
@@ -321,9 +313,8 @@ async def exchange_token(
 
     return TokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
         expires_in=settings.access_token_expire_minutes * 60,
-        state="None",
+        refresh_token=refresh_token,
     )
 
 

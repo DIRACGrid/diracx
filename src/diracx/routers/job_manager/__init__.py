@@ -12,6 +12,7 @@ from sqlalchemy.exc import NoResultFound
 
 from diracx.core.config import Config, ConfigSource
 from diracx.core.models import (
+    JobStatus,
     JobStatusReturn,
     JobStatusUpdate,
     LimitedJobStatusReturn,
@@ -21,7 +22,6 @@ from diracx.core.models import (
     SortSpec,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.core.utils import JobStatus
 from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
