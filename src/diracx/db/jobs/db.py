@@ -23,10 +23,8 @@ from .schema import (
     JobDBBase,
     JobJDLs,
     JobLoggingDBBase,
-    JobParameters,
     Jobs,
     LoggingInfo,
-    OptimizerParameters,
 )
 
 
@@ -279,14 +277,6 @@ class JobDB(BaseDB):
             "TimeStamp": datetime.now(tz=timezone.utc),
         }
 
-    async def delete_job_parameters(self, job_id: int):
-        stmt = delete(JobParameters).where(JobParameters.JobID == job_id)
-        await self.conn.execute(stmt)
-
-    async def delete_job_optimizer_parameters(self, job_id: int):
-        stmt = delete(OptimizerParameters).where(OptimizerParameters.JobID == job_id)
-        await self.conn.execute(stmt)
-
     async def rescheduleJob(self, job_id) -> dict[str, Any]:
         """Reschedule given job"""
         from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
@@ -351,9 +341,9 @@ class JobDB(BaseDB):
         #         if not result["OK"]:
         #             break
 
-        # Delete job in JobParameters and OptimizerParameters:
-        await self.delete_job_parameters(job_id)
-        await self.delete_job_optimizer_parameters(job_id)
+        # TODO: IF we keep JobParameters and OptimizerParameters: Delete job in those tables.
+        # await self.delete_job_parameters(job_id)
+        # await self.delete_job_optimizer_parameters(job_id)
 
         job_jdl = await self.getJobJDL(job_id, original=True)
         if not job_jdl.strip().startswith("["):
