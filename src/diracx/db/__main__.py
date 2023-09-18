@@ -46,8 +46,7 @@ async def init_os():
         logger.info("Initialising %s", db_name)
         db = BaseOSDB.available_implementations(db_name)[0](db_url)
         async with db.client_context():
-            # TODO: Implement
-            raise NotImplementedError("Create index templates and do any other setup")
+            await db.create_index_template()
 
 
 if __name__ == "__main__":

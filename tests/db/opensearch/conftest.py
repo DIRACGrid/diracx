@@ -25,13 +25,12 @@ class DummyOSDB(BaseOSDB):
     test runs are independent of each other.
     """
 
-    mapping = {
-        "properties": {
-            "DateField": {"type": "date"},
-            "IntegerField": {"type": "long"},
-            "KeywordField1": {"type": "keyword"},
-            "KeywordField2": {"type": "keyword"},
-        }
+    fields = {
+        "DateField": {"type": "date"},
+        "IntegerField": {"type": "long"},
+        "KeywordField1": {"type": "keyword"},
+        "KeywordField2": {"type": "keyword"},
+        "TextField": {"type": "text"},
     }
 
     def __init__(self, *args, **kwargs):
@@ -69,8 +68,19 @@ def opensearch_conn_kwargs(demo_kubectl_env):
 
 
 @pytest.fixture
-async def dummy_opensearch_db(opensearch_conn_kwargs):
+async def dummy_opensearch_db_without_template(opensearch_conn_kwargs):
     """Fixture which returns a DummyOSDB object."""
     db = DummyOSDB(opensearch_conn_kwargs)
     async with db.client_context():
         yield db
+        # Clean up after the test
+        await db.client.indices.delete(index=f"{db.index_prefix}*")
+
+
+@pytest.fixture
+async def dummy_opensearch_db(dummy_opensearch_db_without_template):
+    """Fixture which returns a DummyOSDB object with the index template applied."""
+    db = dummy_opensearch_db_without_template
+    await db.create_index_template()
+    yield db
+    await db.client.indices.delete_index_template(name=db.index_prefix)

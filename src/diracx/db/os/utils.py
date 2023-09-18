@@ -26,7 +26,7 @@ class OpenSearchDBUnavailable(OpenSearchDBError):
 
 class BaseOSDB(metaclass=ABCMeta):
     # TODO: Make metadata an abstract property
-    mapping: dict
+    fields: dict
     index_prefix: str
 
     @abstractmethod
@@ -104,6 +104,16 @@ class BaseOSDB(metaclass=ABCMeta):
     async def __aexit__(self, exc_type, exc, tb):
         self._client = None
         return
+
+    async def create_index_template(self) -> None:
+        template_body = {
+            "template": {"mappings": {"properties": self.fields}},
+            "index_patterns": [f"{self.index_prefix}*"],
+        }
+        result = await self.client.indices.put_index_template(
+            name=self.index_prefix, body=template_body
+        )
+        assert result["acknowledged"]
 
     async def upsert(self, doc_id, document) -> None:
         # TODO: Implement properly

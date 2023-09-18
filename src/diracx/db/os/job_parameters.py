@@ -4,21 +4,19 @@ from diracx.db.os.utils import BaseOSDB
 
 
 class JobParametersDB(BaseOSDB):
-    mapping = {
-        "properties": {
-            "JobID": {"type": "long"},
-            "timestamp": {"type": "date"},
-            "CPUNormalizationFactor": {"type": "long"},
-            "NormCPUTime(s)": {"type": "long"},
-            "Memory(kB)": {"type": "long"},
-            "TotalCPUTime(s)": {"type": "long"},
-            "MemoryUsed(kb)": {"type": "long"},
-            "HostName": {"type": "keyword"},
-            "GridCE": {"type": "keyword"},
-            "ModelName": {"type": "keyword"},
-            "Status": {"type": "keyword"},
-            "JobType": {"type": "keyword"},
-        }
+    fields = {
+        "JobID": {"type": "long"},
+        "timestamp": {"type": "date"},
+        "CPUNormalizationFactor": {"type": "long"},
+        "NormCPUTime(s)": {"type": "long"},
+        "Memory(kB)": {"type": "long"},
+        "TotalCPUTime(s)": {"type": "long"},
+        "MemoryUsed(kb)": {"type": "long"},
+        "HostName": {"type": "keyword"},
+        "GridCE": {"type": "keyword"},
+        "ModelName": {"type": "keyword"},
+        "Status": {"type": "keyword"},
+        "JobType": {"type": "keyword"},
     }
     index_prefix = "mysetup_elasticjobparameters_index_"
 
