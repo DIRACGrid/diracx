@@ -8,8 +8,7 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import JobStatusReturn, LimitedJobStatusReturn
-from diracx.core.utils import JobStatus
+from diracx.core.models import JobStatus, JobStatusReturn, LimitedJobStatusReturn
 
 from ..utils import BaseSQLDB, apply_search_filters
 from .schema import (

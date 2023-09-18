@@ -4,11 +4,11 @@ from unittest.mock import MagicMock
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.models import (
+    JobStatus,
     JobStatusUpdate,
     ScalarSearchOperator,
     SetJobStatusReturn,
 )
-from diracx.core.utils import JobStatus
 from diracx.db.sql.jobs.db import JobDB, JobLoggingDB
 
 

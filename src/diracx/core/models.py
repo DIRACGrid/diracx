@@ -6,8 +6,6 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-from diracx.core.utils import JobStatus
-
 
 class ScalarSearchOperator(str, Enum):
     EQUAL = "eq"
@@ -22,7 +20,7 @@ class VectorSearchOperator(str, Enum):
     NOT_IN = "not in"
 
 
-# TODO: TypedDict vs pydnatic?
+# TODO: TypedDict vs pydantic?
 class SortSpec(TypedDict):
     parameter: str
     direction: Literal["asc"] | Literal["dsc"]
@@ -38,6 +36,36 @@ class VectorSearchSpec(TypedDict):
     parameter: str
     operator: VectorSearchOperator
     values: list[str]
+
+
+SearchSpec = ScalarSearchSpec | VectorSearchSpec
+
+
+class TokenResponse(BaseModel):
+    # Based on RFC 6749
+    access_token: str
+    refresh_token: str | None
+    expires_in: int
+    token_type: str = "Bearer"
+    state: str
+
+
+class JobStatus(str, Enum):
+    SUBMITTING = "Submitting"
+    RECEIVED = "Received"
+    CHECKING = "Checking"
+    STAGING = "Staging"
+    WAITING = "Waiting"
+    MATCHED = "Matched"
+    RUNNING = "Running"
+    STALLED = "Stalled"
+    COMPLETING = "Completing"
+    DONE = "Done"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    DELETED = "Deleted"
+    KILLED = "Killed"
+    RESCHEDULED = "Rescheduled"
 
 
 class JobStatusUpdate(BaseModel):
@@ -80,6 +108,3 @@ class SetJobStatusReturn(BaseModel):
     start_exec_time: datetime | None = Field(alias="StartExecTime")
     end_exec_time: datetime | None = Field(alias="EndExecTime")
     last_update_time: datetime | None = Field(alias="LastUpdateTime")
-
-
-SearchSpec = ScalarSearchSpec | VectorSearchSpec
