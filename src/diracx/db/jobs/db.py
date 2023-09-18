@@ -227,7 +227,7 @@ class JobDB(BaseDB):
 
             return {
                 "JobID": job_id,
-                "Status": JobStatus.Failed,
+                "Status": JobStatus.FAILED,
                 "MinorStatus": "Error in JDL syntax",
             }
 
