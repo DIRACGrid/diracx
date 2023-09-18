@@ -30,6 +30,7 @@ dependencies:
   - httpx
   - isodate
   - mypy
+  - opensearch-py
   - pydantic =1.10.10
   - pyjwt
   - pytest

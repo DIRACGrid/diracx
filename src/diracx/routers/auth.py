@@ -39,7 +39,7 @@ from diracx.core.properties import (
     UnevaluatedProperty,
 )
 from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
-from diracx.db.auth.schema import FlowStatus, RefreshTokenStatus
+from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 
 from .dependencies import (
     AuthDB,

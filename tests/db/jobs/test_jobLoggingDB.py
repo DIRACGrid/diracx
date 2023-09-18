@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 
 from diracx.core.utils import JobStatus
-from diracx.db import JobLoggingDB
+from diracx.db.sql import JobLoggingDB
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseDB")
+__all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseSQLDB")
 
 import contextlib
 import logging
@@ -65,7 +65,7 @@ def EnumColumn(enum_type, **kwargs):
     return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
-class BaseDB(metaclass=ABCMeta):
+class BaseSQLDB(metaclass=ABCMeta):
     """This should be the base class of all the DiracX DBs"""
 
     # engine: AsyncEngine
@@ -78,11 +78,13 @@ class BaseDB(metaclass=ABCMeta):
         self._engine: AsyncEngine | None = None
 
     @classmethod
-    def available_implementations(cls, db_name: str) -> list[type[BaseDB]]:
+    def available_implementations(cls, db_name: str) -> list[type[BaseSQLDB]]:
         """Return the available implementations of the DB in reverse priority order."""
-        db_classes: list[type[BaseDB]] = [
+        db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
-            for entry_point in select_from_extension(group="diracx.dbs", name=db_name)
+            for entry_point in select_from_extension(
+                group="diracx.db.sql", name=db_name
+            )
         ]
         if not db_classes:
             raise NotImplementedError(f"Could not find any matches for {db_name=}")
@@ -96,7 +98,7 @@ class BaseDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select_from_extension(group="diracx.dbs"):
+        for entry_point in select_from_extension(group="diracx.db.sql"):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:
@@ -107,7 +109,7 @@ class BaseDB(metaclass=ABCMeta):
                     else:
                         db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
                 except Exception:
-                    logger.error("Error loading URL %s for %s", db_name, db_url)
+                    logger.error("Error loading URL for %s", db_name)
                     raise
         return db_urls
 

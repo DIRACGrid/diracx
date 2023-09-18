@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.db.dummy.db import DummyDB
+from diracx.db.sql.dummy.db import DummyDB
 
 # Each DB test class must defined a fixture looking like this one
 # It allows to get an instance of an in memory DB,

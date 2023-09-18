@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from diracx.db.jobs.db import JobDB
+from diracx.db.sql.jobs.db import JobDB
 
 
 @pytest.fixture

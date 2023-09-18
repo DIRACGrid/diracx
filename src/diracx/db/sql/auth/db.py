@@ -12,8 +12,8 @@ from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
+from diracx.db.sql.utils import BaseSQLDB, substract_date
 
-from ..utils import BaseDB, substract_date
 from .schema import (
     AuthorizationFlows,
     DeviceFlows,
@@ -28,8 +28,7 @@ USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ"
 MAX_RETRY = 5
 
 
-class AuthDB(BaseDB):
-    # This needs to be here for the BaseDB to create the engine
+class AuthDB(BaseSQLDB):
     metadata = AuthDBBase.metadata
 
     async def device_flow_validate_user_code(

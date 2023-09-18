@@ -4,12 +4,13 @@ from uuid import UUID
 
 from sqlalchemy import func, insert, select
 
-from ..utils import BaseDB, apply_search_filters
+from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
+
 from .schema import Base as DummyDBBase
 from .schema import Cars, Owners
 
 
-class DummyDB(BaseDB):
+class DummyDB(BaseSQLDB):
     """
     This DummyDB is just to illustrate some important aspect of writing
     DB classes in DiracX.
@@ -19,7 +20,7 @@ class DummyDB(BaseDB):
     Document the secrets
     """
 
-    # This needs to be here for the BaseDB to create the engine
+    # This needs to be here for the BaseSQLDB to create the engine
     metadata = DummyDBBase.metadata
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
