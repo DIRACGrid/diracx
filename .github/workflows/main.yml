@@ -35,6 +35,49 @@ jobs:
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
 
+  pytest-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        run: |
+          pip install pytest-github-actions-annotate-failures
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install .
+      - name: Start demo
+        run: |
+          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          ../diracx-charts/run_demo.sh --exit-when-done $PWD
+      - name: Debugging information
+        run: |
+          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
+          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
+          export PATH=${DIRACX_DEMO_DIR}:$PATH
+          kubectl get pods
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+            echo "${pod_name}"
+            kubectl describe pod/"${pod_name}" || true
+            for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
+              echo $pod_name $container_name
+              kubectl logs "${pod_name}" -c "${container_name}" || true
+            done
+          done
+          if [ ! -f "${DIRACX_DEMO_DIR}/.success" ]; then
+            cat "${DIRACX_DEMO_DIR}/.failed"
+            exit 1
+          fi
+      - name: Run pytest
+        run: |
+          pytest . --demo-dir ../diracx-charts/ --cov-report=xml:coverage.xml --junitxml=report.xml
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3.1.4
+
   mypy:
     runs-on: ubuntu-latest
     steps:

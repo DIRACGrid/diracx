@@ -58,13 +58,20 @@ pre-commit install
 
 ### Run the test
 
-Run the unit tests
+Run the unit tests:
 
 ```bash
 # In the `diracx` folder
 pytest
 mypy .
 pre-commit run --all-files
+```
+
+Some tests require the DiracX demo instance to be running (see above) and are skipped by default.
+To enable these tests pass `--demo-dir` like so:
+
+```bash
+pytest . --demo-dir ../diracx-charts/
 ```
 
 ### Run a local instance of diracx

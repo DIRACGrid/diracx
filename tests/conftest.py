@@ -37,7 +37,7 @@ def pytest_addoption(parser):
         "--demo-dir",
         type=Path,
         default=None,
-        help="Path to a running diracx-demo directory",
+        help="Path to a diracx-charts directory with the demo running",
     )
 
 
@@ -223,17 +223,26 @@ def admin_user_client(test_client, test_auth_settings):
 
 @pytest.fixture(scope="session")
 def demo_kubectl_env(request):
+    """Get the dictionary of environment variables for kubectl to control the demo"""
     demo_dir = request.config.getoption("--demo-dir")
     if demo_dir is None:
         pytest.skip("Requires a running instance of the DiracX demo")
-    kube_conf = demo_dir / ".demo" / "kube.conf"
+    demo_dir = (demo_dir / ".demo").resolve()
+
+    kube_conf = demo_dir / "kube.conf"
     if not kube_conf.exists():
         raise RuntimeError(f"Could not find {kube_conf}, is the demo running?")
+
     env = {
         **os.environ,
         "KUBECONFIG": str(kube_conf),
-        "PATH": os.environ["PATH"] + ":" + str(demo_dir / ".demo"),
+        "PATH": f"{demo_dir}:{os.environ['PATH']}",
     }
-    pods_result = subprocess.check_output(["kubectl", "get", "pods"], env=env)
-    assert pods_result
+
+    # Check that we can run kubectl
+    pods_result = subprocess.check_output(
+        ["kubectl", "get", "pods"], env=env, text=True
+    )
+    assert "diracx" in pods_result
+
     yield env

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 import socket
-import subprocess
+from subprocess import PIPE, Popen, check_output
 
 import pytest
 
@@ -44,18 +44,37 @@ class DummyOSDB(BaseOSDB):
 
 @pytest.fixture(scope="session")
 def opensearch_conn_kwargs(demo_kubectl_env):
-    """Fixture which forwards a port from the diracx-demo and returns the connection kwargs."""
+    """Fixture to get the OpenSearch connection kwargs.
+
+    This fixture uses kubectl to forward a port from OpenSearch service in the
+    diracx-demo. This port can then be used for testing DiracX against a real
+    OpenSearch instance.
+    """
     require_port_availability(OPENSEARCH_PORT)
-    command = [
+
+    # Ensure the pod is running
+    cmd = [
+        "kubectl",
+        "get",
+        "pod/opensearch-cluster-master-0",
+        "-o",
+        "jsonpath={.status.phase}",
+    ]
+    pod_status = check_output(cmd, text=True, env=demo_kubectl_env)
+    if pod_status != "Running":
+        raise RuntimeError(f"OpenSearch pod is not running: {pod_status=}")
+
+    # Forward the actual port and wait until it has been forwarded before yielding
+    cmd = [
         "kubectl",
         "port-forward",
         "service/opensearch-cluster-master",
         f"{OPENSEARCH_PORT}:9200",
     ]
-    with subprocess.Popen(
-        command, stdout=subprocess.PIPE, universal_newlines=True, env=demo_kubectl_env
-    ) as proc:
+    output_lines = []
+    with Popen(cmd, stdout=PIPE, stderr=PIPE, text=True, env=demo_kubectl_env) as proc:
         for line in proc.stdout:
+            output_lines.append(line)
             if line.startswith("Forwarding from"):
                 yield {
                     "hosts": f"admin:admin@localhost:{OPENSEARCH_PORT}",
@@ -64,6 +83,10 @@ def opensearch_conn_kwargs(demo_kubectl_env):
                 }
                 proc.kill()
                 break
+        else:
+            raise RuntimeError(
+                f"Could not start port forwarding with {cmd=}\n{output_lines=}"
+            )
     proc.wait()
 
 
