@@ -55,12 +55,21 @@ class Enum9(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """An enumeration."""
 
+    SUBMITTING = "Submitting"
+    RECEIVED = "Received"
+    CHECKING = "Checking"
+    STAGING = "Staging"
+    WAITING = "Waiting"
+    MATCHED = "Matched"
     RUNNING = "Running"
     STALLED = "Stalled"
-    KILLED = "Killed"
+    COMPLETING = "Completing"
+    DONE = "Done"
+    COMPLETED = "Completed"
     FAILED = "Failed"
-    RECEIVED = "RECEIVED"
-    SUBMITTING = "Submitting"
+    DELETED = "Deleted"
+    KILLED = "Killed"
+    RESCHEDULED = "Rescheduled"
 
 
 class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):

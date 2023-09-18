@@ -298,73 +298,116 @@ class JobStatusReturn(_serialization.Model):
 
     All required parameters must be populated in order to send to Azure.
 
-    :ivar job_id: Job Id. Required.
-    :vartype job_id: int
-    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
-     "Failed", "RECEIVED", and "Submitting".
+    :ivar status: An enumeration. Required. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~client.models.JobStatus
+    :ivar minor_status: Minorstatus. Required.
+    :vartype minor_status: str
+    :ivar application_status: Applicationstatus. Required.
+    :vartype application_status: str
+    :ivar status_time: Statustime. Required.
+    :vartype status_time: ~datetime.datetime
+    :ivar status_source: Statussource. Required.
+    :vartype status_source: str
     """
 
     _validation = {
-        "job_id": {"required": True},
         "status": {"required": True},
+        "minor_status": {"required": True},
+        "application_status": {"required": True},
+        "status_time": {"required": True},
+        "status_source": {"required": True},
     }
 
     _attribute_map = {
-        "job_id": {"key": "job_id", "type": "int"},
-        "status": {"key": "status", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "application_status": {"key": "ApplicationStatus", "type": "str"},
+        "status_time": {"key": "StatusTime", "type": "iso-8601"},
+        "status_source": {"key": "StatusSource", "type": "str"},
     }
 
     def __init__(
-        self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any
+        self,
+        *,
+        status: Union[str, "_models.JobStatus"],
+        minor_status: str,
+        application_status: str,
+        status_time: datetime.datetime,
+        status_source: str,
+        **kwargs: Any
     ) -> None:
         """
-        :keyword job_id: Job Id. Required.
-        :paramtype job_id: int
-        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
-         "Failed", "RECEIVED", and "Submitting".
+        :keyword status: An enumeration. Required. Known values are: "Submitting", "Received",
+         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~client.models.JobStatus
+        :keyword minor_status: Minorstatus. Required.
+        :paramtype minor_status: str
+        :keyword application_status: Applicationstatus. Required.
+        :paramtype application_status: str
+        :keyword status_time: Statustime. Required.
+        :paramtype status_time: ~datetime.datetime
+        :keyword status_source: Statussource. Required.
+        :paramtype status_source: str
         """
         super().__init__(**kwargs)
-        self.job_id = job_id
         self.status = status
+        self.minor_status = minor_status
+        self.application_status = application_status
+        self.status_time = status_time
+        self.status_source = status_source
 
 
 class JobStatusUpdate(_serialization.Model):
     """JobStatusUpdate.
 
-    All required parameters must be populated in order to send to Azure.
-
-    :ivar job_id: Job Id. Required.
-    :vartype job_id: int
-    :ivar status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
-     "Failed", "RECEIVED", and "Submitting".
+    :ivar status: An enumeration. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~client.models.JobStatus
+    :ivar minor_status: Minorstatus.
+    :vartype minor_status: str
+    :ivar application_status: Applicationstatus.
+    :vartype application_status: str
+    :ivar status_source: Statussource.
+    :vartype status_source: str
     """
 
-    _validation = {
-        "job_id": {"required": True},
-        "status": {"required": True},
-    }
-
     _attribute_map = {
-        "job_id": {"key": "job_id", "type": "int"},
-        "status": {"key": "status", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "application_status": {"key": "ApplicationStatus", "type": "str"},
+        "status_source": {"key": "StatusSource", "type": "str"},
     }
 
     def __init__(
-        self, *, job_id: int, status: Union[str, "_models.JobStatus"], **kwargs: Any
+        self,
+        *,
+        status: Optional[Union[str, "_models.JobStatus"]] = None,
+        minor_status: Optional[str] = None,
+        application_status: Optional[str] = None,
+        status_source: str = "Unknown",
+        **kwargs: Any
     ) -> None:
         """
-        :keyword job_id: Job Id. Required.
-        :paramtype job_id: int
-        :keyword status: An enumeration. Required. Known values are: "Running", "Stalled", "Killed",
-         "Failed", "RECEIVED", and "Submitting".
+        :keyword status: An enumeration. Known values are: "Submitting", "Received", "Checking",
+         "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+         "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~client.models.JobStatus
+        :keyword minor_status: Minorstatus.
+        :paramtype minor_status: str
+        :keyword application_status: Applicationstatus.
+        :paramtype application_status: str
+        :keyword status_source: Statussource.
+        :paramtype status_source: str
         """
         super().__init__(**kwargs)
-        self.job_id = job_id
         self.status = status
+        self.minor_status = minor_status
+        self.application_status = application_status
+        self.status_source = status_source
 
 
 class JobSummaryParams(_serialization.Model):
@@ -415,6 +458,57 @@ class JobSummaryParamsSearchItem(_serialization.Model):
         super().__init__(**kwargs)
 
 
+class LimitedJobStatusReturn(_serialization.Model):
+    """LimitedJobStatusReturn.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar status: An enumeration. Required. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
+    :vartype status: str or ~client.models.JobStatus
+    :ivar minor_status: Minorstatus. Required.
+    :vartype minor_status: str
+    :ivar application_status: Applicationstatus. Required.
+    :vartype application_status: str
+    """
+
+    _validation = {
+        "status": {"required": True},
+        "minor_status": {"required": True},
+        "application_status": {"required": True},
+    }
+
+    _attribute_map = {
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "application_status": {"key": "ApplicationStatus", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        status: Union[str, "_models.JobStatus"],
+        minor_status: str,
+        application_status: str,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword status: An enumeration. Required. Known values are: "Submitting", "Received",
+         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
+        :paramtype status: str or ~client.models.JobStatus
+        :keyword minor_status: Minorstatus. Required.
+        :paramtype minor_status: str
+        :keyword application_status: Applicationstatus. Required.
+        :paramtype application_status: str
+        """
+        super().__init__(**kwargs)
+        self.status = status
+        self.minor_status = minor_status
+        self.application_status = application_status
+
+
 class ScalarSearchSpec(_serialization.Model):
     """ScalarSearchSpec.
 
@@ -462,6 +556,77 @@ class ScalarSearchSpec(_serialization.Model):
         self.parameter = parameter
         self.operator = operator
         self.value = value
+
+
+class SetJobStatusReturn(_serialization.Model):
+    """SetJobStatusReturn.
+
+    :ivar status: An enumeration. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
+    :vartype status: str or ~client.models.JobStatus
+    :ivar minor_status: Minorstatus.
+    :vartype minor_status: str
+    :ivar application_status: Applicationstatus.
+    :vartype application_status: str
+    :ivar heart_beat_time: Heartbeattime.
+    :vartype heart_beat_time: ~datetime.datetime
+    :ivar start_exec_time: Startexectime.
+    :vartype start_exec_time: ~datetime.datetime
+    :ivar end_exec_time: Endexectime.
+    :vartype end_exec_time: ~datetime.datetime
+    :ivar last_update_time: Lastupdatetime.
+    :vartype last_update_time: ~datetime.datetime
+    """
+
+    _attribute_map = {
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "application_status": {"key": "ApplicationStatus", "type": "str"},
+        "heart_beat_time": {"key": "HeartBeatTime", "type": "iso-8601"},
+        "start_exec_time": {"key": "StartExecTime", "type": "iso-8601"},
+        "end_exec_time": {"key": "EndExecTime", "type": "iso-8601"},
+        "last_update_time": {"key": "LastUpdateTime", "type": "iso-8601"},
+    }
+
+    def __init__(
+        self,
+        *,
+        status: Optional[Union[str, "_models.JobStatus"]] = None,
+        minor_status: Optional[str] = None,
+        application_status: Optional[str] = None,
+        heart_beat_time: Optional[datetime.datetime] = None,
+        start_exec_time: Optional[datetime.datetime] = None,
+        end_exec_time: Optional[datetime.datetime] = None,
+        last_update_time: Optional[datetime.datetime] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword status: An enumeration. Known values are: "Submitting", "Received", "Checking",
+         "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+         "Failed", "Deleted", "Killed", and "Rescheduled".
+        :paramtype status: str or ~client.models.JobStatus
+        :keyword minor_status: Minorstatus.
+        :paramtype minor_status: str
+        :keyword application_status: Applicationstatus.
+        :paramtype application_status: str
+        :keyword heart_beat_time: Heartbeattime.
+        :paramtype heart_beat_time: ~datetime.datetime
+        :keyword start_exec_time: Startexectime.
+        :paramtype start_exec_time: ~datetime.datetime
+        :keyword end_exec_time: Endexectime.
+        :paramtype end_exec_time: ~datetime.datetime
+        :keyword last_update_time: Lastupdatetime.
+        :paramtype last_update_time: ~datetime.datetime
+        """
+        super().__init__(**kwargs)
+        self.status = status
+        self.minor_status = minor_status
+        self.application_status = application_status
+        self.heart_beat_time = heart_beat_time
+        self.start_exec_time = start_exec_time
+        self.end_exec_time = end_exec_time
+        self.last_update_time = last_update_time
 
 
 class SortSpec(_serialization.Model):
@@ -516,28 +681,24 @@ class TokenResponse(_serialization.Model):
 
     :ivar access_token: Access Token. Required.
     :vartype access_token: str
-    :ivar refresh_token: Refresh Token.
-    :vartype refresh_token: str
     :ivar expires_in: Expires In. Required.
     :vartype expires_in: int
     :ivar token_type: Token Type.
     :vartype token_type: str
-    :ivar state: State. Required.
-    :vartype state: str
+    :ivar refresh_token: Refresh Token.
+    :vartype refresh_token: str
     """
 
     _validation = {
         "access_token": {"required": True},
         "expires_in": {"required": True},
-        "state": {"required": True},
     }
 
     _attribute_map = {
         "access_token": {"key": "access_token", "type": "str"},
-        "refresh_token": {"key": "refresh_token", "type": "str"},
         "expires_in": {"key": "expires_in", "type": "int"},
         "token_type": {"key": "token_type", "type": "str"},
-        "state": {"key": "state", "type": "str"},
+        "refresh_token": {"key": "refresh_token", "type": "str"},
     }
 
     def __init__(
@@ -545,29 +706,25 @@ class TokenResponse(_serialization.Model):
         *,
         access_token: str,
         expires_in: int,
-        state: str,
-        refresh_token: Optional[str] = None,
         token_type: str = "Bearer",
+        refresh_token: Optional[str] = None,
         **kwargs: Any
     ) -> None:
         """
         :keyword access_token: Access Token. Required.
         :paramtype access_token: str
-        :keyword refresh_token: Refresh Token.
-        :paramtype refresh_token: str
         :keyword expires_in: Expires In. Required.
         :paramtype expires_in: int
         :keyword token_type: Token Type.
         :paramtype token_type: str
-        :keyword state: State. Required.
-        :paramtype state: str
+        :keyword refresh_token: Refresh Token.
+        :paramtype refresh_token: str
         """
         super().__init__(**kwargs)
         self.access_token = access_token
-        self.refresh_token = refresh_token
         self.expires_in = expires_in
         self.token_type = token_type
-        self.state = state
+        self.refresh_token = refresh_token
 
 
 class ValidationError(_serialization.Model):

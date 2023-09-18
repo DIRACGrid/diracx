@@ -31,4 +31,6 @@ def write_credentials(token_response: TokenResponse):
         "refresh_token": token_response.refresh_token,
         "expires_on": int(datetime.timestamp(expires)),
     }
-    get_diracx_preferences().credentials_path.write_text(json.dumps(credential_data))
+    credentials_path = get_diracx_preferences().credentials_path
+    credentials_path.parent.mkdir(parents=True, exist_ok=True)
+    credentials_path.write_text(json.dumps(credential_data))

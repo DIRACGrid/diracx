@@ -9,7 +9,7 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 import json
 from types import TracebackType
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional
 from azure.core.credentials import AccessToken
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.pipeline import PipelineRequest

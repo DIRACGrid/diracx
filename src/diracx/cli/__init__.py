@@ -57,9 +57,8 @@ async def login(
             raise RuntimeError("Device authorization flow expired")
 
         # Save credentials
-        credentials_path = get_diracx_preferences().credentials_path
-        credentials_path.parent.mkdir(parents=True, exist_ok=True)
         write_credentials(response)
+        credentials_path = get_diracx_preferences().credentials_path
         print(f"Saved credentials to {credentials_path}")
     print("\nLogin successful!")
 

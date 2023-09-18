@@ -15,7 +15,9 @@ from ._models import JobStatusReturn
 from ._models import JobStatusUpdate
 from ._models import JobSummaryParams
 from ._models import JobSummaryParamsSearchItem
+from ._models import LimitedJobStatusReturn
 from ._models import ScalarSearchSpec
+from ._models import SetJobStatusReturn
 from ._models import SortSpec
 from ._models import SortSpecDirection
 from ._models import TokenResponse
@@ -49,7 +51,9 @@ __all__ = [
     "JobStatusUpdate",
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
+    "LimitedJobStatusReturn",
     "ScalarSearchSpec",
+    "SetJobStatusReturn",
     "SortSpec",
     "SortSpecDirection",
     "TokenResponse",

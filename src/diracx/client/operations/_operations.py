@@ -309,109 +309,6 @@ def build_jobs_delete_bulk_jobs_request(
     )
 
 
-def build_jobs_get_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/jobs/{job_id}"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_delete_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/jobs/{job_id}"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="DELETE", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_kill_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/jobs/{job_id}/kill"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/jobs/{job_id}/status"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_set_single_job_status_request(
-    job_id: int, *, status: Union[str, _models.JobStatus], **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/jobs/{job_id}/status"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
-
-    # Construct parameters
-    _params["status"] = _SERIALIZER.query("status", status, "str")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
-
-
 def build_jobs_kill_bulk_jobs_request(
     *, job_ids: List[int], **kwargs: Any
 ) -> HttpRequest:
@@ -434,7 +331,7 @@ def build_jobs_kill_bulk_jobs_request(
     )
 
 
-def build_jobs_get_bulk_job_status_request(
+def build_jobs_get_job_status_bulk_request(
     *, job_ids: List[int], **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
@@ -456,8 +353,11 @@ def build_jobs_get_bulk_job_status_request(
     )
 
 
-def build_jobs_set_status_bulk_request(**kwargs: Any) -> HttpRequest:
+def build_jobs_set_job_status_bulk_request(
+    *, force: bool = False, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     content_type: Optional[str] = kwargs.pop(
         "content_type", _headers.pop("Content-Type", None)
@@ -467,6 +367,10 @@ def build_jobs_set_status_bulk_request(**kwargs: Any) -> HttpRequest:
     # Construct URL
     _url = "/jobs/status"
 
+    # Construct parameters
+    if force is not None:
+        _params["force"] = _SERIALIZER.query("force", force, "bool")
+
     # Construct headers
     if content_type is not None:
         _headers["Content-Type"] = _SERIALIZER.header(
@@ -474,7 +378,31 @@ def build_jobs_set_status_bulk_request(**kwargs: Any) -> HttpRequest:
         )
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+    return HttpRequest(
+        method="PUT", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_jobs_get_job_status_history_bulk_request(  # pylint: disable=name-too-long
+    *, job_ids: List[int], **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/status/history"
+
+    # Construct parameters
+    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="GET", url=_url, params=_params, headers=_headers, **kwargs
+    )
 
 
 def build_jobs_search_request(
@@ -528,6 +456,100 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_get_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/{job_id}"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/{job_id}/status"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_set_single_job_status_request(
+    job_id: int, *, force: bool = False, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/{job_id}/status"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct parameters
+    if force is not None:
+        _params["force"] = _SERIALIZER.query("force", force, "bool")
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="PUT", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_jobs_get_single_job_status_history_request(  # pylint: disable=name-too-long
+    job_id: int, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/{job_id}/status/history"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
 class WellKnownOperations:
@@ -1400,284 +1422,6 @@ class JobsOperations:
         return deserialized
 
     @distributed_trace
-    def get_single_job(self, job_id: int, **kwargs: Any) -> Any:
-        """Get Single Job.
-
-        Get Single Job.
-
-        :param job_id: Required.
-        :type job_id: int
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_jobs_get_single_job_request(
-            job_id=job_id,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace
-    def delete_single_job(self, job_id: int, **kwargs: Any) -> Any:
-        """Delete Single Job.
-
-        Delete Single Job.
-
-        :param job_id: Required.
-        :type job_id: int
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_jobs_delete_single_job_request(
-            job_id=job_id,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace
-    def kill_single_job(self, job_id: int, **kwargs: Any) -> Any:
-        """Kill Single Job.
-
-        Kill Single Job.
-
-        :param job_id: Required.
-        :type job_id: int
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_jobs_kill_single_job_request(
-            job_id=job_id,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace
-    def get_single_job_status(
-        self, job_id: int, **kwargs: Any
-    ) -> Union[str, _models.JobStatus]:
-        """Get Single Job Status.
-
-        Get Single Job Status.
-
-        :param job_id: Required.
-        :type job_id: int
-        :return: JobStatus
-        :rtype: str or ~client.models.JobStatus
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Union[str, _models.JobStatus]] = kwargs.pop("cls", None)
-
-        request = build_jobs_get_single_job_status_request(
-            job_id=job_id,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("str", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace
-    def set_single_job_status(
-        self, job_id: int, *, status: Union[str, _models.JobStatus], **kwargs: Any
-    ) -> Any:
-        """Set Single Job Status.
-
-        Set Single Job Status.
-
-        :param job_id: Required.
-        :type job_id: int
-        :keyword status: Known values are: "Running", "Stalled", "Killed", "Failed", "RECEIVED", and
-         "Submitting". Required.
-        :paramtype status: str or ~client.models.JobStatus
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        request = build_jobs_set_single_job_status_request(
-            job_id=job_id,
-            status=status,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace
     def kill_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
         """Kill Bulk Jobs.
 
@@ -1732,15 +1476,17 @@ class JobsOperations:
         return deserialized
 
     @distributed_trace
-    def get_bulk_job_status(self, *, job_ids: List[int], **kwargs: Any) -> Any:
-        """Get Bulk Job Status.
+    def get_job_status_bulk(
+        self, *, job_ids: List[int], **kwargs: Any
+    ) -> Dict[str, _models.LimitedJobStatusReturn]:
+        """Get Job Status Bulk.
 
-        Get Bulk Job Status.
+        Get Job Status Bulk.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
-        :return: any
-        :rtype: any
+        :return: dict mapping str to LimitedJobStatusReturn
+        :rtype: dict[str, ~client.models.LimitedJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1754,9 +1500,11 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[Dict[str, _models.LimitedJobStatusReturn]] = kwargs.pop(
+            "cls", None
+        )
 
-        request = build_jobs_get_bulk_job_status_request(
+        request = build_jobs_get_job_status_bulk_request(
             job_ids=job_ids,
             headers=_headers,
             params=_params,
@@ -1778,7 +1526,7 @@ class JobsOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response)
+        deserialized = self._deserialize("{LimitedJobStatusReturn}", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
@@ -1786,60 +1534,76 @@ class JobsOperations:
         return deserialized
 
     @overload
-    def set_status_bulk(
+    def set_job_status_bulk(
         self,
-        body: List[_models.JobStatusUpdate],
+        body: Dict[str, Dict[str, _models.JobStatusUpdate]],
         *,
+        force: bool = False,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> List[_models.JobStatusReturn]:
-        """Set Status Bulk.
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Job Status Bulk.
 
-        Set Status Bulk.
+        Set Job Status Bulk.
 
         :param body: Required.
-        :type body: list[~client.models.JobStatusUpdate]
+        :type body: dict[str, dict[str, ~client.models.JobStatusUpdate]]
+        :keyword force: Default value is False.
+        :paramtype force: bool
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JobStatusReturn
-        :rtype: list[~client.models.JobStatusReturn]
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
-    def set_status_bulk(
-        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
-    ) -> List[_models.JobStatusReturn]:
-        """Set Status Bulk.
+    def set_job_status_bulk(
+        self,
+        body: IO,
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Job Status Bulk.
 
-        Set Status Bulk.
+        Set Job Status Bulk.
 
         :param body: Required.
         :type body: IO
+        :keyword force: Default value is False.
+        :paramtype force: bool
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JobStatusReturn
-        :rtype: list[~client.models.JobStatusReturn]
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def set_status_bulk(
-        self, body: Union[List[_models.JobStatusUpdate], IO], **kwargs: Any
-    ) -> List[_models.JobStatusReturn]:
-        """Set Status Bulk.
+    def set_job_status_bulk(
+        self,
+        body: Union[Dict[str, Dict[str, _models.JobStatusUpdate]], IO],
+        *,
+        force: bool = False,
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Job Status Bulk.
 
-        Set Status Bulk.
+        Set Job Status Bulk.
 
-        :param body: Is either a [JobStatusUpdate] type or a IO type. Required.
-        :type body: list[~client.models.JobStatusUpdate] or IO
+        :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO type. Required.
+        :type body: dict[str, dict[str, ~client.models.JobStatusUpdate]] or IO
+        :keyword force: Default value is False.
+        :paramtype force: bool
         :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
          Default value is None.
         :paramtype content_type: str
-        :return: list of JobStatusReturn
-        :rtype: list[~client.models.JobStatusReturn]
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map = {
@@ -1856,7 +1620,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[List[_models.JobStatusReturn]] = kwargs.pop("cls", None)
+        cls: ClsType[Dict[str, _models.SetJobStatusReturn]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1864,9 +1628,10 @@ class JobsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "[JobStatusUpdate]")
+            _json = self._serialize.body(body, "{{JobStatusUpdate}}")
 
-        request = build_jobs_set_status_bulk_request(
+        request = build_jobs_set_job_status_bulk_request(
+            force=force,
             content_type=content_type,
             json=_json,
             content=_content,
@@ -1890,7 +1655,63 @@ class JobsOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("[JobStatusReturn]", pipeline_response)
+        deserialized = self._deserialize("{SetJobStatusReturn}", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace
+    def get_job_status_history_bulk(
+        self, *, job_ids: List[int], **kwargs: Any
+    ) -> Dict[str, List[_models.JobStatusReturn]]:
+        """Get Job Status History Bulk.
+
+        Get Job Status History Bulk.
+
+        :keyword job_ids: Required.
+        :paramtype job_ids: list[int]
+        :return: dict mapping str to list of JobStatusReturn
+        :rtype: dict[str, list[~client.models.JobStatusReturn]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Dict[str, List[_models.JobStatusReturn]]] = kwargs.pop("cls", None)
+
+        request = build_jobs_get_job_status_history_bulk_request(
+            job_ids=job_ids,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("{[JobStatusReturn]}", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
@@ -2149,6 +1970,313 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace
+    def get_single_job(self, job_id: int, **kwargs: Any) -> Any:
+        """Get Single Job.
+
+        Get Single Job.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        request = build_jobs_get_single_job_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace
+    def get_single_job_status(
+        self, job_id: int, **kwargs: Any
+    ) -> Dict[str, _models.LimitedJobStatusReturn]:
+        """Get Single Job Status.
+
+        Get Single Job Status.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: dict mapping str to LimitedJobStatusReturn
+        :rtype: dict[str, ~client.models.LimitedJobStatusReturn]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Dict[str, _models.LimitedJobStatusReturn]] = kwargs.pop(
+            "cls", None
+        )
+
+        request = build_jobs_get_single_job_status_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("{LimitedJobStatusReturn}", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @overload
+    def set_single_job_status(
+        self,
+        job_id: int,
+        body: Dict[str, _models.JobStatusUpdate],
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Single Job Status.
+
+        Set Single Job Status.
+
+        :param job_id: Required.
+        :type job_id: int
+        :param body: Required.
+        :type body: dict[str, ~client.models.JobStatusUpdate]
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def set_single_job_status(
+        self,
+        job_id: int,
+        body: IO,
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Single Job Status.
+
+        Set Single Job Status.
+
+        :param job_id: Required.
+        :type job_id: int
+        :param body: Required.
+        :type body: IO
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def set_single_job_status(
+        self,
+        job_id: int,
+        body: Union[Dict[str, _models.JobStatusUpdate], IO],
+        *,
+        force: bool = False,
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Single Job Status.
+
+        Set Single Job Status.
+
+        :param job_id: Required.
+        :type job_id: int
+        :param body: Is either a {str: JobStatusUpdate} type or a IO type. Required.
+        :type body: dict[str, ~client.models.JobStatusUpdate] or IO
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Dict[str, _models.SetJobStatusReturn]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{JobStatusUpdate}")
+
+        request = build_jobs_set_single_job_status_request(
+            job_id=job_id,
+            force=force,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("{SetJobStatusReturn}", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace
+    def get_single_job_status_history(
+        self, job_id: int, **kwargs: Any
+    ) -> Dict[str, List[_models.JobStatusReturn]]:
+        """Get Single Job Status History.
+
+        Get Single Job Status History.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: dict mapping str to list of JobStatusReturn
+        :rtype: dict[str, list[~client.models.JobStatusReturn]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Dict[str, List[_models.JobStatusReturn]]] = kwargs.pop("cls", None)
+
+        request = build_jobs_get_single_job_status_history_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("{[JobStatusReturn]}", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

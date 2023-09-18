@@ -591,7 +591,6 @@ def _get_and_check_token_response(test_client, request_data):
     assert response_data["access_token"]
     assert response_data["refresh_token"]
     assert response_data["expires_in"]
-    assert response_data["state"]
     assert response_data["token_type"]
 
     return response_data

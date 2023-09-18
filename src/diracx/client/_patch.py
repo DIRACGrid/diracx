@@ -168,9 +168,8 @@ def refresh_token(
     token_response = TokenResponse(
         access_token=res["access_token"],
         expires_in=res["expires_in"],
-        state=res["state"],
-        refresh_token=res.get("refresh_token"),
         token_type=res.get("token_type"),
+        refresh_token=res.get("refresh_token"),
     )
 
     write_credentials(cast(CoreTokenResponse, token_response))

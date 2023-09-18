@@ -44,10 +44,9 @@ SearchSpec = ScalarSearchSpec | VectorSearchSpec
 class TokenResponse(BaseModel):
     # Based on RFC 6749
     access_token: str
-    refresh_token: str | None
     expires_in: int
     token_type: str = "Bearer"
-    state: str
+    refresh_token: str | None
 
 
 class JobStatus(str, Enum):
@@ -76,12 +75,10 @@ class JobStatusUpdate(BaseModel):
     minor_status: str | None = Field(
         default=None,
         alias="MinorStatus",
-        serialization_alias="minorStatus",
     )
     application_status: str | None = Field(
         default=None,
         alias="ApplicationStatus",
-        serialization_alias="applicationStatus",
     )
     status_source: str = Field(
         alias="StatusSource",
