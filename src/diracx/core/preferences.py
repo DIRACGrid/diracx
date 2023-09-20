@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 __all__ = ("DiracxPreferences", "OutputFormats", "get_diracx_preferences")
 
 import logging
@@ -27,6 +29,7 @@ class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
     url: AnyHttpUrl
     output_format: OutputFormats = OutputFormats.RICH
     log_level: LogLevels = LogLevels.INFO
+    credentials_path: Path = Path.home() / ".cache" / "diracx" / "credentials.json"
 
     @classmethod
     def from_env(cls):

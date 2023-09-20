@@ -12,6 +12,7 @@ from sqlalchemy.exc import NoResultFound
 
 from diracx.core.config import Config, ConfigSource
 from diracx.core.models import (
+    JobStatus,
     JobStatusReturn,
     JobStatusUpdate,
     LimitedJobStatusReturn,
@@ -21,8 +22,7 @@ from diracx.core.models import (
     SortSpec,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.core.utils import JobStatus
-from diracx.db.jobs.status_utility import (
+from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 
@@ -296,7 +296,7 @@ async def get_job_status_history_bulk(
 async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
 ):
     rescheduled_jobs = []
     # TODO:
@@ -336,7 +336,7 @@ async def reschedule_bulk_jobs(
 async def reschedule_single_job(
     job_id: int,
     job_db: JobDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
 ):
     try:
         result = await job_db.rescheduleJob(job_id)

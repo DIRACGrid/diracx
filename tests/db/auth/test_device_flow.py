@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import AuthorizationError, ExpiredFlowError
-from diracx.db.auth.db import AuthDB
-from diracx.db.auth.schema import USER_CODE_LENGTH
+from diracx.db.sql.auth.db import AuthDB
+from diracx.db.sql.auth.schema import USER_CODE_LENGTH
 
 MAX_VALIDITY = 2
 EXPIRED = 0

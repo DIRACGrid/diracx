@@ -4,7 +4,7 @@ from http import HTTPStatus
 import pytest
 from fastapi.testclient import TestClient
 
-from diracx.core.utils import JobStatus
+from diracx.core.models import JobStatus
 
 TEST_JDL = """
     Arguments = "jobDescription.xml -o LogLevel=INFO";

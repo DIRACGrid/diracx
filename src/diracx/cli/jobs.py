@@ -11,11 +11,10 @@ from rich.console import Console
 from rich.table import Table
 from typer import FileText, Option
 
-from diracx.client.aio import Dirac
+from diracx.client.aio import DiracClient
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
-from diracx.core.preferences import get_diracx_preferences
 
-from .utils import AsyncTyper, get_auth_headers
+from .utils import AsyncTyper
 
 app = AsyncTyper()
 
@@ -54,11 +53,10 @@ async def search(
     condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
 ):
-    async with Dirac(endpoint=get_diracx_preferences().url) as api:
+    async with DiracClient() as api:
         jobs = await api.jobs.search(
             parameters=None if all else parameter,
             search=condition if condition else None,
-            headers=get_auth_headers(),
         )
     display(jobs, "jobs")
 
@@ -104,10 +102,9 @@ def display_rich(data, unit: str) -> None:
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
-    async with Dirac(endpoint="http://localhost:8000") as api:
-        jobs = await api.jobs.submit_bulk_jobs(
-            [x.read() for x in jdl], headers=get_auth_headers()
-        )
+    async with DiracClient() as api:
+        # api.valid(enforce_https=False)
+        jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl])
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )

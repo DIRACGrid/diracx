@@ -4,7 +4,7 @@ import inspect
 import logging
 import os
 from functools import partial
-from typing import AsyncContextManager, AsyncGenerator, Iterable, TypeVar
+from typing import Any, AsyncContextManager, AsyncGenerator, Iterable, TypeVar
 
 import dotenv
 from fastapi import APIRouter, Depends, Request
@@ -17,7 +17,8 @@ from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.db.utils import BaseDB
+from diracx.db.os.utils import BaseOSDB
+from diracx.db.sql.utils import BaseSQLDB
 
 from ..core.settings import ServiceSettingsBase
 from .auth import verify_dirac_access_token
@@ -40,6 +41,7 @@ def create_app_inner(
     enabled_systems: set[str],
     all_service_settings: Iterable[ServiceSettingsBase],
     database_urls: dict[str, str],
+    os_database_conn_kwargs: dict[str, Any],
     config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
@@ -55,19 +57,35 @@ def create_app_inner(
     # Override the configuration source
     app.dependency_overrides[ConfigSource.create] = config_source.read_config
 
-    # Add the DBs to the application
-    available_db_classes: set[type[BaseDB]] = set()
+    # Add the SQL DBs to the application
+    available_sql_db_classes: set[type[BaseSQLDB]] = set()
     for db_name, db_url in database_urls.items():
-        db_classes = BaseDB.available_implementations(db_name)
+        sql_db_classes = BaseSQLDB.available_implementations(db_name)
         # The first DB is the highest priority one
-        db = db_classes[0](db_url=db_url)
-        app.lifetime_functions.append(db.engine_context)
+        sql_db = sql_db_classes[0](db_url=db_url)
+        app.lifetime_functions.append(sql_db.engine_context)
         # Add overrides for all the DB classes, including those from extensions
         # This means vanilla DiracX routers get an instance of the extension's DB
-        for db_class in db_classes:
-            assert db_class.transaction not in app.dependency_overrides
-            available_db_classes.add(db_class)
-            app.dependency_overrides[db_class.transaction] = partial(db_transaction, db)
+        for sql_db_class in sql_db_classes:
+            assert sql_db_class.transaction not in app.dependency_overrides
+            available_sql_db_classes.add(sql_db_class)
+            app.dependency_overrides[sql_db_class.transaction] = partial(
+                db_transaction, sql_db
+            )
+
+    # Add the OpenSearch DBs to the application
+    available_os_db_classes: set[type[BaseOSDB]] = set()
+    for db_name, connection_kwargs in os_database_conn_kwargs.items():
+        os_db_classes = BaseOSDB.available_implementations(db_name)
+        # The first DB is the highest priority one
+        os_db = os_db_classes[0](connection_kwargs=connection_kwargs)
+        app.lifetime_functions.append(os_db.client_context)
+        # Add overrides for all the DB classes, including those from extensions
+        # This means vanilla DiracX routers get an instance of the extension's DB
+        for os_db_class in os_db_classes:
+            assert os_db_class.session not in app.dependency_overrides
+            available_os_db_classes.add(os_db_class)
+            app.dependency_overrides[os_db_class.session] = partial(db_session, os_db)
 
     # Load the requested routers
     routers: dict[str, APIRouter] = {}
@@ -93,10 +111,20 @@ def create_app_inner(
                 )
 
         # Ensure required DBs are available
-        missing_dbs = set(find_dependents(router, BaseDB)) - available_db_classes
-        if missing_dbs:
+        missing_sql_dbs = (
+            set(find_dependents(router, BaseSQLDB)) - available_sql_db_classes
+        )
+        if missing_sql_dbs:
             raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_dbs=}"
+                f"Cannot enable {system_name=} as it requires {missing_sql_dbs=}"
+            )
+        missing_os_dbs = (
+            set(find_dependents(router, BaseOSDB))  # type: ignore[type-abstract]
+            - available_os_db_classes
+        )
+        if missing_os_dbs:
+            raise NotImplementedError(
+                f"Cannot enable {system_name=} as it requires {missing_os_dbs=}"
             )
 
         # Add the router to the application
@@ -145,7 +173,8 @@ def create_app() -> DiracFastAPI:
     return create_app_inner(
         enabled_systems=enabled_systems,
         all_service_settings=all_service_settings,
-        database_urls=BaseDB.available_urls(),
+        database_urls=BaseSQLDB.available_urls(),
+        os_database_conn_kwargs=BaseOSDB.available_urls(),
         config_source=ConfigSource.create(),
     )
 
@@ -181,3 +210,7 @@ def find_dependents(
 async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
     async with db:
         yield db
+
+
+async def db_session(db: T2) -> AsyncGenerator[T2, None]:
+    yield db

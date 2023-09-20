@@ -16,9 +16,9 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
-from diracx.db import AuthDB as _AuthDB
-from diracx.db import JobDB as _JobDB
-from diracx.db import JobLoggingDB as _JobLoggingDB
+from diracx.db.sql import AuthDB as _AuthDB
+from diracx.db.sql import JobDB as _JobDB
+from diracx.db.sql import JobLoggingDB as _JobLoggingDB
 
 T = TypeVar("T")
 

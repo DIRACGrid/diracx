@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import contextlib
+import os
+import subprocess
 from datetime import datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -29,6 +32,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Regenerate the AutoREST client",
+    )
+    parser.addoption(
+        "--demo-dir",
+        type=Path,
+        default=None,
+        help="Path to a running diracx-demo directory",
     )
 
 
@@ -80,6 +89,9 @@ def with_app(test_auth_settings, with_config_repo):
             "AuthDB": "sqlite+aiosqlite:///:memory:",
             "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
         },
+        os_database_conn_kwargs={
+            # TODO: JobParametersDB
+        },
         config_source=ConfigSource.create_from_url(
             backend_url=f"git+file://{with_config_repo}"
         ),
@@ -88,15 +100,15 @@ def with_app(test_auth_settings, with_config_repo):
     @contextlib.asynccontextmanager
     async def create_db_schemas(app=app):
         """Create DB schema's based on the DBs available in app.dependency_overrides"""
-        from diracx.db.utils import BaseDB
+        from diracx.db.sql.utils import BaseSQLDB
 
         for k, v in app.dependency_overrides.items():
-            # Ignore dependency overrides which aren't BaseDB.transaction
-            if k.__func__ != BaseDB.transaction.__func__:
+            # Ignore dependency overrides which aren't BaseSQLDB.transaction
+            if k.__func__ != BaseSQLDB.transaction.__func__:
                 continue
-            # The first argument of the overridden BaseDB.transaction is the DB object
+            # The first argument of the overridden BaseSQLDB.transaction is the DB object
             db = v.args[0]
-            assert isinstance(db, BaseDB), (k, db)
+            assert isinstance(db, BaseSQLDB), (k, db)
             # Fill the DB schema
             async with db.engine.begin() as conn:
                 await conn.run_sync(db.metadata.create_all)
@@ -207,3 +219,21 @@ def admin_user_client(test_client, test_auth_settings):
     test_client.headers["Authorization"] = f"Bearer {token}"
     test_client.dirac_token_payload = payload
     yield test_client
+
+
+@pytest.fixture(scope="session")
+def demo_kubectl_env(request):
+    demo_dir = request.config.getoption("--demo-dir")
+    if demo_dir is None:
+        pytest.skip("Requires a running instance of the DiracX demo")
+    kube_conf = demo_dir / ".demo" / "kube.conf"
+    if not kube_conf.exists():
+        raise RuntimeError(f"Could not find {kube_conf}, is the demo running?")
+    env = {
+        **os.environ,
+        "KUBECONFIG": str(kube_conf),
+        "PATH": os.environ["PATH"] + ":" + str(demo_dir / ".demo"),
+    }
+    pods_result = subprocess.check_output(["kubectl", "get", "pods"], env=env)
+    assert pods_result
+    yield env

@@ -3,20 +3,20 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
 
 from typer import Option
 
-from diracx.client.aio import Dirac
+from diracx.client.aio import DiracClient
 from diracx.client.models import DeviceFlowErrorResponse
+from diracx.core.preferences import get_diracx_preferences
+from diracx.core.utils import write_credentials
 
 from . import internal, jobs
-from .utils import CREDENTIALS_PATH, AsyncTyper
+from .utils import AsyncTyper
 
 app = AsyncTyper()
-
-EXPIRES_GRACE_SECONDS = 15
 
 
 @app.async_command()
@@ -34,10 +34,9 @@ async def login(
         scopes += [f"property:{p}" for p in property]
 
     print(f"Logging in with scopes: {scopes}")
-    # TODO set endpoint URL from preferences
-    async with Dirac(endpoint="http://localhost:8000") as api:
+    async with DiracClient() as api:
         data = await api.auth.initiate_device_flow(
-            client_id="myDIRACClientID",
+            client_id=api.client_id,
             audience="Dirac server",
             scope=" ".join(scopes),
         )
@@ -45,9 +44,7 @@ async def login(
         expires = datetime.now() + timedelta(seconds=data.expires_in - 30)
         while expires > datetime.now():
             print(".", end="", flush=True)
-            response = await api.auth.token(  # type: ignore
-                vo, device_code=data.device_code, client_id="myDIRACClientID"
-            )
+            response = await api.auth.token(device_code=data.device_code, client_id=api.client_id)  # type: ignore
             if isinstance(response, DeviceFlowErrorResponse):
                 if response.error == "authorization_pending":
                     # TODO: Setting more than 5 seconds results in an error
@@ -55,29 +52,34 @@ async def login(
                     await asyncio.sleep(2)
                     continue
                 raise RuntimeError(f"Device flow failed with {response}")
-            print("\nLogin successful!")
             break
         else:
             raise RuntimeError("Device authorization flow expired")
 
-    CREDENTIALS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    expires = datetime.now(tz=timezone.utc) + timedelta(
-        seconds=response.expires_in - EXPIRES_GRACE_SECONDS
-    )
-    credential_data = {
-        "access_token": response.access_token,
-        "refresh_token": response.refresh_token,
-        "expires": expires.isoformat(),
-    }
-    CREDENTIALS_PATH.write_text(json.dumps(credential_data))
-    print(f"Saved credentials to {CREDENTIALS_PATH}")
+        # Save credentials
+        write_credentials(response)
+        credentials_path = get_diracx_preferences().credentials_path
+        print(f"Saved credentials to {credentials_path}")
+    print("\nLogin successful!")
 
 
 @app.async_command()
 async def logout():
-    CREDENTIALS_PATH.unlink(missing_ok=True)
-    # TODO: This should also revoke the refresh token
-    print(f"Removed credentials from {CREDENTIALS_PATH}")
+    async with DiracClient() as api:
+        credentials_path = get_diracx_preferences().credentials_path
+        if credentials_path:
+            credentials = json.loads(credentials_path.read_text())
+
+            # Revoke refresh token
+            try:
+                await api.auth.revoke_refresh_token(credentials["refresh_token"])
+            except Exception:
+                pass
+
+            # Remove credentials
+            credentials_path.unlink(missing_ok=True)
+            print(f"Removed credentials from {credentials_path}")
+    print("\nLogout successful!")
 
 
 @app.callback()

@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base
 
 # The utils class define some boilerplate types that should be used
 # in place of the SQLAlchemy one. Have a look at them
-from ..utils import Column, DateNowColumn
+from diracx.db.sql.utils import Column, DateNowColumn
 
 Base = declarative_base()
 

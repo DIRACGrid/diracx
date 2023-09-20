@@ -10,14 +10,15 @@ from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import (
+    JobMinorStatus,
+    JobStatus,
     JobStatusReturn,
     LimitedJobStatusReturn,
     ScalarSearchOperator,
     ScalarSearchSpec,
 )
-from diracx.core.utils import JobMinorStatus, JobStatus
 
-from ..utils import BaseDB, apply_search_filters
+from ..utils import BaseSQLDB, apply_search_filters
 from .schema import (
     InputData,
     JobDBBase,
@@ -28,8 +29,7 @@ from .schema import (
 )
 
 
-class JobDB(BaseDB):
-    # This needs to be here for the BaseDB to create the engine
+class JobDB(BaseSQLDB):
     metadata = JobDBBase.metadata
 
     # TODO: this is copied from the DIRAC JobDB
@@ -426,10 +426,9 @@ class JobDB(BaseDB):
 MAGIC_EPOC_NUMBER = 1270000000
 
 
-class JobLoggingDB(BaseDB):
+class JobLoggingDB(BaseSQLDB):
     """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps"""
 
-    # This needs to be here for the BaseDB to create the engine
     metadata = JobLoggingDBBase.metadata
 
     async def insert_record(

@@ -7,13 +7,13 @@ import datetime
 
 import sqlalchemy
 
-from ..utils import BaseDB
+from diracx.db.sql.utils import BaseSQLDB
+
 from .schema import Base as SandboxMetadataDBBase
 from .schema import sb_Owners, sb_SandBoxes
 
 
-class SandboxMetadataDB(BaseDB):
-    # This needs to be here for the BaseDB to create the engine
+class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
 
     async def _get_put_owner(self, owner: str, owner_group: str) -> int:
