@@ -14,7 +14,17 @@ from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as OTLPSpanExporterGRPC,
+)
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import parse_raw_as
+from starlette.types import ASGIApp
 
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import (
@@ -36,6 +46,43 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 
 
 logger = logging.getLogger(__name__)
+
+
+###########################################3
+
+
+APP_NAME = os.environ.get("APP_NAME", "mysecretapp")
+EXPOSE_PORT = os.environ.get("EXPOSE_PORT", 8000)
+OTEL_GRPC_ENDPOINT = os.environ.get("OTEL_GRPC_ENDPOINT", "otel-collector:4317")
+OTEL_GRPC_ENDPOINT = "172.18.0.2:4317"
+
+
+def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -> None:
+    # Setting jaeger
+    # set the service name to show in traces
+    resource = Resource.create(attributes={"service.name": app_name})
+
+    # set the tracer provider
+    tracer = TracerProvider(resource=resource)
+    trace.set_tracer_provider(tracer)
+
+    # elif MODE == "otel-collector-http":
+    #     tracer.add_span_processor(
+    #         BatchSpanProcessor(OTLPSpanExporterHTTP(endpoint=OTEL_HTTP_ENDPOINT))
+    #     )
+    # else:
+    # default otel-collector-grpc
+    tracer.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporterGRPC(endpoint=OTEL_GRPC_ENDPOINT, insecure=True)
+        )
+    )
+
+    # # override logger format which with trace id and span id
+    if log_correlation:
+        LoggingInstrumentor().instrument(set_logging_format=True)
+
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=tracer)
 
 
 # Rules:
@@ -181,6 +228,8 @@ def create_app_inner(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    instrument_otel(app, APP_NAME)
 
     return app
 
