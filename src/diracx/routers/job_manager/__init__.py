@@ -296,10 +296,11 @@ async def get_job_status_history_bulk(
 async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
+    job_logging_db: JobLoggingDB,
     user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
 ):
     rescheduled_jobs = []
-    # TODO:
+    # TODO: Joblist Policy:
     # validJobList, invalidJobList, nonauthJobList, ownerJobList = self.jobPolicy.evaluateJobRights(
     #        jobList, RIGHT_RESCHEDULE
     #    )
@@ -309,14 +310,24 @@ async def reschedule_bulk_jobs(
         # TODO: delete job in TaskQueueDB
         # self.taskQueueDB.deleteJob(jobID)
         result = job_db.rescheduleJob(job_id)
-        # TODO: add reschedule logging in JobLoggingDB
-        # self.jobLoggingDB.addLoggingRecord(
-        #         result["JobID"],
-        #         status=result["Status"],
-        #         minorStatus=result["MinorStatus"],
-        #         applicationStatus="Unknown",
-        #         source="JobManager",
-        #     )
+        try:
+            res_status = await job_db.get_job_status(job_id)
+        except NoResultFound as e:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
+            ) from e
+
+        initial_status = res_status.status
+        initial_minor_status = res_status.minor_status
+
+        await job_logging_db.insert_record(
+            int(job_id),
+            initial_status,
+            initial_minor_status,
+            "Unknown",
+            datetime.now(timezone.utc),
+            "JobManager",
+        )
         if result:
             rescheduled_jobs.append(job_id)
     # To uncomment when jobPolicy is setup:
