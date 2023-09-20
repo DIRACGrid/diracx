@@ -15,7 +15,7 @@ from diracx.core.models import (
     ScalarSearchOperator,
     ScalarSearchSpec,
 )
-from diracx.core.utils import JobStatus
+from diracx.core.utils import JobMinorStatus, JobStatus
 
 from ..utils import BaseDB, apply_search_filters
 from .schema import (
@@ -281,7 +281,6 @@ class JobDB(BaseDB):
         """Reschedule given job"""
         from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
         from DIRAC.Core.Utilities.ReturnValues import SErrorException
-        from DIRAC.WorkloadManagementSystem.Client import JobMinorStatus
 
         result = await self.search(
             parameters=[
@@ -323,7 +322,7 @@ class JobDB(BaseDB):
                 job_id,
                 {
                     "Status": JobStatus.FAILED,
-                    "MinorStatus": JobStatus.MAXRESCHEDULING,
+                    "MinorStatus": JobMinorStatus.MAX_RESCHEDULING,
                 },
             )
             raise ValueError(

@@ -23,7 +23,7 @@ class JobStatus(str, Enum):
     RESCHEDULED = "Rescheduled"
 
 
-class MinorStatus(str, Enum):
+class JobMinorStatus(str, Enum):
     MAX_RESCHEDULING = "Maximum of reschedulings reached"
     RESCHEDULED = "job Rescheduled"
 
