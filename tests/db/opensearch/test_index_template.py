@@ -9,7 +9,7 @@ from .conftest import DummyOSDB
 
 DUMMY_DOCUMENT = {
     "DateField": datetime.now(tz=timezone.utc),
-    "IntegerField": 1234,
+    "IntField": 1234,
     "KeywordField1": "keyword1",
     "KeywordField2": "keyword two",
     "TextField": "text value",
