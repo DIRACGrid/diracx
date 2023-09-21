@@ -10,4 +10,8 @@ coverage:
         target: 100%
         informational: true
 
+codecov:
+  notify:
+    after_n_builds: 2
+
 comment: false
