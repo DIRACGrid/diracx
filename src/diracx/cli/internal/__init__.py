@@ -47,9 +47,7 @@ def generate_cs(
         DefaultGroup=user_group,
         Users={},
         Groups={
-            user_group: GroupConfig(
-                JobShare=None, Properties={"NormalUser"}, Quota=None, Users=set()
-            )
+            user_group: GroupConfig(Properties={"NormalUser"}, Quota=None, Users=set())
         },
     )
     config = Config(

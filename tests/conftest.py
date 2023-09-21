@@ -122,6 +122,7 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",
             "JobLoggingDB": "sqlite+aiosqlite:///:memory:",
+            "TaskQueueDB": "sqlite+aiosqlite:///:memory:",
             "AuthDB": "sqlite+aiosqlite:///:memory:",
             "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
         },
@@ -147,6 +148,9 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
             assert isinstance(db, BaseSQLDB), (k, db)
             # Fill the DB schema
             async with db.engine.begin() as conn:
+                # set PRAGMA foreign_keys=ON if sqlite
+                if db._db_url.startswith("sqlite"):
+                    await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
                 await conn.run_sync(db.metadata.create_all)
 
         yield

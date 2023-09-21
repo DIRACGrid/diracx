@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import sqlalchemy
+from sqlalchemy import delete
 
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
-from .schema import sb_Owners, sb_SandBoxes
+from .schema import sb_EntityMapping, sb_Owners, sb_SandBoxes
 
 
 class SandboxMetadataDB(BaseSQLDB):
@@ -82,3 +83,13 @@ class SandboxMetadataDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         is_assigned = result.scalar_one()
         return is_assigned
+        return True
+
+    async def unassign_sandbox_from_jobs(self, job_ids: list[int]):
+        """
+        Unassign sandbox from jobs
+        """
+        stmt = delete(sb_EntityMapping).where(
+            sb_EntityMapping.EntityId.in_(f"Job:{job_id}" for job_id in job_ids)
+        )
+        await self.conn.execute(stmt)

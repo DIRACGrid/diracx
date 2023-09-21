@@ -1,9 +1,11 @@
 import sqlalchemy.types as types
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
-    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -17,6 +19,7 @@ from ..utils import Column, DateNowColumn, NullColumn
 
 JobDBBase = declarative_base()
 JobLoggingDBBase = declarative_base()
+TaskQueueDBBase = declarative_base()
 
 
 class EnumBackedBool(types.TypeDecorator):
@@ -45,19 +48,16 @@ class EnumBackedBool(types.TypeDecorator):
             raise NotImplementedError(f"Unknown {value=}")
 
 
-class JobJDLs(JobDBBase):
-    __tablename__ = "JobJDLs"
-    JobID = Column(Integer, autoincrement=True)
-    JDL = Column(Text)
-    JobRequirements = Column(Text)
-    OriginalJDL = Column(Text)
-    __table_args__ = (PrimaryKeyConstraint("JobID"),)
-
-
 class Jobs(JobDBBase):
     __tablename__ = "Jobs"
 
-    JobID = Column("JobID", Integer, primary_key=True, default=0)
+    JobID = Column(
+        "JobID",
+        Integer,
+        ForeignKey("JobJDLs.JobID", ondelete="CASCADE"),
+        primary_key=True,
+        default=0,
+    )
     JobType = Column("JobType", String(32), default="user")
     JobGroup = Column("JobGroup", String(32), default="00000000")
     JobSplitType = Column(
@@ -95,7 +95,6 @@ class Jobs(JobDBBase):
     )
 
     __table_args__ = (
-        ForeignKeyConstraint(["JobID"], ["JobJDLs.JobID"]),
         Index("JobType", "JobType"),
         Index("JobGroup", "JobGroup"),
         Index("JobSplitType", "JobSplitType"),
@@ -110,33 +109,46 @@ class Jobs(JobDBBase):
     )
 
 
+class JobJDLs(JobDBBase):
+    __tablename__ = "JobJDLs"
+    JobID = Column(Integer, autoincrement=True, primary_key=True)
+    JDL = Column(Text)
+    JobRequirements = Column(Text)
+    OriginalJDL = Column(Text)
+
+
 class InputData(JobDBBase):
     __tablename__ = "InputData"
-    JobID = Column(Integer, primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     LFN = Column(String(255), default="", primary_key=True)
     Status = Column(String(32), default="AprioriGood")
-    __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
 class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
-    JobID = Column(Integer, primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
-    __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
 class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
-    JobID = Column(Integer, primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
-    __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
 class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
-    JobID = Column(Integer, ForeignKey("Jobs.JobID"), primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
     RescheduleCycle = Column(Integer)
@@ -162,24 +174,24 @@ class SiteMaskLogging(JobDBBase):
 
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
-    JobID = Column(Integer, primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
     HeartBeatTime = Column(DateTime, primary_key=True)
 
-    __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
-
 
 class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
-    JobID = Column(Integer, primary_key=True)
+    JobID = Column(
+        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     Command = Column(String(100))
     Arguments = Column(String(100))
     Status = Column(String(64), default="Received")
     ReceptionTime = Column(DateTime, primary_key=True)
     ExecutionTime = NullColumn(DateTime)
-
-    __table_args__ = (ForeignKeyConstraint(["JobID"], ["Jobs.JobID"]),)
 
 
 class LoggingInfo(JobLoggingDBBase):
@@ -194,3 +206,99 @@ class LoggingInfo(JobLoggingDBBase):
     StatusTimeOrder = Column(Numeric(precision=12, scale=3), default=0)
     StatusSource = Column(String(32), default="Unknown")
     __table_args__ = (PrimaryKeyConstraint("JobID", "SeqNum"),)
+
+
+class TaskQueues(TaskQueueDBBase):
+    __tablename__ = "tq_TaskQueues"
+    TQId = Column(Integer, primary_key=True)
+    Owner = Column(String(255), nullable=False)
+    OwnerDN = Column(String(255))
+    OwnerGroup = Column(String(32), nullable=False)
+    VO = Column(String(32), nullable=False)
+    CPUTime = Column(BigInteger, nullable=False)
+    Priority = Column(Float, nullable=False)
+    Enabled = Column(Boolean, nullable=False, default=0)
+    __table_args__ = (Index("TQOwner", "Owner", "OwnerGroup", "CPUTime"),)
+
+
+class JobsQueue(TaskQueueDBBase):
+    __tablename__ = "tq_Jobs"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    JobId = Column(Integer, primary_key=True)
+    Priority = Column(Integer, nullable=False)
+    RealPriority = Column(Float, nullable=False)
+    __table_args__ = (Index("TaskIndex", "TQId"),)
+
+
+class SitesQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToSites"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("SitesTaskIndex", "TQId"),
+        Index("SitesIndex", "Value"),
+    )
+
+
+class GridCEsQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToGridCEs"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("GridCEsTaskIndex", "TQId"),
+        Index("GridCEsValueIndex", "Value"),
+    )
+
+
+class BannedSitesQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToBannedSites"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("BannedSitesTaskIndex", "TQId"),
+        Index("BannedSitesValueIndex", "Value"),
+    )
+
+
+class PlatformsQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToPlatforms"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("PlatformsTaskIndex", "TQId"),
+        Index("PlatformsValueIndex", "Value"),
+    )
+
+
+class JobTypesQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToJobTypes"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("JobTypesTaskIndex", "TQId"),
+        Index("JobTypesValueIndex", "Value"),
+    )
+
+
+class TagsQueue(TaskQueueDBBase):
+    __tablename__ = "tq_TQToTags"
+    TQId = Column(
+        Integer, ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value = Column(String(64), primary_key=True)
+    __table_args__ = (
+        Index("TagsTaskIndex", "TQId"),
+        Index("TagsValueIndex", "Value"),
+    )
