@@ -27,7 +27,8 @@ class DummyOSDB(BaseOSDB):
 
     fields = {
         "DateField": {"type": "date"},
-        "IntegerField": {"type": "long"},
+        "IntField": {"type": "long"},
+        "KeywordField0": {"type": "keyword"},
         "KeywordField1": {"type": "keyword"},
         "KeywordField2": {"type": "keyword"},
         "TextField": {"type": "text"},

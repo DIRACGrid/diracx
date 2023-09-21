@@ -177,7 +177,9 @@ def apply_search_filters(table, stmt, search):
         elif query["operator"] == "in":
             expr = column.in_(query["values"])
         elif query["operator"] in "like":
-            expr = column.like(query["values"])
+            expr = column.like(query["value"])
+        elif query["operator"] in "ilike":
+            expr = column.ilike(query["value"])
         else:
             raise InvalidQueryError(f"Unknown filter {query=}")
         stmt = stmt.where(expr)

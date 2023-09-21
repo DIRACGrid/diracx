@@ -12,4 +12,7 @@ exclude_lines =
     # Don't complain if tests don't hit defensive assertion code:
     raise NotImplementedError
 
+    # Ignore the default implementation of abstract methods
+    ^\s*\.\.\.$
+
     if TYPE_CHECKING:
