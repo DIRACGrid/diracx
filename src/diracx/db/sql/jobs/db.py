@@ -170,6 +170,7 @@ class JobDB(BaseSQLDB):
             "SubmissionTime": datetime.now(tz=timezone.utc),
             "Owner": owner,
             "OwnerGroup": owner_group,
+            "VO": vo,
         }
 
         jobManifest = returnValueOrRaise(checkAndAddOwner(jdl, owner, owner_group))
