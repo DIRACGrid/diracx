@@ -4,6 +4,12 @@ omit =
     src/diracx/client/*
     */site-packages/diracx/client/*
 
+[paths]
+source =
+    src/
+    */site-packages/
+    /diracx_source/*/src/
+
 [report]
 exclude_lines =
     # Have to re-enable the standard pragma

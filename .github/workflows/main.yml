@@ -53,7 +53,7 @@ jobs:
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --exit-when-done $PWD
+          ../diracx-charts/run_demo.sh --enable-coverage --exit-when-done $PWD
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
@@ -74,9 +74,25 @@ jobs:
           fi
       - name: Run pytest
         run: |
-          pytest . --demo-dir ../diracx-charts/ --cov-report=xml:coverage.xml --junitxml=report.xml
+          pytest . --demo-dir ../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+      - name: Collect demo coverage
+        run: |
+          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
+          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
+          export PATH=${DIRACX_DEMO_DIR}:$PATH
+          # Shutdown the pods so we collect coverage data
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+            kubectl delete pod/"${pod_name}"
+          done
+          # Combine the coverage data from the demo and make an XML report
+          coverage_data=$(mktemp)
+          sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
+          coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
+          coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
+        with:
+          files: ./coverage-pytest.xml,./coverage-demo.xml
 
   mypy:
     runs-on: ubuntu-latest
