@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 __all__ = ("DiracxPreferences", "OutputFormats", "get_diracx_preferences")
 
 import logging
+import sys
 from enum import Enum, StrEnum
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import AnyHttpUrl, BaseSettings, validator
+from pydantic import AnyHttpUrl, BaseSettings, Field, validator
 
 from .utils import dotenv_files_from_environment
 
@@ -16,6 +16,10 @@ from .utils import dotenv_files_from_environment
 class OutputFormats(StrEnum):
     RICH = "RICH"
     JSON = "JSON"
+
+    @classmethod
+    def default(cls):
+        return cls.RICH if sys.stdout.isatty() else cls.JSON
 
 
 class LogLevels(Enum):
@@ -27,9 +31,11 @@ class LogLevels(Enum):
 
 class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
     url: AnyHttpUrl
-    output_format: OutputFormats = OutputFormats.RICH
+    output_format: OutputFormats = Field(default_factory=OutputFormats.default)
     log_level: LogLevels = LogLevels.INFO
-    credentials_path: Path = Path.home() / ".cache" / "diracx" / "credentials.json"
+    credentials_path: Path = Field(
+        default_factory=lambda: Path.home() / ".cache" / "diracx" / "credentials.json"
+    )
 
     @classmethod
     def from_env(cls):

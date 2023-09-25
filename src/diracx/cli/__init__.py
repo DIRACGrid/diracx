@@ -84,8 +84,6 @@ async def logout():
 
 @app.callback()
 def callback(output_format: Optional[str] = None):
-    if "DIRACX_OUTPUT_FORMAT" not in os.environ:
-        output_format = output_format or "RICH"
     if output_format is not None:
         os.environ["DIRACX_OUTPUT_FORMAT"] = output_format
 
