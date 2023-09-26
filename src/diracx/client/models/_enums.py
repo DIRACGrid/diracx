@@ -22,6 +22,18 @@ class Enum1(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     )
 
 
+class Enum10(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum10."""
+
+    ASC = "asc"
+
+
+class Enum11(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Enum11."""
+
+    DSC = "dsc"
+
+
 class Enum2(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum2."""
 
@@ -38,18 +50,6 @@ class Enum4(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Code Challenge Method."""
 
     S256 = "S256"
-
-
-class Enum8(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum8."""
-
-    ASC = "asc"
-
-
-class Enum9(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """Enum9."""
-
-    DSC = "dsc"
 
 
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
@@ -70,6 +70,18 @@ class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     DELETED = "Deleted"
     KILLED = "Killed"
     RESCHEDULED = "Rescheduled"
+
+
+class SandboxChecksum(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    SHA256 = "sha256"
+
+
+class SandboxFormat(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    TAR_BZ2 = "tar.bz2"
 
 
 class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
