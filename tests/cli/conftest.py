@@ -11,6 +11,7 @@ from diracx.core.preferences import get_diracx_preferences
 def cli_env(monkeypatch, tmp_path, demo_dir):
     """Set up the environment for the CLI"""
     # HACK: Find the URL of the demo DiracX instance
+    # TODO: Make a preferences file when launching the demo
     helm_values = yaml.safe_load((demo_dir / "values.yaml").read_text())
     host_url = helm_values["dex"]["config"]["issuer"].rsplit(":", 1)[0]
     diracx_url = f"{host_url}:8000"

@@ -27,7 +27,7 @@ from diracx.db.sql.jobs.status_utility import (
 )
 
 from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
-from ..dependencies import JobDB, JobLoggingDB
+from ..dependencies import JobDB, JobLoggingDB, JobParametersDB
 from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
@@ -353,6 +353,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
+    job_parameters_db: JobParametersDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     page: int = 0,
     per_page: int = 100,

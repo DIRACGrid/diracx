@@ -173,7 +173,8 @@ def refresh_token(
     )
 
     if response.status_code != 200:
-        location.unlink()
+        # Think more
+        # location.unlink()
         raise RuntimeError(
             f"An issue occured while refreshing your access token: {response.json()['detail']}"
         )
