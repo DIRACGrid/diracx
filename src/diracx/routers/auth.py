@@ -994,3 +994,24 @@ async def authorization_flow_complete(
     return responses.RedirectResponse(
         f"{redirect_uri}?code={code}&state={decrypted_state['external_state']}"
     )
+
+
+class UserInfoResponse(TypedDict):
+    sub: str
+    vo: str
+    dirac_group: str
+    properties: list[SecurityProperty]
+    preferred_username: str
+
+
+@router.get("/userinfo")
+async def userinfo(
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)]
+) -> UserInfoResponse:
+    return {
+        "sub": user_info.sub,
+        "vo": user_info.vo,
+        "dirac_group": user_info.dirac_group,
+        "properties": user_info.properties,
+        "preferred_username": user_info.preferred_username,
+    }

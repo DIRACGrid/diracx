@@ -25,6 +25,7 @@ async def openid_configuration(
     return {
         "issuer": settings.token_issuer,
         "token_endpoint": str(request.url_for("token")),
+        "userinfo_endpoint:": str(request.url_for("userinfo")),
         "authorization_endpoint": str(request.url_for("authorization_flow")),
         "device_authorization_endpoint": str(request.url_for("initiate_device_flow")),
         # "introspection_endpoint":"",

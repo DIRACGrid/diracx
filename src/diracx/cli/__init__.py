@@ -64,6 +64,14 @@ async def login(
 
 
 @app.async_command()
+async def whoami():
+    async with DiracClient() as api:
+        user_info = await api.auth.userinfo()
+        # TODO: Add a RICH output format
+        print(json.dumps(user_info.as_dict(), indent=2))
+
+
+@app.async_command()
 async def logout():
     async with DiracClient() as api:
         credentials_path = get_diracx_preferences().credentials_path

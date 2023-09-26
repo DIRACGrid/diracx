@@ -727,6 +727,69 @@ class TokenResponse(_serialization.Model):
         self.refresh_token = refresh_token
 
 
+class UserInfoResponse(_serialization.Model):
+    """UserInfoResponse.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar sub: Sub. Required.
+    :vartype sub: str
+    :ivar vo: Vo. Required.
+    :vartype vo: str
+    :ivar dirac_group: Dirac Group. Required.
+    :vartype dirac_group: str
+    :ivar properties: Properties. Required.
+    :vartype properties: list[str]
+    :ivar preferred_username: Preferred Username. Required.
+    :vartype preferred_username: str
+    """
+
+    _validation = {
+        "sub": {"required": True},
+        "vo": {"required": True},
+        "dirac_group": {"required": True},
+        "properties": {"required": True},
+        "preferred_username": {"required": True},
+    }
+
+    _attribute_map = {
+        "sub": {"key": "sub", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "dirac_group": {"key": "dirac_group", "type": "str"},
+        "properties": {"key": "properties", "type": "[str]"},
+        "preferred_username": {"key": "preferred_username", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        sub: str,
+        vo: str,
+        dirac_group: str,
+        properties: List[str],
+        preferred_username: str,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword sub: Sub. Required.
+        :paramtype sub: str
+        :keyword vo: Vo. Required.
+        :paramtype vo: str
+        :keyword dirac_group: Dirac Group. Required.
+        :paramtype dirac_group: str
+        :keyword properties: Properties. Required.
+        :paramtype properties: list[str]
+        :keyword preferred_username: Preferred Username. Required.
+        :paramtype preferred_username: str
+        """
+        super().__init__(**kwargs)
+        self.sub = sub
+        self.vo = vo
+        self.dirac_group = dirac_group
+        self.properties = properties
+        self.preferred_username = preferred_username
+
+
 class ValidationError(_serialization.Model):
     """ValidationError.
 
