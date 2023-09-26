@@ -4,7 +4,6 @@
 __all__ = ("app",)
 
 import json
-import os
 from typing import Annotated
 
 from rich.console import Console
@@ -13,6 +12,7 @@ from typer import FileText, Option
 
 from diracx.client.aio import DiracClient
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
+from diracx.core.preferences import OutputFormats, get_diracx_preferences
 
 from .utils import AsyncTyper
 
@@ -62,13 +62,13 @@ async def search(
 
 
 def display(data, unit: str):
-    format = os.environ["DIRACX_OUTPUT_FORMAT"].lower()
-    if format == "json":
-        print(json.dumps(data, indent=2))
-    elif format == "rich":
-        display_rich(data, unit)
-    else:
-        raise NotImplementedError(format)
+    match get_diracx_preferences().output_format:
+        case OutputFormats.JSON:
+            print(json.dumps(data, indent=2))
+        case OutputFormats.RICH:
+            display_rich(data, unit)
+        case _:
+            raise NotImplementedError(format)
 
 
 def display_rich(data, unit: str) -> None:
