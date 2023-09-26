@@ -32,6 +32,7 @@ from ...operations._operations import (
     build_auth_get_refresh_tokens_request,
     build_auth_initiate_device_flow_request,
     build_auth_revoke_refresh_token_request,
+    build_auth_userinfo_request,
     build_config_serve_config_request,
     build_jobs_delete_bulk_jobs_request,
     build_jobs_get_job_status_bulk_request,
@@ -644,6 +645,57 @@ class AuthOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace_async
+    async def userinfo(self, **kwargs: Any) -> _models.UserInfoResponse:
+        """Userinfo.
+
+        Userinfo.
+
+        :return: UserInfoResponse
+        :rtype: ~client.models.UserInfoResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[_models.UserInfoResponse] = kwargs.pop("cls", None)
+
+        request = build_auth_userinfo_request(
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("UserInfoResponse", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

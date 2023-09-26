@@ -21,6 +21,7 @@ from ._models import SetJobStatusReturn
 from ._models import SortSpec
 from ._models import SortSpecDirection
 from ._models import TokenResponse
+from ._models import UserInfoResponse
 from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
@@ -57,6 +58,7 @@ __all__ = [
     "SortSpec",
     "SortSpecDirection",
     "TokenResponse",
+    "UserInfoResponse",
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",
