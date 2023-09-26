@@ -280,6 +280,48 @@ def build_config_serve_config_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
+def build_jobs_initiate_sandbox_upload_request(
+    **kwargs: Any,
+) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/sandbox"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_get_sandbox_file_request(file_path: str, **kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/jobs/sandbox/{file_path}"
+    path_format_arguments = {
+        "file_path": _SERIALIZER.url("file_path", file_path, "str"),
+    }
+
+    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+
+
 def build_jobs_submit_bulk_jobs_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
@@ -1323,6 +1365,198 @@ class JobsOperations:
         self._deserialize = (
             input_args.pop(0) if input_args else kwargs.pop("deserializer")
         )
+
+    @overload
+    def initiate_sandbox_upload(
+        self,
+        body: _models.SandboxInfo,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.SandboxUploadResponse:
+        """Initiate Sandbox Upload.
+
+        Get the PFN for the given sandbox, initiate an upload as required.
+
+        If the sandbox already exists in the database then the PFN is returned
+        and there is no "url" field in the response.
+
+        If the sandbox does not exist in the database then the "url" and "fields"
+        should be used to upload the sandbox to the storage backend.
+
+        :param body: Required.
+        :type body: ~client.models.SandboxInfo
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: SandboxUploadResponse
+        :rtype: ~client.models.SandboxUploadResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def initiate_sandbox_upload(
+        self, body: IO, *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.SandboxUploadResponse:
+        """Initiate Sandbox Upload.
+
+        Get the PFN for the given sandbox, initiate an upload as required.
+
+        If the sandbox already exists in the database then the PFN is returned
+        and there is no "url" field in the response.
+
+        If the sandbox does not exist in the database then the "url" and "fields"
+        should be used to upload the sandbox to the storage backend.
+
+        :param body: Required.
+        :type body: IO
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: SandboxUploadResponse
+        :rtype: ~client.models.SandboxUploadResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def initiate_sandbox_upload(
+        self, body: Union[_models.SandboxInfo, IO], **kwargs: Any
+    ) -> _models.SandboxUploadResponse:
+        """Initiate Sandbox Upload.
+
+        Get the PFN for the given sandbox, initiate an upload as required.
+
+        If the sandbox already exists in the database then the PFN is returned
+        and there is no "url" field in the response.
+
+        If the sandbox does not exist in the database then the "url" and "fields"
+        should be used to upload the sandbox to the storage backend.
+
+        :param body: Is either a SandboxInfo type or a IO type. Required.
+        :type body: ~client.models.SandboxInfo or IO
+        :keyword content_type: Body Parameter content-type. Known values are: 'application/json'.
+         Default value is None.
+        :paramtype content_type: str
+        :return: SandboxUploadResponse
+        :rtype: ~client.models.SandboxUploadResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.SandboxUploadResponse] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "SandboxInfo")
+
+        request = build_jobs_initiate_sandbox_upload_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("SandboxUploadResponse", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace
+    def get_sandbox_file(
+        self, file_path: str, **kwargs: Any
+    ) -> _models.SandboxDownloadResponse:
+        """Get Sandbox File.
+
+        Get a presigned URL to download a sandbox file
+
+        This route cannot use a redirect response most clients will also send the
+        authorization header when following a redirect. This is not desirable as
+        it would leak the authorization token to the storage backend. Additionally,
+        most storage backends return an error when they receive an authorization
+        header for a presigned URL.
+
+        :param file_path: Required.
+        :type file_path: str
+        :return: SandboxDownloadResponse
+        :rtype: ~client.models.SandboxDownloadResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[_models.SandboxDownloadResponse] = kwargs.pop("cls", None)
+
+        request = build_jobs_get_sandbox_file_request(
+            file_path=file_path,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("SandboxDownloadResponse", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
 
     @overload
     def submit_bulk_jobs(
