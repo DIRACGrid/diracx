@@ -34,14 +34,11 @@ def cli_env(monkeypatch, tmp_path, demo_dir):
 
 @pytest.fixture
 async def with_cli_login(monkeypatch, capfd, cli_env, tmp_path):
-    from .test_login import test_login
+    from .test_login import do_successful_login
 
     try:
-        credentials = await test_login(monkeypatch, capfd, cli_env)
+        await do_successful_login(monkeypatch, capfd, cli_env)
     except Exception:
-        pytest.skip("Login failed, fix test_login to re-enable this test")
+        pytest.xfail("Login failed, fix test_login to re-enable this test")
 
-    credentials_path = tmp_path / "credentials.json"
-    credentials_path.write_text(credentials)
-    monkeypatch.setenv("DIRACX_CREDENTIALS_PATH", str(credentials_path))
     yield
