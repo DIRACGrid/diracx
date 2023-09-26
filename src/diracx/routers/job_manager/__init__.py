@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 from datetime import datetime, timezone
+from enum import StrEnum
 from http import HTTPStatus
 from typing import Annotated, Any, TypedDict
 
 from fastapi import Body, Depends, HTTPException, Query
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, root_validator, validator
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.config import Config, ConfigSource
@@ -27,10 +29,11 @@ from diracx.db.sql.jobs.status_utility import (
 )
 
 from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
-from ..dependencies import JobDB, JobLoggingDB
+from ..dependencies import JobDB, JobLoggingDB, SandboxMetadataDB
 from ..fastapi_classes import DiracxRouter
 
 MAX_PARAMETRIC_JOBS = 20
+PRESIGNED_URL_TIMEOUT = 5 * 60
 
 logger = logging.getLogger(__name__)
 
@@ -457,3 +460,121 @@ async def get_single_job_status_history(
             status_code=HTTPStatus.NOT_FOUND, detail="Job not found"
         ) from e
     return {job_id: status}
+
+
+class SandboxChecksum(StrEnum):
+    SHA256 = "sha256"
+
+
+class SandboxFormat(StrEnum):
+    TAR_GZ = "tar.gz"
+
+
+class SandboxUploadInfo(BaseModel):
+    checksum_algorithm: SandboxChecksum
+    checksum: str
+    size: int
+    format: SandboxFormat
+
+    # TODO: There is probably a pydantic type for this
+    @validator("checksum", pre=True)
+    def checksum_must_be_hex(cls, v):
+        v = v.lower()
+        if not all(c in "0123456789abcdef" for c in v):
+            raise ValueError("Checksum must be hexadecimal")
+        return v.lower()
+
+
+class SandboxUploadResponse(TypedDict):
+    url: str
+    fields: dict[str, str]
+
+
+@router.post("/sandbox")
+async def initiate_sandbox_upload(
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    sandbox_info: SandboxUploadInfo,
+    sandbox_metadata_db: SandboxMetadataDB,
+) -> SandboxUploadResponse | None:
+    # TODO: Use async
+    import boto3
+    from botocore.config import Config
+    from botocore.errorfactory import ClientError
+
+    s3_cred = {
+        "endpoint": "http://christohersmbp4.localdomain:32000",
+        "access_key_id": "console",
+        "secret_access_key": "console123",
+    }
+    bucket_name = "sandboxes"
+    my_config = Config(signature_version="v4")
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=s3_cred["endpoint"],
+        aws_access_key_id=s3_cred["access_key_id"],
+        aws_secret_access_key=s3_cred["secret_access_key"],
+        config=my_config,
+    )
+    s3.create_bucket(Bucket=bucket_name)
+
+    key = "".join(
+        [
+            user_info.vo,
+            user_info.dirac_group,
+            user_info.sub,
+            f"{sandbox_info.checksum_algorithm}:{sandbox_info.checksum}.{sandbox_info.format}",
+        ]
+    )
+
+    already_exists = False
+    try:
+        if await sandbox_metadata_db.exists_and_assigned(key):
+            already_exists = True
+        else:
+            try:
+                s3.head_object(Bucket=bucket_name, Key=key)
+            except ClientError as e:
+                if e.response["Error"]["Code"] != "404":
+                    raise
+            else:
+                already_exists = True
+    except NoResultFound:
+        pass
+
+    if already_exists:
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail="Sandbox already exists",
+        )
+
+    fields = {
+        "x-amz-checksum-algorithm": sandbox_info.checksum_algorithm,
+        f"x-amz-checksum-{sandbox_info.checksum_algorithm}": b16_to_b64(
+            sandbox_info.checksum
+        ),
+    }
+    conditions = [["content-length-range", sandbox_info.size, sandbox_info.size]] + [
+        {k: v} for k, v in fields.items()
+    ]
+
+    upload_info = s3.generate_presigned_post(
+        Bucket=bucket_name,
+        Key=key,
+        Fields=fields,
+        Conditions=conditions,
+        ExpiresIn=PRESIGNED_URL_TIMEOUT,
+    )
+
+    await sandbox_metadata_db.insert(
+        user_info.sub, user_info.dirac_group, "S3", key, upload_info.size
+    )
+
+    return upload_info
+
+    # with open("/tmp/recompress-part1.txt") as fh:
+    #     files={"file": ("recompress-part1.txt", fh)}
+    #     r = requests.post(response['url'], data=response['fields'], files=files)
+
+
+def b16_to_b64(hex_string: str) -> str:
+    return base64.b64encode(base64.b16decode(hex_string.upper())).decode()

@@ -12,6 +12,11 @@ from diracx.db.sql.utils import BaseSQLDB
 from .schema import Base as SandboxMetadataDBBase
 from .schema import sb_Owners, sb_SandBoxes
 
+# In legacy DIRAC the SEName column was used to support multiple different
+# storage backends. This is no longer the case, so we hardcode the value to
+# S3 to represent the new DiracX system.
+SE_NAME = "S3"
+
 
 class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
@@ -36,7 +41,7 @@ class SandboxMetadataDB(BaseSQLDB):
 
     async def insert(
         self, owner: str, owner_group: str, sb_SE: str, se_PFN: str, size: int = 0
-    ) -> tuple[int, bool]:
+    ) -> int:
         """inserts a new sandbox in SandboxMetadataDB
         this is "equivalent" of DIRAC registerAndGetSandbox
 
@@ -70,6 +75,22 @@ class SandboxMetadataDB(BaseSQLDB):
             )
             await self.conn.execute(stmt)
             return sb_ID
+
+    async def exists_and_assigned(self, name: str) -> bool:
+        """Checks if a sandbox exists and has been assigned
+
+        As sandboxes are registered in the DB before uploading to the storage
+        backend we can't on their existence in the database to determine if
+        they have been uploaded. Instead we check if the sandbox has been
+        assigned to a job. If it has then we know it has been uploaded and we
+        can avoid communicating with the storage backend.
+        """
+        stmt: sqlalchemy.Executable = sqlalchemy.select(sb_SandBoxes.Assigned).where(
+            sb_SandBoxes.SEName == SE_NAME,
+            sb_SandBoxes.SEPFN == name,
+        )
+        result = await self.conn.execute(stmt)
+        return result.scalar_one()
 
     async def delete(self, sandbox_ids: list[int]) -> bool:
         stmt: sqlalchemy.Executable = sqlalchemy.delete(sb_SandBoxes).where(
