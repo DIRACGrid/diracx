@@ -9,6 +9,7 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 from datetime import datetime
 import json
 import requests
+import logging
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
@@ -36,6 +37,9 @@ def patch_sdk():
     you can't accomplish using the techniques described in
     https://aka.ms/azsdk/python/dpcodegen/python/customize
     """
+
+
+logger = logging.getLogger(__name__)
 
 
 class DiracTokenCredential(TokenCredential):
@@ -98,12 +102,21 @@ class DiracBearerTokenCredentialPolicy(BearerTokenCredentialPolicy):
             return
 
         if not self._token:
-            credentials = json.loads(self._credential.location.read_text())
-            self._token = self._credential.get_token(
-                "", refresh_token=credentials["refresh_token"]
-            )
+            try:
+                credentials = json.loads(self._credential.location.read_text())
+            except Exception:
+                logger.warning(
+                    "Cannot load credentials from %s", self._credential.location
+                )
+            else:
+                self._token = self._credential.get_token(
+                    "", refresh_token=credentials["refresh_token"]
+                )
 
-        request.http_request.headers["Authorization"] = f"Bearer {self._token.token}"
+        if self._token:
+            request.http_request.headers[
+                "Authorization"
+            ] = f"Bearer {self._token.token}"
 
 
 class DiracClient(DiracGenerated):
@@ -160,6 +173,7 @@ def refresh_token(
     )
 
     if response.status_code != 200:
+        location.unlink()
         raise RuntimeError(
             f"An issue occured while refreshing your access token: {response.json()['detail']}"
         )
@@ -192,24 +206,28 @@ def get_token(location: Path, token: AccessToken | None) -> AccessToken | None:
         raise RuntimeError("credentials are not set")
 
     # Load the existing credentials
-    if not token:
-        credentials = json.loads(location.read_text())
-        token = AccessToken(
-            cast(str, credentials.get("access_token")),
-            cast(int, credentials.get("expires_on")),
-        )
-
-    # We check the validity of the token
-    # If not valid, then return None to inform the caller that a new token
-    # is needed
-    if not is_token_valid(token):
-        return None
-
-    return token
+    try:
+        if not token:
+            credentials = json.loads(location.read_text())
+            token = AccessToken(
+                cast(str, credentials.get("access_token")),
+                cast(int, credentials.get("expires_on")),
+            )
+    except Exception:
+        logger.warning("Cannot load credentials from %s", location)
+        pass
+    else:
+        # We check the validity of the token
+        # If not valid, then return None to inform the caller that a new token
+        # is needed
+        if is_token_valid(token):
+            return token
+    return None
 
 
 def is_token_valid(token: AccessToken) -> bool:
     """Condition to get a new token"""
+    # TODO: Should we check against the userinfo endpoint?
     return (
         datetime.utcfromtimestamp(token.expires_on) - datetime.utcnow()
     ).total_seconds() > 300

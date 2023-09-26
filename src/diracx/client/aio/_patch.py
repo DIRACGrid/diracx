@@ -7,6 +7,7 @@
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
 import json
+import logging
 from types import TracebackType
 from pathlib import Path
 from typing import Any, List, Optional
@@ -23,6 +24,8 @@ from .._patch import get_openid_configuration, get_token, refresh_token
 __all__: List[str] = [
     "DiracClient",
 ]  # Add all objects you want publicly available to users at this package level
+
+logger = logging.getLogger(__name__)
 
 
 def patch_sdk():
@@ -104,6 +107,7 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
         credentials: dict[str, Any]
 
         try:
+            # TODO: Use httpx and await this call
             self._token = get_token(self._credential.location, self._token)
         except RuntimeError:
             # If we are here, it means the credentials path does not exist
@@ -111,12 +115,21 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
             return
 
         if not self._token:
-            credentials = json.loads(self._credential.location.read_text())
-            self._token = await self._credential.get_token(
-                "", refresh_token=credentials["refresh_token"]
-            )
+            try:
+                credentials = json.loads(self._credential.location.read_text())
+            except Exception:
+                logger.warning(
+                    "Cannot load credentials from %s", self._credential.location
+                )
+            else:
+                self._token = await self._credential.get_token(
+                    "", refresh_token=credentials["refresh_token"]
+                )
 
-        request.http_request.headers["Authorization"] = f"Bearer {self._token.token}"
+        if self._token:
+            request.http_request.headers[
+                "Authorization"
+            ] = f"Bearer {self._token.token}"
 
 
 class DiracClient(DiracGenerated):
