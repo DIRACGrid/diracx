@@ -6,7 +6,7 @@
 # --------------------------------------------------------------------------
 
 import datetime
-from typing import Any, List, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
 from .. import _serialization
 
@@ -507,6 +507,139 @@ class LimitedJobStatusReturn(_serialization.Model):
         self.status = status
         self.minor_status = minor_status
         self.application_status = application_status
+
+
+class SandboxDownloadResponse(_serialization.Model):
+    """SandboxDownloadResponse.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar url: Url. Required.
+    :vartype url: str
+    :ivar expires_in: Expires In. Required.
+    :vartype expires_in: int
+    """
+
+    _validation = {
+        "url": {"required": True},
+        "expires_in": {"required": True},
+    }
+
+    _attribute_map = {
+        "url": {"key": "url", "type": "str"},
+        "expires_in": {"key": "expires_in", "type": "int"},
+    }
+
+    def __init__(self, *, url: str, expires_in: int, **kwargs: Any) -> None:
+        """
+        :keyword url: Url. Required.
+        :paramtype url: str
+        :keyword expires_in: Expires In. Required.
+        :paramtype expires_in: int
+        """
+        super().__init__(**kwargs)
+        self.url = url
+        self.expires_in = expires_in
+
+
+class SandboxInfo(_serialization.Model):
+    """SandboxInfo.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar checksum_algorithm: An enumeration. Required. "sha256"
+    :vartype checksum_algorithm: str or ~client.models.ChecksumAlgorithm
+    :ivar checksum: Checksum. Required.
+    :vartype checksum: str
+    :ivar size: Size. Required.
+    :vartype size: int
+    :ivar format: An enumeration. Required. "tar.bz2"
+    :vartype format: str or ~client.models.SandboxFormat
+    """
+
+    _validation = {
+        "checksum_algorithm": {"required": True},
+        "checksum": {"required": True, "pattern": r"^[0-f]{64}$"},
+        "size": {"required": True, "minimum": 1},
+        "format": {"required": True},
+    }
+
+    _attribute_map = {
+        "checksum_algorithm": {"key": "checksum_algorithm", "type": "str"},
+        "checksum": {"key": "checksum", "type": "str"},
+        "size": {"key": "size", "type": "int"},
+        "format": {"key": "format", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        checksum_algorithm: Union[str, "_models.ChecksumAlgorithm"],
+        checksum: str,
+        size: int,
+        format: Union[str, "_models.SandboxFormat"],
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword checksum_algorithm: An enumeration. Required. "sha256"
+        :paramtype checksum_algorithm: str or ~client.models.ChecksumAlgorithm
+        :keyword checksum: Checksum. Required.
+        :paramtype checksum: str
+        :keyword size: Size. Required.
+        :paramtype size: int
+        :keyword format: An enumeration. Required. "tar.bz2"
+        :paramtype format: str or ~client.models.SandboxFormat
+        """
+        super().__init__(**kwargs)
+        self.checksum_algorithm = checksum_algorithm
+        self.checksum = checksum
+        self.size = size
+        self.format = format
+
+
+class SandboxUploadResponse(_serialization.Model):
+    """SandboxUploadResponse.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar pfn: Pfn. Required.
+    :vartype pfn: str
+    :ivar url: Url.
+    :vartype url: str
+    :ivar fields: Fields.
+    :vartype fields: dict[str, str]
+    """
+
+    _validation = {
+        "pfn": {"required": True},
+    }
+
+    _attribute_map = {
+        "pfn": {"key": "pfn", "type": "str"},
+        "url": {"key": "url", "type": "str"},
+        "fields": {"key": "fields", "type": "{str}"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pfn: str,
+        url: Optional[str] = None,
+        fields: Optional[Dict[str, str]] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pfn: Pfn. Required.
+        :paramtype pfn: str
+        :keyword url: Url.
+        :paramtype url: str
+        :keyword fields: Fields.
+        :paramtype fields: dict[str, str]
+        """
+        super().__init__(**kwargs)
+        self.pfn = pfn
+        self.url = url
+        self.fields = fields
 
 
 class ScalarSearchSpec(_serialization.Model):
