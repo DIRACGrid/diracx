@@ -56,7 +56,7 @@ class DiracTokenCredential(TokenCredential):
         claims: Optional[str] = None,
         tenant_id: Optional[str] = None,
         **kwargs: Any,
-    ) -> AccessToken:
+    ) -> AccessToken | None:
         """Refresh the access token using the refresh_token flow.
         :param str scopes: The type of access needed.
         :keyword str claims: Additional claims required in the token, such as those returned in a resource
@@ -159,7 +159,7 @@ class DiracClient(DiracGenerated):
 
 def refresh_token(
     location: Path, token_endpoint: str, client_id: str, refresh_token: str
-) -> AccessToken:
+) -> AccessToken | None:
     """Refresh the access token using the refresh_token flow."""
     from diracx.core.utils import write_credentials
 
@@ -172,9 +172,13 @@ def refresh_token(
         },
     )
 
-    if response.status_code != 200:
-        # Think more
-        # location.unlink()
+    if response.status_code == 401:
+        reason = response.json()["detail"]
+        logger.warning("Your refresh token is not valid anymore: %s", reason)
+        location.unlink()
+        return None
+    elif response.status_code != 200:
+        # TODO: Better handle this case, retry?
         raise RuntimeError(
             f"An issue occured while refreshing your access token: {response.json()['detail']}"
         )

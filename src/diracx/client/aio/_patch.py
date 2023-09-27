@@ -51,7 +51,7 @@ class DiracTokenCredential(AsyncTokenCredential):
         claims: Optional[str] = None,
         tenant_id: Optional[str] = None,
         **kwargs: Any,
-    ) -> AccessToken:
+    ) -> AccessToken | None:
         """Refresh the access token using the refresh_token flow.
         :param str scopes: The type of access needed.
         :keyword str claims: Additional claims required in the token, such as those returned in a resource
