@@ -33,7 +33,7 @@ from diracx.core.exceptions import (
     ExpiredFlowError,
     PendingAuthorizationError,
 )
-from diracx.core.models import TokenResponse
+from diracx.core.models import TokenResponse, UserInfo
 from diracx.core.properties import (
     PROXY_MANAGEMENT,
     SecurityProperty,
@@ -82,7 +82,7 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
     )
 
     async def require_property(
-        user: Annotated[UserInfo, Depends(verify_dirac_access_token)]
+        user: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]
     ):
         if not evaluator(user.properties):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
@@ -164,18 +164,14 @@ class AuthInfo(BaseModel):
     properties: list[SecurityProperty]
 
 
-class UserInfo(AuthInfo):
-    # dirac generated vo:sub
-    sub: str
-    preferred_username: str
-    dirac_group: str
-    vo: str
+class AuthorizedUserInfo(AuthInfo, UserInfo):
+    pass
 
 
 async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,
-) -> UserInfo:
+) -> AuthorizedUserInfo:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
     """
@@ -204,7 +200,7 @@ async def verify_dirac_access_token(
             detail="Invalid JWT",
         ) from None
 
-    return UserInfo(
+    return AuthorizedUserInfo(
         bearer_token=raw_token,
         token_id=token["jti"],
         properties=token["dirac_properties"],
@@ -876,7 +872,7 @@ async def get_oidc_token_info_from_refresh_flow(
 @router.get("/refresh-tokens")
 async def get_refresh_tokens(
     auth_db: AuthDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> list:
     subject: str | None = user_info.sub
     if PROXY_MANAGEMENT in user_info.properties:
@@ -889,7 +885,7 @@ async def get_refresh_tokens(
 @router.delete("/refresh-tokens/{jti}")
 async def revoke_refresh_token(
     auth_db: AuthDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     jti: str,
 ) -> str:
     res = await auth_db.get_refresh_token(jti)
@@ -1006,7 +1002,7 @@ class UserInfoResponse(TypedDict):
 
 @router.get("/userinfo")
 async def userinfo(
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)]
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]
 ) -> UserInfoResponse:
     return {
         "sub": user_info.sub,

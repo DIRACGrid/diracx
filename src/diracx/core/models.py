@@ -105,3 +105,10 @@ class SetJobStatusReturn(BaseModel):
     start_exec_time: datetime | None = Field(alias="StartExecTime")
     end_exec_time: datetime | None = Field(alias="EndExecTime")
     last_update_time: datetime | None = Field(alias="LastUpdateTime")
+
+
+class UserInfo(BaseModel):
+    sub: str  # dirac generated vo:sub
+    preferred_username: str
+    dirac_group: str
+    vo: str

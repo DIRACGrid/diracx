@@ -26,7 +26,7 @@ from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 
-from ..auth import UserInfo, has_properties, verify_dirac_access_token
+from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
 from ..dependencies import JobDB, JobLoggingDB
 from ..fastapi_classes import DiracxRouter
 
@@ -105,7 +105,7 @@ async def submit_bulk_jobs(
     job_definitions: Annotated[list[str], Body(example=EXAMPLE_JDLS["Simple JDL"])],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> list[InsertedJob]:
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
@@ -116,7 +116,7 @@ async def submit_bulk_jobs(
     )
 
     class DiracxJobPolicy(JobPolicy):
-        def __init__(self, user_info: UserInfo, allInfo: bool = True):
+        def __init__(self, user_info: AuthorizedUserInfo, allInfo: bool = True):
             self.userName = user_info.preferred_username
             self.userGroup = user_info.dirac_group
             self.userProperties = user_info.properties
@@ -353,7 +353,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     page: int = 0,
     per_page: int = 100,
     body: Annotated[
@@ -385,7 +385,7 @@ async def search(
 async def summary(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     body: JobSummaryParams,
 ):
     """Show information suitable for plotting"""
