@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+
 from typing import TypedDict
+import logging
+
 
 from fastapi import Request
 
@@ -11,6 +14,8 @@ from .fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False, path_root="")
 
+logger = logging.getLogger(__name__)
+
 
 @router.get("/openid-configuration")
 async def openid_configuration(
@@ -18,6 +23,7 @@ async def openid_configuration(
     config: Config,
     settings: AuthSettings,
 ):
+    logger.info("CHRIS ICI")
     scopes_supported = []
     for vo in config.Registry:
         scopes_supported.append(f"vo:{vo}")
