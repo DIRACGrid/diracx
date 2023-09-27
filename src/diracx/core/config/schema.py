@@ -76,6 +76,16 @@ class RegistryConfig(BaseModel):
     Users: dict[str, UserConfig]
     Groups: dict[str, GroupConfig]
 
+    def sub_from_preferred_username(self, preferred_username: str) -> str:
+        """Get the user sub from the preferred username.
+
+        TODO: This could easily be cached or optimised
+        """
+        for sub, user in self.Users.items():
+            if user.PreferedUsername == preferred_username:
+                return sub
+        raise KeyError(f"User {preferred_username} not found in registry")
+
 
 class DIRACConfig(BaseModel):
     pass
