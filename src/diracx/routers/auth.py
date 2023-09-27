@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 from datetime import timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
@@ -90,7 +90,7 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
     return Depends(require_property)
 
 
-class GrantType(str, Enum):
+class GrantType(StrEnum):
     authorization_code = "authorization_code"
     device_code = "urn:ietf:params:oauth:grant-type:device_code"
     refresh_token = "refresh_token"
