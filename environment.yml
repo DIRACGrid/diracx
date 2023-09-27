@@ -46,6 +46,7 @@ dependencies:
   - rich
   - sqlalchemy
   - typer
+  - boto3-stubs
   - types-cachetools
   - types-PyYAML
   - types-requests
