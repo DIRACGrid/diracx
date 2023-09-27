@@ -119,7 +119,7 @@ class SandboxChecksum(StrEnum):
 
 
 class SandboxFormat(StrEnum):
-    TAR_GZ = "tar.gz"
+    TAR_BZ2 = "tar.bz2"
 
 
 class SandboxInfo(BaseModel):
