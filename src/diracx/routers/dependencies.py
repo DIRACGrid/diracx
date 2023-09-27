@@ -19,6 +19,7 @@ from diracx.core.properties import SecurityProperty
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
+from diracx.db.sql import SandboxMetadataDB as _SandboxMetadataDB
 
 T = TypeVar("T")
 
@@ -32,6 +33,9 @@ def add_settings_annotation(cls: T) -> T:
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
 JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
+SandboxMetadataDB = Annotated[
+    _SandboxMetadataDB, Depends(_SandboxMetadataDB.transaction)
+]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]
