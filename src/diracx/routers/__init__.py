@@ -14,12 +14,17 @@ from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter as OTLPSpanExporterGRPC,
 )
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    ConsoleMetricExporter,
+    PeriodicExportingMetricReader,
+)
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -53,8 +58,10 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = os.environ.get("APP_NAME", "mysecretapp")
 EXPOSE_PORT = os.environ.get("EXPOSE_PORT", 8000)
-OTEL_GRPC_ENDPOINT = os.environ.get("OTEL_GRPC_ENDPOINT", "otel-collector:4317")
-OTEL_GRPC_ENDPOINT = "172.18.0.2:4317"
+OTEL_GRPC_ENDPOINT = os.environ.get(
+    "OTEL_GRPC_ENDPOINT", "diracx-demo-opentelemetry-collector:4317"
+)
+# OTEL_GRPC_ENDPOINT = "172.18.0.2:4317"
 
 
 def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -> None:
@@ -78,11 +85,17 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
         )
     )
 
+    metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter())
+    provider = MeterProvider(metric_readers=[metric_reader])
+    metrics.set_meter_provider(provider)
+
     # # override logger format which with trace id and span id
     if log_correlation:
         LoggingInstrumentor().instrument(set_logging_format=True)
 
-    FastAPIInstrumentor.instrument_app(app, tracer_provider=tracer)
+    FastAPIInstrumentor.instrument_app(
+        app, tracer_provider=tracer, meter_provider=provider
+    )
 
 
 # Rules:
