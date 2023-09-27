@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
 
-class ScalarSearchOperator(str, Enum):
+class ScalarSearchOperator(StrEnum):
     EQUAL = "eq"
     NOT_EQUAL = "neq"
     GREATER_THAN = "gt"
@@ -15,7 +15,7 @@ class ScalarSearchOperator(str, Enum):
     LIKE = "like"
 
 
-class VectorSearchOperator(str, Enum):
+class VectorSearchOperator(StrEnum):
     IN = "in"
     NOT_IN = "not in"
 
@@ -49,7 +49,7 @@ class TokenResponse(BaseModel):
     refresh_token: str | None
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     SUBMITTING = "Submitting"
     RECEIVED = "Received"
     CHECKING = "Checking"
