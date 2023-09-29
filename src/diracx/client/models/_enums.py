@@ -8,6 +8,12 @@ from enum import Enum
 from azure.core import CaseInsensitiveEnumMeta
 
 
+class ChecksumAlgorithm(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """An enumeration."""
+
+    SHA256 = "sha256"
+
+
 class Enum0(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Enum0."""
 
@@ -70,12 +76,6 @@ class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     DELETED = "Deleted"
     KILLED = "Killed"
     RESCHEDULED = "Rescheduled"
-
-
-class SandboxChecksum(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """An enumeration."""
-
-    SHA256 = "sha256"
 
 
 class SandboxFormat(str, Enum, metaclass=CaseInsensitiveEnumMeta):

@@ -48,14 +48,19 @@ class SandboxMetadataDB(BaseSQLDB):
             user.preferred_username,
             f"{sandbox_info.checksum_algorithm}:{sandbox_info.checksum}.{sandbox_info.format}",
         ]
-        return "/".join(parts)
+        return "/" + "/".join(parts)
 
     async def insert_sandbox(self, user: UserInfo, pfn: str, size: int):
         """Add a new sandbox in SandboxMetadataDB"""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         owner_id = await self.upsert_owner(user)
         stmt = sqlalchemy.insert(sb_SandBoxes).values(
-            OwnerId=owner_id, SEName=SE_NAME, SEPFN=pfn, Bytes=size
+            OwnerId=owner_id,
+            SEName=SE_NAME,
+            SEPFN=pfn,
+            Bytes=size,
+            RegistrationTime=utcnow(),
+            LastAccessTime=utcnow(),
         )
         try:
             result = await self.conn.execute(stmt)

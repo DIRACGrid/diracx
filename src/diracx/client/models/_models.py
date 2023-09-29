@@ -548,7 +548,7 @@ class SandboxInfo(_serialization.Model):
     All required parameters must be populated in order to send to Azure.
 
     :ivar checksum_algorithm: An enumeration. Required. "sha256"
-    :vartype checksum_algorithm: str or ~client.models.SandboxChecksum
+    :vartype checksum_algorithm: str or ~client.models.ChecksumAlgorithm
     :ivar checksum: Checksum. Required.
     :vartype checksum: str
     :ivar size: Size. Required.
@@ -574,7 +574,7 @@ class SandboxInfo(_serialization.Model):
     def __init__(
         self,
         *,
-        checksum_algorithm: Union[str, "_models.SandboxChecksum"],
+        checksum_algorithm: Union[str, "_models.ChecksumAlgorithm"],
         checksum: str,
         size: int,
         format: Union[str, "_models.SandboxFormat"],
@@ -582,7 +582,7 @@ class SandboxInfo(_serialization.Model):
     ) -> None:
         """
         :keyword checksum_algorithm: An enumeration. Required. "sha256"
-        :paramtype checksum_algorithm: str or ~client.models.SandboxChecksum
+        :paramtype checksum_algorithm: str or ~client.models.ChecksumAlgorithm
         :keyword checksum: Checksum. Required.
         :paramtype checksum: str
         :keyword size: Size. Required.

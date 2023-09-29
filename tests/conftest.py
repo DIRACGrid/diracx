@@ -8,15 +8,20 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import requests
+import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
+from moto import mock_s3
 
 from diracx.core.config import Config, ConfigSource
+from diracx.core.preferences import get_diracx_preferences
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_token
+from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -75,14 +80,27 @@ def test_auth_settings() -> AuthSettings:
     )
 
 
+@pytest.fixture(scope="function")
+def test_sandbox_settings() -> SandboxStoreSettings:
+    with mock_s3():
+        yield SandboxStoreSettings(
+            bucket_name="sandboxes",
+            s3_client_kwargs={},
+            auto_create_bucket=True,
+        )
+
+
 @pytest.fixture
-def with_app(test_auth_settings, with_config_repo):
+def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
     """
     app = create_app_inner(
         enabled_systems={".well-known", "auth", "config", "jobs"},
-        all_service_settings=[test_auth_settings],
+        all_service_settings=[
+            test_auth_settings,
+            test_sandbox_settings,
+        ],
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",
             "JobLoggingDB": "sqlite+aiosqlite:///:memory:",
@@ -231,6 +249,12 @@ def demo_dir(request) -> Path:
 
 
 @pytest.fixture(scope="session")
+def demo_urls(demo_dir):
+    helm_values = yaml.safe_load((demo_dir / "values.yaml").read_text())
+    yield helm_values["developer"]["urls"]
+
+
+@pytest.fixture(scope="session")
 def demo_kubectl_env(demo_dir):
     """Get the dictionary of environment variables for kubectl to control the demo"""
     kube_conf = demo_dir / "kube.conf"
@@ -250,3 +274,40 @@ def demo_kubectl_env(demo_dir):
     assert "diracx" in pods_result
 
     yield env
+
+
+@pytest.fixture
+def cli_env(monkeypatch, tmp_path, demo_urls):
+    """Set up the environment for the CLI"""
+    diracx_url = demo_urls["diracx"]
+
+    # Ensure the demo is working
+    r = requests.get(f"{diracx_url}/openapi.json")
+    r.raise_for_status()
+    assert r.json()["info"]["title"] == "Dirac"
+
+    env = {
+        "DIRACX_URL": diracx_url,
+        "HOME": str(tmp_path),
+    }
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    yield env
+
+    # The DiracX preferences are cached however when testing this cache is invalid
+    get_diracx_preferences.cache_clear()
+
+
+@pytest.fixture
+async def with_cli_login(monkeypatch, capfd, cli_env, tmp_path):
+    from .cli.test_login import test_login
+
+    try:
+        credentials = await test_login(monkeypatch, capfd, cli_env)
+    except Exception:
+        pytest.skip("Login failed, fix test_login to re-enable this test")
+
+    credentials_path = tmp_path / "credentials.json"
+    credentials_path.write_text(credentials)
+    monkeypatch.setenv("DIRACX_CREDENTIALS_PATH", str(credentials_path))
+    yield

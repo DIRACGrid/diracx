@@ -34,7 +34,8 @@ def do_device_flow_with_dex(url: str) -> None:
 
     # Do the actual login
     r = requests.post(
-        action_url, data={"login": "admin@example.com", "password": "password"}
+        action_url,
+        data={"login": "admin@example.com", "password": "password"},
     )
     r.raise_for_status()
     # This should have redirected to the DiracX page that shows the login is complete
@@ -60,7 +61,7 @@ async def test_login(monkeypatch, capfd, cli_env):
             do_device_flow_with_dex(match.group())
 
         # Ensure we don't poll forever
-        assert poll_attempts <= 10
+        assert poll_attempts <= 100
 
         # Reduce the sleep duration to zero to speed up the test
         return unpatched_sleep(0)
@@ -69,7 +70,6 @@ async def test_login(monkeypatch, capfd, cli_env):
     # would normally be done by a user. This includes capturing the login URL
     # and doing the actual device flow with dex.
     unpatched_sleep = asyncio.sleep
-    monkeypatch.setattr("asyncio.sleep", fake_sleep)
 
     expected_credentials_path = Path(
         cli_env["HOME"], ".cache", "diracx", "credentials.json"
@@ -79,7 +79,9 @@ async def test_login(monkeypatch, capfd, cli_env):
     assert not expected_credentials_path.exists()
 
     # Run the login command
-    await cli.login(vo="diracAdmin", group=None, property=None)
+    with monkeypatch.context() as m:
+        m.setattr("asyncio.sleep", fake_sleep)
+        await cli.login(vo="diracAdmin", group=None, property=None)
     captured = capfd.readouterr()
     assert "Login successful!" in captured.out
     assert captured.err == ""

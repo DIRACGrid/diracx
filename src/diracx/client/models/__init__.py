@@ -29,6 +29,7 @@ from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
 
+from ._enums import ChecksumAlgorithm
 from ._enums import Enum0
 from ._enums import Enum1
 from ._enums import Enum10
@@ -37,7 +38,6 @@ from ._enums import Enum2
 from ._enums import Enum3
 from ._enums import Enum4
 from ._enums import JobStatus
-from ._enums import SandboxChecksum
 from ._enums import SandboxFormat
 from ._enums import ScalarSearchOperator
 from ._enums import VectorSearchOperator
@@ -70,6 +70,7 @@ __all__ = [
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",
+    "ChecksumAlgorithm",
     "Enum0",
     "Enum1",
     "Enum10",
@@ -78,7 +79,6 @@ __all__ = [
     "Enum3",
     "Enum4",
     "JobStatus",
-    "SandboxChecksum",
     "SandboxFormat",
     "ScalarSearchOperator",
     "VectorSearchOperator",

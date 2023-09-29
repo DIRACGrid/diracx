@@ -114,7 +114,7 @@ class UserInfo(BaseModel):
     vo: str
 
 
-class SandboxChecksum(StrEnum):
+class ChecksumAlgorithm(StrEnum):
     SHA256 = "sha256"
 
 
@@ -123,7 +123,7 @@ class SandboxFormat(StrEnum):
 
 
 class SandboxInfo(BaseModel):
-    checksum_algorithm: SandboxChecksum
+    checksum_algorithm: ChecksumAlgorithm
     checksum: str = Field(pattern=r"^[0-f]{64}$")
     size: int = Field(ge=1)
     format: SandboxFormat

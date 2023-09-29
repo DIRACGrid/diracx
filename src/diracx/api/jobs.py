@@ -14,13 +14,16 @@ import httpx
 from diracx.client.aio import DiracClient
 from diracx.client.models import SandboxInfo
 
+from .utils import with_client
+
 logger = logging.getLogger(__name__)
 
 SANDBOX_CHECKSUM_ALGORITHM = "sha256"
 SANDBOX_COMPRESSION = "bz2"
 
 
-async def create_sandbox(client: DiracClient, paths: list[Path]) -> str:
+@with_client
+async def create_sandbox(paths: list[Path], *, client: DiracClient) -> str:
     """Create a sandbox from the given paths and upload it to the storage backend.
 
     Any paths that are directories will be added recursively.
@@ -52,9 +55,13 @@ async def create_sandbox(client: DiracClient, paths: list[Path]) -> str:
         if res.url:
             logger.debug("Uploading sandbox for %s", res.pfn)
             files = {"file": ("file", tar_fh)}
-            response = httpx.post(res.url, data=res.fields, files=files)
-            # TODO: Handle this error better
-            response.raise_for_status()
+            async with httpx.AsyncClient() as httpx_client:
+                response = await httpx_client.post(
+                    res.url, data=res.fields, files=files
+                )
+                # TODO: Handle this error better
+                response.raise_for_status()
+
             logger.debug(
                 "Sandbox uploaded for %s with status code %s",
                 res.pfn,
@@ -65,9 +72,10 @@ async def create_sandbox(client: DiracClient, paths: list[Path]) -> str:
         return res.pfn
 
 
-async def download_sandbox(client: DiracClient, pfn: str, destination: Path):
+@with_client
+async def download_sandbox(pfn: str, destination: Path, *, client: DiracClient):
     """Download a sandbox from the storage backend to the given destination."""
-    res = await client.jobs.get_sandbox_file(pfn)
+    res = await client.jobs.get_sandbox_file(pfn=pfn)
     logger.debug("Downloading sandbox for %s", pfn)
     with tempfile.TemporaryFile(mode="w+b") as fh:
         async with httpx.AsyncClient() as http_client:
@@ -76,6 +84,7 @@ async def download_sandbox(client: DiracClient, pfn: str, destination: Path):
             response.raise_for_status()
             async for chunk in response.aiter_bytes():
                 fh.write(chunk)
+        fh.seek(0)
         logger.debug("Sandbox downloaded for %s", pfn)
 
         with tarfile.open(fileobj=fh) as tf:

@@ -821,6 +821,68 @@ class JobsOperations:
             input_args.pop(0) if input_args else kwargs.pop("deserializer")
         )
 
+    @distributed_trace_async
+    async def get_sandbox_file(
+        self, *, pfn: str, **kwargs: Any
+    ) -> _models.SandboxDownloadResponse:
+        """Get Sandbox File.
+
+        Get a presigned URL to download a sandbox file
+
+        This route cannot use a redirect response most clients will also send the
+        authorization header when following a redirect. This is not desirable as
+        it would leak the authorization token to the storage backend. Additionally,
+        most storage backends return an error when they receive an authorization
+        header for a presigned URL.
+
+        :keyword pfn: Required.
+        :paramtype pfn: str
+        :return: SandboxDownloadResponse
+        :rtype: ~client.models.SandboxDownloadResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[_models.SandboxDownloadResponse] = kwargs.pop("cls", None)
+
+        request = build_jobs_get_sandbox_file_request(
+            pfn=pfn,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("SandboxDownloadResponse", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
     @overload
     async def initiate_sandbox_upload(
         self,
@@ -945,68 +1007,6 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("SandboxUploadResponse", pipeline_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})
-
-        return deserialized
-
-    @distributed_trace_async
-    async def get_sandbox_file(
-        self, file_path: str, **kwargs: Any
-    ) -> _models.SandboxDownloadResponse:
-        """Get Sandbox File.
-
-        Get a presigned URL to download a sandbox file
-
-        This route cannot use a redirect response most clients will also send the
-        authorization header when following a redirect. This is not desirable as
-        it would leak the authorization token to the storage backend. Additionally,
-        most storage backends return an error when they receive an authorization
-        header for a presigned URL.
-
-        :param file_path: Required.
-        :type file_path: str
-        :return: SandboxDownloadResponse
-        :rtype: ~client.models.SandboxDownloadResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[_models.SandboxDownloadResponse] = kwargs.pop("cls", None)
-
-        request = build_jobs_get_sandbox_file_request(
-            file_path=file_path,
-            headers=_headers,
-            params=_params,
-        )
-        request.url = self._client.format_url(request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = (
-            await self._client._pipeline.run(  # pylint: disable=protected-access
-                request, stream=_stream, **kwargs
-            )
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("SandboxDownloadResponse", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
