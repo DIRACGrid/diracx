@@ -30,7 +30,7 @@ jobs:
       - name: Prepare environment
         run: |
           pip install typer pyyaml gitpython packaging
-          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          git clone https://github.com/chaen/DIRAC.git -b "diracx_sandbox" /tmp/DIRACRepo
           # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment
         run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --extra-module "diracx=${GITHUB_WORKSPACE}"
