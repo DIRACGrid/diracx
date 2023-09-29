@@ -42,8 +42,6 @@ jobs:
         run: cd /tmp/DIRACRepo && ./integration_tests.py test-server || touch server-tests-failed
       - name: Client tests
         run: cd /tmp/DIRACRepo && ./integration_tests.py test-client || touch client-tests-failed
-      - name: diracx logs
-        run: docker logs diracx
       - name: Check test status
         run: |
           has_error=0
@@ -51,3 +49,15 @@ jobs:
           if [ -f server-tests-failed ]; then has_error=0; echo "Server tests failed"; fi
           if [ -f client-tests-failed ]; then has_error=0; echo "Client tests failed"; fi
           if [ ${has_error} = 1 ]; then exit 1; fi
+      - name: diracx logs
+        if: ${{ failure() }}
+        run: |
+          mkdir -p /tmp/service-logs
+          docker logs diracx 2>&1 | tee /tmp/service-logs/diracx.log
+          cd /tmp/DIRACRepo
+          ./integration_tests.py logs --no-follow --lines 1000 2>&1 | tee /tmp/service-logs/dirac.log
+      - uses: actions/upload-artifact@v3
+        if: ${{ failure() }}
+        with:
+          name: serivce-logs
+          path: /tmp/service-logs/
