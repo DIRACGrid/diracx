@@ -222,13 +222,17 @@ def admin_user_client(test_client, test_auth_settings):
 
 
 @pytest.fixture(scope="session")
-def demo_kubectl_env(request):
-    """Get the dictionary of environment variables for kubectl to control the demo"""
+def demo_dir(request) -> Path:
     demo_dir = request.config.getoption("--demo-dir")
     if demo_dir is None:
         pytest.skip("Requires a running instance of the DiracX demo")
     demo_dir = (demo_dir / ".demo").resolve()
+    yield demo_dir
 
+
+@pytest.fixture(scope="session")
+def demo_kubectl_env(demo_dir):
+    """Get the dictionary of environment variables for kubectl to control the demo"""
     kube_conf = demo_dir / "kube.conf"
     if not kube_conf.exists():
         raise RuntimeError(f"Could not find {kube_conf}, is the demo running?")

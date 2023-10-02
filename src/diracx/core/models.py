@@ -112,3 +112,18 @@ class UserInfo(BaseModel):
     preferred_username: str
     dirac_group: str
     vo: str
+
+
+class SandboxChecksum(StrEnum):
+    SHA256 = "sha256"
+
+
+class SandboxFormat(StrEnum):
+    TAR_BZ2 = "tar.bz2"
+
+
+class SandboxInfo(BaseModel):
+    checksum_algorithm: SandboxChecksum
+    checksum: str = Field(pattern=r"^[0-f]{64}$")
+    size: int = Field(ge=1)
+    format: SandboxFormat

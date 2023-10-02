@@ -16,9 +16,11 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.db.os import JobParametersDB as _JobParametersDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
+from diracx.db.sql import SandboxMetadataDB as _SandboxMetadataDB
 
 T = TypeVar("T")
 
@@ -28,10 +30,16 @@ def add_settings_annotation(cls: T) -> T:
     return Annotated[cls, Depends(cls.create)]  # type: ignore
 
 
-# Databases
+# SQL Databases
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
 JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
+SandboxMetadataDB = Annotated[
+    _SandboxMetadataDB, Depends(_SandboxMetadataDB.transaction)
+]
+
+# OpenSearch Databases
+JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]
