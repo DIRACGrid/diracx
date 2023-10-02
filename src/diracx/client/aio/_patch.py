@@ -15,7 +15,7 @@ from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.pipeline import PipelineRequest
 from azure.core.pipeline.policies import AsyncBearerTokenCredentialPolicy
 
-from diracx.core.preferences import get_diracx_preferences
+from diracx.core.preferences import get_diracx_preferences, DiracxPreferences
 
 from ._client import Dirac as DiracGenerated
 from .._patch import get_openid_configuration, get_token, refresh_token
@@ -125,9 +125,13 @@ class DiracClient(DiracGenerated):
     """
 
     def __init__(
-        self, endpoint: str | None = None, client_id: str | None = None, **kwargs: Any
+        self,
+        endpoint: str | None = None,
+        client_id: str | None = None,
+        diracx_preferences: DiracxPreferences | None = None,
+        **kwargs: Any,
     ) -> None:
-        diracx_preferences = get_diracx_preferences()
+        diracx_preferences = diracx_preferences or get_diracx_preferences()
         self._endpoint = endpoint or diracx_preferences.url
         self._client_id = client_id or "myDIRACClientID"
 

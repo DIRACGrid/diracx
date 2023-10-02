@@ -32,7 +32,7 @@ def non_mocked_hosts(test_client) -> list[str]:
 
 @pytest.fixture
 async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
-    data_dir = Path(__file__).parent.parent / "data"
+    data_dir = Path(__file__).parent.parent.parent / "data"
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
     httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
 

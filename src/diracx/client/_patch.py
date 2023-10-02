@@ -6,6 +6,8 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
+from __future__ import annotations
+
 from datetime import datetime
 import json
 import requests
@@ -19,7 +21,7 @@ from azure.core.pipeline.policies import BearerTokenCredentialPolicy
 
 from diracx.client.models import TokenResponse
 from diracx.core.models import TokenResponse as CoreTokenResponse
-from diracx.core.preferences import get_diracx_preferences
+from diracx.core.preferences import DiracxPreferences, get_diracx_preferences
 
 from ._client import Dirac as DiracGenerated
 
@@ -112,9 +114,13 @@ class DiracClient(DiracGenerated):
     """
 
     def __init__(
-        self, endpoint: str | None = None, client_id: str | None = None, **kwargs: Any
+        self,
+        endpoint: str | None = None,
+        client_id: str | None = None,
+        diracx_preferences: DiracxPreferences | None = None,
+        **kwargs: Any,
     ) -> None:
-        diracx_preferences = get_diracx_preferences()
+        diracx_preferences = diracx_preferences or get_diracx_preferences()
         self._endpoint = endpoint or diracx_preferences.url
         self._client_id = client_id or "myDIRACClientID"
 

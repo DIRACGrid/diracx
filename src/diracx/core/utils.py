@@ -4,6 +4,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from diracx.core.models import TokenResponse
 
@@ -19,7 +20,7 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
     return [v for _, v in sorted(env_files.items())]
 
 
-def write_credentials(token_response: TokenResponse):
+def write_credentials(token_response: TokenResponse, location: Path | None = None):
     """Write credentials received in dirax_preferences.credentials_path"""
     from diracx.core.preferences import get_diracx_preferences
 
@@ -31,6 +32,6 @@ def write_credentials(token_response: TokenResponse):
         "refresh_token": token_response.refresh_token,
         "expires_on": int(datetime.timestamp(expires)),
     }
-    credentials_path = get_diracx_preferences().credentials_path
+    credentials_path = location or get_diracx_preferences().credentials_path
     credentials_path.parent.mkdir(parents=True, exist_ok=True)
     credentials_path.write_text(json.dumps(credential_data))

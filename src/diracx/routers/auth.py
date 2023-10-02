@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import re
 import secrets
 from datetime import timedelta
@@ -18,6 +19,7 @@ from cachetools import TTLCache
 from fastapi import (
     Depends,
     Form,
+    Header,
     HTTPException,
     Request,
     Response,
@@ -1011,3 +1013,62 @@ async def userinfo(
         "properties": user_info.properties,
         "preferred_username": user_info.preferred_username,
     }
+
+
+BASE_64_URL_SAFE_PATTERN = (
+    r"(?:[A-Za-z0-9\-_]{4})*(?:[A-Za-z0-9\-_]{2}==|[A-Za-z0-9\-_]{3}=)?"
+)
+LEGACY_EXCHANGE_PATTERN = rf"Bearer diracx:legacy:({BASE_64_URL_SAFE_PATTERN})"
+
+
+@router.get("/legacy-exchange", include_in_schema=False)
+async def legacy_exchange(
+    preferred_username: str,
+    scope: str,
+    authorization: Annotated[str, Header()],
+    auth_db: AuthDB,
+    available_properties: AvailableSecurityProperties,
+    settings: AuthSettings,
+    config: Config,
+):
+    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange."""
+    if not (
+        expected_api_key := os.environ.get("DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Legacy exchange is not enabled",
+        )
+
+    if match := re.fullmatch(LEGACY_EXCHANGE_PATTERN, authorization):
+        raw_token = base64.urlsafe_b64decode(match.group(1))
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid authorization header",
+        )
+
+    if hashlib.sha256(raw_token).hexdigest() != expected_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid credentials",
+        )
+
+    try:
+        parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+        vo_users = config.Registry[parsed_scope["vo"]]
+        sub = vo_users.sub_from_preferred_username(preferred_username)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid scope or preferred_username",
+        ) from e
+
+    return await exchange_token(
+        auth_db,
+        scope,
+        {"sub": sub, "preferred_username": preferred_username},
+        config,
+        settings,
+        available_properties,
+    )
