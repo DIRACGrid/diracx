@@ -41,3 +41,23 @@ def test_upload_then_download(normal_user_client: TestClient):
     r = requests.get(download_info["url"])
     assert r.status_code == 200, r.text
     assert r.content == data
+
+
+def test_upload_oversized(normal_user_client: TestClient):
+    data = secrets.token_bytes(512)
+    checksum = hashlib.sha256(data).hexdigest()
+
+    # Initiate the upload
+    r = normal_user_client.post(
+        "/jobs/sandbox",
+        json={
+            "checksum_algorithm": "sha256",
+            "checksum": checksum,
+            # We can forge the size here to be larger than the actual data as
+            # we should get an error and never actually upload the data
+            "size": 1024 * 1024 * 1024,
+            "format": "tar.bz2",
+        },
+    )
+    assert r.status_code == 400, r.text
+    assert "Sandbox too large" in r.json()["detail"], r.text
