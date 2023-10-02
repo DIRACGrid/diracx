@@ -76,8 +76,6 @@ def add_user(
     vo: str = "testvo",
     user_group: str = "user",
     sub: str = "usersub",
-    dn: str = "DN",
-    ca: str = "CA",
     preferred_username: str = "preferred_username",
 ):
     """Add a user to an existing vo and group"""
@@ -87,7 +85,7 @@ def add_user(
 
     repo_path = Path(config_repo.path)
 
-    new_user = UserConfig(CA=ca, DN=dn, PreferedUsername=preferred_username)
+    new_user = UserConfig(PreferedUsername=preferred_username)
 
     config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
