@@ -6,8 +6,9 @@ __all__ = (
     "ServiceSettingsBase",
 )
 
+import contextlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, AsyncIterator, Self, TypeVar
 
 from authlib.jose import JsonWebKey
 from pydantic import AnyUrl, BaseSettings, SecretStr, parse_obj_as
@@ -58,3 +59,8 @@ class ServiceSettingsBase(BaseSettings, allow_mutation=False):
     @classmethod
     def create(cls) -> Self:
         raise NotImplementedError("This should never be called")
+
+    @contextlib.asynccontextmanager
+    async def lifetime_function(self) -> AsyncIterator[None]:
+        """A context manager that can be used to run code at startup and shutdown."""
+        yield

@@ -52,6 +52,7 @@ def create_app_inner(
         cls = type(service_settings)
         assert cls not in available_settings_classes
         available_settings_classes.add(cls)
+        app.lifetime_functions.append(service_settings.lifetime_function)
         app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
 
     # Override the configuration source
