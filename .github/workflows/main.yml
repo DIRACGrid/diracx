@@ -111,3 +111,24 @@ jobs:
       - name: Run mypy
         run: |
           mypy .
+
+  convert-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        run: |
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install .
+      - name: Run convert script
+        run: |
+          cd csSync
+          git init /tmp/integration/
+          DIRAC_COMPAT_ENABLE_CS_CONVERSION=yes python convert-from-legacy.py tests/integration_test.cfg tests/convert_integration_test.yaml /tmp/integration/
+          python -c "import yaml; assert(yaml.safe_load('/tmp/integration/default.yml')==yaml.safe_load('tests/integration_test.yaml'))"
