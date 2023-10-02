@@ -50,7 +50,7 @@ class SandboxMetadataDB(BaseSQLDB):
         ]
         return "/" + "/".join(parts)
 
-    async def insert_sandbox(self, user: UserInfo, pfn: str, size: int):
+    async def insert_sandbox(self, user: UserInfo, pfn: str, size: int) -> None:
         """Add a new sandbox in SandboxMetadataDB"""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         owner_id = await self.upsert_owner(user)
@@ -86,11 +86,3 @@ class SandboxMetadataDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         is_assigned = result.scalar_one()
         return is_assigned
-
-    async def delete(self, sandbox_ids: list[int]) -> bool:
-        stmt: sqlalchemy.Executable = sqlalchemy.delete(sb_SandBoxes).where(
-            sb_SandBoxes.SBId.in_(sandbox_ids)
-        )
-        await self.conn.execute(stmt)
-
-        return True
