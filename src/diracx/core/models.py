@@ -112,3 +112,7 @@ class UserInfo(BaseModel):
     preferred_username: str
     dirac_group: str
     vo: str
+
+
+class ChecksumAlgorithm(StrEnum):
+    SHA256 = "sha256"

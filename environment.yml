@@ -50,5 +50,9 @@ dependencies:
   - types-PyYAML
   - types-requests
   - uvicorn
+  - moto
+  - mypy-boto3-s3
+  - botocore
+  - boto3-stubs
   # - pip:
   #   - git+https://github.com/DIRACGrid/DIRAC.git@integration
