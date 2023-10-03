@@ -46,7 +46,7 @@ class TokenResponse(BaseModel):
     access_token: str
     expires_in: int
     token_type: str = "Bearer"
-    refresh_token: str | None
+    refresh_token: str | None = None
 
 
 class JobStatus(StrEnum):
@@ -98,13 +98,13 @@ class JobStatusReturn(LimitedJobStatusReturn):
 
 
 class SetJobStatusReturn(BaseModel):
-    status: JobStatus | None = Field(alias="Status")
-    minor_status: str | None = Field(alias="MinorStatus")
-    application_status: str | None = Field(alias="ApplicationStatus")
-    heartbeat_time: datetime | None = Field(alias="HeartBeatTime")
-    start_exec_time: datetime | None = Field(alias="StartExecTime")
-    end_exec_time: datetime | None = Field(alias="EndExecTime")
-    last_update_time: datetime | None = Field(alias="LastUpdateTime")
+    status: JobStatus | None = Field(None, alias="Status")
+    minor_status: str | None = Field(None, alias="MinorStatus")
+    application_status: str | None = Field(None, alias="ApplicationStatus")
+    heartbeat_time: datetime | None = Field(None, alias="HeartBeatTime")
+    start_exec_time: datetime | None = Field(None, alias="StartExecTime")
+    end_exec_time: datetime | None = Field(None, alias="EndExecTime")
+    last_update_time: datetime | None = Field(None, alias="LastUpdateTime")
 
 
 class UserInfo(BaseModel):

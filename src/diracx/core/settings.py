@@ -8,15 +8,11 @@ __all__ = (
 
 import contextlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, Self, TypeVar
+from typing import Any, AsyncIterator, Self, TypeVar
 
 from authlib.jose import JsonWebKey
-from pydantic import AnyUrl, BaseSettings, SecretStr, parse_obj_as
-
-if TYPE_CHECKING:
-    from pydantic.config import BaseConfig
-    from pydantic.fields import ModelField
-
+from pydantic import AnyUrl, SecretStr, parse_obj_as
+from pydantic_settings import BaseSettings
 
 T = TypeVar("T")
 
@@ -33,11 +29,11 @@ class TokenSigningKey(SecretStr):
         self.jwk = JsonWebKey.import_key(self.get_secret_value())
 
     @classmethod
-    # TODO: This should return TokenSigningKey but pydantic's type hints are wrong
-    def validate(cls, value: Any) -> SecretStr:
+    def validate(cls, value: Any) -> TokenSigningKey:
         """Load private keys from files if needed"""
         if isinstance(value, str) and not value.strip().startswith("-----BEGIN"):
             url = parse_obj_as(LocalFileUrl, value)
+            assert url.path, url.path
             value = Path(url.path).read_text()
         return super().validate(value)
 
@@ -48,11 +44,11 @@ class LocalFileUrl(AnyUrl):
 
     @classmethod
     # TODO: This should return LocalFileUrl but pydantic's type hints are wrong
-    def validate(cls, value: Any, field: ModelField, config: BaseConfig) -> AnyUrl:
+    def validate(cls, value: Any) -> AnyUrl:
         """Overrides AnyUrl.validate to add file:// scheme if not present."""
         if isinstance(value, str) and "://" not in value:
             value = f"file://{value}"
-        return super().validate(value, field, config)
+        return super().validate(value)
 
 
 class ServiceSettingsBase(BaseSettings, allow_mutation=False):
