@@ -70,7 +70,9 @@ class ConfigSource(metaclass=ABCMeta):
         return cls.create_from_url(backend_url=os.environ["DIRACX_CONFIG_BACKEND_URL"])
 
     @classmethod
-    def create_from_url(cls, *, backend_url: ConfigSourceUrl | Path | str):
+    def create_from_url(
+        cls, *, backend_url: ConfigSourceUrl | Path | str
+    ) -> ConfigSource:
         url = parse_obj_as(ConfigSourceUrl, str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 

@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-from __future__ import annotations
-
-import argparse
-import json
 import os
 from pathlib import Path
 
@@ -10,18 +5,11 @@ import diraccfg
 import yaml
 from pydantic import BaseModel
 
-from diracx.core.config import DEFAULT_CONFIG_FILE, Config
+from diracx.core.config import Config
 
+from ..utils import AsyncTyper
 
-def _git_path(value: str) -> Path:
-    repo = Path(value)
-    if not (repo / ".git").is_dir():
-        raise ValueError(f"{repo} does not appear to be a git repository")
-    return repo
-
-
-def _list_to_str(original: str) -> list[str]:
-    return [x.strip() for x in original.split(",") if x.strip()]
+app = AsyncTyper()
 
 
 class IdPConfig(BaseModel):
@@ -39,35 +27,36 @@ class ConversionConfig(BaseModel):
     VOs: dict[str, VOConfig]
 
 
-def parse_args():
-    parser = argparse.ArgumentParser("Convert the legacy DIRAC CS to the new format")
-    parser.add_argument("old_file", type=Path)
-    parser.add_argument("conversion_config", type=Path)
-    parser.add_argument("repo", type=_git_path)
-    args = parser.parse_args()
+# def parse_args():
+#     parser = argparse.ArgumentParser("Convert the legacy DIRAC CS to the new format")
+#     parser.add_argument("old_file", type=Path)
+#     parser.add_argument("conversion_config", type=Path)
+#     parser.add_argument("repo", type=Path)
+#     args = parser.parse_args()
 
+
+#     main(args.old_file, args.conversion_config, args.repo / DEFAULT_CONFIG_FILE)
+
+
+@app.command()
+def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
+    """Load the old CS and convert it to the new YAML format"""
     if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
         raise RuntimeError(
             "DIRAC_COMPAT_ENABLE_CS_CONVERSION must be set for the conversion to be possible"
         )
 
-    main(args.old_file, args.conversion_config, args.repo / DEFAULT_CONFIG_FILE)
-
-
-def main(old_file: Path, conversion_config: Path, new_file: Path):
-    """Load the old CS and convert it to the new YAML format"""
     old_data = old_file.read_text()
     cfg = diraccfg.CFG().loadFromBuffer(old_data)
     raw = cfg.getAsDict()
 
-    apply_fixes(raw, conversion_config)
+    _apply_fixes(raw, conversion_config)
 
     config = Config.parse_obj(raw)
-    new_data = json.loads(config.json(exclude_unset=True))
-    new_file.write_text(yaml.safe_dump(new_data))
+    new_file.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
 
 
-def apply_fixes(raw, conversion_config: Path):
+def _apply_fixes(raw, conversion_config: Path):
     """Modify raw in place to make any layout changes between the old and new structure"""
 
     conv_config = ConversionConfig.parse_obj(
@@ -147,7 +136,3 @@ def apply_fixes(raw, conversion_config: Path):
                     # We ignore the DN and CA
                     raw["Registry"][vo]["Users"][subject].pop("DN", None)
                     raw["Registry"][vo]["Users"][subject].pop("CA", None)
-
-
-if __name__ == "__main__":
-    parse_args()
