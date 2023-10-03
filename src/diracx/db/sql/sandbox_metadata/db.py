@@ -8,12 +8,6 @@ from diracx.db.sql.utils import BaseSQLDB, utcnow
 from .schema import Base as SandboxMetadataDBBase
 from .schema import sb_Owners, sb_SandBoxes
 
-# In legacy DIRAC the SEName column was used to support multiple different
-# storage backends. This is no longer the case, so we hardcode the value to
-# S3 to represent the new DiracX system.
-SE_NAME = "ProductionSandboxSE"
-PFN_PREFIX = "/S3/"
-
 
 class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
@@ -50,13 +44,15 @@ class SandboxMetadataDB(BaseSQLDB):
         ]
         return "/" + "/".join(parts)
 
-    async def insert_sandbox(self, user: UserInfo, pfn: str, size: int) -> None:
+    async def insert_sandbox(
+        self, se_name: str, user: UserInfo, pfn: str, size: int
+    ) -> None:
         """Add a new sandbox in SandboxMetadataDB"""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         owner_id = await self.upsert_owner(user)
         stmt = sqlalchemy.insert(sb_SandBoxes).values(
             OwnerId=owner_id,
-            SEName=SE_NAME,
+            SEName=se_name,
             SEPFN=pfn,
             Bytes=size,
             RegistrationTime=utcnow(),
@@ -65,23 +61,23 @@ class SandboxMetadataDB(BaseSQLDB):
         try:
             result = await self.conn.execute(stmt)
         except sqlalchemy.exc.IntegrityError:
-            await self.update_sandbox_last_access_time(pfn)
+            await self.update_sandbox_last_access_time(se_name, pfn)
         else:
             assert result.rowcount == 1
 
-    async def update_sandbox_last_access_time(self, pfn: str) -> None:
+    async def update_sandbox_last_access_time(self, se_name: str, pfn: str) -> None:
         stmt = (
             sqlalchemy.update(sb_SandBoxes)
-            .where(sb_SandBoxes.SEName == SE_NAME, sb_SandBoxes.SEPFN == pfn)
+            .where(sb_SandBoxes.SEName == se_name, sb_SandBoxes.SEPFN == pfn)
             .values(LastAccessTime=utcnow())
         )
         result = await self.conn.execute(stmt)
         assert result.rowcount == 1
 
-    async def sandbox_is_assigned(self, pfn: str) -> bool:
+    async def sandbox_is_assigned(self, se_name: str, pfn: str) -> bool:
         """Checks if a sandbox exists and has been assigned."""
         stmt: sqlalchemy.Executable = sqlalchemy.select(sb_SandBoxes.Assigned).where(
-            sb_SandBoxes.SEName == SE_NAME, sb_SandBoxes.SEPFN == pfn
+            sb_SandBoxes.SEName == se_name, sb_SandBoxes.SEPFN == pfn
         )
         result = await self.conn.execute(stmt)
         is_assigned = result.scalar_one()

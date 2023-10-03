@@ -31,7 +31,7 @@ def test_upload_then_download(
     upload_info = r.json()
     assert upload_info["url"]
     sandbox_pfn = upload_info["pfn"]
-    assert sandbox_pfn.startswith("/S3/")
+    assert sandbox_pfn.startswith("SB:SandboxSE|/S3/")
 
     # Actually upload the file
     files = {"file": ("file", BytesIO(data))}

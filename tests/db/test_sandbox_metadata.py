@@ -46,18 +46,18 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
     assert pfn1 not in db_contents
     async with sandbox_metadata_db:
         with pytest.raises(sqlalchemy.exc.NoResultFound):
-            await sandbox_metadata_db.sandbox_is_assigned(pfn1)
+            await sandbox_metadata_db.sandbox_is_assigned("SandboxSE", pfn1)
 
     # Insert the sandbox
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.insert_sandbox(user_info, pfn1, 100)
+        await sandbox_metadata_db.insert_sandbox("SandboxSE", user_info, pfn1, 100)
     db_contents = await _dump_db(sandbox_metadata_db)
     owner_id1, last_access_time1 = db_contents[pfn1]
 
     # Inserting again should update the last access time
     await asyncio.sleep(1)  # The timestamp only has second precision
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.insert_sandbox(user_info, pfn1, 100)
+        await sandbox_metadata_db.insert_sandbox("SandboxSE", user_info, pfn1, 100)
     db_contents = await _dump_db(sandbox_metadata_db)
     owner_id2, last_access_time2 = db_contents[pfn1]
     assert owner_id1 == owner_id2
@@ -65,14 +65,14 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
 
     # The sandbox still hasn't been assigned
     async with sandbox_metadata_db:
-        assert not await sandbox_metadata_db.sandbox_is_assigned(pfn1)
+        assert not await sandbox_metadata_db.sandbox_is_assigned("SandboxSE", pfn1)
 
     # Inserting again should update the last access time
     await asyncio.sleep(1)  # The timestamp only has second precision
     last_access_time3 = (await _dump_db(sandbox_metadata_db))[pfn1][1]
     assert last_access_time2 == last_access_time3
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.update_sandbox_last_access_time(pfn1)
+        await sandbox_metadata_db.update_sandbox_last_access_time("SandboxSE", pfn1)
     last_access_time4 = (await _dump_db(sandbox_metadata_db))[pfn1][1]
     assert last_access_time2 < last_access_time4
 
