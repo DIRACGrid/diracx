@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 __all__ = (
+    "S3ClientKwargs",
     "s3_bucket_exists",
     "s3_object_exists",
     "generate_presigned_upload",
 )
 
 import base64
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING, NotRequired, TypedDict, cast
 
 from botocore.errorfactory import ClientError
 
@@ -16,6 +17,15 @@ from .models import ChecksumAlgorithm
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3.client import S3Client
+
+
+class S3ClientKwargs(TypedDict):
+    region_name: NotRequired[str]
+    use_ssl: NotRequired[bool]
+    verify: NotRequired[bool | str]
+    endpoint_url: NotRequired[str]
+    aws_access_key_id: NotRequired[str]
+    aws_secret_access_key: NotRequired[str]
 
 
 class S3PresignedPostInfo(TypedDict):

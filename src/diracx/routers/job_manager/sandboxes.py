@@ -16,6 +16,7 @@ from diracx.core.models import (
 )
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.s3 import (
+    S3ClientKwargs,
     generate_presigned_upload,
     s3_bucket_exists,
     s3_object_exists,
@@ -38,7 +39,7 @@ class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE
     """Settings for the sandbox store."""
 
     bucket_name: str
-    s3_client_kwargs: dict[str, str]
+    s3_client_kwargs: S3ClientKwargs
     auto_create_bucket: bool = False
     url_validity_seconds: int = 5 * 60
     _client: S3Client = PrivateAttr(None)
@@ -49,7 +50,7 @@ class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE
             "s3",
             **self.s3_client_kwargs,
             config=Config(signature_version="v4"),
-        ) as self._client:  # type: ignore
+        ) as self._client:
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
                     raise ValueError(
