@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
-from moto import mock_s3
+from moto.server import ThreadedMotoServer
 
 from diracx.core.config import Config, ConfigSource
 from diracx.core.preferences import get_diracx_preferences
@@ -80,14 +80,31 @@ def test_auth_settings() -> AuthSettings:
     )
 
 
+@pytest.fixture(scope="session")
+def aio_moto():
+    """Start the moto server in a separate thread and return the base URL
+
+    The mocking provided by moto doesn't play nicely with aiobotocore so we use
+    the server directly. See https://github.com/aio-libs/aiobotocore/issues/755
+    """
+    port = 27132
+    server = ThreadedMotoServer(port=port)
+    server.start()
+    yield {
+        "endpoint_url": f"http://localhost:{port}",
+        "aws_access_key_id": "testing",
+        "aws_secret_access_key": "testing",
+    }
+    server.stop()
+
+
 @pytest.fixture(scope="function")
-def test_sandbox_settings() -> SandboxStoreSettings:
-    with mock_s3():
-        yield SandboxStoreSettings(
-            bucket_name="sandboxes",
-            s3_client_kwargs={},
-            auto_create_bucket=True,
-        )
+def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
+    yield SandboxStoreSettings(
+        bucket_name="sandboxes",
+        s3_client_kwargs=aio_moto,
+        auto_create_bucket=True,
+    )
 
 
 @pytest.fixture
