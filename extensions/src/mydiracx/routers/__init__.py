@@ -16,10 +16,9 @@ from pydantic import parse_raw_as
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
+from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.utils import BaseDB
-
-from diracx.core.settings import ServiceSettingsBase
 from diracx.routers.auth import verify_dirac_token
 from diracx.routers.fastapi_classes import DiracFastAPI, DiracxRouter
 
