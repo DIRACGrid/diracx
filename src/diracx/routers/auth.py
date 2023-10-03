@@ -481,7 +481,7 @@ async def do_device_flow(
     (note: it can't be put as parameter or in the URL)
     """
 
-    # Here we make sure the user_code actualy exists
+    # Here we make sure the user_code actually exists
     scope = await auth_db.device_flow_validate_user_code(
         user_code, settings.device_flow_expiration_seconds
     )
@@ -1038,7 +1038,26 @@ async def legacy_exchange(
     settings: AuthSettings,
     config: Config,
 ):
-    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange."""
+    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange.
+
+    This route is disabled if DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY is not set
+    in the environment.
+
+    If legacy token exchange is required, an API key must be included in the
+    request. This can be generated with the following python code::
+
+        import secrets
+        import base64
+        import hashlib
+        token = secrets.token_bytes()
+
+        # This is the secret to include in the request
+        print(f"API key is diracx:legacy:{base64.urlsafe_b64encode(token).decode()}")
+
+        # This is the environment variable to set on the DiracX server
+        print(f"DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY={hashlib.sha256(token).hexdigest()}")
+
+    """
     if not (
         expected_api_key := os.environ.get("DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY")
     ):
