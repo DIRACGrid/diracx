@@ -263,7 +263,13 @@ async def exchange_token(
 
     # Extract attributes from the OIDC token details
     sub = oidc_token_info["sub"]
-    preferred_username = oidc_token_info.get("preferred_username", sub)
+    if user_info := config.Registry[vo].Users.get(sub):
+        preferred_username = user_info.PreferedUsername
+    else:
+        preferred_username = oidc_token_info.get("preferred_username", sub)
+        raise NotImplementedError(
+            "Dynamic registration of users is not yet implemented"
+        )
 
     # Extract attributes from the settings and configuration
     issuer = settings.token_issuer
