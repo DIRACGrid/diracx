@@ -29,12 +29,14 @@ from diracx.db.sql.jobs.status_utility import (
 from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
 from ..dependencies import JobDB, JobLoggingDB
 from ..fastapi_classes import DiracxRouter
+from .sandboxes import router as sandboxes_router
 
 MAX_PARAMETRIC_JOBS = 20
 
 logger = logging.getLogger(__name__)
 
 router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router.include_router(sandboxes_router)
 
 
 class JobSummaryParams(BaseModel):

@@ -14,12 +14,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from git import Repo
+from moto.server import ThreadedMotoServer
 
 from diracx.core.config import Config, ConfigSource
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers import create_app_inner
 from diracx.routers.auth import AuthSettings, create_token
+from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -78,8 +80,35 @@ def test_auth_settings() -> AuthSettings:
     )
 
 
+@pytest.fixture(scope="session")
+def aio_moto():
+    """Start the moto server in a separate thread and return the base URL
+
+    The mocking provided by moto doesn't play nicely with aiobotocore so we use
+    the server directly. See https://github.com/aio-libs/aiobotocore/issues/755
+    """
+    port = 27132
+    server = ThreadedMotoServer(port=port)
+    server.start()
+    yield {
+        "endpoint_url": f"http://localhost:{port}",
+        "aws_access_key_id": "testing",
+        "aws_secret_access_key": "testing",
+    }
+    server.stop()
+
+
+@pytest.fixture(scope="function")
+def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
+    yield SandboxStoreSettings(
+        bucket_name="sandboxes",
+        s3_client_kwargs=aio_moto,
+        auto_create_bucket=True,
+    )
+
+
 @pytest.fixture
-def with_app(test_auth_settings, with_config_repo):
+def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
     """
@@ -87,6 +116,7 @@ def with_app(test_auth_settings, with_config_repo):
         enabled_systems={".well-known", "auth", "config", "jobs"},
         all_service_settings=[
             test_auth_settings,
+            test_sandbox_settings,
         ],
         database_urls={
             "JobDB": "sqlite+aiosqlite:///:memory:",

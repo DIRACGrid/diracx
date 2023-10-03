@@ -8,7 +8,8 @@ from enum import Enum, StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, BaseSettings, Field, validator
+from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic_settings import BaseSettings
 
 from .utils import dotenv_files_from_environment
 
@@ -41,7 +42,8 @@ class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
     def from_env(cls):
         return cls(_env_file=dotenv_files_from_environment("DIRACX_DOTENV"))
 
-    @validator("log_level", pre=True)
+    @field_validator("log_level", mode="before")
+    @classmethod
     def validate_log_level(cls, v: str):
         if isinstance(v, str):
             return getattr(LogLevels, v.upper())

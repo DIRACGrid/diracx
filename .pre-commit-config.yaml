@@ -28,9 +28,11 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
-          - pydantic==1.10.10
+          - pydantic
           - sqlalchemy
           - types-PyYAML
           - types-cachetools
           - types-requests
+          - types-aiobotocore[essential]
+          - boto3-stubs[essential]
         exclude: ^(src/diracx/client/|tests/|build)

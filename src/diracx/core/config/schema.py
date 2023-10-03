@@ -5,13 +5,14 @@ from datetime import datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, PrivateAttr, root_validator
+from pydantic import EmailStr, PrivateAttr, model_validator
 
 from ..properties import SecurityProperty
 
 
 class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def legacy_adaptor(cls, v):
         """Applies transformations to interpret the legacy DIRAC CFG format"""
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
@@ -37,7 +38,7 @@ class UserConfig(BaseModel):
     CA: str
     DN: str
     PreferedUsername: str
-    Email: EmailStr | None
+    Email: EmailStr | None = None
     Suspended: list[str] = []
     Quota: int | None = None
     # TODO: These should be LHCbDIRAC specific
@@ -49,12 +50,12 @@ class GroupConfig(BaseModel):
     AutoAddVOMS: bool = False
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
-    JobShare: Optional[int]
+    JobShare: Optional[int] = None
     Properties: list[SecurityProperty]
-    Quota: Optional[int]
+    Quota: Optional[int] = None
     Users: list[str]
     AllowBackgroundTQs: bool = False
-    VOMSRole: Optional[str]
+    VOMSRole: Optional[str] = None
     AutoSyncVOMS: bool = False
 
 
@@ -97,7 +98,7 @@ class JobMonitoringConfig(BaseModel):
 
 
 class ServicesConfig(BaseModel):
-    Catalogs: dict[str, Any] | None
+    Catalogs: dict[str, Any] | None = None
     JobMonitoring: JobMonitoringConfig = JobMonitoringConfig()
 
 
@@ -138,12 +139,12 @@ class Config(BaseModel):
     # TODO: Should this be split by vo rather than setup?
     Operations: dict[str, OperationsConfig]
 
-    LocalSite: Any
-    LogLevel: Any
-    MCTestingDestination: Any
-    Resources: Any
-    Systems: Any
-    WebApp: Any
+    LocalSite: Any = None
+    LogLevel: Any = None
+    MCTestingDestination: Any = None
+    Resources: Any = None
+    Systems: Any = None
+    WebApp: Any = None
 
     _hexsha: str = PrivateAttr()
     _modified: datetime = PrivateAttr()

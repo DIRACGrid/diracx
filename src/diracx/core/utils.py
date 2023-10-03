@@ -20,7 +20,7 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
     return [v for _, v in sorted(env_files.items())]
 
 
-def write_credentials(token_response: TokenResponse, location: Path | None = None):
+def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
     """Write credentials received in dirax_preferences.credentials_path"""
     from diracx.core.preferences import get_diracx_preferences
 

@@ -16,6 +16,9 @@ from ._models import JobStatusUpdate
 from ._models import JobSummaryParams
 from ._models import JobSummaryParamsSearchItem
 from ._models import LimitedJobStatusReturn
+from ._models import SandboxDownloadResponse
+from ._models import SandboxInfo
+from ._models import SandboxUploadResponse
 from ._models import ScalarSearchSpec
 from ._models import SetJobStatusReturn
 from ._models import SortSpec
@@ -26,14 +29,16 @@ from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
 
+from ._enums import ChecksumAlgorithm
 from ._enums import Enum0
 from ._enums import Enum1
+from ._enums import Enum10
+from ._enums import Enum11
 from ._enums import Enum2
 from ._enums import Enum3
 from ._enums import Enum4
-from ._enums import Enum8
-from ._enums import Enum9
 from ._enums import JobStatus
+from ._enums import SandboxFormat
 from ._enums import ScalarSearchOperator
 from ._enums import VectorSearchOperator
 from ._patch import __all__ as _patch_all
@@ -53,6 +58,9 @@ __all__ = [
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
     "LimitedJobStatusReturn",
+    "SandboxDownloadResponse",
+    "SandboxInfo",
+    "SandboxUploadResponse",
     "ScalarSearchSpec",
     "SetJobStatusReturn",
     "SortSpec",
@@ -62,14 +70,16 @@ __all__ = [
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",
+    "ChecksumAlgorithm",
     "Enum0",
     "Enum1",
+    "Enum10",
+    "Enum11",
     "Enum2",
     "Enum3",
     "Enum4",
-    "Enum8",
-    "Enum9",
     "JobStatus",
+    "SandboxFormat",
     "ScalarSearchOperator",
     "VectorSearchOperator",
 ]

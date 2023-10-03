@@ -4,10 +4,9 @@ import base64
 import hashlib
 import secrets
 
-import botocore.exceptions
 import pytest
 import requests
-from moto import mock_s3
+from aiobotocore.session import get_session
 
 from diracx.core.s3 import (
     b16_to_b64,
@@ -43,42 +42,39 @@ def test_b16_to_b64_random():
 
 
 @pytest.fixture(scope="function")
-def moto_s3():
+async def moto_s3(aio_moto):
     """Very basic moto-based S3 backend.
 
     This is a fixture that can be used to test S3 interactions using moto.
     Note that this is not a complete S3 backend, in particular authentication
     and validation of requests is not implemented.
     """
-    with mock_s3():
-        client = botocore.session.get_session().create_client("s3")
-        client.create_bucket(Bucket=BUCKET_NAME)
-        client.create_bucket(Bucket=OTHER_BUCKET_NAME)
+    async with get_session().create_client("s3", **aio_moto) as client:
+        await client.create_bucket(Bucket=BUCKET_NAME)
+        await client.create_bucket(Bucket=OTHER_BUCKET_NAME)
         yield client
 
 
-def test_s3_bucket_exists(moto_s3):
-    assert s3_bucket_exists(moto_s3, BUCKET_NAME)
-    assert not s3_bucket_exists(moto_s3, MISSING_BUCKET_NAME)
+async def test_s3_bucket_exists(moto_s3):
+    assert await s3_bucket_exists(moto_s3, BUCKET_NAME)
+    assert not await s3_bucket_exists(moto_s3, MISSING_BUCKET_NAME)
 
 
-def test_s3_object_exists(moto_s3):
-    with pytest.raises(botocore.exceptions.ClientError):
-        s3_object_exists(moto_s3, MISSING_BUCKET_NAME, "key")
-
-    assert not s3_object_exists(moto_s3, BUCKET_NAME, "key")
-    moto_s3.put_object(Bucket=BUCKET_NAME, Key="key", Body=b"hello")
-    assert s3_object_exists(moto_s3, BUCKET_NAME, "key")
+async def test_s3_object_exists(moto_s3):
+    assert not await s3_object_exists(moto_s3, MISSING_BUCKET_NAME, "key")
+    assert not await s3_object_exists(moto_s3, BUCKET_NAME, "key")
+    await moto_s3.put_object(Bucket=BUCKET_NAME, Key="key", Body=b"hello")
+    assert await s3_object_exists(moto_s3, BUCKET_NAME, "key")
 
 
-def test_presigned_upload_moto(moto_s3):
+async def test_presigned_upload_moto(moto_s3):
     """Test the presigned upload with moto
 
     This doesn't actually test the signature, see test_presigned_upload_minio
     """
     file_content, checksum = _random_file(128)
     key = f"{checksum}.dat"
-    upload_info = generate_presigned_upload(
+    upload_info = await generate_presigned_upload(
         moto_s3, BUCKET_NAME, key, "sha256", checksum, len(file_content), 60
     )
 
@@ -89,30 +85,32 @@ def test_presigned_upload_moto(moto_s3):
     assert r.status_code == 204, r.text
 
     # Make sure the object is actually there
-    obj = moto_s3.get_object(Bucket=BUCKET_NAME, Key=key)
-    assert obj["Body"].read() == file_content
+    obj = await moto_s3.get_object(Bucket=BUCKET_NAME, Key=key)
+    assert (await obj["Body"].read()) == file_content
 
 
-@pytest.fixture(scope="session")
-def minio_client(demo_urls):
+@pytest.fixture(scope="function")
+async def minio_client(demo_urls):
     """Create a S3 client that uses minio from the demo as backend"""
-    yield botocore.session.get_session().create_client(
+    async with get_session().create_client(
         "s3",
         endpoint_url=demo_urls["minio"],
         aws_access_key_id="console",
         aws_secret_access_key="console123",
-    )
+    ) as client:
+        yield client
 
 
-@pytest.fixture(scope="session")
-def test_bucket(minio_client):
+@pytest.fixture(scope="function")
+async def test_bucket(minio_client):
     """Create a test bucket that is cleaned up after the test session"""
     bucket_name = f"dirac-test-{secrets.token_hex(8)}"
-    minio_client.create_bucket(Bucket=bucket_name)
+    await minio_client.create_bucket(Bucket=bucket_name)
     yield bucket_name
-    for obj in minio_client.list_objects(Bucket=bucket_name)["Contents"]:
-        minio_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
-    minio_client.delete_bucket(Bucket=bucket_name)
+    objects = await minio_client.list_objects(Bucket=bucket_name)
+    for obj in objects.get("Contents", []):
+        await minio_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
+    await minio_client.delete_bucket(Bucket=bucket_name)
 
 
 @pytest.mark.parametrize(
@@ -127,7 +125,7 @@ def test_bucket(minio_client):
         [_random_file(128)[0], _random_file(128)[1], 128, "ContentChecksumMismatch"],
     ],
 )
-def test_presigned_upload_minio(
+async def test_presigned_upload_minio(
     minio_client, test_bucket, content, checksum, size, expected_error
 ):
     """Test the presigned upload with Minio
@@ -138,7 +136,7 @@ def test_presigned_upload_minio(
     """
     key = f"{checksum}.dat"
     # Prepare the signed URL
-    upload_info = generate_presigned_upload(
+    upload_info = await generate_presigned_upload(
         minio_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
@@ -147,8 +145,8 @@ def test_presigned_upload_minio(
     )
     if expected_error is None:
         assert r.status_code == 204, r.text
-        assert s3_object_exists(minio_client, test_bucket, key)
+        assert await s3_object_exists(minio_client, test_bucket, key)
     else:
         assert r.status_code == 400, r.text
         assert expected_error in r.text
-        assert not s3_object_exists(minio_client, test_bucket, key)
+        assert not (await s3_object_exists(minio_client, test_bucket, key))

@@ -31,7 +31,7 @@ dependencies:
   - isodate
   - mypy
   - opensearch-py
-  - pydantic =1.10.10
+  - pydantic >=2
   - pyjwt
   - pytest
   - pytest-asyncio
@@ -51,8 +51,8 @@ dependencies:
   - types-requests
   - uvicorn
   - moto
-  - mypy-boto3-s3
+  - aiobotocore
   - botocore
-  - boto3-stubs
-  # - pip:
-  #   - git+https://github.com/DIRACGrid/DIRAC.git@integration
+  - pip:
+    - types-aiobotocore[essential]
+    - boto3-stubs[essential]
