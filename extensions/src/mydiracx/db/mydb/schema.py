@@ -1,20 +1,17 @@
-from enum import Enum, auto
-
 from sqlalchemy import (
     DateTime,
     Integer,
-    JSON,
-    String,
-    Uuid,
     PrimaryKeyConstraint,
+    String,
 )
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.utils import Column, DateNowColumn, EnumColumn, NullColumn
+from diracx.db.utils import Column
 
 USER_CODE_LENGTH = 8
 
 Base = declarative_base()
+
 
 class CustomObject(Base):
     __tablename__ = "CustomObject"
