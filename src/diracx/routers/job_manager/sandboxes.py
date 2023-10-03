@@ -154,6 +154,7 @@ SANDBOX_PFN_REGEX = (
 async def get_sandbox_file(
     pfn: Annotated[str, Query(max_length=256, pattern=SANDBOX_PFN_REGEX)],
     settings: SandboxStoreSettings,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> SandboxDownloadResponse:
     """Get a presigned URL to download a sandbox file
 
@@ -163,7 +164,24 @@ async def get_sandbox_file(
     most storage backends return an error when they receive an authorization
     header for a presigned URL.
     """
-    # TODO: Prevent people from downloading other people's sandboxes?
+    required_prefix = (
+        "/"
+        + "/".join(
+            [
+                "S3",
+                settings.bucket_name,
+                user_info.vo,
+                user_info.dirac_group,
+                user_info.preferred_username,
+            ]
+        )
+        + "/"
+    )
+    if not pfn.startswith(required_prefix):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"Invalid PFN. PFN must start with {required_prefix}",
+        )
     # TODO: Support by name and by job id?
     presigned_url = await settings.s3_client.generate_presigned_url(
         ClientMethod="get_object",

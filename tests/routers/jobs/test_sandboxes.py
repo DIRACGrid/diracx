@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from copy import deepcopy
 from io import BytesIO
 
 import requests
 from fastapi.testclient import TestClient
 
+from diracx.routers.auth import AuthSettings, create_token
 
-def test_upload_then_download(normal_user_client: TestClient):
+
+def test_upload_then_download(
+    normal_user_client: TestClient, test_auth_settings: AuthSettings
+):
     data = secrets.token_bytes(512)
     checksum = hashlib.sha256(data).hexdigest()
 
@@ -41,6 +46,20 @@ def test_upload_then_download(normal_user_client: TestClient):
     r = requests.get(download_info["url"])
     assert r.status_code == 200, r.text
     assert r.content == data
+
+    # Modify the authorization payload to be another user
+    other_user_payload = deepcopy(normal_user_client.dirac_token_payload)
+    other_user_payload["preferred_username"] = "other_user"
+    other_user_token = create_token(other_user_payload, test_auth_settings)
+
+    # Make sure another user can't download the sandbox
+    r = normal_user_client.get(
+        "/jobs/sandbox",
+        params={"pfn": sandbox_pfn},
+        headers={"Authorization": f"Bearer {other_user_token}"},
+    )
+    assert r.status_code == 400, r.text
+    assert "Invalid PFN. PFN must start with" in r.json()["detail"]
 
 
 def test_upload_oversized(normal_user_client: TestClient):
