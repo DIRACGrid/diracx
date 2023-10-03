@@ -21,6 +21,7 @@ parts
 bin
 develop-eggs
 .installed.cfg
+*.whl
 
 # Translations
 *.mo

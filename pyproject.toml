@@ -30,7 +30,9 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 120
 src = ["diracx-*/src", "diracx-*/tests"]
-exclude = ["diracx-client/src/diracx/client/"]
+exclude = [
+    "diracx-client/src/diracx/client/",
+]
 
 [tool.ruff.lint]
 select = [

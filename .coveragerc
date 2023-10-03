@@ -2,8 +2,10 @@
 omit =
     tests/*
     */tests/*
-    **/diracx/client/*
+    **/diracx/client/generated/*
     **/diracx/testing/*
+    **/gubbins/testing/*
+    **/gubbins/client/generated/*
 
 [paths]
 source =

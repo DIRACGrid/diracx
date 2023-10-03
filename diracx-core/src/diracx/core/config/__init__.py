@@ -21,6 +21,7 @@ from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersion
+from ..extensions import select_from_extension
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
@@ -146,7 +147,11 @@ class BaseGitConfigSource(ConfigSource):
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
         raw_obj = yaml.safe_load(blob.data_stream.read().decode())
-        config = Config.model_validate(raw_obj)
+
+        config_class: Config = select_from_extension(group="diracx", name="config")[
+            0
+        ].load()
+        config = config_class.model_validate(raw_obj)
         config._hexsha = hexsha
         config._modified = modified
         return config

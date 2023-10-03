@@ -29,7 +29,8 @@ jobs:
       run: |
         find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
 
-  pytest:
+
+  unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
@@ -61,6 +62,9 @@ jobs:
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
+          # Note: DIRAC will install pretty much everything
+          # from diracx so installing just the dependency may
+          # be a bit useless
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install ${{ matrix.dependencies }}
       - name: Run pytest
