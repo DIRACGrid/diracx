@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, AsyncIterator
 
-import botocore.session
+from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from fastapi import Depends, HTTPException, Query
@@ -22,7 +23,7 @@ from diracx.core.s3 import (
 from diracx.core.settings import ServiceSettingsBase
 
 if TYPE_CHECKING:
-    from mypy_boto3_s3.client import S3Client
+    from types_aiobotocore_s3.client import S3Client
 
 from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
 from ..dependencies import SandboxMetadataDB, add_settings_annotation
@@ -42,28 +43,26 @@ class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE
     url_validity_seconds: int = 5 * 60
     _client: S3Client = PrivateAttr(None)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # TODO: Use async
-        session = botocore.session.get_session()
-        self._client = session.create_client(
+    @contextlib.asynccontextmanager
+    async def lifetime_function(self) -> AsyncIterator[None]:
+        async with get_session().create_client(
             "s3",
-            # endpoint_url=s3_cred["endpoint"],
-            # aws_access_key_id=s3_cred["access_key_id"],
-            # aws_secret_access_key=s3_cred["secret_access_key"],
             **self.s3_client_kwargs,
             config=Config(signature_version="v4"),
-        )
-        if not s3_bucket_exists(self._client, self.bucket_name):
-            if not self.auto_create_bucket:
-                raise ValueError(
-                    f"Bucket {self.bucket_name} does not exist and auto_create_bucket is disabled"
-                )
-            try:
-                self._client.create_bucket(Bucket=self.bucket_name)
-            except ClientError as e:
-                raise ValueError(f"Failed to create bucket {self.bucket_name}") from e
+        ) as self._client:  # type: ignore
+            if not await s3_bucket_exists(self._client, self.bucket_name):
+                if not self.auto_create_bucket:
+                    raise ValueError(
+                        f"Bucket {self.bucket_name} does not exist and auto_create_bucket is disabled"
+                    )
+                try:
+                    await self._client.create_bucket(Bucket=self.bucket_name)
+                except ClientError as e:
+                    raise ValueError(
+                        f"Failed to create bucket {self.bucket_name}"
+                    ) from e
+
+            yield
 
     @property
     def s3_client(self) -> S3Client:
@@ -116,7 +115,7 @@ async def initiate_sandbox_upload(
             await sandbox_metadata_db.update_sandbox_last_access_time(pfn)
             return SandboxUploadResponse(pfn=pfn)
 
-    upload_info = generate_presigned_upload(
+    upload_info = await generate_presigned_upload(
         settings.s3_client,
         settings.bucket_name,
         pfn_to_key(pfn),
@@ -166,7 +165,7 @@ async def get_sandbox_file(
     """
     # TODO: Prevent people from downloading other people's sandboxes?
     # TODO: Support by name and by job id?
-    presigned_url = settings.s3_client.generate_presigned_url(
+    presigned_url = await settings.s3_client.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": settings.bucket_name, "Key": pfn_to_key(pfn)},
         ExpiresIn=settings.url_validity_seconds,

@@ -33,4 +33,6 @@ repos:
           - types-PyYAML
           - types-cachetools
           - types-requests
+          - types-aiobotocore[essential]
+          - boto3-stubs[essential]
         exclude: ^(src/diracx/client/|tests/|build)

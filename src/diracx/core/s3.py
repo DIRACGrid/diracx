@@ -1,7 +1,11 @@
 """Utilities for interacting with S3-compatible storage."""
 from __future__ import annotations
 
-__all__ = ("s3_bucket_exists", "s3_object_exists", "generate_presigned_upload")
+__all__ = (
+    "s3_bucket_exists",
+    "s3_object_exists",
+    "generate_presigned_upload",
+)
 
 import base64
 from typing import TYPE_CHECKING, TypedDict, cast
@@ -11,7 +15,7 @@ from botocore.errorfactory import ClientError
 from .models import ChecksumAlgorithm
 
 if TYPE_CHECKING:
-    from mypy_boto3_s3.client import S3Client
+    from types_aiobotocore_s3.client import S3Client
 
 
 class S3PresignedPostInfo(TypedDict):
@@ -19,19 +23,19 @@ class S3PresignedPostInfo(TypedDict):
     fields: dict[str, str]
 
 
-def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
+async def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
     """Check if a bucket exists in S3."""
-    return _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
+    return await _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
 
 
-def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> bool:
+async def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> bool:
     """Check if an object exists in an S3 bucket."""
-    return _s3_exists(s3_client.head_object, Bucket=bucket_name, Key=key)
+    return await _s3_exists(s3_client.head_object, Bucket=bucket_name, Key=key)
 
 
-def _s3_exists(method, **kwargs: str) -> bool:
+async def _s3_exists(method, **kwargs: str) -> bool:
     try:
-        method(**kwargs)
+        await method(**kwargs)
     except ClientError as e:
         if e.response["Error"]["Code"] != "404":
             raise
@@ -40,7 +44,7 @@ def _s3_exists(method, **kwargs: str) -> bool:
         return True
 
 
-def generate_presigned_upload(
+async def generate_presigned_upload(
     s3_client: S3Client,
     bucket_name: str,
     key: str,
@@ -60,7 +64,7 @@ def generate_presigned_upload(
     conditions = [["content-length-range", size, size]] + [
         {k: v} for k, v in fields.items()
     ]
-    result = s3_client.generate_presigned_post(
+    result = await s3_client.generate_presigned_post(
         Bucket=bucket_name,
         Key=key,
         Fields=fields,
