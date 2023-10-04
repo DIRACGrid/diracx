@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-
-import json
 from pathlib import Path
 
 import git
@@ -19,9 +16,11 @@ from diracx.core.config.schema import (
     UserConfig,
 )
 
-from .utils import AsyncTyper
+from ..utils import AsyncTyper
+from . import legacy
 
 app = AsyncTyper()
+app.add_typer(legacy.app, name="legacy")
 
 
 @app.command()
@@ -49,7 +48,7 @@ def generate_cs(
         Users={},
         Groups={
             user_group: GroupConfig(
-                JobShare=None, Properties=["NormalUser"], Quota=None, Users=[]
+                JobShare=None, Properties={"NormalUser"}, Quota=None, Users=set()
             )
         },
     )
@@ -62,8 +61,7 @@ def generate_cs(
     repo = git.Repo.init(repo_path, initial_branch="master")
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing configuration to {yaml_path}", err=True)
-    config_data = json.loads(config.json(exclude_unset=True))
-    yaml_path.write_text(yaml.safe_dump(config_data))
+    yaml_path.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
     repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit("Initial commit")
     typer.echo(f"Successfully created repo in {config_repo}", err=True)
@@ -76,8 +74,6 @@ def add_user(
     vo: str = "testvo",
     user_group: str = "user",
     sub: str = "usersub",
-    dn: str = "DN",
-    ca: str = "CA",
     preferred_username: str = "preferred_username",
 ):
     """Add a user to an existing vo and group"""
@@ -87,7 +83,7 @@ def add_user(
 
     repo_path = Path(config_repo.path)
 
-    new_user = UserConfig(CA=ca, DN=dn, PreferedUsername=preferred_username)
+    new_user = UserConfig(PreferedUsername=preferred_username)
 
     config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
@@ -97,13 +93,12 @@ def add_user(
 
     config.Registry[vo].Users[sub] = new_user
 
-    config.Registry[vo].Groups[user_group].Users.append(sub)
+    config.Registry[vo].Groups[user_group].Users.add(sub)
 
     repo = git.Repo.init(repo_path)
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
-    config_data = json.loads(config.json(exclude_unset=True))
-    yaml_path.write_text(yaml.safe_dump(config_data))
+    yaml_path.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
     repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit(
         f"Added user {sub} ({preferred_username}) to vo {vo} and user_group {user_group}"

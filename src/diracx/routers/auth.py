@@ -267,7 +267,8 @@ async def exchange_token(
 
     # Extract attributes from the settings and configuration
     issuer = settings.token_issuer
-    dirac_properties = config.Registry[vo].Groups[dirac_group].Properties
+    # dirac_properties needs to be a list in the token as to be json serializable
+    dirac_properties = sorted(config.Registry[vo].Groups[dirac_group].Properties)
 
     # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:

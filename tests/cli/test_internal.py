@@ -31,8 +31,6 @@ def test_add_user(tmp_path, vo, user_group):
     cs_repo = f"git+file://{tmp_path}"
 
     sub = "lhcb:chaen"
-    dn = "/something/somethin/DN"
-    ca = "CERN"
     preferred_username = "dontCallMeShirley"
 
     # Create the CS
@@ -57,10 +55,6 @@ def test_add_user(tmp_path, vo, user_group):
             user_group,
             "--sub",
             sub,
-            "--dn",
-            dn,
-            "--ca",
-            ca,
             "--preferred-username",
             preferred_username,
         ],
@@ -76,4 +70,3 @@ def test_add_user(tmp_path, vo, user_group):
     # check the user is defined
     assert vo in config.Registry
     assert sub in config.Registry[vo].Users
-    assert ca == config.Registry[vo].Users[sub].CA

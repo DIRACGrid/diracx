@@ -1,0 +1,859 @@
+DIRAC: {}
+Operations:
+  Defaults:
+    DataManagement:
+      RegistrationProtocols: srm, dips, s3
+    EMail:
+      Logging: lhcb-dirac-ci@cern.ch
+      Production: lhcb-dirac-ci@cern.ch
+    ResourceStatus:
+      Config:
+        Cache: '600'
+        FromAddress: fstagni@cern.ch
+        State: Active
+        StatusTypes:
+          StorageElement: ReadAccess, WriteAccess, CheckAccess, RemoveAccess
+          default: all
+        notificationGroups: ShiftersGroup
+      Policies:
+        AlwaysActiveForResource:
+          matchParams:
+            element: Resource
+          policyType: AlwaysActive
+        AlwaysBannedForSE1SE2:
+          matchParams:
+            name: SE1, SE2
+          policyType: AlwaysBanned
+        AlwaysBannedForSite:
+          matchParams:
+            element: Site
+          policyType: AlwaysBanned
+    Services:
+      Catalogs:
+        CatalogList: FileCatalog, TSCatalog, MultiVOFileCatalog
+    Transformations:
+      DataProcessing: MCSimulation, Merge, DataReprocessing
+  vo:
+    Shifter:
+      DataManager:
+        Group: prod
+        User: adminusername
+      LHCbPR:
+        Group: prod
+        User: adminusername
+      ProductionManager:
+        Group: prod
+        User: adminusername
+      TestManager:
+        Group: prod
+        User: adminusername
+Registry:
+  Jenkins:
+    DefaultGroup: jenkins_user
+    Groups:
+      jenkins_fcadmin:
+        Properties: !!set
+          FileCatalogManagement: null
+          NormalUser: null
+        Users: !!set
+          26dbe36e-cf5c-4c52-a834-29a1c904ef74: null
+          a95ab678-3fa4-41b9-b863-fe62ce8064ce: null
+          e2cb28ec-1a1e-40ee-a56d-d899b79879ce: null
+      jenkins_user:
+        Properties: !!set
+          NormalUser: null
+        Users: !!set
+          26dbe36e-cf5c-4c52-a834-29a1c904ef74: null
+          a95ab678-3fa4-41b9-b863-fe62ce8064ce: null
+          e2cb28ec-1a1e-40ee-a56d-d899b79879ce: null
+    IdP:
+      ClientID: 995ed3b9-d5bd-49d3-a7f4-7fc7dbd5a0cd
+      URL: https://jenkins.invalid/
+    Users:
+      26dbe36e-cf5c-4c52-a834-29a1c904ef74:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: ciuser
+      a95ab678-3fa4-41b9-b863-fe62ce8064ce:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: trialUser
+      e2cb28ec-1a1e-40ee-a56d-d899b79879ce:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: adminusername
+  vo:
+    DefaultGroup: dirac_user
+    Groups:
+      dirac_admin:
+        Properties: !!set
+          AlarmsManagement: null
+          CSAdministrator: null
+          FullDelegation: null
+          JobAdministrator: null
+          Operator: null
+          ProxyManagement: null
+          ServiceAdministrator: null
+        Users: !!set
+          26b14fc9-6d40-4ca5-b014-6234eaf0fb6e: null
+      dirac_user:
+        Properties: !!set
+          NormalUser: null
+        Users: !!set
+          26b14fc9-6d40-4ca5-b014-6234eaf0fb6e: null
+          d3adc733-6588-4d6f-8581-5986b02d0c87: null
+          ff2152ff-34f4-4739-b106-3def37e291e3: null
+    IdP:
+      ClientID: 072afab5-ed92-46e0-a61d-4ecbc96e0770
+      URL: https://vo.invalid/
+    Users:
+      26b14fc9-6d40-4ca5-b014-6234eaf0fb6e:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: adminusername
+      d3adc733-6588-4d6f-8581-5986b02d0c87:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: ciuser
+      ff2152ff-34f4-4739-b106-3def37e291e3:
+        Email: lhcb-dirac-ci@cern.ch
+        PreferedUsername: trialUser
+Resources:
+  FTSEndpoints:
+    FTS3:
+      JENKINS-FTS3: https://jenkins-fts3.cern.ch:8446
+  FileCatalogs:
+    FileCatalog:
+      AccessType: Read-Write
+      Master: 'True'
+      Status: Active
+    MultiVOFileCatalog:
+      AccessType: Read-Write
+      CatalogType: FileCatalog
+      CatalogURL: DataManagement/MultiVOFileCatalog
+      Status: Active
+    TSCatalog:
+      AccessType: Write
+      CatalogType: TSCatalog
+      CatalogURL: Transformation/TransformationManager
+      Status: Active
+  Sites:
+    DIRAC:
+      DIRAC.Jenkins.ch:
+        CEs:
+          jenkins.cern.ch:
+            CEType: Test
+            Queues:
+              jenkins-queue_not_important:
+                SI00: '2400'
+                maxCPUTime: '200000'
+        Name: aNameWhatSoEver
+        SE: SE-1
+        jenkins.cern.ch:
+          QueuesResources:
+            Sites:
+              DIRAC:
+                DIRAC.Jenkins.ch:
+                  jenkins.cern.ch:
+                    Queues:
+                      jenkins-queue_not_important: {}
+  StorageElements:
+    ProductionSandboxSE:
+      AccessProtocol: dips
+      BackendType: DISET
+      DIP:
+        Access: remote
+        Host: localhost
+        Path: dirac-JenkinsSetup/sandboxes
+        Port: '9196'
+        Protocol: dips
+        ProtocolName: DIP
+    S3-DIRECT:
+      AccessProtocols: s3
+      S3:
+        Access: remote
+        Aws_access_key_id: FakeId
+        Aws_secret_access_key: 'True'
+        Host: s3-direct
+        Path: my-first-bucket
+        Port: '9090'
+        Protocol: s3
+        SecureConnection: 'False'
+      WriteProtocols: s3
+    S3-INDIRECT:
+      AccessProtocols: s3
+      S3:
+        Access: remote
+        Host: s3-direct
+        Path: my-first-bucket
+        Port: '9090'
+        Protocol: s3
+        SecureConnection: 'False'
+      WriteProtocols: s3
+    SE-1:
+      AccessProtocol: dips
+      DIP:
+        Access: remote
+        Host: server
+        Path: /DataManagement/SE-1
+        Port: '9148'
+        Protocol: dips
+    SE-2:
+      AccessProtocol: dips
+      DIP:
+        Access: remote
+        Host: server
+        Path: /DataManagement/SE-2
+        Port: '9147'
+        Protocol: dips
+Systems:
+  Accounting:
+    Production:
+      Databases:
+        AccountingDB:
+          DBName: AccountingDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        DataStore:
+          Authorization:
+            Default: authenticated
+            compactDB: ServiceAdministrator
+            deleteType: ServiceAdministrator
+            regenerateBuckets: ServiceAdministrator
+            registerType: ServiceAdministrator
+            setBucketsLength: ServiceAdministrator
+          Port: '9133'
+          RunBucketing: 'True'
+        ReportGenerator:
+          Authorization:
+            Default: authenticated
+            FileTransfer:
+              Default: authenticated
+          DataLocation: data/accountingGraphs
+          Port: '9134'
+      URLs:
+        DataStore: dips://server:9133/Accounting/DataStore
+        ReportGenerator: dips://server:9134/Accounting/ReportGenerator
+  Bookkeeping:
+    Production:
+      Databases:
+        BookkeepingDB:
+          LHCbDIRACBookkeepingPassword: FILL_ME
+          LHCbDIRACBookkeepingServer: FILL_ME
+          LHCbDIRACBookkeepingTNS: FILL_ME
+          LHCbDIRACBookkeepingUser: FILL_ME
+  Configuration:
+    Production:
+      Agents:
+        RucioSynchronizerAgent:
+          PollingTime: '120'
+        VOMS2CSAgent:
+          AutoAddUsers: 'True'
+          AutoDeleteUsers: 'True'
+          AutoLiftSuspendedStatus: 'True'
+          AutoModifyUsers: 'True'
+          DetailedReport: 'True'
+          DryRun: 'True'
+          MailFrom: noreply@dirac.system
+          MakeHomeDirectory: 'False'
+          PollingTime: '14400'
+          SyncPluginName: ''
+          VO: Any
+      FailoverURLs: {}
+      Services:
+        Server:
+          HandlerPath: DIRAC/ConfigurationSystem/Service/TornadoConfigurationHandler.py
+          Port: '9135'
+        TornadoConfiguration:
+          Authorization:
+            Default: authenticated
+            commitNewData: CSAdministrator
+            forceGlobalConfigurationUpdate: CSAdministrator
+            getVersionContents: ServiceAdministrator, CSAdministrator
+            rollbackToVersion: CSAdministrator
+          Protocol: https
+      URLs:
+        Configuration: https://server:8443/Configuration/TornadoConfiguration
+  DataManagement:
+    Production:
+      Agents:
+        FTS3Agent:
+          DeleteGraceDays: '180'
+          DeleteLimitPerCycle: '100'
+          JobBulkSize: '20'
+          KickAssignedHours: '1'
+          KickLimitPerCycle: '100'
+          MaxAttemptsPerFile: '256'
+          MaxFilesPerJob: '100'
+          MaxThreads: '10'
+          OperationBulkSize: '20'
+          PollingTime: '120'
+          ProxyLifetime: '43200'
+      Databases:
+        DataIntegrityDB:
+          DBName: DataIntegrityDB
+          Host: mysql
+          Port: '3306'
+        FTS3DB:
+          DBName: FTS3DB
+          Host: mysql
+          Port: '3306'
+        FileCatalogDB:
+          DBName: FileCatalogDB
+          Host: mysql
+          Port: '3306'
+        MultiVOFileCatalogDB:
+          DBName: MultiVOFileCatalogDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        SE-1:
+          BasePath: /home/dirac/ServerInstallDIR/Storage/SE-1
+          Module: StorageElement
+          Port: '9148'
+        SE-2:
+          BasePath: /home/dirac/ServerInstallDIR/Storage/SE-2
+          Module: StorageElement
+          Port: '9147'
+        StorageElement:
+          Authorization:
+            Default: authenticated
+            FileTransfer:
+              Default: authenticated
+          BasePath: storageElement
+          MaxStorageSize: '0'
+          Port: '9148'
+        TornadoDataIntegrity:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+        TornadoFTS3Manager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+        TornadoFileCatalog:
+          Authorization:
+            Default: authenticated
+          DefaultUmask: '509'
+          DirectoryManager: DirectoryClosure
+          FileManager: FileManagerPs
+          GlobalReadAccess: 'True'
+          LFNPFNConvention: Strong
+          Protocol: https
+          ResolvePFN: 'True'
+          SEManager: SEManagerDB
+          SecurityManager: VOMSSecurityManager
+          UniqueGUID: 'True'
+          UserGroupManager: UserAndGroupManagerDB
+          VisibleStatus: AprioriGood
+        TornadoMultiVOFileCatalog:
+          Database: MultiVOFileCatalogDB
+          DirectoryManager: DirectoryClosure
+          DirectoryMetadata: MultiVODirectoryMetadata
+          FileManager: FileManagerPs
+          FileMetadata: MultiVOFileMetadata
+          Module: TornadoFileCatalog
+          Port: '9198'
+          Protocol: https
+          SecurityManager: NoSecurityManager
+          UniqueGUID: 'True'
+        TornadoS3Gateway:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+      URLs:
+        DataIntegrity: https://server:8443/DataManagement/TornadoDataIntegrity
+        FTS3Manager: https://server:8443/DataManagement/TornadoFTS3Manager
+        FileCatalog: https://server:8443/DataManagement/TornadoFileCatalog
+        MultiVOFileCatalog: https://server:9198/DataManagement/TornadoMultiVOFileCatalog
+        S3Gateway: https://server:8443/DataManagement/TornadoS3Gateway
+        SE-1: dips://server:9148/DataManagement/SE-1
+        SE-2: dips://server:9147/DataManagement/SE-2
+        StorageElement: dips://server:9148/DataManagement/StorageElement
+  Framework:
+    Production:
+      Databases:
+        AuthDB:
+          DBName: AuthDB
+          Host: mysql
+          Port: '3306'
+        InstalledComponentsDB:
+          DBName: InstalledComponentsDB
+          Host: mysql
+          Port: '3306'
+        NotificationDB:
+          DBName: NotificationDB
+          Host: mysql
+          Port: '3306'
+        ProxyDB:
+          DBName: ProxyDB
+          Host: mysql
+          Port: '3306'
+        TokenDB:
+          DBName: TokenDB
+          Host: mysql
+          Port: '3306'
+        UserProfileDB:
+          DBName: UserProfileDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        BundleDelivery:
+          Authorization:
+            Default: authenticated
+            FileTransfer:
+              Default: authenticated
+          Port: '9158'
+        SecurityLogging:
+          Authorization:
+            Default: authenticated
+          DataLocation: data/securityLog
+          Port: '9153'
+        SystemAdministrator:
+          Authorization:
+            Default: ServiceAdministrator
+            storeHostInfo: Operator
+          Port: '9162'
+        TornadoComponentMonitoring:
+          Authorization:
+            Default: ServiceAdministrator
+            componentExists: authenticated
+            getComponents: authenticated
+            getHosts: authenticated
+            getInstallations: authenticated
+            hostExists: authenticated
+            installationExists: authenticated
+            updateLog: Operator
+          Protocol: https
+        TornadoNotification:
+          Authorization:
+            Default: AlarmsManagement
+            getNotifications: authenticated
+            markNotificationsAsRead: authenticated
+            ping: authenticated
+            removeNotificationsForUser: authenticated
+            sendMail: authenticated
+            sendSMS: authenticated
+          Protocol: https
+          SMSSwitch: sms.switch.ch
+        TornadoProxyManager:
+          Authorization:
+            Default: authenticated
+            getLogContents: ProxyManagement
+            getProxy: FullDelegation, LimitedDelegation, PrivateLimitedDelegation
+            getProxyWithToken: FullDelegation, LimitedDelegation, PrivateLimitedDelegation
+            getVOMSProxy: FullDelegation, LimitedDelegation, PrivateLimitedDelegation
+            getVOMSProxyWithToken: FullDelegation, LimitedDelegation, PrivateLimitedDelegation
+            setPersistency: ProxyManagement
+          MailFrom: '"proxymanager@diracgrid.org"'
+          Protocol: https
+        TornadoTokenManager:
+          Authorization:
+            Default: authenticated
+            getUsersTokensInfo: ProxyManagement
+          Protocol: https
+        TornadoUserProfileManager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+      URLs:
+        BundleDelivery: dips://server:9158/Framework/BundleDelivery
+        ComponentMonitoring: https://server:8443/Framework/TornadoComponentMonitoring
+        Notification: https://server:8443/Framework/TornadoNotification
+        ProxyManager: https://server:8443/Framework/TornadoProxyManager
+        SecurityLogging: dips://server:9153/Framework/SecurityLogging
+        SystemAdministrator: dips://server:9162/Framework/SystemAdministrator
+        TokenManager: https://server:8443/Framework/TornadoTokenManager
+        UserProfileManager: https://server:8443/Framework/TornadoUserProfileManager
+  Monitoring:
+    Production:
+      FailoverURLs: {}
+      Services:
+        TornadoMonitoring:
+          Authorization:
+            Default: authenticated
+            FileTransfer:
+              Default: authenticated
+          Protocol: https
+      URLs:
+        Monitoring: https://server:8443/Monitoring/TornadoMonitoring
+  Production:
+    Production:
+      Databases:
+        ProductionDB:
+          DBName: ProductionDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        TornadoProductionManager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+      URLs:
+        ProductionManager: https://server:8443/Production/TornadoProductionManager
+  RequestManagement:
+    Production:
+      Agents:
+        CleanReqDBAgent:
+          CancelGraceDays: '0'
+          ControlDirectory: control/RequestManagement/CleanReqDBAgent
+          DeleteFailed: 'False'
+          DeleteGraceDays: '60'
+          DeleteLimit: '100'
+          KickGraceHours: '1'
+          KickLimit: '10000'
+          PollingTime: '60'
+        RequestExecutingAgent:
+          BulkRequest: '0'
+          MaxProcess: '20'
+          MinProcess: '20'
+          OperationHandlers:
+            ForwardDISET:
+              Location: DIRAC/RequestManagementSystem/Agent/RequestOperations/ForwardDISET
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOut: '120'
+            PutAndRegister:
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/PutAndRegister
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '600'
+            RegisterFile:
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/RegisterFile
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '120'
+            RegisterReplica:
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/RegisterReplica
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '120'
+            RemoveFile:
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/RemoveFile
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '120'
+            RemoveReplica:
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/RemoveReplica
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '120'
+            ReplicateAndRegister:
+              FTSBannedGroups: dirac_user, lhcb_user
+              FTSMode: 'False'
+              Location: DIRAC/DataManagementSystem/Agent/RequestOperations/ReplicateAndRegister
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '600'
+            SetFileStatus:
+              Location: DIRAC/TransformationSystem/Agent/RequestOperations/SetFileStatus
+              LogLevel: INFO
+              MaxAttempts: '256'
+              TimeOutPerFile: '120'
+          PollingTime: '60'
+          ProcessPoolQueueSize: '20'
+          ProcessPoolSleep: '5'
+          ProcessPoolTimeout: '900'
+          RequestsPerCycle: '100'
+      Databases:
+        ReqDB:
+          DBName: ReqDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        ReqProxy:
+          Authorization:
+            Default: authenticated
+          Port: '9161'
+          SweepSize: '10'
+        TornadoReqManager:
+          Authorization:
+            Default: authenticated
+          ConstantRequestDelay: '0'
+          Protocol: https
+      URLs:
+        ReqManager: https://server:8443/RequestManagement/TornadoReqManager
+        ReqProxy: dips://server:9161/RequestManagement/ReqProxy
+  ResourceStatus:
+    Production:
+      Agents:
+        ElementInspectorAgent:
+          PollingTime: '300'
+          elementType: Resource
+          maxNumberOfThreads: '15'
+        EmailAgent:
+          PollingTime: '1800'
+        RucioRSSAgent:
+          PollingTime: '120'
+        SiteInspectorAgent:
+          PollingTime: '300'
+          maxNumberOfThreads: '15'
+        SummarizeLogsAgent:
+          Months: '36'
+          PollingTime: '300'
+        TokenAgent:
+          PollingTime: '3600'
+          adminMail: ''
+          notifyHours: '12'
+      Databases:
+        ResourceManagementDB:
+          DBName: ResourceManagementDB
+          Host: mysql
+          Port: '3306'
+        ResourceStatusDB:
+          DBName: ResourceStatusDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        TornadoPublisher:
+          Authorization:
+            Default: Authenticated
+          Protocol: https
+        TornadoResourceManagement:
+          Authorization:
+            Default: SiteManager
+            select: all
+          Protocol: https
+        TornadoResourceStatus:
+          Authorization:
+            Default: SiteManager
+            select: all
+          Protocol: https
+      URLs:
+        Publisher: https://server:8443/ResourceStatus/TornadoPublisher
+        ResourceManagement: https://server:8443/ResourceStatus/TornadoResourceManagement
+        ResourceStatus: https://server:8443/ResourceStatus/TornadoResourceStatus
+  StorageManagement:
+    Production:
+      Agents:
+        RequestFinalizationAgent:
+          PollingTime: '120'
+        RequestPreparationAgent:
+          PollingTime: '120'
+        StageMonitorAgent:
+          PollingTime: '120'
+          StoragePlugins: ''
+        StageRequestAgent:
+          PollingTime: '120'
+      Databases:
+        StorageManagementDB:
+          DBName: StorageManagementDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        TornadoStorageManager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+      URLs:
+        StorageManager: https://server:8443/StorageManagement/TornadoStorageManager
+  Tornado:
+    Production:
+      Port: '8443'
+  Transformation:
+    Production:
+      Agents:
+        DataRecoveryAgent:
+          EnableFlag: 'False'
+          JobInfoFromJDLOnly: 'False'
+          MailFrom: ''
+          MailTo: ''
+          PollingTime: '3600'
+          PrintEvery: '200'
+          TransformationStatus: Active, Completing
+          TransformationsNoInput: ''
+          TransformationsToIgnore: ''
+          TransformationsWithInput: ''
+        InputDataAgent:
+          FullUpdatePeriod: '86400'
+          PollingTime: '120'
+          RefreshOnly: 'False'
+        MCExtensionAgent:
+          PollingTime: '120'
+        RequestTaskAgent:
+          CheckReserved: ''
+          CheckReservedStatus: Active, Completing, Stopped
+          MonitorFiles: ''
+          MonitorTasks: ''
+          PluginLocation: DIRAC.TransformationSystem.Client.TaskManagerPlugin
+          PollingTime: '120'
+          ShifterCredentials: ''
+          SubmitStatus: Active, Completing
+          SubmitTasks: 'yes'
+          TaskUpdateChunkSize: '0'
+          TaskUpdateStatus: Checking, Deleted, Killed, Staging, Stalled, Matched,
+            Scheduled, Rescheduled, Completed, Submitted, Assigned, Received, Waiting,
+            Running
+          TasksPerLoop: '50'
+          TransType: ''
+          UpdateFilesStatus: Active, Completing, Stopped
+          UpdateTasksStatus: Active, Completing, Stopped
+          maxNumberOfThreads: '15'
+          shifterProxy: ''
+        TransformationAgent:
+          PollingTime: '120'
+        TransformationCleaningAgent:
+          ArchiveAfter: '7'
+          DirectoryLocations: TransformationDB, MetadataCatalog
+          EnableFlag: 'True'
+          PollingTime: '3600'
+          TransfIDMeta: TransformationID
+          TransformationTypes: ''
+          shifterProxy: ''
+        ValidateOutputDataAgent:
+          PollingTime: '120'
+        WorkflowTaskAgent:
+          BulkSubmission: 'false'
+          CheckReserved: ''
+          CheckReservedStatus: Active, Completing, Stopped
+          MonitorFiles: ''
+          MonitorTasks: ''
+          PluginLocation: DIRAC.TransformationSystem.Client.TaskManagerPlugin
+          PollingTime: '120'
+          ShifterCredentials: ''
+          SubmitStatus: Active, Completing
+          SubmitTasks: 'yes'
+          TaskUpdateChunkSize: '0'
+          TaskUpdateStatus: Submitted, Received, Waiting, Running, Matched, Completed,
+            Failed
+          TasksPerLoop: '50'
+          TransType: MCSimulation, DataReconstruction, DataStripping, MCStripping,
+            Merge
+          UpdateFilesStatus: Active, Completing, Stopped
+          UpdateTasksStatus: Active, Completing, Stopped
+          maxNumberOfThreads: '15'
+          shifterProxy: ''
+      Databases:
+        TransformationDB:
+          DBName: TransformationDB
+          Host: mysql
+          Port: '3306'
+      FailoverURLs: {}
+      Services:
+        TornadoTransformationManager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+      URLs:
+        TransformationManager: https://server:8443/Transformation/TornadoTransformationManager
+  WorkloadManagement:
+    Production:
+      Agents:
+        JobCleaningAgent:
+          MaxHBJobsAtOnce: '0'
+          MaxJobsAtOnce: '500'
+          PollingTime: '3600'
+          ProductionTypes: ''
+          RemoveStatusDelay:
+            Any: '-1'
+            Done: '7'
+            Failed: '7'
+            Killed: '7'
+          RemoveStatusDelayHB:
+            Done: '-1'
+            Failed: '-1'
+            Killed: '-1'
+        PilotLoggingAgent:
+          PollingTime: '600'
+      Databases:
+        JobDB:
+          DBName: JobDB
+          Host: mysql
+          Port: '3306'
+        JobLoggingDB:
+          DBName: JobLoggingDB
+          Host: mysql
+          Port: '3306'
+        PilotAgentsDB:
+          DBName: PilotAgentsDB
+          Host: mysql
+          Port: '3306'
+        SandboxMetadataDB:
+          DBName: SandboxMetadataDB
+          Host: mysql
+          Port: '3306'
+        TaskQueueDB:
+          DBName: TaskQueueDB
+          Host: mysql
+          Port: '3306'
+      Executors:
+        Optimizers:
+          JobScheduling:
+            RescheduleDelays: '0'
+      FailoverURLs: {}
+      Services:
+        Matcher:
+          Authorization:
+            Default: authenticated
+            getActiveTaskQueues: JobAdministrator
+          MaxThreads: '20'
+          Port: '9170'
+        OptimizationMind:
+          Port: '9175'
+        PilotManager:
+          Authorization:
+            Default: authenticated
+          Port: '9171'
+        SandboxStore:
+          BasePath: dirac-JenkinsSetup/sandboxes
+          LogLevel: DEBUG
+        TornadoJobManager:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+        TornadoJobMonitoring:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+        TornadoJobStateUpdate:
+          Authorization:
+            Default: authenticated
+          Protocol: https
+        TornadoPilotLogging:
+          Authorization:
+            Default: authenticated
+            finaliseLogs: Operator, Pilot, GenericPilot
+            getMetadata: Operator, TrustedHost
+            sendMessage: Operator, GenericPilot
+          Protocol: https
+        TornadoSandboxStore:
+          Authorization:
+            Default: authenticated
+            FileTransfer:
+              Default: authenticated
+          Backend: local
+          BasePath: dirac-JenkinsSetup/sandboxes
+          DelayedExternalDeletion: 'True'
+          LocalSE: ProductionSandboxSE
+          LogLevel: DEBUG
+          MaxSandboxSizeMiB: '10'
+          MaxThreads: '200'
+          Protocol: https
+          SandboxPrefix: Sandbox
+          toClientMaxThreads: '100'
+        TornadoWMSAdministrator:
+          Authorization:
+            Default: Operator
+            allowSite: SiteManager, Operator
+            banSite: SiteManager, Operator
+            getJobPilotOutput: authenticated
+            getSiteMask: authenticated
+            getSiteMaskStatus: authenticated
+            ping: authenticated
+          Protocol: https
+      URLs:
+        JobManager: https://server:8443/WorkloadManagement/TornadoJobManager
+        JobMonitoring: https://server:8443/WorkloadManagement/TornadoJobMonitoring
+        JobStateUpdate: https://server:8443/WorkloadManagement/TornadoJobStateUpdate
+        Matcher: dips://server:9170/WorkloadManagement/Matcher
+        OptimizationMind: dips://server:9175/WorkloadManagement/OptimizationMind
+        PilotLogging: https://server:8443/WorkloadManagement/TornadoPilotLogging
+        PilotManager: dips://server:9171/WorkloadManagement/PilotManager
+        SandboxStore: https://server:8443/WorkloadManagement/TornadoSandboxStore
+        WMSAdministrator: https://server:8443/WorkloadManagement/TornadoWMSAdministrator
+WebApp:
+  Access:
+    upload: TrustedHost

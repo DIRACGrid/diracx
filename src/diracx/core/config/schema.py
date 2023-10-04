@@ -22,9 +22,11 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
         # though ideally we should parse the type hints properly.
         for field, hint in cls.__annotations__.items():
             # Convert comma separated lists to actual lists
-            if hint in {"list[str]", "list[SecurityProperty]"} and isinstance(
-                v.get(field), str
-            ):
+            if hint in {
+                "list[str]",
+                "set[str]",
+                "set[SecurityProperty]",
+            } and isinstance(v.get(field), str):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
             # If the field is optional and the value is "None" convert it to None
             if "| None" in hint and field in v:
@@ -34,8 +36,6 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
 
 
 class UserConfig(BaseModel):
-    CA: str
-    DN: str
     PreferedUsername: str
     Email: EmailStr | None
     Suspended: list[str] = []
@@ -50,9 +50,9 @@ class GroupConfig(BaseModel):
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
     JobShare: Optional[int]
-    Properties: list[SecurityProperty]
+    Properties: set[SecurityProperty]
     Quota: Optional[int]
-    Users: list[str]
+    Users: set[str]
     AllowBackgroundTQs: bool = False
     VOMSRole: Optional[str]
     AutoSyncVOMS: bool = False
