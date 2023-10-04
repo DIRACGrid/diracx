@@ -9,6 +9,7 @@ from typing import Any, AsyncContextManager, AsyncGenerator, Iterable, TypeVar
 import dotenv
 from fastapi import APIRouter, Depends, Request
 from fastapi.dependencies.models import Dependant
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from pydantic import parse_raw_as
@@ -142,6 +143,20 @@ def create_app_inner(
     # Add exception handlers
     app.add_exception_handler(DiracError, dirac_error_handler)
     app.add_exception_handler(DiracHttpResponse, http_response_handler)
+
+    # TODO: remove the CORSMiddleware once we figure out how to launch
+    # diracx and diracx-web under the same origin
+    origins = [
+        "http://localhost:8000",
+    ]
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     return app
 

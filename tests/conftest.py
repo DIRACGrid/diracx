@@ -156,6 +156,11 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     # already been ran
     app.lifetime_functions.append(create_db_schemas)
 
+    # For test purpose, we remove root_path as it can generate issues.
+    # TestClient sends HTTP requests directly to the DiracFastAPI,
+    # bypassing the proxy server.
+    app.root_path = ""
+
     yield app
 
 

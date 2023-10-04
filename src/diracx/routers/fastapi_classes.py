@@ -34,6 +34,7 @@ class DiracFastAPI(FastAPI):
             generate_unique_id_function=lambda route: f"{route.tags[0]}_{route.name}",
             title="Dirac",
             lifespan=lifespan,
+            root_path="/api",
         )
         # FIXME: when autorest will support 3.1.0
         # From 0.99.0, FastAPI is using openapi 3.1.0 by default
