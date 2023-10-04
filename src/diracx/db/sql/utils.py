@@ -134,10 +134,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         """
         assert self._engine is None, "engine_context cannot be nested"
 
-        engine = create_async_engine(
-            self._db_url,
-            echo=True,
-        )
+        engine = create_async_engine(self._db_url)
         self._engine = engine
 
         yield

@@ -41,6 +41,7 @@ class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE
     s3_client_kwargs: dict[str, str]
     auto_create_bucket: bool = False
     url_validity_seconds: int = 5 * 60
+    se_name: str = "SandboxSE"
     _client: S3Client = PrivateAttr(None)
 
     @contextlib.asynccontextmanager
@@ -97,9 +98,12 @@ async def initiate_sandbox_upload(
         )
 
     pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
+    full_pfn = f"SB:{settings.se_name}|{pfn}"
 
     try:
-        exists_and_assigned = await sandbox_metadata_db.sandbox_is_assigned(pfn)
+        exists_and_assigned = await sandbox_metadata_db.sandbox_is_assigned(
+            settings.se_name, pfn
+        )
     except NoResultFound:
         # The sandbox doesn't exist in the database
         pass
@@ -112,8 +116,10 @@ async def initiate_sandbox_upload(
         if exists_and_assigned or s3_object_exists(
             settings.s3_client, settings.bucket_name, pfn_to_key(pfn)
         ):
-            await sandbox_metadata_db.update_sandbox_last_access_time(pfn)
-            return SandboxUploadResponse(pfn=pfn)
+            await sandbox_metadata_db.update_sandbox_last_access_time(
+                settings.se_name, pfn
+            )
+            return SandboxUploadResponse(pfn=full_pfn)
 
     upload_info = await generate_presigned_upload(
         settings.s3_client,
@@ -124,9 +130,11 @@ async def initiate_sandbox_upload(
         sandbox_info.size,
         settings.url_validity_seconds,
     )
-    await sandbox_metadata_db.insert_sandbox(user_info, pfn, sandbox_info.size)
+    await sandbox_metadata_db.insert_sandbox(
+        settings.se_name, user_info, pfn, sandbox_info.size
+    )
 
-    return SandboxUploadResponse(**upload_info, pfn=pfn)
+    return SandboxUploadResponse(**upload_info, pfn=full_pfn)
 
 
 class SandboxDownloadResponse(BaseModel):
@@ -143,8 +151,8 @@ def pfn_to_key(pfn: str) -> str:
 
 
 SANDBOX_PFN_REGEX = (
-    # Starts with /S3/<bucket_name>
-    r"^/S3/[a-z0-9\.\-]{3,63}"
+    # Starts with /S3/<bucket_name> or /SB:<se_name>|/S3/<bucket_name>
+    r"^(:?SB:[A-Za-z]+\|)?/S3/[a-z0-9\.\-]{3,63}"
     # Followed /<vo>/<group>/<username>/<checksum_algorithm>:<checksum>.<format>
     r"(?:/[^/]+){3}/[a-z0-9]{3,10}:[0-9a-f]{64}\.[a-z0-9\.]+$"
 )
@@ -164,6 +172,7 @@ async def get_sandbox_file(
     most storage backends return an error when they receive an authorization
     header for a presigned URL.
     """
+    pfn = pfn.split("|", 1)[-1]
     required_prefix = (
         "/"
         + "/".join(

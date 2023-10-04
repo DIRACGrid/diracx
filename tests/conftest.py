@@ -54,6 +54,7 @@ def pytest_collection_modifyitems(config, items):
         # --regenerate-client given in cli: allow client re-generation
         return
     skip_regen = pytest.mark.skip(reason="need --regenerate-client option to run")
+    found = False
     for item in items:
         if item.name == "test_regenerate_client":
             item.add_marker(skip_regen)
