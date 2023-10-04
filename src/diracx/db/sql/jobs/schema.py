@@ -59,7 +59,6 @@ class Jobs(JobDBBase):
 
     JobID = Column("JobID", Integer, primary_key=True, default=0)
     JobType = Column("JobType", String(32), default="user")
-    DIRACSetup = Column("DIRACSetup", String(32), default="test")
     JobGroup = Column("JobGroup", String(32), default="00000000")
     JobSplitType = Column(
         "JobSplitType", Enum("Single", "Master", "Subjob", "DAGNode"), default="Single"
