@@ -28,6 +28,11 @@ RUN chmod 755 /dockerEntrypoint.sh
 COPY --chown=$MAMBA_USER:$MAMBA_USER dockerMicroMambaEntrypoint.sh /
 RUN chmod 755 /dockerMicroMambaEntrypoint.sh
 
+# In many clusters the container is ran as a random uid for security reasons.
+# If we mark the conda directory as group 0 and give it group write permissions
+# then we're still able to manage the environment from inside the container.
+RUN chown -R $MAMBA_USER:0 /opt/conda && chmod -R g=u /opt/conda
+
 ENTRYPOINT [ "/dockerEntrypoint.sh" ]
 
 
