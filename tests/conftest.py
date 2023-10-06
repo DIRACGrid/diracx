@@ -156,11 +156,6 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     # already been ran
     app.lifetime_functions.append(create_db_schemas)
 
-    # For test purpose, we remove root_path as it can generate issues.
-    # TestClient sends HTTP requests directly to the DiracFastAPI,
-    # bypassing the proxy server.
-    app.root_path = ""
-
     yield app
 
 
@@ -301,7 +296,7 @@ def cli_env(monkeypatch, tmp_path, demo_urls):
     diracx_url = demo_urls["diracx"]
 
     # Ensure the demo is working
-    r = requests.get(f"{diracx_url}/openapi.json")
+    r = requests.get(f"{diracx_url}/api/openapi.json")
     r.raise_for_status()
     assert r.json()["info"]["title"] == "Dirac"
 

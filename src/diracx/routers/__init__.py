@@ -133,9 +133,11 @@ def create_app_inner(
         dependencies = []
         if isinstance(router, DiracxRouter) and router.diracx_require_auth:
             dependencies.append(Depends(verify_dirac_access_token))
+        # Most routers are mounted under /api/<system_name>
+        path_root = getattr(router, "diracx_path_root", "/api")
         app.include_router(
             router,
-            prefix=f"/{system_name}",
+            prefix=f"{path_root}/{system_name}",
             tags=[system_name],
             dependencies=dependencies,
         )

@@ -4,12 +4,12 @@ from fastapi.testclient import TestClient
 
 def test_unauthenticated(with_app):
     with TestClient(with_app) as client:
-        response = client.get("/config/lhcb/")
+        response = client.get("/api/config/lhcb/")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 def test_get_config(normal_user_client):
-    r = normal_user_client.get("/config/lhcb")
+    r = normal_user_client.get("/api/config/lhcb")
     assert r.status_code == status.HTTP_200_OK, r.json()
     assert r.json(), r.text
 
@@ -17,7 +17,7 @@ def test_get_config(normal_user_client):
     etag = r.headers["ETag"]
 
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": etag,
             "If-Modified-Since": last_modified,
@@ -29,7 +29,7 @@ def test_get_config(normal_user_client):
 
     # If only an invalid ETAG is passed, we expect a response
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": "wrongEtag",
         },
@@ -39,7 +39,7 @@ def test_get_config(normal_user_client):
 
     # If an past ETAG and an past timestamp as give, we expect an response
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": "pastEtag",
             "If-Modified-Since": "Mon, 1 Apr 2000 00:42:42 GMT",
@@ -50,7 +50,7 @@ def test_get_config(normal_user_client):
 
     # If an future ETAG and an new timestamp as give, we expect 304
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": "futureEtag",
             "If-Modified-Since": "Mon, 1 Apr 9999 00:42:42 GMT",
@@ -61,7 +61,7 @@ def test_get_config(normal_user_client):
 
     # If an invalid ETAG and an invalid modified time, we expect a response
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": "futureEtag",
             "If-Modified-Since": "wrong format",
@@ -72,7 +72,7 @@ def test_get_config(normal_user_client):
 
     # If the correct ETAG and a past timestamp as give, we expect 304
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": etag,
             "If-Modified-Since": "Mon, 1 Apr 2000 00:42:42 GMT",
@@ -83,7 +83,7 @@ def test_get_config(normal_user_client):
 
     # If the correct ETAG and a new timestamp as give, we expect 304
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": etag,
             "If-Modified-Since": "Mon, 1 Apr 9999 00:42:42 GMT",
@@ -94,7 +94,7 @@ def test_get_config(normal_user_client):
 
     # If the correct ETAG and an invalid modified time, we expect 304
     r = normal_user_client.get(
-        "/config/lhcb",
+        "/api/config/lhcb",
         headers={
             "If-None-Match": etag,
             "If-Modified-Since": "wrong format",

@@ -52,7 +52,7 @@ from .dependencies import (
 )
 from .fastapi_classes import DiracxRouter
 
-oidc_scheme = OpenIdConnect(openIdConnectUrl="/api/.well-known/openid-configuration")
+oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
 
 
 @add_settings_annotation
