@@ -63,7 +63,7 @@ def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpR
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/device"
+    _url = "/api/auth/device"
 
     # Construct parameters
     _params["user_code"] = _SERIALIZER.query("user_code", user_code, "str")
@@ -85,7 +85,7 @@ def build_auth_initiate_device_flow_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/device"
+    _url = "/api/auth/device"
 
     # Construct parameters
     _params["client_id"] = _SERIALIZER.query("client_id", client_id, "str")
@@ -109,7 +109,7 @@ def build_auth_finish_device_flow_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/device/complete"
+    _url = "/api/auth/device/complete"
 
     # Construct parameters
     _params["code"] = _SERIALIZER.query("code", code, "str")
@@ -129,7 +129,7 @@ def build_auth_finished_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/device/complete/finished"
+    _url = "/api/auth/device/complete/finished"
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -143,7 +143,7 @@ def build_auth_get_refresh_tokens_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/refresh-tokens"
+    _url = "/api/auth/refresh-tokens"
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -157,7 +157,7 @@ def build_auth_revoke_refresh_token_request(jti: str, **kwargs: Any) -> HttpRequ
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/refresh-tokens/{jti}"
+    _url = "/api/auth/refresh-tokens/{jti}"
     path_format_arguments = {
         "jti": _SERIALIZER.url("jti", jti, "str"),
     }
@@ -187,7 +187,7 @@ def build_auth_authorization_flow_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/authorize"
+    _url = "/api/auth/authorize"
 
     # Construct parameters
     _params["response_type"] = _SERIALIZER.query("response_type", response_type, "str")
@@ -219,7 +219,7 @@ def build_auth_authorization_flow_complete_request(  # pylint: disable=name-too-
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/authorize/complete"
+    _url = "/api/auth/authorize/complete"
 
     # Construct parameters
     _params["code"] = _SERIALIZER.query("code", code, "str")
@@ -239,7 +239,7 @@ def build_auth_userinfo_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/userinfo"
+    _url = "/api/auth/userinfo"
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -259,7 +259,7 @@ def build_config_serve_config_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/config/{vo}"
+    _url = "/api/config/{vo}"
     path_format_arguments = {
         "vo": _SERIALIZER.url("vo", vo, "str"),
     }
@@ -287,7 +287,7 @@ def build_jobs_get_sandbox_file_request(*, pfn: str, **kwargs: Any) -> HttpReque
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/sandbox"
+    _url = "/api/jobs/sandbox"
 
     # Construct parameters
     _params["pfn"] = _SERIALIZER.query(
@@ -295,7 +295,7 @@ def build_jobs_get_sandbox_file_request(*, pfn: str, **kwargs: Any) -> HttpReque
         pfn,
         "str",
         max_length=256,
-        pattern=r"^/S3/[a-z0-9\.\-]{3,63}(?:/[^/]+){3}/[a-z0-9]{3,10}:[0-9a-f]{64}\.[a-z0-9\.]+$",
+        pattern=r"^(:?SB:[A-Za-z]+\|)?/S3/[a-z0-9\.\-]{3,63}(?:/[^/]+){3}/[a-z0-9]{3,10}:[0-9a-f]{64}\.[a-z0-9\.]+$",
     )
 
     # Construct headers
@@ -317,7 +317,7 @@ def build_jobs_initiate_sandbox_upload_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/sandbox"
+    _url = "/api/jobs/sandbox"
 
     # Construct headers
     if content_type is not None:
@@ -338,7 +338,7 @@ def build_jobs_submit_bulk_jobs_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/"
+    _url = "/api/jobs/"
 
     # Construct headers
     if content_type is not None:
@@ -359,7 +359,7 @@ def build_jobs_delete_bulk_jobs_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/"
+    _url = "/api/jobs/"
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
@@ -381,7 +381,7 @@ def build_jobs_kill_bulk_jobs_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/kill"
+    _url = "/api/jobs/kill"
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
@@ -403,7 +403,7 @@ def build_jobs_get_job_status_bulk_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/status"
+    _url = "/api/jobs/status"
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
@@ -428,7 +428,7 @@ def build_jobs_set_job_status_bulk_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/status"
+    _url = "/api/jobs/status"
 
     # Construct parameters
     if force is not None:
@@ -455,7 +455,7 @@ def build_jobs_get_job_status_history_bulk_request(  # pylint: disable=name-too-
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/status/history"
+    _url = "/api/jobs/status/history"
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
@@ -480,7 +480,7 @@ def build_jobs_search_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/search"
+    _url = "/api/jobs/search"
 
     # Construct parameters
     if page is not None:
@@ -509,7 +509,7 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/summary"
+    _url = "/api/jobs/summary"
 
     # Construct headers
     if content_type is not None:
@@ -527,7 +527,7 @@ def build_jobs_get_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/{job_id}"
+    _url = "/api/jobs/{job_id}"
     path_format_arguments = {
         "job_id": _SERIALIZER.url("job_id", job_id, "int"),
     }
@@ -546,7 +546,7 @@ def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> Http
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/{job_id}/status"
+    _url = "/api/jobs/{job_id}/status"
     path_format_arguments = {
         "job_id": _SERIALIZER.url("job_id", job_id, "int"),
     }
@@ -571,7 +571,7 @@ def build_jobs_set_single_job_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/{job_id}/status"
+    _url = "/api/jobs/{job_id}/status"
     path_format_arguments = {
         "job_id": _SERIALIZER.url("job_id", job_id, "int"),
     }
@@ -602,7 +602,7 @@ def build_jobs_get_single_job_status_history_request(  # pylint: disable=name-to
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/jobs/{job_id}/status/history"
+    _url = "/api/jobs/{job_id}/status/history"
     path_format_arguments = {
         "job_id": _SERIALIZER.url("job_id", job_id, "int"),
     }
