@@ -92,3 +92,31 @@ async def test_login(monkeypatch, capfd, cli_env):
     # Return the credentials so this test can also be used by the
     # "with_cli_login" fixture
     return expected_credentials_path.read_text()
+
+
+async def test_logout(monkeypatch, capfd, cli_env, with_cli_login):
+    expected_credentials_path = expected_credentials_path = Path(
+        cli_env["HOME"], ".cache", "diracx", "credentials.json"
+    )
+    # Ensure the credentials file does exist
+    assert expected_credentials_path.exists()
+
+    # Run the logout command
+    await cli.logout()
+    captured = capfd.readouterr()
+    assert "Removed credentials from" in captured.out
+    assert "Logout successful!" in captured.out
+    assert captured.err == ""
+
+    # Ensure the credentials file does not exist after logging out
+    assert not expected_credentials_path.exists()
+
+    # Rerun the logout command, it should not fail
+    await cli.logout()
+    captured = capfd.readouterr()
+    assert "Removed credentials from" not in captured.out
+    assert "Logout successful!" in captured.out
+    assert captured.err == ""
+
+    # Ensure the credentials file still does not exist
+    assert not expected_credentials_path.exists()

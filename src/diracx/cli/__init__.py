@@ -75,7 +75,7 @@ async def whoami():
 async def logout():
     async with DiracClient() as api:
         credentials_path = get_diracx_preferences().credentials_path
-        if credentials_path:
+        if credentials_path.exists():
             credentials = json.loads(credentials_path.read_text())
 
             # Revoke refresh token
