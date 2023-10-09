@@ -291,17 +291,21 @@ def demo_kubectl_env(demo_dir):
 
 
 @pytest.fixture
-def cli_env(monkeypatch, tmp_path, demo_urls):
+def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
     """Set up the environment for the CLI"""
     diracx_url = demo_urls["diracx"]
+    ca_path = demo_dir / "demo-ca.pem"
+    if not ca_path.exists():
+        raise RuntimeError(f"Could not find {ca_path}, is the demo running?")
 
     # Ensure the demo is working
-    r = requests.get(f"{diracx_url}/api/openapi.json")
+    r = requests.get(f"{diracx_url}/api/openapi.json", verify=ca_path)
     r.raise_for_status()
     assert r.json()["info"]["title"] == "Dirac"
 
     env = {
         "DIRACX_URL": diracx_url,
+        "DIRACX_CA_PATH": str(ca_path),
         "HOME": str(tmp_path),
     }
     for key, value in env.items():

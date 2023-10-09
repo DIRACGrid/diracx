@@ -43,8 +43,16 @@ def patch_sdk():
 class DiracTokenCredential(TokenCredential):
     """Tailor get_token() for our context"""
 
-    def __init__(self, location: Path, token_endpoint: str, client_id: str) -> None:
+    def __init__(
+        self,
+        location: Path,
+        token_endpoint: str,
+        client_id: str,
+        *,
+        verify: bool | str = True,
+    ) -> None:
         self.location = location
+        self.verify = verify
         self.token_endpoint = token_endpoint
         self.client_id = client_id
 
@@ -64,7 +72,11 @@ class DiracTokenCredential(TokenCredential):
         :return: An AccessToken instance containing the token string and its expiration time in Unix time.
         """
         return refresh_token(
-            self.location, self.token_endpoint, self.client_id, kwargs["refresh_token"]
+            self.location,
+            self.token_endpoint,
+            self.client_id,
+            kwargs["refresh_token"],
+            verify=self.verify,
         )
 
 
@@ -118,14 +130,18 @@ class DiracClient(DiracGenerated):
         endpoint: str | None = None,
         client_id: str | None = None,
         diracx_preferences: DiracxPreferences | None = None,
+        verify: bool | str = True,
         **kwargs: Any,
     ) -> None:
         diracx_preferences = diracx_preferences or get_diracx_preferences()
         self._endpoint = endpoint or diracx_preferences.url
+        if verify is True and diracx_preferences.ca_path:
+            verify = str(diracx_preferences.ca_path)
+        kwargs["connection_verify"] = verify
         self._client_id = client_id or "myDIRACClientID"
 
         # Get .well-known configuration
-        openid_configuration = get_openid_configuration(self._endpoint)
+        openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
 
         # Initialize Dirac with a Dirac-specific token credential policy
         super().__init__(
@@ -135,6 +151,7 @@ class DiracClient(DiracGenerated):
                     location=diracx_preferences.credentials_path,
                     token_endpoint=openid_configuration["token_endpoint"],
                     client_id=self._client_id,
+                    verify=verify,
                 ),
             ),
             **kwargs,
@@ -151,7 +168,12 @@ class DiracClient(DiracGenerated):
 
 
 def refresh_token(
-    location: Path, token_endpoint: str, client_id: str, refresh_token: str
+    location: Path,
+    token_endpoint: str,
+    client_id: str,
+    refresh_token: str,
+    *,
+    verify: bool | str = True,
 ) -> AccessToken:
     """Refresh the access token using the refresh_token flow."""
     from diracx.core.utils import write_credentials
@@ -163,6 +185,7 @@ def refresh_token(
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
         },
+        verify=verify,
     )
 
     if response.status_code != 200:
@@ -183,9 +206,14 @@ def refresh_token(
     return AccessToken(credentials.get("access_token"), credentials.get("expires_on"))
 
 
-def get_openid_configuration(endpoint: str) -> Dict[str, str]:
+def get_openid_configuration(
+    endpoint: str, *, verify: bool | str = True
+) -> Dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
-    response = requests.get(url=f"{endpoint}/.well-known/openid-configuration")
+    response = requests.get(
+        url=f"{endpoint}/.well-known/openid-configuration",
+        verify=verify,
+    )
     if not response.ok:
         raise RuntimeError("Cannot fetch any information from the .well-known endpoint")
     return response.json()

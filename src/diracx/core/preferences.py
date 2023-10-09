@@ -31,6 +31,7 @@ class LogLevels(Enum):
 
 class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
     url: AnyHttpUrl
+    ca_path: Path | None = None
     output_format: OutputFormats = Field(default_factory=OutputFormats.default)
     log_level: LogLevels = LogLevels.INFO
     credentials_path: Path = Field(

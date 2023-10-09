@@ -11,7 +11,7 @@ import requests
 from diracx import cli
 
 
-def do_device_flow_with_dex(url: str) -> None:
+def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     """Do the device flow with dex"""
 
     class DexLoginFormParser(HTMLParser):
@@ -22,7 +22,7 @@ def do_device_flow_with_dex(url: str) -> None:
                 action_url = urljoin(login_page_url, dict(attrs)["action"])
 
     # Get the login page
-    r = requests.get(url)
+    r = requests.get(url, verify=ca_path)
     r.raise_for_status()
     login_page_url = r.url  # This is not the same as URL as we redirect to dex
     login_page_body = r.text
@@ -36,6 +36,7 @@ def do_device_flow_with_dex(url: str) -> None:
     r = requests.post(
         action_url,
         data={"login": "admin@example.com", "password": "password"},
+        verify=ca_path,
     )
     r.raise_for_status()
     # This should have redirected to the DiracX page that shows the login is complete
@@ -58,7 +59,7 @@ async def test_login(monkeypatch, capfd, cli_env):
             match = re.search(rf"{cli_env['DIRACX_URL']}[^\n]+", captured.out)
             assert match, captured
 
-            do_device_flow_with_dex(match.group())
+            do_device_flow_with_dex(match.group(), cli_env["DIRACX_CA_PATH"])
 
         # Ensure we don't poll forever
         assert poll_attempts <= 100
