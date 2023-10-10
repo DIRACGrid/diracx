@@ -76,7 +76,7 @@ def test_auth_settings() -> AuthSettings:
     yield AuthSettings(
         token_key=pem,
         allowed_redirects=[
-            "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+            "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
     )
 

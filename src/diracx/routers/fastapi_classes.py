@@ -36,6 +36,7 @@ class DiracFastAPI(FastAPI):
             lifespan=lifespan,
             openapi_url="/api/openapi.json",
             docs_url="/api/docs",
+            swagger_ui_oauth2_redirect_url="/api/docs/oauth2-redirect",
         )
         # FIXME: when autorest will support 3.1.0
         # From 0.99.0, FastAPI is using openapi 3.1.0 by default

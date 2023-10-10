@@ -108,7 +108,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
-            "redirect_uri": "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
             "scope": "vo:lhcb property:NormalUser",
             "state": "external-state",
         },
@@ -138,7 +138,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     )
     assert r.status_code == 307, r.text
     assert urlparse(r.headers["Location"]).netloc == "diracx.test.invalid:8000"
-    assert urlparse(r.headers["Location"]).path == "/docs/oauth2-redirect"
+    assert urlparse(r.headers["Location"]).path == "/api/docs/oauth2-redirect"
     query_parameters = parse_qs(urlparse(r.headers["Location"]).query)
     assert query_parameters["state"][0] == "external-state"
     code = query_parameters["code"][0]
@@ -149,7 +149,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
         "code": code,
         "state": state,
         "client_id": DIRAC_CLIENT_ID,
-        "redirect_uri": "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+        "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         "code_verifier": code_verifier,
     }
     _get_and_check_token_response(
@@ -356,7 +356,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     new_auth_settings = AuthSettings(
         token_key=pem,
         allowed_redirects=[
-            "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+            "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
     )
     new_refresh_token = create_token(refresh_payload, new_auth_settings)
