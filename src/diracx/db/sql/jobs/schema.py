@@ -68,6 +68,7 @@ class Jobs(JobDBBase):
     JobName = Column("JobName", String(128), default="Unknown")
     Owner = Column("Owner", String(64), default="Unknown")
     OwnerGroup = Column("OwnerGroup", String(128), default="Unknown")
+    VO = Column("VO", String(32))
     SubmissionTime = NullColumn("SubmissionTime", DateTime)
     RescheduleTime = NullColumn("RescheduleTime", DateTime)
     LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
