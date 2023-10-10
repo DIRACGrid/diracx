@@ -85,10 +85,10 @@ async def test_sanity_checks(opensearch_conn_kwargs):
     db = DummyOSDB(opensearch_conn_kwargs)
     # Check that the client is not available before entering the context manager
     with pytest.raises(RuntimeError):
-        db.client.ping()
+        await db.client.ping()
 
     # It shouldn't be possible to enter the context manager twice
     async with db.client_context():
-        assert db.client.ping()
+        assert await db.client.ping()
         with pytest.raises(AssertionError):
             await db.__aenter__()
