@@ -201,7 +201,7 @@ def refresh_token(
         refresh_token=res.get("refresh_token"),
     )
 
-    write_credentials(cast(CoreTokenResponse, token_response))
+    write_credentials(cast(CoreTokenResponse, token_response), location=location)
     credentials = json.loads(location.read_text())
     return AccessToken(credentials.get("access_token"), credentials.get("expires_on"))
 
