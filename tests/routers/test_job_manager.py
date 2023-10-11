@@ -72,13 +72,13 @@ TEST_LARGE_PARAMETRIC_JDL = """
 
 def test_insert_and_list_parametric_jobs(normal_user_client):
     job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3  # Parameters.JOB_ID is 3
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    r = normal_user_client.post("/jobs/search")
+    r = normal_user_client.post("/api/jobs/search")
     assert r.status_code == 200, r.json()
 
     listed_jobs = r.json()
@@ -97,13 +97,13 @@ def test_insert_and_list_parametric_jobs(normal_user_client):
     ],
 )
 def test_insert_and_list_bulk_jobs(job_definitions, normal_user_client):
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    r = normal_user_client.post("/jobs/search")
+    r = normal_user_client.post("/api/jobs/search")
     assert r.status_code == 200, r.json()
 
     listed_jobs = r.json()
@@ -116,27 +116,27 @@ def test_insert_and_list_bulk_jobs(job_definitions, normal_user_client):
 def test_insert_and_search(normal_user_client):
     # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
     # Test /jobs/search
-    r = normal_user_client.post("/jobs/search")
+    r = normal_user_client.post("/api/jobs/search")
     assert r.status_code == 200, r.json()
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
     assert {x["VerifiedFlag"] for x in r.json()} == {True}
 
     r = normal_user_client.post(
-        "/jobs/search",
+        "/api/jobs/search",
         json={"search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}]},
     )
     assert r.status_code == 200, r.json()
     assert r.json() == []
 
     r = normal_user_client.post(
-        "/jobs/search",
+        "/api/jobs/search",
         json={
             "search": [
                 {
@@ -151,7 +151,7 @@ def test_insert_and_search(normal_user_client):
     assert [x["JobID"] for x in r.json()] == submitted_job_ids
 
     r = normal_user_client.post(
-        "/jobs/search", json={"parameters": ["JobID", "Status"]}
+        "/api/jobs/search", json={"parameters": ["JobID", "Status"]}
     )
     assert r.status_code == 200, r.json()
     assert r.json() == [
@@ -160,7 +160,7 @@ def test_insert_and_search(normal_user_client):
 
     # Test /jobs/summary
     r = normal_user_client.post(
-        "/jobs/summary", json={"grouping": ["Status", "OwnerGroup"]}
+        "/api/jobs/summary", json={"grouping": ["Status", "OwnerGroup"]}
     )
     assert r.status_code == 200, r.json()
 
@@ -169,7 +169,7 @@ def test_insert_and_search(normal_user_client):
     ]
 
     r = normal_user_client.post(
-        "/jobs/summary",
+        "/api/jobs/summary",
         json={
             "grouping": ["Status"],
             "search": [
@@ -185,7 +185,7 @@ def test_insert_and_search(normal_user_client):
     assert r.json() == [{"Status": JobStatus.RECEIVED.value, "count": 1}]
 
     r = normal_user_client.post(
-        "/jobs/summary",
+        "/api/jobs/summary",
         json={
             "grouping": ["Status"],
             "search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}],
@@ -200,7 +200,7 @@ def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
 ):
     """Test that a user cannot submit a parametric JDL greater than the max parametric jobs"""
     job_definitions = [TEST_LARGE_PARAMETRIC_JDL]
-    res = normal_user_client.post("/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
@@ -209,7 +209,7 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
 ):
     """Test that a user cannot submit a list of JDL greater than the max number of jobs"""
     job_definitions = [TEST_JDL for _ in range(100)]
-    res = normal_user_client.post("/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
@@ -220,12 +220,12 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
 def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
     normal_user_client, job_definitions
 ):
-    res = normal_user_client.post("/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
 def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_client):
-    res = admin_user_client.post("/jobs/", json=[TEST_JDL])
+    res = admin_user_client.post("/api/jobs/", json=[TEST_JDL])
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
 
 
@@ -233,13 +233,13 @@ def test_get_job_status(normal_user_client: TestClient):
     """Test that the job status is returned correctly."""
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1  # Parameters.JOB_ID is 3
     job_id = r.json()[0]["JobID"]
 
     # Act
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -252,7 +252,7 @@ def test_get_job_status(normal_user_client: TestClient):
 def test_get_status_of_nonexistent_job(normal_user_client: TestClient):
     """Test that the job status is returned correctly."""
     # Act
-    r = normal_user_client.get("/jobs/1/status")
+    r = normal_user_client.get("/api/jobs/1/status")
 
     # Assert
     assert r.status_code == 404, r.json()
@@ -263,7 +263,7 @@ def test_get_job_status_in_bulk(normal_user_client: TestClient):
     """Test that we can get the status of multiple jobs in one request"""
     # Arrange
     job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3  # Parameters.JOB_ID is 3
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -271,7 +271,9 @@ def test_get_job_status_in_bulk(normal_user_client: TestClient):
     assert (isinstance(submitted_job_id, int) for submitted_job_id in submitted_job_ids)
 
     # Act
-    r = normal_user_client.get("/jobs/status", params={"job_ids": submitted_job_ids})
+    r = normal_user_client.get(
+        "/api/jobs/status", params={"job_ids": submitted_job_ids}
+    )
 
     # Assert
     print(r.json())
@@ -288,12 +290,12 @@ async def test_get_job_status_history(normal_user_client: TestClient):
     # Arrange
     job_definitions = [TEST_JDL]
     before = datetime.now(timezone.utc)
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     after = datetime.now(timezone.utc)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
@@ -303,7 +305,7 @@ async def test_get_job_status_history(normal_user_client: TestClient):
     NEW_MINOR_STATUS = "JobPath"
     beforebis = datetime.now(timezone.utc)
     r = normal_user_client.put(
-        f"/jobs/{job_id}/status",
+        f"/api/jobs/{job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -318,7 +320,7 @@ async def test_get_job_status_history(normal_user_client: TestClient):
 
     # Act
     r = normal_user_client.get(
-        f"/jobs/{job_id}/status/history",
+        f"/api/jobs/{job_id}/status/history",
     )
 
     # Assert
@@ -347,18 +349,18 @@ async def test_get_job_status_history(normal_user_client: TestClient):
 def test_get_job_status_history_in_bulk(normal_user_client: TestClient):
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
     assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
 
     # Act
-    r = normal_user_client.get("/jobs/status/history", params={"job_ids": [job_id]})
+    r = normal_user_client.get("/api/jobs/status/history", params={"job_ids": [job_id]})
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -373,11 +375,11 @@ def test_get_job_status_history_in_bulk(normal_user_client: TestClient):
 def test_set_job_status(normal_user_client: TestClient):
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
@@ -387,7 +389,7 @@ def test_set_job_status(normal_user_client: TestClient):
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/jobs/{job_id}/status",
+        f"/api/jobs/{job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -401,7 +403,7 @@ def test_set_job_status(normal_user_client: TestClient):
     assert r.json()[str(job_id)]["Status"] == NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
@@ -411,7 +413,7 @@ def test_set_job_status(normal_user_client: TestClient):
 def test_set_job_status_invalid_job(normal_user_client: TestClient):
     # Act
     r = normal_user_client.put(
-        "/jobs/1/status",
+        "/api/jobs/1/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": JobStatus.CHECKING.value,
@@ -430,7 +432,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
 ):
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
@@ -438,7 +440,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
     # Act
     date = datetime.utcnow().isoformat(sep=" ")
     r = normal_user_client.put(
-        f"/jobs/{job_id}/status",
+        f"/api/jobs/{job_id}/status",
         json={
             date: {
                 "Status": JobStatus.CHECKING.value,
@@ -457,11 +459,11 @@ def test_set_job_status_cannot_make_impossible_transitions(
 ):
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
@@ -471,7 +473,7 @@ def test_set_job_status_cannot_make_impossible_transitions(
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/jobs/{job_id}/status",
+        f"/api/jobs/{job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -485,7 +487,7 @@ def test_set_job_status_cannot_make_impossible_transitions(
     assert r.json()[str(job_id)]["Status"] != NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] != NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
@@ -495,11 +497,11 @@ def test_set_job_status_cannot_make_impossible_transitions(
 def test_set_job_status_force(normal_user_client: TestClient):
     # Arrange
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
@@ -509,7 +511,7 @@ def test_set_job_status_force(normal_user_client: TestClient):
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/jobs/{job_id}/status",
+        f"/api/jobs/{job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -524,7 +526,7 @@ def test_set_job_status_force(normal_user_client: TestClient):
     assert r.json()[str(job_id)]["Status"] == NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(job_id)]["Status"] == NEW_STATUS
     assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
@@ -534,13 +536,13 @@ def test_set_job_status_force(normal_user_client: TestClient):
 def test_set_job_status_bulk(normal_user_client: TestClient):
     # Arrange
     job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3
     job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
     for job_id in job_ids:
-        r = normal_user_client.get(f"/jobs/{job_id}/status")
+        r = normal_user_client.get(f"/api/jobs/{job_id}/status")
         assert r.status_code == 200, r.json()
         assert r.json()[str(job_id)]["Status"] == JobStatus.SUBMITTING.value
         assert r.json()[str(job_id)]["MinorStatus"] == "Bulk transaction confirmation"
@@ -549,7 +551,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient):
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        "/jobs/status",
+        "/api/jobs/status",
         json={
             job_id: {
                 datetime.now(timezone.utc).isoformat(): {
@@ -567,7 +569,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient):
         assert r.json()[str(job_id)]["Status"] == NEW_STATUS
         assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-        r_get = normal_user_client.get(f"/jobs/{job_id}/status")
+        r_get = normal_user_client.get(f"/api/jobs/{job_id}/status")
         assert r_get.status_code == 200, r_get.json()
         assert r_get.json()[str(job_id)]["Status"] == NEW_STATUS
         assert r_get.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
@@ -577,7 +579,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient):
 def test_set_job_status_with_invalid_job_id(normal_user_client: TestClient):
     # Act
     r = normal_user_client.put(
-        "/jobs/999999999/status",
+        "/api/jobs/999999999/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": JobStatus.CHECKING.value,

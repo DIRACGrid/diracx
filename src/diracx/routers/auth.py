@@ -606,7 +606,7 @@ def parse_and_validate_scope(
     else:
         vo = vos[0]
         if vo not in config.Registry:
-            raise ValueError(f"VO {vo} is not known to his installation")
+            raise ValueError(f"VO {vo} is not known to this installation")
 
     if not groups:
         # TODO: Handle multiple groups correctly

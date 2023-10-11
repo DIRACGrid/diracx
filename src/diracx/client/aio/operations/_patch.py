@@ -45,7 +45,7 @@ def build_token_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/auth/token"
+    _url = "/api/auth/token"
     _url: str = _format_url_section(_url)
 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -125,4 +125,4 @@ class JobsOperations(JobsOperationsGenerated):
         # TODO: The BytesIO here is only needed to satify the typing
         # Probably an autorest bug
         body_data = io.BytesIO(json.dumps(body).encode("utf-8"))
-        return await super().search(body_data, **kwargs)
+        return await super().summary(body_data, **kwargs)

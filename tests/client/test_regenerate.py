@@ -18,7 +18,7 @@ def test_regenerate_client(test_client, tmp_path):
 
     WARNING: This test will modify the source code of the client!
     """
-    r = test_client.get("/openapi.json")
+    r = test_client.get("/api/openapi.json")
     r.raise_for_status()
 
     openapi_spec = tmp_path / "openapi.json"

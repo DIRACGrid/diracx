@@ -21,6 +21,17 @@ from .schema import (
 )
 
 
+def _get_columns(table, parameters):
+    columns = [x for x in table.columns]
+    if parameters:
+        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
+            raise InvalidQueryError(
+                f"Unrecognised parameters requested {unrecognised_parameters}"
+            )
+        columns = [c for c in columns if c.name in parameters]
+    return columns
+
+
 class JobDB(BaseSQLDB):
     metadata = JobDBBase.metadata
 
@@ -30,7 +41,7 @@ class JobDB(BaseSQLDB):
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
-        columns = [Jobs.__table__.columns[x] for x in group_by]
+        columns = _get_columns(Jobs.__table__, group_by)
 
         stmt = select(*columns, func.count(Jobs.JobID).label("count"))
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
@@ -47,21 +58,17 @@ class JobDB(BaseSQLDB):
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
     ) -> list[dict[str, Any]]:
         # Find which columns to select
-        columns = [x for x in Jobs.__table__.columns]
-        if parameters:
-            if unrecognised_parameters := set(parameters) - set(
-                Jobs.__table__.columns.keys()
-            ):
-                raise InvalidQueryError(
-                    f"Unrecognised parameters requested {unrecognised_parameters}"
-                )
-            columns = [c for c in columns if c.name in parameters]
+        columns = _get_columns(Jobs.__table__, parameters)
         stmt = select(*columns)
 
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
         # Apply any sort constraints
         for sort in sorts:
+            if sort["parameter"] not in Jobs.__table__.columns:
+                raise InvalidQueryError(
+                    f"Cannot sort by {sort['parameter']}: unknown column"
+                )
             column = Jobs.__table__.columns[sort["parameter"]]
             if sort["direction"] == "asc":
                 column = column.asc()

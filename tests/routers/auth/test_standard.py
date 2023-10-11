@@ -102,13 +102,13 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     r = test_client.get(
-        "/auth/authorize",
+        "/api/auth/authorize",
         params={
             "response_type": "code",
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
-            "redirect_uri": "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
             "scope": "vo:lhcb property:NormalUser",
             "state": "external-state",
         },
@@ -138,7 +138,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     )
     assert r.status_code == 307, r.text
     assert urlparse(r.headers["Location"]).netloc == "diracx.test.invalid:8000"
-    assert urlparse(r.headers["Location"]).path == "/docs/oauth2-redirect"
+    assert urlparse(r.headers["Location"]).path == "/api/docs/oauth2-redirect"
     query_parameters = parse_qs(urlparse(r.headers["Location"]).query)
     assert query_parameters["state"][0] == "external-state"
     code = query_parameters["code"][0]
@@ -149,7 +149,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
         "code": code,
         "state": state,
         "client_id": DIRAC_CLIENT_ID,
-        "redirect_uri": "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+        "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         "code_verifier": code_verifier,
     }
     _get_and_check_token_response(
@@ -158,7 +158,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     # Ensure the token request doesn't work a second time
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
 
@@ -166,7 +166,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
-        "/auth/device",
+        "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
@@ -183,7 +183,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
 
     # Check that token requests return "authorization_pending"
     r = test_client.post(
-        "/auth/token",
+        "/api/auth/token",
         data={
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": data["device_code"],
@@ -234,7 +234,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     # Ensure the token request doesn't work a second time
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
 
@@ -275,7 +275,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
 
     # User uses the initial refresh token to get a new one
     # The server should detect the breach and revoke every token bound to User
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 400, data
     assert (
@@ -287,7 +287,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     # In theory, new_refresh_token has not been revoked since it is the latest one
     # But because a breach was detected, it should also be revoked
     request_data["refresh_token"] = new_refresh_token
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 400, data
     assert (
@@ -326,7 +326,7 @@ async def test_refresh_token_expired(
 
     # Try to get a new access token using the invalid refresh token
     # The server should detect that it is not encoded properly
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
@@ -356,7 +356,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     new_auth_settings = AuthSettings(
         token_key=pem,
         allowed_redirects=[
-            "http://diracx.test.invalid:8000/docs/oauth2-redirect",
+            "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
     )
     new_refresh_token = create_token(refresh_payload, new_auth_settings)
@@ -372,7 +372,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
 
     # Try to get a new access token using the invalid refresh token
     # The server should detect that it is not encoded properly
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "Invalid JWT: bad_signature: "
@@ -392,7 +392,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
 
     # Normal user lists his/her refresh tokens
     r = test_client.get(
-        "/auth/refresh-tokens",
+        "/api/auth/refresh-tokens",
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -406,7 +406,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
 
     # Token manager lists refresh tokens: should get his/her own and the normal user's one
     r = test_client.get(
-        "/auth/refresh-tokens",
+        "/api/auth/refresh-tokens",
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
@@ -425,7 +425,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
 
     # Normal user lists his/her refresh tokens again
     r = test_client.get(
-        "/auth/refresh-tokens",
+        "/api/auth/refresh-tokens",
         headers={"Authorization": f"Bearer {response_data['access_token']}"},
     )
     data = r.json()
@@ -434,7 +434,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
 
     # Token manager lists refresh tokens: should get his/her own and the normal user's one
     r = test_client.get(
-        "/auth/refresh-tokens",
+        "/api/auth/refresh-tokens",
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
@@ -471,7 +471,7 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete a random and non-existing RT: should raise an error
     r = test_client.delete(
-        "/auth/refresh-tokens/does-not-exists",
+        "/api/auth/refresh-tokens/does-not-exists",
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -479,7 +479,7 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete token manager's RT: should not work
     r = test_client.delete(
-        f"/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -487,7 +487,7 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete his/her RT: should work
     r = test_client.delete(
-        f"/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -495,7 +495,7 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete his/her RT again: should work
     r = test_client.delete(
-        f"/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -530,7 +530,7 @@ async def test_revoke_refresh_tokens_token_manager(
 
     # Token manager tries to delete token manager's RT: should work
     r = test_client.delete(
-        f"/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
@@ -538,7 +538,7 @@ async def test_revoke_refresh_tokens_token_manager(
 
     # Token manager tries to delete his/her RT: should work
     r = test_client.delete(
-        f"/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
@@ -551,7 +551,7 @@ def _get_tokens(
     """Get a pair of tokens (access, refresh) through a device flow code"""
     # User Initiates a device flow (would normally be done from CLI)
     r = test_client.post(
-        "/auth/device",
+        "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
@@ -572,7 +572,7 @@ def _get_tokens(
 
     # User gets a TokenResponse: should contain an access and a refresh tokens
     r = test_client.post(
-        "/auth/token",
+        "/api/auth/token",
         data={
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": data["device_code"],
@@ -585,7 +585,7 @@ def _get_tokens(
 def _get_and_check_token_response(test_client, request_data):
     """Get a token and check that mandatory fields are present"""
     # Check that token request now works
-    r = test_client.post("/auth/token", data=request_data)
+    r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 200, r.json()
     response_data = r.json()
     assert response_data["access_token"]

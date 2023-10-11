@@ -7,7 +7,7 @@ from diracx.routers.auth import AuthSettings
 from .dependencies import Config
 from .fastapi_classes import DiracxRouter
 
-router = DiracxRouter(require_auth=False)
+router = DiracxRouter(require_auth=False, path_root="")
 
 
 @router.get("/openid-configuration")

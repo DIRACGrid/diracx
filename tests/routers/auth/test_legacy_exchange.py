@@ -17,7 +17,7 @@ def legacy_credentials(monkeypatch):
 
 async def test_valid(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers=legacy_credentials,
     )
@@ -25,7 +25,7 @@ async def test_valid(test_client, legacy_credentials):
     access_token = r.json()["access_token"]
 
     r = test_client.get(
-        "/auth/userinfo", headers={"Authorization": f"Bearer {access_token}"}
+        "/api/auth/userinfo", headers={"Authorization": f"Bearer {access_token}"}
     )
     assert r.status_code == 200
     user_info = r.json()
@@ -37,7 +37,7 @@ async def test_valid(test_client, legacy_credentials):
 
 async def test_disabled(test_client):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers={"Authorization": "Bearer diracx:legacy:ChangeME"},
     )
@@ -46,7 +46,7 @@ async def test_disabled(test_client):
 
 async def test_no_credentials(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers={"Authorization": "Bearer invalid"},
     )
@@ -56,7 +56,7 @@ async def test_no_credentials(test_client, legacy_credentials):
 
 async def test_invalid_credentials(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers={"Authorization": "Bearer invalid"},
     )
@@ -66,7 +66,7 @@ async def test_invalid_credentials(test_client, legacy_credentials):
 
 async def test_wrong_credentials(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers={"Authorization": "Bearer diracx:legacy:ChangeME"},
     )
@@ -76,7 +76,7 @@ async def test_wrong_credentials(test_client, legacy_credentials):
 
 async def test_unknown_vo(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:unknown group:lhcb_user"},
         headers=legacy_credentials,
     )
@@ -86,7 +86,7 @@ async def test_unknown_vo(test_client, legacy_credentials):
 
 async def test_unknown_group(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:unknown"},
         headers=legacy_credentials,
     )
@@ -96,7 +96,7 @@ async def test_unknown_group(test_client, legacy_credentials):
 
 async def test_unknown_user(test_client, legacy_credentials):
     r = test_client.get(
-        "/auth/legacy-exchange",
+        "/api/auth/legacy-exchange",
         params={"preferred_username": "unknown", "scope": "vo:lhcb group:lhcb_user"},
         headers=legacy_credentials,
     )

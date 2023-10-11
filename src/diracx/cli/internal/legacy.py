@@ -84,7 +84,7 @@ def _apply_fixes(raw, conversion_config: Path):
     raw["DIRAC"].pop("DefaultGroup", None)
 
     # Check that we have the config for all the VOs
-    vos = set(raw["Registry"]["VO"])
+    vos = set(raw["Registry"].get("VO", []))
     if non_configured_vos := vos - set(conv_config.VOs):
         print(f"{non_configured_vos} don't have a migration config, ignoring")
 

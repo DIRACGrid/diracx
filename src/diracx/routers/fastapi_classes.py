@@ -34,6 +34,9 @@ class DiracFastAPI(FastAPI):
             generate_unique_id_function=lambda route: f"{route.tags[0]}_{route.name}",
             title="Dirac",
             lifespan=lifespan,
+            openapi_url="/api/openapi.json",
+            docs_url="/api/docs",
+            swagger_ui_oauth2_redirect_url="/api/docs/oauth2-redirect",
         )
         # FIXME: when autorest will support 3.1.0
         # From 0.99.0, FastAPI is using openapi 3.1.0 by default
@@ -59,6 +62,8 @@ class DiracxRouter(APIRouter):
         *,
         dependencies=None,
         require_auth: bool = True,
+        path_root: str = "/api",
     ):
         super().__init__(dependencies=dependencies)
         self.diracx_require_auth = require_auth
+        self.diracx_path_root = path_root

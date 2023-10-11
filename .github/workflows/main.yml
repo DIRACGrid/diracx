@@ -53,7 +53,7 @@ jobs:
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-coverage --exit-when-done $PWD
+          ../diracx-charts/run_demo.sh --enable-coverage --exit-when-done --set-value developer.autoReload=false $PWD
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo

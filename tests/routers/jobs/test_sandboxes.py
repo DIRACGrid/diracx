@@ -19,7 +19,7 @@ def test_upload_then_download(
 
     # Initiate the upload
     r = normal_user_client.post(
-        "/jobs/sandbox",
+        "/api/jobs/sandbox",
         json={
             "checksum_algorithm": "sha256",
             "checksum": checksum,
@@ -39,7 +39,7 @@ def test_upload_then_download(
     assert r.status_code == 204, r.text
 
     # Make sure we can download it and get the same data back
-    r = normal_user_client.get("/jobs/sandbox", params={"pfn": sandbox_pfn})
+    r = normal_user_client.get("/api/jobs/sandbox", params={"pfn": sandbox_pfn})
     assert r.status_code == 200, r.text
     download_info = r.json()
     assert download_info["expires_in"] > 5
@@ -54,7 +54,7 @@ def test_upload_then_download(
 
     # Make sure another user can't download the sandbox
     r = normal_user_client.get(
-        "/jobs/sandbox",
+        "/api/jobs/sandbox",
         params={"pfn": sandbox_pfn},
         headers={"Authorization": f"Bearer {other_user_token}"},
     )
@@ -68,7 +68,7 @@ def test_upload_oversized(normal_user_client: TestClient):
 
     # Initiate the upload
     r = normal_user_client.post(
-        "/jobs/sandbox",
+        "/api/jobs/sandbox",
         json={
             "checksum_algorithm": "sha256",
             "checksum": checksum,
