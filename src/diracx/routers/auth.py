@@ -254,6 +254,8 @@ async def exchange_token(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
+    *,
+    refresh_token_expire_minutes: int | None = None,
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
     # Extract dirac attributes from the OIDC scope
@@ -294,9 +296,11 @@ async def exchange_token(
     )
 
     # Generate refresh token payload
+    if refresh_token_expire_minutes is None:
+        refresh_token_expire_minutes = settings.refresh_token_expire_minutes
     refresh_payload = {
         "jti": jti,
-        "exp": creation_time + timedelta(minutes=settings.refresh_token_expire_minutes),
+        "exp": creation_time + timedelta(minutes=refresh_token_expire_minutes),
     }
 
     # Generate access token payload
@@ -1037,6 +1041,7 @@ async def legacy_exchange(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
     config: Config,
+    expires_minutes: int | None = None,
 ):
     """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange.
 
@@ -1097,4 +1102,5 @@ async def legacy_exchange(
         config,
         settings,
         available_properties,
+        refresh_token_expire_minutes=expires_minutes,
     )
