@@ -90,7 +90,7 @@ Refresh tokens have a longer lifetime and are verified by a central service. Ref
 
 The access token profile contains the standardised fields from RFC-7519 (`sub`, `aud`, `iss`, `jti`) and OpenID Connect Core 1.0 (`preferred_username`). The `sub` field is unique per person per VO and there is a single issuer per installation. In addition, the token contains DiracX-specific fields:
 
-* `vo`: String containing the name of the virtual Organisation to which the user belongs. This field may change if it becomes a registered field following the merge of WLCG,EGI and Scikit profiles, in which case we would adapt.
+* `vo`: String containing the name of the virtual Organisation to which the user belongs. This field may change if it becomes a registered field following the merge of WLCG, EGI and SciTokens profiles, in which case we would adapt.
 * `dirac_group`: String containing the name of the current group that the user is acting as a member of. This is used only for identity purposes.
 * `dirac_capabilities`: A list of strings representing the DiracX-specific permissions for authentication.
 
