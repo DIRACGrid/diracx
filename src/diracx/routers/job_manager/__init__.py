@@ -378,15 +378,102 @@ async def search(
                 "value": user_info.sub,
             }
         )
-    # TODO: Pagination
-    return await job_db.search(
-        body.parameters,
-        body.search,
-        body.sort,
-        distinct=body.distinct,
-        page=page,
-        per_page=per_page,
-    )
+
+    # TODO: Put a property to BaseSQLDB so this can be JobDB.tables.Jobs
+    default_params = [c.name for c in job_db.metadata.tables["Jobs"].columns]
+    # By default only the contents of the Jobs table is returned
+    sql_columns = set(default_params)
+    for table_name in ["JobJDLs"]:
+        sql_columns |= {c.name for c in job_db.metadata.tables[table_name].columns}
+    # TODO: Support opensearch
+    os_fields = set()  # set(job_parameters_db.fields)
+
+    # Ensure all of the requested parameters are known
+    # TODO: Do we need to be able to support arbitrary job parameters?
+    response_params: list[str] = body.parameters or default_params
+    if unrecognised_params := set(response_params) - (sql_columns | os_fields):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"Requested unknown parameters: {unrecognised_params}",
+        )
+
+    # Ensure the search parameters can be satisfied by a single DB technology
+    search_params = {x["parameter"] for x in body.search}
+    if unrecognised_params := search_params - (sql_columns | os_fields):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"Requested unknown search parameters: {unrecognised_params}",
+        )
+    if not search_params:
+        sql_search = None
+    elif search_params.issubset(sql_columns):
+        sql_search = True
+    elif search_params.issubset(os_fields):
+        sql_search = False
+    else:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=(
+                f"Can not search by {search_params - sql_columns} at the "
+                f"same time as {search_params - os_fields}."
+            ),
+        )
+
+    # Ensure the sort parameters can be satisfied by a single DB technology
+    sort_parameters = {x["parameter"] for x in body.sort}
+    if unrecognised_params := sort_parameters - (sql_columns | os_fields):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"Requested unknown sort parameters: {unrecognised_params}",
+        )
+    if not sort_parameters:
+        sql_sort = None
+    elif sort_parameters.issubset(sql_columns):
+        sql_sort = True
+    elif sort_parameters.issubset(os_fields):
+        sql_sort = False
+    else:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=(
+                f"Can not search by {search_params - sql_columns} at the "
+                f"same time as {search_params - os_fields}."
+            ),
+        )
+
+    # If the request can be satisfied by either DB, prefer SQL
+    if sql_search is None and sql_sort is None:
+        sql_search = True
+
+    # Ensure that the search and sort can be done with the same DB technology
+    sql_search = sql_sort if sql_search is None else sql_search
+    sql_sort = sql_search if sql_sort is None else sql_sort
+    if sql_search != sql_sort:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=(
+                f"Searches by {search_params} can only be sorted by {sql_columns}."
+            ),
+        )
+
+    if sql_search:
+        results = await job_db.search(
+            # We don't use a set here as we want to maintain the column ordering
+            [c for c in response_params if c in sql_columns],
+            body.search,
+            body.sort,
+            distinct=body.distinct,
+            page=page,
+            per_page=per_page,
+        )
+        if os_params := set(response_params) - sql_columns:
+            # TODO: Don't forget to maintain column order
+            raise NotImplementedError(
+                "TODO: Support querying some parameters from opensearch"
+            )
+    else:
+        raise NotImplementedError("TODO: Support opensearch")
+    return results
 
 
 @router.post("/summary")
