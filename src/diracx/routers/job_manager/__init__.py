@@ -53,6 +53,7 @@ class JobSearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []
+    distinct: bool = False
 
     @root_validator
     def validate_fields(cls, v):
@@ -379,7 +380,12 @@ async def search(
         )
     # TODO: Pagination
     return await job_db.search(
-        body.parameters, body.search, body.sort, page=page, per_page=per_page
+        body.parameters,
+        body.search,
+        body.sort,
+        distinct=body.distinct,
+        page=page,
+        per_page=per_page,
     )
 
 

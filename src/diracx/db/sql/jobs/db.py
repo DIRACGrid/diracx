@@ -55,11 +55,20 @@ class JobDB(BaseSQLDB):
         ]
 
     async def search(
-        self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
+        self,
+        parameters,
+        search,
+        sorts,
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
     ) -> list[dict[str, Any]]:
         # Find which columns to select
         columns = _get_columns(Jobs.__table__, parameters)
         stmt = select(*columns)
+        if distinct:
+            stmt = stmt.distinct()
 
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
