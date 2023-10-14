@@ -356,6 +356,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
+    # job_parameters_db: JobParametersDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     page: int = 0,
     per_page: int = 100,
@@ -407,6 +408,7 @@ async def search(
     if not search_params:
         sql_search = None
     elif search_params.issubset(sql_columns):
+        # TODO: Limit to indexed columns?
         sql_search = True
     elif search_params.issubset(os_fields):
         sql_search = False

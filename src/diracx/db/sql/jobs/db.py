@@ -21,15 +21,18 @@ from .schema import (
 )
 
 
-def _get_columns(table, parameters):
-    columns = [x for x in table.columns]
-    if parameters:
-        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
-            raise InvalidQueryError(
-                f"Unrecognised parameters requested {unrecognised_parameters}"
-            )
-        columns = [c for c in columns if c.name in parameters]
-    return columns
+def _get_columns(tables, parameters):
+    assert parameters, "TODO: Not needed when JobDB.summary is updated"
+    columns = {}
+    # Iterate in reverse order so we prefer using the first possible table.
+    # i.e. if tables = [Jobs, JobJDLs] we should prefer getting JobID from
+    # Jobs.JobID instead of JobJDLs.JobID
+    for table in tables[::-1]:
+        # We prefer getting columns from
+        columns |= {c.name: c for c in table.columns}
+    if unrecognised := set(parameters) - set(columns):
+        raise InvalidQueryError(f"Unrecognised parameters requested {unrecognised}")
+    return [columns[c] for c in parameters]
 
 
 class JobDB(BaseSQLDB):
@@ -41,7 +44,8 @@ class JobDB(BaseSQLDB):
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
-        columns = _get_columns(Jobs.__table__, group_by)
+        columns = _get_columns([Jobs.__table__], group_by)
+        # TODO: We probably now need a join
 
         stmt = select(*columns, func.count(Jobs.JobID).label("count"))
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
@@ -64,8 +68,10 @@ class JobDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> list[dict[str, Any]]:
+        tables = [Jobs.__table__, JobJDLs.__table__]
+        # TODO: We probably now need a join
         # Find which columns to select
-        columns = _get_columns(Jobs.__table__, parameters)
+        columns = _get_columns(tables, parameters)
         stmt = select(*columns)
         if distinct:
             stmt = stmt.distinct()
