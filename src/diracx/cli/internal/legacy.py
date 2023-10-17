@@ -1,9 +1,16 @@
+import base64
+import hashlib
+import json
 import os
 from pathlib import Path
+from typing import cast
+from urllib.parse import urljoin, urlparse
 
 import diraccfg
+import typer
 import yaml
 from pydantic import BaseModel
+from typer import Option
 
 from diracx.core.config import Config
 
@@ -136,3 +143,134 @@ def _apply_fixes(raw, conversion_config: Path):
                     # We ignore the DN and CA
                     raw["Registry"][vo]["Users"][subject].pop("DN", None)
                     raw["Registry"][vo]["Users"][subject].pop("CA", None)
+
+
+@app.command()
+def generate_helm_values(
+    public_cfg: Path = Option(help="Path to the cfg file served by the CS"),
+    secret_cfg: Path = Option(
+        default=None, help="Path to the cfg containing the secret"
+    ),
+    output_file: Path = Option(help="Where to dump the yam file"),
+):
+    """Generate an initial values.yaml to run a DiracX installation
+    compatible with a DIRAC instance. The file is not complete, and needs
+    manual editing"""
+
+    helm_values = {
+        "developer": {"enabled": False},
+        "init-cs": {"enabled": True},
+        "init-secrets": {"enabled": True},
+        "init-sql": {"enabled": False, "env": {}},
+        "cert-manager": {"enabled": False},
+        "cert-manager-issuer": {"enabled": False},
+        "minio": {"enabled": False},
+        "dex": {"enabled": False},
+        "opensearch": {"enabled": False},
+        "ingress": {
+            "enabled": True,
+            "className": None,
+            "tlsSecretName": None,
+            "annotations": {
+                "route.openshift.io/termination": "edge",
+                "haproxy.router.openshift.io/ip_whitelist": "",
+            },
+        },
+        "rabbitmq": {"enabled": False},
+        "mysql": {"enabled": False},
+        "diracx": {
+            "manageOSIndices": False,
+            "mysqlDatabases": [],
+            "osDatabases": [],
+            "settings": {},
+        },
+    }
+
+    cfg = diraccfg.CFG().loadFromBuffer(public_cfg.read_text())
+
+    if secret_cfg:
+        cfg = cfg.mergeWith(diraccfg.CFG().loadFromBuffer(secret_cfg.read_text()))
+
+    cfg = cast(dict, cfg.getAsDict())
+
+    diracx_url = cfg["DiracX"]["URL"]
+    diracx_hostname = urlparse(diracx_url).netloc.split(":", 1)[0]
+    # Remove the port
+    diracx_config = {
+        "manageOSIndices": False,
+        "mysqlDatabases": [],
+        "osDatabases": [],
+        "settings": {},
+    }
+
+    diracx_settings: dict[str, str] = {}
+    diracx_config["settings"] = diracx_settings
+    helm_values["diracx"] = diracx_config
+    diracx_config["hostname"] = diracx_hostname
+
+    diracx_settings["DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS"] = json.dumps(
+        [
+            urljoin(diracx_url, "api/docs/oauth2-redirect"),
+            urljoin(diracx_url, "/#authentication-callback"),
+        ]
+    )
+
+    default_db_user = cfg["Systems"].get("Databases", {}).get("User")
+    default_db_password = cfg["Systems"].get("Databases", {}).get("Password")
+
+    default_setup = cfg["DIRAC"]["Setup"]
+
+    all_db_configs = {}
+    for system, system_config in cfg["Systems"].items():
+        system_setup = cfg["DIRAC"]["Setups"][default_setup].get(system, None)
+        if system_setup:
+            all_db_configs.update(system_config[system_setup].get("Databases", {}))
+
+    from diracx.core.extensions import select_from_extension
+
+    for entry_point in select_from_extension(group="diracx.db.sql"):
+        db_name = entry_point.name
+        # There is a DIRAC AuthDB, but it is not the same
+        # as the DiracX one
+        if db_name == "AuthDB":
+            url_name = "DIRACX_DB_URL_AUTHDB"
+            connection_string = "FILL ME: I am a new DB, create me"
+        else:
+            db_config = all_db_configs[db_name]
+            url_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
+            db_user = db_config.get("User", default_db_user)
+            db_password = db_config.get("Password", default_db_password)
+            db_host = db_config["Host"]
+            db_port = db_config["Port"]
+            indb_name = db_config["DBName"]
+
+            connection_string = f"mysql+aiomysql://{db_user}:{db_password}@{db_host}:{db_port}/{indb_name}"
+        diracx_settings[url_name] = connection_string
+
+    # Settings for the legacy
+    try:
+        diracx_settings["DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY"] = hashlib.sha256(
+            base64.urlsafe_b64decode(cfg["DiracX"]["LegacyExchangeApiKey"])
+        ).hexdigest()
+    except KeyError:
+        typer.echo(
+            "ERROR: you must have '/DiracX/LegacyExchangeApiKey' already set", err=True
+        )
+        raise typer.Exit(1) from None
+    # Sandboxstore settings
+    # TODO: Integrate minio for production use (ingress, etc)
+    # By default, take the server hostname and prepend "sandboxes"
+    diracx_settings[
+        "DIRACX_SANDBOX_STORE_BUCKET_NAME"
+    ] = f"{diracx_hostname.split('.')[0]}-sandboxes"
+    diracx_settings["DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS"] = json.dumps(
+        {
+            "endpoint_url": "FILL ME",
+            "aws_access_key_id": "FILL ME",
+            "aws_secret_access_key": "FILL ME",
+        }
+    )
+
+    diracx_settings["DIRACX_SERVICE_JOBS_ENABLED"] = "true"
+    diracx_settings["DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET"] = "true"
+    output_file.write_text(yaml.safe_dump(helm_values))
