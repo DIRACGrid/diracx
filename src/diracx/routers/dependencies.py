@@ -16,6 +16,7 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.db.os import JobParametersDB as _JobParametersDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
@@ -36,6 +37,7 @@ JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
 SandboxMetadataDB = Annotated[
     _SandboxMetadataDB, Depends(_SandboxMetadataDB.transaction)
 ]
+JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]
