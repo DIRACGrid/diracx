@@ -175,15 +175,7 @@ async def get_sandbox_file(
     pfn = pfn.split("|", 1)[-1]
     required_prefix = (
         "/"
-        + "/".join(
-            [
-                "S3",
-                settings.bucket_name,
-                user_info.vo,
-                user_info.dirac_group,
-                user_info.preferred_username,
-            ]
-        )
+        + f"S3/{settings.bucket_name}/{user_info.vo}/{user_info.dirac_group}/{user_info.preferred_username}"
         + "/"
     )
     if not pfn.startswith(required_prefix):

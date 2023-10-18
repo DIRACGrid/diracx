@@ -7,11 +7,22 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 
 [tool.ruff]
-select = ["E", "F", "B", "I", "PLE"]
+select = [
+    "E",    # pycodestyle errrors
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "PLE",  # pylint errors
+    # "UP",   # pyUpgrade
+    "FLY",  # flynt
+]
 ignore = ["B905", "B008", "B006"]
 line-length = 120
 src = ["src", "tests"]
 exclude = ["src/diracx/client/"]
+
+[tool.isort]
+profile = "black"
 
 [tool.ruff.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
