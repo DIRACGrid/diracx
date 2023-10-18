@@ -2,7 +2,9 @@ import logging
 from importlib.metadata import PackageNotFoundError, version
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    # level=logging.DEBUG, format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    level=logging.WARNING,
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
 
 try:
