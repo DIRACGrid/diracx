@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import Request
 
 from diracx.routers.auth import AuthSettings
@@ -40,3 +42,27 @@ async def openid_configuration(
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
     }
+
+
+@router.get("/dirac")
+async def dirac_configuration(
+    config: Config,
+):
+    vos: dict[str, Any] = {}
+    vos["virtual_organisations"] = []
+    for vo in config.Registry:
+        infos: dict[str, Any] = {}
+        infos[vo] = {}
+        infos[vo]["groups"] = {}
+        for g in config.Registry[vo].Groups:
+            infos[vo]["groups"][g] = {}
+            infos[vo]["groups"][g]["properties"] = sorted(
+                config.Registry[vo].Groups[g].Properties
+            )
+
+        infos[vo]["SupportMessage"] = config.Registry[vo].SupportMessage
+        infos[vo]["default_group"] = config.Registry[vo].DefaultGroup
+
+        vos["virtual_organisations"].append(infos)
+
+    return vos

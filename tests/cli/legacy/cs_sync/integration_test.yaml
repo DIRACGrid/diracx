@@ -69,6 +69,7 @@ Registry:
     IdP:
       ClientID: 995ed3b9-d5bd-49d3-a7f4-7fc7dbd5a0cd
       URL: https://jenkins.invalid/
+    SupportMessage: "contact tata@yoyo.fr"
     Users:
       26dbe36e-cf5c-4c52-a834-29a1c904ef74:
         Email: lhcb-dirac-ci@cern.ch

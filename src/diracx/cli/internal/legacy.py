@@ -106,6 +106,12 @@ def _apply_fixes(raw, conversion_config: Path):
             "Users": {},
             "Groups": {},
         }
+
+        support_message = (
+            original_registry.get("VO", {}).get(vo, {}).get("SupportMessage")
+        )
+        if support_message:
+            raw["Registry"][vo]["SupportMessage"] = support_message
         if "DefaultStorageQuota" in original_registry:
             raw["Registry"][vo]["DefaultStorageQuota"] = original_registry[
                 "DefaultStorageQuota"

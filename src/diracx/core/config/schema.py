@@ -69,6 +69,7 @@ class IdpConfig(BaseModel):
 
 class RegistryConfig(BaseModel):
     IdP: IdpConfig
+    SupportMessage: str = "Please contact system administrator"
     DefaultGroup: str
     DefaultStorageQuota: float = 0
     DefaultProxyLifeTime: int = 12 * 60 * 60

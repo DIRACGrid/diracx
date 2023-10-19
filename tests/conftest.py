@@ -169,6 +169,7 @@ def with_config_repo(tmp_path):
             "Registry": {
                 "lhcb": {
                     "DefaultGroup": "lhcb_user",
+                    "SupportMessage": "Please contact administrator",
                     "DefaultProxyLifeTime": 432000,
                     "DefaultStorageQuota": 2000,
                     "IdP": {
