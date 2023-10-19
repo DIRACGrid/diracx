@@ -67,6 +67,11 @@ class JobStatus(StrEnum):
     RESCHEDULED = "Rescheduled"
 
 
+class JobMinorStatus(str, Enum):
+    MAX_RESCHEDULING = "Maximum of reschedulings reached"
+    RESCHEDULED = "Job Rescheduled"
+
+
 class JobStatusUpdate(BaseModel):
     status: JobStatus | None = Field(
         default=None,

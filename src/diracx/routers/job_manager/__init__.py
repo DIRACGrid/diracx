@@ -294,6 +294,70 @@ async def get_job_status_history_bulk(
     return {job_id: status for job_id, status in zip(job_ids, result)}
 
 
+@router.post("/reschedule")
+async def reschedule_bulk_jobs(
+    job_ids: Annotated[list[int], Query()],
+    job_db: JobDB,
+    job_logging_db: JobLoggingDB,
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+):
+    rescheduled_jobs = []
+    # TODO: Joblist Policy:
+    # validJobList, invalidJobList, nonauthJobList, ownerJobList = self.jobPolicy.evaluateJobRights(
+    #        jobList, RIGHT_RESCHEDULE
+    #    )
+    # For the moment all jobs are valid:
+    valid_job_list = job_ids
+    for job_id in valid_job_list:
+        # TODO: delete job in TaskQueueDB
+        # self.taskQueueDB.deleteJob(jobID)
+        result = job_db.rescheduleJob(job_id)
+        try:
+            res_status = await job_db.get_job_status(job_id)
+        except NoResultFound as e:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
+            ) from e
+
+        initial_status = res_status.status
+        initial_minor_status = res_status.minor_status
+
+        await job_logging_db.insert_record(
+            int(job_id),
+            initial_status,
+            initial_minor_status,
+            "Unknown",
+            datetime.now(timezone.utc),
+            "JobManager",
+        )
+        if result:
+            rescheduled_jobs.append(job_id)
+    # To uncomment when jobPolicy is setup:
+    # if invalid_job_list or non_auth_job_list:
+    #     logging.error("Some jobs failed to reschedule")
+    #     if invalid_job_list:
+    #         logging.info(f"Invalid jobs: {invalid_job_list}")
+    #     if non_auth_job_list:
+    #         logging.info(f"Non authorized jobs: {nonauthJobList}")
+
+    # TODO: send jobs to OtimizationMind
+    #  self.__sendJobsToOptimizationMind(validJobList)
+    return rescheduled_jobs
+
+
+@router.post("/{job_id}/reschedule")
+async def reschedule_single_job(
+    job_id: int,
+    job_db: JobDB,
+    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+):
+    try:
+        result = await job_db.rescheduleJob(job_id)
+    except ValueError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    return result
+
+
 EXAMPLE_SEARCHES = {
     "Show all": {
         "summary": "Show all",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -8,7 +9,14 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import JobStatus, JobStatusReturn, LimitedJobStatusReturn
+from diracx.core.models import (
+    JobMinorStatus,
+    JobStatus,
+    JobStatusReturn,
+    LimitedJobStatusReturn,
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+)
 
 from ..utils import BaseSQLDB, apply_search_filters
 from .schema import (
@@ -39,6 +47,11 @@ class JobDB(BaseSQLDB):
     # but is overwriten in LHCbDIRAC, so we need
     # to find a way to make it dynamic
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
+
+    # TODO: set maxRescheduling value from CS
+    # maxRescheduling = self.getCSOption("MaxRescheduling", 3)
+    # For now:
+    maxRescheduling = 3
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = _get_columns(Jobs.__table__, group_by)
@@ -155,6 +168,20 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
+    async def getJobJDL(self, job_id: int, original: bool = False) -> str:
+        from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
+
+        if original:
+            stmt = select(JobJDLs.OriginalJDL).where(JobJDLs.JobID == job_id)
+        else:
+            stmt = select(JobJDLs.JDL).where(JobJDLs.JobID == job_id)
+
+        jdl = (await self.conn.execute(stmt)).scalar_one()
+        if jdl:
+            jdl = extractJDL(jdl)
+
+        return jdl
+
     async def insert(
         self,
         jdl,
@@ -257,6 +284,143 @@ class JobDB(BaseSQLDB):
             "MinorStatus": initial_minor_status,
             "TimeStamp": datetime.now(tz=timezone.utc),
         }
+
+    async def rescheduleJob(self, job_id) -> dict[str, Any]:
+        """Reschedule given job"""
+        from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
+        from DIRAC.Core.Utilities.ReturnValues import SErrorException
+
+        result = await self.search(
+            parameters=[
+                "Status",
+                "MinorStatus",
+                "VerifiedFlag",
+                "RescheduleCounter",
+                "Owner",
+                "OwnerGroup",
+            ],
+            search=[
+                ScalarSearchSpec(
+                    parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+                )
+            ],
+            sorts=[],
+        )
+        if not result:
+            raise ValueError(f"Job {job_id} not found.")
+
+        jobAttrs = result[0]
+
+        if "VerifiedFlag" not in jobAttrs:
+            raise ValueError(f"Job {job_id} not found in the system")
+
+        if not jobAttrs["VerifiedFlag"]:
+            raise ValueError(
+                f"Job {job_id} not Verified: Status {jobAttrs['Status']}, Minor Status: {jobAttrs['MinorStatus']}"
+            )
+
+        reschedule_counter = int(jobAttrs["RescheduleCounter"]) + 1
+
+        # TODO: update maxRescheduling:
+        # self.maxRescheduling = self.getCSOption("MaxRescheduling", self.maxRescheduling)
+
+        if reschedule_counter > self.maxRescheduling:
+            logging.warn(f"Job {job_id}: Maximum number of reschedulings is reached.")
+            self.setJobAttributes(
+                job_id,
+                {
+                    "Status": JobStatus.FAILED,
+                    "MinorStatus": JobMinorStatus.MAX_RESCHEDULING,
+                },
+            )
+            raise ValueError(
+                f"Maximum number of reschedulings is reached: {self.maxRescheduling}"
+            )
+
+        new_job_attributes = {"RescheduleCounter": reschedule_counter}
+
+        # TODO: get the job parameters from JobMonitoringClient
+        # result = JobMonitoringClient().getJobParameters(jobID)
+        # if result["OK"]:
+        #     parDict = result["Value"]
+        #     for key, value in parDict.get(jobID, {}).items():
+        #         result = self.setAtticJobParameter(jobID, key, value, rescheduleCounter - 1)
+        #         if not result["OK"]:
+        #             break
+
+        # TODO: IF we keep JobParameters and OptimizerParameters: Delete job in those tables.
+        # await self.delete_job_parameters(job_id)
+        # await self.delete_job_optimizer_parameters(job_id)
+
+        job_jdl = await self.getJobJDL(job_id, original=True)
+        if not job_jdl.strip().startswith("["):
+            job_jdl = f"[{job_jdl}]"
+
+        classAdJob = ClassAd(job_jdl)
+        classAdReq = ClassAd("[]")
+        retVal = {}
+        retVal["JobID"] = job_id
+
+        classAdJob.insertAttributeInt("JobID", job_id)
+
+        try:
+            result = self._checkAndPrepareJob(
+                job_id,
+                classAdJob,
+                classAdReq,
+                jobAttrs["Owner"],
+                jobAttrs["OwnerGroup"],
+                new_job_attributes,
+                classAdJob.getAttributeString("VirtualOrganization"),
+            )
+        except SErrorException as e:
+            raise ValueError(e) from e
+
+        priority = classAdJob.getAttributeInt("Priority")
+        if priority is None:
+            priority = 0
+        jobAttrs["UserPriority"] = priority
+
+        siteList = classAdJob.getListFromExpression("Site")
+        if not siteList:
+            site = "ANY"
+        elif len(siteList) > 1:
+            site = "Multiple"
+        else:
+            site = siteList[0]
+
+        jobAttrs["Site"] = site
+
+        jobAttrs["Status"] = JobStatus.RECEIVED
+
+        jobAttrs["MinorStatus"] = JobMinorStatus.RESCHEDULED
+
+        jobAttrs["ApplicationStatus"] = "Unknown"
+
+        jobAttrs["ApplicationNumStatus"] = 0
+
+        jobAttrs["LastUpdateTime"] = str(datetime.utcnow())
+
+        jobAttrs["RescheduleTime"] = str(datetime.utcnow())
+
+        reqJDL = classAdReq.asJDL()
+        classAdJob.insertAttributeInt("JobRequirements", reqJDL)
+
+        jobJDL = classAdJob.asJDL()
+
+        # Replace the JobID placeholder if any
+        jobJDL = jobJDL.replace("%j", str(job_id))
+
+        result = self.setJobJDL(job_id, jobJDL)
+
+        result = self.setJobAttributes(job_id, jobAttrs)
+
+        retVal["InputData"] = classAdJob.lookupAttribute("InputData")
+        retVal["RescheduleCounter"] = reschedule_counter
+        retVal["Status"] = JobStatus.RECEIVED
+        retVal["MinorStatus"] = JobMinorStatus.RESCHEDULED
+
+        return retVal
 
     async def get_job_status(self, job_id: int) -> LimitedJobStatusReturn:
         stmt = select(Jobs.Status, Jobs.MinorStatus, Jobs.ApplicationStatus).where(
