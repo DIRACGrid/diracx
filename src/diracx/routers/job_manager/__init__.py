@@ -299,7 +299,7 @@ async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
     rescheduled_jobs = []
     # TODO: Joblist Policy:
@@ -349,7 +349,7 @@ async def reschedule_bulk_jobs(
 async def reschedule_single_job(
     job_id: int,
     job_db: JobDB,
-    user_info: Annotated[UserInfo, Depends(verify_dirac_access_token)],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
     try:
         result = await job_db.rescheduleJob(job_id)

@@ -53,6 +53,7 @@ dependencies:
   - moto
   - aiobotocore
   - botocore
+  - pip
   - pip:
     - types-aiobotocore[essential]
     - boto3-stubs[essential]
