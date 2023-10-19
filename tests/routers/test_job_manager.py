@@ -595,7 +595,7 @@ def test_set_job_status_with_invalid_job_id(normal_user_client: TestClient):
 
 def test_insert_and_reschedule(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
 
@@ -603,7 +603,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
 
     # Test /jobs/reschedule
     r = normal_user_client.post(
-        "/jobs/reschedule",
+        "/api/jobs/reschedule",
         params={"job_ids": submitted_job_ids},
     )
     assert r.status_code == 200, r.json()
