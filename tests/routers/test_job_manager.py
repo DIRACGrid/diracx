@@ -195,6 +195,25 @@ def test_insert_and_search(normal_user_client):
     assert r.json() == []
 
 
+def test_search_distinct(normal_user_client):
+    job_definitions = [TEST_JDL, TEST_JDL, TEST_JDL]
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+
+    # Check that distinct collapses identical records when true
+    r = normal_user_client.post(
+        "/api/jobs/search", json={"parameters": ["Status"], "distinct": False}
+    )
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) > 1
+    r = normal_user_client.post(
+        "/api/jobs/search", json={"parameters": ["Status"], "distinct": True}
+    )
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == 1
+
+
 def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
     normal_user_client,
 ):

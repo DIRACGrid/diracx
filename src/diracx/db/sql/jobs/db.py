@@ -68,7 +68,14 @@ class JobDB(BaseSQLDB):
         ]
 
     async def search(
-        self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
+        self,
+        parameters,
+        search,
+        sorts,
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
     ) -> list[dict[str, Any]]:
         # Find which columns to select
         columns = _get_columns(Jobs.__table__, parameters)
@@ -89,6 +96,9 @@ class JobDB(BaseSQLDB):
                 column = column.desc()
             else:
                 raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
+
+        if distinct:
+            stmt = stmt.distinct()
 
         # Apply pagination
         if page:
