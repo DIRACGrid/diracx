@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, PrivateAttr, root_validator
+from pydantic import EmailStr, Field, PrivateAttr, root_validator
 
 from ..properties import SecurityProperty
 
@@ -67,9 +67,15 @@ class IdpConfig(BaseModel):
         return f"{self.URL}/.well-known/openid-configuration"
 
 
+class SupportInfo(BaseModel):
+    Email: str | None = None
+    Webpage: str | None = None
+    Message: str = "Please contact system administrator"
+
+
 class RegistryConfig(BaseModel):
     IdP: IdpConfig
-    SupportMessage: str = "Please contact system administrator"
+    Support: SupportInfo = Field(default_factory=SupportInfo)
     DefaultGroup: str
     DefaultStorageQuota: float = 0
     DefaultProxyLifeTime: int = 12 * 60 * 60

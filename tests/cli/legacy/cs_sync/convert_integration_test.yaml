@@ -8,6 +8,10 @@ VOs:
       adminusername: e2cb28ec-1a1e-40ee-a56d-d899b79879ce
       ciuser: 26dbe36e-cf5c-4c52-a834-29a1c904ef74
       trialUser: a95ab678-3fa4-41b9-b863-fe62ce8064ce
+    Support:
+      Message: "Contact the help desk"
+      Email: "helpdesk@example.invalid"
+      Webpage: "https://helpdesk.vo.invalid"
   vo:
     DefaultGroup: dirac_user
     IdP:

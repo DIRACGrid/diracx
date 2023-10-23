@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TypedDict
 
 from fastapi import Request
 
@@ -44,25 +44,44 @@ async def openid_configuration(
     }
 
 
-@router.get("/dirac")
-async def dirac_configuration(
-    config: Config,
-):
-    vos: dict[str, Any] = {}
-    vos["virtual_organisations"] = []
-    for vo in config.Registry:
-        infos: dict[str, Any] = {}
-        infos[vo] = {}
-        infos[vo]["groups"] = {}
-        for g in config.Registry[vo].Groups:
-            infos[vo]["groups"][g] = {}
-            infos[vo]["groups"][g]["properties"] = sorted(
-                config.Registry[vo].Groups[g].Properties
-            )
+class SupportInfo(TypedDict):
+    message: str
+    webpage: str | None
+    email: str | None
 
-        infos[vo]["SupportMessage"] = config.Registry[vo].SupportMessage
-        infos[vo]["default_group"] = config.Registry[vo].DefaultGroup
 
-        vos["virtual_organisations"].append(infos)
+class GroupInfo(TypedDict):
+    properties: list[str]
 
-    return vos
+
+class VOInfo(TypedDict):
+    groups: dict[str, GroupInfo]
+    support: SupportInfo
+    default_group: str
+
+
+class Metadata(TypedDict):
+    virtual_organizations: dict[str, VOInfo]
+
+
+@router.get("/dirac-metadata")
+async def installation_metadata(config: Config) -> Metadata:
+    metadata: Metadata = {
+        "virtual_organizations": {},
+    }
+    for vo, vo_info in config.Registry.items():
+        groups: dict[str, GroupInfo] = {
+            group: {"properties": sorted(group_info.Properties)}
+            for group, group_info in vo_info.Groups.items()
+        }
+        metadata["virtual_organizations"][vo] = {
+            "groups": groups,
+            "support": {
+                "message": vo_info.Support.Message,
+                "webpage": vo_info.Support.Webpage,
+                "email": vo_info.Support.Email,
+            },
+            "default_group": vo_info.DefaultGroup,
+        }
+
+    return metadata
