@@ -101,6 +101,32 @@ class BodyAuthTokenGrantType(_serialization.Model):
         super().__init__(**kwargs)
 
 
+class GroupInfo(_serialization.Model):
+    """GroupInfo.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar properties: Properties. Required.
+    :vartype properties: list[str]
+    """
+
+    _validation = {
+        "properties": {"required": True},
+    }
+
+    _attribute_map = {
+        "properties": {"key": "properties", "type": "[str]"},
+    }
+
+    def __init__(self, *, properties: List[str], **kwargs: Any) -> None:
+        """
+        :keyword properties: Properties. Required.
+        :paramtype properties: list[str]
+        """
+        super().__init__(**kwargs)
+        self.properties = properties
+
+
 class HTTPValidationError(_serialization.Model):
     """HTTPValidationError.
 
@@ -509,6 +535,34 @@ class LimitedJobStatusReturn(_serialization.Model):
         self.application_status = application_status
 
 
+class Metadata(_serialization.Model):
+    """Metadata.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar virtual_organizations: Virtual Organizations. Required.
+    :vartype virtual_organizations: dict[str, ~client.models.VOInfo]
+    """
+
+    _validation = {
+        "virtual_organizations": {"required": True},
+    }
+
+    _attribute_map = {
+        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+    }
+
+    def __init__(
+        self, *, virtual_organizations: Dict[str, "_models.VOInfo"], **kwargs: Any
+    ) -> None:
+        """
+        :keyword virtual_organizations: Virtual Organizations. Required.
+        :paramtype virtual_organizations: dict[str, ~client.models.VOInfo]
+        """
+        super().__init__(**kwargs)
+        self.virtual_organizations = virtual_organizations
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 
@@ -807,6 +861,48 @@ class SortSpecDirection(_serialization.Model):
         super().__init__(**kwargs)
 
 
+class SupportInfo(_serialization.Model):
+    """SupportInfo.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar message: Message. Required.
+    :vartype message: str
+    :ivar webpage: Webpage. Required.
+    :vartype webpage: str
+    :ivar email: Email. Required.
+    :vartype email: str
+    """
+
+    _validation = {
+        "message": {"required": True},
+        "webpage": {"required": True},
+        "email": {"required": True},
+    }
+
+    _attribute_map = {
+        "message": {"key": "message", "type": "str"},
+        "webpage": {"key": "webpage", "type": "str"},
+        "email": {"key": "email", "type": "str"},
+    }
+
+    def __init__(
+        self, *, message: str, webpage: str, email: str, **kwargs: Any
+    ) -> None:
+        """
+        :keyword message: Message. Required.
+        :paramtype message: str
+        :keyword webpage: Webpage. Required.
+        :paramtype webpage: str
+        :keyword email: Email. Required.
+        :paramtype email: str
+        """
+        super().__init__(**kwargs)
+        self.message = message
+        self.webpage = webpage
+        self.email = email
+
+
 class TokenResponse(_serialization.Model):
     """TokenResponse.
 
@@ -1025,3 +1121,50 @@ class VectorSearchSpec(_serialization.Model):
         self.parameter = parameter
         self.operator = operator
         self.values = values
+
+
+class VOInfo(_serialization.Model):
+    """VOInfo.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar groups: Groups. Required.
+    :vartype groups: dict[str, ~client.models.GroupInfo]
+    :ivar support: SupportInfo. Required.
+    :vartype support: ~client.models.SupportInfo
+    :ivar default_group: Default Group. Required.
+    :vartype default_group: str
+    """
+
+    _validation = {
+        "groups": {"required": True},
+        "support": {"required": True},
+        "default_group": {"required": True},
+    }
+
+    _attribute_map = {
+        "groups": {"key": "groups", "type": "{GroupInfo}"},
+        "support": {"key": "support", "type": "SupportInfo"},
+        "default_group": {"key": "default_group", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        groups: Dict[str, "_models.GroupInfo"],
+        support: "_models.SupportInfo",
+        default_group: str,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword groups: Groups. Required.
+        :paramtype groups: dict[str, ~client.models.GroupInfo]
+        :keyword support: SupportInfo. Required.
+        :paramtype support: ~client.models.SupportInfo
+        :keyword default_group: Default Group. Required.
+        :paramtype default_group: str
+        """
+        super().__init__(**kwargs)
+        self.groups = groups
+        self.support = support
+        self.default_group = default_group
