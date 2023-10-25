@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TypedDict
+
 from fastapi import Request
 
 from diracx.routers.auth import AuthSettings
@@ -40,3 +42,46 @@ async def openid_configuration(
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
     }
+
+
+class SupportInfo(TypedDict):
+    message: str
+    webpage: str | None
+    email: str | None
+
+
+class GroupInfo(TypedDict):
+    properties: list[str]
+
+
+class VOInfo(TypedDict):
+    groups: dict[str, GroupInfo]
+    support: SupportInfo
+    default_group: str
+
+
+class Metadata(TypedDict):
+    virtual_organizations: dict[str, VOInfo]
+
+
+@router.get("/dirac-metadata")
+async def installation_metadata(config: Config) -> Metadata:
+    metadata: Metadata = {
+        "virtual_organizations": {},
+    }
+    for vo, vo_info in config.Registry.items():
+        groups: dict[str, GroupInfo] = {
+            group: {"properties": sorted(group_info.Properties)}
+            for group, group_info in vo_info.Groups.items()
+        }
+        metadata["virtual_organizations"][vo] = {
+            "groups": groups,
+            "support": {
+                "message": vo_info.Support.Message,
+                "webpage": vo_info.Support.Webpage,
+                "email": vo_info.Support.Email,
+            },
+            "default_group": vo_info.DefaultGroup,
+        }
+
+    return metadata

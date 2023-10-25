@@ -6,6 +6,7 @@
 
 from ._models import BodyAuthToken
 from ._models import BodyAuthTokenGrantType
+from ._models import GroupInfo
 from ._models import HTTPValidationError
 from ._models import InitiateDeviceFlowResponse
 from ._models import InsertedJob
@@ -16,6 +17,7 @@ from ._models import JobStatusUpdate
 from ._models import JobSummaryParams
 from ._models import JobSummaryParamsSearchItem
 from ._models import LimitedJobStatusReturn
+from ._models import Metadata
 from ._models import SandboxDownloadResponse
 from ._models import SandboxInfo
 from ._models import SandboxUploadResponse
@@ -23,8 +25,10 @@ from ._models import ScalarSearchSpec
 from ._models import SetJobStatusReturn
 from ._models import SortSpec
 from ._models import SortSpecDirection
+from ._models import SupportInfo
 from ._models import TokenResponse
 from ._models import UserInfoResponse
+from ._models import VOInfo
 from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
@@ -48,6 +52,7 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthToken",
     "BodyAuthTokenGrantType",
+    "GroupInfo",
     "HTTPValidationError",
     "InitiateDeviceFlowResponse",
     "InsertedJob",
@@ -58,6 +63,7 @@ __all__ = [
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
     "LimitedJobStatusReturn",
+    "Metadata",
     "SandboxDownloadResponse",
     "SandboxInfo",
     "SandboxUploadResponse",
@@ -65,8 +71,10 @@ __all__ = [
     "SetJobStatusReturn",
     "SortSpec",
     "SortSpecDirection",
+    "SupportInfo",
     "TokenResponse",
     "UserInfoResponse",
+    "VOInfo",
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",

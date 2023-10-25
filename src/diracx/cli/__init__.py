@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 import asyncio
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Annotated, Optional
 
-from typer import Option
+import typer
 
 from diracx.client.aio import DiracClient
 from diracx.client.models import DeviceFlowErrorResponse
@@ -19,11 +17,30 @@ from .utils import AsyncTyper
 app = AsyncTyper()
 
 
+async def installation_metadata():
+    async with DiracClient() as api:
+        return await api.well_known.installation_metadata()
+
+
+def vo_callback(vo: str | None) -> str:
+    metadata = asyncio.run(installation_metadata())
+    vos = list(metadata.virtual_organizations)
+    if not vo:
+        raise typer.BadParameter(
+            f"VO must be specified, available options are: {' '.join(vos)}"
+        )
+    if vo not in vos:
+        raise typer.BadParameter(
+            f"Unknown VO {vo}, available options are: {' '.join(vos)}"
+        )
+    return vo
+
+
 @app.async_command()
 async def login(
-    vo: str,
+    vo: Annotated[Optional[str], typer.Argument(callback=vo_callback)] = None,
     group: Optional[str] = None,
-    property: Optional[list[str]] = Option(
+    property: Optional[list[str]] = typer.Option(
         None, help="Override the default(s) with one or more properties"
     ),
 ):

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from typer import Option
 
 from diracx.core.config import Config
+from diracx.core.config.schema import Field, SupportInfo
 
 from ..utils import AsyncTyper
 
@@ -28,6 +29,7 @@ class VOConfig(BaseModel):
     DefaultGroup: str
     IdP: IdPConfig
     UserSubjects: dict[str, str]
+    Support: SupportInfo = Field(default_factory=SupportInfo)
 
 
 class ConversionConfig(BaseModel):
@@ -105,6 +107,7 @@ def _apply_fixes(raw, conversion_config: Path):
             "DefaultGroup": vo_meta.DefaultGroup,
             "Users": {},
             "Groups": {},
+            "Support": vo_meta.Support,
         }
         if "DefaultStorageQuota" in original_registry:
             raw["Registry"][vo]["DefaultStorageQuota"] = original_registry[

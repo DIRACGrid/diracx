@@ -69,6 +69,10 @@ Registry:
     IdP:
       ClientID: 995ed3b9-d5bd-49d3-a7f4-7fc7dbd5a0cd
       URL: https://jenkins.invalid/
+    Support:
+      Email: "helpdesk@example.invalid"
+      Message: "Contact the help desk"
+      Webpage: "https://helpdesk.vo.invalid"
     Users:
       26dbe36e-cf5c-4c52-a834-29a1c904ef74:
         Email: lhcb-dirac-ci@cern.ch
@@ -103,6 +107,7 @@ Registry:
     IdP:
       ClientID: 072afab5-ed92-46e0-a61d-4ecbc96e0770
       URL: https://vo.invalid/
+    Support: {}
     Users:
       26b14fc9-6d40-4ca5-b014-6234eaf0fb6e:
         Email: lhcb-dirac-ci@cern.ch

@@ -43,11 +43,14 @@ from ...operations._operations import (
     build_jobs_get_single_job_status_request,
     build_jobs_initiate_sandbox_upload_request,
     build_jobs_kill_bulk_jobs_request,
+    build_jobs_reschedule_bulk_jobs_request,
+    build_jobs_reschedule_single_job_request,
     build_jobs_search_request,
     build_jobs_set_job_status_bulk_request,
     build_jobs_set_single_job_status_request,
     build_jobs_submit_bulk_jobs_request,
     build_jobs_summary_request,
+    build_well_known_installation_metadata_request,
     build_well_known_openid_configuration_request,
 )
 from .._vendor import raise_if_not_implemented
@@ -129,6 +132,57 @@ class WellKnownOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace_async
+    async def installation_metadata(self, **kwargs: Any) -> _models.Metadata:
+        """Installation Metadata.
+
+        Installation Metadata.
+
+        :return: Metadata
+        :rtype: ~client.models.Metadata
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[_models.Metadata] = kwargs.pop("cls", None)
+
+        request = build_well_known_installation_metadata_request(
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("Metadata", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
@@ -1466,6 +1520,114 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("{[JobStatusReturn]}", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace_async
+    async def reschedule_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
+        """Reschedule Bulk Jobs.
+
+        Reschedule Bulk Jobs.
+
+        :keyword job_ids: Required.
+        :paramtype job_ids: list[int]
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        request = build_jobs_reschedule_bulk_jobs_request(
+            job_ids=job_ids,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})
+
+        return deserialized
+
+    @distributed_trace_async
+    async def reschedule_single_job(self, job_id: int, **kwargs: Any) -> Any:
+        """Reschedule Single Job.
+
+        Reschedule Single Job.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        request = build_jobs_reschedule_single_job_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        request.url = self._client.format_url(request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})
