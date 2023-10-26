@@ -49,7 +49,7 @@ class GroupConfig(BaseModel):
     AutoAddVOMS: bool = False
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
-    JobShare: Optional[int]
+    JobShare: int = 1000
     Properties: set[SecurityProperty]
     Quota: Optional[int]
     Users: set[str]
@@ -103,9 +103,14 @@ class JobMonitoringConfig(BaseModel):
     useESForJobParametersFlag: bool = False
 
 
+class JobSchedulingConfig(BaseModel):
+    EnableSharesCorrection: bool = False
+
+
 class ServicesConfig(BaseModel):
     Catalogs: dict[str, Any] | None
     JobMonitoring: JobMonitoringConfig = JobMonitoringConfig()
+    JobScheduling: JobSchedulingConfig = JobSchedulingConfig()
 
 
 class OperationsConfig(BaseModel):

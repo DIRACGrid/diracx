@@ -23,7 +23,7 @@ async def test_insert_record(job_logging_db: JobLoggingDB):
         # Act
         await job_logging_db.insert_record(
             1,
-            status=JobStatus.RECEIVED.value,
+            status=JobStatus.RECEIVED,
             minor_status="minor_status",
             application_status="application_status",
             date=date,

@@ -35,6 +35,9 @@ async def init_sql():
         db = BaseSQLDB.available_implementations(db_name)[0](db_url)
         async with db.engine_context():
             async with db.engine.begin() as conn:
+                # set PRAGMA foreign_keys=ON if sqlite
+                if db._db_url.startswith("sqlite"):
+                    await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
                 await conn.run_sync(db.metadata.create_all)
 
 

@@ -23,6 +23,7 @@ export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///:memory:"
+export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
 export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes

@@ -714,7 +714,7 @@ class ScalarSearchSpec(_serialization.Model):
      "like".
     :vartype operator: str or ~client.models.ScalarSearchOperator
     :ivar value: Value. Required.
-    :vartype value: str
+    :vartype value: ~client.models.ScalarSearchSpecValue
     """
 
     _validation = {
@@ -726,7 +726,7 @@ class ScalarSearchSpec(_serialization.Model):
     _attribute_map = {
         "parameter": {"key": "parameter", "type": "str"},
         "operator": {"key": "operator", "type": "str"},
-        "value": {"key": "value", "type": "str"},
+        "value": {"key": "value", "type": "ScalarSearchSpecValue"},
     }
 
     def __init__(
@@ -734,7 +734,7 @@ class ScalarSearchSpec(_serialization.Model):
         *,
         parameter: str,
         operator: Union[str, "_models.ScalarSearchOperator"],
-        value: str,
+        value: "_models.ScalarSearchSpecValue",
         **kwargs: Any
     ) -> None:
         """
@@ -744,12 +744,22 @@ class ScalarSearchSpec(_serialization.Model):
          "like".
         :paramtype operator: str or ~client.models.ScalarSearchOperator
         :keyword value: Value. Required.
-        :paramtype value: str
+        :paramtype value: ~client.models.ScalarSearchSpecValue
         """
         super().__init__(**kwargs)
         self.parameter = parameter
         self.operator = operator
         self.value = value
+
+
+class ScalarSearchSpecValue(_serialization.Model):
+    """Value."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
 
 
 class SetJobStatusReturn(_serialization.Model):
@@ -1093,7 +1103,7 @@ class VectorSearchSpec(_serialization.Model):
     :ivar operator: An enumeration. Required. Known values are: "in" and "not in".
     :vartype operator: str or ~client.models.VectorSearchOperator
     :ivar values: Values. Required.
-    :vartype values: list[str]
+    :vartype values: ~client.models.VectorSearchSpecValues
     """
 
     _validation = {
@@ -1105,7 +1115,7 @@ class VectorSearchSpec(_serialization.Model):
     _attribute_map = {
         "parameter": {"key": "parameter", "type": "str"},
         "operator": {"key": "operator", "type": "str"},
-        "values": {"key": "values", "type": "[str]"},
+        "values": {"key": "values", "type": "VectorSearchSpecValues"},
     }
 
     def __init__(
@@ -1113,7 +1123,7 @@ class VectorSearchSpec(_serialization.Model):
         *,
         parameter: str,
         operator: Union[str, "_models.VectorSearchOperator"],
-        values: List[str],
+        values: "_models.VectorSearchSpecValues",
         **kwargs: Any
     ) -> None:
         """
@@ -1122,12 +1132,22 @@ class VectorSearchSpec(_serialization.Model):
         :keyword operator: An enumeration. Required. Known values are: "in" and "not in".
         :paramtype operator: str or ~client.models.VectorSearchOperator
         :keyword values: Values. Required.
-        :paramtype values: list[str]
+        :paramtype values: ~client.models.VectorSearchSpecValues
         """
         super().__init__(**kwargs)
         self.parameter = parameter
         self.operator = operator
         self.values = values
+
+
+class VectorSearchSpecValues(_serialization.Model):
+    """Values."""
+
+    _attribute_map = {}
+
+    def __init__(self, **kwargs: Any) -> None:
+        """ """
+        super().__init__(**kwargs)
 
 
 class VOInfo(_serialization.Model):

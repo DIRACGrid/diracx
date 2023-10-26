@@ -248,83 +248,89 @@ def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_clie
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
 
 
-def test_get_job_status(normal_user_client: TestClient):
-    """Test that the job status is returned correctly."""
-    # Arrange
+@pytest.fixture
+def valid_job_id(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1  # Parameters.JOB_ID is 3
-    job_id = r.json()[0]["JobID"]
+    assert len(r.json()) == 1
+    return r.json()[0]["JobID"]
 
+
+@pytest.fixture
+def valid_job_ids(normal_user_client: TestClient):
+    job_definitions = [TEST_PARAMETRIC_JDL]
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == 3
+    return sorted([job_dict["JobID"] for job_dict in r.json()])
+
+
+@pytest.fixture
+def invalid_job_id():
+    return 999999996
+
+
+@pytest.fixture
+def invalid_job_ids():
+    return [999999997, 999999998, 999999999]
+
+
+def test_get_job_status(normal_user_client: TestClient, valid_job_id: int):
+    """Test that the job status is returned correctly."""
     # Act
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
 
     # Assert
     assert r.status_code == 200, r.json()
     # TODO: should we return camel case here (and everywhere else) ?
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
 
-def test_get_status_of_nonexistent_job(normal_user_client: TestClient):
+def test_get_status_of_nonexistent_job(
+    normal_user_client: TestClient, invalid_job_id: int
+):
     """Test that the job status is returned correctly."""
     # Act
-    r = normal_user_client.get("/api/jobs/1/status")
+    r = normal_user_client.get(f"/api/jobs/{invalid_job_id}/status")
 
     # Assert
     assert r.status_code == 404, r.json()
-    assert r.json() == {"detail": "Job 1 not found"}
+    assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
-def test_get_job_status_in_bulk(normal_user_client: TestClient):
+def test_get_job_status_in_bulk(normal_user_client: TestClient, valid_job_ids: list):
     """Test that we can get the status of multiple jobs in one request"""
-    # Arrange
-    job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 3  # Parameters.JOB_ID is 3
-    submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
-    assert isinstance(submitted_job_ids, list)
-    assert (isinstance(submitted_job_id, int) for submitted_job_id in submitted_job_ids)
-
     # Act
-    r = normal_user_client.get(
-        "/api/jobs/status", params={"job_ids": submitted_job_ids}
-    )
+    r = normal_user_client.get("/api/jobs/status", params={"job_ids": valid_job_ids})
 
     # Assert
-    print(r.json())
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3  # Parameters.JOB_ID is 3
-    for job_id in submitted_job_ids:
+    for job_id in valid_job_ids:
         assert str(job_id) in r.json()
         assert r.json()[str(job_id)]["Status"] == JobStatus.SUBMITTING.value
         assert r.json()[str(job_id)]["MinorStatus"] == "Bulk transaction confirmation"
         assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
 
 
-async def test_get_job_status_history(normal_user_client: TestClient):
+async def test_get_job_status_history(
+    normal_user_client: TestClient, valid_job_id: int
+):
     # Arrange
-    job_definitions = [TEST_JDL]
-    before = datetime.now(timezone.utc)
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    after = datetime.now(timezone.utc)
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-    assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
-    beforebis = datetime.now(timezone.utc)
+    before = datetime.now(timezone.utc)
     r = normal_user_client.put(
-        f"/api/jobs/{job_id}/status",
+        f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -332,83 +338,74 @@ async def test_get_job_status_history(normal_user_client: TestClient):
             }
         },
     )
-    afterbis = datetime.now(timezone.utc)
+    after = datetime.now(timezone.utc)
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
     # Act
     r = normal_user_client.get(
-        f"/api/jobs/{job_id}/status/history",
+        f"/api/jobs/{valid_job_id}/status/history",
     )
 
     # Assert
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
-    assert len(r.json()[str(job_id)]) == 2
-    assert r.json()[str(job_id)][0]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)][0]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)][0]["ApplicationStatus"] == "Unknown"
+    assert len(r.json()[str(valid_job_id)]) == 2
+    assert r.json()[str(valid_job_id)][0]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)][0]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)][0]["StatusSource"] == "JobManager"
+
+    assert r.json()[str(valid_job_id)][1]["Status"] == JobStatus.CHECKING.value
+    assert r.json()[str(valid_job_id)][1]["MinorStatus"] == "JobPath"
+    assert r.json()[str(valid_job_id)][1]["ApplicationStatus"] == "Unknown"
     assert (
-        before < datetime.fromisoformat(r.json()[str(job_id)][0]["StatusTime"]) < after
+        before
+        < datetime.fromisoformat(r.json()[str(valid_job_id)][1]["StatusTime"])
+        < after
     )
-    assert r.json()[str(job_id)][0]["StatusSource"] == "JobManager"
-
-    assert r.json()[str(job_id)][1]["Status"] == JobStatus.CHECKING.value
-    assert r.json()[str(job_id)][1]["MinorStatus"] == "JobPath"
-    assert r.json()[str(job_id)][1]["ApplicationStatus"] == "Unknown"
-    assert (
-        beforebis
-        < datetime.fromisoformat(r.json()[str(job_id)][1]["StatusTime"])
-        < afterbis
-    )
-    assert r.json()[str(job_id)][1]["StatusSource"] == "Unknown"
+    assert r.json()[str(valid_job_id)][1]["StatusSource"] == "Unknown"
 
 
-def test_get_job_status_history_in_bulk(normal_user_client: TestClient):
+def test_get_job_status_history_in_bulk(
+    normal_user_client: TestClient, valid_job_id: int
+):
     # Arrange
-    job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-    assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
     # Act
-    r = normal_user_client.get("/api/jobs/status/history", params={"job_ids": [job_id]})
+    r = normal_user_client.get(
+        "/api/jobs/status/history", params={"job_ids": [valid_job_id]}
+    )
 
     # Assert
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
-    assert r.json()[str(job_id)][0]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)][0]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)][0]["ApplicationStatus"] == "Unknown"
-    assert datetime.fromisoformat(r.json()[str(job_id)][0]["StatusTime"])
-    assert r.json()[str(job_id)][0]["StatusSource"] == "JobManager"
+    assert r.json()[str(valid_job_id)][0]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)][0]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
+    assert datetime.fromisoformat(r.json()[str(valid_job_id)][0]["StatusTime"])
+    assert r.json()[str(valid_job_id)][0]["StatusSource"] == "JobManager"
 
 
-def test_set_job_status(normal_user_client: TestClient):
+def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
     # Arrange
-    job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-    assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
     # Act
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/api/jobs/{job_id}/status",
+        f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -419,20 +416,22 @@ def test_set_job_status(normal_user_client: TestClient):
 
     # Assert
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
 
-def test_set_job_status_invalid_job(normal_user_client: TestClient):
+def test_set_job_status_invalid_job(
+    normal_user_client: TestClient, invalid_job_id: int
+):
     # Act
     r = normal_user_client.put(
-        "/api/jobs/1/status",
+        f"/api/jobs/{invalid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": JobStatus.CHECKING.value,
@@ -443,23 +442,17 @@ def test_set_job_status_invalid_job(normal_user_client: TestClient):
 
     # Assert
     assert r.status_code == 404, r.json()
-    assert r.json() == {"detail": "Job 1 not found"}
+    assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
 def test_set_job_status_offset_naive_datetime_return_bad_request(
     normal_user_client: TestClient,
+    valid_job_id: int,
 ):
-    # Arrange
-    job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-
     # Act
     date = datetime.utcnow().isoformat(sep=" ")
     r = normal_user_client.put(
-        f"/api/jobs/{job_id}/status",
+        f"/api/jobs/{valid_job_id}/status",
         json={
             date: {
                 "Status": JobStatus.CHECKING.value,
@@ -474,25 +467,20 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
 
 
 def test_set_job_status_cannot_make_impossible_transitions(
-    normal_user_client: TestClient,
+    normal_user_client: TestClient, valid_job_id: int
 ):
     # Arrange
-    job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-    assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
     # Act
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/api/jobs/{job_id}/status",
+        f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -503,34 +491,29 @@ def test_set_job_status_cannot_make_impossible_transitions(
 
     # Assert
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] != NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["Status"] != NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] != NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] != NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
 
-def test_set_job_status_force(normal_user_client: TestClient):
+def test_set_job_status_force(normal_user_client: TestClient, valid_job_id: int):
     # Arrange
-    job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    job_id = r.json()[0]["JobID"]
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-    assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
     # Act
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
     r = normal_user_client.put(
-        f"/api/jobs/{job_id}/status",
+        f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": NEW_STATUS,
@@ -542,25 +525,19 @@ def test_set_job_status_force(normal_user_client: TestClient):
 
     # Assert
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
-    r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
-    assert r.json()[str(job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
-    assert r.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
 
 
-def test_set_job_status_bulk(normal_user_client: TestClient):
+def test_set_job_status_bulk(normal_user_client: TestClient, valid_job_ids):
     # Arrange
-    job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 3
-    job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
-
-    for job_id in job_ids:
+    for job_id in valid_job_ids:
         r = normal_user_client.get(f"/api/jobs/{job_id}/status")
         assert r.status_code == 200, r.json()
         assert r.json()[str(job_id)]["Status"] == JobStatus.SUBMITTING.value
@@ -578,13 +555,13 @@ def test_set_job_status_bulk(normal_user_client: TestClient):
                     "MinorStatus": NEW_MINOR_STATUS,
                 }
             }
-            for job_id in job_ids
+            for job_id in valid_job_ids
         },
     )
 
     # Assert
     assert r.status_code == 200, r.json()
-    for job_id in job_ids:
+    for job_id in valid_job_ids:
         assert r.json()[str(job_id)]["Status"] == NEW_STATUS
         assert r.json()[str(job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
@@ -595,10 +572,12 @@ def test_set_job_status_bulk(normal_user_client: TestClient):
         assert r_get.json()[str(job_id)]["ApplicationStatus"] == "Unknown"
 
 
-def test_set_job_status_with_invalid_job_id(normal_user_client: TestClient):
+def test_set_job_status_with_invalid_job_id(
+    normal_user_client: TestClient, invalid_job_id: int
+):
     # Act
     r = normal_user_client.put(
-        "/api/jobs/999999999/status",
+        f"/api/jobs/{invalid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
                 "Status": JobStatus.CHECKING.value,
@@ -609,7 +588,7 @@ def test_set_job_status_with_invalid_job_id(normal_user_client: TestClient):
 
     # Assert
     assert r.status_code == 404, r.json()
-    assert r.json() == {"detail": "Job 999999999 not found"}
+    assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
 def test_insert_and_reschedule(normal_user_client: TestClient):
@@ -626,3 +605,247 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
         params={"job_ids": submitted_job_ids},
     )
     assert r.status_code == 200, r.json()
+
+
+# Test delete job
+
+
+def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
+    # Act
+    r = normal_user_client.delete(f"/api/jobs/{valid_job_id}")
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    assert r.status_code == 200, r.json()
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.DELETED
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Checking accounting"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
+
+
+def test_delete_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
+    # Act
+    r = normal_user_client.delete(f"/api/jobs/{invalid_job_id}")
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
+
+
+def test_delete_bulk_jobs_valid_job_ids(
+    normal_user_client: TestClient, valid_job_ids: list[int]
+):
+    # Act
+    r = normal_user_client.delete("/api/jobs/", params={"job_ids": valid_job_ids})
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    for valid_job_id in valid_job_ids:
+        r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+        assert r.status_code == 200, r.json()
+        assert r.json()[str(valid_job_id)]["Status"] == JobStatus.DELETED
+        assert r.json()[str(valid_job_id)]["MinorStatus"] == "Checking accounting"
+        assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
+
+
+def test_delete_bulk_jobs_invalid_job_ids(
+    normal_user_client: TestClient, invalid_job_ids: list[int]
+):
+    # Act
+    r = normal_user_client.delete("/api/jobs/", params={"job_ids": invalid_job_ids})
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {
+        "detail": {
+            "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
+            "valid_job_ids": [],
+            "failed_job_ids": invalid_job_ids,
+        }
+    }
+
+
+def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
+    normal_user_client: TestClient, valid_job_ids: list[int], invalid_job_ids: list[int]
+):
+    # Arrange
+    job_ids = valid_job_ids + invalid_job_ids
+
+    # Act
+    r = normal_user_client.delete("/api/jobs/", params={"job_ids": job_ids})
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {
+        "detail": {
+            "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(job_ids)}",
+            "valid_job_ids": valid_job_ids,
+            "failed_job_ids": invalid_job_ids,
+        }
+    }
+    for job_id in valid_job_ids:
+        r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+        assert r.status_code == 200, r.json()
+        assert r.json()[str(job_id)]["Status"] != JobStatus.DELETED
+
+
+# Test kill job
+
+
+def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
+    # Act
+    r = normal_user_client.post(f"/api/jobs/{valid_job_id}/kill")
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    assert r.status_code == 200, r.json()
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.KILLED
+    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Marked for termination"
+    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
+
+
+def test_kill_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
+    # Act
+    r = normal_user_client.post(f"/api/jobs/{invalid_job_id}/kill")
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
+
+
+def test_kill_bulk_jobs_valid_job_ids(
+    normal_user_client: TestClient, valid_job_ids: list[int]
+):
+    # Act
+    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": valid_job_ids})
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    assert r.json() == valid_job_ids
+    for valid_job_id in valid_job_ids:
+        r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+        assert r.status_code == 200, r.json()
+        assert r.json()[str(valid_job_id)]["Status"] == JobStatus.KILLED
+        assert r.json()[str(valid_job_id)]["MinorStatus"] == "Marked for termination"
+        assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
+
+
+def test_kill_bulk_jobs_invalid_job_ids(
+    normal_user_client: TestClient, invalid_job_ids: list[int]
+):
+    # Act
+    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": invalid_job_ids})
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {
+        "detail": {
+            "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
+            "valid_job_ids": [],
+            "failed_job_ids": invalid_job_ids,
+        }
+    }
+
+
+def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
+    normal_user_client: TestClient, valid_job_ids: list[int], invalid_job_ids: list[int]
+):
+    # Arrange
+    job_ids = valid_job_ids + invalid_job_ids
+
+    # Act
+    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": job_ids})
+
+    # Assert
+    assert r.status_code == 404, r.json()
+    assert r.json() == {
+        "detail": {
+            "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(job_ids)}",
+            "valid_job_ids": valid_job_ids,
+            "failed_job_ids": invalid_job_ids,
+        }
+    }
+    for valid_job_id in valid_job_ids:
+        r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+        assert r.status_code == 200, r.json()
+        # assert the job is not killed
+        assert r.json()[str(valid_job_id)]["Status"] != JobStatus.KILLED
+
+
+# Test remove job
+
+
+def test_remove_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
+    # Act
+    r = normal_user_client.post(f"/api/jobs/{valid_job_id}/remove")
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    assert r.status_code == 404, r.json()
+
+
+def test_remove_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
+    # Act
+    r = normal_user_client.post(f"/api/jobs/{invalid_job_id}/remove")
+
+    # Assert
+    assert r.status_code == 200, r.json()
+
+
+def test_remove_bulk_jobs_valid_job_ids(
+    normal_user_client: TestClient, valid_job_ids: list[int]
+):
+    # Act
+    r = normal_user_client.post("/api/jobs/remove", params={"job_ids": valid_job_ids})
+
+    # Assert
+    assert r.status_code == 200, r.json()
+    for job_id in valid_job_ids:
+        r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+        assert r.status_code == 404, r.json()
+
+
+# def test_remove_bulk_jobs_invalid_job_ids(
+#     normal_user_client: TestClient, invalid_job_ids: list[int]
+# ):
+#     # Act
+#     r = normal_user_client.post("/api/jobs/remove", params={"job_ids": invalid_job_ids})
+
+#     # Assert
+#     assert r.status_code == 404, r.json()
+#     assert r.json() == {
+#         "detail": {
+#             "message": f"Failed to remove {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
+#             "failed_ids": {
+#                 str(invalid_job_id): f"Job {invalid_job_id} not found"
+#                 for invalid_job_id in invalid_job_ids
+#             },
+#         }
+#     }
+
+
+# def test_remove_bulk_jobs_mix_of_valid_and_invalid_job_ids(
+#     normal_user_client: TestClient, valid_job_ids: list[int], invalid_job_ids: list[int]
+# ):
+#     # Arrange
+#     job_ids = valid_job_ids + invalid_job_ids
+
+#     # Act
+#     r = normal_user_client.post("/api/jobs/remove", params={"job_ids": job_ids})
+
+#     # Assert
+#     assert r.status_code == 404, r.json()
+#     assert r.json() == {
+#         "detail": {
+#             "message": f"Failed to remove {len(invalid_job_ids)} jobs out of {len(job_ids)}",
+#             "failed_ids": {
+#                 str(invalid_job_id): f"Job {invalid_job_id} not found"
+#                 for invalid_job_id in invalid_job_ids
+#             },
+#         }
+#     }
+#     for job_id in valid_job_ids:
+#         r = normal_user_client.get(f"/api/jobs/{job_id}/status")
+#         assert r.status_code == 404, r.json()

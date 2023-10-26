@@ -36,3 +36,9 @@ class BadConfigurationVersion(ConfigurationError):
 
 class InvalidQueryError(DiracError):
     """It was not possible to build a valid database query from the given input"""
+
+
+class JobNotFound(Exception):
+    def __init__(self, job_id: int):
+        self.job_id: int = job_id
+        super().__init__(f"Job {job_id} not found")
