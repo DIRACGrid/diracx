@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from diracx.core.exceptions import InvalidQueryError
+from diracx.core.exceptions import InvalidQueryError, JobNotFound
 from diracx.core.models import (
     JobMinorStatus,
     JobStatus,
@@ -17,8 +17,6 @@ from diracx.core.models import (
     ScalarSearchOperator,
     ScalarSearchSpec,
 )
-from diracx.core.exceptions import InvalidQueryError, JobNotFound
-from diracx.core.models import JobStatus, JobStatusReturn, LimitedJobStatusReturn
 from diracx.core.properties import JOB_SHARING, SecurityProperty
 
 from ..utils import BaseSQLDB, apply_search_filters

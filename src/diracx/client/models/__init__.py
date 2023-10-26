@@ -22,6 +22,7 @@ from ._models import SandboxDownloadResponse
 from ._models import SandboxInfo
 from ._models import SandboxUploadResponse
 from ._models import ScalarSearchSpec
+from ._models import ScalarSearchSpecValue
 from ._models import SetJobStatusReturn
 from ._models import SortSpec
 from ._models import SortSpecDirection
@@ -32,6 +33,7 @@ from ._models import VOInfo
 from ._models import ValidationError
 from ._models import ValidationErrorLocItem
 from ._models import VectorSearchSpec
+from ._models import VectorSearchSpecValues
 
 from ._enums import ChecksumAlgorithm
 from ._enums import Enum0
@@ -68,6 +70,7 @@ __all__ = [
     "SandboxInfo",
     "SandboxUploadResponse",
     "ScalarSearchSpec",
+    "ScalarSearchSpecValue",
     "SetJobStatusReturn",
     "SortSpec",
     "SortSpecDirection",
@@ -78,6 +81,7 @@ __all__ = [
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",
+    "VectorSearchSpecValues",
     "ChecksumAlgorithm",
     "Enum0",
     "Enum1",
