@@ -279,12 +279,15 @@ class JobSearchParams(_serialization.Model):
     :vartype search: list[~client.models.JobSearchParamsSearchItem]
     :ivar sort: Sort.
     :vartype sort: list[~client.models.SortSpec]
+    :ivar distinct: Distinct.
+    :vartype distinct: bool
     """
 
     _attribute_map = {
         "parameters": {"key": "parameters", "type": "[str]"},
         "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
         "sort": {"key": "sort", "type": "[SortSpec]"},
+        "distinct": {"key": "distinct", "type": "bool"},
     }
 
     def __init__(
@@ -293,6 +296,7 @@ class JobSearchParams(_serialization.Model):
         parameters: Optional[List[str]] = None,
         search: List["_models.JobSearchParamsSearchItem"] = [],
         sort: List["_models.SortSpec"] = [],
+        distinct: bool = False,
         **kwargs: Any
     ) -> None:
         """
@@ -302,11 +306,14 @@ class JobSearchParams(_serialization.Model):
         :paramtype search: list[~client.models.JobSearchParamsSearchItem]
         :keyword sort: Sort.
         :paramtype sort: list[~client.models.SortSpec]
+        :keyword distinct: Distinct.
+        :paramtype distinct: bool
         """
         super().__init__(**kwargs)
         self.parameters = parameters
         self.search = search
         self.sort = sort
+        self.distinct = distinct
 
 
 class JobSearchParamsSearchItem(_serialization.Model):
