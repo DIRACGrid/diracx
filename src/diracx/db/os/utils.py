@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from abc import ABCMeta, abstractmethod
+from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, AsyncIterator, Self
 
@@ -14,6 +15,7 @@ from opensearchpy import AsyncOpenSearch
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
+from diracx.db.exceptions import DBUnavailable
 
 OS_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 
@@ -24,7 +26,7 @@ class OpenSearchDBError(Exception):
     pass
 
 
-class OpenSearchDBUnavailable(OpenSearchDBError):
+class OpenSearchDBUnavailable(DBUnavailable, OpenSearchDBError):
     pass
 
 
@@ -40,6 +42,10 @@ class BaseOSDB(metaclass=ABCMeta):
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
         self._client: AsyncOpenSearch | None = None
         self._connection_kwargs = connection_kwargs
+        # We use a ContextVar to make sure that self._conn
+        # is specific to each context, and avoid parallel
+        # route executions to overlap
+        self._conn: ContextVar[bool] = ContextVar("_conn", default=False)
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type[BaseOSDB]]:
@@ -93,20 +99,34 @@ class BaseOSDB(metaclass=ABCMeta):
         """
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
-            if not await self._client.ping():
-                raise OpenSearchDBUnavailable(
-                    f"Failed to connect to {self.__class__.__qualname__}"
-                )
             yield
         self._client = None
 
+    async def ping(self):
+        """
+        Check whether the connection to the DB is still working.
+        We could enable the ``pre_ping`` in the engine, but this would
+        be ran at every query.
+        """
+        if not await self.client.ping():
+            raise OpenSearchDBUnavailable(
+                f"Failed to connect to {self.__class__.__qualname__}"
+            )
+
     async def __aenter__(self):
-        """This is entered on every request. It does nothing"""
-        assert self._client is None, "client_context hasn't been entered"
+        """This is entered on every request.
+        At the moment it does nothing, however, we keep it here
+        in case we ever want to use OpenSearch equivalent of a transaction
+        """
+        assert not self._conn.get(), "BaseOSDB context cannot be nested"
+        assert self._client is not None, "client_context hasn't been entered"
+        self._conn.set(True)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        assert self._conn.get()
         self._client = None
+        self._conn.set(False)
         return
 
     async def create_index_template(self) -> None:

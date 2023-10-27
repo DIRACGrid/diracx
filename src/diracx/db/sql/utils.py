@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, AsyncIterator, Self, cast
 
 from pydantic import parse_obj_as
 from sqlalchemy import Column as RawColumn
-from sqlalchemy import DateTime, Enum, MetaData
+from sqlalchemy import DateTime, Enum, MetaData, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
@@ -21,6 +22,7 @@ from sqlalchemy.sql import expression
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import SqlalchemyDsn
+from diracx.db.exceptions import DBUnavailable
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -64,6 +66,14 @@ DateNowColumn = partial(Column, DateTime(timezone=True), server_default=utcnow()
 
 def EnumColumn(enum_type, **kwargs):
     return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
+
+
+class SQLDBError(Exception):
+    pass
+
+
+class SQLDBUnavailable(DBUnavailable, SQLDBError):
+    """Used whenever we encounter a problem with the B connection"""
 
 
 class BaseSQLDB(metaclass=ABCMeta):
@@ -146,7 +156,10 @@ class BaseSQLDB(metaclass=ABCMeta):
         """
         assert self._engine is None, "engine_context cannot be nested"
 
-        engine = create_async_engine(self._db_url)
+        # Set the pool_recycle to 30mn
+        # That should prevent the problem of MySQL expiring connection
+        # after 60mn by default
+        engine = create_async_engine(self._db_url, pool_recycle=60 * 30)
         self._engine = engine
 
         yield
@@ -166,8 +179,12 @@ class BaseSQLDB(metaclass=ABCMeta):
         This is called by the Dependency mechanism (see ``db_transaction``),
         It will create a new connection/transaction for each route call.
         """
+        assert self._conn.get() is None, "BaseSQLDB context cannot be nested"
+        try:
+            self._conn.set(await self.engine.connect().__aenter__())
+        except Exception as e:
+            raise SQLDBUnavailable("Cannot connect to DB") from e
 
-        self._conn.set(await self.engine.connect().__aenter__())
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -180,6 +197,17 @@ class BaseSQLDB(metaclass=ABCMeta):
             await self._conn.get().commit()
         await self._conn.get().__aexit__(exc_type, exc, tb)
         self._conn.set(None)
+
+    async def ping(self):
+        """
+        Check whether the connection to the DB is still working.
+        We could enable the ``pre_ping`` in the engine, but this would
+        be ran at every query.
+        """
+        try:
+            await self.conn.scalar(select(1))
+        except OperationalError as e:
+            raise SQLDBUnavailable("Cannot ping the DB") from e
 
 
 def apply_search_filters(table, stmt, search):

@@ -9,12 +9,10 @@ from .conftest import OPENSEARCH_PORT, DummyOSDB, require_port_availability
 
 async def _ensure_db_unavailable(db: DummyOSDB):
     """Helper function which raises an exception if we manage to connect to the DB."""
-    # Normally we would use "async with db.client_context()" but here
-    # __aenter__ is used explicitly to ensure the exception is raised
-    # while entering the context manager
-    acm = db.client_context()
-    with pytest.raises(OpenSearchDBUnavailable):
-        await acm.__aenter__()
+    async with db.client_context():
+        async with db:
+            with pytest.raises(OpenSearchDBUnavailable):
+                await db.ping()
 
 
 async def test_connection(dummy_opensearch_db: DummyOSDB):
@@ -85,10 +83,9 @@ async def test_sanity_checks(opensearch_conn_kwargs):
     db = DummyOSDB(opensearch_conn_kwargs)
     # Check that the client is not available before entering the context manager
     with pytest.raises(RuntimeError):
-        await db.client.ping()
+        await db.ping()
 
     # It shouldn't be possible to enter the context manager twice
     async with db.client_context():
-        assert await db.client.ping()
-        with pytest.raises(AssertionError):
-            await db.__aenter__()
+        async with db:
+            await db.ping()

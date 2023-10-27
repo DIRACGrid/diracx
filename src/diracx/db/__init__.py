@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("sql", "os")
+__all__ = ("sql", "os", "exceptions")
 
-from . import os, sql
+from . import exceptions, os, sql
