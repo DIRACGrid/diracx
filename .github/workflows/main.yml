@@ -111,3 +111,23 @@ jobs:
       - name: Run mypy
         run: |
           mypy .
+
+  client-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        run: |
+          micromamba install -c conda-forge nodejs pre-commit
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install -e .
+          npm install -g autorest
+      - name: Run autorest
+        run: |
+          pytest --no-cov --regenerate-client tests/client/test_regenerate.py

@@ -179,3 +179,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 ```
+
+
+## Client generation
+
+[!WARNING]
+This is for advanced users only as it is currently an unstable feature
+
+
+When a new client generation is needed, a CI job called `client-generation` will fail, and one of the repo admin will regenerate the client for you.
+
+If you anyway want to try, the best up to date documentation is to look at the [client-generation CI job](https://github.com/DIRACGrid/diracx/blob/main/.github/workflows/main.yml)
