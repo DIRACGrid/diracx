@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 __all__ = ("select_from_extension",)
 
 import os
