@@ -20,10 +20,12 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
     return [v for _, v in sorted(env_files.items())]
 
 
-def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
-    """Write credentials received in dirax_preferences.credentials_path"""
-    from diracx.core.preferences import get_diracx_preferences
+def serialize_credentials(token_response: TokenResponse) -> str:
+    """Serialize DiracX client credentials to a string
 
+    This method is separated from write_credentials to allow for DIRAC to be
+    able to serialize credentials for inclusion in the proxy file.
+    """
     expires = datetime.now(tz=timezone.utc) + timedelta(
         seconds=token_response.expires_in - EXPIRES_GRACE_SECONDS
     )
@@ -32,6 +34,13 @@ def write_credentials(token_response: TokenResponse, *, location: Path | None = 
         "refresh_token": token_response.refresh_token,
         "expires_on": int(datetime.timestamp(expires)),
     }
+    return json.dumps(credential_data)
+
+
+def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
+    """Write credentials received in dirax_preferences.credentials_path"""
+    from diracx.core.preferences import get_diracx_preferences
+
     credentials_path = location or get_diracx_preferences().credentials_path
     credentials_path.parent.mkdir(parents=True, exist_ok=True)
-    credentials_path.write_text(json.dumps(credential_data))
+    credentials_path.write_text(serialize_credentials(token_response))
