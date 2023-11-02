@@ -9,6 +9,7 @@ class DiracHttpResponse(RuntimeError):
 
 class DiracError(RuntimeError):
     http_status_code = status.HTTP_400_BAD_REQUEST
+    http_headers: dict[str, str] | None = None
 
     def __init__(self, detail: str = "Unknown"):
         self.detail = detail

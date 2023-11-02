@@ -7,6 +7,7 @@ import pytest
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.sql.dummy.db import DummyDB
+from diracx.db.sql.utils import SQLDBUnavailable
 
 # Each DB test class must defined a fixture looking like this one
 # It allows to get an instance of an in memory DB,
@@ -67,3 +68,11 @@ async def test_insert_and_summary(dummy_db: DummyDB):
                     }
                 ],
             )
+
+
+async def test_bad_connection():
+    dummy_db = DummyDB("mysql+aiomysql://tata:yoyo@db.invalid:3306/name")
+    async with dummy_db.engine_context():
+        with pytest.raises(SQLDBUnavailable):
+            async with dummy_db:
+                dummy_db.ping()

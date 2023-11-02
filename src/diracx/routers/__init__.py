@@ -3,11 +3,13 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+from collections.abc import AsyncGenerator
 from functools import partial
-from typing import Any, AsyncContextManager, AsyncGenerator, Iterable, TypeVar
+from typing import Any, Iterable, TypeVar
 
 import dotenv
-from fastapi import APIRouter, Depends, Request
+from cachetools import TTLCache
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -15,9 +17,13 @@ from fastapi.routing import APIRoute
 from pydantic import parse_raw_as
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponse
+from diracx.core.exceptions import (
+    DiracError,
+    DiracHttpResponse,
+)
 from diracx.core.extensions import select_from_extension
 from diracx.core.utils import dotenv_files_from_environment
+from diracx.db.exceptions import DBUnavailable
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 
@@ -26,7 +32,8 @@ from .auth import verify_dirac_access_token
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 
 T = TypeVar("T")
-T2 = TypeVar("T2", bound=AsyncContextManager)
+T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,21 +66,33 @@ def create_app_inner(
     # Override the configuration source
     app.dependency_overrides[ConfigSource.create] = config_source.read_config
 
+    fail_startup = True
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
     for db_name, db_url in database_urls.items():
-        sql_db_classes = BaseSQLDB.available_implementations(db_name)
-        # The first DB is the highest priority one
-        sql_db = sql_db_classes[0](db_url=db_url)
-        app.lifetime_functions.append(sql_db.engine_context)
-        # Add overrides for all the DB classes, including those from extensions
-        # This means vanilla DiracX routers get an instance of the extension's DB
-        for sql_db_class in sql_db_classes:
-            assert sql_db_class.transaction not in app.dependency_overrides
-            available_sql_db_classes.add(sql_db_class)
-            app.dependency_overrides[sql_db_class.transaction] = partial(
-                db_transaction, sql_db
-            )
+        try:
+            sql_db_classes = BaseSQLDB.available_implementations(db_name)
+
+            # The first DB is the highest priority one
+            sql_db = sql_db_classes[0](db_url=db_url)
+
+            app.lifetime_functions.append(sql_db.engine_context)
+            # Add overrides for all the DB classes, including those from extensions
+            # This means vanilla DiracX routers get an instance of the extension's DB
+            for sql_db_class in sql_db_classes:
+                assert sql_db_class.transaction not in app.dependency_overrides
+                available_sql_db_classes.add(sql_db_class)
+                app.dependency_overrides[sql_db_class.transaction] = partial(
+                    db_transaction, sql_db
+                )
+
+            # At least one DB works, so we do not fail the startup
+            fail_startup = False
+        except Exception:
+            logger.exception("Failed to initialize DB %s", db_name)
+
+    if fail_startup:
+        raise Exception("No SQL database could be initialized, aborting")
 
     # Add the OpenSearch DBs to the application
     available_os_db_classes: set[type[BaseOSDB]] = set()
@@ -87,7 +106,9 @@ def create_app_inner(
         for os_db_class in os_db_classes:
             assert os_db_class.session not in app.dependency_overrides
             available_os_db_classes.add(os_db_class)
-            app.dependency_overrides[os_db_class.session] = partial(db_session, os_db)
+            app.dependency_overrides[os_db_class.session] = partial(
+                db_transaction, os_db
+            )
 
     # Load the requested routers
     routers: dict[str, APIRouter] = {}
@@ -145,6 +166,7 @@ def create_app_inner(
     # Add exception handlers
     app.add_exception_handler(DiracError, dirac_error_handler)
     app.add_exception_handler(DiracHttpResponse, http_response_handler)
+    app.add_exception_handler(DBUnavailable, route_unavailable_error_hander)
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -199,12 +221,22 @@ def create_app() -> DiracFastAPI:
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
     return JSONResponse(
-        status_code=exc.http_status_code, content={"detail": exc.detail}
+        status_code=exc.http_status_code,
+        content={"detail": exc.detail},
+        headers=exc.http_headers,
     )
 
 
 def http_response_handler(request: Request, exc: DiracHttpResponse) -> Response:
     return JSONResponse(status_code=exc.status_code, content=exc.data)
+
+
+def route_unavailable_error_hander(request: Request, exc: DBUnavailable):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Retry-After": "10"},
+        content={"detail": str(exc.args)},
+    )
 
 
 def find_dependents(
@@ -225,10 +257,33 @@ def find_dependents(
         yield from find_dependents(dependency.dependencies, cls)
 
 
+_db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
+
+
+async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
+    """Cache the result of pinging the DB
+    (exceptions are not cachable)
+    """
+    if db not in _db_alive_cache:
+        try:
+            await db.ping()
+            _db_alive_cache[db] = ""
+
+        except DBUnavailable as e:
+            _db_alive_cache[db] = e.args[0]
+
+    return _db_alive_cache[db]
+
+
 async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
+    """
+    Initiate a DB transaction.
+    """
+
+    # Entering the context already triggers a connection to the DB
+    # that may fail
     async with db:
+        # Check whether the connection still works before executing the query
+        if reason := await is_db_unavailable(db):
+            raise DBUnavailable(reason)
         yield db
-
-
-async def db_session(db: T2) -> AsyncGenerator[T2, None]:
-    yield db
