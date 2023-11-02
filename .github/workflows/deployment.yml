@@ -112,7 +112,10 @@ jobs:
           fi
       - name: Build distributions
         run: |
-          python -m build
+          for pkg_dir in $PWD/diracx-*; do
+            echo "Building $pkg_dir"
+            python -m build --outdir $PWD/dist $pkg_dir
+          done
       - name: Make release on GitHub
         if: steps.check-tag.outputs.create-release == 'true'
         run: |

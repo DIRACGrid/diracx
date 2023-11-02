@@ -1,0 +1,72 @@
+[project]
+name = "diracx-routers"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "aiobotocore",
+    "authlib",
+    "botocore",
+    "cachetools",
+    "dirac",
+    "diracx-core",
+    "diracx-db",
+    "python-dotenv",  # TODO: We might not need this
+    "python-multipart",
+    "fastapi",
+    "httpx",
+    "pydantic",
+    "sqlalchemy",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = [
+    "diracx-testing",
+    "moto[server]",
+    "pytest-httpx",
+]
+types = [
+    "boto3-stubs",
+    "types-aiobotocore[essential]",
+    "types-aiobotocore-s3",
+    "types-cachetools",
+    "types-python-dateutil",
+    "types-PyYAML",
+    "types-requests",
+]
+
+[project.entry-points."diracx.services"]
+jobs = "diracx.routers.job_manager:router"
+config = "diracx.routers.configuration:router"
+auth = "diracx.routers.auth:router"
+".well-known" = "diracx.routers.well_known:router"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = ".."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=diracx.routers", "--cov-report=term-missing",
+    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"

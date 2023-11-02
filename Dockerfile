@@ -14,4 +14,4 @@ WORKDIR /code
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /code/diracx
 
-RUN pip install ./diracx git+https://github.com/DIRACGrid/DIRAC.git@integration
+RUN pip install ./diracx/diracx-core ./diracx/diracx-db ./diracx/diracx-routers git+https://github.com/DIRACGrid/DIRAC.git@integration

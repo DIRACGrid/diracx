@@ -63,7 +63,7 @@ Run the unit tests:
 ```bash
 # In the `diracx` folder
 pytest
-mypy .
+mypy
 pre-commit run --all-files
 ```
 
@@ -71,7 +71,7 @@ Some tests require the DiracX demo instance to be running (see above) and are sk
 To enable these tests pass `--demo-dir` like so:
 
 ```bash
-pytest . --demo-dir ../diracx-charts/
+pytest --demo-dir=../diracx-charts/
 ```
 
 ### Run a local instance of diracx
