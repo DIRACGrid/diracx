@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import contextlib
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, AsyncIterator
+from typing import TYPE_CHECKING, Annotated, AsyncIterator, Literal
 
 from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
-from fastapi import Depends, HTTPException, Query
+from fastapi import Body, Depends, HTTPException, Query
 from pydantic import BaseModel, PrivateAttr
+from pyparsing import Any
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.models import (
@@ -191,4 +192,45 @@ async def get_sandbox_file(
     )
     return SandboxDownloadResponse(
         url=presigned_url, expires_in=settings.url_validity_seconds
+    )
+
+
+@router.get("/{job_id}/sandbox")
+async def get_job_sandboxes(
+    job_id: int,
+    sandbox_metadata_db: SandboxMetadataDB,
+) -> dict[str, list[Any]]:
+    """Get input and output sandboxes of given job id at the same time."""
+    # TODO: check that user as created the job or is admin
+    input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(job_id, "Input")
+    output_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(job_id, "Output")
+    return {"Input": input_sb, "Output": output_sb}
+
+
+@router.get("/{job_id}/sandbox/{sandbox_type}")
+async def get_job_sandbox(
+    job_id: int,
+    sandbox_metadata_db: SandboxMetadataDB,
+    sandbox_type: Literal["input", "output"],
+) -> list[Any]:
+    """Get input or output sandbox from given job"""
+    # TODO: check that user has created the job or is admin
+    job_sb_pfns = await sandbox_metadata_db.get_sandbox_assigned_to_job(
+        job_id, sandbox_type.capitalize()
+    )
+
+    return job_sb_pfns
+
+
+@router.patch("/{job_id}/sandbox/output")
+async def assign_sandbox(
+    job_id: int,
+    pfn: Annotated[str, Body(max_length=256, pattern=SANDBOX_PFN_REGEX)],
+    sandbox_metadata_db: SandboxMetadataDB,
+    settings: SandboxStoreSettings,
+):
+    # TODO: check that user has created the job or is admin
+    short_pfn = pfn.split("|", 1)[-1]
+    await sandbox_metadata_db.assign_sandbox_to_job(
+        job_id, short_pfn, "Output", settings.se_name
     )
