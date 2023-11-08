@@ -272,7 +272,7 @@ async def remove_jobs(
 
     # TODO: this was also  not done in the JobManagerHandler, but it was done in the JobCleaningAgent
     # I think it should be done here as well
-    await sandbox_metadata_db.unassign_sandbox_from_jobs(job_ids)
+    await sandbox_metadata_db.unassign_sandboxes_to_jobs(job_ids)
 
     # Remove the job from TaskQueueDB
     await _remove_jobs_from_task_queue(job_ids, config, task_queue_db, background_task)

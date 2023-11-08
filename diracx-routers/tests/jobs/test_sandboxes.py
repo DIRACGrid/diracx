@@ -13,7 +13,13 @@ from diracx.routers.auth.token import create_token
 from diracx.routers.auth.utils import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthSettings", "SandboxMetadataDB", "SandboxStoreSettings"]
+    [
+        "AuthSettings",
+        "JobDB",
+        "JobLoggingDB",
+        "SandboxMetadataDB",
+        "SandboxStoreSettings",
+    ]
 )
 
 
@@ -92,3 +98,87 @@ def test_upload_oversized(normal_user_client: TestClient):
     )
     assert r.status_code == 400, r.text
     assert "Sandbox too large" in r.json()["detail"], r.text
+
+
+TEST_JDL = """
+    Arguments = "jobDescription.xml -o LogLevel=INFO";
+    Executable = "dirac-jobexec";
+    JobGroup = jobGroup;
+    JobName = jobName;
+    JobType = User;
+    LogLevel = INFO;
+    OutputSandbox =
+        {
+            Script1_CodeOutput.log,
+            std.err,
+            std.out
+        };
+    Priority = 1;
+    Site = ANY;
+    StdError = std.err;
+    StdOutput = std.out;
+"""
+
+
+def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
+    data = secrets.token_bytes(512)
+    checksum = hashlib.sha256(data).hexdigest()
+
+    # Upload Sandbox:
+    r = normal_user_client.post(
+        "/api/jobs/sandbox",
+        json={
+            "checksum_algorithm": "sha256",
+            "checksum": checksum,
+            "size": len(data),
+            "format": "tar.bz2",
+        },
+    )
+    assert r.status_code == 200, r.text
+    upload_info = r.json()
+    assert upload_info["url"]
+    sandbox_pfn = upload_info["pfn"]
+    assert sandbox_pfn.startswith("SB:SandboxSE|/S3/")
+
+    # Submit a job:
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+    job_id = r.json()[0]["JobID"]
+
+    # Getting job sb:
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/output")
+    assert r.status_code == 200
+    # Should be empty
+    assert r.json()[0] is None
+
+    # Assign sb to job:
+    r = normal_user_client.patch(
+        f"/api/jobs/{job_id}/sandbox/output",
+        json=sandbox_pfn,
+    )
+    assert r.status_code == 200
+
+    # Get the sb again:
+    short_pfn = sandbox_pfn.split("|", 1)[-1]
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
+    assert r.status_code == 200
+    assert r.json()["Input"] == [None]
+    assert r.json()["Output"] == [short_pfn]
+
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/output")
+    assert r.status_code == 200
+    assert r.json()[0] == short_pfn
+
+    # Unassign sb to job:
+    job_ids = [job_id]
+    r = normal_user_client.delete("/api/jobs/sandbox", params={"jobs_ids": job_ids})
+    assert r.status_code == 200
+
+    # Get the sb again, it should'nt be there anymore:
+    short_pfn = sandbox_pfn.split("|", 1)[-1]
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
+    assert r.status_code == 200
+    assert r.json()["Input"] == [None]
+    assert r.json()["Output"] == [None]
