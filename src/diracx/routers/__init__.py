@@ -20,6 +20,7 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
 )
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.instrumentation.logging.constants import DEFAULT_LOGGING_FORMAT
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
@@ -93,6 +94,13 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
     if log_correlation:
         LoggingInstrumentor().instrument(set_logging_format=True)
 
+        # CHRIS HACK
+        # manually change the logging formater of uvicorn as it is
+        # not reached by the LoggingInstrumentor
+        logger = logging.getLogger("uvicorn.access")
+        for hl in logger.handlers:
+            hl.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
+
     FastAPIInstrumentor.instrument_app(
         app, tracer_provider=tracer, meter_provider=provider
     )
@@ -113,6 +121,7 @@ def create_app_inner(
     config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
+    instrument_otel(app, APP_NAME)
 
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
@@ -242,7 +251,9 @@ def create_app_inner(
         allow_headers=["*"],
     )
 
-    instrument_otel(app, APP_NAME)
+    print(f"CHRIS LOGS { sorted(logging.root.manager.loggerDict)}")
+
+    # instrument_otel(app, APP_NAME)
 
     return app
 
