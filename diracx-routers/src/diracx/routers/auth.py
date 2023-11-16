@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 import os
 import re
 import secrets
@@ -51,6 +52,8 @@ from .dependencies import (
     add_settings_annotation,
 )
 from .fastapi_classes import DiracxRouter
+
+logger = logging.getLogger(__name__)
 
 oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
 
@@ -1031,6 +1034,7 @@ class UserInfoResponse(TypedDict):
 async def userinfo(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]
 ) -> UserInfoResponse:
+    logger.info("CHRIS YEAH BABY")
     return {
         "sub": user_info.sub,
         "vo": user_info.vo,
