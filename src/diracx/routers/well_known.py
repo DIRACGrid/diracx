@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-
-from typing import TypedDict
 import logging
-
+from typing import TypedDict
 
 from fastapi import Request
 
