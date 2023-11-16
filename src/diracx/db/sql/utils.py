@@ -59,8 +59,8 @@ def substract_date(**kwargs: float) -> datetime:
     return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
 
 
-Column = partial(RawColumn, nullable=False)
-NullColumn = partial(RawColumn, nullable=True)
+Column: partial[RawColumn] = partial(RawColumn, nullable=False)
+NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
 DateNowColumn = partial(Column, DateTime(timezone=True), server_default=utcnow())
 
 
