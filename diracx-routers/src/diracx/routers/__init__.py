@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter as OTLPSpanExporterGRPC,
 )
@@ -23,7 +24,6 @@ from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.logging.constants import DEFAULT_LOGGING_FORMAT
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
-    ConsoleMetricExporter,
     PeriodicExportingMetricReader,
 )
 from opentelemetry.sdk.resources import Resource
@@ -71,8 +71,8 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
     resource = Resource.create(attributes={"service.name": app_name})
 
     # set the tracer provider
-    tracer = TracerProvider(resource=resource)
-    trace.set_tracer_provider(tracer)
+    tracer_provider = TracerProvider(resource=resource)
+    trace.set_tracer_provider(tracer_provider)
 
     # elif MODE == "otel-collector-http":
     #     tracer.add_span_processor(
@@ -80,15 +80,19 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
     #     )
     # else:
     # default otel-collector-grpc
-    tracer.add_span_processor(
+    tracer_provider.add_span_processor(
         BatchSpanProcessor(
             OTLPSpanExporterGRPC(endpoint=OTEL_GRPC_ENDPOINT, insecure=True)
         )
     )
 
-    metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter())
-    provider = MeterProvider(metric_readers=[metric_reader])
-    metrics.set_meter_provider(provider)
+    # metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(),export_interval_millis=1000)
+    metric_reader = PeriodicExportingMetricReader(
+        OTLPMetricExporter(endpoint=OTEL_GRPC_ENDPOINT, insecure=True),
+        export_interval_millis=3000,
+    )
+    meter_provider = MeterProvider(metric_readers=[metric_reader])
+    metrics.set_meter_provider(meter_provider)
 
     # # override logger format which with trace id and span id
     if log_correlation:
@@ -102,7 +106,14 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
             hl.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
 
     FastAPIInstrumentor.instrument_app(
-        app, tracer_provider=tracer, meter_provider=provider
+        app, tracer_provider=tracer_provider, meter_provider=meter_provider
+    )
+    from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
+
+    app.add_middleware(
+        OpenTelemetryMiddleware,
+        tracer_provider=tracer_provider,
+        meter_provider=meter_provider,
     )
 
 
@@ -121,7 +132,6 @@ def create_app_inner(
     config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
-    instrument_otel(app, APP_NAME)
 
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
@@ -260,7 +270,7 @@ def create_app_inner(
 
     print(f"CHRIS LOGS { sorted(logging.root.manager.loggerDict)}")
 
-    # instrument_otel(app, APP_NAME)
+    instrument_otel(app, APP_NAME)
 
     return app
 
