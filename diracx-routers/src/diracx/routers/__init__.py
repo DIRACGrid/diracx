@@ -72,7 +72,6 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
 
     # set the tracer provider
     tracer_provider = TracerProvider(resource=resource)
-    trace.set_tracer_provider(tracer_provider)
 
     # elif MODE == "otel-collector-http":
     #     tracer.add_span_processor(
@@ -85,6 +84,7 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
             OTLPSpanExporterGRPC(endpoint=OTEL_GRPC_ENDPOINT, insecure=True)
         )
     )
+    trace.set_tracer_provider(tracer_provider)
 
     # metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(),export_interval_millis=1000)
     metric_reader = PeriodicExportingMetricReader(
@@ -105,15 +105,12 @@ def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -
         for hl in logger.handlers:
             hl.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
 
+    # FastAPIInstrumentor.instrument_app(
+    #     app, tracer_provider=tracer_provider, meter_provider=meter_provider
+    # )
+
     FastAPIInstrumentor.instrument_app(
         app, tracer_provider=tracer_provider, meter_provider=meter_provider
-    )
-    from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
-
-    app.add_middleware(
-        OpenTelemetryMiddleware,
-        tracer_provider=tracer_provider,
-        meter_provider=meter_provider,
     )
 
 
