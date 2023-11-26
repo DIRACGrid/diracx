@@ -116,6 +116,8 @@ jobs:
             echo "Building $pkg_dir"
             python -m build --outdir $PWD/dist $pkg_dir
           done
+          # Also build the diracx metapackage
+          python -m build --outdir $PWD/dist .
       - name: Make release on GitHub
         if: steps.check-tag.outputs.create-release == 'true'
         run: |
