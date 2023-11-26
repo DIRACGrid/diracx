@@ -208,6 +208,7 @@ jobs:
           context: containers/client/
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
           tags: ghcr.io/diracgrid/diracx/client:dev
+          platforms: linux/amd64,linux/arm64
           build-args: PACKAGES_TO_INSTALL=/bindmount/${{ steps.find_wheel.outputs.diracx_core-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx_client-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx_cli-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx_api-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx-wheel-name }} git+https://github.com/DIRACGrid/DIRAC.git@integration
       - name: Build and push services (dev)
         uses: docker/build-push-action@v5
@@ -216,4 +217,5 @@ jobs:
           context: containers/services/
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
           tags: ghcr.io/diracgrid/diracx/services:dev
+          platforms: linux/amd64,linux/arm64
           build-args: PACKAGES_TO_INSTALL=/bindmount/${{ steps.find_wheel.outputs.diracx_core-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx_db-wheel-name }} /bindmount/${{ steps.find_wheel.outputs.diracx_routers-wheel-name }} git+https://github.com/DIRACGrid/DIRAC.git@integration
