@@ -1,9 +1,37 @@
+[project]
+name = "diracx"
+description = "Client installation for users of DiracX installations"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "diracx-api",
+    "diracx-cli",
+    "diracx-client",
+    "diracx-core",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = [
+    "diracx-testing",
+]
+
+[tool.setuptools]
+packages = []
+
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
-# Enable setuptools_scm to compute the version number from the most recent tag
-# https://github.com/pypa/setuptools_scm/#pyprojecttoml-usage
 [tool.setuptools_scm]
 
 [tool.ruff]
@@ -18,8 +46,8 @@ select = [
 ]
 ignore = ["B905", "B008", "B006"]
 line-length = 120
-src = ["src", "tests"]
-exclude = ["src/diracx/client/"]
+src = ["diracx-*/src", "diracx-*/tests"]
+exclude = ["diracx-client/src/diracx/client/"]
 
 [tool.isort]
 profile = "black"
@@ -29,9 +57,26 @@ profile = "black"
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
 
 [tool.mypy]
+files = [
+    "diracx-api/src/**/*.py",
+    "diracx-cli/src/**/*.py",
+    "diracx-client/src/**/_patch.py",
+    "diracx-core/src/**/*.py",
+    "diracx-db/src/**/*.py",
+    "diracx-routers/src/**/*.py",
+]
+mypy_path = [
+    "$MYPY_CONFIG_FILE_DIR/diracx-api/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-cli/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-client/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-core/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-db/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-routers/src",
+]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
-exclude = ["^src/diracx/client", "^tests/", "^build/"]
 allow_redefinition = true
+explicit_package_bases = true
+# disallow_untyped_defs = true
 # strict = true
 enable_error_code = ["import", "attr-defined"]
 
@@ -44,5 +89,18 @@ module = 'authlib.*'
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = ["-v", "--cov=diracx", "--cov-report=term-missing"]
+testpaths = [
+    "diracx-api/tests",
+    "diracx-cli/tests",
+    "diracx-client/tests",
+    "diracx-core/tests",
+    "diracx-db/tests",
+    "diracx-routers/tests",
+]
+addopts = [
+    "-v",
+    "--cov=diracx", "--cov-report=term-missing",
+    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
 asyncio_mode = "auto"

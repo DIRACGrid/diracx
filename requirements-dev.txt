@@ -1,0 +1,8 @@
+-e ./[testing]
+-e ./diracx-core/[testing]
+-e ./diracx-api/[testing]
+-e ./diracx-cli/[testing]
+-e ./diracx-client/[testing]
+-e ./diracx-routers/[testing]
+-e ./diracx-db/[testing]
+-e ./diracx-testing/[testing]

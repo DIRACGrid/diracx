@@ -1,0 +1,5 @@
+# Exclude everything from the diracx sdist
+global-exclude *
+
+# Add back in the minimal files requires
+include pyproject.toml README.md LICENSE

@@ -1,0 +1,58 @@
+[project]
+name = "diracx-db"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "dirac",
+    "diracx-core",
+    "fastapi",
+    "opensearch-py[async]",
+    "pydantic",
+    "sqlalchemy[aiomysql,aiosqlite]",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = [
+    "diracx-testing",
+]
+
+[project.entry-points."diracx.db.sql"]
+AuthDB = "diracx.db.sql:AuthDB"
+JobDB = "diracx.db.sql:JobDB"
+JobLoggingDB = "diracx.db.sql:JobLoggingDB"
+SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
+TaskQueueDB = "diracx.db.sql:TaskQueueDB"
+
+[project.entry-points."diracx.db.os"]
+JobParametersDB = "diracx.db.os:JobParametersDB"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = ".."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=diracx.db", "--cov-report=term-missing",
+    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"

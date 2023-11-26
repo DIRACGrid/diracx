@@ -15,23 +15,52 @@ defaults:
 
 jobs:
   pytest:
+    name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: "./diracx-core"
+            dependencies: "./diracx-testing"
+          - package: "./diracx-db"
+            dependencies: "./diracx-testing ./diracx-core"
+          - package: "./diracx-routers"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db"
+          - package: "./diracx-client"
+            dependencies: "./diracx-testing ./diracx-core"
+          - package: "./diracx-api"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-client"
+          - package: "./diracx-cli"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: environment.yml
+          # TODO: Use a conda environment file used for the diracx/base container image
+          environment-name: test-env
+          create-args: >-
+            python=3.11
+            m2crypto
+            python-gfal2
+            mypy
+            pip
           init-shell: bash
           post-cleanup: 'all'
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install .
+          pip install ${{ matrix.dependencies }} ${{ matrix.package }}[types]
+      - name: Run mypy
+        run: |
+          mypy ${{ matrix.package }}/src
       - name: Run pytest
         run: |
-          pytest . --cov-report=xml:coverage.xml --junitxml=report.xml
+          cd ${{ matrix.package }}
+          pip install .[testing]
+          pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
 
@@ -49,7 +78,7 @@ jobs:
         run: |
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install .
+          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ ./diracx-client/ ./diracx-routers/ ./diracx-db/ ./diracx-testing/
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
@@ -74,7 +103,7 @@ jobs:
           fi
       - name: Run pytest
         run: |
-          pytest . --demo-dir ../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+          pytest --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
@@ -88,29 +117,21 @@ jobs:
           coverage_data=$(mktemp)
           sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
           coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
+
+          # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
+          fake_module=$(mktemp -d)
+          mkdir -p "${fake_module}/src/diracx"
+          for fn in "${PWD}"/*/src/diracx/*; do
+            ln -sf "${fn}" "${fake_module}/src/diracx/$(basename "${fn}")"
+          done
+          sed -i "s@source =@source =\n    ${fake_module}/src@g" .coveragerc
+          cat .coveragerc
+
           coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
-
-  mypy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install .
-      - name: Run mypy
-        run: |
-          mypy .
 
   client-generation:
     runs-on: ubuntu-latest
@@ -126,8 +147,8 @@ jobs:
         run: |
           micromamba install -c conda-forge nodejs pre-commit
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install -e .
+          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ -e ./diracx-client/ ./diracx-routers/ ./diracx-db/ ./diracx-testing/
           npm install -g autorest
       - name: Run autorest
         run: |
-          pytest --no-cov --regenerate-client tests/client/test_regenerate.py
+          pytest --no-cov --regenerate-client diracx-client/tests/test_regenerate.py

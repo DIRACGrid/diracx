@@ -35,4 +35,4 @@ repos:
           - types-requests
           - types-aiobotocore[essential]
           - boto3-stubs[essential]
-        exclude: ^(src/diracx/client/|tests/|build)
+        exclude: ^(diracx-client/src/diracx/client/|diracx-[a-z]+/tests/|diracx-testing/|build)
