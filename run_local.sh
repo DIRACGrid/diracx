@@ -11,8 +11,18 @@ signing_key="${tmp_dir}/signing-key/rsa256.key"
 ssh-keygen -P "" -t rsa -b 4096 -m PEM -f "${signing_key}"
 
 # Make a fake CS
-dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo" \
-  --vo=diracAdmin --user-group=admin --idp-url=runlocal.diracx.invalid
+dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo"
+
+dirac internal add-vo "${tmp_dir}/cs_store/initialRepo" \
+    --vo=diracAdmin \
+    --idp-url=runlocal.diracx.invalid \
+    --idp-client-id="idp-client-id" \
+    --default-group=admin
+
+dirac internal add-group "${tmp_dir}/cs_store/initialRepo" \
+    --vo=diracAdmin \
+    --group=admin
+
 dirac internal add-user "${tmp_dir}/cs_store/initialRepo" \
   --vo=diracAdmin --user-group=admin \
   --sub=75212b23-14c2-47be-9374-eb0113b0575e \
