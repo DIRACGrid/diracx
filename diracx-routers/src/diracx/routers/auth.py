@@ -216,7 +216,7 @@ async def verify_dirac_access_token(
 async def verify_dirac_refresh_token(
     refresh_token: str,
     settings: AuthSettings,
-) -> tuple[str, float]:
+) -> tuple[str, float, bool]:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
     """
@@ -236,7 +236,7 @@ async def verify_dirac_refresh_token(
             detail=f"Invalid JWT: {e.args[0]}",
         ) from e
 
-    return (token["jti"], float(token["exp"]))
+    return (token["jti"], float(token["exp"]), token["legacy_exchange"])
 
 
 def create_token(payload: dict, settings: AuthSettings) -> str:
@@ -256,6 +256,7 @@ async def exchange_token(
     available_properties: AvailableSecurityProperties,
     *,
     refresh_token_expire_minutes: int | None = None,
+    legacy_exchange: bool = False,
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token"""
     # Extract dirac attributes from the OIDC scope
@@ -301,6 +302,9 @@ async def exchange_token(
     refresh_payload = {
         "jti": jti,
         "exp": creation_time + timedelta(minutes=refresh_token_expire_minutes),
+        # legacy_exchange is used to indicate that the original refresh token
+        # was obtained from the legacy_exchange endpoint
+        "legacy_exchange": legacy_exchange,
     }
 
     # Generate access token payload
@@ -722,6 +726,8 @@ async def token(
     """Token endpoint to retrieve the token at the end of a flow.
     This is the endpoint being pulled by dirac-login when doing the device flow
     """
+    legacy_exchange = False
+
     if grant_type == GrantType.device_code:
         oidc_token_info, scope = await get_oidc_token_info_from_device_flow(
             device_code, client_id, auth_db, settings
@@ -733,7 +739,11 @@ async def token(
         )
 
     elif grant_type == GrantType.refresh_token:
-        oidc_token_info, scope = await get_oidc_token_info_from_refresh_flow(
+        (
+            oidc_token_info,
+            scope,
+            legacy_exchange,
+        ) = await get_oidc_token_info_from_refresh_flow(
             refresh_token, auth_db, settings
         )
     else:
@@ -747,6 +757,7 @@ async def token(
         config,
         settings,
         available_properties,
+        legacy_exchange=legacy_exchange,
     )
 
 
@@ -842,34 +853,37 @@ async def get_oidc_token_info_from_refresh_flow(
     assert refresh_token is not None
 
     # Decode the refresh token to get the JWT ID
-    jti, _ = await verify_dirac_refresh_token(refresh_token, settings)
+    jti, _, legacy_exchange = await verify_dirac_refresh_token(refresh_token, settings)
 
     # Get some useful user information from the refresh token entry in the DB
     refresh_token_attributes = await auth_db.get_refresh_token(jti)
 
     sub = refresh_token_attributes["sub"]
 
-    # Refresh token rotation: https://datatracker.ietf.org/doc/html/rfc6749#section-10.4
-    # Check that the refresh token has not been already revoked
-    # This might indicate that a potential attacker try to impersonate someone
-    # In such case, all the refresh tokens bound to a given user (subject) should be revoked
-    # Forcing the user to reauthenticate interactively through an authorization/device flow (recommended practice)
-    if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
-        # Revoke all the user tokens from the subject
-        await auth_db.revoke_user_refresh_tokens(sub)
+    # Check if the refresh token was obtained from the legacy_exchange endpoint
+    # If it is the case, we bypass the refresh token rotation mechanism
+    if not legacy_exchange:
+        # Refresh token rotation: https://datatracker.ietf.org/doc/html/rfc6749#section-10.4
+        # Check that the refresh token has not been already revoked
+        # This might indicate that a potential attacker try to impersonate someone
+        # In such case, all the refresh tokens bound to a given user (subject) should be revoked
+        # Forcing the user to reauthenticate interactively through an authorization/device flow (recommended practice)
+        if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
+            # Revoke all the user tokens from the subject
+            await auth_db.revoke_user_refresh_tokens(sub)
 
-        # Commit here, otherwise the revokation operation will not be taken into account
-        # as we return an error to the user
-        await auth_db.conn.commit()
+            # Commit here, otherwise the revokation operation will not be taken into account
+            # as we return an error to the user
+            await auth_db.conn.commit()
 
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Revoked refresh token reused: potential attack detected. You must authenticate again",
-        )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Revoked refresh token reused: potential attack detected. You must authenticate again",
+            )
 
-    # Part of the refresh token rotation mechanism:
-    # Revoke the refresh token provided, a new one needs to be generated
-    await auth_db.revoke_refresh_token(jti)
+        # Part of the refresh token rotation mechanism:
+        # Revoke the refresh token provided, a new one needs to be generated
+        await auth_db.revoke_refresh_token(jti)
 
     # Build an ID token and get scope from the refresh token attributes received
     oidc_token_info = {
@@ -879,7 +893,7 @@ async def get_oidc_token_info_from_refresh_flow(
         "preferred_username": refresh_token_attributes["preferred_username"],
     }
     scope = refresh_token_attributes["scope"]
-    return (oidc_token_info, scope)
+    return (oidc_token_info, scope, legacy_exchange)
 
 
 @router.get("/refresh-tokens")
@@ -1103,4 +1117,5 @@ async def legacy_exchange(
         settings,
         available_properties,
         refresh_token_expire_minutes=expires_minutes,
+        legacy_exchange=True,
     )
