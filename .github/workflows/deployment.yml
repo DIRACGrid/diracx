@@ -172,7 +172,6 @@ jobs:
             name: diracx-whl
       - name: "Find wheels"
         id: find_wheel
-        if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         run: |
           # We need to copy them there to be able to access them in the RUN --mount
           cp diracx*.whl containers/client/
@@ -190,7 +189,7 @@ jobs:
           push: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
-          build-args: EXTRA_PACKAGES_TO_INSTALL="diracx==${{ needs.deploy-pypi.outputs.new-version }} DIRAC~=9.0.0a1"
+          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRAC~=9.0.0a1
       - name: Build and push services (release)
         uses: docker/build-push-action@v5
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
@@ -199,7 +198,7 @@ jobs:
           push: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
-          build-args: EXTRA_PACKAGES_TO_INSTALL="diracx-routers==${{ needs.deploy-pypi.outputs.new-version }} DIRAC~=9.0.0a1"
+          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRAC~=9.0.0a1
 
       - name: Build and push client (dev)
         uses: docker/build-push-action@v5
