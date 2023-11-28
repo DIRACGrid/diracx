@@ -718,3 +718,16 @@ async def get_single_job_status_history(
             status_code=HTTPStatus.NOT_FOUND, detail="Job not found"
         ) from e
     return {job_id: status}
+
+
+@router.patch("/{job_id}")
+async def set_single_job_properties(
+    job_id: int, job_properties: Annotated[dict[str, Any], Body()], job_db: JobDB
+):
+    """
+    Update the given job properties (MinorStatus, ApplicationStatus, etc)
+    """
+
+    rowcount = await job_db.set_properties({job_id: job_properties})
+    if not rowcount:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Job not found")

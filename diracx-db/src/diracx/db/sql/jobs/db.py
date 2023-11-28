@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import bindparam, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import InvalidQueryError, JobNotFound
@@ -473,6 +473,39 @@ class JobDB(BaseSQLDB):
         """
         stmt = delete(JobJDLs).where(JobJDLs.JobID.in_(job_ids))
         await self.conn.execute(stmt)
+
+    async def set_properties(self, properties: dict[int, dict[str, Any]]) -> int:
+        """Update the job parameters
+        All the jobs must update the same properties
+
+        :param properties: {job_id : {prop1: val1, prop2:val2}
+
+        :return rowcount
+
+        """
+
+        # Check that all we always update the same set of properties
+        required_parameters_set = set(
+            [tuple(sorted(k.keys())) for k in properties.values()]
+        )
+
+        if len(required_parameters_set) != 1:
+            raise NotImplementedError(
+                "All the jobs should update the same set of properties"
+            )
+
+        required_parameters = list(required_parameters_set)[0]
+        update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
+
+        columns = _get_columns(Jobs.__table__, required_parameters)
+        stmt = (
+            update(Jobs)
+            .where(Jobs.JobID == bindparam("job_id"))
+            .values(**{c.name: bindparam(c.name) for c in columns})
+        )
+        rows = await self.conn.execute(stmt, update_parameters)
+
+        return rows.rowcount
 
 
 MAGIC_EPOC_NUMBER = 1270000000
