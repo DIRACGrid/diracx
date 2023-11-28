@@ -167,7 +167,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Download diracx wheels
         uses: actions/download-artifact@v3
-        if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         with:
             name: diracx-whl
       - name: "Find wheels"
