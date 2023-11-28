@@ -1,7 +1,6 @@
 ![Basic tests](https://github.com/DIRACGrid/diracx/actions/workflows/main.yml/badge.svg?branch=main)
 ![Basic tests](https://github.com/DIRACGrid/diracx/actions/workflows/containerised.yml/badge.svg?branch=main)
 
-
 # DiracX Prototype
 
 This repository contains the proof-of-concept code for DiracX.
