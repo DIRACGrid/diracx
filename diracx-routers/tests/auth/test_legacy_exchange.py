@@ -7,6 +7,8 @@ from typing import Any
 
 import pytest
 
+DIRAC_CLIENT_ID = "myDIRACClientID"
+
 
 @pytest.fixture
 def legacy_credentials(monkeypatch):
@@ -63,6 +65,46 @@ async def test_valid(test_client, legacy_credentials, expires_seconds):
     assert user_info["vo"] == "lhcb"
     assert user_info["dirac_group"] == "lhcb_user"
     assert user_info["properties"] == ["NormalUser", "PrivateLimitedDelegation"]
+
+
+async def test_refresh_token(test_client, legacy_credentials):
+    """Test that the refresh token rotation is disabled"""
+    r = test_client.get(
+        "/api/auth/legacy-exchange",
+        params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
+        headers=legacy_credentials,
+    )
+    assert r.status_code == 200
+    initial_refresh_token = r.json()["refresh_token"]
+
+    # Refresh the access token
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": initial_refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    data = r.json()
+    assert r.status_code == 200, data
+    new_refresh_token1 = data["refresh_token"]
+
+    # Refresh the access token using the initial refresh token
+    # In a normal case, it should have been revoked by the refresh token rotation mechanism
+    # during the last call. But in this specific case, the refresh token rotation
+    # mechanism should be disabled
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": initial_refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    data = r.json()
+    assert r.status_code == 200, data
+    new_refresh_token2 = data["refresh_token"]
+
+    # Make sure that obtained refresh tokens are all different
+    assert new_refresh_token1 != initial_refresh_token
+    assert new_refresh_token1 != new_refresh_token2
 
 
 async def test_disabled(test_client):
