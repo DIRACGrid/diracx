@@ -358,7 +358,7 @@ async def get_job_status_bulk(
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
 
 
-@router.put("/status")
+@router.patch("/status")
 async def set_job_status_bulk(
     job_update: dict[int, dict[datetime, JobStatusUpdate]],
     job_db: JobDB,
@@ -681,7 +681,7 @@ async def get_single_job_status(
     return {job_id: status}
 
 
-@router.put("/{job_id}/status")
+@router.patch("/{job_id}/status")
 async def set_single_job_status(
     job_id: int,
     status: Annotated[dict[datetime, JobStatusUpdate], Body()],

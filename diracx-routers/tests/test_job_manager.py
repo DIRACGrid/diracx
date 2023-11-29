@@ -329,7 +329,7 @@ async def test_get_job_status_history(
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
     before = datetime.now(timezone.utc)
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
@@ -404,7 +404,7 @@ def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
     # Act
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
@@ -430,7 +430,7 @@ def test_set_job_status_invalid_job(
     normal_user_client: TestClient, invalid_job_id: int
 ):
     # Act
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{invalid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
@@ -451,7 +451,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
 ):
     # Act
     date = datetime.utcnow().isoformat(sep=" ")
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
             date: {
@@ -479,7 +479,7 @@ def test_set_job_status_cannot_make_impossible_transitions(
     # Act
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
@@ -512,7 +512,7 @@ def test_set_job_status_force(normal_user_client: TestClient, valid_job_id: int)
     # Act
     NEW_STATUS = JobStatus.RUNNING.value
     NEW_MINOR_STATUS = "JobPath"
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
@@ -546,7 +546,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient, valid_job_ids):
     # Act
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         "/api/jobs/status",
         json={
             job_id: {
@@ -576,7 +576,7 @@ def test_set_job_status_with_invalid_job_id(
     normal_user_client: TestClient, invalid_job_id: int
 ):
     # Act
-    r = normal_user_client.put(
+    r = normal_user_client.patch(
         f"/api/jobs/{invalid_job_id}/status",
         json={
             datetime.now(tz=timezone.utc).isoformat(): {
