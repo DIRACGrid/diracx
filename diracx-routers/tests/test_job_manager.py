@@ -813,41 +813,77 @@ def test_remove_bulk_jobs_valid_job_ids(
 def test_set_single_job_properties(normal_user_client: TestClient, valid_job_id: int):
     job_id = str(valid_job_id)
 
-    initial_job_state = normal_user_client.get(f"/api/jobs/{job_id}/status").json()[
-        job_id
-    ]
-    initial_minor_status = initial_job_state["MinorStatus"]
+    initial_job_state = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": job_id,
+                }
+            ]
+        },
+    ).json()[0]
+
+    initial_user_priority = initial_job_state["UserPriority"]
     initial_application_status = initial_job_state["ApplicationStatus"]
+    initial_last_update_time = initial_job_state["LastUpdateTime"]
 
     # Update just one property
     res = normal_user_client.patch(
         f"/api/jobs/{job_id}",
-        json={"MinorStatus": "Boom"},
+        json={"UserPriority": 2},
     )
     assert res.status_code == 200, res.json()
 
-    new_job_state = normal_user_client.get(f"/api/jobs/{job_id}/status").json()[job_id]
-    new_minor_status = new_job_state["MinorStatus"]
+    new_job_state = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": job_id,
+                }
+            ]
+        },
+    ).json()[0]
+    new_user_priority = new_job_state["UserPriority"]
     new_application_status = new_job_state["ApplicationStatus"]
 
     assert initial_application_status == new_application_status
-    assert initial_minor_status != new_minor_status
-    assert new_minor_status == "Boom"
+    assert initial_user_priority != new_user_priority
+    assert new_user_priority == 2
+    assert new_job_state["LastUpdateTime"] == initial_last_update_time
 
     # Update two properties
     res = normal_user_client.patch(
         f"/api/jobs/{job_id}",
-        json={"MinorStatus": initial_minor_status, "ApplicationStatus": "Crack"},
+        json={"UserPriority": initial_user_priority, "ApplicationStatus": "Crack"},
+        params={"update_timestamp": True},
     )
     assert res.status_code == 200, res.json()
 
-    new_job_state = normal_user_client.get(f"/api/jobs/{job_id}/status").json()[job_id]
-    new_minor_status = new_job_state["MinorStatus"]
+    new_job_state = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": job_id,
+                }
+            ]
+        },
+    ).json()[0]
+    new_user_priority = new_job_state["UserPriority"]
     new_application_status = new_job_state["ApplicationStatus"]
 
     assert initial_application_status != new_application_status
     assert new_application_status == "Crack"
-    assert initial_minor_status == new_minor_status
+    assert initial_user_priority == new_user_priority
+    assert new_job_state["LastUpdateTime"] != initial_last_update_time
 
 
 def test_set_single_job_properties_non_existing_job(
@@ -857,7 +893,7 @@ def test_set_single_job_properties_non_existing_job(
 
     res = normal_user_client.patch(
         f"/api/jobs/{job_id}",
-        json={"MinorStatus": "Boom"},
+        json={"UserPriority": 2},
     )
     assert res.status_code == HTTPStatus.NOT_FOUND, res.json()
 

@@ -3,10 +3,13 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import bindparam, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import BindParameter
 
 from diracx.core.exceptions import InvalidQueryError, JobNotFound
 from diracx.core.models import (
@@ -474,11 +477,14 @@ class JobDB(BaseSQLDB):
         stmt = delete(JobJDLs).where(JobJDLs.JobID.in_(job_ids))
         await self.conn.execute(stmt)
 
-    async def set_properties(self, properties: dict[int, dict[str, Any]]) -> int:
+    async def set_properties(
+        self, properties: dict[int, dict[str, Any]], update_timestamp: bool = False
+    ) -> int:
         """Update the job parameters
         All the jobs must update the same properties
 
         :param properties: {job_id : {prop1: val1, prop2:val2}
+        :param update_timestamp: if True, update the LastUpdate to now
 
         :return rowcount
 
@@ -498,11 +504,13 @@ class JobDB(BaseSQLDB):
         update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
 
         columns = _get_columns(Jobs.__table__, required_parameters)
-        stmt = (
-            update(Jobs)
-            .where(Jobs.JobID == bindparam("job_id"))
-            .values(**{c.name: bindparam(c.name) for c in columns})
-        )
+        values: dict[str, BindParameter[Any] | datetime] = {
+            c.name: bindparam(c.name) for c in columns
+        }
+        if update_timestamp:
+            values["LastUpdateTime"] = datetime.now(tz=timezone.utc)
+
+        stmt = update(Jobs).where(Jobs.JobID == bindparam("job_id")).values(**values)
         rows = await self.conn.execute(stmt, update_parameters)
 
         return rows.rowcount
