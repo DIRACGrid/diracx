@@ -41,7 +41,7 @@ async def set_job_status(
     # transform JobStateUpdate objects into dicts
     statusDict = {}
     for key, value in status.items():
-        statusDict[key] = value.dict(by_alias=True)
+        statusDict[key] = {k: v for k, v in value.dict().items() if v is not None}
 
     res = await job_db.search(
         parameters=["Status", "StartExecTime", "EndExecTime"],
@@ -124,13 +124,13 @@ async def set_job_status(
 
     for updTime in updateTimes:
         sDict = statusDict[updTime]
-        if not sDict["Status"]:
+        if not sDict.get("Status"):
             sDict["Status"] = "idem"
-        if not sDict["MinorStatus"]:
+        if not sDict.get("MinorStatus"):
             sDict["MinorStatus"] = "idem"
-        if not sDict["ApplicationStatus"]:
+        if not sDict.get("ApplicationStatus"):
             sDict["ApplicationStatus"] = "idem"
-        if not sDict["Source"]:
+        if not sDict.get("Source"):
             sDict["Source"] = "Unknown"
 
         await job_logging_db.insert_record(
