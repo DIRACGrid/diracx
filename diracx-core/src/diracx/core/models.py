@@ -87,7 +87,7 @@ class LimitedJobStatusReturn(BaseModel):
 
 class JobStatusReturn(LimitedJobStatusReturn):
     StatusTime: datetime
-    StatusSource: str
+    Source: str
 
 
 class SetJobStatusReturn(BaseModel):

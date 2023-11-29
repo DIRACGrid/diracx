@@ -32,9 +32,10 @@ async def test_insert_record(job_logging_db: JobLoggingDB):
 
         # Assert
         res = await job_logging_db.get_records(1)
+
         assert len(res) == 1
-        assert res[0].status == JobStatus.RECEIVED.value
-        assert res[0].minor_status == "minor_status"
-        assert res[0].application_status == "application_status"
-        assert res[0].status_time == date
-        assert res[0].status_source == "pytest"
+        assert res[0].Status == JobStatus.RECEIVED.value
+        assert res[0].MinorStatus == "minor_status"
+        assert res[0].ApplicationStatus == "application_status"
+        assert res[0].StatusTime == date
+        assert res[0].Source == "pytest"

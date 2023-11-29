@@ -173,7 +173,7 @@ class BaseSQLDB(metaclass=ABCMeta):
             raise RuntimeError(f"{self.__class__} was used before entering")
         return cast(AsyncConnection, self._conn.get())
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         """
         Create a connection.
         This is called by the Dependency mechanism (see ``db_transaction``),

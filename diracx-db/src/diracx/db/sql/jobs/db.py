@@ -562,12 +562,12 @@ class JobLoggingDB(BaseSQLDB):
             ApplicationStatus=application_status[:255],
             StatusTime=date,
             StatusTimeOrder=epoc,
-            StatusSource=source[:32],
+            Source=source[:32],
         )
         await self.conn.execute(stmt)
 
     async def get_records(self, job_id: int) -> list[JobStatusReturn]:
-        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,StatusSource tuple
+        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
         for each record found for job specified by its jobID in historical order
         """
 
@@ -577,7 +577,7 @@ class JobLoggingDB(BaseSQLDB):
                 LoggingInfo.MinorStatus,
                 LoggingInfo.ApplicationStatus,
                 LoggingInfo.StatusTime,
-                LoggingInfo.StatusSource,
+                LoggingInfo.Source,
             )
             .where(LoggingInfo.JobID == int(job_id))
             .order_by(LoggingInfo.StatusTimeOrder, LoggingInfo.StatusTime)
@@ -629,7 +629,7 @@ class JobLoggingDB(BaseSQLDB):
                         MinorStatus=minor_status,
                         ApplicationStatus=application_status,
                         StatusTime=status_time,
-                        StatusSource=status_source,
+                        Source=status_source,
                     )
                 )
 

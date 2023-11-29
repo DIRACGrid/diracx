@@ -355,7 +355,7 @@ async def test_get_job_status_history(
     assert r.json()[str(valid_job_id)][0]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[str(valid_job_id)][0]["MinorStatus"] == "Job accepted"
     assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
-    assert r.json()[str(valid_job_id)][0]["StatusSource"] == "JobManager"
+    assert r.json()[str(valid_job_id)][0]["Source"] == "JobManager"
 
     assert r.json()[str(valid_job_id)][1]["Status"] == JobStatus.CHECKING.value
     assert r.json()[str(valid_job_id)][1]["MinorStatus"] == "JobPath"
@@ -365,7 +365,7 @@ async def test_get_job_status_history(
         < datetime.fromisoformat(r.json()[str(valid_job_id)][1]["StatusTime"])
         < after
     )
-    assert r.json()[str(valid_job_id)][1]["StatusSource"] == "Unknown"
+    assert r.json()[str(valid_job_id)][1]["Source"] == "Unknown"
 
 
 def test_get_job_status_history_in_bulk(
@@ -390,7 +390,7 @@ def test_get_job_status_history_in_bulk(
     assert r.json()[str(valid_job_id)][0]["MinorStatus"] == "Job accepted"
     assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
     assert datetime.fromisoformat(r.json()[str(valid_job_id)][0]["StatusTime"])
-    assert r.json()[str(valid_job_id)][0]["StatusSource"] == "JobManager"
+    assert r.json()[str(valid_job_id)][0]["Source"] == "JobManager"
 
 
 def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
