@@ -73,43 +73,31 @@ class JobMinorStatus(StrEnum):
 
 
 class JobStatusUpdate(BaseModel):
-    status: JobStatus | None = Field(
-        default=None,
-        alias="Status",
-    )
-    minor_status: str | None = Field(
-        default=None,
-        alias="MinorStatus",
-    )
-    application_status: str | None = Field(
-        default=None,
-        alias="ApplicationStatus",
-    )
-    status_source: str = Field(
-        alias="StatusSource",
-        default="Unknown",
-    )
+    Status: JobStatus | None = None
+    MinorStatus: str | None = None
+    ApplicationStatus: str | None = None
+    Source: str = "Unknown"
 
 
 class LimitedJobStatusReturn(BaseModel):
-    status: JobStatus = Field(alias="Status")
-    minor_status: str = Field(alias="MinorStatus")
-    application_status: str = Field(alias="ApplicationStatus")
+    Status: JobStatus
+    MinorStatus: str
+    ApplicationStatus: str
 
 
 class JobStatusReturn(LimitedJobStatusReturn):
-    status_time: datetime = Field(alias="StatusTime")
-    status_source: str = Field(alias="StatusSource")
+    StatusTime: datetime
+    Source: str
 
 
 class SetJobStatusReturn(BaseModel):
-    status: JobStatus | None = Field(alias="Status")
-    minor_status: str | None = Field(alias="MinorStatus")
-    application_status: str | None = Field(alias="ApplicationStatus")
-    heartbeat_time: datetime | None = Field(alias="HeartBeatTime")
-    start_exec_time: datetime | None = Field(alias="StartExecTime")
-    end_exec_time: datetime | None = Field(alias="EndExecTime")
-    last_update_time: datetime | None = Field(alias="LastUpdateTime")
+    Status: JobStatus | None
+    MinorStatus: str | None
+    ApplicationStatus: str | None
+    HeartBeatTime: datetime | None
+    StartExecTime: datetime | None
+    EndExecTime: datetime | None
+    LastUpdateTime: datetime | None
 
 
 class UserInfo(BaseModel):

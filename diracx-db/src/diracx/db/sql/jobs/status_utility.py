@@ -41,7 +41,7 @@ async def set_job_status(
     # transform JobStateUpdate objects into dicts
     statusDict = {}
     for key, value in status.items():
-        statusDict[key] = value.dict(by_alias=True)
+        statusDict[key] = {k: v for k, v in value.dict().items() if v is not None}
 
     res = await job_db.search(
         parameters=["Status", "StartExecTime", "EndExecTime"],
@@ -110,7 +110,7 @@ async def set_job_status(
         #         return result
 
     for updTime in updateTimes:
-        if statusDict[updTime]["StatusSource"].startswith("Job"):
+        if statusDict[updTime]["Source"].startswith("Job"):
             job_data["HeartBeatTime"] = updTime
 
     if not startTime and newStartTime:
@@ -122,22 +122,16 @@ async def set_job_status(
     if job_data:
         await job_db.setJobAttributes(job_id, job_data)
 
-    # Update the JobLoggingDB records
-    # TODO: Because I really didn't liked the fact that the input field is called "Source"
-    # and the output field is called "StatusSource"
-    # I changed the name of the input field to "StatusSource"
-    # Meaning this change must be added to the transformation layer for DIRAC.
-
     for updTime in updateTimes:
         sDict = statusDict[updTime]
-        if not sDict["Status"]:
+        if not sDict.get("Status"):
             sDict["Status"] = "idem"
-        if not sDict["MinorStatus"]:
+        if not sDict.get("MinorStatus"):
             sDict["MinorStatus"] = "idem"
-        if not sDict["ApplicationStatus"]:
+        if not sDict.get("ApplicationStatus"):
             sDict["ApplicationStatus"] = "idem"
-        if not sDict["StatusSource"]:
-            sDict["StatusSource"] = "Unknown"
+        if not sDict.get("Source"):
+            sDict["Source"] = "Unknown"
 
         await job_logging_db.insert_record(
             job_id,
@@ -145,7 +139,7 @@ async def set_job_status(
             sDict["MinorStatus"],
             sDict["ApplicationStatus"],
             updTime,
-            sDict["StatusSource"],
+            sDict["Source"],
         )
 
     return SetJobStatusReturn(**job_data)
@@ -186,7 +180,7 @@ async def delete_jobs(
                         datetime.now(timezone.utc): JobStatusUpdate(
                             Status=JobStatus.DELETED,
                             MinorStatus="Checking accounting",
-                            StatusSource="job_manager",
+                            Source="job_manager",
                         )
                     },
                     job_db,
@@ -222,7 +216,7 @@ async def kill_jobs(
                         datetime.now(timezone.utc): JobStatusUpdate(
                             Status=JobStatus.KILLED,
                             MinorStatus="Marked for termination",
-                            StatusSource="job_manager",
+                            Source="job_manager",
                         )
                     },
                     job_db,
@@ -242,7 +236,7 @@ async def kill_jobs(
     #                 datetime.now(timezone.utc): JobStatusUpdate(
     #                     Status=JobStatus.KILLED,
     #                     MinorStatus="Marked for termination",
-    #                     StatusSource="job_manager",
+    #                     Source="job_manager",
     #                 )
     #             },
     #             job_db,

@@ -358,7 +358,7 @@ async def get_job_status_bulk(
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
 
 
-@router.put("/status")
+@router.patch("/status")
 async def set_job_status_bulk(
     job_update: dict[int, dict[datetime, JobStatusUpdate]],
     job_db: JobDB,
@@ -366,12 +366,12 @@ async def set_job_status_bulk(
     force: bool = False,
 ) -> dict[int, SetJobStatusReturn]:
     # check that the datetime contains timezone info
-    for status in job_update.values():
+    for job_id, status in job_update.items():
         for dt in status:
             if dt.tzinfo is None:
                 raise HTTPException(
                     status_code=HTTPStatus.BAD_REQUEST,
-                    detail=f"Timestamp {dt} is not timezone aware",
+                    detail=f"Timestamp {dt} is not timezone aware for job {job_id}",
                 )
 
     res = await asyncio.gather(
@@ -418,8 +418,8 @@ async def reschedule_bulk_jobs(
                 status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
             ) from e
 
-        initial_status = res_status.status
-        initial_minor_status = res_status.minor_status
+        initial_status = res_status.Status
+        initial_minor_status = res_status.MinorStatus
 
         await job_logging_db.insert_record(
             int(job_id),
@@ -681,7 +681,7 @@ async def get_single_job_status(
     return {job_id: status}
 
 
-@router.put("/{job_id}/status")
+@router.patch("/{job_id}/status")
 async def set_single_job_status(
     job_id: int,
     status: Annotated[dict[datetime, JobStatusUpdate], Body()],
@@ -718,3 +718,21 @@ async def get_single_job_status_history(
             status_code=HTTPStatus.NOT_FOUND, detail="Job not found"
         ) from e
     return {job_id: status}
+
+
+@router.patch("/{job_id}")
+async def set_single_job_properties(
+    job_id: int,
+    job_properties: Annotated[dict[str, Any], Body()],
+    job_db: JobDB,
+    update_timestamp: bool = False,
+):
+    """
+    Update the given job properties (MinorStatus, ApplicationStatus, etc)
+    """
+
+    rowcount = await job_db.set_properties(
+        {job_id: job_properties}, update_timestamp=update_timestamp
+    )
+    if not rowcount:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Job not found")

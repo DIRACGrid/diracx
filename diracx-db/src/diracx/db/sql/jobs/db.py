@@ -3,10 +3,13 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import bindparam, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import BindParameter
 
 from diracx.core.exceptions import InvalidQueryError, JobNotFound
 from diracx.core.models import (
@@ -474,6 +477,44 @@ class JobDB(BaseSQLDB):
         stmt = delete(JobJDLs).where(JobJDLs.JobID.in_(job_ids))
         await self.conn.execute(stmt)
 
+    async def set_properties(
+        self, properties: dict[int, dict[str, Any]], update_timestamp: bool = False
+    ) -> int:
+        """Update the job parameters
+        All the jobs must update the same properties
+
+        :param properties: {job_id : {prop1: val1, prop2:val2}
+        :param update_timestamp: if True, update the LastUpdate to now
+
+        :return rowcount
+
+        """
+
+        # Check that all we always update the same set of properties
+        required_parameters_set = set(
+            [tuple(sorted(k.keys())) for k in properties.values()]
+        )
+
+        if len(required_parameters_set) != 1:
+            raise NotImplementedError(
+                "All the jobs should update the same set of properties"
+            )
+
+        required_parameters = list(required_parameters_set)[0]
+        update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
+
+        columns = _get_columns(Jobs.__table__, required_parameters)
+        values: dict[str, BindParameter[Any] | datetime] = {
+            c.name: bindparam(c.name) for c in columns
+        }
+        if update_timestamp:
+            values["LastUpdateTime"] = datetime.now(tz=timezone.utc)
+
+        stmt = update(Jobs).where(Jobs.JobID == bindparam("job_id")).values(**values)
+        rows = await self.conn.execute(stmt, update_parameters)
+
+        return rows.rowcount
+
 
 MAGIC_EPOC_NUMBER = 1270000000
 
@@ -521,12 +562,12 @@ class JobLoggingDB(BaseSQLDB):
             ApplicationStatus=application_status[:255],
             StatusTime=date,
             StatusTimeOrder=epoc,
-            StatusSource=source[:32],
+            Source=source[:32],
         )
         await self.conn.execute(stmt)
 
     async def get_records(self, job_id: int) -> list[JobStatusReturn]:
-        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,StatusSource tuple
+        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
         for each record found for job specified by its jobID in historical order
         """
 
@@ -536,7 +577,7 @@ class JobLoggingDB(BaseSQLDB):
                 LoggingInfo.MinorStatus,
                 LoggingInfo.ApplicationStatus,
                 LoggingInfo.StatusTime,
-                LoggingInfo.StatusSource,
+                LoggingInfo.Source,
             )
             .where(LoggingInfo.JobID == int(job_id))
             .order_by(LoggingInfo.StatusTimeOrder, LoggingInfo.StatusTime)
@@ -588,7 +629,7 @@ class JobLoggingDB(BaseSQLDB):
                         MinorStatus=minor_status,
                         ApplicationStatus=application_status,
                         StatusTime=status_time,
-                        StatusSource=status_source,
+                        Source=status_source,
                     )
                 )
 

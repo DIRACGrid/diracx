@@ -204,7 +204,7 @@ class LoggingInfo(JobLoggingDBBase):
     StatusTime = DateNowColumn()
     # TODO: Check that this corresponds to the DOUBLE(12,3) type in MySQL
     StatusTimeOrder = Column(Numeric(precision=12, scale=3), default=0)
-    StatusSource = Column(String(32), default="Unknown")
+    Source = Column(String(32), default="Unknown", name="StatusSource")
     __table_args__ = (PrimaryKeyConstraint("JobID", "SeqNum"),)
 
 
