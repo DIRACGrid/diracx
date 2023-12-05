@@ -55,22 +55,25 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_regen)
 
 
-@pytest.fixture
-def test_auth_settings() -> AuthSettings:
+@pytest.fixture(scope="session")
+def rsa_private_key_pem() -> str:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
 
-    from diracx.routers.auth import AuthSettings
-
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
-    pem = private_key.private_bytes(
+    return private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     ).decode()
 
+
+@pytest.fixture(scope="session")
+def test_auth_settings(rsa_private_key_pem) -> AuthSettings:
+    from diracx.routers.auth import AuthSettings
+
     yield AuthSettings(
-        token_key=pem,
+        token_key=rsa_private_key_pem,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
