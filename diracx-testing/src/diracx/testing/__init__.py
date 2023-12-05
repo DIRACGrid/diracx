@@ -100,7 +100,7 @@ def aio_moto():
     server.stop()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
@@ -111,7 +111,7 @@ def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
@@ -169,11 +169,13 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     yield app
 
 
-@pytest.fixture
-def with_config_repo(tmp_path):
+@pytest.fixture(scope="session")
+def with_config_repo(tmp_path_factory):
     from git import Repo
 
     from diracx.core.config import Config
+
+    tmp_path = tmp_path_factory.mktemp("cs-repo")
 
     repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
