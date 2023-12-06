@@ -118,6 +118,8 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
     """
     Create a DiracxApp with hard coded configuration for test
     """
+    import sqlalchemy
+
     from diracx.core.config import ConfigSource
     from diracx.routers import create_app_inner
 
@@ -154,11 +156,21 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
             # The first argument of the overridden BaseSQLDB.transaction is the DB object
             db = v.args[0]
             assert isinstance(db, BaseSQLDB), (k, db)
+
+            # set PRAGMA foreign_keys=ON if sqlite
+            if db.engine.url.drivername.startswith("sqlite"):
+
+                def set_sqlite_pragma(dbapi_connection, connection_record):
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.close()
+
+                sqlalchemy.event.listen(
+                    db.engine.sync_engine, "connect", set_sqlite_pragma
+                )
+
             # Fill the DB schema
             async with db.engine.begin() as conn:
-                # set PRAGMA foreign_keys=ON if sqlite
-                if db._db_url.startswith("sqlite"):
-                    await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
                 await conn.run_sync(db.metadata.create_all)
 
         yield
