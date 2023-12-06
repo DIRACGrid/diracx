@@ -5,10 +5,21 @@ import secrets
 from copy import deepcopy
 from io import BytesIO
 
+import pytest
 import requests
 from fastapi.testclient import TestClient
 
 from diracx.routers.auth import AuthSettings, create_token
+
+pytestmark = pytest.mark.enabled_dependencies(
+    ["AuthSettings", "SandboxMetadataDB", "SandboxStoreSettings"]
+)
+
+
+@pytest.fixture
+def normal_user_client(client_factory):
+    with client_factory.normal_user() as client:
+        yield client
 
 
 def test_upload_then_download(

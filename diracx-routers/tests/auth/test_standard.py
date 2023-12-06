@@ -23,6 +23,15 @@ from diracx.routers.auth import (
 )
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
+pytestmark = pytest.mark.enabled_dependencies(
+    ["AuthDB", "AuthSettings", "ConfigSource"]
+)
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
 
 
 @pytest.fixture

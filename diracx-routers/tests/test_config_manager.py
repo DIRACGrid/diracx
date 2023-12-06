@@ -1,9 +1,17 @@
+import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.enabled_dependencies(["AuthSettings", "ConfigSource"])
 
 
-def test_unauthenticated(with_app):
-    with TestClient(with_app) as client:
+@pytest.fixture
+def normal_user_client(client_factory):
+    with client_factory.normal_user() as client:
+        yield client
+
+
+def test_unauthenticated(client_factory):
+    with client_factory.unauthenticated() as client:
         response = client.get("/api/config/lhcb/")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
