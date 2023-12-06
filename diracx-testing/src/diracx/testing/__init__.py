@@ -114,14 +114,27 @@ def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
 
 
 @pytest.fixture(scope="session")
-def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
+def with_app(
+    test_auth_settings, test_sandbox_settings, with_config_repo, tmp_path_factory
+):
     """
     Create a DiracxApp with hard coded configuration for test
     """
+    import aiosqlite
     import sqlalchemy
+    from sqlalchemy.util.concurrency import greenlet_spawn
 
     from diracx.core.config import ConfigSource
     from diracx.routers import create_app_inner
+
+    database_urls = {
+        "JobDB": "sqlite+aiosqlite:///:memory:",
+        "JobLoggingDB": "sqlite+aiosqlite:///:memory:",
+        "TaskQueueDB": "sqlite+aiosqlite:///:memory:",
+        "AuthDB": "sqlite+aiosqlite:///:memory:",
+        "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
+    }
+    empty_db_dir = tmp_path_factory.mktemp("empty-dbs")
 
     app = create_app_inner(
         enabled_systems={".well-known", "auth", "config", "jobs"},
@@ -129,13 +142,7 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
             test_auth_settings,
             test_sandbox_settings,
         ],
-        database_urls={
-            "JobDB": "sqlite+aiosqlite:///:memory:",
-            "JobLoggingDB": "sqlite+aiosqlite:///:memory:",
-            "TaskQueueDB": "sqlite+aiosqlite:///:memory:",
-            "AuthDB": "sqlite+aiosqlite:///:memory:",
-            "SandboxMetadataDB": "sqlite+aiosqlite:///:memory:",
-        },
+        database_urls=database_urls,
         os_database_conn_kwargs={
             # TODO: JobParametersDB
         },
@@ -169,9 +176,23 @@ def with_app(test_auth_settings, test_sandbox_settings, with_config_repo):
                     db.engine.sync_engine, "connect", set_sqlite_pragma
                 )
 
-            # Fill the DB schema
-            async with db.engine.begin() as conn:
-                await conn.run_sync(db.metadata.create_all)
+            # We maintain a cache of the populated DBs in empty_db_dir so that
+            # we don't have to recreate them for every test. This speeds up the
+            # tests by a considerable amount.
+            ref_db = empty_db_dir / f"{k.__self__.__name__}.db"
+            if ref_db.exists():
+                async with aiosqlite.connect(ref_db) as ref_conn:
+                    conn = await db.engine.raw_connection()
+                    await ref_conn.backup(conn.driver_connection)
+                    await greenlet_spawn(conn.close)
+            else:
+                async with db.engine.begin() as conn:
+                    await conn.run_sync(db.metadata.create_all)
+
+                async with aiosqlite.connect(ref_db) as ref_conn:
+                    conn = await db.engine.raw_connection()
+                    await conn.driver_connection.backup(ref_conn)
+                    await greenlet_spawn(conn.close)
 
         yield
 
