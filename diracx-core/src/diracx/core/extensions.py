@@ -4,20 +4,23 @@ import os
 from collections import defaultdict
 from importlib.metadata import EntryPoint, entry_points
 from importlib.util import find_spec
-from typing import Iterator
+
+from cachetools import LRUCache, cached
 
 
-def extensions_by_priority() -> Iterator[str]:
+@cached(cache=LRUCache(maxsize=1024))
+def extensions_by_priority() -> list[str]:
     """Yield extension module names in order of priority."""
+    results = []
     for module_name in os.environ.get("DIRACX_EXTENSIONS", "diracx").split(","):
         if find_spec(module_name) is None:
             raise RuntimeError(f"Could not find extension module {module_name=}")
-        yield module_name
+        results.append(module_name)
+    return results
 
 
-def select_from_extension(
-    *, group: str, name: str | None = None
-) -> Iterator[EntryPoint]:
+@cached(cache=LRUCache(maxsize=1024))
+def select_from_extension(*, group: str, name: str | None = None) -> list[EntryPoint]:
     """Select entry points by group and name, in order of priority.
 
     Similar to ``importlib.metadata.entry_points.select`` except only modules
@@ -34,5 +37,8 @@ def select_from_extension(
         module_name = entry_point.module.split(".")[0]
         matches[module_name].append(entry_point)
 
-    for module_name in extensions_by_priority():
-        yield from matches.get(module_name, [])
+    return [
+        x
+        for module_name in extensions_by_priority()
+        for x in matches.get(module_name, [])
+    ]
