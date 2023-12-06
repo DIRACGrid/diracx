@@ -81,7 +81,7 @@ def test_auth_settings(rsa_private_key_pem) -> AuthSettings:
 
 
 @pytest.fixture(scope="session")
-def aio_moto():
+def aio_moto(worker_id):
     """Start the moto server in a separate thread and return the base URL
 
     The mocking provided by moto doesn't play nicely with aiobotocore so we use
@@ -90,6 +90,8 @@ def aio_moto():
     from moto.server import ThreadedMotoServer
 
     port = 27132
+    if worker_id != "master":
+        port += int(worker_id.replace("gw", "")) + 1
     server = ThreadedMotoServer(port=port)
     server.start()
     yield {
