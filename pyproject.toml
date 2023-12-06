@@ -43,6 +43,7 @@ select = [
     "PLE",  # pylint errors
     # "UP",   # pyUpgrade
     "FLY",  # flynt
+    "DTZ",  # flake8-datetimez
 ]
 ignore = ["B905", "B008", "B006"]
 line-length = 120

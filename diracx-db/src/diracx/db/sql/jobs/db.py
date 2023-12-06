@@ -423,9 +423,9 @@ class JobDB(BaseSQLDB):
 
         jobAttrs["ApplicationNumStatus"] = 0
 
-        jobAttrs["LastUpdateTime"] = str(datetime.utcnow())
+        jobAttrs["LastUpdateTime"] = datetime.now(tz=timezone.utc)
 
-        jobAttrs["RescheduleTime"] = str(datetime.utcnow())
+        jobAttrs["RescheduleTime"] = datetime.now(tz=timezone.utc)
 
         reqJDL = classAdReq.asJDL()
         classAdJob.insertAttributeInt("JobRequirements", reqJDL)

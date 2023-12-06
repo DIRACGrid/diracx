@@ -5,7 +5,7 @@ import contextlib
 import os
 import re
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -271,7 +271,7 @@ class ClientFactory:
         with self.unauthenticated() as client:
             payload = {
                 "sub": "testingVO:yellow-sub",
-                "exp": datetime.now()
+                "exp": datetime.now(tz=timezone.utc)
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
                 "aud": AUDIENCE,
                 "iss": ISSUER,

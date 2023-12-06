@@ -473,7 +473,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
     valid_job_id: int,
 ):
     # Act
-    date = datetime.utcnow().isoformat(sep=" ")
+    date = datetime.utcnow().isoformat(sep=" ")  # noqa: DTZ003
     r = normal_user_client.patch(
         f"/api/jobs/{valid_job_id}/status",
         json={
