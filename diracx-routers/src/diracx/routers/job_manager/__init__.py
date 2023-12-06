@@ -84,8 +84,9 @@ class JobID(BaseModel):
 
 
 EXAMPLE_JDLS = {
-    "Simple JDL": [
-        """Arguments = "jobDescription.xml -o LogLevel=INFO";
+    "Simple JDL": {
+        "value": [
+            """Arguments = "jobDescription.xml -o LogLevel=INFO";
 Executable = "dirac-jobexec";
 JobGroup = jobGroup;
 JobName = jobName;
@@ -101,15 +102,17 @@ Priority = 1;
 Site = ANY;
 StdError = std.err;
 StdOutput = std.out;"""
-    ],
-    "Parametric JDL": ["""Arguments = "jobDescription.xml -o LogLevel=INFO"""],
+        ]
+    },
+    "Parametric JDL": {
+        "value": ["""Arguments = "jobDescription.xml -o LogLevel=INFO"""]
+    },
 }
 
 
 @router.post("/")
 async def submit_bulk_jobs(
-    # FIXME: Using mutliple doesn't work with swagger?
-    job_definitions: Annotated[list[str], Body(example=EXAMPLE_JDLS["Simple JDL"])],
+    job_definitions: Annotated[list[str], Body(openapi_examples=EXAMPLE_JDLS)],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
@@ -410,7 +413,7 @@ async def reschedule_bulk_jobs(
     for job_id in valid_job_list:
         # TODO: delete job in TaskQueueDB
         # self.taskQueueDB.deleteJob(jobID)
-        result = job_db.rescheduleJob(job_id)
+        result = await job_db.rescheduleJob(job_id)
         try:
             res_status = await job_db.get_job_status(job_id)
         except NoResultFound as e:

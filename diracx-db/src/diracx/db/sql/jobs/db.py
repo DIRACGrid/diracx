@@ -388,7 +388,7 @@ class JobDB(BaseSQLDB):
         classAdJob.insertAttributeInt("JobID", job_id)
 
         try:
-            result = self._checkAndPrepareJob(
+            result = await self._checkAndPrepareJob(
                 job_id,
                 classAdJob,
                 classAdReq,
@@ -435,9 +435,9 @@ class JobDB(BaseSQLDB):
         # Replace the JobID placeholder if any
         jobJDL = jobJDL.replace("%j", str(job_id))
 
-        result = self.setJobJDL(job_id, jobJDL)
+        result = await self.setJobJDL(job_id, jobJDL)
 
-        result = self.setJobAttributes(job_id, jobAttrs)
+        result = await self.setJobAttributes(job_id, jobAttrs)
 
         retVal["InputData"] = classAdJob.lookupAttribute("InputData")
         retVal["RescheduleCounter"] = reschedule_counter
@@ -669,9 +669,13 @@ class TaskQueueDB(BaseSQLDB):
         """
         Get the task queue info for given jobs
         """
-        stmt = select(
-            TaskQueues.TQId, TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO
-        ).where(JobsQueue.JobId.in_(job_ids))
+        stmt = (
+            select(
+                TaskQueues.TQId, TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO
+            )
+            .join(JobsQueue, TaskQueues.TQId == JobsQueue.TQId)
+            .where(JobsQueue.JobId.in_(job_ids))
+        )
         return set(
             (int(row[0]), str(row[1]), str(row[2]), str(row[3]))
             for row in (await self.conn.execute(stmt)).all()
