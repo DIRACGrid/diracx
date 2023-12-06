@@ -13,7 +13,11 @@ def compare_keys(key1, key2):
 
 
 def test_token_signing_key(tmp_path):
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        # DANGER: 512-bits is a bad idea for prod but makes the test notably faster!
+        key_size=512,
+    )
     private_key_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
