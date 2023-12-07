@@ -17,8 +17,6 @@ from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.db.exceptions import DBUnavailable
 
-OS_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
-
 logger = logging.getLogger(__name__)
 
 
@@ -184,7 +182,9 @@ class BaseOSDB(metaclass=ABCMeta):
                 if field_name not in self.fields:
                     continue
                 if self.fields[field_name]["type"] == "date":
-                    hit[field_name] = datetime.strptime(hit[field_name], OS_DATE_FORMAT)
+                    hit[field_name] = datetime.strptime(
+                        hit[field_name], "%Y-%m-%dT%H:%M:%S.%f%z"
+                    )
 
         return hits
 

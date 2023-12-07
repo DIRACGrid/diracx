@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import random
 import secrets
 
 import pytest
@@ -20,9 +21,11 @@ OTHER_BUCKET_NAME = "other_bucket"
 MISSING_BUCKET_NAME = "missing_bucket"
 INVALID_BUCKET_NAME = ".."
 
+rng = random.Random(1234)
+
 
 def _random_file(size_bytes: int):
-    file_content = secrets.token_bytes(size_bytes)
+    file_content = rng.randbytes(size_bytes)
     checksum = hashlib.sha256(file_content).hexdigest()
     return file_content, checksum
 

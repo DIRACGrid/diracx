@@ -67,6 +67,8 @@ class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE
 
     @property
     def s3_client(self) -> S3Client:
+        if self._client is None:
+            raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
 
 

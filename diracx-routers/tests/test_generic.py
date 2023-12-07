@@ -1,5 +1,13 @@
 import pytest
 
+pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
+
 
 def test_openapi(test_client):
     r = test_client.get("/api/openapi.json")

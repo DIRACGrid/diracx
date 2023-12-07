@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 import typer
@@ -58,8 +58,10 @@ async def login(
             scope=" ".join(scopes),
         )
         print("Now go to:", data.verification_uri_complete)
-        expires = datetime.now() + timedelta(seconds=data.expires_in - 30)
-        while expires > datetime.now():
+        expires = datetime.now(tz=timezone.utc) + timedelta(
+            seconds=data.expires_in - 30
+        )
+        while expires > datetime.now(tz=timezone.utc):
             print(".", end="", flush=True)
             response = await api.auth.token(device_code=data.device_code, client_id=api.client_id)  # type: ignore
             if isinstance(response, DeviceFlowErrorResponse):

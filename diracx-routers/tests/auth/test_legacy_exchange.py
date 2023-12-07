@@ -8,6 +8,9 @@ from typing import Any
 import pytest
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
+pytestmark = pytest.mark.enabled_dependencies(
+    ["AuthDB", "AuthSettings", "ConfigSource"]
+)
 
 
 @pytest.fixture
@@ -18,6 +21,12 @@ def legacy_credentials(monkeypatch):
         "DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY", hashlib.sha256(secret).hexdigest()
     )
     yield {"Authorization": f"Bearer {valid_token}"}
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
 
 
 def _jwt_payload(jwt: str) -> dict[str, Any]:

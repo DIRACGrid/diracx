@@ -44,6 +44,7 @@ def generate_cs(
         Operations={"Defaults": OperationsConfig()},
     )
 
+    git.Repo.init(repo_path, initial_branch="master")
     update_config_and_commit(
         repo_path=repo_path, config=config, message="Initial commit"
     )
@@ -180,7 +181,7 @@ def add_user(
 
 def update_config_and_commit(repo_path: Path, config: Config, message: str):
     """Update the yaml file in the repo and commit it"""
-    repo = git.Repo.init(repo_path)
+    repo = git.Repo(repo_path)
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
     yaml_path.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))

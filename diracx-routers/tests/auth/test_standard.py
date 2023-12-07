@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -23,6 +23,15 @@ from diracx.routers.auth import (
 )
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
+pytestmark = pytest.mark.enabled_dependencies(
+    ["AuthDB", "AuthSettings", "ConfigSource"]
+)
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
 
 
 @pytest.fixture
@@ -313,7 +322,9 @@ async def test_refresh_token_expired(
     )
 
     # Modify the expiration time (utc now - 5 hours)
-    refresh_payload["exp"] = int((datetime.utcnow() - timedelta(hours=5)).timestamp())
+    refresh_payload["exp"] = int(
+        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
+    )
 
     # Encode it differently
     new_refresh_token = create_token(refresh_payload, test_auth_settings)
@@ -346,7 +357,11 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     # Encode it differently (using another algorithm)
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        # DANGER: 512-bits is a bad idea for prod but makes the test notably faster!
+        key_size=512,
+    )
     pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,

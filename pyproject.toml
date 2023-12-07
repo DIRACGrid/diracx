@@ -43,6 +43,7 @@ select = [
     "PLE",  # pylint errors
     # "UP",   # pyUpgrade
     "FLY",  # flynt
+    "DTZ",  # flake8-datetimez
 ]
 ignore = ["B905", "B008", "B006"]
 line-length = 120
@@ -104,3 +105,6 @@ addopts = [
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"
+markers = [
+    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+]

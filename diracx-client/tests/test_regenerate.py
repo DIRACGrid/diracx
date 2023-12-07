@@ -2,8 +2,18 @@ import subprocess
 from pathlib import Path
 
 import git
+import pytest
 
 import diracx.client
+
+pytestmark = pytest.mark.enabled_dependencies([])
+# pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
 
 
 def test_regenerate_client(test_client, tmp_path):
