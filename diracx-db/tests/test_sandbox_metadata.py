@@ -9,7 +9,7 @@ import sqlalchemy
 
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
-from diracx.db.sql.sandbox_metadata.schema import sb_SandBoxes
+from diracx.db.sql.sandbox_metadata.schema import sb_EntityMapping, sb_SandBoxes
 
 
 @pytest.fixture
@@ -90,3 +90,58 @@ async def _dump_db(
         )
         res = await sandbox_metadata_db.conn.execute(stmt)
         return {row.SEPFN: (row.OwnerId, row.LastAccessTime) for row in res}
+
+
+async def test_assign_sandbox_to_job(sandbox_metadata_db: SandboxMetadataDB):
+    pfn = secrets.token_hex()
+    user_info = UserInfo(
+        sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
+    )
+    dummy_jobid = 666
+    # Insert the sandbox
+    async with sandbox_metadata_db:
+        await sandbox_metadata_db.insert_sandbox("SandboxSE", user_info, pfn, 100)
+
+    async with sandbox_metadata_db:
+        stmt = sqlalchemy.select(sb_SandBoxes.SBId, sb_SandBoxes.SEPFN)
+        res = await sandbox_metadata_db.conn.execute(stmt)
+    db_contents = {row.SEPFN: row.SBId for row in res}
+    SBId1 = db_contents[pfn]
+    # The sandbox still hasn't been assigned
+    async with sandbox_metadata_db:
+        assert not await sandbox_metadata_db.sandbox_is_assigned("SandboxSE", pfn)
+
+    # Check there is no mapping
+    async with sandbox_metadata_db:
+        stmt = sqlalchemy.select(
+            sb_EntityMapping.SBId, sb_EntityMapping.EntityId, sb_EntityMapping.Type
+        )
+        res = await sandbox_metadata_db.conn.execute(stmt)
+    db_contents = {row.SBId: (row.EntityId, row.Type) for row in res}
+    assert db_contents == {}
+
+    # Assign sandbox with dummy jobid
+    async with sandbox_metadata_db:
+        await sandbox_metadata_db.assign_sandbox_to_job(
+            dummy_jobid, pfn, "Output", "SandboxSE"
+        )
+    # Check if sandbox and job are mapped
+    async with sandbox_metadata_db:
+        stmt = sqlalchemy.select(
+            sb_EntityMapping.SBId, sb_EntityMapping.EntityId, sb_EntityMapping.Type
+        )
+        res = await sandbox_metadata_db.conn.execute(stmt)
+    db_contents = {row.SBId: (row.EntityId, row.Type) for row in res}
+
+    EntityID1, Type = db_contents[SBId1]
+    assert int(EntityID1) == dummy_jobid
+    assert Type == "Output"
+
+    async with sandbox_metadata_db:
+        stmt = sqlalchemy.select(sb_SandBoxes.SBId, sb_SandBoxes.SEPFN)
+        res = await sandbox_metadata_db.conn.execute(stmt)
+    db_contents = {row.SEPFN: row.SBId for row in res}
+    SBId1 = db_contents[pfn]
+    # The sandbox should be assigned
+    async with sandbox_metadata_db:
+        assert await sandbox_metadata_db.sandbox_is_assigned("SandboxSE", pfn)
