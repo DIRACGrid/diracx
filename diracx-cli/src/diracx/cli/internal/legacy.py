@@ -48,7 +48,7 @@ class ConversionConfig(BaseModel):
 
 
 @app.command()
-def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
+def cs_sync(old_file: Path, new_file: Path):
     """Load the old CS and convert it to the new YAML format"""
     if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
         raise RuntimeError(
@@ -71,18 +71,16 @@ def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
             "DisabledVOs cannot be set if any Legacy clients are enabled"
         )
 
-    _apply_fixes(raw, conversion_config)
+    _apply_fixes(raw)
 
     config = Config.parse_obj(raw)
     new_file.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
 
 
-def _apply_fixes(raw, conversion_config: Path):
+def _apply_fixes(raw):
     """Modify raw in place to make any layout changes between the old and new structure"""
 
-    conv_config = ConversionConfig.parse_obj(
-        yaml.safe_load(conversion_config.read_text())
-    )
+    conv_config = ConversionConfig.parse_obj(raw["DiracX"]["CsSync"])
 
     raw.pop("DiracX", None)
     # Remove dips specific parts from the CS

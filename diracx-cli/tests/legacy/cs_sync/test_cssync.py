@@ -23,7 +23,6 @@ def test_cs_sync(tmp_path, monkeypatch):
             "legacy",
             "cs-sync",
             f"{file_path / 'integration_test.cfg'}",
-            f"{file_path / 'convert_integration_test.yaml'}",
             str(output_file),
         ],
     )
@@ -48,7 +47,6 @@ def test_disabled_vos_empty(tmp_path, monkeypatch):
             "legacy",
             "cs-sync",
             f"{file_path / 'integration_test_buggy.cfg'}",
-            f"{file_path / 'convert_integration_test.yaml'}",
             str(output_file),
         ],
     )
