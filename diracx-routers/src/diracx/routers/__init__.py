@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from functools import partial
-from typing import Any, Iterable, TypeVar
+from typing import Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
@@ -164,9 +164,16 @@ def create_app_inner(
         )
 
     # Add exception handlers
-    app.add_exception_handler(DiracError, dirac_error_handler)
-    app.add_exception_handler(DiracHttpResponse, http_response_handler)
-    app.add_exception_handler(DBUnavailable, route_unavailable_error_hander)
+    # We need to cast because callables are contravariant and we define our exception handlers
+    # with a subclass of Exception (https://mypy.readthedocs.io/en/latest/generics.html#variance-of-generic-types)
+    handler_signature = Callable[[Request, Exception], Response | Awaitable[Response]]
+    app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))
+    app.add_exception_handler(
+        DiracHttpResponse, cast(handler_signature, http_response_handler)
+    )
+    app.add_exception_handler(
+        DBUnavailable, cast(handler_signature, route_unavailable_error_hander)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
