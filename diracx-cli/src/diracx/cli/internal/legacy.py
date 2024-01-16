@@ -59,6 +59,18 @@ def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
     cfg = diraccfg.CFG().loadFromBuffer(old_data)
     raw = cfg.getAsDict()
 
+    diracx_section = raw["DiracX"]
+    # DisabledVOs cannot be set if any Legacy clients are enabled
+    disabled_vos = diracx_section.get("DisabledVOs")
+    enabled_clients = []
+    for _, client_status in diracx_section.get("LegacyClientEnabled", {}).items():
+        for _, str_status in client_status.items():
+            enabled_clients.append(str_status == "True")
+    if disabled_vos and any(enabled_clients):
+        raise RuntimeError(
+            "DisabledVOs cannot be set if any Legacy clients are enabled"
+        )
+
     _apply_fixes(raw, conversion_config)
 
     config = Config.parse_obj(raw)
