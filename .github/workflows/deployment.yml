@@ -122,7 +122,7 @@ jobs:
           # Also build the diracx metapackage
           python -m build --outdir $PWD/dist .
       - name: 'Upload Artifact'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: diracx-whl
           path: dist/diracx*.whl
