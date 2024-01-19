@@ -3,12 +3,16 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
 
 import diraccfg
 import typer
 import yaml
+
+if TYPE_CHECKING:
+    from diraccfg.cfg import CFGAsDict
+
 from pydantic import BaseModel
 from typer import Option
 
@@ -59,12 +63,14 @@ def cs_sync(old_file: Path, new_file: Path):
     cfg = diraccfg.CFG().loadFromBuffer(old_data)
     raw = cfg.getAsDict()
 
-    diracx_section = raw["DiracX"]
+    diracx_section = cast("CFGAsDict", raw["DiracX"])
     # DisabledVOs cannot be set if any Legacy clients are enabled
     disabled_vos = diracx_section.get("DisabledVOs")
     enabled_clients = []
-    for _, client_status in diracx_section.get("LegacyClientEnabled", {}).items():
-        for _, str_status in client_status.items():
+    for _, client_status in cast(
+        "CFGAsDict", diracx_section.get("LegacyClientEnabled", {})
+    ).items():
+        for _, str_status in cast("CFGAsDict", client_status).items():
             enabled_clients.append(str_status == "True")
     if disabled_vos and any(enabled_clients):
         raise RuntimeError(
