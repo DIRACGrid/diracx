@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin, urlparse
 from uuid import uuid4
 
 import pytest
@@ -551,5 +551,13 @@ def do_device_flow_with_dex(url: str, ca_path: str) -> None:
         verify=ca_path,
     )
     r.raise_for_status()
+    approval_url = r.url  # This is not the same as URL as we redirect to dex
+    # Do the actual approval
+    r = requests.post(
+        approval_url,
+        {"approval": "approve", "req": parse_qs(urlparse(r.url).query)["req"][0]},
+        verify=ca_path,
+    )
+
     # This should have redirected to the DiracX page that shows the login is complete
     assert "Please close the window" in r.text
