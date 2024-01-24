@@ -19,12 +19,13 @@ dirac internal add-vo "${tmp_dir}/cs_store/initialRepo" \
     --idp-client-id="idp-client-id" \
     --default-group=admin
 
-dirac internal add-group "${tmp_dir}/cs_store/initialRepo" \
-    --vo=diracAdmin \
-    --group=admin
+#dirac internal add-group "${tmp_dir}/cs_store/initialRepo" \
+#    --vo=diracAdmin \
+#    --group=admin
 
+#  --vo=diracAdmin --user-group=admin \
 dirac internal add-user "${tmp_dir}/cs_store/initialRepo" \
-  --vo=diracAdmin --user-group=admin \
+  --vo=diracAdmin --group=admin \
   --sub=75212b23-14c2-47be-9374-eb0113b0575e \
   --preferred-username=localuser
 
@@ -39,6 +40,9 @@ export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upp
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
 export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost:3000", "aws_access_key_id": "console", "aws_secret_access_key": "console123"}'
+
+export DIRACX_EXTENSIONS="mydiracx,diracx"
+export DIRACX_DB_URL_DUMMYDB="sqlite+aiosqlite:///:memory:"
 
 moto_server -p3000 &
 moto_pid=$!

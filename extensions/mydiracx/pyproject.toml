@@ -1,0 +1,111 @@
+[project]
+name = "mydiracx"
+description = "Client installation for users of DiracX installations"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+#    "mydiracx-api",
+#    "mydiracx-cli",
+#    "mydiracx-client",
+#    "mydiracx-core",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = [
+    "mydiracx-testing",
+]
+
+[tool.setuptools]
+packages = []
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = ".."
+
+[tool.ruff]
+select = [
+    "E",    # pycodestyle errrors
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "PLE",  # pylint errors
+    # "UP",   # pyUpgrade
+    "FLY",  # flynt
+    "DTZ",  # flake8-datetimez
+]
+ignore = ["B905", "B008", "B006"]
+line-length = 120
+src = ["mydiracx-*/src", "diracx-*/tests"]
+exclude = ["mydiracx-client/src/diracx/client/"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff.flake8-bugbear]
+# Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
+
+[tool.mypy]
+files = [
+    "mydiracx-api/src/**/*.py",
+    "mydiracx-cli/src/**/*.py",
+    "mydiracx-client/src/**/_patch.py",
+    "mydiracx-core/src/**/*.py",
+    "mydiracx-db/src/**/*.py",
+    "mydiracx-routers/src/**/*.py",
+]
+mypy_path = [
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-api/src",
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-cli/src",
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-client/src",
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-core/src",
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-db/src",
+    "$MYPY_CONFIG_FILE_DIR/mydiracx-routers/src",
+]
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+allow_redefinition = true
+explicit_package_bases = true
+# disallow_untyped_defs = true
+# strict = true
+enable_error_code = ["import", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = 'DIRAC.*'
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = 'authlib.*'
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "mydiracx-api/tests",
+    "mydiracx-cli/tests",
+    "mydiracx-client/tests",
+    "mydiracx-core/tests",
+    "mydiracx-db/tests",
+    "mydiracx-routers/tests",
+]
+addopts = [
+    "-v",
+    "--cov=mydiracx", "--cov-report=term-missing",
+    "-pmydiracx.testing", "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
+markers = [
+    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+]

@@ -28,8 +28,8 @@ from diracx.db.exceptions import DBUnavailable
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 
-from .auth import verify_dirac_access_token
-from .fastapi_classes import DiracFastAPI, DiracxRouter
+from diracx.routers.auth import verify_dirac_access_token
+from diracx.routers.fastapi_classes import DiracFastAPI, DiracxRouter
 
 T = TypeVar("T")
 T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
@@ -53,6 +53,7 @@ def create_app_inner(
     config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
+
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
     for service_settings in all_service_settings:
