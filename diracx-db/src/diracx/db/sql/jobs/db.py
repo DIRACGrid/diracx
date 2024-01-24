@@ -421,8 +421,6 @@ class JobDB(BaseSQLDB):
 
         jobAttrs["ApplicationStatus"] = "Unknown"
 
-        jobAttrs["ApplicationNumStatus"] = 0
-
         jobAttrs["LastUpdateTime"] = datetime.now(tz=timezone.utc)
 
         jobAttrs["RescheduleTime"] = datetime.now(tz=timezone.utc)

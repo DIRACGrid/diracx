@@ -60,10 +60,6 @@ class Jobs(JobDBBase):
     )
     JobType = Column("JobType", String(32), default="user")
     JobGroup = Column("JobGroup", String(32), default="00000000")
-    JobSplitType = Column(
-        "JobSplitType", Enum("Single", "Master", "Subjob", "DAGNode"), default="Single"
-    )
-    MasterJobID = Column("MasterJobID", Integer, default=0)
     Site = Column("Site", String(100), default="ANY")
     JobName = Column("JobName", String(128), default="Unknown")
     Owner = Column("Owner", String(64), default="Unknown")
@@ -78,17 +74,9 @@ class Jobs(JobDBBase):
     Status = Column("Status", String(32), default="Received")
     MinorStatus = Column("MinorStatus", String(128), default="Unknown")
     ApplicationStatus = Column("ApplicationStatus", String(255), default="Unknown")
-    ApplicationNumStatus = Column("ApplicationNumStatus", Integer, default=0)
     UserPriority = Column("UserPriority", Integer, default=0)
-    SystemPriority = Column("SystemPriority", Integer, default=0)
     RescheduleCounter = Column("RescheduleCounter", Integer, default=0)
     VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
-    DeletedFlag = Column("DeletedFlag", EnumBackedBool(), default=False)
-    KilledFlag = Column("KilledFlag", EnumBackedBool(), default=False)
-    FailedFlag = Column("FailedFlag", EnumBackedBool(), default=False)
-    ISandboxReadyFlag = Column("ISandboxReadyFlag", EnumBackedBool(), default=False)
-    OSandboxReadyFlag = Column("OSandboxReadyFlag", EnumBackedBool(), default=False)
-    RetrievedFlag = Column("RetrievedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
     AccountedFlag = Column(
         "AccountedFlag", Enum("True", "False", "Failed"), default="False"
@@ -97,7 +85,6 @@ class Jobs(JobDBBase):
     __table_args__ = (
         Index("JobType", "JobType"),
         Index("JobGroup", "JobGroup"),
-        Index("JobSplitType", "JobSplitType"),
         Index("Site", "Site"),
         Index("Owner", "Owner"),
         Index("OwnerGroup", "OwnerGroup"),
