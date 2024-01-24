@@ -9,13 +9,6 @@ from typing import Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
-from fastapi import APIRouter, Depends, Request, status
-from fastapi.dependencies.models import Dependant
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
-from fastapi.routing import APIRoute
-from pydantic import parse_raw_as
-
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import (
     DiracError,
@@ -27,9 +20,14 @@ from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailable
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
-
 from diracx.routers.auth import verify_dirac_access_token
 from diracx.routers.fastapi_classes import DiracFastAPI, DiracxRouter
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.dependencies.models import Dependant
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+from fastapi.routing import APIRoute
+from pydantic import parse_raw_as
 
 T = TypeVar("T")
 T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)

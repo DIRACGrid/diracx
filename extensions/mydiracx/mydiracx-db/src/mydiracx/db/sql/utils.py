@@ -11,6 +11,10 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from typing import TYPE_CHECKING, AsyncIterator, Self, cast
 
+from diracx.core.exceptions import InvalidQueryError
+from diracx.core.extensions import select_from_extension
+from diracx.core.settings import SqlalchemyDsn
+from diracx.db.exceptions import DBUnavailable
 from pydantic import parse_obj_as
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData, select
@@ -18,11 +22,6 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
-
-from diracx.core.exceptions import InvalidQueryError
-from diracx.core.extensions import select_from_extension
-from diracx.core.settings import SqlalchemyDsn
-from diracx.db.exceptions import DBUnavailable
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
