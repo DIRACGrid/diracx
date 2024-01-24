@@ -39,6 +39,9 @@ export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
 export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost:3000", "aws_access_key_id": "console", "aws_secret_access_key": "console123"}'
 
+export DIRACX_EXTENSIONS="mydiracx,diracx"
+export DIRACX_DB_URL_DUMMYDB="sqlite+aiosqlite:///:memory:"
+
 moto_server -p3000 &
 moto_pid=$!
 uvicorn --factory diracx.routers:create_app --reload &
