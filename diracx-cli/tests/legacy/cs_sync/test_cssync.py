@@ -23,7 +23,6 @@ def test_cs_sync(tmp_path, monkeypatch):
             "legacy",
             "cs-sync",
             f"{file_path / 'integration_test.cfg'}",
-            f"{file_path / 'convert_integration_test.yaml'}",
             str(output_file),
         ],
     )
@@ -33,3 +32,25 @@ def test_cs_sync(tmp_path, monkeypatch):
     expected_output = yaml.safe_load((file_path / "integration_test.yaml").read_text())
     assert actual_output == expected_output
     Config.parse_obj(actual_output)
+
+
+def test_disabled_vos_empty(tmp_path, monkeypatch):
+    # # DisabledVOs cannot be set if any Legacy clients are enabled
+    monkeypatch.setenv("DIRAC_COMPAT_ENABLE_CS_CONVERSION", "Yes")
+
+    output_file = tmp_path / "default.yaml"
+
+    result = runner.invoke(
+        app,
+        [
+            "internal",
+            "legacy",
+            "cs-sync",
+            f"{file_path / 'integration_test_buggy.cfg'}",
+            str(output_file),
+        ],
+    )
+    assert result.exit_code == 1
+    assert not output_file.is_file()
+    assert isinstance(result.exception, RuntimeError)
+    assert "DisabledVOs cannot be set" in str(result.exception)

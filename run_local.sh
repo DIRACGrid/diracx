@@ -19,12 +19,8 @@ dirac internal add-vo "${tmp_dir}/cs_store/initialRepo" \
     --idp-client-id="idp-client-id" \
     --default-group=admin
 
-dirac internal add-group "${tmp_dir}/cs_store/initialRepo" \
-    --vo=diracAdmin \
-    --group=admin
-
 dirac internal add-user "${tmp_dir}/cs_store/initialRepo" \
-  --vo=diracAdmin --user-group=admin \
+  --vo=diracAdmin --group=admin \
   --sub=75212b23-14c2-47be-9374-eb0113b0575e \
   --preferred-username=localuser
 

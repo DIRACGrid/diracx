@@ -3,12 +3,16 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
 
 import diraccfg
 import typer
 import yaml
+
+if TYPE_CHECKING:
+    from diraccfg.cfg import CFGAsDict
+
 from pydantic import BaseModel
 from typer import Option
 
@@ -48,7 +52,7 @@ class ConversionConfig(BaseModel):
 
 
 @app.command()
-def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
+def cs_sync(old_file: Path, new_file: Path):
     """Load the old CS and convert it to the new YAML format"""
     if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
         raise RuntimeError(
@@ -59,18 +63,30 @@ def cs_sync(old_file: Path, conversion_config: Path, new_file: Path):
     cfg = diraccfg.CFG().loadFromBuffer(old_data)
     raw = cfg.getAsDict()
 
-    _apply_fixes(raw, conversion_config)
+    diracx_section = cast("CFGAsDict", raw["DiracX"])
+    # DisabledVOs cannot be set if any Legacy clients are enabled
+    disabled_vos = diracx_section.get("DisabledVOs")
+    enabled_clients = []
+    for _, client_status in cast(
+        "CFGAsDict", diracx_section.get("LegacyClientEnabled", {})
+    ).items():
+        for _, str_status in cast("CFGAsDict", client_status).items():
+            enabled_clients.append(str_status == "True")
+    if disabled_vos and any(enabled_clients):
+        raise RuntimeError(
+            "DisabledVOs cannot be set if any Legacy clients are enabled"
+        )
+
+    _apply_fixes(raw)
 
     config = Config.parse_obj(raw)
     new_file.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
 
 
-def _apply_fixes(raw, conversion_config: Path):
+def _apply_fixes(raw):
     """Modify raw in place to make any layout changes between the old and new structure"""
 
-    conv_config = ConversionConfig.parse_obj(
-        yaml.safe_load(conversion_config.read_text())
-    )
+    conv_config = ConversionConfig.parse_obj(raw["DiracX"]["CsSync"])
 
     raw.pop("DiracX", None)
     # Remove dips specific parts from the CS
