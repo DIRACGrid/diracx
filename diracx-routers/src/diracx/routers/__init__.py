@@ -14,7 +14,23 @@ from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as OTLPSpanExporterGRPC,
+)
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.instrumentation.logging.constants import DEFAULT_LOGGING_FORMAT
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,
+)
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import parse_raw_as
+from starlette.types import ASGIApp
 
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import (
@@ -36,6 +52,66 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 
 
 logger = logging.getLogger(__name__)
+
+
+###########################################3
+
+
+APP_NAME = os.environ.get("APP_NAME", "mysecretapp")
+EXPOSE_PORT = os.environ.get("EXPOSE_PORT", 8000)
+OTEL_GRPC_ENDPOINT = os.environ.get(
+    "OTEL_GRPC_ENDPOINT", "diracx-demo-opentelemetry-collector:4317"
+)
+# OTEL_GRPC_ENDPOINT = "172.18.0.2:4317"
+
+
+def instrument_otel(app: ASGIApp, app_name: str, log_correlation: bool = True) -> None:
+    # Setting jaeger
+    # set the service name to show in traces
+    resource = Resource.create(attributes={"service.name": app_name})
+
+    # set the tracer provider
+    tracer_provider = TracerProvider(resource=resource)
+
+    # elif MODE == "otel-collector-http":
+    #     tracer.add_span_processor(
+    #         BatchSpanProcessor(OTLPSpanExporterHTTP(endpoint=OTEL_HTTP_ENDPOINT))
+    #     )
+    # else:
+    # default otel-collector-grpc
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporterGRPC(endpoint=OTEL_GRPC_ENDPOINT, insecure=True)
+        )
+    )
+    trace.set_tracer_provider(tracer_provider)
+
+    # metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(),export_interval_millis=1000)
+    metric_reader = PeriodicExportingMetricReader(
+        OTLPMetricExporter(endpoint=OTEL_GRPC_ENDPOINT, insecure=True),
+        export_interval_millis=3000,
+    )
+    meter_provider = MeterProvider(metric_readers=[metric_reader])
+    metrics.set_meter_provider(meter_provider)
+
+    # # override logger format which with trace id and span id
+    if log_correlation:
+        LoggingInstrumentor().instrument(set_logging_format=True)
+
+        # CHRIS HACK
+        # manually change the logging formater of uvicorn as it is
+        # not reached by the LoggingInstrumentor
+        logger = logging.getLogger("uvicorn.access")
+        for hl in logger.handlers:
+            hl.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
+
+    # FastAPIInstrumentor.instrument_app(
+    #     app, tracer_provider=tracer_provider, meter_provider=meter_provider
+    # )
+
+    FastAPIInstrumentor.instrument_app(
+        app, tracer_provider=tracer_provider, meter_provider=meter_provider
+    )
 
 
 # Rules:
@@ -188,6 +264,10 @@ def create_app_inner(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    print(f"CHRIS LOGS { sorted(logging.root.manager.loggerDict)}")
+
+    instrument_otel(app, APP_NAME)
 
     return app
 
