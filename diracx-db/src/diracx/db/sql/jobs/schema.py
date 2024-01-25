@@ -212,7 +212,6 @@ class TaskQueues(TaskQueueDBBase):
     __tablename__ = "tq_TaskQueues"
     TQId = Column(Integer, primary_key=True)
     Owner = Column(String(255), nullable=False)
-    OwnerDN = Column(String(255))
     OwnerGroup = Column(String(32), nullable=False)
     VO = Column(String(32), nullable=False)
     CPUTime = Column(BigInteger, nullable=False)
