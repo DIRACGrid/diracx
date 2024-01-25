@@ -19,7 +19,7 @@ class SandboxMetadataDB(BaseSQLDB):
         stmt = sqlalchemy.select(sb_Owners.OwnerID).where(
             sb_Owners.Owner == user.preferred_username,
             sb_Owners.OwnerGroup == user.dirac_group,
-            sb_Owners.VO == user.vo
+            sb_Owners.VO == user.vo,
         )
         result = await self.conn.execute(stmt)
         if owner_id := result.scalar_one_or_none():
