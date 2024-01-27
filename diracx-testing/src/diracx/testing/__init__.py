@@ -19,6 +19,9 @@ if TYPE_CHECKING:
     from diracx.routers.auth import AuthSettings
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
+# Ensure that if we try to load the legacy DIRAC config that it fails
+os.environ["DIRAC_DISABLE_GCONFIG_REFRESH"] = "true"
+
 # to get a string like this run:
 # openssl rand -hex 32
 ALGORITHM = "HS256"
