@@ -133,6 +133,10 @@ def _apply_fixes(raw):
             raw["Registry"][vo]["DefaultProxyLifeTime"] = original_registry[
                 "DefaultProxyLifeTime"
             ]
+        # Copy over the necessary parts of the VO section
+        for key in {"VOMSName"}:
+            if key in original_registry.get("VO", {}).get(vo, {}):
+                raw["Registry"][vo][key] = original_registry["VO"][vo][key]
         # Find the groups that belong to this VO
         vo_users = set()
         for name, info in original_registry["Groups"].items():
@@ -159,8 +163,14 @@ def _apply_fixes(raw):
                     raw["Registry"][vo]["Users"][subject] = info | {
                         "PreferedUsername": name
                     }
-                    # We ignore the DN and CA
-                    raw["Registry"][vo]["Users"][subject].pop("DN", None)
+                    # Strip any DNs which are from the failed OAuth2 attempt
+                    raw_dn = raw["Registry"][vo]["Users"][subject].pop("DN", None)
+                    raw["Registry"][vo]["Users"][subject]["DNs"] = [
+                        dn.strip()
+                        for dn in raw_dn.split(",")
+                        if not dn.strip().startswith("/O=DIRAC/")
+                    ]
+                    # We ignore the CA
                     raw["Registry"][vo]["Users"][subject].pop("CA", None)
 
 
