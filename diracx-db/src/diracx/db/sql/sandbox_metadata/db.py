@@ -19,7 +19,7 @@ class SandboxMetadataDB(BaseSQLDB):
         stmt = sqlalchemy.select(sb_Owners.OwnerID).where(
             sb_Owners.Owner == user.preferred_username,
             sb_Owners.OwnerGroup == user.dirac_group,
-            # TODO: Add VO
+            sb_Owners.VO == user.vo,
         )
         result = await self.conn.execute(stmt)
         if owner_id := result.scalar_one_or_none():
@@ -28,6 +28,7 @@ class SandboxMetadataDB(BaseSQLDB):
         stmt = sqlalchemy.insert(sb_Owners).values(
             Owner=user.preferred_username,
             OwnerGroup=user.dirac_group,
+            VO=user.vo,
         )
         result = await self.conn.execute(stmt)
         return result.lastrowid

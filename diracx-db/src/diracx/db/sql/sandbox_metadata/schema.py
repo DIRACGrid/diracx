@@ -19,6 +19,7 @@ class sb_Owners(Base):
     OwnerID = Column(Integer, autoincrement=True)
     Owner = Column(String(32))
     OwnerGroup = Column(String(32))
+    VO = Column(String(64))
     __table_args__ = (PrimaryKeyConstraint("OwnerID"),)
 
 
