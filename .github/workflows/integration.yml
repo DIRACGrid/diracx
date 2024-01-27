@@ -38,6 +38,7 @@ jobs:
         run: |
           pip install typer pyyaml gitpython packaging
           git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
           # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment
         run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --diracx-dist-dir "${GITHUB_WORKSPACE}/dist"
