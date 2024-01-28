@@ -18,8 +18,7 @@ app = AsyncTyper()
 @app.async_command()
 async def dump():
     async with DiracClient() as api:
-        user_info = await api.auth.userinfo()
-        config = await api.config.serve_config(user_info.vo)
+        config = await api.config.serve_config()
         display(config)
 
 

@@ -18,15 +18,14 @@ LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 router = DiracxRouter()
 
 
-@router.get("/{vo}")
+@router.get("/")
 async def serve_config(
-    vo: str,
     config: Config,
     response: Response,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ):
-    """ "
+    """
     Get the latest view of the config.
 
 

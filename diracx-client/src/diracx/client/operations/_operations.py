@@ -264,7 +264,6 @@ def build_auth_userinfo_request(**kwargs: Any) -> HttpRequest:
 
 
 def build_config_serve_config_request(
-    vo: str,
     *,
     if_none_match: Optional[str] = None,
     if_modified_since: Optional[str] = None,
@@ -275,12 +274,7 @@ def build_config_serve_config_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/config/{vo}"
-    path_format_arguments = {
-        "vo": _SERIALIZER.url("vo", vo, "str"),
-    }
-
-    _url: str = _format_url_section(_url, **path_format_arguments)  # type: ignore
+    _url = "/api/config/"
 
     # Construct headers
     if if_none_match is not None:
@@ -1505,7 +1499,6 @@ class ConfigOperations:
     @distributed_trace
     def serve_config(
         self,
-        vo: str,
         *,
         if_none_match: Optional[str] = None,
         if_modified_since: Optional[str] = None,
@@ -1513,7 +1506,6 @@ class ConfigOperations:
     ) -> Any:
         """Serve Config.
 
-        "
         Get the latest view of the config.
 
         If If-None-Match header is given and matches the latest ETag, return 304
@@ -1521,8 +1513,6 @@ class ConfigOperations:
         If If-Modified-Since is given and is newer than latest,
             return 304: this is to avoid flip/flopping.
 
-        :param vo: Required.
-        :type vo: str
         :keyword if_none_match: Default value is None.
         :paramtype if_none_match: str
         :keyword if_modified_since: Default value is None.
@@ -1545,7 +1535,6 @@ class ConfigOperations:
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         request = build_config_serve_config_request(
-            vo=vo,
             if_none_match=if_none_match,
             if_modified_since=if_modified_since,
             headers=_headers,
