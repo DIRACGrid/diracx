@@ -37,6 +37,7 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
 
 class UserConfig(BaseModel):
     PreferedUsername: str
+    DNs: list[str] = []
     Email: EmailStr | None
     Suspended: list[str] = []
     Quota: int | None = None
@@ -79,6 +80,7 @@ class RegistryConfig(BaseModel):
     DefaultGroup: str
     DefaultStorageQuota: float = 0
     DefaultProxyLifeTime: int = 12 * 60 * 60
+    VOMSName: str | None = None
 
     Users: dict[str, UserConfig]
     Groups: dict[str, GroupConfig]
