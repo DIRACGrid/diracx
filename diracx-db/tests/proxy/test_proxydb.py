@@ -101,13 +101,13 @@ def voms_init_cmd_fake(*args, **kwargs):
     return new_cmd
 
 
-async def test_get_proxy(proxy_db: ProxyDB, monkeypatch):
+async def test_get_proxy(proxy_db: ProxyDB, monkeypatch, tmp_path):
     monkeypatch.setenv("X509_CERT_DIR", str(TEST_DATA_DIR / "certs"))
     monkeypatch.setattr("diracx.db.sql.proxy.db.voms_init_cmd", voms_init_cmd_fake)
 
     async with proxy_db as proxy_db:
         proxy_pem = await proxy_db.get_proxy(
-            TEST_DN, "fakevo", "fakevo_user", "/fakevo", 3600
+            TEST_DN, "fakevo", "fakevo_user", "/fakevo", 3600, tmp_path, tmp_path
         )
 
     proxy_chain = X509Chain()

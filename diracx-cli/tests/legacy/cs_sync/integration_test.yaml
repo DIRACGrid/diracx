@@ -89,7 +89,9 @@ Registry:
         - /C=ch/O=DIRAC/OU=DIRAC CI/CN=ciuser
         Email: lhcb-dirac-ci@cern.ch
         PreferedUsername: adminusername
-    VOMSName: myVOMS
+    VOMS:
+      Name: myVOMS
+      Servers: {}
   vo:
     DefaultGroup: dirac_user
     Groups:
@@ -131,6 +133,8 @@ Registry:
         - /C=ch/O=DIRAC/OU=DIRAC CI/CN=trialUser
         Email: lhcb-dirac-ci@cern.ch
         PreferedUsername: trialUser
+    VOMS:
+      Servers: {}
 Resources:
   FTSEndpoints:
     FTS3:

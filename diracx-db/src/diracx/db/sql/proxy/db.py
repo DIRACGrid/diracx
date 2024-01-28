@@ -33,6 +33,8 @@ class ProxyDB(BaseSQLDB):
         dirac_group: str,
         voms_attr: str | None,
         lifetime_seconds: int,
+        vomses: Path,
+        vomsdir: Path,
     ) -> str:
         """Generate a new proxy for the given DN as PEM with the given VOMS extension"""
         original_chain = await self.get_stored_proxy(
@@ -61,7 +63,7 @@ class ProxyDB(BaseSQLDB):
                 proxy_chain,
                 str(in_fn),
                 str(out_fn),
-                Locations.getVomsesLocation(),
+                str(vomses),
             )
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -71,7 +73,7 @@ class ProxyDB(BaseSQLDB):
                 env=os.environ
                 | {
                     "X509_CERT_DIR": Locations.getCAsLocationNoConfig(),
-                    "X509_VOMS_DIR": Locations.getVomsdirLocation(),
+                    "X509_VOMS_DIR": str(vomsdir),
                 },
             )
             await proc.wait()

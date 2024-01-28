@@ -74,6 +74,18 @@ class SupportInfo(BaseModel):
     Message: str = "Please contact system administrator"
 
 
+class VomsServerConfig(BaseModel):
+    # Taken from one of the lines in $X509_VOMSES/$VO_NAME
+    Info: str
+    # Taken from $X509_VOMSDIR/$VO_NAME/$HOSTNAME.lsc
+    Chain: list[str]
+
+
+class VomsConfig(BaseModel):
+    Name: str | None
+    Servers: dict[str, VomsServerConfig] = {}
+
+
 class RegistryConfig(BaseModel):
     IdP: IdpConfig
     Support: SupportInfo = Field(default_factory=SupportInfo)
@@ -81,6 +93,7 @@ class RegistryConfig(BaseModel):
     DefaultStorageQuota: float = 0
     DefaultProxyLifeTime: int = 12 * 60 * 60
     VOMSName: str | None = None
+    VOMS: VomsConfig = Field(default_factory=VomsConfig)
 
     Users: dict[str, UserConfig]
     Groups: dict[str, GroupConfig]

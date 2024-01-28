@@ -8,6 +8,8 @@ import re
 import secrets
 from datetime import timedelta
 from enum import StrEnum
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
@@ -34,6 +36,7 @@ from diracx.core.exceptions import (
     DiracHttpResponse,
     ExpiredFlowError,
     PendingAuthorizationError,
+    ProxyNotFoundError,
 )
 from diracx.core.models import TokenResponse, UserInfo
 from diracx.core.properties import (
@@ -48,6 +51,7 @@ from .dependencies import (
     AuthDB,
     AvailableSecurityProperties,
     Config,
+    ProxyDB,
     add_settings_annotation,
 )
 from .fastapi_classes import DiracxRouter
@@ -1119,3 +1123,54 @@ async def legacy_exchange(
         refresh_token_expire_minutes=expires_minutes,
         legacy_exchange=True,
     )
+
+
+@router.get("/proxy")
+async def get_proxy(
+    proxy_db: ProxyDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    config: Config,
+):
+    voms_role = config.Registry[user_info.vo].Groups[user_info.dirac_group].VOMSRole
+    _, sub = user_info.sub.split(":", 1)
+    user_dns = config.Registry[user_info.vo].Users[sub].DNs
+    voms_vo_name = config.Registry[user_info.vo].VOMS.Name or user_info.vo
+
+    # TODO: Move on to the Config class
+    tmp = TemporaryDirectory()
+    vomsdir = Path(tmp.name) / "vomsdir"
+    vomses = Path(tmp.name) / "vomses"
+    vomsdir.mkdir()
+    vomses.mkdir()
+    for vo in config.Registry:
+        voms_vo_name = config.Registry[vo].VOMS.Name or vo
+        (vomsdir / voms_vo_name).mkdir()
+
+        vomses_content = []
+        for hostname, info in config.Registry[vo].VOMS.Servers.items():
+            vomses_content.append(info.Info)
+            (vomsdir / voms_vo_name / f"{hostname}.lsc").write_text(
+                "\n".join(info.Chain)
+            )
+        (vomses / voms_vo_name).write_text("\n".join(vomses_content))
+
+    # TODO: Get proper lifetime
+    lifetime_seconds = 3600
+    for user_dn in user_dns:
+        try:
+            return await proxy_db.get_proxy(
+                user_dn,
+                voms_vo_name,
+                user_info.dirac_group,
+                voms_role,
+                lifetime_seconds,
+                vomses,
+                vomsdir,
+            )
+        except ProxyNotFoundError:
+            pass
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No available proxy for {user_info.sub}",
+        )
