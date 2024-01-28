@@ -6,6 +6,7 @@ import json
 import os
 import re
 import secrets
+import textwrap
 from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -45,6 +46,7 @@ from diracx.core.properties import (
     UnevaluatedProperty,
 )
 from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
+from diracx.core.utils import serialize_credentials
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 
 from .dependencies import (
@@ -1130,11 +1132,24 @@ async def get_proxy(
     proxy_db: ProxyDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     config: Config,
+    auth_db: AuthDB,
+    settings: AuthSettings,
+    available_properties: AvailableSecurityProperties,
 ):
-    voms_role = config.Registry[user_info.vo].Groups[user_info.dirac_group].VOMSRole
-    _, sub = user_info.sub.split(":", 1)
-    user_dns = config.Registry[user_info.vo].Users[sub].DNs
-    voms_vo_name = config.Registry[user_info.vo].VOMS.Name or user_info.vo
+    vo_config = config.Registry[user_info.vo]
+
+    # Prevent privilege escalation from tokens with non-default properties
+    default_properties = vo_config.Groups[user_info.dirac_group].Properties
+    if set(user_info.properties) != default_properties:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only tokens with group default properties can be used to get a proxy",
+        )
+
+    voms_role = vo_config.Groups[user_info.dirac_group].VOMSRole
+    _, vo_sub = user_info.sub.split(":", 1)
+    user_dns = vo_config.Users[vo_sub].DNs
+    voms_vo_name = vo_config.VOMS.Name or user_info.vo
 
     # TODO: Move on to the Config class
     tmp = TemporaryDirectory()
@@ -1158,7 +1173,7 @@ async def get_proxy(
     lifetime_seconds = 3600
     for user_dn in user_dns:
         try:
-            return await proxy_db.get_proxy(
+            proxy_string = await proxy_db.get_proxy(
                 user_dn,
                 voms_vo_name,
                 user_info.dirac_group,
@@ -1167,6 +1182,7 @@ async def get_proxy(
                 vomses,
                 vomsdir,
             )
+            break
         except ProxyNotFoundError:
             pass
     else:
@@ -1174,3 +1190,28 @@ async def get_proxy(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"No available proxy for {user_info.sub}",
         )
+
+    # Add a DiracX token to the proxy
+    PEM_BEGIN = "-----BEGIN DIRACX-----"
+    PEM_END = "-----END DIRACX-----"
+    scope = [f"vo:{user_info.vo}", f"group:{user_info.dirac_group}"] + [
+        f"property:{prop}" for prop in user_info.properties
+    ]
+
+    token = await exchange_token(
+        auth_db,
+        " ".join(scope),
+        {"sub": vo_sub, "preferred_username": user_info.preferred_username},
+        config,
+        settings,
+        available_properties,
+        refresh_token_expire_minutes=lifetime_seconds,
+        legacy_exchange=True,
+    )
+
+    proxy_string += f"{PEM_BEGIN}\n"
+    data = base64.b64encode(serialize_credentials(token).encode("utf-8")).decode()
+    proxy_string += textwrap.fill(data, width=64)
+    proxy_string += f"\n{PEM_END}\n"
+
+    return proxy_string

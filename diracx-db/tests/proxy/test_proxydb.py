@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from functools import wraps
-from pathlib import Path
+from functools import partial
 from typing import AsyncGenerator
 
 import pytest
-from DIRAC.Core.Security.VOMS import voms_init_cmd
-from DIRAC.Core.Security.X509Chain import X509Chain
-from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
-from sqlalchemy import insert
 
 from diracx.core.exceptions import DiracError
 from diracx.db.sql.proxy.db import ProxyDB
-from diracx.db.sql.proxy.schema import CleanProxies
-
-TEST_NAME = "testuser"
-TEST_DN = "/O=Dirac Computing/O=CERN/CN=MrUser"
-TEST_DATA_DIR = Path(__file__).parent / "data"
-TEST_PEM_PATH = TEST_DATA_DIR / "proxy.pem"
+from diracx.testing.proxy import (
+    TEST_DATA_DIR,
+    TEST_DN,
+    check_proxy_string,
+    insert_proxy,
+    voms_init_cmd_fake,
+)
 
 
 @pytest.fixture
@@ -33,15 +28,7 @@ async def empty_proxy_db(tmp_path) -> AsyncGenerator[ProxyDB, None]:
 @pytest.fixture
 async def proxy_db(empty_proxy_db) -> AsyncGenerator[ProxyDB, None]:
     async with empty_proxy_db.engine.begin() as conn:
-        await conn.execute(
-            insert(CleanProxies).values(
-                UserName=TEST_NAME,
-                UserDN=TEST_DN,
-                ProxyProvider="Certificate",
-                Pem=TEST_PEM_PATH.read_bytes(),
-                ExpirationTime=datetime(2033, 11, 25, 21, 25, 23, tzinfo=timezone.utc),
-            )
-        )
+        await insert_proxy(conn)
     yield empty_proxy_db
 
 
@@ -75,55 +62,15 @@ async def test_proxy_not_long_enough(proxy_db: ProxyDB):
             )
 
 
-@wraps(voms_init_cmd)
-def voms_init_cmd_fake(*args, **kwargs):
-    cmd = voms_init_cmd(*args, **kwargs)
-
-    new_cmd = ["voms-proxy-fake"]
-    i = 1
-    while i < len(cmd):
-        # Some options are not supported by voms-proxy-fake
-        if cmd[i] in {"-valid", "-vomses", "-timeout"}:
-            i += 2
-            continue
-        new_cmd.append(cmd[i])
-        i += 1
-    new_cmd.extend(
-        [
-            "-hostcert",
-            f"{TEST_DATA_DIR}/certs/host/hostcert.pem",
-            "-hostkey",
-            f"{TEST_DATA_DIR}/certs/host/hostkey.pem",
-            "-fqan",
-            "/fakevo/Role=NULL/Capability=NULL",
-        ]
-    )
-    return new_cmd
-
-
 async def test_get_proxy(proxy_db: ProxyDB, monkeypatch, tmp_path):
     monkeypatch.setenv("X509_CERT_DIR", str(TEST_DATA_DIR / "certs"))
-    monkeypatch.setattr("diracx.db.sql.proxy.db.voms_init_cmd", voms_init_cmd_fake)
+    monkeypatch.setattr(
+        "diracx.db.sql.proxy.db.voms_init_cmd", partial(voms_init_cmd_fake, "fakevo")
+    )
 
     async with proxy_db as proxy_db:
         proxy_pem = await proxy_db.get_proxy(
             TEST_DN, "fakevo", "fakevo_user", "/fakevo", 3600, tmp_path, tmp_path
         )
 
-    proxy_chain = X509Chain()
-    returnValueOrRaise(proxy_chain.loadProxyFromString(proxy_pem))
-
-    # Check validity
-    not_after = returnValueOrRaise(proxy_chain.getNotAfterDate()).replace(
-        tzinfo=timezone.utc
-    )
-    # The proxy should currently be valid
-    assert datetime.now(timezone.utc) < not_after
-    # The proxy should be invalid in less than 3601 seconds
-    time_left = not_after - datetime.now(timezone.utc)
-    assert time_left < timedelta(hours=1, seconds=1)
-
-    # Check VOMS data
-    voms_data = returnValueOrRaise(proxy_chain.getVOMSData())
-    assert voms_data["vo"] == "fakevo"
-    assert voms_data["fqan"] == ["/fakevo/Role=NULL/Capability=NULL"]
+    check_proxy_string("fakevo", proxy_pem)

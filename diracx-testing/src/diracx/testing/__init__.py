@@ -16,6 +16,7 @@ import pytest
 import requests
 
 if TYPE_CHECKING:
+    from diracx.core.properties import SecurityProperty
     from diracx.routers.auth import AuthSettings
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
@@ -145,6 +146,9 @@ class ClientFactory:
             for e in select_from_extension(group="diracx.db.sql")
         }
         self._cache_dir = tmp_path_factory.mktemp("empty-dbs")
+        self._config_source = ConfigSource.create_from_url(
+            backend_url=f"git+file://{with_config_repo}"
+        )
 
         self.test_auth_settings = test_auth_settings
 
@@ -158,9 +162,7 @@ class ClientFactory:
             os_database_conn_kwargs={
                 # TODO: JobParametersDB
             },
-            config_source=ConfigSource.create_from_url(
-                backend_url=f"git+file://{with_config_repo}"
-            ),
+            config_source=self._config_source,
         )
 
         self.all_dependency_overrides = self.app.dependency_overrides.copy()
@@ -264,22 +266,32 @@ class ClientFactory:
             yield client
 
     @contextlib.contextmanager
-    def normal_user(self):
-        from diracx.core.properties import NORMAL_USER
+    def normal_user(
+        self,
+        *,
+        vo: str = "lhcb",
+        sub: str = "yellow-sub",
+        group: str = "test_group",
+        properties: list[SecurityProperty] = None,
+    ):
+        from diracx.core.properties import NORMAL_USER, PRIVATE_LIMITED_DELEGATION
         from diracx.routers.auth import create_token
+
+        if properties is None:
+            properties = [NORMAL_USER, PRIVATE_LIMITED_DELEGATION]
 
         with self.unauthenticated() as client:
             payload = {
-                "sub": "testingVO:yellow-sub",
+                "sub": f"{vo}:{sub}",
                 "exp": datetime.now(tz=timezone.utc)
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
                 "aud": AUDIENCE,
                 "iss": ISSUER,
-                "dirac_properties": [NORMAL_USER],
+                "dirac_properties": properties,
                 "jti": str(uuid4()),
                 "preferred_username": "preferred_username",
-                "dirac_group": "test_group",
-                "vo": "lhcb",
+                "dirac_group": group,
+                "vo": vo,
             }
             token = create_token(payload, self.test_auth_settings)
 
@@ -357,6 +369,7 @@ def with_config_repo(tmp_path_factory):
                         "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041": {
                             "PreferedUsername": "chaen",
                             "Email": None,
+                            "DNs": ["/O=Dirac Computing/O=CERN/CN=MrUser"],
                         },
                         "c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152": {
                             "PreferedUsername": "albdr",
@@ -370,11 +383,24 @@ def with_config_repo(tmp_path_factory):
                                 "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041",
                                 "c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152",
                             ],
+                            "VOMSRole": "arole",
                         },
                         "lhcb_tokenmgr": {
                             "Properties": ["NormalUser", "ProxyManagement"],
                             "Users": ["c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152"],
                         },
+                    },
+                    "VOMS": {
+                        "Servers": {
+                            "voms.lhcb.invalid": {
+                                "Info": '"lhcb" "voms.lhcb.invalid" "1256" '
+                                '"/DC=mars/OU=computers/CN=voms.lhcb.invalid" "lhcb" "24"',
+                                "Chain": [
+                                    "/DC=mars/OU=computers/CN=voms.lhcb.invalid",
+                                    "/DC=mars/CN=Fake Certification Authority",
+                                ],
+                            }
+                        }
                     },
                 }
             },
