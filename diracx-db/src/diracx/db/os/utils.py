@@ -34,8 +34,7 @@ class BaseOSDB(metaclass=ABCMeta):
     index_prefix: str
 
     @abstractmethod
-    def index_name(self, doc_id: int) -> str:
-        ...
+    def index_name(self, doc_id: int) -> str: ...
 
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
         self._client: AsyncOpenSearch | None = None
