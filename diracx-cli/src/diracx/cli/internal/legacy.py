@@ -289,9 +289,9 @@ def generate_helm_values(
     # Sandboxstore settings
     # TODO: Integrate minio for production use (ingress, etc)
     # By default, take the server hostname and prepend "sandboxes"
-    diracx_settings[
-        "DIRACX_SANDBOX_STORE_BUCKET_NAME"
-    ] = f"{diracx_hostname.split('.')[0]}-sandboxes"
+    diracx_settings["DIRACX_SANDBOX_STORE_BUCKET_NAME"] = (
+        f"{diracx_hostname.split('.')[0]}-sandboxes"
+    )
     diracx_settings["DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS"] = json.dumps(
         {
             "endpoint_url": "FILL ME",

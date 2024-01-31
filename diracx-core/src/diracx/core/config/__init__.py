@@ -49,16 +49,13 @@ class ConfigSource(metaclass=ABCMeta):
     scheme: str
 
     @abstractmethod
-    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        ...
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None: ...
 
     @abstractmethod
-    def latest_revision(self) -> tuple[str, datetime]:
-        ...
+    def latest_revision(self) -> tuple[str, datetime]: ...
 
     @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        ...
+    def read_raw(self, hexsha: str, modified: datetime) -> Config: ...
 
     def __init_subclass__(cls) -> None:
         if cls.scheme in cls.__registry:

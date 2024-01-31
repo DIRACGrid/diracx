@@ -15,8 +15,7 @@ class DiracError(RuntimeError):
         self.detail = detail
 
 
-class AuthorizationError(DiracError):
-    ...
+class AuthorizationError(DiracError): ...
 
 
 class PendingAuthorizationError(AuthorizationError):

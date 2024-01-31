@@ -1,4 +1,5 @@
 """Utilities for interacting with S3-compatible storage."""
+
 from __future__ import annotations
 
 __all__ = (
