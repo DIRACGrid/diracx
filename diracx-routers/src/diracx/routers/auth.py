@@ -16,6 +16,7 @@ from authlib.integrations.starlette_client import OAuthError
 from authlib.jose import JoseError, JsonWebKey, JsonWebToken
 from authlib.oidc.core import IDToken
 from cachetools import TTLCache
+from cryptography.fernet import Fernet
 from fastapi import (
     Depends,
     Form,
@@ -41,7 +42,7 @@ from diracx.core.properties import (
     SecurityProperty,
     UnevaluatedProperty,
 )
-from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
+from diracx.core.settings import FernetKey, ServiceSettingsBase, TokenSigningKey
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 
 from .dependencies import (
@@ -63,6 +64,9 @@ class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     allowed_redirects: list[str] = []
     device_flow_expiration_seconds: int = 600
     authorization_flow_expiration_seconds: int = 300
+
+    # State key is used to encrypt/decrypt the state dict passed to the IAM
+    state_key: FernetKey
 
     token_issuer: str = "http://lhcbdirac.cern.ch/"
     token_audience: str = "dirac"
@@ -385,7 +389,7 @@ async def initiate_device_flow(
 
 
 async def initiate_authorization_flow_with_iam(
-    config, vo: str, redirect_uri: str, state: dict[str, str]
+    config, vo: str, redirect_uri: str, state: dict[str, str], cipher_suite: Fernet
 ):
     # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
     code_verifier = secrets.token_hex()
@@ -404,10 +408,9 @@ async def initiate_authorization_flow_with_iam(
     # Take these two from CS/.well-known
     authorization_endpoint = server_metadata["authorization_endpoint"]
 
-    # TODO : encrypt it for good
-    encrypted_state = base64.urlsafe_b64encode(
-        json.dumps(state | {"vo": vo, "code_verifier": code_verifier}).encode()
-    ).decode()
+    encrypted_state = encrypt_state(
+        state | {"vo": vo, "code_verifier": code_verifier}, cipher_suite
+    )
 
     urlParams = [
         "response_type=code",
@@ -501,15 +504,28 @@ async def do_device_flow(
     }
 
     authorization_flow_url = await initiate_authorization_flow_with_iam(
-        config, parsed_scope["vo"], redirect_uri, state_for_iam
+        config,
+        parsed_scope["vo"],
+        redirect_uri,
+        state_for_iam,
+        settings.state_key.fernet,
     )
     return RedirectResponse(authorization_flow_url)
 
 
-def decrypt_state(state):
+def encrypt_state(state_dict: dict[str, str], cipher_suite: Fernet) -> str:
+    """Encrypt the state dict and return it as a string"""
+    return cipher_suite.encrypt(
+        base64.urlsafe_b64encode(json.dumps(state_dict).encode())
+    ).decode()
+
+
+def decrypt_state(state: str, cipher_suite: Fernet) -> dict[str, str]:
+    """Decrypt the state string and return it as a dict"""
     try:
-        # TODO: There have been better schemes like rot13
-        return json.loads(base64.urlsafe_b64decode(state).decode())
+        return json.loads(
+            base64.urlsafe_b64decode(cipher_suite.decrypt(state.encode())).decode()
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
@@ -532,7 +548,7 @@ async def finish_device_flow(
     can map it to the corresponding device flow using the user_code
     in the cookie/session
     """
-    decrypted_state = decrypt_state(state)
+    decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code
 
     id_token = await get_token_from_iam(
@@ -981,6 +997,7 @@ async def authorization_flow(
         parsed_scope["vo"],
         f"{request.url.replace(query='')}/complete",
         state_for_iam,
+        settings.state_key.fernet,
     )
 
     return responses.RedirectResponse(authorization_flow_url)
@@ -995,7 +1012,7 @@ async def authorization_flow_complete(
     config: Config,
     settings: AuthSettings,
 ):
-    decrypted_state = decrypt_state(state)
+    decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.authorization_code
 
     id_token = await get_token_from_iam(

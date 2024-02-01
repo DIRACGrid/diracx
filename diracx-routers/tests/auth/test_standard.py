@@ -8,16 +8,21 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 import jwt
 import pytest
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import HTTPException
 from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.routers.auth import (
     AuthSettings,
+    GrantType,
     _server_metadata_cache,
     create_token,
+    decrypt_state,
+    encrypt_state,
     get_server_metadata,
     parse_and_validate_scope,
 )
@@ -370,6 +375,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
 
     new_auth_settings = AuthSettings(
         token_key=pem,
+        state_key=Fernet.generate_key(),
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
@@ -680,3 +686,38 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
     available_properties = SecurityProperty.available_properties()
     with pytest.raises(ValueError, match=expected_error):
         parse_and_validate_scope(scope, config, available_properties)
+
+
+def test_encrypt_decrypt_state_valid_state(fernet_key):
+    """Test that decrypt_state returns the correct state"""
+    fernet = Fernet(fernet_key)
+    # Create a valid state
+    state_dict = {
+        "vo": "lhcb",
+        "code_verifier": secrets.token_hex(),
+        "user_code": "AE19U",
+        "grant_type": GrantType.device_code.value,
+    }
+
+    state = encrypt_state(state_dict, fernet)
+    result = decrypt_state(state, fernet)
+
+    assert result == state_dict
+
+    # Create an empty state
+    state_dict = {}
+
+    state = encrypt_state(state_dict, fernet)
+    result = decrypt_state(state, fernet)
+
+    assert result == state_dict
+
+
+def test_encrypt_decrypt_state_invalid_state(fernet_key):
+    """Test that decrypt_state raises an error when the state is invalid"""
+    state = "invalid_state"  # Invalid state string
+
+    with pytest.raises(HTTPException) as exc_info:
+        decrypt_state(state, fernet_key)
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "Invalid state"
