@@ -379,7 +379,7 @@ async def initiate_device_flow(
         "user_code": user_code,
         "device_code": device_code,
         "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
-        "verification_uri": str(request.url.replace(query={})),
+        "verification_uri": verification_uri,
         "expires_in": settings.device_flow_expiration_seconds,
     }
 
