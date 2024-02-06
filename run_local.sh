@@ -10,6 +10,8 @@ mkdir -p "${tmp_dir}/signing-key" "${tmp_dir}/cs_store/"
 signing_key="${tmp_dir}/signing-key/rsa256.key"
 ssh-keygen -P "" -t rsa -b 4096 -m PEM -f "${signing_key}"
 
+state_key="$(head -c 32 /dev/urandom | base64)"
+
 # Make a fake CS
 dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo"
 
@@ -31,6 +33,7 @@ export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///:memory:"
 export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///:memory:"
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
+export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
 export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
