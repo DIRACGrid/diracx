@@ -11,7 +11,7 @@ from diracx.client.models import DeviceFlowErrorResponse
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.utils import write_credentials
 
-from . import internal, jobs
+from . import config, internal, jobs
 from .utils import AsyncTyper
 
 app = AsyncTyper()
@@ -116,6 +116,7 @@ def callback(output_format: Optional[str] = None):
 
 
 app.add_typer(jobs.app, name="jobs")
+app.add_typer(config.app, name="config")
 app.add_typer(internal.app, name="internal", hidden=True)
 
 

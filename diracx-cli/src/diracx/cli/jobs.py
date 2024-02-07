@@ -62,13 +62,14 @@ async def search(
 
 
 def display(data, unit: str):
-    match get_diracx_preferences().output_format:
+    output_format = get_diracx_preferences().output_format
+    match output_format:
         case OutputFormats.JSON:
             print(json.dumps(data, indent=2))
         case OutputFormats.RICH:
             display_rich(data, unit)
         case _:
-            raise NotImplementedError(format)
+            raise NotImplementedError(output_format)
 
 
 def display_rich(data, unit: str) -> None:
