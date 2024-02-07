@@ -276,8 +276,6 @@ async def exchange_token(
 
     # Extract attributes from the settings and configuration
     issuer = settings.token_issuer
-    # dirac_properties needs to be a list in the token as to be json serializable
-    dirac_properties = sorted(config.Registry[vo].Groups[dirac_group].Properties)
 
     # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
@@ -313,7 +311,7 @@ async def exchange_token(
         "vo": vo,
         "aud": settings.token_audience,
         "iss": issuer,
-        "dirac_properties": dirac_properties,
+        "dirac_properties": parsed_scope["properties"],
         "jti": str(uuid4()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
@@ -637,7 +635,7 @@ def parse_and_validate_scope(
 
     return {
         "group": group,
-        "properties": properties,
+        "properties": sorted(properties),
         "vo": vo,
     }
 
