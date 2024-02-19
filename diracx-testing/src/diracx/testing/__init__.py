@@ -16,7 +16,7 @@ import pytest
 import requests
 
 if TYPE_CHECKING:
-    from diracx.routers.auth import AuthSettings
+    from diracx.routers.auth.utils import AuthSettings
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
 
 # to get a string like this run:
@@ -77,7 +77,7 @@ def fernet_key() -> str:
 
 @pytest.fixture(scope="session")
 def test_auth_settings(rsa_private_key_pem, fernet_key) -> AuthSettings:
-    from diracx.routers.auth import AuthSettings
+    from diracx.routers.auth.utils import AuthSettings
 
     yield AuthSettings(
         token_key=rsa_private_key_pem,
@@ -274,7 +274,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def normal_user(self):
         from diracx.core.properties import NORMAL_USER
-        from diracx.routers.auth import create_token
+        from diracx.routers.auth.token import create_token
 
         with self.unauthenticated() as client:
             payload = {
@@ -298,7 +298,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def admin_user(self):
         from diracx.core.properties import JOB_ADMINISTRATOR
-        from diracx.routers.auth import create_token
+        from diracx.routers.auth.token import create_token
 
         with self.unauthenticated() as client:
             payload = {

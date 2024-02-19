@@ -144,7 +144,7 @@ We'll now make a `/parking/` router which contains information store in the `Dum
 
 ### Creating the router submodule
 
-TODO: This isn't yet documented here however see `diracx.routers.well_known` for an example.
+TODO: This isn't yet documented here however see `diracx.routers.auth.well_known` for an example.
 
 ### Defining the new router in the `diracx.services` entrypoint
 

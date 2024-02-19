@@ -16,11 +16,11 @@ from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
-from diracx.routers.auth import (
+from diracx.routers.auth.token import create_token
+from diracx.routers.auth.utils import (
     AuthSettings,
     GrantType,
     _server_metadata_cache,
-    create_token,
     decrypt_state,
     encrypt_state,
     get_server_metadata,
@@ -62,7 +62,7 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
 
     httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
-    monkeypatch.setattr("diracx.routers.auth.parse_id_token", fake_parse_id_token)
+    monkeypatch.setattr("diracx.routers.auth.utils.parse_id_token", fake_parse_id_token)
 
     yield httpx_mock
 
