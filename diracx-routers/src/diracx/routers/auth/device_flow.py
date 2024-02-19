@@ -123,6 +123,11 @@ async def initiate_device_flow(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.args[0],
         ) from e
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=e.args[0],
+        ) from e
 
     user_code, device_code = await auth_db.insert_device_flow(
         client_id, scope, audience

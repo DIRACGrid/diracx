@@ -302,13 +302,20 @@ def parse_and_validate_scope(
         if group not in config.Registry[vo].Groups:
             raise ValueError(f"{group} not in {vo} groups")
 
+    allowed_properties = config.Registry[vo].Groups[group].Properties
     if not properties:
         # If there are no properties set get the defaults from the CS
-        properties = [str(p) for p in config.Registry[vo].Groups[group].Properties]
+        properties = [str(p) for p in allowed_properties]
 
     if not set(properties).issubset(available_properties):
         raise ValueError(
             f"{set(properties)-set(available_properties)} are not valid properties"
+        )
+
+    if not set(properties).issubset(allowed_properties):
+        raise PermissionError(
+            f"Attempted to access properties {set(properties)-set(allowed_properties)} which are not allowed."
+            f" Allowed properties are: {allowed_properties}"
         )
 
     return {

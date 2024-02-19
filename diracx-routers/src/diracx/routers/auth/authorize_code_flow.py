@@ -100,6 +100,11 @@ async def authorization_flow(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.args[0],
         ) from e
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=e.args[0],
+        ) from e
 
     # Store the authorization flow details
     uuid = await auth_db.insert_authorization_flow(

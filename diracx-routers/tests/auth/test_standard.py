@@ -184,7 +184,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
-            "scope": "vo:lhcb group:lhcb_user property:FileCatalogManagement property:NormalUser",
+            "scope": "vo:lhcb group:lhcb_user property:NormalUser",
         },
     )
     assert r.status_code == 200, r.json()
@@ -251,6 +251,92 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
+
+
+async def test_flows_with_unallowed_properties(test_client):
+    """Test the authorization flow and the device flow with unallowed properties."""
+    unallowed_property = "FileCatalogManagement"
+
+    # Initiate the authorization flow
+    code_verifier = secrets.token_hex()
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .replace("=", "")
+    )
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": f"vo:lhcb property:{unallowed_property} property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 403, r.json()
+    assert (
+        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
+        in r.json()["detail"]
+    )
+
+    # Initiate the device flow
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "audience": "Dirac server",
+            "scope": f"vo:lhcb group:lhcb_user property:{unallowed_property} property:NormalUser",
+        },
+    )
+    assert r.status_code == 403, r.json()
+    assert (
+        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
+        in r.json()["detail"]
+    )
+
+
+async def test_flows_with_invalid_properties(test_client):
+    """Test the authorization flow and the device flow with invalid properties."""
+    invalid_property = "InvalidAndUnknownProperty"
+
+    # Initiate the authorization flow
+    code_verifier = secrets.token_hex()
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .replace("=", "")
+    )
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": f"vo:lhcb property:{invalid_property} property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.json()
+    assert f"{{'{invalid_property}'}} are not valid properties" in r.json()["detail"]
+
+    # Initiate the device flow
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "audience": "Dirac server",
+            "scope": f"vo:lhcb group:lhcb_user property:{invalid_property} property:NormalUser",
+        },
+    )
+    assert r.status_code == 400, r.json()
+    assert f"{{'{invalid_property}'}} are not valid properties" in r.json()["detail"]
 
 
 async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
@@ -576,7 +662,7 @@ def _get_tokens(
         params={
             "client_id": DIRAC_CLIENT_ID,
             "audience": "Dirac server",
-            "scope": f"vo:lhcb group:{group} property:FileCatalogManagement property:{property}",
+            "scope": f"vo:lhcb group:{group} property:{property}",
         },
     )
     data = r.json()
