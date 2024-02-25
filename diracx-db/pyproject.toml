@@ -31,6 +31,7 @@ testing = [
 AuthDB = "diracx.db.sql:AuthDB"
 JobDB = "diracx.db.sql:JobDB"
 JobLoggingDB = "diracx.db.sql:JobLoggingDB"
+ProxyDB = "diracx.db.sql:ProxyDB"
 SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 

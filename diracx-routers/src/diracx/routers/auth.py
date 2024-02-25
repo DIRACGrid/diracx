@@ -6,8 +6,11 @@ import json
 import os
 import re
 import secrets
+import textwrap
 from datetime import timedelta
 from enum import StrEnum
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated, Literal, TypedDict
 from uuid import UUID, uuid4
 
@@ -34,6 +37,7 @@ from diracx.core.exceptions import (
     DiracHttpResponse,
     ExpiredFlowError,
     PendingAuthorizationError,
+    ProxyNotFoundError,
 )
 from diracx.core.models import TokenResponse, UserInfo
 from diracx.core.properties import (
@@ -42,12 +46,14 @@ from diracx.core.properties import (
     UnevaluatedProperty,
 )
 from diracx.core.settings import ServiceSettingsBase, TokenSigningKey
+from diracx.core.utils import serialize_credentials
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 
 from .dependencies import (
     AuthDB,
     AvailableSecurityProperties,
     Config,
+    ProxyDB,
     add_settings_annotation,
 )
 from .fastapi_classes import DiracxRouter
@@ -1117,3 +1123,93 @@ async def legacy_exchange(
         refresh_token_expire_minutes=expires_minutes,
         legacy_exchange=True,
     )
+
+
+@router.get("/proxy")
+async def get_proxy(
+    proxy_db: ProxyDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    config: Config,
+    auth_db: AuthDB,
+    settings: AuthSettings,
+    available_properties: AvailableSecurityProperties,
+):
+    vo_config = config.Registry[user_info.vo]
+
+    # Prevent privilege escalation from tokens with non-default properties
+    default_properties = vo_config.Groups[user_info.dirac_group].Properties
+    if set(user_info.properties) != default_properties:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only tokens with group default properties can be used to get a proxy",
+        )
+
+    voms_role = vo_config.Groups[user_info.dirac_group].VOMSRole
+    _, vo_sub = user_info.sub.split(":", 1)
+    user_dns = vo_config.Users[vo_sub].DNs
+    voms_vo_name = vo_config.VOMS.Name or user_info.vo
+
+    # TODO: Move on to the Config class
+    tmp = TemporaryDirectory()
+    vomsdir = Path(tmp.name) / "vomsdir"
+    vomses = Path(tmp.name) / "vomses"
+    vomsdir.mkdir()
+    vomses.mkdir()
+    for vo in config.Registry:
+        voms_vo_name = config.Registry[vo].VOMS.Name or vo
+        (vomsdir / voms_vo_name).mkdir()
+
+        vomses_content = []
+        for hostname, info in config.Registry[vo].VOMS.Servers.items():
+            vomses_content.append(info.Info)
+            (vomsdir / voms_vo_name / f"{hostname}.lsc").write_text(
+                "\n".join(info.Chain)
+            )
+        (vomses / voms_vo_name).write_text("\n".join(vomses_content))
+
+    # TODO: Get proper lifetime
+    lifetime_seconds = 3600
+    for user_dn in user_dns:
+        try:
+            proxy_string = await proxy_db.get_proxy(
+                user_dn,
+                voms_vo_name,
+                user_info.dirac_group,
+                voms_role,
+                lifetime_seconds,
+                vomses,
+                vomsdir,
+            )
+            break
+        except ProxyNotFoundError:
+            pass
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No available proxy for {user_info.sub}",
+        )
+
+    # Add a DiracX token to the proxy
+    PEM_BEGIN = "-----BEGIN DIRACX-----"
+    PEM_END = "-----END DIRACX-----"
+    scope = [f"vo:{user_info.vo}", f"group:{user_info.dirac_group}"] + [
+        f"property:{prop}" for prop in user_info.properties
+    ]
+
+    token = await exchange_token(
+        auth_db,
+        " ".join(scope),
+        {"sub": vo_sub, "preferred_username": user_info.preferred_username},
+        config,
+        settings,
+        available_properties,
+        refresh_token_expire_minutes=lifetime_seconds,
+        legacy_exchange=True,
+    )
+
+    proxy_string += f"{PEM_BEGIN}\n"
+    data = base64.b64encode(serialize_credentials(token).encode("utf-8")).decode()
+    proxy_string += textwrap.fill(data, width=64)
+    proxy_string += f"\n{PEM_END}\n"
+
+    return proxy_string

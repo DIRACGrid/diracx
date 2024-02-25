@@ -42,3 +42,11 @@ class JobNotFound(Exception):
     def __init__(self, job_id: int):
         self.job_id: int = job_id
         super().__init__(f"Job {job_id} not found")
+
+
+class VOMSInitError(DiracError):
+    """Adding VOMS attributes to a proxy failed"""
+
+
+class ProxyNotFoundError(DiracError):
+    """There are no valid proxies for the given user"""

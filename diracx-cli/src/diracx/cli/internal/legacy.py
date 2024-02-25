@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from typer import Option
 
 from diracx.core.config import Config
-from diracx.core.config.schema import Field, SupportInfo
+from diracx.core.config.schema import Field, SupportInfo, VomsServerConfig
 
 from ..utils import AsyncTyper
 
@@ -34,6 +34,7 @@ class VOConfig(BaseModel):
     IdP: IdPConfig
     UserSubjects: dict[str, str]
     Support: SupportInfo = Field(default_factory=SupportInfo)
+    VOMSServers: dict[str, VomsServerConfig] = {}
 
 
 class ConversionConfig(BaseModel):
@@ -133,10 +134,12 @@ def _apply_fixes(raw):
             raw["Registry"][vo]["DefaultProxyLifeTime"] = original_registry[
                 "DefaultProxyLifeTime"
             ]
-        # Copy over the necessary parts of the VO section
-        for key in {"VOMSName"}:
-            if key in original_registry.get("VO", {}).get(vo, {}):
-                raw["Registry"][vo][key] = original_registry["VO"][vo][key]
+        # Copy over information about the VOMS server
+        raw["Registry"][vo]["VOMS"] = {"Servers": vo_meta.VOMSServers}
+        if "VOMSName" in original_registry.get("VO", {}).get(vo, {}):
+            raw["Registry"][vo]["VOMS"]["Name"] = original_registry["VO"][vo][
+                "VOMSName"
+            ]
         # Find the groups that belong to this VO
         vo_users = set()
         for name, info in original_registry["Groups"].items():
