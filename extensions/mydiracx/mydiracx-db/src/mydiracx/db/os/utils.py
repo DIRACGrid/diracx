@@ -11,11 +11,10 @@ from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, AsyncIterator, Self
 
-from opensearchpy import AsyncOpenSearch
-
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.db.exceptions import DBUnavailable
+from opensearchpy import AsyncOpenSearch
 
 logger = logging.getLogger(__name__)
 

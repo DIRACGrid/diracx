@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, insert, select
-
 from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
+from sqlalchemy import func, insert, select
 
 from .schema import Base as DummyDBBase
 from .schema import Cars, Owners

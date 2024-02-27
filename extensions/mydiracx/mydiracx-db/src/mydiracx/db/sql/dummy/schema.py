@@ -1,9 +1,8 @@
 # The utils class define some boilerplate types that should be used
 # in place of the SQLAlchemy one. Have a look at them
+from diracx.db.sql.utils import Column, DateNowColumn
 from sqlalchemy import ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import declarative_base
-
-from diracx.db.sql.utils import Column, DateNowColumn
 
 Base = declarative_base()
 
