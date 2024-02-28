@@ -69,7 +69,4 @@ async def insert_example_object(
     dummy_db: DummyDB,
 ):
 
-    owner_id = dummy_db.insert_owner('Jim')
-    ret = dummy_db.insert_car('AA111', 'Batmobil', owner_id)
-
-    return ret
+    return await dummy_db.insert_owner('Jim')
