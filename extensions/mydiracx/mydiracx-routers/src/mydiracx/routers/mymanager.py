@@ -60,5 +60,5 @@ async def get_example_object(
     dummy_db: DummyDB,
 ):
 
-    return await dummy_db.summary()
+    return await dummy_db.summary('model','%')
     #return
