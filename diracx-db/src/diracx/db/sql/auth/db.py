@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import datetime
 from uuid import uuid4
@@ -63,7 +64,7 @@ class AuthDB(BaseSQLDB):
             ),
         ).with_for_update()
         stmt = stmt.where(
-            DeviceFlows.device_code == device_code,
+            DeviceFlows.device_code == hashlib.sha256(device_code.encode()).hexdigest(),
         )
         res = dict((await self.conn.execute(stmt)).one()._mapping)
 
@@ -74,7 +75,10 @@ class AuthDB(BaseSQLDB):
             # Update the status to Done before returning
             await self.conn.execute(
                 update(DeviceFlows)
-                .where(DeviceFlows.device_code == device_code)
+                .where(
+                    DeviceFlows.device_code
+                    == hashlib.sha256(device_code.encode()).hexdigest()
+                )
                 .values(status=FlowStatus.DONE)
             )
             return res
@@ -119,14 +123,17 @@ class AuthDB(BaseSQLDB):
                 secrets.choice(USER_CODE_ALPHABET)
                 for _ in range(DeviceFlows.user_code.type.length)  # type: ignore
             )
-            # user_code = "2QRKPY"
             device_code = secrets.token_urlsafe()
+
+            # Hash the the device_code to avoid leaking information
+            hashed_device_code = hashlib.sha256(device_code.encode()).hexdigest()
+
             stmt = insert(DeviceFlows).values(
                 client_id=client_id,
                 scope=scope,
                 audience=audience,
                 user_code=user_code,
-                device_code=device_code,
+                device_code=hashed_device_code,
             )
             try:
                 await self.conn.execute(stmt)
@@ -172,7 +179,10 @@ class AuthDB(BaseSQLDB):
         :raises: AuthorizationError if no such uuid or status not pending
         """
 
+        # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()
+        hashed_code = hashlib.sha256(code.encode()).hexdigest()
+
         stmt = update(AuthorizationFlows)
 
         stmt = stmt.where(
@@ -181,7 +191,7 @@ class AuthDB(BaseSQLDB):
             AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
         )
 
-        stmt = stmt.values(id_token=id_token, code=code, status=FlowStatus.READY)
+        stmt = stmt.values(id_token=id_token, code=hashed_code, status=FlowStatus.READY)
         res = await self.conn.execute(stmt)
 
         if res.rowcount != 1:
@@ -190,15 +200,16 @@ class AuthDB(BaseSQLDB):
         stmt = select(AuthorizationFlows.code, AuthorizationFlows.redirect_uri)
         stmt = stmt.where(AuthorizationFlows.uuid == uuid)
         row = (await self.conn.execute(stmt)).one()
-        return row.code, row.redirect_uri
+        return code, row.redirect_uri
 
     async def get_authorization_flow(self, code: str, max_validity: int):
+        hashed_code = hashlib.sha256(code.encode()).hexdigest()
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
         stmt = select(AuthorizationFlows).with_for_update()
         stmt = stmt.where(
-            AuthorizationFlows.code == code,
+            AuthorizationFlows.code == hashed_code,
             AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
         )
 
@@ -208,7 +219,7 @@ class AuthDB(BaseSQLDB):
             # Update the status to Done before returning
             await self.conn.execute(
                 update(AuthorizationFlows)
-                .where(AuthorizationFlows.code == code)
+                .where(AuthorizationFlows.code == hashed_code)
                 .values(status=FlowStatus.DONE)
             )
 

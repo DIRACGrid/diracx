@@ -69,11 +69,19 @@ def rsa_private_key_pem() -> str:
 
 
 @pytest.fixture(scope="session")
-def test_auth_settings(rsa_private_key_pem) -> AuthSettings:
+def fernet_key() -> str:
+    from cryptography.fernet import Fernet
+
+    return Fernet.generate_key().decode()
+
+
+@pytest.fixture(scope="session")
+def test_auth_settings(rsa_private_key_pem, fernet_key) -> AuthSettings:
     from diracx.routers.auth import AuthSettings
 
     yield AuthSettings(
         token_key=rsa_private_key_pem,
+        state_key=fernet_key,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],

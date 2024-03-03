@@ -46,7 +46,7 @@ class DeviceFlows(Base):
     client_id = Column(String(255))
     scope = Column(String(1024))
     audience = Column(String(255))
-    device_code = Column(String(128), unique=True)  # hash it ?
+    device_code = Column(String(128), unique=True)  # Should be a hash
     id_token = NullColumn(JSON())
 
 
@@ -61,7 +61,7 @@ class AuthorizationFlows(Base):
     code_challenge = Column(String(255))
     code_challenge_method = Column(String(8))
     redirect_uri = Column(String(255))
-    code = NullColumn(String(255))  # hash it ?
+    code = NullColumn(String(255))  # Should be a hash
     id_token = NullColumn(JSON())
 
 

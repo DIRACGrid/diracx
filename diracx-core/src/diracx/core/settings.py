@@ -16,7 +16,7 @@ from pydantic import AnyUrl, BaseSettings, SecretStr, parse_obj_as
 if TYPE_CHECKING:
     from pydantic.config import BaseConfig
     from pydantic.fields import ModelField
-
+from cryptography.fernet import Fernet
 
 T = TypeVar("T")
 
@@ -40,6 +40,14 @@ class TokenSigningKey(SecretStr):
             url = parse_obj_as(LocalFileUrl, value)
             value = Path(url.path).read_text()
         return super().validate(value)
+
+
+class FernetKey(SecretStr):
+    fernet: Fernet
+
+    def __init__(self, data: str):
+        super().__init__(data)
+        self.fernet = Fernet(self.get_secret_value())
 
 
 class LocalFileUrl(AnyUrl):
