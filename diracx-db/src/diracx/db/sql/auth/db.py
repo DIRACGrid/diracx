@@ -114,7 +114,6 @@ class AuthDB(BaseSQLDB):
         self,
         client_id: str,
         scope: str,
-        audience: str,
     ) -> tuple[str, str]:
         # Because the user_code might be short, there is a risk of conflicts
         # This is why we retry multiple times
@@ -131,7 +130,6 @@ class AuthDB(BaseSQLDB):
             stmt = insert(DeviceFlows).values(
                 client_id=client_id,
                 scope=scope,
-                audience=audience,
                 user_code=user_code,
                 device_code=hashed_device_code,
             )
@@ -150,7 +148,6 @@ class AuthDB(BaseSQLDB):
         self,
         client_id: str,
         scope: str,
-        audience: str,
         code_challenge: str,
         code_challenge_method: str,
         redirect_uri: str,
@@ -161,7 +158,6 @@ class AuthDB(BaseSQLDB):
             uuid=uuid,
             client_id=client_id,
             scope=scope,
-            audience=audience,
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
             redirect_uri=redirect_uri,

@@ -281,7 +281,6 @@ class ClientFactory:
                 "sub": "testingVO:yellow-sub",
                 "exp": datetime.now(tz=timezone.utc)
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
-                "aud": AUDIENCE,
                 "iss": ISSUER,
                 "dirac_properties": [NORMAL_USER],
                 "jti": str(uuid4()),
@@ -303,7 +302,6 @@ class ClientFactory:
         with self.unauthenticated() as client:
             payload = {
                 "sub": "testingVO:yellow-sub",
-                "aud": AUDIENCE,
                 "iss": ISSUER,
                 "dirac_properties": [JOB_ADMINISTRATOR],
                 "jti": str(uuid4()),

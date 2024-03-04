@@ -54,7 +54,6 @@ async def login(
     async with DiracClient() as api:
         data = await api.auth.initiate_device_flow(
             client_id=api.client_id,
-            audience="Dirac server",
             scope=" ".join(scopes),
         )
         print("Now go to:", data.verification_uri_complete)

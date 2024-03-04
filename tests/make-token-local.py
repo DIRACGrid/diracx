@@ -31,7 +31,6 @@ def main(token_key):
     access_payload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
-        "aud": settings.token_audience,
         "iss": settings.token_issuer,
         "dirac_properties": dirac_properties,
         "jti": str(uuid.uuid4()),

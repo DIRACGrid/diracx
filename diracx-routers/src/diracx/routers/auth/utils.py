@@ -42,7 +42,6 @@ class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
     state_key: FernetKey
 
     token_issuer: str = "http://lhcbdirac.cern.ch/"
-    token_audience: str = "dirac"
     token_key: TokenSigningKey
     token_algorithm: str = "RS256"
     access_token_expire_minutes: int = 20
@@ -136,7 +135,8 @@ async def fetch_jwk_set(url: str):
     return JsonWebKey.import_key_set(jwk_set)
 
 
-async def parse_id_token(config, vo, raw_id_token: str, audience: str):
+async def parse_id_token(config, vo, raw_id_token: str):
+    """Parse and validate the ID token from IAM."""
     server_metadata = await get_server_metadata(
         config.Registry[vo].IdP.server_metadata_url
     )
@@ -149,7 +149,9 @@ async def parse_id_token(config, vo, raw_id_token: str, audience: str):
         claims_cls=IDToken,
         claims_options={
             "iss": {"values": [server_metadata["issuer"]]},
-            "aud": {"values": [audience]},
+            # The audience is a required parameter and is the client ID of the application
+            # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
+            "aud": {"values": [config.Registry[vo].IdP.ClientID]},
         },
     )
     token.validate()
@@ -200,7 +202,6 @@ async def verify_dirac_access_token(
             key=settings.token_key.jwk,
             claims_options={
                 "iss": {"values": [settings.token_issuer]},
-                "aud": {"values": [settings.token_audience]},
             },
         )
         token.validate()
@@ -407,7 +408,6 @@ async def get_token_from_iam(
             config=config,
             vo=vo,
             raw_id_token=raw_id_token,
-            audience=config.Registry[vo].IdP.ClientID,
         )
     except OAuthError:
         raise

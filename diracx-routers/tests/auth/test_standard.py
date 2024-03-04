@@ -69,7 +69,7 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     _server_metadata_cache.clear()
 
 
-async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs):
+async def fake_parse_id_token(raw_id_token: str, *args, **kwargs):
     """Return a fake ID token as if it were returned by an external IdP"""
     id_tokens = {
         "user1": {
@@ -183,7 +183,6 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
             "scope": "vo:lhcb group:lhcb_user property:NormalUser",
         },
     )
@@ -288,7 +287,6 @@ async def test_flows_with_unallowed_properties(test_client):
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
             "scope": f"vo:lhcb group:lhcb_user property:{unallowed_property} property:NormalUser",
         },
     )
@@ -331,7 +329,6 @@ async def test_flows_with_invalid_properties(test_client):
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
             "scope": f"vo:lhcb group:lhcb_user property:{invalid_property} property:NormalUser",
         },
     )
@@ -661,7 +658,6 @@ def _get_tokens(
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
             "scope": f"vo:lhcb group:{group} property:{property}",
         },
     )

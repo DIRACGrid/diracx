@@ -110,7 +110,6 @@ async def authorization_flow(
     uuid = await auth_db.insert_authorization_flow(
         client_id,
         scope,
-        "audience",
         code_challenge,
         code_challenge_method,
         redirect_uri,

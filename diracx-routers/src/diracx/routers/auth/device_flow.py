@@ -96,7 +96,6 @@ class InitiateDeviceFlowResponse(TypedDict):
 async def initiate_device_flow(
     client_id: str,
     scope: str,
-    audience: str,
     request: Request,
     auth_db: AuthDB,
     config: Config,
@@ -129,9 +128,7 @@ async def initiate_device_flow(
             detail=e.args[0],
         ) from e
 
-    user_code, device_code = await auth_db.insert_device_flow(
-        client_id, scope, audience
-    )
+    user_code, device_code = await auth_db.insert_device_flow(client_id, scope)
 
     verification_uri = str(request.url.replace(query={}))
 

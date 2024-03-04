@@ -390,10 +390,11 @@ async def exchange_token(
     }
 
     # Generate access token payload
+    # For now, the access token is only used to access DIRAC services,
+    # therefore, the audience is not set and checked
     access_payload = {
         "sub": sub,
         "vo": vo,
-        "aud": settings.token_audience,
         "iss": issuer,
         "dirac_properties": parsed_scope["properties"],
         "jti": str(uuid4()),
