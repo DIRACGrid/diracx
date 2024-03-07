@@ -16,7 +16,7 @@ from azure.core.pipeline import PipelineResponse
 from azure.core.utils import case_insensitive_dict
 from azure.core.tracing.decorator_async import distributed_trace_async
 
-from ...operations._operations import _SERIALIZER, _format_url_section
+from ...operations._operations import _SERIALIZER
 from ._operations import (
     AuthOperations as AuthOperationsGenerated,
     JobsOperations as JobsOperationsGenerated,
@@ -46,7 +46,6 @@ def build_token_request(**kwargs: Any) -> HttpRequest:
 
     # Construct URL
     _url = "/api/auth/token"
-    _url: str = _format_url_section(_url)
 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 

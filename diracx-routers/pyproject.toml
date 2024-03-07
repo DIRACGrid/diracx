@@ -49,7 +49,7 @@ types = [
 jobs = "diracx.routers.job_manager:router"
 config = "diracx.routers.configuration:router"
 auth = "diracx.routers.auth:router"
-".well-known" = "diracx.routers.well_known:router"
+".well-known" = "diracx.routers.auth.well_known:router"
 
 [tool.setuptools.packages.find]
 where = ["src"]

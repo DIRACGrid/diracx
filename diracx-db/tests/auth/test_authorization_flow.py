@@ -23,7 +23,7 @@ async def test_insert_id_token(auth_db: AuthDB):
     # First insert
     async with auth_db as auth_db:
         uuid = await auth_db.insert_authorization_flow(
-            "client_id", "scope", "audience", "code_challenge", "S256", "redirect_uri"
+            "client_id", "scope", "code_challenge", "S256", "redirect_uri"
         )
 
     id_token = {"sub": "myIdToken"}
@@ -68,12 +68,11 @@ async def test_insert(auth_db: AuthDB):
     # First insert
     async with auth_db as auth_db:
         uuid1 = await auth_db.insert_authorization_flow(
-            "client_id", "scope", "audience", "code_challenge", "S256", "redirect_uri"
+            "client_id", "scope", "code_challenge", "S256", "redirect_uri"
         )
         uuid2 = await auth_db.insert_authorization_flow(
             "client_id2",
             "scope2",
-            "audience2",
             "code_challenge2",
             "S256",
             "redirect_uri2",

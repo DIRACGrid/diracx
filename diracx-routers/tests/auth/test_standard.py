@@ -16,11 +16,11 @@ from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
-from diracx.routers.auth import (
+from diracx.routers.auth.token import create_token
+from diracx.routers.auth.utils import (
     AuthSettings,
     GrantType,
     _server_metadata_cache,
-    create_token,
     decrypt_state,
     encrypt_state,
     get_server_metadata,
@@ -62,14 +62,14 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
 
     httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
-    monkeypatch.setattr("diracx.routers.auth.parse_id_token", fake_parse_id_token)
+    monkeypatch.setattr("diracx.routers.auth.utils.parse_id_token", fake_parse_id_token)
 
     yield httpx_mock
 
     _server_metadata_cache.clear()
 
 
-async def fake_parse_id_token(raw_id_token: str, audience: str, *args, **kwargs):
+async def fake_parse_id_token(raw_id_token: str, *args, **kwargs):
     """Return a fake ID token as if it were returned by an external IdP"""
     id_tokens = {
         "user1": {
@@ -115,6 +115,41 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
         .replace("=", "")
     )
 
+    # Initiate the authorization flow with a wrong client ID
+    # Check that the client ID is not recognized
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": "Unknown client ID",
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": "vo:lhcb property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.text
+
+    # Initiate the authorization flow with an unrecognized redirect URI
+    # Check that the redirect URI is not recognized
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.unrecognized:8000/api/docs/oauth2-redirect",
+            "scope": "vo:lhcb property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.text
+
+    # Correctly initiate the authorization flow
     r = test_client.get(
         "/api/auth/authorize",
         params={
@@ -157,6 +192,30 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert query_parameters["state"][0] == "external-state"
     code = query_parameters["code"][0]
 
+    # Try to get token with the wrong client ID
+    request_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "state": state,
+        "client_id": "Unknown client ID",
+        "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+        "code_verifier": code_verifier,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
+
+    # Try to get token with the wrong redirect URI
+    request_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "state": state,
+        "client_id": "Unknown client ID",
+        "redirect_uri": "http://diracx.test.unrecognized:8000/api/docs/oauth2-redirect",
+        "code_verifier": code_verifier,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
+
     # Get and check token
     request_data = {
         "grant_type": "authorization_code",
@@ -178,13 +237,23 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
 
 
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
+    # Initiate the device flow with a wrong client ID
+    # Check that the client ID is not recognized
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": "Unknown client ID",
+            "scope": "vo:lhcb property:NormalUser",
+        },
+    )
+    assert r.status_code == 400, r.json()
+
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
-            "scope": "vo:lhcb group:lhcb_user property:FileCatalogManagement property:NormalUser",
+            "scope": "vo:lhcb group:lhcb_user property:NormalUser",
         },
     )
     assert r.status_code == 200, r.json()
@@ -236,6 +305,15 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.get(redirect_uri, params={"code": "valid-code", "state": state})
     assert r.status_code == 400, r.text
 
+    # Try to get token with the wrong redirect URI
+    request_data = {
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "device_code": data["device_code"],
+        "client_id": "Unknown client ID",
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
+
     # Get and check token
     request_data = {
         "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -251,6 +329,90 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "Code was already used"
+
+
+async def test_flows_with_unallowed_properties(test_client):
+    """Test the authorization flow and the device flow with unallowed properties."""
+    unallowed_property = "FileCatalogManagement"
+
+    # Initiate the authorization flow
+    code_verifier = secrets.token_hex()
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .replace("=", "")
+    )
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": f"vo:lhcb property:{unallowed_property} property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 403, r.json()
+    assert (
+        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
+        in r.json()["detail"]
+    )
+
+    # Initiate the device flow
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "scope": f"vo:lhcb group:lhcb_user property:{unallowed_property} property:NormalUser",
+        },
+    )
+    assert r.status_code == 403, r.json()
+    assert (
+        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
+        in r.json()["detail"]
+    )
+
+
+async def test_flows_with_invalid_properties(test_client):
+    """Test the authorization flow and the device flow with invalid properties."""
+    invalid_property = "InvalidAndUnknownProperty"
+
+    # Initiate the authorization flow
+    code_verifier = secrets.token_hex()
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .replace("=", "")
+    )
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": f"vo:lhcb property:{invalid_property} property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.json()
+    assert f"{{'{invalid_property}'}} are not valid properties" in r.json()["detail"]
+
+    # Initiate the device flow
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "scope": f"vo:lhcb group:lhcb_user property:{invalid_property} property:NormalUser",
+        },
+    )
+    assert r.status_code == 400, r.json()
+    assert f"{{'{invalid_property}'}} are not valid properties" in r.json()["detail"]
 
 
 async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
@@ -575,8 +737,7 @@ def _get_tokens(
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "audience": "Dirac server",
-            "scope": f"vo:lhcb group:{group} property:FileCatalogManagement property:{property}",
+            "scope": f"vo:lhcb group:{group} property:{property}",
         },
     )
     data = r.json()
@@ -658,8 +819,26 @@ def test_parse_scopes(vos, groups, scope, expected):
         [
             ["lhcb"],
             ["lhcb_user"],
+            "group:lhcb_user undefinedscope:undefined",
+            "Unrecognised scopes",
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user"],
             "group:lhcb_user",
             "No vo scope requested",
+        ],
+        [
+            ["lhcb", "gridpp"],
+            ["lhcb_user", "lhcb_admin"],
+            "vo:lhcb vo:gridpp group:lhcb_user group:lhcb_admin",
+            "Only one vo is allowed",
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user", "lhcb_admin"],
+            "vo:lhcb group:lhcb_user group:lhcb_admin",
+            "Only one DIRAC group allowed",
         ],
     ],
 )

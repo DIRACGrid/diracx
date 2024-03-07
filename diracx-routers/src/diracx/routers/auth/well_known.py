@@ -4,10 +4,9 @@ from typing import TypedDict
 
 from fastapi import Request
 
-from diracx.routers.auth import AuthSettings
-
-from .dependencies import Config
-from .fastapi_classes import DiracxRouter
+from ..dependencies import Config
+from ..fastapi_classes import DiracxRouter
+from .utils import AuthSettings
 
 router = DiracxRouter(require_auth=False, path_root="")
 
@@ -18,6 +17,7 @@ async def openid_configuration(
     config: Config,
     settings: AuthSettings,
 ):
+    """OpenID Connect discovery endpoint."""
     scopes_supported = []
     for vo in config.Registry:
         scopes_supported.append(f"vo:{vo}")
@@ -66,6 +66,7 @@ class Metadata(TypedDict):
 
 @router.get("/dirac-metadata")
 async def installation_metadata(config: Config) -> Metadata:
+    """Get metadata about the dirac installation."""
     metadata: Metadata = {
         "virtual_organizations": {},
     }

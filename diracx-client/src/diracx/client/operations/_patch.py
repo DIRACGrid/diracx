@@ -24,7 +24,6 @@ from ._operations import (
     JobsOperations as JobsOperationsGenerated,
     JSON,
     _SERIALIZER,
-    _format_url_section,
 )
 
 __all__: List[str] = [
@@ -49,7 +48,6 @@ def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
 
     # Construct URL
     _url = "/api/auth/token"
-    _url: str = _format_url_section(_url)
 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 

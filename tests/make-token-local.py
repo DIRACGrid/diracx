@@ -7,7 +7,8 @@ from pathlib import Path
 from diracx.core.models import TokenResponse
 from diracx.core.properties import NORMAL_USER
 from diracx.core.utils import write_credentials
-from diracx.routers.auth import AuthSettings, create_token
+from diracx.routers.auth.token import create_token
+from diracx.routers.auth.utils import AuthSettings
 
 
 def parse_args():
@@ -30,7 +31,6 @@ def main(token_key):
     access_payload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
-        "aud": settings.token_audience,
         "iss": settings.token_issuer,
         "dirac_properties": dirac_properties,
         "jti": str(uuid.uuid4()),
