@@ -47,8 +47,7 @@ async def get_refresh_tokens(
     if PROXY_MANAGEMENT in user_info.properties:
         subject = None
 
-    res = await auth_db.get_user_refresh_tokens(subject)
-    return res
+    return await auth_db.get_user_refresh_tokens(subject)
 
 
 @router.delete("/refresh-tokens/{jti}")

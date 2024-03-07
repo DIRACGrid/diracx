@@ -115,6 +115,41 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
         .replace("=", "")
     )
 
+    # Initiate the authorization flow with a wrong client ID
+    # Check that the client ID is not recognized
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": "Unknown client ID",
+            "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+            "scope": "vo:lhcb property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.text
+
+    # Initiate the authorization flow with an unrecognized redirect URI
+    # Check that the redirect URI is not recognized
+    r = test_client.get(
+        "/api/auth/authorize",
+        params={
+            "response_type": "code",
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+            "client_id": DIRAC_CLIENT_ID,
+            "redirect_uri": "http://diracx.test.unrecognized:8000/api/docs/oauth2-redirect",
+            "scope": "vo:lhcb property:NormalUser",
+            "state": "external-state",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 400, r.text
+
+    # Correctly initiate the authorization flow
     r = test_client.get(
         "/api/auth/authorize",
         params={
@@ -157,6 +192,30 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert query_parameters["state"][0] == "external-state"
     code = query_parameters["code"][0]
 
+    # Try to get token with the wrong client ID
+    request_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "state": state,
+        "client_id": "Unknown client ID",
+        "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+        "code_verifier": code_verifier,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
+
+    # Try to get token with the wrong redirect URI
+    request_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "state": state,
+        "client_id": "Unknown client ID",
+        "redirect_uri": "http://diracx.test.unrecognized:8000/api/docs/oauth2-redirect",
+        "code_verifier": code_verifier,
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
+
     # Get and check token
     request_data = {
         "grant_type": "authorization_code",
@@ -178,6 +237,17 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
 
 
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
+    # Initiate the device flow with a wrong client ID
+    # Check that the client ID is not recognized
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": "Unknown client ID",
+            "scope": "vo:lhcb property:NormalUser",
+        },
+    )
+    assert r.status_code == 400, r.json()
+
     # Initiate the device flow (would normally be done from CLI)
     r = test_client.post(
         "/api/auth/device",
@@ -234,6 +304,15 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     # Ensure a valid code does not work a second time
     r = test_client.get(redirect_uri, params={"code": "valid-code", "state": state})
     assert r.status_code == 400, r.text
+
+    # Try to get token with the wrong redirect URI
+    request_data = {
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "device_code": data["device_code"],
+        "client_id": "Unknown client ID",
+    }
+    r = test_client.post("/api/auth/token", data=request_data)
+    assert r.status_code == 400, r.json()
 
     # Get and check token
     request_data = {
@@ -740,8 +819,26 @@ def test_parse_scopes(vos, groups, scope, expected):
         [
             ["lhcb"],
             ["lhcb_user"],
+            "group:lhcb_user undefinedscope:undefined",
+            "Unrecognised scopes",
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user"],
             "group:lhcb_user",
             "No vo scope requested",
+        ],
+        [
+            ["lhcb", "gridpp"],
+            ["lhcb_user", "lhcb_admin"],
+            "vo:lhcb vo:gridpp group:lhcb_user group:lhcb_admin",
+            "Only one vo is allowed",
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user", "lhcb_admin"],
+            "vo:lhcb group:lhcb_user group:lhcb_admin",
+            "Only one DIRAC group allowed",
         ],
     ],
 )

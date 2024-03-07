@@ -84,7 +84,7 @@ async def token(
 
     elif grant_type == GrantType.authorization_code:
         oidc_token_info, scope = await get_oidc_token_info_from_authorization_flow(
-            code, redirect_uri, code_verifier, auth_db, settings
+            code, client_id, redirect_uri, code_verifier, auth_db, settings
         )
 
     elif grant_type == GrantType.refresh_token:
@@ -148,6 +148,7 @@ async def get_oidc_token_info_from_device_flow(
 
 async def get_oidc_token_info_from_authorization_flow(
     code: str | None,
+    client_id: str | None,
     redirect_uri: str | None,
     code_verifier: str | None,
     auth_db: AuthDB,
@@ -163,7 +164,13 @@ async def get_oidc_token_info_from_authorization_flow(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid redirect_uri",
         )
+    if client_id != info["client_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bad client_id",
+        )
 
+    # Check the code_verifier
     try:
         assert code_verifier is not None
         code_challenge = (
