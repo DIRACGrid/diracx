@@ -10,6 +10,9 @@ pytestmark = pytest.mark.enabled_dependencies([])
 # pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
 
 
+AUTOREST_VERSION = "6.13.7"
+
+
 @pytest.fixture
 def test_client(client_factory):
     with client_factory.unauthenticated() as client:
@@ -53,8 +56,12 @@ def test_regenerate_client(test_client, tmp_path):
         "--namespace=client",
         f"--output-folder={output_folder}",
     ]
+
     # This is required to be able to work offline
-    cmd += ["--use=@autorest/python@6.4.11"]
+    # TODO: if offline, find the version already installed
+    # and use it
+    # cmd += [f"--use=@autorest/python@{AUTOREST_VERSION}"]
+
     subprocess.run(cmd, check=True)
 
     cmd = ["pre-commit", "run", "--all-files"]
@@ -64,3 +71,7 @@ def test_regenerate_client(test_client, tmp_path):
     subprocess.run(cmd, check=True, cwd=repo_root)
     if repo.is_dirty(path=repo_root / "src" / "diracx" / "client"):
         raise AssertionError("Client was regenerated with changes")
+
+
+if __name__ == "__main__":
+    print(AUTOREST_VERSION)

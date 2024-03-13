@@ -151,4 +151,6 @@ jobs:
           npm install -g autorest
       - name: Run autorest
         run: |
+          autorest --python --help
+          $HOME/.autorest/\@autorest_python\@*/node_modules/\@autorest/python/venv/bin/python -m pip install --upgrade setuptools
           pytest --no-cov --regenerate-client diracx-client/tests/test_regenerate.py
