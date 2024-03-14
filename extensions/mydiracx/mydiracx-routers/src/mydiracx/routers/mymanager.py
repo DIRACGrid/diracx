@@ -65,16 +65,14 @@ router = DiracxRouter(require_auth=False)
 #     return await dummy_db.summary(group_by, search)
 
 
-# @router.get("/insert_owner/{owner_name}")
-# async def insert_example_object(
-#     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-#     dummy_db: DummyDB,
-#     owner_name: str,
+@router.get("/insert_owner/{owner_name}")
+async def insert_example_object(
+    #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    dummy_db: DummyDB,
+    owner_name: str,
+):
 
-
-# ):
-
-#     return await dummy_db.insert_owner('Jim')
+    return await dummy_db.insert_owner(owner_name)
 
 # @router.get("/insert_car/{plate}/{model}/{owner_id}")
 # async def get_example_object(
