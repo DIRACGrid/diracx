@@ -13,7 +13,13 @@ from diracx.routers.auth.token import create_token
 from diracx.routers.auth.utils import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthSettings", "SandboxMetadataDB", "SandboxStoreSettings"]
+    [
+        "AuthSettings",
+        "JobDB",
+        "JobLoggingDB",
+        "SandboxMetadataDB",
+        "SandboxStoreSettings",
+    ]
 )
 
 
