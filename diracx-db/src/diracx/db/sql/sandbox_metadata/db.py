@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import sqlalchemy
 from sqlalchemy import delete
 
@@ -84,12 +86,42 @@ class SandboxMetadataDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         is_assigned = result.scalar_one()
         return is_assigned
-        return True
+
+    async def get_sandbox_assigned_to_job(self, job_id: int, sb_type: str) -> list[Any]:
+        """Get the sandbox assign to job"""
+        stmt = (
+            sqlalchemy.select(sb_SandBoxes.SEPFN)
+            .where(sb_SandBoxes.SBId == sb_EntityMapping.SBId)
+            .where(
+                sb_EntityMapping.EntityId == job_id, sb_EntityMapping.Type == sb_type
+            )
+        )
+        result = await self.conn.execute(stmt)
+        return [result.scalar()]
+
+    async def assign_sandbox_to_job(
+        self, job_id: int, pfn: str, sb_type: str, se_name: str
+    ):
+        """Mapp sandbox and job"""
+        select_sbid = sqlalchemy.select(
+            sb_SandBoxes.SBId,
+            sqlalchemy.literal(job_id).label("EntityId"),
+            sqlalchemy.literal(sb_type).label("Type"),
+        ).where(sb_SandBoxes.SEName == se_name, sb_SandBoxes.SEPFN == pfn)
+        stmt = sqlalchemy.insert(sb_EntityMapping).from_select(
+            ["SBId", "EntityId", "Type"], select_sbid
+        )
+        await self.conn.execute(stmt)
+
+        stmt = (
+            sqlalchemy.update(sb_SandBoxes)
+            .where(sb_SandBoxes.SEPFN == pfn)
+            .values(Assigned=True)
+        )
+        await self.conn.execute(stmt)
 
     async def unassign_sandbox_from_jobs(self, job_ids: list[int]):
-        """
-        Unassign sandbox from jobs
-        """
+        """Delete sandbox and job mapping"""
         stmt = delete(sb_EntityMapping).where(
             sb_EntityMapping.EntityId.in_(f"Job:{job_id}" for job_id in job_ids)
         )

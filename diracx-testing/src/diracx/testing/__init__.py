@@ -127,7 +127,7 @@ class UnavailableDependency:
 
     def __call__(self):
         raise NotImplementedError(
-            f"{self.key} has not been made available to this test!"
+            f"{self.key} has not been made available to this test! Please add it to pytest.mark.enabled_dependencies"
         )
 
 
