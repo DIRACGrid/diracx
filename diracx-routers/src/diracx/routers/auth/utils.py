@@ -73,7 +73,7 @@ class GrantType(StrEnum):
 
     authorization_code = "authorization_code"
     device_code = "urn:ietf:params:oauth:grant-type:device_code"
-    refresh_token = "refresh_token"  # noqa: S105   # False positif of Bandit about hard coded password
+    refresh_token = "refresh_token"  # noqa: S105   # False positive of Bandit about hard coded password
 
 
 class ScopeInfoDict(TypedDict):
