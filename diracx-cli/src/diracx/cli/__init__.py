@@ -99,7 +99,8 @@ async def logout():
             # Revoke refresh token
             try:
                 await api.auth.revoke_refresh_token(credentials["refresh_token"])
-            except Exception:
+            except Exception as e:
+                print(f"Error revoking the refresh token {e!r}")
                 pass
 
             # Remove credentials
