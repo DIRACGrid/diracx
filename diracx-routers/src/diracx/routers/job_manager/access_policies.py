@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+import contextlib
 import functools
 import os
 from enum import StrEnum, auto
-from typing import Annotated, Callable
+from typing import Annotated, AsyncIterator, Callable, Self
 
 from fastapi import Depends, HTTPException, status
 
+from diracx.core.extensions import select_from_extension
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB
 
@@ -26,6 +30,7 @@ async def default_wms_policy(
     job_db: JobDB,
     job_ids: list[int] | None = None,
 ):
+    """Implement the JobPolicy"""
     if action == ActionType.CREATE:
         if job_ids is not None:
             raise NotImplementedError(
@@ -71,14 +76,91 @@ async def default_wms_policy(
     raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 
+class BaseAccessPolicy:
+
+    policy: Callable
+
+    @classmethod
+    def check(cls) -> Self:
+        raise NotImplementedError("This should never be called")
+
+    @contextlib.asynccontextmanager
+    async def lifetime_function(self) -> AsyncIterator[None]:
+        """A context manager that can be used to run code at startup and shutdown."""
+        yield
+
+    @classmethod
+    def available_implementations(
+        cls, access_policy_name: str
+    ) -> list[type[BaseAccessPolicy]]:
+        """Return the available implementations of the AccessPolicy in reverse priority order."""
+        policy_classes: list[type[BaseAccessPolicy]] = [
+            entry_point.load()
+            for entry_point in select_from_extension(
+                group="diracx.access_policies", name=access_policy_name
+            )
+        ]
+        if not policy_classes:
+            raise NotImplementedError(
+                f"Could not find any matches for {access_policy_name=}"
+            )
+        return policy_classes
+
+
+class WMSAccessPolicy(BaseAccessPolicy):
+    policy = staticmethod(default_wms_policy)
+
+
 def check_permissions(
+    access_policy_instance,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
+    """
+    This is what every route should depend on to check user permissions.
 
+    It yield an access policy that needs to be checked.
+    If this is declared as a dependency but not called
+    """
     has_been_called = False
 
-    # TODO: query the CS to find the actual policy
-    policy = default_wms_policy
+    # # TODO: query the CS to find the actual policy
+    # policy = default_wms_policy
+
+    @functools.wraps(access_policy_instance.policy)
+    async def wrapped_policy(**kwargs):
+        """This wrapper is just to update the has_been_called flag"""
+        nonlocal has_been_called
+        has_been_called = True
+        return await access_policy_instance.policy(user_info, **kwargs)
+
+    try:
+        yield wrapped_policy
+    finally:
+        if not has_been_called:
+            # TODO nice error message with inspect
+            # That should really not happen
+            print(
+                "THIS SHOULD NOT HAPPEN, ALWAYS VERIFY PERMISSION",
+                "(PS: I hope you are in a CI)",
+                flush=True,
+            )
+            os._exit(1)
+
+
+def check_permissions_alone(
+    policy,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+):
+    """
+    This is what every route should depend on to check user permissions.
+
+    It yield an access policy that needs to be checked.
+    If this is declared as a dependency but not called
+    """
+    has_been_called = False
+
+    # # TODO: query the CS to find the actual policy
+    # policy = default_wms_policy
 
     @functools.wraps(policy)
     async def wrapped_policy(**kwargs):
@@ -101,6 +183,4 @@ def check_permissions(
             os._exit(1)
 
 
-CheckPermissionsCallable = Annotated[Callable, Depends(check_permissions)]
-
-# router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+WMSAccessPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]

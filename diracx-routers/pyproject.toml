@@ -51,6 +51,11 @@ config = "diracx.routers.configuration:router"
 auth = "diracx.routers.auth:router"
 ".well-known" = "diracx.routers.auth.well_known:router"
 
+[project.entry-points."diracx.access_policies"]
+WMSAccessPolicy = "diracx.routers.job_manager.access_policies:WMSAccessPolicy"
+
+
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
