@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from http import HTTPStatus
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Callable, TypedDict
 
 from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, root_validator
@@ -22,7 +22,6 @@ from diracx.core.models import (
     SetJobStatusReturn,
     SortSpec,
 )
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql.jobs.status_utility import (
     delete_jobs,
     kill_jobs,
@@ -30,16 +29,18 @@ from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 
-from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
+from ..auth import AuthorizedUserInfo, verify_dirac_access_token
 from ..dependencies import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 from ..fastapi_classes import DiracxRouter
+from .access_policies import ActionType, WMSAccessPolicy
 from .sandboxes import router as sandboxes_router
 
+WMSAccessPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 MAX_PARAMETRIC_JOBS = 20
 
 logger = logging.getLogger(__name__)
 
-router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router = DiracxRouter()
 router.include_router(sandboxes_router)
 
 
@@ -116,7 +117,10 @@ async def submit_bulk_jobs(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: WMSAccessPolicyCallable,
 ) -> list[InsertedJob]:
+    await check_permissions(action=ActionType.CREATE, job_db=job_db)
+
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
     from DIRAC.WorkloadManagementSystem.Service.JobPolicy import RIGHT_SUBMIT, JobPolicy
@@ -250,7 +254,10 @@ async def delete_bulk_jobs(
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
+
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     # TODO: implement job policy
 
     try:
@@ -285,7 +292,9 @@ async def kill_bulk_jobs(
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     # TODO: implement job policy
     try:
         await kill_jobs(
@@ -320,6 +329,7 @@ async def remove_bulk_jobs(
     sandbox_metadata_db: SandboxMetadataDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
     """
     Fully remove a list of jobs from the WMS databases.
@@ -329,6 +339,7 @@ async def remove_bulk_jobs(
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
     be removed, and the delete endpoint should be used instead for any other purpose.
     """
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     # TODO: Remove once legacy DIRAC no longer needs this
 
     # TODO: implement job policy
@@ -350,8 +361,11 @@ async def remove_bulk_jobs(
 
 @router.get("/status")
 async def get_job_status_bulk(
-    job_ids: Annotated[list[int], Query()], job_db: JobDB
+    job_ids: Annotated[list[int], Query()],
+    job_db: JobDB,
+    check_permissions: WMSAccessPolicyCallable,
 ) -> dict[int, LimitedJobStatusReturn]:
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
     try:
         result = await asyncio.gather(
             *(job_db.get_job_status(job_id) for job_id in job_ids)
@@ -366,8 +380,12 @@ async def set_job_status_bulk(
     job_update: dict[int, dict[datetime, JobStatusUpdate]],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
+    check_permissions: WMSAccessPolicyCallable,
     force: bool = False,
 ) -> dict[int, SetJobStatusReturn]:
+    await check_permissions(
+        action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)
+    )
     # check that the datetime contains timezone info
     for job_id, status in job_update.items():
         for dt in status:
@@ -388,8 +406,12 @@ async def set_job_status_bulk(
 
 @router.get("/status/history")
 async def get_job_status_history_bulk(
-    job_ids: Annotated[list[int], Query()], job_logging_db: JobLoggingDB
+    job_ids: Annotated[list[int], Query()],
+    job_logging_db: JobLoggingDB,
+    job_db: JobDB,
+    check_permissions: WMSAccessPolicyCallable,
 ) -> dict[int, list[JobStatusReturn]]:
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
     result = await asyncio.gather(
         *(job_logging_db.get_records(job_id) for job_id in job_ids)
     )
@@ -401,8 +423,9 @@ async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: WMSAccessPolicyCallable,
 ):
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     rescheduled_jobs = []
     # TODO: Joblist Policy:
     # validJobList, invalidJobList, nonauthJobList, ownerJobList = self.jobPolicy.evaluateJobRights(
@@ -451,8 +474,9 @@ async def reschedule_bulk_jobs(
 async def reschedule_single_job(
     job_id: int,
     job_db: JobDB,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: WMSAccessPolicyCallable,
 ):
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     try:
         result = await job_db.rescheduleJob(job_id)
     except ValueError as e:
@@ -522,6 +546,7 @@ async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: WMSAccessPolicyCallable,
     page: int = 0,
     per_page: int = 100,
     body: Annotated[
@@ -532,6 +557,7 @@ async def search(
 
     **TODO: Add more docs**
     """
+    await check_permissions(action=ActionType.QUERY, job_db=job_db)
     if body is None:
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info
@@ -560,8 +586,10 @@ async def summary(
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     body: JobSummaryParams,
+    check_permissions: WMSAccessPolicyCallable,
 ):
     """Show information suitable for plotting"""
+    await check_permissions(action=ActionType.QUERY, job_db=job_db)
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
         body.search.append(
@@ -575,7 +603,12 @@ async def summary(
 
 
 @router.get("/{job_id}")
-async def get_single_job(job_id: int):
+async def get_single_job(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: WMSAccessPolicyCallable,
+):
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     return f"This job {job_id}"
 
 
@@ -587,10 +620,12 @@ async def delete_single_job(
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
     """
     Delete a job by killing and setting the job status to DELETED.
     """
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     # TODO: implement job policy
     try:
@@ -618,10 +653,12 @@ async def kill_single_job(
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
     """
     Kill a job.
     """
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     # TODO: implement job policy
 
@@ -646,6 +683,7 @@ async def remove_single_job(
     sandbox_metadata_db: SandboxMetadataDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
+    check_permissions: WMSAccessPolicyCallable,
 ):
     """
     Fully remove a job from the WMS databases.
@@ -654,6 +692,8 @@ async def remove_single_job(
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
     be removed, and the delete endpoint should be used instead.
     """
+
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # TODO: Remove once legacy DIRAC no longer needs this
 
     # TODO: implement job policy
@@ -673,8 +713,11 @@ async def remove_single_job(
 
 @router.get("/{job_id}/status")
 async def get_single_job_status(
-    job_id: int, job_db: JobDB
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: WMSAccessPolicyCallable,
 ) -> dict[int, LimitedJobStatusReturn]:
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     try:
         status = await job_db.get_job_status(job_id)
     except JobNotFound as e:
@@ -690,8 +733,10 @@ async def set_single_job_status(
     status: Annotated[dict[datetime, JobStatusUpdate], Body()],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
+    check_permissions: WMSAccessPolicyCallable,
     force: bool = False,
 ) -> dict[int, SetJobStatusReturn]:
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # check that the datetime contains timezone info
     for dt in status:
         if dt.tzinfo is None:
@@ -712,8 +757,11 @@ async def set_single_job_status(
 @router.get("/{job_id}/status/history")
 async def get_single_job_status_history(
     job_id: int,
+    job_db: JobDB,
     job_logging_db: JobLoggingDB,
+    check_permissions: WMSAccessPolicyCallable,
 ) -> dict[int, list[JobStatusReturn]]:
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     try:
         status = await job_logging_db.get_records(job_id)
     except JobNotFound as e:
@@ -728,11 +776,14 @@ async def set_single_job_properties(
     job_id: int,
     job_properties: Annotated[dict[str, Any], Body()],
     job_db: JobDB,
+    check_permissions: WMSAccessPolicyCallable,
     update_timestamp: bool = False,
 ):
     """
     Update the given job properties (MinorStatus, ApplicationStatus, etc)
     """
+
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     rowcount = await job_db.set_properties(
         {job_id: job_properties}, update_timestamp=update_timestamp
