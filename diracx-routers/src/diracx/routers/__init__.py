@@ -77,9 +77,8 @@ def create_app_inner(
             for entry_point in select_from_extension(group="diracx.access_policies")
         ]
     )
-
+    available_access_policy_names = []
     for access_policy_name in available_access_policy_names:
-
         access_policy_classes = BaseAccessPolicy.available_implementations(
             access_policy_name
         )
@@ -95,6 +94,11 @@ def create_app_inner(
             app.dependency_overrides[access_policy_class.check] = partial(
                 check_permissions, access_policy
             )
+    from diracx.routers.job_manager.access_policies import WMSAccessPolicy
+
+    app.dependency_overrides[WMSAccessPolicy.check] = partial(
+        check_permissions, WMSAccessPolicy()
+    )
 
     fail_startup = True
     # Add the SQL DBs to the application

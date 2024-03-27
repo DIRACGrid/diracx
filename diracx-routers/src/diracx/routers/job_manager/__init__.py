@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from http import HTTPStatus
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, Callable, TypedDict
 
 from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, root_validator
@@ -32,9 +32,10 @@ from diracx.db.sql.jobs.status_utility import (
 from ..auth import AuthorizedUserInfo, verify_dirac_access_token
 from ..dependencies import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 from ..fastapi_classes import DiracxRouter
-from .access_policies import ActionType, WMSAccessPolicyCallable
+from .access_policies import ActionType, WMSAccessPolicy
 from .sandboxes import router as sandboxes_router
 
+WMSAccessPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 MAX_PARAMETRIC_JOBS = 20
 
 logger = logging.getLogger(__name__)
