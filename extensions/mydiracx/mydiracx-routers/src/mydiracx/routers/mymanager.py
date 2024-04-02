@@ -18,5 +18,5 @@ async def get_example_object(
     # user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
 ):
-    # return await dummy_db.summary()
-    return
+    return await dummy_db.summary()
+    # return
