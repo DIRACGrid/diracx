@@ -48,5 +48,6 @@ async def get_example_object(
     plate: UUID,
     model: str,
     owner_id: int,
+):
 
     return await dummy_db.insert_car(plate, model, owner_id)
