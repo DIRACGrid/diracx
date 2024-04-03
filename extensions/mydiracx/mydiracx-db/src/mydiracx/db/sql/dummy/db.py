@@ -26,7 +26,7 @@ class DummyDB(BaseSQLDB):
         columns = [Cars.__table__.columns[x] for x in group_by]
 
         stmt = select(*columns, func.count(Cars.licensePlate).label("count"))
-        stmt = apply_search_filters(Cars.__table__, stmt, search)
+        #stmt = apply_search_filters(Cars.__table__, stmt, search)
         stmt = stmt.group_by(*columns)
 
         # Execute the query
