@@ -41,6 +41,13 @@ class DummyDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
         return result.lastrowid
+    
+    async def get_owner(self) -> list[str]:
+        stmt = select(Owners.name)
+        result = await self.conn.execute(stmt)
+        print(result)
+        # await self.engine.commit()
+        return result
 
     async def insert_car(self, license_plate: UUID, model: str, owner_id: int) -> int:
         stmt = insert(Cars).values(

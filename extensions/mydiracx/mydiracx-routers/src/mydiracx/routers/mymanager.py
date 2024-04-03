@@ -23,15 +23,16 @@ router = DiracxRouter(require_auth=False)
 #    return await dummy_db.summary()
 #    # return
 
-@router.get("/get_summary/{group_by}/{search}")
-async def get_example_object(
-     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    dummy_db: DummyDB,
-    group_by: str,
-    search: str,
-):
+#@router.get("/get_summary/{group_by}/{search}")
+#async def get_example_object(
+#     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+#    dummy_db: DummyDB,
+#    group_by: str,
+#    search: str,
+#):
 
-    return await dummy_db.summary(group_by, search)
+#    #return await dummy_db.summary(group_by, search)
+#    return
 
 
 @router.post("/insert_owner/{owner_name}")
@@ -42,14 +43,24 @@ async def insert_example_object(
 ):
 
     return await dummy_db.insert_owner(owner_name)
+    #return
 
-@router.get("/insert_car/{plate}/{model}/{owner_id}")
-async def get_example_object(
+@router.post("/get_owners")
+async def insert_example_object(
     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
-    plate: UUID,
-    model: str,
-    owner_id: int,
 ):
 
-    return await dummy_db.insert_car(plate, model, owner_id)
+    return await dummy_db.get_owner()
+
+#@router.get("/insert_car/{plate}/{model}/{owner_id}")
+#async def get_example_object(
+#    #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+#    dummy_db: DummyDB,
+#    plate: UUID,
+#    model: str,
+#    owner_id: int,
+#):
+
+#    #return await dummy_db.insert_car(plate, model, owner_id)
+#    return
