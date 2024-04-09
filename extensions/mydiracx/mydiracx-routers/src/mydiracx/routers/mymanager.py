@@ -5,9 +5,11 @@ from uuid import UUID
 from typing import Annotated
 
 from diracx.routers.fastapi_classes import DiracxRouter
+from diracx.routers.auth import AuthorizedUserInfo, verify_dirac_access_token
+from fastapi import Depends
 from fastapi.security import OpenIdConnect
 
-from diracx.routers.auth import AuthorizedUserInfo, verify_dirac_access_token
+
 
 from .dependencies import (
     DummyDB,
