@@ -53,7 +53,7 @@ def create_app_inner(
     config_source: ConfigSource,
 ) -> DiracFastAPI:
     app = DiracFastAPI()
-    
+
     # Find which settings classes are available and add them to dependency_overrides
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
     for service_settings in all_service_settings:
