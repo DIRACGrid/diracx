@@ -15,7 +15,7 @@ oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration"
 router = DiracxRouter(require_auth=False)
 
 
-@router.get("/example/get_summary")
+@router.get("/get_summary")
 async def get_example_object(
     # user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
@@ -44,7 +44,7 @@ async def insert_example_object(
     return await dummy_db.insert_owner(owner_name)
     #return
 
-@router.post("/get_owners")
+@router.get("/get_owners")
 async def insert_example_object(
     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
