@@ -1,2 +1,0 @@
-class DBUnavailable(Exception):
-    pass
