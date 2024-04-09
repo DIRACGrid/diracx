@@ -41,7 +41,7 @@ class DummyDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
         return result.lastrowid
-    
+
     async def get_owner(self) -> list[str]:
         stmt = select(Owners.name)
         result = await self.conn.execute(stmt)
@@ -56,7 +56,7 @@ class DummyDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
         return result.lastrowid
-    
+
     async def get_car(self) -> list[str]:
         stmt = select(Cars.model)
         result = await self.conn.execute(stmt)
