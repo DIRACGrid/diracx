@@ -10,6 +10,7 @@ dependencies:
   - aiosqlite
   - azure-core
   - cachetools
+  - cwltool
   ########
   # Building the docker image on some system may fail
   # as long as this bug is still present
