@@ -31,7 +31,7 @@ async def insert_example_object(
 
     return await dummy_db.get_owner()
 
-@router.get("/insert_car/{plate}/{model}/{owner_id}")
+@router.post("/insert_car/{plate}/{model}/{owner_id}")
 async def get_example_object(
     #user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
