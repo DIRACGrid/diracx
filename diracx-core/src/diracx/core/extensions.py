@@ -37,9 +37,8 @@ def select_from_extension(*, group: str, name: str | None = None) -> list[EntryP
         module_name = entry_point.module.split(".")[0]
         matches[module_name].append(entry_point)
 
-    toReturn = [
+    return [
         x
         for module_name in extensions_by_priority()
         for x in matches.get(module_name, [])
     ]
-    return toReturn
