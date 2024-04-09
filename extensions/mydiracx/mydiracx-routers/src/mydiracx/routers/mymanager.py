@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from typing import Annotated
+
 from diracx.routers.fastapi_classes import DiracxRouter
 from fastapi.security import OpenIdConnect
+
+from dirac.routers.auth import AuthorizedUserInfo, verify_dirac_access_token
 
 from .dependencies import (
     DummyDB,
