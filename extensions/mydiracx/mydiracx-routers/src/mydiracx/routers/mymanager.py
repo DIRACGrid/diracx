@@ -15,10 +15,7 @@ from .dependencies import (
     DummyDB,
 )
 
-oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
-
-
-router = DiracxRouter(require_auth=False)
+router = DiracxRouter()
 
 @router.post("/insert_owner/{owner_name}")
 async def insert_example_object(
