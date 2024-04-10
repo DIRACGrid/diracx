@@ -33,9 +33,9 @@ jobs:
           - package: "./diracx-cli"
             dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
           - package: "./extensions/mydiracx/mydiracx-db"
-            dependencies: "./diracx-testing ./diracx-core"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db"
           - package: "./extensions/mydiracx/mydiracx-routers"
-            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mydiracx-db"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db ./diracx-routers ./extensions/mydiracx/mydiracx-db"
           
     steps:
       - name: Checkout code
