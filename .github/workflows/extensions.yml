@@ -32,12 +32,12 @@ jobs:
             dependencies: "./diracx-testing ./diracx-core ./diracx-client"
           - package: "./diracx-cli"
             dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
-          - package: "./extensions/mydiracx/mdiracx-db"
+          - package: "./extensions/mydiracx/mydiracx-db"
             dependencies: "./diracx-testing ./diracx-core"
-          - package: "./extensions/mydiracx/mdiracx-routers"
-            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mdiracx-db"
+          - package: "./extensions/mydiracx/mydiracx-routers"
+            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mydiracx-db"
           - package: "./extensions/mydiracx"
-            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mdiracx-db ./extensions/mydiracx/mdiracx-routers"
+            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mydiracx-db ./extensions/mydiracx/mydiracx-routers"
           
     steps:
       - name: Checkout code
