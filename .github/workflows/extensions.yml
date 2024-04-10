@@ -55,7 +55,7 @@ jobs:
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install git+https://github.com/ruslan33/diracx.git@mydiracx-extension
           pip install ${{ matrix.dependencies }} ${{ matrix.package }}[types]
       - name: Run mypy
         run: |
