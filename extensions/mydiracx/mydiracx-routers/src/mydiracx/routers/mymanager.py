@@ -16,7 +16,7 @@ router = DiracxRouter()
 
 
 @router.post("/insert_owner/{owner_name}")
-async def insert_example_object(
+async def insert_owner_object(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
     owner_name: str,
@@ -26,7 +26,7 @@ async def insert_example_object(
 
 
 @router.get("/get_owners")
-async def insert_example_object(
+async def get_owner_object(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
 ):
@@ -35,7 +35,7 @@ async def insert_example_object(
 
 
 @router.post("/insert_car/{plate}/{model}/{owner_id}")
-async def get_example_object(
+async def insert_car_object(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
     plate: UUID,
@@ -47,7 +47,7 @@ async def get_example_object(
 
 
 @router.get("/get_cars")
-async def insert_example_object(
+async def get_car_object(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
 ):
@@ -56,7 +56,7 @@ async def insert_example_object(
 
 
 @router.get("/get_summary")
-async def get_example_object(
+async def get_summary(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dummy_db: DummyDB,
 ):
