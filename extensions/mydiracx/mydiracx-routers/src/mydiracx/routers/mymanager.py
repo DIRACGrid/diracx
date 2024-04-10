@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
-
 from diracx.routers.auth import AuthorizedUserInfo, verify_dirac_access_token
 from diracx.routers.fastapi_classes import DiracxRouter
+from fastapi import Depends
 
 from mydiracx.db.sql import DummyDB as _DummyDB
 
