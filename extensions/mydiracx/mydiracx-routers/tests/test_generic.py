@@ -10,13 +10,13 @@ def normal_user_client(client_factory):
 
 
 def test_write(normal_user_client):
-    r = test_client.post("/api/mymanager/insert_owner/username")
+    r = normal_user_client.post("/api/mymanager/insert_owner/username")
     assert r.status_code == 200
     assert r.json()
 
 
 def test_read(normal_user_client):
-    r = test_client.get("/api/mymanager/get_owners")
+    r = normal_user_client.get("/api/mymanager/get_owners")
     assert r.status_code == 200
     assert r.json()
     assert r.json()[0] == "username"
