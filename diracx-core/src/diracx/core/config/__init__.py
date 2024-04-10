@@ -7,6 +7,7 @@ import os
 from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 
 import git
@@ -22,8 +23,11 @@ if TYPE_CHECKING:
     from pydantic.fields import ModelField
 
 DEFAULT_CONFIG_FILE = "default.yml"
+DEFAULT_GIT_BRANCH = "master"
 DEFAULT_CS_CACHE_TTL = 5
 MAX_CS_CACHED_VERSIONS = 1
+DEFAULT_PULL_CACHE_TTL = 5
+MAX_PULL_CACHED_VERSIONS = 1
 
 logger = logging.getLogger(__name__)
 
@@ -85,32 +89,21 @@ class ConfigSource(metaclass=ABCMeta):
         pass
 
 
-class LocalGitConfigSource(ConfigSource):
-    scheme = "git+file"
+class BaseGitConfigSource(ConfigSource):
+    scheme = "git"
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        if not backend_url.path:
-            raise ValueError("Empty path for LocalGitConfigSource")
-
-        repo_location = Path(backend_url.path)
-        self.repo_location = repo_location
-        self.repo = git.Repo(repo_location)
+        self.repo: git.Repo
+        super().__init__(backend_url=backend_url)
         self._latest_revision_cache: Cache = TTLCache(
             MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
         )
         self._read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
 
-    def __hash__(self):
-        return hash(self.repo_location)
-
-    def clear_caches(self):
-        self._latest_revision_cache.clear()
-        self._read_raw_cache.clear()
-
     @cachedmethod(lambda self: self._latest_revision_cache)
     def latest_revision(self) -> tuple[str, datetime]:
         try:
-            rev = self.repo.rev_parse("master")
+            rev = self.repo.rev_parse(DEFAULT_GIT_BRANCH)
         except git.exc.ODBError as e:  # type: ignore
             raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
         modified = rev.committed_datetime.astimezone(timezone.utc)
@@ -134,3 +127,57 @@ class LocalGitConfigSource(ConfigSource):
         config._hexsha = hexsha
         config._modified = modified
         return config
+
+    def clear_caches(self):
+        self._latest_revision_cache.clear()
+        self._read_raw_cache.clear()
+
+
+class LocalGitConfigSource(BaseGitConfigSource):
+    scheme = "git+file"
+
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
+        super().__init__(backend_url=backend_url)
+        if not backend_url.path:
+            raise ValueError("Empty path for LocalGitConfigSource")
+
+        repo_location = Path(backend_url.path)
+        self.repo_location = repo_location
+        self.repo = git.Repo(repo_location)
+
+    def __hash__(self):
+        return hash(self.repo_location)
+
+
+class RemoteGitConfigSource(BaseGitConfigSource):
+    """Clone a remote git repository on a tmp local dir"""
+
+    scheme = "git+https"
+
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
+        super().__init__(backend_url=backend_url)
+        if not backend_url:
+            raise ValueError("No remote url for RemoteGitConfigSource")
+        self.remote_url = backend_url
+        self._temp_dir = TemporaryDirectory()
+        self.repo_location = Path(self._temp_dir.name)
+        self.repo = git.Repo.clone_from(self.remote_url, self.repo_location)
+        self._pull_cache: Cache = TTLCache(
+            MAX_PULL_CACHED_VERSIONS, DEFAULT_PULL_CACHE_TTL
+        )
+
+    def clear_temp(self):
+        """Clean up temp dir"""
+        self._temp_dir.cleanup()
+
+    def __hash__(self):
+        return hash(self.repo_location)
+
+    @cachedmethod(lambda self: self._pull_cache)
+    def _pull(self):
+        """Git pull from remote repo"""
+        self.repo.remotes.origin.pull()
+
+    def latest_revision(self) -> tuple[str, datetime]:
+        self._pull()
+        return super().latest_revision()
