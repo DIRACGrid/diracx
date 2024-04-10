@@ -71,7 +71,7 @@ jobs:
       - name: Upload coverage report
         uses: codecov/codecov-action@v4.1.1
 
-pytest-integration:
+  pytest-integration:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
