@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - mydiracx-extension
   pull_request:
     branches:
       - main
