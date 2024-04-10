@@ -1,1 +1,70 @@
+name: Basic Tests
 
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+
+defaults:
+  run:
+    shell: bash -el {0}
+
+jobs:
+  pytest:
+    name: Unit test - ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: "./diracx-db"
+            dependencies: "./diracx-testing ./diracx-core"
+          - package: "./diracx-routers"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db"
+          - package: "./diracx-client"
+            dependencies: "./diracx-testing ./diracx-core"
+          - package: "./diracx-api"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-client"
+          - package: "./diracx-cli"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
+          - package: "./extensions/mydiracx/mdiracx-db"
+            dependencies: "./diracx-testing ./diracx-core"
+          - package: "./extensions/mydiracx/mdiracx-routers"
+            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mdiracx-db"
+          - package: "./extensions/mydiracx"
+            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mdiracx-db ./extensions/mydiracx/mdiracx-routers"
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          # TODO: Use a conda environment file used for the diracx/base container image
+          environment-name: test-env
+          create-args: >-
+            python=3.11
+            m2crypto
+            python-gfal2
+            mypy
+            pip
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        run: |
+          pip install pytest-github-actions-annotate-failures
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install ${{ matrix.dependencies }} ${{ matrix.package }}[types]
+      - name: Run mypy
+        run: |
+          mypy ${{ matrix.package }}/src
+      - name: Run pytest
+        run: |
+          cd ${{ matrix.package }}
+          pip install .[testing]
+          pytest --cov-report=xml:coverage.xml --junitxml=report.xml
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4.1.1
