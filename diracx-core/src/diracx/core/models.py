@@ -120,3 +120,8 @@ class SandboxInfo(BaseModel):
     checksum: str = Field(pattern=r"^[0-f]{64}$")
     size: int = Field(ge=1)
     format: SandboxFormat
+
+
+class SandboxType(StrEnum):
+    Input: str = "Input"
+    Output: str = "Output"

@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import contextlib
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, AsyncIterator
+from typing import TYPE_CHECKING, Annotated, AsyncIterator, Literal
 
 from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
-from fastapi import Depends, HTTPException, Query
+from fastapi import Body, Depends, HTTPException, Query
 from pydantic import BaseModel, PrivateAttr
+from pyparsing import Any
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.models import (
     SandboxInfo,
+    SandboxType,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.s3 import (
@@ -104,7 +106,7 @@ async def initiate_sandbox_upload(
 
     try:
         exists_and_assigned = await sandbox_metadata_db.sandbox_is_assigned(
-            settings.se_name, pfn
+            pfn, settings.se_name
         )
     except NoResultFound:
         # The sandbox doesn't exist in the database
@@ -194,3 +196,72 @@ async def get_sandbox_file(
     return SandboxDownloadResponse(
         url=presigned_url, expires_in=settings.url_validity_seconds
     )
+
+
+@router.get("/{job_id}/sandbox")
+async def get_job_sandboxes(
+    job_id: int,
+    sandbox_metadata_db: SandboxMetadataDB,
+) -> dict[str, list[Any]]:
+    """Get input and output sandboxes of given job"""
+    # TODO: check that user as created the job or is admin
+    input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
+        job_id, SandboxType.Input
+    )
+    output_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
+        job_id, SandboxType.Output
+    )
+    return {SandboxType.Input: input_sb, SandboxType.Output: output_sb}
+
+
+@router.get("/{job_id}/sandbox/{sandbox_type}")
+async def get_job_sandbox(
+    job_id: int,
+    sandbox_metadata_db: SandboxMetadataDB,
+    sandbox_type: Literal["input", "output"],
+) -> list[Any]:
+    """Get input or output sandbox of given job"""
+    # TODO: check that user has created the job or is admin
+    job_sb_pfns = await sandbox_metadata_db.get_sandbox_assigned_to_job(
+        job_id, SandboxType(sandbox_type.capitalize())
+    )
+
+    return job_sb_pfns
+
+
+@router.patch("/{job_id}/sandbox/output")
+async def assign_sandbox_to_job(
+    job_id: int,
+    pfn: Annotated[str, Body(max_length=256, pattern=SANDBOX_PFN_REGEX)],
+    sandbox_metadata_db: SandboxMetadataDB,
+    settings: SandboxStoreSettings,
+):
+    """Mapp the pfn as output sandbox to job"""
+    # TODO: check that user has created the job or is admin
+    short_pfn = pfn.split("|", 1)[-1]
+    await sandbox_metadata_db.assign_sandbox_to_jobs(
+        jobs_ids=[job_id],
+        pfn=short_pfn,
+        sb_type=SandboxType.Output,
+        se_name=settings.se_name,
+    )
+
+
+@router.delete("/{job_id}/sandbox")
+async def unassign_job_sandboxes(
+    job_id: int,
+    sandbox_metadata_db: SandboxMetadataDB,
+):
+    """Delete single job sandbox mapping"""
+    # TODO: check that user has created the job or is admin
+    await sandbox_metadata_db.unassign_sandboxes_to_jobs([job_id])
+
+
+@router.delete("/sandbox")
+async def unassign_bulk_jobs_sandboxes(
+    jobs_ids: Annotated[list[int], Query()],
+    sandbox_metadata_db: SandboxMetadataDB,
+):
+    """Delete bulk jobs sandbox mapping"""
+    # TODO: check that user has created the job or is admin
+    await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)
