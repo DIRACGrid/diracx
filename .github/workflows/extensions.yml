@@ -36,8 +36,6 @@ jobs:
             dependencies: "./diracx-testing ./diracx-core"
           - package: "./extensions/mydiracx/mydiracx-routers"
             dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mydiracx-db"
-          - package: "./extensions/mydiracx"
-            dependencies: "./diracx-testing ./diracx-core ./extensions/mydiracx/mydiracx-db ./extensions/mydiracx/mydiracx-routers"
           
     steps:
       - name: Checkout code
