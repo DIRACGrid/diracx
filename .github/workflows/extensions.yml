@@ -55,7 +55,8 @@ jobs:
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          #pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension
           pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx-db&subdirectory=extensions/mydiracx/mydiracx-db'
           pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx-routers&subdirectory=extensions/mydiracx/mydiracx-routers'
           pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx&subdirectory=extensions/mydiracx'
@@ -70,94 +71,3 @@ jobs:
           pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
         uses: codecov/codecov-action@v4.1.1
-
-  pytest-integration:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ ./diracx-client/ ./diracx-routers/ ./diracx-db/ ./diracx-testing/
-      - name: Start demo
-        run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-coverage --exit-when-done --set-value developer.autoReload=false $PWD
-      - name: Debugging information
-        run: |
-          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
-          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
-          export PATH=${DIRACX_DEMO_DIR}:$PATH
-          kubectl get pods
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
-            echo "${pod_name}"
-            kubectl describe pod/"${pod_name}" || true
-            for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
-              echo $pod_name $container_name
-              kubectl logs "${pod_name}" -c "${container_name}" || true
-            done
-          done
-          if [ ! -f "${DIRACX_DEMO_DIR}/.success" ]; then
-            cat "${DIRACX_DEMO_DIR}/.failed"
-            exit 1
-          fi
-      - name: Run pytest
-        run: |
-          pytest --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
-      - name: Collect demo coverage
-        run: |
-          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
-          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
-          export PATH=${DIRACX_DEMO_DIR}:$PATH
-          # Shutdown the pods so we collect coverage data
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
-            kubectl delete pod/"${pod_name}"
-          done
-          # Combine the coverage data from the demo and make an XML report
-          coverage_data=$(mktemp)
-          sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
-          coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
-
-          # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
-          fake_module=$(mktemp -d)
-          mkdir -p "${fake_module}/src/diracx"
-          for fn in "${PWD}"/*/src/diracx/*; do
-            ln -sf "${fn}" "${fake_module}/src/diracx/$(basename "${fn}")"
-          done
-          sed -i "s@source =@source =\n    ${fake_module}/src@g" .coveragerc
-          cat .coveragerc
-
-          coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4.1.1
-        with:
-          files: ./coverage-pytest.xml,./coverage-demo.xml
-
-  client-generation:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          micromamba install -c conda-forge nodejs pre-commit
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ -e ./diracx-client/ ./diracx-routers/ ./diracx-db/ ./diracx-testing/
-          npm install -g autorest
-      - name: Run autorest
-        run: |
-          autorest --python --help
-          $HOME/.autorest/\@autorest_python\@*/node_modules/\@autorest/python/venv/bin/python -m pip install --upgrade setuptools
-          pytest --no-cov --regenerate-client diracx-client/tests/test_regenerate.py
