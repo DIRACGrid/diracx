@@ -159,5 +159,10 @@ class Config(BaseModel):
     Systems: Any
     WebApp: Any
 
+    # These 2 parameters are used for client side caching
+    # see the "/config/" route for details
+
+    # hash for a unique representation of the config version
     _hexsha: str = PrivateAttr()
+    # modification date
     _modified: datetime = PrivateAttr()
