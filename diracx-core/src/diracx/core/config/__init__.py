@@ -137,7 +137,6 @@ class BaseGitConfigSource(ConfigSource):
     scheme = "basegit"
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        super().__init__(backend_url=backend_url)
         self._latest_revision_cache: Cache = TTLCache(
             MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
         )
