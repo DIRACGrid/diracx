@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "aiobotocore",
+    "aiobotocore>=2.12",
     "authlib",
     "botocore",
     "cachetools",
