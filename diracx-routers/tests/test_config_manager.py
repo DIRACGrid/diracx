@@ -13,7 +13,7 @@ def normal_user_client(client_factory):
 def test_unauthenticated(client_factory):
     with client_factory.unauthenticated() as client:
         response = client.get("/api/config/")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_get_config(normal_user_client):

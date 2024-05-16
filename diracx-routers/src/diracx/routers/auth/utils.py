@@ -177,7 +177,14 @@ def decrypt_state(state: str, cipher_suite: Fernet) -> dict[str, str]:
         ) from e
 
 
-oidc_scheme = OpenIdConnect(openIdConnectUrl="/.well-known/openid-configuration")
+# auto_error=False is used to avoid raising the wrong exception when the token is missing
+# The error is handled in the verify_dirac_access_token function
+# More info:
+# - https://github.com/tiangolo/fastapi/issues/10177
+# - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
+oidc_scheme = OpenIdConnect(
+    openIdConnectUrl="/.well-known/openid-configuration", auto_error=False
+)
 
 
 async def verify_dirac_access_token(
@@ -187,6 +194,12 @@ async def verify_dirac_access_token(
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint
     """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header is missing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if match := re.fullmatch(r"Bearer (.+)", authorization):
         raw_token = match.group(1)
     else:
@@ -209,6 +222,7 @@ async def verify_dirac_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",
+            headers={"WWW-Authenticate": "Bearer"},
         ) from None
 
     return AuthorizedUserInfo(
@@ -243,6 +257,7 @@ async def verify_dirac_refresh_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid JWT: {e.args[0]}",
+            headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
     return (token["jti"], float(token["exp"]), token["legacy_exchange"])

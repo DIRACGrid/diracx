@@ -18,7 +18,12 @@ from azure.core.pipeline.policies import AsyncBearerTokenCredentialPolicy
 from diracx.core.preferences import get_diracx_preferences, DiracxPreferences
 
 from ._client import Dirac as DiracGenerated
-from .._patch import get_openid_configuration, get_token, refresh_token
+from .._patch import (
+    get_openid_configuration,
+    get_token,
+    refresh_token,
+    is_refresh_token_valid,
+)
 
 __all__: List[str] = [
     "DiracClient",
@@ -114,7 +119,6 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
         self._token: AccessToken | None
         self._credential: DiracTokenCredential
         credentials: dict[str, Any]
-
         try:
             self._token = get_token(self._credential.location, self._token)
         except RuntimeError:
@@ -124,8 +128,13 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
 
         if not self._token:
             credentials = json.loads(self._credential.location.read_text())
+            refresh_token = credentials["refresh_token"]
+            if not is_refresh_token_valid(refresh_token):
+                # If we are here, it means the refresh token is not valid anymore
+                # we suppose it is not needed to perform the request
+                return
             self._token = await self._credential.get_token(
-                "", refresh_token=credentials["refresh_token"]
+                "", refresh_token=refresh_token
             )
 
         request.http_request.headers["Authorization"] = f"Bearer {self._token.token}"
