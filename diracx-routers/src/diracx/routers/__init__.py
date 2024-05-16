@@ -5,6 +5,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from functools import partial
+from logging import Formatter, StreamHandler
 from typing import Any, Awaitable, Callable, Iterable, TypeVar, cast
 
 import dotenv
@@ -16,11 +17,11 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from pydantic import parse_raw_as
 
+# from starlette.types import ASGIApp
+from uvicorn.logging import AccessFormatter, DefaultFormatter
+
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import (
-    DiracError,
-    DiracHttpResponse,
-)
+from diracx.core.exceptions import DiracError, DiracHttpResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
@@ -30,12 +31,52 @@ from diracx.db.sql.utils import BaseSQLDB
 
 from .auth import verify_dirac_access_token
 from .fastapi_classes import DiracFastAPI, DiracxRouter
+from .otel import instrument_otel
 
 T = TypeVar("T")
 T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 
 
 logger = logging.getLogger(__name__)
+
+
+###########################################3
+
+
+def configure_logger():
+    """Configure the console logger
+
+    Access logs come from uvicorn, which configure its logger in a certain way
+    (https://github.com/tiangolo/fastapi/discussions/7457)
+    This method adds a timestamp to the uvicorn output,
+    and define a console handler for all the diracx loggers
+    We cannot configure just the root handler, as uvicorn
+    attaches handler to the `uvicorn` logger
+    """
+
+    diracx_handler = StreamHandler()
+    diracx_handler.setFormatter(Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logging.getLogger("diracx").addHandler(diracx_handler)
+    logging.getLogger("diracx").setLevel("INFO")
+
+    # Recreate the formatters for the uvicorn loggers adding the timestamp
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    try:
+        previous_fmt = uvicorn_access_logger.handlers[0].formatter._fmt
+        new_format = f"%(asctime)s - {previous_fmt}"
+        uvicorn_access_logger.handlers[0].setFormatter(AccessFormatter(new_format))
+    # There may not be any handler defined, like in the CI
+    except IndexError:
+        pass
+
+    uvicorn_logger = logging.getLogger("uvicorn")
+    try:
+        previous_fmt = uvicorn_logger.handlers[0].formatter._fmt
+        new_format = f"%(asctime)s - {previous_fmt}"
+        uvicorn_logger.handlers[0].setFormatter(DefaultFormatter(new_format))
+    # There may not be any handler defined, like in the CI
+    except IndexError:
+        pass
 
 
 # Rules:
@@ -188,6 +229,9 @@ def create_app_inner(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    configure_logger()
+    instrument_otel(app)
 
     return app
 
