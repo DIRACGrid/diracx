@@ -19,6 +19,9 @@ from diracx.core.models import (
     LimitedJobStatusReturn,
     ScalarSearchOperator,
     ScalarSearchSpec,
+    SearchSpec,
+    SortDirection,
+    SortSpec,
 )
 from diracx.core.properties import JOB_SHARING, SecurityProperty
 
@@ -83,9 +86,9 @@ class JobDB(BaseSQLDB):
 
     async def search(
         self,
-        parameters,
-        search,
-        sorts,
+        parameters: list[str],
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
         *,
         distinct: bool = False,
         per_page: int = 100,
@@ -98,18 +101,24 @@ class JobDB(BaseSQLDB):
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
         # Apply any sort constraints
+        sort_columns = []
         for sort in sorts:
             if sort["parameter"] not in Jobs.__table__.columns:
                 raise InvalidQueryError(
                     f"Cannot sort by {sort['parameter']}: unknown column"
                 )
             column = Jobs.__table__.columns[sort["parameter"]]
-            if sort["direction"] == "asc":
-                column = column.asc()
-            elif sort["direction"] == "desc":
-                column = column.desc()
+            sorted_column = None
+            if sort["direction"] == SortDirection.ASC:
+                sorted_column = column.asc()
+            elif sort["direction"] == SortDirection.DESC:
+                sorted_column = column.desc()
             else:
                 raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
+            sort_columns.append(sorted_column)
+
+        if sort_columns:
+            stmt = stmt.order_by(*sort_columns)
 
         if distinct:
             stmt = stmt.distinct()

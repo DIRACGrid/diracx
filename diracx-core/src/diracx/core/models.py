@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -20,12 +20,6 @@ class VectorSearchOperator(StrEnum):
     NOT_IN = "not in"
 
 
-# TODO: TypedDict vs pydantic?
-class SortSpec(TypedDict):
-    parameter: str
-    direction: Literal["asc"] | Literal["dsc"]
-
-
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
@@ -39,6 +33,17 @@ class VectorSearchSpec(TypedDict):
 
 
 SearchSpec = ScalarSearchSpec | VectorSearchSpec
+
+
+class SortDirection(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+# TODO: TypedDict vs pydantic?
+class SortSpec(TypedDict):
+    parameter: str
+    direction: SortDirection
 
 
 class TokenResponse(BaseModel):
