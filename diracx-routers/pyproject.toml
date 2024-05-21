@@ -48,6 +48,7 @@ types = [
 ]
 
 [project.entry-points."diracx.services"]
+pilotlogs = "diracx.routers.pilot_logging.remote_logger:router"
 jobs = "diracx.routers.job_manager:router"
 config = "diracx.routers.configuration:router"
 auth = "diracx.routers.auth:router"
@@ -56,6 +57,7 @@ auth = "diracx.routers.auth:router"
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.job_manager.access_policies:WMSAccessPolicy"
 SandboxAccessPolicy = "diracx.routers.job_manager.access_policies:SandboxAccessPolicy"
+PilotLogsAccessPolicy = "diracx.routers.pilot_logging.access_policies:PilotLogsAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
