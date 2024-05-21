@@ -5,6 +5,7 @@ from .base import (
     SQLDBUnavailableError,
     apply_search_filters,
     apply_sort_constraints,
+    get_columns,
 )
 from .functions import (
     _get_columns,

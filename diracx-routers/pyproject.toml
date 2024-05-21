@@ -52,6 +52,7 @@ pilots = "diracx.routers.pilots:router"
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 PilotManagementAccessPolicy = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
+PilotLogsAccessPolicy = "diracx.routers.pilots.access_policies:PilotLogsAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]

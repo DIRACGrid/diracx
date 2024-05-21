@@ -75,7 +75,7 @@ class JobDB(BaseSQLDB):
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for jobs in the database."""
         # Find which columns to select
-        columns = _get_columns(Jobs.__table__, parameters)
+        columns = get_columns(Jobs.__table__, parameters)
 
         stmt = select(*columns)
 
@@ -261,7 +261,7 @@ class JobDB(BaseSQLDB):
         required_parameters = list(required_parameters_set)[0]
         update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
 
-        columns = _get_columns(Jobs.__table__, required_parameters)
+        columns = get_columns(Jobs.__table__, required_parameters)
         values: dict[str, BindParameter[Any] | datetime] = {
             c.name: bindparam(c.name) for c in columns
         }
