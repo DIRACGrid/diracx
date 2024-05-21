@@ -8,6 +8,7 @@ __all__ = (
     "SandboxMetadataDB",
     "TaskQueueDB",
     "PilotAgentsDB",
+    "PilotLogsDB",
     "add_settings_annotation",
     "AvailableSecurityProperties",
 )
@@ -23,6 +24,7 @@ from diracx.core.settings import AuthSettings as _AuthSettings
 from diracx.core.settings import DevelopmentSettings as _DevelopmentSettings
 from diracx.core.settings import SandboxStoreSettings as _SandboxStoreSettings
 from diracx.db.os import JobParametersDB as _JobParametersDB
+from diracx.db.os import PilotLogsDB as _PilotLogsDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
@@ -38,7 +40,7 @@ def add_settings_annotation(cls: T) -> T:
     return Annotated[cls, Depends(cls.create)]  # type: ignore
 
 
-# Databases
+# SQL Databases
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
 JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
@@ -48,9 +50,9 @@ SandboxMetadataDB = Annotated[
 ]
 TaskQueueDB = Annotated[_TaskQueueDB, Depends(_TaskQueueDB.transaction)]
 
-# Opensearch databases
+# OpenSearch Databases
 JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
-
+PilotLogsDB = Annotated[_PilotLogsDB, Depends(_PilotLogsDB.session)]
 
 # Miscellaneous
 Config = Annotated[_Config, Depends(ConfigSource.create)]

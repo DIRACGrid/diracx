@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
-from sqlalchemy import insert
+from sqlalchemy import func, insert, select
 
-from ..utils import BaseSQLDB
+from diracx.core.exceptions import InvalidQueryError
+from diracx.core.models import (
+    SearchSpec,
+    SortSpec,
+)
+
+from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints, get_columns
 from .schema import PilotAgents, PilotAgentsDBBase
 
 
@@ -44,3 +51,46 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = insert(PilotAgents).values(values)
         await self.conn.execute(stmt)
         return
+
+    async def search(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        # Find which columns to select
+        columns = get_columns(PilotAgents.__table__, parameters)
+
+        stmt = select(*columns)
+
+        stmt = apply_search_filters(
+            PilotAgents.__table__.columns.__getitem__, stmt, search
+        )
+        stmt = apply_sort_constraints(
+            PilotAgents.__table__.columns.__getitem__, stmt, sorts
+        )
+
+        if distinct:
+            stmt = stmt.distinct()
+
+        # Calculate total count before applying pagination
+        total_count_subquery = stmt.alias()
+        total_count_stmt = select(func.count()).select_from(total_count_subquery)
+        total = (await self.conn.execute(total_count_stmt)).scalar_one()
+
+        # Apply pagination
+        if page is not None:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+        # Execute the query
+        return total, [
+            dict(row._mapping) async for row in (await self.conn.stream(stmt))
+        ]

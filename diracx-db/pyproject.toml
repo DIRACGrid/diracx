@@ -36,6 +36,7 @@ TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 
 [project.entry-points."diracx.dbs.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
+PilotLogsDB = "diracx.db.os:PilotLogsDB"
 
 [tool.setuptools.packages.find]
 where = ["src"]
