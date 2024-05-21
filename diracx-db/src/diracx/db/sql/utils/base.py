@@ -258,6 +258,17 @@ def find_time_resolution(value):
     raise InvalidQueryError(f"Cannot parse {value=}")
 
 
+def get_columns(table, parameters):
+    columns = [x for x in table.columns]
+    if parameters:
+        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
+            raise InvalidQueryError(
+                f"Unrecognised parameters requested {unrecognised_parameters}"
+            )
+        columns = [c for c in columns if c.name in parameters]
+    return columns
+
+
 def apply_search_filters(column_mapping, stmt, search):
     for query in search:
         try:
