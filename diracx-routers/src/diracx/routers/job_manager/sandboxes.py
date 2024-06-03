@@ -24,11 +24,14 @@ from diracx.core.s3 import (
 )
 from diracx.core.settings import ServiceSettingsBase
 
+from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from .access_policies import ActionType, CheckSandboxPolicyCallable
+
 if TYPE_CHECKING:
     from types_aiobotocore_s3.client import S3Client
 
-from ..auth import AuthorizedUserInfo, has_properties, verify_dirac_access_token
-from ..dependencies import SandboxMetadataDB, add_settings_annotation
+from ..auth import has_properties
+from ..dependencies import JobDB, SandboxMetadataDB, add_settings_annotation
 from ..fastapi_classes import DiracxRouter
 
 MAX_SANDBOX_SIZE_BYTES = 100 * 1024 * 1024
@@ -86,6 +89,7 @@ async def initiate_sandbox_upload(
     sandbox_info: SandboxInfo,
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
+    check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxUploadResponse:
     """Get the PFN for the given sandbox, initiate an upload as required.
 
@@ -95,14 +99,22 @@ async def initiate_sandbox_upload(
     If the sandbox does not exist in the database then the "url" and "fields"
     should be used to upload the sandbox to the storage backend.
     """
+
+    pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
+    full_pfn = f"SB:{settings.se_name}|{pfn}"
+    await check_permissions(
+        action=ActionType.CREATE, sandbox_metadata_db=sandbox_metadata_db, pfns=[pfn]
+    )
+
+    # TODO: THis test should come first, but if we do
+    # the access policy will crash for not having been called
+    # so we need to find a way to ackownledge that
+
     if sandbox_info.size > MAX_SANDBOX_SIZE_BYTES:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail=f"Sandbox too large. Max size is {MAX_SANDBOX_SIZE_BYTES} bytes",
         )
-
-    pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
-    full_pfn = f"SB:{settings.se_name}|{pfn}"
 
     try:
         exists_and_assigned = await sandbox_metadata_db.sandbox_is_assigned(
@@ -113,7 +125,7 @@ async def initiate_sandbox_upload(
         pass
     else:
         # As sandboxes are registered in the DB before uploading to the storage
-        # backend we can't on their existence in the database to determine if
+        # backend we can't rely on their existence in the database to determine if
         # they have been uploaded. Instead we check if the sandbox has been
         # assigned to a job. If it has then we know it has been uploaded and we
         # can avoid communicating with the storage backend.
@@ -167,6 +179,8 @@ async def get_sandbox_file(
     pfn: Annotated[str, Query(max_length=256, pattern=SANDBOX_PFN_REGEX)],
     settings: SandboxStoreSettings,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    sandbox_metadata_db: SandboxMetadataDB,
+    check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxDownloadResponse:
     """Get a presigned URL to download a sandbox file
 
@@ -176,17 +190,20 @@ async def get_sandbox_file(
     most storage backends return an error when they receive an authorization
     header for a presigned URL.
     """
+
     pfn = pfn.split("|", 1)[-1]
     required_prefix = (
         "/"
         + f"S3/{settings.bucket_name}/{user_info.vo}/{user_info.dirac_group}/{user_info.preferred_username}"
         + "/"
     )
-    if not pfn.startswith(required_prefix):
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail=f"Invalid PFN. PFN must start with {required_prefix}",
-        )
+    await check_permissions(
+        action=ActionType.READ,
+        sandbox_metadata_db=sandbox_metadata_db,
+        pfns=[pfn],
+        required_prefix=required_prefix,
+    )
+
     # TODO: Support by name and by job id?
     presigned_url = await settings.s3_client.generate_presigned_url(
         ClientMethod="get_object",
@@ -202,9 +219,12 @@ async def get_sandbox_file(
 async def get_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
+    job_db: JobDB,
+    check_permissions: CheckSandboxPolicyCallable,
 ) -> dict[str, list[Any]]:
     """Get input and output sandboxes of given job"""
-    # TODO: check that user as created the job or is admin
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
+
     input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType.Input
     )
@@ -218,10 +238,13 @@ async def get_job_sandboxes(
 async def get_job_sandbox(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
+    job_db: JobDB,
     sandbox_type: Literal["input", "output"],
+    check_permissions: CheckSandboxPolicyCallable,
 ) -> list[Any]:
     """Get input or output sandbox of given job"""
-    # TODO: check that user has created the job or is admin
+
+    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     job_sb_pfns = await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType(sandbox_type.capitalize())
     )
@@ -234,10 +257,13 @@ async def assign_sandbox_to_job(
     job_id: int,
     pfn: Annotated[str, Body(max_length=256, pattern=SANDBOX_PFN_REGEX)],
     sandbox_metadata_db: SandboxMetadataDB,
+    job_db: JobDB,
     settings: SandboxStoreSettings,
+    check_permissions: CheckSandboxPolicyCallable,
 ):
-    """Mapp the pfn as output sandbox to job"""
-    # TODO: check that user has created the job or is admin
+    """Map the pfn as output sandbox to job"""
+
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     short_pfn = pfn.split("|", 1)[-1]
     await sandbox_metadata_db.assign_sandbox_to_jobs(
         jobs_ids=[job_id],
@@ -251,9 +277,11 @@ async def assign_sandbox_to_job(
 async def unassign_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
+    job_db: JobDB,
+    check_permissions: CheckSandboxPolicyCallable,
 ):
     """Delete single job sandbox mapping"""
-    # TODO: check that user has created the job or is admin
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     await sandbox_metadata_db.unassign_sandboxes_to_jobs([job_id])
 
 
@@ -261,7 +289,10 @@ async def unassign_job_sandboxes(
 async def unassign_bulk_jobs_sandboxes(
     jobs_ids: Annotated[list[int], Query()],
     sandbox_metadata_db: SandboxMetadataDB,
+    job_db: JobDB,
+    check_permissions: CheckSandboxPolicyCallable,
 ):
     """Delete bulk jobs sandbox mapping"""
-    # TODO: check that user has created the job or is admin
+
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=jobs_ids)
     await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)

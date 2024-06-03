@@ -9,7 +9,7 @@ import pytest
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthDB", "AuthSettings", "ConfigSource"]
+    ["AuthDB", "AuthSettings", "ConfigSource", "BaseAccessPolicy"]
 )
 
 

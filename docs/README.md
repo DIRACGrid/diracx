@@ -46,7 +46,7 @@ conda activate diracx-dev
 
 # Make an editable installation of diracx
 
-pip install -e .
+pip install -r requirements-dev.txt
 
 # Install the patched DIRAC version
 pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
@@ -139,6 +139,7 @@ To add a router there are two steps:
 
 1. Create a module in `diracx.routers` for the given service.
 2. Add an entry to the `diracx.services` entrypoint.
+3. Do not forget the Access Policy (see chapter lower down)
 
 We'll now make a `/parking/` router which contains information store in the `DummyDB`.
 
@@ -190,3 +191,54 @@ This is for advanced users only as it is currently an unstable feature
 When a new client generation is needed, a CI job called `client-generation` will fail, and one of the repo admin will regenerate the client for you.
 
 If you anyway want to try, the best up to date documentation is to look at the [client-generation CI job](https://github.com/DIRACGrid/diracx/blob/main/.github/workflows/main.yml)
+
+
+## Access Policy
+
+Permission management in ``diracx`` is managed by ``AccessPolicy``. The idea is that each policy can inject data upon token issuance, and every route will rely on a given policy to check permissions.
+
+The various policies are defined in `diracx-routers/pyproject.toml`:
+
+```toml
+[project.entry-points."diracx.access_policies"]
+WMSAccessPolicy = "diracx.routers.job_manager.access_policies:WMSAccessPolicy"
+SandboxAccessPolicy = "diracx.routers.job_manager.access_policies:SandboxAccessPolicy"
+```
+
+Each route must have a policy as argument, and call it
+
+
+```python
+from .access_policies import ActionType, CheckWMSPolicyCallable
+
+@router.post("/")
+async def submit_bulk_jobs(
+    job_definitions: Annotated[list[str], Body()],
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> list[InsertedJob]:
+    await check_permissions(action=ActionType.CREATE, job_db=job_db)
+    ...
+```
+
+Failing in doing so will result in a CI error ``test_all_routes_have_policy``
+
+Some routes do not need access permissions, like the authorization ones, in which case they can be marked as such
+
+```python
+from .access_policies import open_access
+
+@open_access
+@router.get("/")
+async def serve_config(
+```
+
+Implementing a new ``AccessPolicy`` is done by:
+1. Create a module in `diracx.routers.<service>access_policies.py`
+2. Create a new class inheriting from ``BaseAccessPolicy``
+3. For specific instructions, see ``diracx-routers/src/diracx/routers/access_policies.py``
+2. Add an entry to the `diracx.access_policies` entrypoint.
+
+
+> [!WARNING]
+> When running tests, no permission is checked. This is to allow testing the router behavior with respect to the policy behavior. For testing a policy, see for example ``diracx-routers/tests/jobs/test_wms_access_policy.py``

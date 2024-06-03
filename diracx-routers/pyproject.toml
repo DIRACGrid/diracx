@@ -4,7 +4,7 @@ description = "TODO"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -20,7 +20,7 @@ dependencies = [
     "dirac",
     "diracx-core",
     "diracx-db",
-    "python-dotenv",  # TODO: We might not need this
+    "python-dotenv",    # TODO: We might not need this
     "python-multipart",
     "fastapi",
     "httpx",
@@ -35,11 +35,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-    "moto[server]",
-    "pytest-httpx",
-]
+testing = ["diracx-testing", "moto[server]", "pytest-httpx"]
 types = [
     "boto3-stubs",
     "types-aiobotocore[essential]",
@@ -56,6 +52,11 @@ config = "diracx.routers.configuration:router"
 auth = "diracx.routers.auth:router"
 ".well-known" = "diracx.routers.auth.well_known:router"
 
+[project.entry-points."diracx.access_policies"]
+WMSAccessPolicy = "diracx.routers.job_manager.access_policies:WMSAccessPolicy"
+SandboxAccessPolicy = "diracx.routers.job_manager.access_policies:SandboxAccessPolicy"
+
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -70,8 +71,10 @@ root = ".."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.routers", "--cov-report=term-missing",
-    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--cov=diracx.routers",
+    "--cov-report=term-missing",
+    "-pdiracx.testing",
+    "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

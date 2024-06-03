@@ -1,7 +1,9 @@
 import pytest
 from fastapi import status
 
-pytestmark = pytest.mark.enabled_dependencies(["AuthSettings", "ConfigSource"])
+pytestmark = pytest.mark.enabled_dependencies(
+    ["AuthSettings", "ConfigSource", "OpenAccessPolicy"]
+)
 
 
 @pytest.fixture

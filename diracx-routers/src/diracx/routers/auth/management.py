@@ -4,7 +4,7 @@ These endpoints are used to manage the user's authentication tokens and
 to get information about the user's identity.
 """
 
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from fastapi import (
     Depends,
@@ -21,7 +21,7 @@ from ..dependencies import (
     AuthDB,
 )
 from ..fastapi_classes import DiracxRouter
-from .utils import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 router = DiracxRouter(require_auth=False)
 
@@ -32,6 +32,7 @@ class UserInfoResponse(TypedDict):
     sub: str
     vo: str
     dirac_group: str
+    policies: dict[str, Any]
     properties: list[SecurityProperty]
     preferred_username: str
 
@@ -84,5 +85,6 @@ async def userinfo(
         "vo": user_info.vo,
         "dirac_group": user_info.dirac_group,
         "properties": user_info.properties,
+        "policies": user_info.policies,
         "preferred_username": user_info.preferred_username,
     }

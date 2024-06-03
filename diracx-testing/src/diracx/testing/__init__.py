@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# TODO: this needs a lot of documentation, in particular what will matter for users
+# are the enabled_dependencies markers
 import asyncio
 import contextlib
 import os
@@ -16,8 +18,9 @@ import pytest
 import requests
 
 if TYPE_CHECKING:
-    from diracx.routers.auth.utils import AuthSettings
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
+    from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
+
 
 # to get a string like this run:
 # openssl rand -hex 32
@@ -77,7 +80,7 @@ def fernet_key() -> str:
 
 @pytest.fixture(scope="session")
 def test_auth_settings(rsa_private_key_pem, fernet_key) -> AuthSettings:
-    from diracx.routers.auth.utils import AuthSettings
+    from diracx.routers.utils.users import AuthSettings
 
     yield AuthSettings(
         token_key=rsa_private_key_pem,
@@ -132,6 +135,7 @@ class UnavailableDependency:
 
 
 class ClientFactory:
+
     def __init__(
         self,
         tmp_path_factory,
@@ -144,6 +148,21 @@ class ClientFactory:
         from diracx.core.settings import ServiceSettingsBase
         from diracx.db.sql.utils import BaseSQLDB
         from diracx.routers import create_app_inner
+        from diracx.routers.access_policies import BaseAccessPolicy
+
+        class AlwaysAllowAccessPolicy(BaseAccessPolicy):
+            """
+            Dummy access policy
+            """
+
+            async def policy(
+                policy_name: str, user_info: AuthorizedUserInfo, /, **kwargs
+            ):
+                pass
+
+            def enrich_tokens(access_payload: dict, refresh_payload: dict):
+
+                return {"PolicySpecific": "OpenAccessForTest"}, {}
 
         enabled_systems = {
             e.name for e in select_from_extension(group="diracx.services")
@@ -155,6 +174,12 @@ class ClientFactory:
         self._cache_dir = tmp_path_factory.mktemp("empty-dbs")
 
         self.test_auth_settings = test_auth_settings
+
+        all_access_policies = {
+            e.name: [AlwaysAllowAccessPolicy]
+            + BaseAccessPolicy.available_implementations(e.name)
+            for e in select_from_extension(group="diracx.access_policies")
+        }
 
         self.app = create_app_inner(
             enabled_systems=enabled_systems,
@@ -169,13 +194,15 @@ class ClientFactory:
             config_source=ConfigSource.create_from_url(
                 backend_url=f"git+file://{with_config_repo}"
             ),
+            all_access_policies=all_access_policies,
         )
 
         self.all_dependency_overrides = self.app.dependency_overrides.copy()
         self.app.dependency_overrides = {}
         for obj in self.all_dependency_overrides:
             assert issubclass(
-                obj.__self__, (ServiceSettingsBase, BaseSQLDB, ConfigSource)
+                obj.__self__,
+                (ServiceSettingsBase, BaseSQLDB, ConfigSource, BaseAccessPolicy),
             ), obj
 
         self.all_lifetime_functions = self.app.lifetime_functions[:]
@@ -190,9 +217,10 @@ class ClientFactory:
         assert (
             self.app.dependency_overrides == {} and self.app.lifetime_functions == []
         ), "configure cannot be nested"
-
         for k, v in self.all_dependency_overrides.items():
+
             class_name = k.__self__.__name__
+
             if class_name in enabled_dependencies:
                 self.app.dependency_overrides[k] = v
             else:
@@ -317,7 +345,10 @@ class ClientFactory:
 
 @pytest.fixture(scope="session")
 def session_client_factory(
-    test_auth_settings, test_sandbox_settings, with_config_repo, tmp_path_factory
+    test_auth_settings,
+    test_sandbox_settings,
+    with_config_repo,
+    tmp_path_factory,
 ):
     """
     TODO
