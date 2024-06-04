@@ -51,7 +51,7 @@ dependencies:
   - types-requests
   - uvicorn
   - moto
-  - aiobotocore
+  - aiobotocore >=2.12
   - botocore
   - pip
   - pip:
