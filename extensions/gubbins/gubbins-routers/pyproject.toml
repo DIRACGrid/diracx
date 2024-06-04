@@ -1,5 +1,5 @@
 [project]
-name = "mydiracx-routers"
+name = "gubbins-routers"
 description = "TODO"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -46,7 +46,7 @@ types = [
 ]
 
 [project.entry-points."diracx.services"]
-mymanager = "mydiracx.routers.mymanager:router"
+mymanager = "gubbins.routers.mymanager:router"
 
 [tool.setuptools.packages.find]
 where = ["src"]

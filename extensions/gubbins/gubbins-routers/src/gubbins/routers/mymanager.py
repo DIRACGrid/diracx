@@ -7,7 +7,7 @@ from diracx.routers.auth import AuthorizedUserInfo, verify_dirac_access_token
 from diracx.routers.fastapi_classes import DiracxRouter
 from fastapi import Depends
 
-from mydiracx.db.sql import DummyDB as _DummyDB
+from gubbins.db.sql import DummyDB as _DummyDB
 
 # Database
 DummyDB = Annotated[_DummyDB, Depends(_DummyDB.transaction)]

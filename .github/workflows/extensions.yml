@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - mydiracx-extension
+      - gubbins-extension
   pull_request:
     branches:
       - main
@@ -32,11 +32,11 @@ jobs:
             dependencies: "./diracx-testing ./diracx-core ./diracx-client"
           - package: "./diracx-cli"
             dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
-          - package: "./extensions/mydiracx/mydiracx-db"
+          - package: "./extensions/gubbins/gubbins-db"
             dependencies: "./diracx-testing ./diracx-core ./diracx-db"
-          - package: "./extensions/mydiracx/mydiracx-routers"
-            dependencies: "./diracx-testing ./diracx-core ./diracx-db ./diracx-routers ./extensions/mydiracx/mydiracx-db"
-          
+          - package: "./extensions/gubbins/gubbins-routers"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db ./diracx-routers ./extensions/gubbins/gubbins-db"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,9 +56,9 @@ jobs:
         run: |
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx-db&subdirectory=extensions/mydiracx/mydiracx-db'
-          pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx-routers&subdirectory=extensions/mydiracx/mydiracx-routers'
-          pip install 'git+https://github.com/ruslan33/diracx.git@mydiracx-extension#egg=mydiracx&subdirectory=extensions/mydiracx'
+          pip install 'git+https://github.com/ruslan33/diracx.git@gubbins-extension#egg=gubbins-db&subdirectory=extensions/gubbins/gubbins-db'
+          pip install 'git+https://github.com/ruslan33/diracx.git@gubbins-extension#egg=gubbins-routers&subdirectory=extensions/gubbins/gubbins-routers'
+          pip install 'git+https://github.com/ruslan33/diracx.git@gubbins-extension#egg=gubbins&subdirectory=extensions/gubbins'
           pip install ${{ matrix.dependencies }} ${{ matrix.package }}[types]
       - name: Run mypy
         run: |

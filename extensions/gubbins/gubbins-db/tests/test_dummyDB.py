@@ -7,7 +7,7 @@ import pytest
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.sql.utils import SQLDBUnavailable
 
-from mydiracx.db.sql.dummy.db import DummyDB
+from gubbins.db.sql.dummy.db import DummyDB
 
 # Each DB test class must defined a fixture looking like this one
 # It allows to get an instance of an in memory DB,

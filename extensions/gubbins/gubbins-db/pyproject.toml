@@ -1,5 +1,5 @@
 [project]
-name = "mydiracx-db"
+name = "gubbins-db"
 description = "TODO"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,7 +28,7 @@ testing = [
 ]
 
 [project.entry-points."diracx.db.sql"]
-DummyDB = "mydiracx.db.sql:DummyDB"
+DummyDB = "gubbins.db.sql:DummyDB"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,5 +1,5 @@
 [project]
-name = "mydiracx"
+name = "gubbins"
 description = "Client installation for users of DiracX installations"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,16 +13,16 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-#    "mydiracx-api",
-#    "mydiracx-cli",
-#    "mydiracx-client",
-#    "mydiracx-core",
+#    "gubbins-api",
+#    "gubbins-cli",
+#    "gubbins-client",
+#    "gubbins-core",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 testing = [
-    "mydiracx-testing",
+    "gubbins-testing",
 ]
 
 [tool.setuptools]
@@ -48,8 +48,8 @@ select = [
 ]
 ignore = ["B905", "B008", "B006"]
 line-length = 120
-src = ["mydiracx-*/src", "diracx-*/tests"]
-exclude = ["mydiracx-client/src/diracx/client/"]
+src = ["gubbins-*/src", "diracx-*/tests"]
+exclude = ["gubbins-client/src/diracx/client/"]
 
 [tool.isort]
 profile = "black"
@@ -60,20 +60,20 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "f
 
 [tool.mypy]
 files = [
-    "mydiracx-api/src/**/*.py",
-    "mydiracx-cli/src/**/*.py",
-    "mydiracx-client/src/**/_patch.py",
-    "mydiracx-core/src/**/*.py",
-    "mydiracx-db/src/**/*.py",
-    "mydiracx-routers/src/**/*.py",
+    "gubbins-api/src/**/*.py",
+    "gubbins-cli/src/**/*.py",
+    "gubbins-client/src/**/_patch.py",
+    "gubbins-core/src/**/*.py",
+    "gubbins-db/src/**/*.py",
+    "gubbins-routers/src/**/*.py",
 ]
 mypy_path = [
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-api/src",
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-cli/src",
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-client/src",
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-core/src",
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-db/src",
-    "$MYPY_CONFIG_FILE_DIR/mydiracx-routers/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-api/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-cli/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-client/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-core/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-db/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-routers/src",
 ]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 allow_redefinition = true
@@ -92,16 +92,16 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = [
-    "mydiracx-api/tests",
-    "mydiracx-cli/tests",
-    "mydiracx-client/tests",
-    "mydiracx-core/tests",
-    "mydiracx-db/tests",
-    "mydiracx-routers/tests",
+    "gubbins-api/tests",
+    "gubbins-cli/tests",
+    "gubbins-client/tests",
+    "gubbins-core/tests",
+    "gubbins-db/tests",
+    "gubbins-routers/tests",
 ]
 addopts = [
     "-v",
-    "--cov=mydiracx", "--cov-report=term-missing",
+    "--cov=gubbins", "--cov-report=term-missing",
     "-pdiracx.testing", "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
