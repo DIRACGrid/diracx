@@ -5,13 +5,13 @@ from uuid import UUID
 from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
 from sqlalchemy import func, insert, select
 
-from .schema import Base as DummyDBBase
+from .schema import Base as LollygagDBBase
 from .schema import Cars, Owners
 
 
-class DummyDB(BaseSQLDB):
+class LollygagDB(BaseSQLDB):
     """
-    This DummyDB is just to illustrate some important aspect of writing
+    This LollygagDB is just to illustrate some important aspect of writing
     DB classes in DiracX.
 
     It is mostly pure SQLAlchemy, with a few convention
@@ -20,7 +20,7 @@ class DummyDB(BaseSQLDB):
     """
 
     # This needs to be here for the BaseSQLDB to create the engine
-    metadata = DummyDBBase.metadata
+    metadata = LollygagDBBase.metadata
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = [Cars.__table__.columns[x] for x in group_by]

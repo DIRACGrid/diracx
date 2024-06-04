@@ -1,10 +1,10 @@
 [project]
 name = "gubbins-db"
-description = "TODO"
+description = "DB classes for the Gubbins diracx extension"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -13,22 +13,17 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "dirac",
-    "diracx-core",
-    "fastapi",
-    "opensearch-py[async]",
-    "pydantic",
-    "sqlalchemy[aiomysql,aiosqlite]",
+    # This is obvious
+    "diracx-db",
+    # We should add something else
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-]
+testing = ["diracx-testing"]
 
 [project.entry-points."diracx.db.sql"]
-DummyDB = "gubbins.db.sql:DummyDB"
+LollygagDB = "gubbins.db.sql:LollygagDB"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,6 +32,9 @@ where = ["src"]
 requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
+# This should not be in your extension !
+# It is just because we have this demo extension
+# in a subfolder of our git repo
 [tool.setuptools_scm]
 root = "../../.."
 
@@ -44,8 +42,11 @@ root = "../../.."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.db", "--cov-report=term-missing",
-    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--cov=gubbins.db",
+    "--cov-report=term-missing",
+    "-pgubbins.testing",
+    "-pdiracx.testing",
+    "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

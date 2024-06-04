@@ -1,6 +1,6 @@
 import pytest
 
-pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
+pytestmark = pytest.mark.enabled_dependencies(["AuthSettings", "LollygagDB"])
 
 
 @pytest.fixture
@@ -9,14 +9,15 @@ def normal_user_client(client_factory):
         yield client
 
 
-def test_write(normal_user_client):
-    r = normal_user_client.post("/api/mymanager/insert_owner/username")
+def test_lollygag(normal_user_client):
+    r = normal_user_client.get("/api/lollygag/get_owners")
+    assert r.status_code == 200
+    assert len(r.json()) == 0
+
+    r = normal_user_client.post("/api/lollygag/insert_owner/username")
     assert r.status_code == 200
     assert r.json()
 
-
-def test_read(normal_user_client):
-    r = normal_user_client.get("/api/mymanager/get_owners")
+    r = normal_user_client.get("/api/lollygag/get_owners")
     assert r.status_code == 200
-    assert r.json()
-    assert r.json()[0] == "username"
+    assert len(r.json()) == 0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("DummyDB",)
+#
+__all__ = ("LollygagDB",)
 
-from .dummy.db import DummyDB
+from .lollygag.db import LollygagDB

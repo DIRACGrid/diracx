@@ -4,7 +4,7 @@ description = "TODO"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -12,29 +12,11 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = [
-    "aiobotocore",
-    "authlib",
-    "botocore",
-    "cachetools",
-    "dirac",
-    "diracx-core",
-    "diracx-db",
-    "python-dotenv",  # TODO: We might not need this
-    "python-multipart",
-    "fastapi",
-    "httpx",
-    "pydantic",
-    "sqlalchemy",
-]
+dependencies = ["diracx-routers"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-    "moto[server]",
-    "pytest-httpx",
-]
+testing = ["diracx-testing"]
 types = [
     "boto3-stubs",
     "types-aiobotocore[essential]",
@@ -46,7 +28,7 @@ types = [
 ]
 
 [project.entry-points."diracx.services"]
-mymanager = "gubbins.routers.mymanager:router"
+lollygag = "gubbins.routers.lollygag:router"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -62,8 +44,11 @@ root = "../../.."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.routers", "--cov-report=term-missing",
-    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--cov=gubbins.routers",
+    "--cov-report=term-missing",
+    # Both gubbins and diracx are needed here
+    "-pgubbins.testing",
+    "-pdiracx.testing",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"
