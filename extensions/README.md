@@ -16,6 +16,11 @@ Extensions are enabled via the ``DIRACX_EXTENSIONS`` environment variable. It sh
 
 What to do with the `environment.yaml` ? should we replicate wht's in diracx ?
 
+
+## CI
+
+What is under ``.github/workflows/extensions.yaml`` should in fact be under ``.github/workflows/`` of your repo
+
 ## Installing the extension
 
 To develop, follow the same instruction as ``diracx``
