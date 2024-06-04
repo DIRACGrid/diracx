@@ -102,7 +102,7 @@ testpaths = [
 addopts = [
     "-v",
     "--cov=mydiracx", "--cov-report=term-missing",
-    "-pmydiracx.testing", "-pdiracx.testing.osdb",
+    "-pdiracx.testing", "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"
