@@ -45,6 +45,8 @@ addopts = [
     "--cov=gubbins.db",
     "--cov-report=term-missing",
     "-pgubbins.testing",
+    # Both gubbins and diracx are needed here
+    "-pgubbins.testing",
     "-pdiracx.testing",
     "-pdiracx.testing.osdb",
     "--import-mode=importlib",

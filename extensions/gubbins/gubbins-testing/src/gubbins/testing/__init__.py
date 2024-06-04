@@ -5,7 +5,7 @@ import pytest
 
 # This fixture sets the environment variable
 # during the tests.
-# You MUST define one like that
+# You MUST define one like thatF
 @pytest.fixture(scope="session", autouse=True)
 def set_extension_env():
     with pytest.MonkeyPatch.context() as mp:

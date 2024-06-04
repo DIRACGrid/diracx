@@ -11,6 +11,11 @@ The structure of the repo, the content of the ``pyproject.toml`` files, the ``__
 
 Extensions are enabled via the ``DIRACX_EXTENSIONS`` environment variable. It should be set to ``gubbins,diracx``
 
+
+## QUESTIONS
+
+What to do with the `environment.yaml` ? should we replicate wht's in diracx ?
+
 ## Installing the extension
 
 To develop, follow the same instruction as ``diracx``

@@ -4,7 +4,7 @@ description = "Client installation for users of DiracX installations"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -13,17 +13,15 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-#    "gubbins-api",
-#    "gubbins-cli",
-#    "gubbins-client",
-#    "gubbins-core",
+    #    "gubbins-api",
+    #    "gubbins-cli",
+    #    "gubbins-client",
+    #    "gubbins-core",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "gubbins-testing",
-]
+testing = ["gubbins-testing"]
 
 [tool.setuptools]
 packages = []
@@ -36,17 +34,6 @@ build-backend = "setuptools.build_meta"
 root = "../.."
 
 [tool.ruff]
-select = [
-    "E",    # pycodestyle errrors
-    "F",    # pyflakes
-    "B",    # flake8-bugbear
-    "I",    # isort
-    "PLE",  # pylint errors
-    # "UP",   # pyUpgrade
-    "FLY",  # flynt
-    "DTZ",  # flake8-datetimez
-]
-ignore = ["B905", "B008", "B006"]
 line-length = 120
 src = ["gubbins-*/src", "diracx-*/tests"]
 exclude = ["gubbins-client/src/diracx/client/"]
@@ -54,9 +41,37 @@ exclude = ["gubbins-client/src/diracx/client/"]
 [tool.isort]
 profile = "black"
 
-[tool.ruff.flake8-bugbear]
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errrors
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "I",   # isort
+    "PLE", # pylint errors
+    # "UP",   # pyUpgrade
+    "FLY", # flynt
+    "DTZ", # flake8-datetimez
+    "S",   # flake8-bandit
+]
+
+ignore = [
+    "B905",
+    "B008",
+    "B006",
+    "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+]
+
+
+
+[tool.ruff.lint.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Header"]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
 
 [tool.mypy]
 files = [
@@ -101,8 +116,11 @@ testpaths = [
 ]
 addopts = [
     "-v",
-    "--cov=gubbins", "--cov-report=term-missing",
-    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--cov=gubbins",
+    "--cov-report=term-missing",
+    "-pgubbins.testing",
+    "-pdiracx.testing",
+    "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

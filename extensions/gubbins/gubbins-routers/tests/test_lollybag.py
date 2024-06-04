@@ -20,4 +20,4 @@ def test_lollygag(normal_user_client):
 
     r = normal_user_client.get("/api/lollygag/get_owners")
     assert r.status_code == 200
-    assert len(r.json()) == 0
+    assert r.json() == ["username"]
