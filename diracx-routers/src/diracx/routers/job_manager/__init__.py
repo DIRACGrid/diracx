@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Annotated, Any, TypedDict
 
-from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query
+from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, root_validator
 from sqlalchemy.exc import NoResultFound
 
@@ -63,13 +63,6 @@ class JobSearchParams(BaseModel):
     def validate_fields(cls, v):
         # TODO
         return v
-
-
-class JobDefinition(BaseModel):
-    owner: str
-    group: str
-    vo: str
-    jdl: str
 
 
 class InsertedJob(TypedDict):
@@ -507,6 +500,7 @@ EXAMPLE_SEARCHES = {
     },
 }
 
+
 EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
     200: {
         "description": "List of matching results",
@@ -537,7 +531,45 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
             }
         },
     },
+    206: {
+        "description": "Partial Content. Only a part of the requested range could be served.",
+        "headers": {
+            "Content-Range": {
+                "description": "The range of jobs returned in this response",
+                "schema": {"type": "string", "example": "jobs 0-1/4"},
+            }
+        },
+        "model": list[dict[str, Any]],
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "JobID": 1,
+                        "JobGroup": "jobGroup",
+                        "Owner": "myvo:my_nickname",
+                        "SubmissionTime": "2023-05-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-05-25T07:03:35.602652",
+                        "Status": "RECEIVED",
+                        "MinorStatus": "Job accepted",
+                        "ApplicationStatus": "Unknown",
+                    },
+                    {
+                        "JobID": 2,
+                        "JobGroup": "my_nickname",
+                        "Owner": "myvo:cburr",
+                        "SubmissionTime": "2023-05-25T07:03:36.256378",
+                        "LastUpdateTime": "2023-05-25T07:10:11.974324",
+                        "Status": "Done",
+                        "MinorStatus": "Application Exited Successfully",
+                        "ApplicationStatus": "All events processed",
+                    },
+                ]
+            }
+        },
+    },
 }
+
+MAX_PER_PAGE = 10000
 
 
 @router.post("/search", responses=EXAMPLE_RESPONSES)
@@ -546,7 +578,8 @@ async def search(
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
-    page: int = 0,
+    response: Response,
+    page: int = 1,
     per_page: int = 100,
     body: Annotated[
         JobSearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
@@ -557,6 +590,11 @@ async def search(
     **TODO: Add more docs**
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
+
+    # Apply a limit to per_page to prevent abuse of the API
+    if per_page > MAX_PER_PAGE:
+        per_page = MAX_PER_PAGE
+
     if body is None:
         body = JobSearchParams()
     # TODO: Apply all the job policy stuff properly using user_info
@@ -568,8 +606,8 @@ async def search(
                 "value": user_info.sub,
             }
         )
-    # TODO: Pagination
-    return await job_db.search(
+
+    total, jobs = await job_db.search(
         body.parameters,
         body.search,
         body.sort,
@@ -577,6 +615,23 @@ async def search(
         page=page,
         per_page=per_page,
     )
+    # Set the Content-Range header if needed
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4
+
+    # No jobs found but there are jobs for the requested search
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
+    if len(jobs) == 0 and total > 0:
+        response.headers["Content-Range"] = f"jobs */{total}"
+        response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
+
+    # The total number of jobs is greater than the number of jobs returned
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
+    elif len(jobs) < total:
+        first_idx = per_page * (page - 1)
+        last_idx = min(first_idx + len(jobs), total) - 1 if total > 0 else 0
+        response.headers["Content-Range"] = f"jobs {first_idx}-{last_idx}/{total}"
+        response.status_code = HTTPStatus.PARTIAL_CONTENT
+    return jobs
 
 
 @router.post("/summary")

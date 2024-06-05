@@ -4,7 +4,8 @@
 __all__ = ("app",)
 
 import json
-from typing import Annotated
+import re
+from typing import Annotated, cast
 
 from rich.console import Console
 from rich.table import Table
@@ -52,29 +53,66 @@ async def search(
     ],
     condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
     all: bool = False,
+    page: int = 1,
+    per_page: int = 10,
 ):
     async with DiracClient() as api:
-        jobs = await api.jobs.search(
+        jobs, content_range = await api.jobs.search(
             parameters=None if all else parameter,
             search=condition if condition else None,
+            page=page,
+            per_page=per_page,
+            cls=lambda _, jobs, headers: (
+                jobs,
+                ContentRange(headers.get("Content-Range", "jobs")),
+            ),
         )
-    display(jobs, "jobs")
+
+    display(jobs, cast(ContentRange, content_range))
 
 
-def display(data, unit: str):
+class ContentRange:
+    unit: str | None = None
+    start: int | None = None
+    end: int | None = None
+    total: int | None = None
+
+    def __init__(self, header: str):
+        if match := re.fullmatch(r"(\w+) (\d+-\d+|\*)/(\d+|\*)", header):
+            self.unit, range, total = match.groups()
+            self.total = int(total)
+            if range != "*":
+                self.start, self.end = map(int, range.split("-"))
+        elif match := re.fullmatch(r"\w+", header):
+            self.unit = match.group()
+
+    @property
+    def caption(self):
+        if self.start is None and self.end is None:
+            range_str = "all"
+        else:
+            range_str = (
+                f"{self.start if self.start is not None else 'unknown'}-"
+                f"{self.end if self.end is not None else 'unknown'} "
+                f"of {self.total or 'unknown'}"
+            )
+        return f"Showing {range_str} {self.unit}"
+
+
+def display(data, content_range: ContentRange):
     output_format = get_diracx_preferences().output_format
     match output_format:
         case OutputFormats.JSON:
             print(json.dumps(data, indent=2))
         case OutputFormats.RICH:
-            display_rich(data, unit)
+            display_rich(data, content_range)
         case _:
             raise NotImplementedError(output_format)
 
 
-def display_rich(data, unit: str) -> None:
+def display_rich(data, content_range: ContentRange) -> None:
     if not data:
-        print(f"No {unit} found")
+        print(f"No {content_range.unit} found")
         return
 
     console = Console()
@@ -83,7 +121,7 @@ def display_rich(data, unit: str) -> None:
         table = Table(
             "Parameter",
             "Value",
-            caption=f"Showing {len(data)} of {len(data)} {unit}",
+            caption=content_range.caption,
             caption_justify="right",
         )
         for job in data:
@@ -93,7 +131,7 @@ def display_rich(data, unit: str) -> None:
     else:
         table = Table(
             *columns,
-            caption=f"Showing {len(data)} of {len(data)} {unit}",
+            caption=content_range.caption,
             caption_justify="right",
         )
         for job in data:

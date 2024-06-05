@@ -107,6 +107,8 @@ def test_insert_and_list_parametric_jobs(normal_user_client):
 
     listed_jobs = r.json()
 
+    assert "Content-Range" not in r.headers
+
     assert len(listed_jobs) == 3  # Parameters.JOB_ID is 3
 
     assert submitted_job_ids == sorted([job_dict["JobID"] for job_dict in listed_jobs])
@@ -132,33 +134,44 @@ def test_insert_and_list_bulk_jobs(job_definitions, normal_user_client):
 
     listed_jobs = r.json()
 
+    assert "Content-Range" not in r.headers
+
     assert len(listed_jobs) == len(job_definitions)
 
     assert submitted_job_ids == sorted([job_dict["JobID"] for job_dict in listed_jobs])
 
 
 def test_insert_and_search(normal_user_client):
+    """Test inserting a job and then searching for it."""
     # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == len(job_definitions)
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
     # Test /jobs/search
+    # 1. Search for all jobs
     r = normal_user_client.post("/api/jobs/search")
-    assert r.status_code == 200, r.json()
-    assert [x["JobID"] for x in r.json()] == submitted_job_ids
-    assert {x["VerifiedFlag"] for x in r.json()} == {True}
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert [x["JobID"] for x in listed_jobs] == submitted_job_ids
+    assert {x["VerifiedFlag"] for x in listed_jobs} == {True}
 
+    # 2. Search for all jobs with status NEW: should return an empty list
     r = normal_user_client.post(
         "/api/jobs/search",
         json={"search": [{"parameter": "Status", "operator": "eq", "value": "NEW"}]},
     )
-    assert r.status_code == 200, r.json()
-    assert r.json() == []
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert listed_jobs == []
 
+    assert "Content-Range" not in r.headers
+
+    # 3. Search for all jobs with status RECEIVED: should return the submitted jobs
     r = normal_user_client.post(
         "/api/jobs/search",
         json={
@@ -171,16 +184,23 @@ def test_insert_and_search(normal_user_client):
             ]
         },
     )
-    assert r.status_code == 200, r.json()
-    assert [x["JobID"] for x in r.json()] == submitted_job_ids
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert [x["JobID"] for x in listed_jobs] == submitted_job_ids
 
+    assert "Content-Range" not in r.headers
+
+    # 4. Search for all jobs but just return the JobID and the Status
     r = normal_user_client.post(
         "/api/jobs/search", json={"parameters": ["JobID", "Status"]}
     )
-    assert r.status_code == 200, r.json()
-    assert r.json() == [
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert listed_jobs == [
         {"JobID": jid, "Status": JobStatus.RECEIVED.value} for jid in submitted_job_ids
     ]
+
+    assert "Content-Range" not in r.headers
 
     # Test /jobs/summary
     r = normal_user_client.post(
@@ -220,22 +240,97 @@ def test_insert_and_search(normal_user_client):
 
 
 def test_search_distinct(normal_user_client):
+    """Test that the distinct parameter works as expected."""
     job_definitions = [TEST_JDL, TEST_JDL, TEST_JDL]
     r = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == len(job_definitions)
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) == len(job_definitions)
 
     # Check that distinct collapses identical records when true
     r = normal_user_client.post(
         "/api/jobs/search", json={"parameters": ["Status"], "distinct": False}
     )
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) > 1
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) > 1
+
+    assert "Content-Range" not in r.headers
+
     r = normal_user_client.post(
         "/api/jobs/search", json={"parameters": ["Status"], "distinct": True}
     )
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) == 1
+
+    assert "Content-Range" not in r.headers
+
+
+def test_search_pagination(normal_user_client):
+    """Test that the pagination works as expected."""
+    job_definitions = [TEST_JDL] * 20
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) == len(job_definitions)
+
+    # Get the first 20 jobs (all of them)
+    r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": 20})
+    listed_jobs = r.json()
+    assert r.status_code == 200, listed_jobs
+    assert len(listed_jobs) == 20
+
+    assert "Content-Range" not in r.headers
+
+    # Get the first 10 jobs
+    r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": 10})
+    listed_jobs = r.json()
+    assert r.status_code == 206, listed_jobs
+    assert len(listed_jobs) == 10
+
+    assert "Content-Range" in r.headers
+    assert (
+        r.headers["Content-Range"]
+        == f"jobs 0-{len(listed_jobs) -1}/{len(job_definitions)}"
+    )
+
+    # Get the next 10 jobs
+    r = normal_user_client.post("/api/jobs/search", params={"page": 2, "per_page": 10})
+    listed_jobs = r.json()
+    assert r.status_code == 206, listed_jobs
+    assert len(listed_jobs) == 10
+
+    assert "Content-Range" in r.headers
+    assert (
+        r.headers["Content-Range"]
+        == f"jobs 10-{len(listed_jobs) + 10 - 1}/{len(job_definitions)}"
+    )
+
+    # Get an unknown page
+    r = normal_user_client.post("/api/jobs/search", params={"page": 3, "per_page": 10})
+    listed_jobs = r.json()
+    assert r.status_code == 416, listed_jobs
+    assert len(listed_jobs) == 0
+
+    assert "Content-Range" in r.headers
+    assert r.headers["Content-Range"] == f"jobs */{len(job_definitions)}"
+
+    # Set the per_page parameter to 0
+    r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": 0})
+    assert r.status_code == 400, r.json()
+
+    # Set the per_page parameter to a negative number
+    r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": -1})
+    assert r.status_code == 400, r.json()
+
+    # Set the page parameter to 0
+    r = normal_user_client.post("/api/jobs/search", params={"page": 0, "per_page": 10})
+    assert r.status_code == 400, r.json()
+
+    # Set the page parameter to a negative number
+    r = normal_user_client.post("/api/jobs/search", params={"page": -1, "per_page": 10})
+    assert r.status_code == 400, r.json()
 
 
 def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(

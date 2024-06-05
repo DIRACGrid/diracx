@@ -19,6 +19,9 @@ from diracx.core.models import (
     LimitedJobStatusReturn,
     ScalarSearchOperator,
     ScalarSearchSpec,
+    SearchSpec,
+    SortDirection,
+    SortSpec,
 )
 from diracx.core.properties import JOB_SHARING, SecurityProperty
 
@@ -83,14 +86,14 @@ class JobDB(BaseSQLDB):
 
     async def search(
         self,
-        parameters,
-        search,
-        sorts,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
         *,
         distinct: bool = False,
         per_page: int = 100,
         page: int | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[int, list[dict[Any, Any]]]:
         # Find which columns to select
         columns = _get_columns(Jobs.__table__, parameters)
         stmt = select(*columns)
@@ -98,28 +101,45 @@ class JobDB(BaseSQLDB):
         stmt = apply_search_filters(Jobs.__table__, stmt, search)
 
         # Apply any sort constraints
+        sort_columns = []
         for sort in sorts:
             if sort["parameter"] not in Jobs.__table__.columns:
                 raise InvalidQueryError(
                     f"Cannot sort by {sort['parameter']}: unknown column"
                 )
             column = Jobs.__table__.columns[sort["parameter"]]
-            if sort["direction"] == "asc":
-                column = column.asc()
-            elif sort["direction"] == "desc":
-                column = column.desc()
+            sorted_column = None
+            if sort["direction"] == SortDirection.ASC:
+                sorted_column = column.asc()
+            elif sort["direction"] == SortDirection.DESC:
+                sorted_column = column.desc()
             else:
                 raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
+            sort_columns.append(sorted_column)
+
+        if sort_columns:
+            stmt = stmt.order_by(*sort_columns)
 
         if distinct:
             stmt = stmt.distinct()
 
+        # Calculate total count before applying pagination
+        total_count_subquery = stmt.alias()
+        total_count_stmt = select(func.count()).select_from(total_count_subquery)
+        total = (await self.conn.execute(total_count_stmt)).scalar_one()
+
         # Apply pagination
-        if page:
-            raise NotImplementedError("TODO Not yet implemented")
+        if page is not None:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
 
         # Execute the query
-        return [dict(row._mapping) async for row in (await self.conn.stream(stmt))]
+        return total, [
+            dict(row._mapping) async for row in (await self.conn.stream(stmt))
+        ]
 
     async def _insertNewJDL(self, jdl) -> int:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
@@ -314,7 +334,7 @@ class JobDB(BaseSQLDB):
         from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
         from DIRAC.Core.Utilities.ReturnValues import SErrorException
 
-        result = await self.search(
+        _, result = await self.search(
             parameters=[
                 "Status",
                 "MinorStatus",
