@@ -33,16 +33,10 @@ TEST_JDL = """
 
 @pytest.fixture
 async def jdl_file():
-    with tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", delete=False
-    ) as temp_file:
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as temp_file:
         temp_file.write(TEST_JDL)
         temp_file.flush()
-        jdl_filename = temp_file.name
-
-    yield jdl_filename
-
-    os.remove(jdl_filename)
+        yield temp_file.name
 
 
 async def test_submit(with_cli_login, jdl_file, capfd):
