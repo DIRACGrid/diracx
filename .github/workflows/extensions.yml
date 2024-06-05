@@ -23,9 +23,9 @@ jobs:
       matrix:
         include:
           - package: "./extensions/gubbins/gubbins-db"
-            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./diracx-db"
+            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./diracx-db ./diracx-core"
           - package: "./extensions/gubbins/gubbins-routers"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./diracx-testing ./diracx-db ./diracx-routers"
+            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./diracx-testing ./diracx-db ./diracx-core ./diracx-routers"
 
     steps:
       - name: Checkout code
