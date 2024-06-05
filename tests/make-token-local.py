@@ -8,7 +8,7 @@ from diracx.core.models import TokenResponse
 from diracx.core.properties import NORMAL_USER
 from diracx.core.utils import write_credentials
 from diracx.routers.auth.token import create_token
-from diracx.routers.auth.utils import AuthSettings
+from diracx.routers.utils.users import AuthSettings
 
 
 def parse_args():

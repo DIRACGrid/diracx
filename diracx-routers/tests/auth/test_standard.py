@@ -18,7 +18,6 @@ from diracx.core.config import Config
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.routers.auth.token import create_token
 from diracx.routers.auth.utils import (
-    AuthSettings,
     GrantType,
     _server_metadata_cache,
     decrypt_state,
@@ -26,10 +25,11 @@ from diracx.routers.auth.utils import (
     get_server_metadata,
     parse_and_validate_scope,
 )
+from diracx.routers.utils.users import AuthSettings
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthDB", "AuthSettings", "ConfigSource"]
+    ["AuthDB", "AuthSettings", "ConfigSource", "BaseAccessPolicy"]
 )
 
 
@@ -765,7 +765,8 @@ def _get_tokens(
 
 
 def _get_and_check_token_response(test_client, request_data):
-    """Get a token and check that mandatory fields are present"""
+    """Get a token and check that mandatory fields are present and that the userinfo endpoint returns
+    something sensible"""
     # Check that token request now works
     r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 200, r.json()
@@ -774,6 +775,12 @@ def _get_and_check_token_response(test_client, request_data):
     assert response_data["refresh_token"]
     assert response_data["expires_in"]
     assert response_data["token_type"]
+
+    r = test_client.get(
+        "/api/auth/userinfo",
+        headers={"authorization": f"Bearer {response_data['access_token']}"},
+    )
+    assert r.status_code == 200, r.json()
 
     return response_data
 

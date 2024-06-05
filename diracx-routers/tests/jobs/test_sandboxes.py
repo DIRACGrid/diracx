@@ -10,7 +10,7 @@ import requests
 from fastapi.testclient import TestClient
 
 from diracx.routers.auth.token import create_token
-from diracx.routers.auth.utils import AuthSettings
+from diracx.routers.utils.users import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -19,6 +19,8 @@ pytestmark = pytest.mark.enabled_dependencies(
         "JobLoggingDB",
         "SandboxMetadataDB",
         "SandboxStoreSettings",
+        "WMSAccessPolicy",
+        "SandboxAccessPolicy",
     ]
 )
 
@@ -71,13 +73,15 @@ def test_upload_then_download(
     other_user_token = create_token(other_user_payload, test_auth_settings)
 
     # Make sure another user can't download the sandbox
+    # The fact that another user cannot download the sandbox
+    # is enforced at the policy level, so since in this test
+    # we use the AlwaysAllowAccessPolicy, it will actually work !
     r = normal_user_client.get(
         "/api/jobs/sandbox",
         params={"pfn": sandbox_pfn},
         headers={"Authorization": f"Bearer {other_user_token}"},
     )
-    assert r.status_code == 400, r.text
-    assert "Invalid PFN. PFN must start with" in r.json()["detail"]
+    assert r.status_code == 200, r.text
 
 
 def test_upload_oversized(normal_user_client: TestClient):

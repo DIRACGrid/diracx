@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 from uuid import uuid4
 
 from authlib.jose import JsonWebToken
-from fastapi import Form, Header, HTTPException, status
+from fastapi import Depends, Form, Header, HTTPException, status
 
 from diracx.core.exceptions import (
     DiracHttpResponse,
@@ -19,16 +19,13 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import TokenResponse
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
+from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.auth.utils import GrantType
 
-from ..dependencies import (
-    AuthDB,
-    AvailableSecurityProperties,
-    Config,
-)
+from ..dependencies import AuthDB, AvailableSecurityProperties, Config
 from ..fastapi_classes import DiracxRouter
+from ..utils.users import AuthSettings
 from .utils import (
-    AuthSettings,
     parse_and_validate_scope,
     verify_dirac_refresh_token,
 )
@@ -51,6 +48,9 @@ async def token(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
+    all_access_policies: Annotated[
+        dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
+    ],
     device_code: Annotated[
         str | None, Form(description="device code for OAuth2 device flow")
     ] = None,
@@ -99,6 +99,7 @@ async def token(
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
     # Get a TokenResponse to return to the user
+
     return await exchange_token(
         auth_db,
         scope,
@@ -106,6 +107,7 @@ async def token(
         config,
         settings,
         available_properties,
+        all_access_policies=all_access_policies,
         legacy_exchange=legacy_exchange,
     )
 
@@ -267,6 +269,9 @@ async def legacy_exchange(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
     config: Config,
+    all_access_policies: Annotated[
+        dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
+    ],
     expires_minutes: int | None = None,
 ):
     """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange.
@@ -334,6 +339,7 @@ async def legacy_exchange(
         config,
         settings,
         available_properties,
+        all_access_policies=all_access_policies,
         refresh_token_expire_minutes=expires_minutes,
         legacy_exchange=True,
     )
@@ -346,6 +352,9 @@ async def exchange_token(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
+    all_access_policies: Annotated[
+        dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
+    ],
     *,
     refresh_token_expire_minutes: int | None = None,
     legacy_exchange: bool = False,
@@ -410,6 +419,22 @@ async def exchange_token(
         "dirac_group": dirac_group,
         "exp": creation_time + timedelta(minutes=settings.access_token_expire_minutes),
     }
+
+    # Enrich the token payload with policy specific content
+    dirac_access_policies = {}
+    dirac_refresh_policies = {}
+    for policy_name, policy in all_access_policies.items():
+
+        access_extra, refresh_extra = policy.enrich_tokens(
+            access_payload, refresh_payload
+        )
+        if access_extra:
+            dirac_access_policies[policy_name] = access_extra
+        if refresh_extra:
+            dirac_refresh_policies[policy_name] = refresh_extra
+
+    access_payload["dirac_policies"] = dirac_access_policies
+    refresh_payload["dirac_policies"] = dirac_refresh_policies
 
     # Generate the token: encode the payloads
     access_token = create_token(access_payload, settings)

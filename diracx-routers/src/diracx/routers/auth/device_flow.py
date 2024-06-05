@@ -70,8 +70,8 @@ from ..dependencies import (
     Config,
 )
 from ..fastapi_classes import DiracxRouter
+from ..utils.users import AuthSettings
 from .utils import (
-    AuthSettings,
     GrantType,
     decrypt_state,
     get_token_from_iam,

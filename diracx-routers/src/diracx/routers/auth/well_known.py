@@ -6,7 +6,9 @@ from fastapi import Request
 
 from ..dependencies import Config
 from ..fastapi_classes import DiracxRouter
-from .utils import AuthSettings
+from ..utils.users import AuthSettings
+
+# from ..access_policies import OpenAccessPolicyCallable
 
 router = DiracxRouter(require_auth=False, path_root="")
 
@@ -16,8 +18,10 @@ async def openid_configuration(
     request: Request,
     config: Config,
     settings: AuthSettings,
+    # check_permissions: OpenAccessPolicyCallable,
 ):
     """OpenID Connect discovery endpoint."""
+    # await check_permissions()
     scopes_supported = []
     for vo in config.Registry:
         scopes_supported.append(f"vo:{vo}")
@@ -65,8 +69,12 @@ class Metadata(TypedDict):
 
 
 @router.get("/dirac-metadata")
-async def installation_metadata(config: Config) -> Metadata:
+async def installation_metadata(
+    config: Config,
+    # check_permissions: OpenAccessPolicyCallable,
+) -> Metadata:
     """Get metadata about the dirac installation."""
+    # await check_permissions()
     metadata: Metadata = {
         "virtual_organizations": {},
     }

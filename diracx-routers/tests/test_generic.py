@@ -1,6 +1,8 @@
 import pytest
 
-pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
+pytestmark = pytest.mark.enabled_dependencies(
+    ["ConfigSource", "AuthSettings", "OpenAccessPolicy"]
+)
 
 
 @pytest.fixture
