@@ -13,19 +13,15 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any
+from typing import Annotated
 
 import git
 import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
-from pydantic import AnyUrl, parse_obj_as
+from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersion
 from .schema import Config
-
-if TYPE_CHECKING:
-    from pydantic.config import BaseConfig
-    from pydantic.fields import ModelField
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_GIT_BRANCH = "master"
@@ -37,20 +33,16 @@ MAX_PULL_CACHED_VERSIONS = 1
 logger = logging.getLogger(__name__)
 
 
-class ConfigSourceUrl(AnyUrl):
-    """
-    Custom class for managing URL (see validate)
-    """
+def _apply_default_scheme(value: str) -> str:
+    """Applies the default git+file:// scheme if not present."""
+    if isinstance(value, str) and "://" not in value:
+        value = f"git+file://{value}"
+    return value
 
-    host_required = False
 
-    @classmethod
-    # TODO: This should return ConfigSourceUrl but pydantic's type hints are wrong
-    def validate(cls, value: Any, field: ModelField, config: BaseConfig) -> AnyUrl:
-        """Overrides AnyUrl.validate to add file:// scheme if not present."""
-        if isinstance(value, str) and "://" not in value:
-            value = f"git+file://{value}"
-        return super().validate(value, field, config)
+ConfigSourceUrl = Annotated[
+    AnyUrl, UrlConstraints(host_required=False), BeforeValidator(_apply_default_scheme)
+]
 
 
 class ConfigSource(metaclass=ABCMeta):
@@ -107,7 +99,8 @@ class ConfigSource(metaclass=ABCMeta):
         the backend URL scheme
 
         """
-        url = parse_obj_as(ConfigSourceUrl, str(backend_url))
+
+        url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
     def read_config(self) -> Config:
@@ -164,7 +157,7 @@ class BaseGitConfigSource(ConfigSource):
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
         raw_obj = yaml.safe_load(blob.data_stream.read().decode())
-        config = Config.parse_obj(raw_obj)
+        config = Config.model_validate(raw_obj)
         config._hexsha = hexsha
         config._modified = modified
         return config
@@ -207,7 +200,7 @@ class RemoteGitConfigSource(BaseGitConfigSource):
             raise ValueError("No remote url for RemoteGitConfigSource")
 
         # git does not understand `git+https`, so we remove the `git+` part
-        self.remote_url = backend_url.replace("git+", "")
+        self.remote_url = str(backend_url).replace("git+", "")
         self._temp_dir = TemporaryDirectory()
         self.repo_location = Path(self._temp_dir.name)
         self.repo = git.Repo.clone_from(self.remote_url, self.repo_location)

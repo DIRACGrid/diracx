@@ -19,7 +19,8 @@ dependencies = [
     "cachetools",
     "email_validator",
     "gitpython",
-    "pydantic<2",
+    "pydantic >=2",
+    "pydantic-settings",
     "pyyaml",
 ]
 dynamic = ["version"]

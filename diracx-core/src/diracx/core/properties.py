@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import inspect
 import operator
-from typing import Callable
+from typing import Any, Callable
+
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 from diracx.core.extensions import select_from_extension
 
@@ -23,6 +26,12 @@ class SecurityProperty(str):
                 if isinstance(obj, SecurityProperty):
                     properties.add(obj)
         return properties
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(cls, handler(str))
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self})"

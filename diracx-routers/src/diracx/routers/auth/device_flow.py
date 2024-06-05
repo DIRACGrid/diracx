@@ -53,8 +53,6 @@ the token endpoint (POST /token).
 * The client can then use the access token to access the DIRAC services.
 """
 
-from typing import TypedDict
-
 from fastapi import (
     HTTPException,
     Request,
@@ -63,6 +61,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import RedirectResponse
+from typing_extensions import TypedDict
 
 from ..dependencies import (
     AuthDB,

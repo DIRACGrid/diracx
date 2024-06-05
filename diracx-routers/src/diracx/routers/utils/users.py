@@ -6,6 +6,7 @@ from authlib.jose import JoseError, JsonWebToken
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel, Field
+from pydantic_settings import SettingsConfigDict
 
 from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
@@ -41,8 +42,10 @@ class AuthorizedUserInfo(AuthInfo, UserInfo):
 
 
 @add_settings_annotation
-class AuthSettings(ServiceSettingsBase, env_prefix="DIRACX_SERVICE_AUTH_"):
+class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
+
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from typing import TYPE_CHECKING, AsyncIterator, Self, cast
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum, MetaData, select
 from sqlalchemy.exc import OperationalError
@@ -123,7 +123,9 @@ class BaseSQLDB(metaclass=ABCMeta):
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
                     else:
-                        db_urls[db_name] = parse_obj_as(SqlalchemyDsn, db_url)
+                        db_urls[db_name] = str(
+                            TypeAdapter(SqlalchemyDsn).validate_python(db_url)
+                        )
                 except Exception:
                     logger.error("Error loading URL for %s", db_name)
                     raise

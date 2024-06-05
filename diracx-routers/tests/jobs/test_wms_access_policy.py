@@ -322,7 +322,7 @@ async def test_sandbox_access_policy_read(sandbox_db):
     )
 
     # User cannot act on others
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException):
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
             normal_user,

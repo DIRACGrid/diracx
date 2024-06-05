@@ -139,7 +139,7 @@ class DiracClient(DiracGenerated):
         **kwargs: Any,
     ) -> None:
         diracx_preferences = diracx_preferences or get_diracx_preferences()
-        self._endpoint = endpoint or diracx_preferences.url
+        self._endpoint = str(endpoint or diracx_preferences.url)
         if verify is True and diracx_preferences.ca_path:
             verify = str(diracx_preferences.ca_path)
         kwargs["connection_verify"] = verify

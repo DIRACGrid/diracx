@@ -23,7 +23,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
-from pydantic import parse_raw_as
+from pydantic import TypeAdapter
 
 # from starlette.types import ASGIApp
 from uvicorn.logging import AccessFormatter, DefaultFormatter
@@ -335,7 +335,7 @@ def create_app() -> DiracFastAPI:
     settings_classes = set()
     for entry_point in select_from_extension(group="diracx.services"):
         env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
-        enabled = parse_raw_as(bool, os.environ.get(env_var, "true"))
+        enabled = TypeAdapter(bool).validate_json(os.environ.get(env_var, "true"))
         logger.debug("Found service %r: enabled=%s", entry_point, enabled)
         if not enabled:
             continue

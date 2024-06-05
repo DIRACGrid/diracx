@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pydantic import field_validator
+from pydantic_settings import SettingsConfigDict
+
 __all__ = ("DiracxPreferences", "OutputFormats", "get_diracx_preferences")
 
 import logging
@@ -8,7 +11,8 @@ from enum import Enum, StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, BaseSettings, Field, validator
+from pydantic import AnyHttpUrl, Field
+from pydantic_settings import BaseSettings
 
 from .utils import dotenv_files_from_environment
 
@@ -29,7 +33,9 @@ class LogLevels(Enum):
     DEBUG = logging.DEBUG
 
 
-class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
+class DiracxPreferences(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="DIRACX_")
+
     url: AnyHttpUrl
     ca_path: Path | None = None
     output_format: OutputFormats = Field(default_factory=OutputFormats.default)
@@ -42,7 +48,8 @@ class DiracxPreferences(BaseSettings, env_prefix="DIRACX_"):
     def from_env(cls):
         return cls(_env_file=dotenv_files_from_environment("DIRACX_DOTENV"))
 
-    @validator("log_level", pre=True)
+    @field_validator("log_level", mode="before")
+    @classmethod
     def validate_log_level(cls, v: str):
         if isinstance(v, str):
             return getattr(LogLevels, v.upper())

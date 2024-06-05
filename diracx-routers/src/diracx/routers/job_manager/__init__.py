@@ -4,11 +4,12 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from http import HTTPStatus
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any
 
 from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query, Response
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel
 from sqlalchemy.exc import NoResultFound
+from typing_extensions import TypedDict
 
 from diracx.core.config import Config, ConfigSource
 from diracx.core.exceptions import JobNotFound
@@ -46,11 +47,7 @@ router.include_router(sandboxes_router)
 class JobSummaryParams(BaseModel):
     grouping: list[str]
     search: list[SearchSpec] = []
-
-    @root_validator
-    def validate_fields(cls, v):
-        # TODO
-        return v
+    # TODO: Add more validation
 
 
 class JobSearchParams(BaseModel):
@@ -58,11 +55,7 @@ class JobSearchParams(BaseModel):
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []
     distinct: bool = False
-
-    @root_validator
-    def validate_fields(cls, v):
-        # TODO
-        return v
+    # TODO: Add more validation
 
 
 class InsertedJob(TypedDict):

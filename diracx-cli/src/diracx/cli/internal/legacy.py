@@ -79,14 +79,16 @@ def cs_sync(old_file: Path, new_file: Path):
 
     _apply_fixes(raw)
 
-    config = Config.parse_obj(raw)
-    new_file.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
+    config = Config.model_validate(raw)
+    new_file.write_text(
+        yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))
+    )
 
 
 def _apply_fixes(raw):
     """Modify raw in place to make any layout changes between the old and new structure"""
 
-    conv_config = ConversionConfig.parse_obj(raw["DiracX"]["CsSync"])
+    conv_config = ConversionConfig.model_validate(raw["DiracX"]["CsSync"])
 
     raw.pop("DiracX", None)
     # Remove dips specific parts from the CS
@@ -119,7 +121,7 @@ def _apply_fixes(raw):
 
     for vo, vo_meta in conv_config.VOs.items():
         raw["Registry"][vo] = {
-            "IdP": vo_meta.IdP,
+            "IdP": vo_meta.IdP.model_dump(),
             "DefaultGroup": vo_meta.DefaultGroup,
             "Users": {},
             "Groups": {},

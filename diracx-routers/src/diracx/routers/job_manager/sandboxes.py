@@ -9,6 +9,7 @@ from botocore.config import Config
 from botocore.errorfactory import ClientError
 from fastapi import Body, Depends, HTTPException, Query
 from pydantic import BaseModel, PrivateAttr
+from pydantic_settings import SettingsConfigDict
 from pyparsing import Any
 from sqlalchemy.exc import NoResultFound
 
@@ -39,8 +40,10 @@ router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRAT
 
 
 @add_settings_annotation
-class SandboxStoreSettings(ServiceSettingsBase, env_prefix="DIRACX_SANDBOX_STORE_"):
+class SandboxStoreSettings(ServiceSettingsBase):
     """Settings for the sandbox store."""
+
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SANDBOX_STORE_")
 
     bucket_name: str
     s3_client_kwargs: dict[str, str]
