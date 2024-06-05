@@ -3,6 +3,8 @@ name: Deployment
 on:
   push:
   pull_request:
+  schedule:
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       check-ci:
