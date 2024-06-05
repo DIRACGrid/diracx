@@ -125,7 +125,7 @@ async def get_oidc_token_info_from_device_flow(
         ) from e
     except ExpiredFlowError as e:
         raise DiracHttpResponse(
-            status.HTTP_400_BAD_REQUEST, {"error": "expired_token"}
+            status.HTTP_401_UNAUTHORIZED, {"error": "expired_token"}
         ) from e
     # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
     # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
@@ -233,7 +233,7 @@ async def get_oidc_token_info_from_refresh_flow(
             await auth_db.conn.commit()
 
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Revoked refresh token reused: potential attack detected. You must authenticate again",
             )
 
@@ -307,8 +307,9 @@ async def legacy_exchange(
 
     if hashlib.sha256(raw_token).hexdigest() != expected_api_key:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:

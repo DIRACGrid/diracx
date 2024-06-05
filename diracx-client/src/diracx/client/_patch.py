@@ -8,8 +8,9 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
+import jwt
 import requests
 
 from pathlib import Path
@@ -113,9 +114,12 @@ class DiracBearerTokenCredentialPolicy(BearerTokenCredentialPolicy):
 
         if not self._token:
             credentials = json.loads(self._credential.location.read_text())
-            self._token = self._credential.get_token(
-                "", refresh_token=credentials["refresh_token"]
-            )
+            refresh_token = credentials["refresh_token"]
+            if not is_refresh_token_valid(refresh_token):
+                # If we are here, it means the refresh token is not valid anymore
+                # we suppose it is not needed to perform the request
+                return
+            self._token = self._credential.get_token("", refresh_token=refresh_token)
 
         request.http_request.headers["Authorization"] = f"Bearer {self._token.token}"
 
@@ -242,8 +246,20 @@ def get_token(location: Path, token: AccessToken | None) -> AccessToken | None:
     return token
 
 
+def is_refresh_token_valid(refresh_token: str) -> bool:
+    """Check if the refresh token is still valid."""
+    # Decode the refresh token
+    refresh_payload = jwt.decode(refresh_token, options={"verify_signature": False})
+    if not refresh_payload or "exp" not in refresh_payload:
+        return False
+
+    # Check the expiration time
+    return refresh_payload["exp"] > datetime.now(tz=timezone.utc).timestamp()
+
+
 def is_token_valid(token: AccessToken) -> bool:
     """Condition to get a new token"""
     return (
-        datetime.utcfromtimestamp(token.expires_on) - datetime.utcnow()
+        datetime.fromtimestamp(token.expires_on, tz=timezone.utc)
+        - datetime.now(tz=timezone.utc)
     ).total_seconds() > 300

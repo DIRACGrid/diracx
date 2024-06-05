@@ -151,7 +151,7 @@ async def test_wrong_credentials(test_client, legacy_credentials):
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},
         headers={"Authorization": "Bearer diracx:legacy:ChangeME"},
     )
-    assert r.status_code == 403
+    assert r.status_code == 401
     assert r.json()["detail"] == "Invalid credentials"
 
 

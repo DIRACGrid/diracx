@@ -453,7 +453,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     # The server should detect the breach and revoke every token bound to User
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
-    assert r.status_code == 400, data
+    assert r.status_code == 401, data
     assert (
         data["detail"]
         == "Revoked refresh token reused: potential attack detected. You must authenticate again"
@@ -465,7 +465,7 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     request_data["refresh_token"] = new_refresh_token
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
-    assert r.status_code == 400, data
+    assert r.status_code == 401, data
     assert (
         data["detail"]
         == "Revoked refresh token reused: potential attack detected. You must authenticate again"
@@ -666,7 +666,7 @@ async def test_revoke_refresh_tokens_normal_user(
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
-    assert r.status_code == 401, data
+    assert r.status_code == 403, data
 
     # Normal user tries to delete his/her RT: should work
     r = test_client.delete(
