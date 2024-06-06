@@ -15,6 +15,7 @@ import requests
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
+from urllib import parse
 from azure.core.credentials import AccessToken
 from azure.core.credentials import TokenCredential
 from azure.core.pipeline import PipelineRequest
@@ -215,7 +216,7 @@ def get_openid_configuration(
 ) -> Dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
     response = requests.get(
-        url=f"{endpoint}/.well-known/openid-configuration",
+        url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
         verify=verify,
     )
     if not response.ok:
