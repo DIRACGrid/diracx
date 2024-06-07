@@ -4,13 +4,13 @@ FROM ghcr.io/diracgrid/diracx/services:dev
 ENV DIRACX_EXTENSIONS "gubbins,diracx"
 
 ARG EXTRA_PACKAGES_TO_INSTALL
-
+ARG EXTENSION_CUSTOM_SOURCES_TO_INSTALL
 
 # RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "ls /bindmount/* "
 
 # RUN /entrypoint.sh bash -ec "IFS=',' read -r -a extra_pkg_array <<< "${EXTRA_PACKAGES_TO_INSTALL}" && echo ${extra_pkg_array} && echo ${EXTRA_PACKAGES_TO_INSTALL} && echo PROUT "
 
-RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "pip install --no-deps ${EXTRA_PACKAGES_TO_INSTALL} && echo 'Running pip check' && pip check"
+RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -exc "pip install --no-deps ${EXTRA_PACKAGES_TO_INSTALL} ${EXTENSION_CUSTOM_SOURCES_TO_INSTALL} && echo 'Running pip check' && pip check"
 
 
 

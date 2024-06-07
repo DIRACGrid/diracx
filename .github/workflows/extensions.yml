@@ -131,7 +131,8 @@ jobs:
           tags: gubbins/services:dev
           outputs: type=docker,dest=/tmp/gubbins_services_image.tar
           build-args: |
-            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration,/bindmount/gubbins*.whl
+            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration"
+            EXTENSION_CUSTOM_SOURCES_TO_INSTALL="/bindmount/gubbins*.whl"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
