@@ -168,7 +168,7 @@ jobs:
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --set-value global.services="gubbins/services:dev" $PWD
+          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --set-value global.services="gubbins/services:dev" $PWD $PWD/extensions/gubbins/gubbins-*
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
