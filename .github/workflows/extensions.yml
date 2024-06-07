@@ -1,4 +1,4 @@
-name: Extensions Basic Tests
+name: Extensions full test
 
 on:
   push:
@@ -131,7 +131,7 @@ jobs:
           tags: gubbins/services:dev
           outputs: type=docker,dest=/tmp/gubbins_services_image.tar
           build-args: |
-            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
+            EXTRA_PACKAGES_TO_INSTALL="git+https://github.com/DIRACGrid/DIRAC.git@integration,gubbins*.whl"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
