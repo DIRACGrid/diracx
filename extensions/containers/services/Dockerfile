@@ -5,7 +5,16 @@ ENV DIRACX_EXTENSIONS "gubbins,diracx"
 
 ARG EXTRA_PACKAGES_TO_INSTALL
 
+
+# RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "ls /bindmount/* "
+
+# RUN /entrypoint.sh bash -ec "IFS=',' read -r -a extra_pkg_array <<< "${EXTRA_PACKAGES_TO_INSTALL}" && echo ${extra_pkg_array} && echo ${EXTRA_PACKAGES_TO_INSTALL} && echo PROUT "
+
 RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "pip install --no-deps ${EXTRA_PACKAGES_TO_INSTALL} && echo 'Running pip check' && pip check"
+
+
+
+#RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "IFS=', ' read -r -a extra_pkg_array <<< "${EXTRA_PACKAGES_TO_INSTALL}" && echo ${extra_pkg_array} && pip install --no-deps ${EXTRA_PACKAGES_TO_INSTALL[@]} && echo 'Running pip check' && pip check"
 
 # # In many clusters the container is ran as a random uid for security reasons.
 # # If we mark the conda directory as group 0 and give it group write permissions
