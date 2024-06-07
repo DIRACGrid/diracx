@@ -91,6 +91,12 @@ jobs:
           python -m build --outdir $PWD/dist .
           # And build the gubbins package
           for pkg_dir in $PWD/extensions/gubbins/gubbins-*; do
+            # Skip the testing package
+            if [[ "${pkg_dir}" =~ .*testing.* ]];
+            then
+              echo "Do not build ${pkg_dir}";
+              continue;
+            fi
             echo "Building $pkg_dir"
             python -m build --outdir $PWD/dist $pkg_dir
           done
@@ -132,7 +138,7 @@ jobs:
           outputs: type=docker,dest=/tmp/gubbins_services_image.tar
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
-            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins*.whl
+            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins-*.whl
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
