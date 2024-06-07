@@ -15,7 +15,7 @@ defaults:
     shell: bash -el {0}
 
 jobs:
-  pytest:
+  unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
@@ -26,7 +26,6 @@ jobs:
             dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./diracx-db ./diracx-core"
           - package: "./extensions/gubbins/gubbins-routers"
             dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./diracx-testing ./diracx-db ./diracx-core ./diracx-routers"
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,3 +56,166 @@ jobs:
           pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
         uses: codecov/codecov-action@v4.1.1
+
+
+  build-wheels:
+    name: Build wheels
+    runs-on: "ubuntu-latest"
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    defaults:
+      run:
+        # We need extglob for REFERENCE_BRANCH substitution
+        shell: bash -l -O extglob {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Installing dependencies
+        run: |
+          python -m pip install \
+              build \
+              python-dateutil \
+              pytz \
+              readme_renderer[md] \
+              requests \
+              setuptools_scm
+      - name: Build distributions
+        run: |
+          for pkg_dir in $PWD/diracx-*; do
+            echo "Building $pkg_dir"
+            python -m build --outdir $PWD/dist $pkg_dir
+          done
+          # Also build the diracx metapackage
+          python -m build --outdir $PWD/dist .
+          # And build the gubbins package
+          for pkg_dir in $PWD/extensions/gubbins/gubbins-*; do
+            echo "Building $pkg_dir"
+            python -m build --outdir $PWD/dist $pkg_dir
+          done
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gubbins-whl
+          path: dist/*.whl
+          retention-days: 5
+
+  # Build to docker image with the code in it
+  build-image:
+    needs: build-wheels
+    timeout-minutes:  30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Download gubbins wheels
+        uses: actions/download-artifact@v4
+        with:
+            name: gubbins-whl
+      - name: "Find wheels"
+        id: find_wheel
+        run: |
+          # We need to copy them there to be able to access them in the RUN --mount
+          cp diracx*.whl gubbins*.whl extensions/containers/services/
+          for wheel_fn in *.whl; do
+            pkg_name=$(basename "${wheel_fn}" | cut -d '-' -f 1)
+            echo "${pkg_name}-wheel-name=$(ls "${pkg_name}"-*.whl)" >> $GITHUB_OUTPUT
+          done
+      - name: Build and export
+        uses: docker/build-push-action@v5
+        with:
+          context: extensions/containers/services
+          tags: gubbins/services:dev
+          outputs: type=docker,dest=/tmp/gubbins_services_image.tar
+          build-args: |
+            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gubbins-services-img
+          path: /tmp/gubbins_services_image.tar
+
+
+  pytest-integration:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download gubbins-image
+        uses: actions/download-artifact@v4
+        with:
+          name: gubbins-services-img
+          path: /tmp
+      - name: Load image
+        run: |
+          docker load --input /tmp/gubbins_services_image.tar
+          docker image ls -a
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: bash
+          post-cleanup: 'all'
+      - name: Set up environment
+        run: |
+          pip install pytest-github-actions-annotate-failures
+          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
+          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ ./diracx-client/ ./diracx-routers/ ./diracx-db/ ./diracx-testing/  ./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-routers
+      - name: Start demo
+        run: |
+          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --set-value global.services="gubbins/services:dev" $PWD
+      - name: Debugging information
+        run: |
+          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
+          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
+          export PATH=${DIRACX_DEMO_DIR}:$PATH
+          kubectl get pods
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+            echo "${pod_name}"
+            kubectl describe pod/"${pod_name}" || true
+            for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
+              echo $pod_name $container_name
+              kubectl logs "${pod_name}" -c "${container_name}" || true
+            done
+          done
+          if [ ! -f "${DIRACX_DEMO_DIR}/.success" ]; then
+            cat "${DIRACX_DEMO_DIR}/.failed"
+            exit 1
+          fi
+      - name: Run pytest
+        run: |
+          cd extensions/gubbins
+          pytest --demo-dir=../../../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+      - name: Collect demo coverage
+        run: |
+          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
+          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
+          export PATH=${DIRACX_DEMO_DIR}:$PATH
+          # Shutdown the pods so we collect coverage data
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+            kubectl delete pod/"${pod_name}"
+          done
+          # Combine the coverage data from the demo and make an XML report
+          coverage_data=$(mktemp)
+          sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
+          coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
+
+          # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
+          fake_module=$(mktemp -d)
+          mkdir -p "${fake_module}/src/diracx"
+          for fn in "${PWD}"/*/src/diracx/*; do
+            ln -sf "${fn}" "${fake_module}/src/diracx/$(basename "${fn}")"
+          done
+          sed -i "s@source =@source =\n    ${fake_module}/src@g" .coveragerc
+          cat .coveragerc
+
+          coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4.4.1
+        with:
+          files: ./coverage-pytest.xml,./coverage-demo.xml

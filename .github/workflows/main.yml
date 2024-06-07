@@ -14,7 +14,7 @@ defaults:
     shell: bash -el {0}
 
 jobs:
-  pytest:
+  unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:

@@ -11,7 +11,6 @@ The structure of the repo, the content of the ``pyproject.toml`` files, the ``__
 
 Extensions are enabled via the ``DIRACX_EXTENSIONS`` environment variable. It should be set to ``gubbins,diracx``
 
-
 ## QUESTIONS
 
 What to do with the `environment.yaml` ? should we replicate wht's in diracx ?
@@ -19,7 +18,9 @@ What to do with the `environment.yaml` ? should we replicate wht's in diracx ?
 
 ## CI
 
-What is under ``.github/workflows/extensions.yaml`` should in fact be under ``.github/workflows/`` of your repo
+What is under ``.github/workflows/extensions.yaml`` should in fact be split in multiple jobs under ``.github/workflows/`` of your repo
+
+Here we make sure to use the local versions of ``diracx`` packages to make sure we are always up to date, and that a change in ``diracx`` does not break the extension mechanisms. But in your real extension, you will want to depend on published package (i.e. ``pip install diracx-routers`` instead of ``pip install -e ./diracx-routers`` for example), and on published docker images
 
 ## Installing the extension
 
