@@ -17,9 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 T = TypeVar("T")
 
-
-class SqlalchemyDsn(AnyUrl):
-    allowed_schemes = {"sqlite+aiosqlite", "mysql+aiomysql"}
+SqlalchemyDsn = Annotated[AnyUrl, UrlConstraints(schemes={"sqlite+aiosqlite", "mysql+aiomysql"})]
 
 
 class _TokenSigningKey(SecretStr):
