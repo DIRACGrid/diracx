@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 import git
 import typer
 import yaml
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from diracx.core.config import ConfigSource, ConfigSourceUrl
 from diracx.core.config.schema import (
@@ -25,13 +25,11 @@ app.add_typer(legacy.app, name="legacy")
 
 
 @app.command()
-def generate_cs(
-    config_repo: str,
-):
+def generate_cs(config_repo: str):
     """Generate a minimal DiracX configuration repository"""
-    # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
-    if config_repo.scheme != "git+file":
+    # TODO: The use of TypeAdapter should be moved in to typer itself
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
         raise NotImplementedError("Only git+file:// URLs are supported")
     repo_path = Path(config_repo.path)
     if repo_path.exists() and list(repo_path.iterdir()):
@@ -62,8 +60,10 @@ def add_vo(
 ):
     """Add a registry entry (vo) to an existing configuration repository"""
 
-    # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
+    # TODO: The use of TypeAdapter should be moved in to typer itself
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
+        raise NotImplementedError("Only git+file:// URLs are supported")
     repo_path = Path(config_repo.path)
 
     # A VO should at least contain a default group
@@ -104,8 +104,10 @@ def add_group(
 ):
     """Add a group to an existing vo in the configuration repository"""
 
-    # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
+    # TODO: The use of TypeAdapter should be moved in to typer itself
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
+        raise NotImplementedError("Only git+file:// URLs are supported")
     repo_path = Path(config_repo.path)
 
     new_group = GroupConfig(Properties=set(properties), Quota=None, Users=set())
@@ -139,8 +141,10 @@ def add_user(
 ):
     """Add a user to an existing vo and group"""
 
-    # TODO: The use of parse_obj_as should be moved in to typer itself
-    config_repo = parse_obj_as(ConfigSourceUrl, config_repo)
+    # TODO: The use of TypeAdapter should be moved in to typer itself
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
+        raise NotImplementedError("Only git+file:// URLs are supported")
 
     repo_path = Path(config_repo.path)
 
@@ -184,6 +188,8 @@ def update_config_and_commit(repo_path: Path, config: Config, message: str):
     repo = git.Repo(repo_path)
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
-    yaml_path.write_text(yaml.safe_dump(config.dict(exclude_unset=True)))
+    yaml_path.write_text(
+        yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))
+    )
     repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit(message)

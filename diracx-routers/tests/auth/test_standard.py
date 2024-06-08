@@ -798,7 +798,7 @@ def _get_and_check_token_response(test_client, request_data):
 )
 def test_parse_scopes(vos, groups, scope, expected):
     # TODO: Extend test for extra properties
-    config = Config.parse_obj(
+    config = Config.model_validate(
         {
             "DIRAC": {},
             "Registry": {
@@ -851,7 +851,7 @@ def test_parse_scopes(vos, groups, scope, expected):
 )
 def test_parse_scopes_invalid(vos, groups, scope, expected_error):
     # TODO: Extend test for extra properties
-    config = Config.parse_obj(
+    config = Config.model_validate(
         {
             "DIRAC": {},
             "Registry": {

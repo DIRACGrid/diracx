@@ -52,20 +52,20 @@ Registry:
     DefaultGroup: jenkins_user
     Groups:
       jenkins_fcadmin:
-        Properties: !!set
-          FileCatalogManagement: null
-          NormalUser: null
-        Users: !!set
-          26dbe36e-cf5c-4c52-a834-29a1c904ef74: null
-          a95ab678-3fa4-41b9-b863-fe62ce8064ce: null
-          e2cb28ec-1a1e-40ee-a56d-d899b79879ce: null
+        Properties:
+        - FileCatalogManagement
+        - NormalUser
+        Users:
+        - 26dbe36e-cf5c-4c52-a834-29a1c904ef74
+        - a95ab678-3fa4-41b9-b863-fe62ce8064ce
+        - e2cb28ec-1a1e-40ee-a56d-d899b79879ce
       jenkins_user:
-        Properties: !!set
-          NormalUser: null
-        Users: !!set
-          26dbe36e-cf5c-4c52-a834-29a1c904ef74: null
-          a95ab678-3fa4-41b9-b863-fe62ce8064ce: null
-          e2cb28ec-1a1e-40ee-a56d-d899b79879ce: null
+        Properties:
+        - NormalUser
+        Users:
+        - 26dbe36e-cf5c-4c52-a834-29a1c904ef74
+        - a95ab678-3fa4-41b9-b863-fe62ce8064ce
+        - e2cb28ec-1a1e-40ee-a56d-d899b79879ce
     IdP:
       ClientID: 995ed3b9-d5bd-49d3-a7f4-7fc7dbd5a0cd
       URL: https://jenkins.invalid/
@@ -94,23 +94,23 @@ Registry:
     DefaultGroup: dirac_user
     Groups:
       dirac_admin:
-        Properties: !!set
-          AlarmsManagement: null
-          CSAdministrator: null
-          FullDelegation: null
-          JobAdministrator: null
-          Operator: null
-          ProxyManagement: null
-          ServiceAdministrator: null
-        Users: !!set
-          26b14fc9-6d40-4ca5-b014-6234eaf0fb6e: null
+        Properties:
+        - AlarmsManagement
+        - CSAdministrator
+        - FullDelegation
+        - JobAdministrator
+        - Operator
+        - ProxyManagement
+        - ServiceAdministrator
+        Users:
+        - 26b14fc9-6d40-4ca5-b014-6234eaf0fb6e
       dirac_user:
-        Properties: !!set
-          NormalUser: null
-        Users: !!set
-          26b14fc9-6d40-4ca5-b014-6234eaf0fb6e: null
-          d3adc733-6588-4d6f-8581-5986b02d0c87: null
-          ff2152ff-34f4-4739-b106-3def37e291e3: null
+        Properties:
+        - NormalUser
+        Users:
+        - 26b14fc9-6d40-4ca5-b014-6234eaf0fb6e
+        - d3adc733-6588-4d6f-8581-5986b02d0c87
+        - ff2152ff-34f4-4739-b106-3def37e291e3
     IdP:
       ClientID: 072afab5-ed92-46e0-a61d-4ecbc96e0770
       URL: https://vo.invalid/

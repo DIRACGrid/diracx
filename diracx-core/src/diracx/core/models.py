@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import TypedDict
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 
 class ScalarSearchOperator(StrEnum):
@@ -51,7 +51,7 @@ class TokenResponse(BaseModel):
     access_token: str
     expires_in: int
     token_type: str = "Bearer"
-    refresh_token: str | None
+    refresh_token: str | None = None
 
 
 class JobStatus(StrEnum):
@@ -96,13 +96,13 @@ class JobStatusReturn(LimitedJobStatusReturn):
 
 
 class SetJobStatusReturn(BaseModel):
-    Status: JobStatus | None
-    MinorStatus: str | None
-    ApplicationStatus: str | None
-    HeartBeatTime: datetime | None
-    StartExecTime: datetime | None
-    EndExecTime: datetime | None
-    LastUpdateTime: datetime | None
+    Status: JobStatus | None = None
+    MinorStatus: str | None = None
+    ApplicationStatus: str | None = None
+    HeartBeatTime: datetime | None = None
+    StartExecTime: datetime | None = None
+    EndExecTime: datetime | None = None
+    LastUpdateTime: datetime | None = None
 
 
 class UserInfo(BaseModel):

@@ -4,18 +4,16 @@ These endpoints are used to manage the user's authentication tokens and
 to get information about the user's identity.
 """
 
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any
 
 from fastapi import (
     Depends,
     HTTPException,
     status,
 )
+from typing_extensions import TypedDict
 
-from diracx.core.properties import (
-    PROXY_MANAGEMENT,
-    SecurityProperty,
-)
+from diracx.core.properties import PROXY_MANAGEMENT, SecurityProperty
 
 from ..dependencies import (
     AuthDB,

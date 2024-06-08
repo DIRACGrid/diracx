@@ -41,7 +41,7 @@ async def set_job_status(
     # transform JobStateUpdate objects into dicts
     statusDict = {}
     for key, value in status.items():
-        statusDict[key] = {k: v for k, v in value.dict().items() if v is not None}
+        statusDict[key] = {k: v for k, v in value.model_dump().items() if v is not None}
 
     _, res = await job_db.search(
         parameters=["Status", "StartExecTime", "EndExecTime"],

@@ -14,6 +14,24 @@ T = TypeVar("T")
 # methods name should follow the generate_unique_id_function pattern
 
 
+def _downgrade_openapi_schema(data):
+    """Modify an openapi schema in-place to be compatible with AutoRest"""
+    if isinstance(data, dict):
+        for k, v in list(data.items()):
+            if k == "anyOf":
+                if {"type": "null"} in v:
+                    v.pop(v.index({"type": "null"}))
+                    data["nullable"] = True
+                    if len(v) == 1:
+                        data |= v[0]
+            elif k == "const":
+                data.pop(k)
+            _downgrade_openapi_schema(v)
+    if isinstance(data, list):
+        for v in data:
+            _downgrade_openapi_schema(v)
+
+
 class DiracFastAPI(FastAPI):
     def __init__(self):
         @contextlib.asynccontextmanager
@@ -46,10 +64,11 @@ class DiracFastAPI(FastAPI):
     def openapi(self, *args, **kwargs):
         if not self.openapi_schema:
             super().openapi(*args, **kwargs)
+            _downgrade_openapi_schema(self.openapi_schema)
+            # Remove 422 responses as we don't want autorest to use it
             for _, method_item in self.openapi_schema.get("paths").items():
                 for _, param in method_item.items():
                     responses = param.get("responses")
-                    # remove 422 response, also can remove other status code
                     if "422" in responses:
                         del responses["422"]
 

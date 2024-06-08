@@ -19,12 +19,15 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from pydantic_settings import SettingsConfigDict
 
 from diracx.core.settings import ServiceSettingsBase
 
 
-class OTELSettings(ServiceSettingsBase, env_prefix="DIRACX_OTEL_"):
+class OTELSettings(ServiceSettingsBase):
     """Settings for the Open Telemetry Configuration."""
+
+    model_config = SettingsConfigDict(env_prefix="DIRACX_OTEL_")
 
     enabled: bool = False
     application_name: str = "diracx"

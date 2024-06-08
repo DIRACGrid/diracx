@@ -26,13 +26,16 @@ def test_get_pfn(sandbox_metadata_db: SandboxMetadataDB):
         sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
     )
     sandbox_info = SandboxInfo(
-        checksum="checksum",
+        checksum="90e0ba6763c91a905bb9fd6e025aac1952ae742e6d756a31a0963aa7df7cd7b1",
         checksum_algorithm="sha256",
         format="tar.bz2",
         size=100,
     )
     pfn = sandbox_metadata_db.get_pfn("bucket1", user_info, sandbox_info)
-    assert pfn == "/S3/bucket1/vo/group1/user1/sha256:checksum.tar.bz2"
+    assert pfn == (
+        "/S3/bucket1/vo/group1/user1/"
+        "sha256:90e0ba6763c91a905bb9fd6e025aac1952ae742e6d756a31a0963aa7df7cd7b1.tar.bz2"
+    )
 
 
 async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):

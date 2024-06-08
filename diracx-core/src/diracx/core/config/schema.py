@@ -2,16 +2,27 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Annotated, Any, Optional, TypeVar
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field, PrivateAttr, root_validator
+from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator
+from pydantic.functional_serializers import PlainSerializer
 
 from ..properties import SecurityProperty
 
+# By default the serialization of set doesn't have a well defined ordering so
+# we have to use a custom type to make sure the values are always sorted.
+T = TypeVar("T")
+SerializableSet = Annotated[
+    set[T], PlainSerializer(sorted, return_type=list[T], when_used="json-unless-none")
+]
 
-class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
-    @root_validator(pre=True)
+
+class BaseModel(_BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    @model_validator(mode="before")
+    @classmethod
     def legacy_adaptor(cls, v):
         """Applies transformations to interpret the legacy DIRAC CFG format"""
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
@@ -22,10 +33,12 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
         # though ideally we should parse the type hints properly.
         for field, hint in cls.__annotations__.items():
             # Convert comma separated lists to actual lists
+            if hint.startswith("set"):
+                raise NotImplementedError("Use SerializableSet instead!")
             if hint in {
                 "list[str]",
-                "set[str]",
-                "set[SecurityProperty]",
+                "SerializableSet[str]",
+                "SerializableSet[SecurityProperty]",
             } and isinstance(v.get(field), str):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
             # If the field is optional and the value is "None" convert it to None
@@ -38,7 +51,7 @@ class BaseModel(_BaseModel, extra="forbid", allow_mutation=False):
 class UserConfig(BaseModel):
     PreferedUsername: str
     DNs: list[str] = []
-    Email: EmailStr | None
+    Email: EmailStr | None = None
     Suspended: list[str] = []
     Quota: int | None = None
     # TODO: These should be LHCbDIRAC specific
@@ -51,11 +64,11 @@ class GroupConfig(BaseModel):
     AutoUploadPilotProxy: bool = False
     AutoUploadProxy: bool = False
     JobShare: int = 1000
-    Properties: set[SecurityProperty]
-    Quota: Optional[int]
-    Users: set[str]
+    Properties: SerializableSet[SecurityProperty]
+    Quota: Optional[int] = None
+    Users: SerializableSet[str]
     AllowBackgroundTQs: bool = False
-    VOMSRole: Optional[str]
+    VOMSRole: Optional[str] = None
     AutoSyncVOMS: bool = False
 
 
@@ -110,7 +123,7 @@ class JobSchedulingConfig(BaseModel):
 
 
 class ServicesConfig(BaseModel):
-    Catalogs: dict[str, Any] | None
+    Catalogs: dict[str, Any] | None = None
     JobMonitoring: JobMonitoringConfig = JobMonitoringConfig()
     JobScheduling: JobSchedulingConfig = JobSchedulingConfig()
 
@@ -152,12 +165,12 @@ class Config(BaseModel):
     # TODO: Should this be split by vo rather than setup?
     Operations: dict[str, OperationsConfig]
 
-    LocalSite: Any
-    LogLevel: Any
-    MCTestingDestination: Any
-    Resources: Any
-    Systems: Any
-    WebApp: Any
+    LocalSite: Any = None
+    LogLevel: Any = None
+    MCTestingDestination: Any = None
+    Resources: Any = None
+    Systems: Any = None
+    WebApp: Any = None
 
     # These 2 parameters are used for client side caching
     # see the "/config/" route for details

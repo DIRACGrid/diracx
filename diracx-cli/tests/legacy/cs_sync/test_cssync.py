@@ -31,7 +31,7 @@ def test_cs_sync(tmp_path, monkeypatch):
     actual_output = yaml.safe_load(output_file.read_text())
     expected_output = yaml.safe_load((file_path / "integration_test.yaml").read_text())
     assert actual_output == expected_output
-    Config.parse_obj(actual_output)
+    Config.model_validate(actual_output)
 
 
 def test_disabled_vos_empty(tmp_path, monkeypatch):

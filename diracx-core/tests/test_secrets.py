@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from diracx.core.settings import TokenSigningKey
 
@@ -26,17 +26,18 @@ def test_token_signing_key(tmp_path):
     key_file = tmp_path / "private_key.pem"
     key_file.write_text(private_key_pem)
 
+    adapter = TypeAdapter(TokenSigningKey)
+
     # Test that we can load a key from a file
     compare_keys(
-        parse_obj_as(TokenSigningKey, f"{key_file}").jwk.get_private_key(), private_key
+        adapter.validate_python(f"{key_file}").jwk.get_private_key(), private_key
     )
     compare_keys(
-        parse_obj_as(TokenSigningKey, f"file://{key_file}").jwk.get_private_key(),
+        adapter.validate_python(f"file://{key_file}").jwk.get_private_key(),
         private_key,
     )
 
     # Test with can load the PEM data directly
     compare_keys(
-        parse_obj_as(TokenSigningKey, private_key_pem).jwk.get_private_key(),
-        private_key,
+        adapter.validate_python(private_key_pem).jwk.get_private_key(), private_key
     )

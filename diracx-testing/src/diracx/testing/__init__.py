@@ -378,7 +378,7 @@ def with_config_repo(tmp_path_factory):
 
     repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
-    example_cs = Config.parse_obj(
+    example_cs = Config.model_validate(
         {
             "DIRAC": {},
             "Registry": {
@@ -418,7 +418,7 @@ def with_config_repo(tmp_path_factory):
             "Operations": {"Defaults": {}},
         }
     )
-    cs_file.write_text(example_cs.json())
+    cs_file.write_text(example_cs.model_dump_json())
     repo.index.add([cs_file])  # add it to the index
     repo.index.commit("Added a new file")
     yield tmp_path
