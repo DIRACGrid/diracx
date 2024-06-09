@@ -36,7 +36,9 @@ class MockOSDBMixin:
 
         from diracx.db.sql.utils import DateNowColumn
 
-        self._sql_db = sql_utils.BaseSQLDB(connection_kwargs["sqlalchemy_dsn"])
+        # Dynamically create a subclass of BaseSQLDB so we get clearer errors
+        MockedDB = type(f"Mocked{self.__class__.__name__}", (sql_utils.BaseSQLDB,), {})
+        self._sql_db = MockedDB(connection_kwargs["sqlalchemy_dsn"])
 
         # Dynamically create the table definition based on the fields
         columns = [
