@@ -243,10 +243,11 @@ class ClientFactory:
         # already been ran
         self.app.lifetime_functions.append(self.create_db_schemas)
 
-        yield
-
-        self.app.dependency_overrides = {}
-        self.app.lifetime_functions = []
+        try:
+            yield
+        finally:
+            self.app.dependency_overrides = {}
+            self.app.lifetime_functions = []
 
     @contextlib.asynccontextmanager
     async def create_db_schemas(self):

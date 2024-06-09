@@ -208,10 +208,11 @@ class BaseSQLDB(metaclass=ABCMeta):
         engine = create_async_engine(self._db_url, pool_recycle=60 * 30)
         self._engine = engine
 
-        yield
-
-        self._engine = None
-        await engine.dispose()
+        try:
+            yield
+        finally:
+            self._engine = None
+            await engine.dispose()
 
     @property
     def conn(self) -> AsyncConnection:
