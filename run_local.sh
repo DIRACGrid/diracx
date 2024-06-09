@@ -27,11 +27,14 @@ dirac internal add-user "${tmp_dir}/cs_store/initialRepo" \
   --preferred-username=localuser
 
 export DIRACX_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
-export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///:memory:"
+export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///${tmp_dir}/authdb.db"
+export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///${tmp_dir}/jobdb.db"
+export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///${tmp_dir}/jobloggingdb.db"
+export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///${tmp_dir}/sandboxmetadatadb.db"
+export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///${tmp_dir}/taskqueuedb.db"
+# This script monkey patches the parameter db to use a sqlite database rather
+# than requiring a full opensearch instance so we use a sqlalchmey dsn here
+export DIRACX_OS_DB_JOBPARAMETERSDB='{"sqlalchemy_dsn": "sqlite+aiosqlite:///'${tmp_dir}'/jobparametersdb.db"}'
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
 export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
 export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
@@ -41,7 +44,7 @@ export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost
 
 moto_server -p3000 &
 moto_pid=$!
-uvicorn --factory diracx.routers:create_app --reload &
+uvicorn --factory diracx.testing.routers:create_app --reload &
 diracx_pid=$!
 
 success=0

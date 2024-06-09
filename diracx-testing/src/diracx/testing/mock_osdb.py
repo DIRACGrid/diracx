@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+__all__ = (
+    "MockOSDBMixin",
+    "fake_available_osdb_implementations",
+)
+
 import contextlib
 from datetime import datetime, timezone
 from functools import partial
@@ -146,3 +151,13 @@ class MockOSDBMixin:
 
     async def ping(self):
         return await self._sql_db.ping()
+
+
+def fake_available_osdb_implementations(name, *, real_available_implementations):
+    implementations = real_available_implementations(name)
+
+    # Dynamically generate a class that inherits from the first implementation
+    # but that also has the MockOSDBMixin
+    MockParameterDB = type(name, (MockOSDBMixin, implementations[0]), {})
+
+    return [MockParameterDB] + implementations

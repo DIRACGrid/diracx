@@ -142,18 +142,6 @@ class UnavailableDependency:
         )
 
 
-def fake_available_implementations(name, *, real_available_implementations):
-    from diracx.testing.mock_osdb import MockOSDBMixin
-
-    implementations = real_available_implementations(name)
-
-    # Dynamically generate a class that inherits from the first implementation
-    # but that also has the MockOSDBMixin
-    MockParameterDB = type(name, (MockOSDBMixin, implementations[0]), {})
-
-    return [MockParameterDB] + implementations
-
-
 class ClientFactory:
 
     def __init__(
@@ -200,7 +188,7 @@ class ClientFactory:
             for e in select_from_extension(group="diracx.db.os")
         }
         BaseOSDB.available_implementations = partial(
-            fake_available_implementations,
+            fake_available_osdb_implementations,
             real_available_implementations=BaseOSDB.available_implementations,
         )
 
