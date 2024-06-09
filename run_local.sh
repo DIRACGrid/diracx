@@ -66,7 +66,7 @@ echo ""
 echo "1. Use the CLI:"
 echo ""
 echo "    export DIRACX_URL=http://localhost:8000"
-echo "    tests/make-token-local.py ${signing_key}"
+echo "    env DIRACX_SERVICE_AUTH_STATE_KEY='${state_key}' tests/make-token-local.py ${signing_key}"
 echo ""
 echo "2. Using swagger: http://localhost:8000/api/docs"
 
