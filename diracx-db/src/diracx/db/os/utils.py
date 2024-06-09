@@ -124,9 +124,7 @@ class BaseOSDB(metaclass=ABCMeta):
 
     async def __aexit__(self, exc_type, exc, tb):
         assert self._conn.get()
-        self._client = None
         self._conn.set(False)
-        return
 
     async def create_index_template(self) -> None:
         template_body = {
