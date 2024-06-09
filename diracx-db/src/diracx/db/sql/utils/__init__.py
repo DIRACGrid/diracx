@@ -288,7 +288,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             self._conn.set(await self.engine.connect().__aenter__())
         except Exception as e:
-            raise SQLDBUnavailable("Cannot connect to DB") from e
+            raise SQLDBUnavailable(
+                f"Cannot connect to {self.__class__.__name__}"
+            ) from e
 
         return self
 
