@@ -79,6 +79,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "SandboxMetadataDB",
         "WMSAccessPolicy",
         "DevelopmentSettings",
+        "JobParametersDB",
     ]
 )
 

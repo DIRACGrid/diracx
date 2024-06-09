@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, timedelta, timezone
+from functools import partial
 
 import pytest
 
 from diracx.core.exceptions import InvalidQueryError
+from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.osdb import DummyOSDB
 
 DOC1 = {
@@ -35,19 +38,83 @@ DOC3 = {
 }
 
 
-@pytest.fixture()
-async def prefilled_db(dummy_opensearch_db: DummyOSDB):
+@contextlib.asynccontextmanager
+async def resolve_fixtures_hack(request, name):
+    """Resolves a fixture from `diracx.testing.osdb`.
+
+    This is a hack to work around pytest-asyncio not supporting the use of
+    request.getfixturevalue() from within an async function.
+
+    See: https://github.com/pytest-dev/pytest-asyncio/issues/112
+    """
+    import inspect
+
+    import diracx.testing.osdb
+
+    # Track cleanup generators to ensure they are all exhausted
+    # i.e. we return control to the caller so cleanup can be performed
+    to_cleanup = []
+    # As we rely on recursion to resolve fixtures, we need to use an async
+    # context stack to ensure cleanup is performed in the correct order
+    async with contextlib.AsyncExitStack() as stack:
+        # If the given function name is available in diracx.testing.osdb, resolve
+        # it manually, else assume it's safe to use request.getfixturevalue()
+        if func := getattr(diracx.testing.osdb, name, None):
+            if not hasattr(func, "__wrapped__"):
+                raise NotImplementedError(f"resolve_fixtures({func=})")
+            func = func.__wrapped__
+            # Only resolve the arguments manually if the function is marked
+            # as an asyncio fixture
+            if getattr(func, "_force_asyncio_fixture", False):
+                args = [
+                    await stack.enter_async_context(
+                        resolve_fixtures_hack(request, arg_name)
+                    )
+                    for arg_name in inspect.signature(func).parameters
+                ]
+                result = func(*args)
+                if inspect.isawaitable(result):
+                    result = await result
+                elif inspect.isasyncgen(result):
+                    to_cleanup.append(partial(anext, result))
+                    result = await anext(result)
+            else:
+                result = request.getfixturevalue(name)
+        else:
+            result = request.getfixturevalue(name)
+
+        # Yield the resolved fixture result to the caller
+        try:
+            yield result
+        finally:
+            # Cleanup all resources in the correct order
+            for cleanup_func in reversed(to_cleanup):
+                try:
+                    await cleanup_func()
+                except StopAsyncIteration:
+                    pass
+                else:
+                    raise NotImplementedError(
+                        "Cleanup generator did not stop as expected"
+                    )
+
+
+@pytest.fixture(params=["dummy_opensearch_db", "sql_opensearch_db"])
+async def prefilled_db(request):
     """Fill the database with dummy records for testing."""
-    await dummy_opensearch_db.upsert(798811211, DOC1)
-    await dummy_opensearch_db.upsert(998811211, DOC2)
-    await dummy_opensearch_db.upsert(798811212, DOC3)
+    impl = request.param
+    async with resolve_fixtures_hack(request, impl) as dummy_opensearch_db:
+        await dummy_opensearch_db.upsert(798811211, DOC1)
+        await dummy_opensearch_db.upsert(998811211, DOC2)
+        await dummy_opensearch_db.upsert(798811212, DOC3)
 
-    # Force a refresh to make sure the documents are available
-    await dummy_opensearch_db.client.indices.refresh(
-        index=f"{dummy_opensearch_db.index_prefix}*"
-    )
+        # Force a refresh to make sure the documents are available
+        if not impl == "sql_opensearch_db":
+            await dummy_opensearch_db.client.indices.refresh(
+                index=f"{dummy_opensearch_db.index_prefix}*"
+            )
 
-    yield dummy_opensearch_db
+        yield dummy_opensearch_db
 
 
 async def test_specified_parameters(prefilled_db: DummyOSDB):
@@ -290,13 +357,15 @@ async def test_operators_keyword(prefilled_db: DummyOSDB):
         DOC3["IntField"],
     }
 
-    with pytest.raises(InvalidQueryError):
-        query = part | {"operator": "lt", "value": "a"}
-        await prefilled_db.search(["IntField"], [query], [])
+    # The MockOSDBMixin doesn't validate if types are indexed correctly
+    if not isinstance(prefilled_db, MockOSDBMixin):
+        with pytest.raises(InvalidQueryError):
+            query = part | {"operator": "lt", "value": "a"}
+            await prefilled_db.search(["IntField"], [query], [])
 
-    with pytest.raises(InvalidQueryError):
-        query = part | {"operator": "gt", "value": "a"}
-        await prefilled_db.search(["IntField"], [query], [])
+        with pytest.raises(InvalidQueryError):
+            query = part | {"operator": "gt", "value": "a"}
+            await prefilled_db.search(["IntField"], [query], [])
 
 
 async def test_unknown_operator(prefilled_db: DummyOSDB):
@@ -309,7 +378,9 @@ async def test_unknown_operator(prefilled_db: DummyOSDB):
 async def test_unindexed_field(prefilled_db: DummyOSDB):
     with pytest.raises(InvalidQueryError):
         await prefilled_db.search(
-            None, [{"parameter": "UnknownField", "eq": "eq", "value": "foobar"}], []
+            None,
+            [{"parameter": "UnknownField", "operator": "eq", "value": "foobar"}],
+            [],
         )
 
 
@@ -347,10 +418,12 @@ async def test_sort_keyword(prefilled_db: DummyOSDB):
 
 
 async def test_sort_text(prefilled_db: DummyOSDB):
-    with pytest.raises(InvalidQueryError):
-        await prefilled_db.search(
-            None, [], [{"parameter": "TextField", "direction": "asc"}]
-        )
+    # The MockOSDBMixin doesn't validate if types are indexed correctly
+    if not isinstance(prefilled_db, MockOSDBMixin):
+        with pytest.raises(InvalidQueryError):
+            await prefilled_db.search(
+                None, [], [{"parameter": "TextField", "direction": "asc"}]
+            )
 
 
 async def test_sort_unknown(prefilled_db: DummyOSDB):

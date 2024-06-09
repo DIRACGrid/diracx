@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -141,6 +142,18 @@ class UnavailableDependency:
         )
 
 
+def fake_available_implementations(name, *, real_available_implementations):
+    from diracx.testing.mock_osdb import MockOSDBMixin
+
+    implementations = real_available_implementations(name)
+
+    # Dynamically generate a class that inherits from the first implementation
+    # but that also has the MockOSDBMixin
+    MockParameterDB = type(name, (MockOSDBMixin, implementations[0]), {})
+
+    return [MockParameterDB] + implementations
+
+
 class ClientFactory:
 
     def __init__(
@@ -154,9 +167,12 @@ class ClientFactory:
         from diracx.core.config import ConfigSource
         from diracx.core.extensions import select_from_extension
         from diracx.core.settings import ServiceSettingsBase
+        from diracx.db.os.utils import BaseOSDB
         from diracx.db.sql.utils import BaseSQLDB
         from diracx.routers import create_app_inner
         from diracx.routers.access_policies import BaseAccessPolicy
+
+        from .mock_osdb import fake_available_osdb_implementations
 
         class AlwaysAllowAccessPolicy(BaseAccessPolicy):
             """Dummy access policy."""
@@ -177,6 +193,17 @@ class ClientFactory:
             e.name: "sqlite+aiosqlite:///:memory:"
             for e in select_from_extension(group="diracx.db.sql")
         }
+        # TODO: Monkeypatch this in a less stupid way
+        # TODO: Only use this if opensearch isn't available
+        os_database_conn_kwargs = {
+            e.name: {"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
+            for e in select_from_extension(group="diracx.db.os")
+        }
+        BaseOSDB.available_implementations = partial(
+            fake_available_implementations,
+            real_available_implementations=BaseOSDB.available_implementations,
+        )
+
         self._cache_dir = tmp_path_factory.mktemp("empty-dbs")
 
         self.test_auth_settings = test_auth_settings
@@ -196,9 +223,7 @@ class ClientFactory:
                 test_dev_settings,
             ],
             database_urls=database_urls,
-            os_database_conn_kwargs={
-                # TODO: JobParametersDB
-            },
+            os_database_conn_kwargs=os_database_conn_kwargs,
             config_source=ConfigSource.create_from_url(
                 backend_url=f"git+file://{with_config_repo}"
             ),
@@ -210,14 +235,20 @@ class ClientFactory:
         for obj in self.all_dependency_overrides:
             assert issubclass(
                 obj.__self__,
-                (ServiceSettingsBase, BaseSQLDB, ConfigSource, BaseAccessPolicy),
+                (
+                    ServiceSettingsBase,
+                    BaseSQLDB,
+                    BaseOSDB,
+                    ConfigSource,
+                    BaseAccessPolicy,
+                ),
             ), obj
 
         self.all_lifetime_functions = self.app.lifetime_functions[:]
         self.app.lifetime_functions = []
         for obj in self.all_lifetime_functions:
             assert isinstance(
-                obj.__self__, (ServiceSettingsBase, BaseSQLDB, ConfigSource)
+                obj.__self__, (ServiceSettingsBase, BaseSQLDB, BaseOSDB, ConfigSource)
             ), obj
 
     @contextlib.contextmanager
@@ -235,6 +266,7 @@ class ClientFactory:
                 self.app.dependency_overrides[k] = UnavailableDependency(class_name)
 
         for obj in self.all_lifetime_functions:
+            # TODO: We should use the name of the entry point instead of the class name
             if obj.__self__.__class__.__name__ in enabled_dependencies:
                 self.app.lifetime_functions.append(obj)
 
