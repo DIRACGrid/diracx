@@ -143,9 +143,11 @@ class SandboxMetadataDB(BaseSQLDB):
         """Delete mapping between jobs and sandboxes"""
         for job_id in jobs_ids:
             entity_id = self.jobid_to_entity_id(job_id)
-            sb_sel_stmt = sqlalchemy.select(
-                sb_SandBoxes.SBId,
-            ).where(sb_EntityMapping.EntityId == entity_id)
+            sb_sel_stmt = sqlalchemy.select(sb_SandBoxes.SBId)
+            sb_sel_stmt = sb_sel_stmt.join(
+                sb_EntityMapping, sb_EntityMapping.SBId == sb_SandBoxes.SBId
+            )
+            sb_sel_stmt = sb_sel_stmt.where(sb_EntityMapping.EntityId == entity_id)
 
             result = await self.conn.execute(sb_sel_stmt)
             sb_ids = [row.SBId for row in result]
