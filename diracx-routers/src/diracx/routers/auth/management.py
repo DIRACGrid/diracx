@@ -41,7 +41,8 @@ async def get_refresh_tokens(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> list:
     """Get all refresh tokens for the user. If the user has the `proxy_management` property, then
-    the subject is not used to filter the refresh tokens."""
+    the subject is not used to filter the refresh tokens.
+    """
     subject: str | None = user_info.sub
     if PROXY_MANAGEMENT in user_info.properties:
         subject = None
@@ -56,7 +57,8 @@ async def revoke_refresh_token(
     jti: str,
 ) -> str:
     """Revoke a refresh token. If the user has the `proxy_management` property, then
-    the subject is not used to filter the refresh tokens."""
+    the subject is not used to filter the refresh tokens.
+    """
     res = await auth_db.get_refresh_token(jti)
     if not res:
         raise HTTPException(

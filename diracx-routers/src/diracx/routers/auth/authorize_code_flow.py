@@ -1,6 +1,5 @@
 """Authorization code flow.
 
-
 Client Application                   DIRAC Auth Service                IAM (Identity Access Management)
 ------------------                   ------------------                --------------------------------
        |                                     |                                         |
@@ -75,8 +74,7 @@ async def authorization_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ):
-    """
-    Initiate the authorization flow.
+    """Initiate the authorization flow.
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 

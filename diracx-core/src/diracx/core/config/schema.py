@@ -24,7 +24,7 @@ class BaseModel(_BaseModel):
     @model_validator(mode="before")
     @classmethod
     def legacy_adaptor(cls, v):
-        """Applies transformations to interpret the legacy DIRAC CFG format"""
+        """Apply transformations to interpret the legacy DIRAC CFG format."""
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
         # If we're running with DIRAC_COMPAT_ENABLE_CS_CONVERSION set we apply

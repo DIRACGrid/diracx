@@ -73,11 +73,58 @@ class SQLDBError(Exception):
 
 
 class SQLDBUnavailable(DBUnavailable, SQLDBError):
-    """Used whenever we encounter a problem with the B connection"""
+    """Used whenever we encounter a problem with the B connection."""
 
 
 class BaseSQLDB(metaclass=ABCMeta):
-    """This should be the base class of all the DiracX DBs"""
+    """This should be the base class of all the SQL DiracX DBs.
+
+    The details covered here should be handled automatically by the service and
+    task machinery of DiracX and this documentation exists for informational
+    purposes.
+
+    The available databases are discovered by calling `BaseSQLDB.available_urls`.
+    This method returns a mapping of database names to connection URLs. The
+    available databases are determined by the `diracx.dbs.sql` entrypoint in the
+    `pyproject.toml` file and the connection URLs are taken from the environment
+    variables of the form `DIRACX_DB_URL_<db-name>`.
+
+    If extensions to DiracX are being used, there can be multiple implementations
+    of the same database. To list the available implementations use
+    `BaseSQLDB.available_implementations(db_name)`. The first entry in this list
+    will be the preferred implementation and it can be initialized by calling
+    it's `__init__` function with a URL perviously obtained from
+    `BaseSQLDB.available_urls`.
+
+    To control the lifetime of the SQLAlchemy engine used for connecting to the
+    database, which includes the connection pool, the `BaseSQLDB.engine_context`
+    asynchronous context manager should be entered. When inside this context
+    manager, the engine can be accessed with `BaseSQLDB.engine`.
+
+    Upon entering, the DB class can then be used as an asynchronous context
+    manager to enter transactions. If an exception is raised the transaction is
+    rolled back automatically. If the inner context exits peacefully, the
+    transaction is committed automatically. When inside this context manager,
+    the DB connection can be accessed with `BaseSQLDB.conn`.
+
+    For example:
+
+    ```python
+    db_name = ...
+    url = BaseSQLDB.available_urls()[db_name]
+    MyDBClass = BaseSQLDB.available_implementations(db_name)[0]
+
+    db = MyDBClass(url)
+    async with db.engine_context:
+        async with db:
+            # Do something in the first transaction
+            # Commit will be called automatically
+
+        async with db:
+            # This transaction will be rolled back due to the exception
+            raise Exception(...)
+    ```
+    """
 
     # engine: AsyncEngine
     # TODO: Make metadata an abstract property
@@ -139,13 +186,10 @@ class BaseSQLDB(metaclass=ABCMeta):
     def engine(self) -> AsyncEngine:
         """The engine to use for database operations.
 
-        It is normally not necessary to use the engine directly,
-        unless you are doing something special, like writing a
-        test fixture that gives you a db.
-
+        It is normally not necessary to use the engine directly, unless you are
+        doing something special, like writing a test fixture that gives you a db.
 
         Requires that the engine_context has been entered.
-
         """
         assert self._engine is not None, "engine_context must be entered"
         return self._engine
@@ -153,8 +197,8 @@ class BaseSQLDB(metaclass=ABCMeta):
     @contextlib.asynccontextmanager
     async def engine_context(self) -> AsyncIterator[None]:
         """Context manage to manage the engine lifecycle.
-        This is called once at the application startup
-        (see ``lifetime_functions``)
+
+        This is called once at the application startup (see ``lifetime_functions``).
         """
         assert self._engine is None, "engine_context cannot be nested"
 
@@ -176,8 +220,8 @@ class BaseSQLDB(metaclass=ABCMeta):
         return cast(AsyncConnection, self._conn.get())
 
     async def __aenter__(self) -> Self:
-        """
-        Create a connection.
+        """Create a connection.
+
         This is called by the Dependency mechanism (see ``db_transaction``),
         It will create a new connection/transaction for each route call.
         """
@@ -190,10 +234,10 @@ class BaseSQLDB(metaclass=ABCMeta):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """
-        This is called when exciting a route.
+        """This is called when exciting a route.
+
         If there was no exception, the changes in the DB are committed.
-        Otherwise, they are rollbacked.
+        Otherwise, they are rolled back.
         """
         if exc_type is None:
             await self._conn.get().commit()
@@ -201,10 +245,10 @@ class BaseSQLDB(metaclass=ABCMeta):
         self._conn.set(None)
 
     async def ping(self):
-        """
-        Check whether the connection to the DB is still working.
-        We could enable the ``pre_ping`` in the engine, but this would
-        be ran at every query.
+        """Check whether the connection to the DB is still working.
+
+        We could enable the ``pre_ping`` in the engine, but this would be ran at
+        every query.
         """
         try:
             await self.conn.scalar(select(1))

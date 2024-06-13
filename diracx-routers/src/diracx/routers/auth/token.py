@@ -1,5 +1,4 @@
-""" Token endpoint implementation.
-"""
+"""Token endpoint implementation."""
 
 import base64
 import hashlib
@@ -115,7 +114,7 @@ async def token(
 async def get_oidc_token_info_from_device_flow(
     device_code: str | None, client_id: str, auth_db: AuthDB, settings: AuthSettings
 ):
-    """Get OIDC token information from the device flow DB and check few parameters before returning it"""
+    """Get OIDC token information from the device flow DB and check few parameters before returning it."""
     assert device_code is not None
     try:
         info = await auth_db.get_device_flow(
@@ -156,7 +155,7 @@ async def get_oidc_token_info_from_authorization_flow(
     auth_db: AuthDB,
     settings: AuthSettings,
 ):
-    """Get OIDC token information from the authorization flow DB and check few parameters before returning it"""
+    """Get OIDC token information from the authorization flow DB and check few parameters before returning it."""
     assert code is not None
     info = await auth_db.get_authorization_flow(
         code, settings.authorization_flow_expiration_seconds
@@ -207,7 +206,7 @@ async def get_oidc_token_info_from_authorization_flow(
 async def get_oidc_token_info_from_refresh_flow(
     refresh_token: str | None, auth_db: AuthDB, settings: AuthSettings
 ):
-    """Get OIDC token information from the refresh token DB and check few parameters before returning it"""
+    """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
     assert refresh_token is not None
 
     # Decode the refresh token to get the JWT ID
@@ -359,7 +358,7 @@ async def exchange_token(
     refresh_token_expire_minutes: int | None = None,
     legacy_exchange: bool = False,
 ) -> TokenResponse:
-    """Method called to exchange the OIDC token for a DIRAC generated access token"""
+    """Method called to exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     vo = parsed_scope["vo"]

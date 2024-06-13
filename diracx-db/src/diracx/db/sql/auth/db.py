@@ -35,7 +35,7 @@ class AuthDB(BaseSQLDB):
     async def device_flow_validate_user_code(
         self, user_code: str, max_validity: int
     ) -> str:
-        """Validate that the user_code can be used (Pending status, not expired)
+        """Validate that the user_code can be used (Pending status, not expired).
 
         Returns the scope field for the given user_code
 
@@ -51,9 +51,7 @@ class AuthDB(BaseSQLDB):
         return (await self.conn.execute(stmt)).scalar_one()
 
     async def get_device_flow(self, device_code: str, max_validity: int):
-        """
-        :raises: NoResultFound
-        """
+        """:raises: NoResultFound"""
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -94,9 +92,7 @@ class AuthDB(BaseSQLDB):
     async def device_flow_insert_id_token(
         self, user_code: str, id_token: dict[str, str], max_validity: int
     ) -> None:
-        """
-        :raises: AuthorizationError if no such code or status not pending
-        """
+        """:raises: AuthorizationError if no such code or status not pending"""
         stmt = update(DeviceFlows)
         stmt = stmt.where(
             DeviceFlows.user_code == user_code,
@@ -170,11 +166,9 @@ class AuthDB(BaseSQLDB):
     async def authorization_flow_insert_id_token(
         self, uuid: str, id_token: dict[str, str], max_validity: int
     ) -> tuple[str, str]:
+        """Returns code, redirect_uri
+        :raises: AuthorizationError if no such uuid or status not pending.
         """
-        returns code, redirect_uri
-        :raises: AuthorizationError if no such uuid or status not pending
-        """
-
         # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()
         hashed_code = hashlib.sha256(code.encode()).hexdigest()
@@ -232,8 +226,7 @@ class AuthDB(BaseSQLDB):
         preferred_username: str,
         scope: str,
     ) -> tuple[str, datetime]:
-        """
-        Insert a refresh token in the DB as well as user attributes
+        """Insert a refresh token in the DB as well as user attributes
         required to generate access tokens.
         """
         # Generate a JWT ID
@@ -257,9 +250,7 @@ class AuthDB(BaseSQLDB):
         return jti, row.creation_time
 
     async def get_refresh_token(self, jti: str) -> dict:
-        """
-        Get refresh token details bound to a given JWT ID
-        """
+        """Get refresh token details bound to a given JWT ID."""
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -275,7 +266,7 @@ class AuthDB(BaseSQLDB):
         return res
 
     async def get_user_refresh_tokens(self, subject: str | None = None) -> list[dict]:
-        """Get a list of refresh token details based on a subject ID (not revoked)"""
+        """Get a list of refresh token details based on a subject ID (not revoked)."""
         # Get a list of refresh tokens
         stmt = select(RefreshTokens).with_for_update()
 
@@ -295,7 +286,7 @@ class AuthDB(BaseSQLDB):
         return refresh_tokens
 
     async def revoke_refresh_token(self, jti: str):
-        """Revoke a token given by its JWT ID"""
+        """Revoke a token given by its JWT ID."""
         await self.conn.execute(
             update(RefreshTokens)
             .where(RefreshTokens.jti == jti)
@@ -303,7 +294,7 @@ class AuthDB(BaseSQLDB):
         )
 
     async def revoke_user_refresh_tokens(self, subject):
-        """Revoke all the refresh tokens belonging to a user (subject ID)"""
+        """Revoke all the refresh tokens belonging to a user (subject ID)."""
         await self.conn.execute(
             update(RefreshTokens)
             .where(RefreshTokens.sub == subject)

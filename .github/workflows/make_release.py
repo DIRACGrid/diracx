@@ -7,7 +7,7 @@ from packaging.version import Version
 
 
 def make_release(version, commit_hash, release_notes=""):
-    """Create a new GitHub release using the given data
+    """Create a new GitHub release using the given data.
 
     This function always makes a pre-release first to ensure the "latest" release never corresponds
     to one without artifacts uploaded. If the new version number is not a pre-release, as

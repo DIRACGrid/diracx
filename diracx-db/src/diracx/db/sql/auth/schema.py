@@ -15,12 +15,11 @@ Base = declarative_base()
 
 
 class FlowStatus(Enum):
-    """
-    The normal flow is
+    """The normal flow is
     PENDING -> READY -> DONE
     Pending is upon insertion
     Ready/Error is set in response to IdP
-    Done means the user has been issued the dirac token
+    Done means the user has been issued the dirac token.
     """
 
     # The flow is ongoing
@@ -64,9 +63,8 @@ class AuthorizationFlows(Base):
 
 
 class RefreshTokenStatus(Enum):
-    """
-    The normal flow is
-    CREATED -> REVOKED
+    """The normal flow is
+    CREATED -> REVOKED.
 
     Note1: There is no EXPIRED status as it can be calculated from a creation time
     Note2: As part of the refresh token rotation mechanism, the revoked token should be retained
@@ -82,7 +80,7 @@ class RefreshTokenStatus(Enum):
 
 class RefreshTokens(Base):
     """Store attributes bound to a refresh token, as well as specific user attributes
-    that might be then used to generate access tokens
+    that might be then used to generate access tokens.
     """
 
     __tablename__ = "RefreshTokens"

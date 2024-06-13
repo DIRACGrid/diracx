@@ -20,7 +20,7 @@ def test_client(client_factory):
 
 
 def test_regenerate_client(test_client, tmp_path):
-    """Regenerate the AutoREST client and run pre-commit checks on it
+    """Regenerate the AutoREST client and run pre-commit checks on it.
 
     This test is skipped by default, and can be enabled by passing
     --regenerate-client to pytest. It is intended to be run manually

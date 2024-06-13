@@ -46,7 +46,7 @@ The direct dependencies between the submodules are as follows:
 
 - Currently, and as long as `DIRAC` and `diracx` coexist, we employ a versioning format of v0.<major>.<patch>.
 - We only support using the same version across all `diracx-*` packages.
-- The client and server versions can vary, but the client version is always communicated to the server. Incompatibly old client versions may lead to request rejections, prompting a client update.
+- The client and server versions can vary, but the client version is always communicated to the server. Incompatibly old client versions may lead to request rejections, prompting a client update. (TODO: https://github.com/DIRACGrid/diracx/issues/258)
 
 ## Container Images
 
@@ -86,9 +86,13 @@ See this diagram for an example of how this looks in practice:
 ### Dependencies
 
 - There is a noted duplication between `setup.cfg` and `environment.yaml`.
-- The `diracx/base` image is built from a Dockerfile with `environment.yml`, primarily defining the Python version.
+- The `diracx/base` image is built from a Dockerfile with `environment.yml`, primarily defining the Python version and `dirac_environment.yaml` containing the DIRAC specific dependencies. The latter is there as a "temporary" thing.
 - The `diracx/services-base` and `diracx/tasks-base` images extend `diracx/base` with additional Dockerfiles and `environment.yml`, tailored to their specific needs.
 - The `diracx/services` and `diracx/tasks` images are further built upon their respective base images, adding necessary diracx packages through `pip install --no-dependencies`.
+
+### Entrypoint
+
+TODO: document the entry point
 
 ## Extensions
 

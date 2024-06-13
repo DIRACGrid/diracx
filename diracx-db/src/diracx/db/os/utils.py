@@ -29,6 +29,48 @@ class OpenSearchDBUnavailable(DBUnavailable, OpenSearchDBError):
 
 
 class BaseOSDB(metaclass=ABCMeta):
+    """This should be the base class of all the OpenSearch DiracX DBs.
+
+    The details covered here should be handled automatically by the service and
+    task machinery of DiracX and this documentation exists for informational
+    purposes.
+
+    The available OpenSearch databases are discovered by calling `BaseOSDB.available_urls`.
+    This method returns a dictionary of database names to connection parameters.
+    The available databases are determined by the `diracx.db.os` entrypoint in
+    the `pyproject.toml` file and the connection parameters are taken from the
+    environment variables prefixed with `DIRACX_OS_DB_{DB_NAME}`.
+
+    If extensions to DiracX are being used, there can be multiple implementations
+    of the same database. To list the available implementations use
+    `BaseOSDB.available_implementations(db_name)`. The first entry in this list
+    will be the preferred implementation and it can be initialized by calling
+    its `__init__` function with the connection parameters previously obtained
+    from `BaseOSDB.available_urls`.
+
+    To control the lifetime of the OpenSearch client, the `BaseOSDB.client_context`
+    asynchronous context manager should be entered. When inside this context
+    manager, the client can be accessed with `BaseOSDB.client`.
+
+    Upon entering, the DB class can then be used as an asynchronous context
+    manager to perform operations. Currently this context manager has no effect
+    however it must be used as it may be used in future. When inside this
+    context manager, the DB connection can be accessed with `BaseOSDB.client`.
+
+    For example:
+
+    ```python
+    db_name = ...
+    conn_params = BaseOSDB.available_urls()[db_name]
+    MyDBClass = BaseOSDB.available_implementations(db_name)[0]
+
+    db = MyDBClass(conn_params)
+    async with db.client_context:
+        async with db:
+            # Do something with the OpenSearch client
+    ```
+    """
+
     # TODO: Make metadata an abstract property
     fields: dict
     index_prefix: str
@@ -77,13 +119,15 @@ class BaseOSDB(metaclass=ABCMeta):
     @classmethod
     def session(cls) -> Self:
         """This is just a fake method such that the Dependency overwrite has
-        a hash to use"""
+        a hash to use.
+        """
         raise NotImplementedError("This should never be called")
 
     @property
     def client(self) -> AsyncOpenSearch:
         """Just a getter for _client, making sure we entered
-        the context manager"""
+        the context manager.
+        """
         if self._client is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return self._client
@@ -91,7 +135,7 @@ class BaseOSDB(metaclass=ABCMeta):
     @contextlib.asynccontextmanager
     async def client_context(self) -> AsyncIterator[None]:
         """Context manage to manage the client lifecycle.
-        This is called when starting fastapi
+        This is called when starting fastapi.
 
         """
         assert self._client is None, "client_context cannot be nested"
@@ -100,8 +144,7 @@ class BaseOSDB(metaclass=ABCMeta):
         self._client = None
 
     async def ping(self):
-        """
-        Check whether the connection to the DB is still working.
+        """Check whether the connection to the DB is still working.
         We could enable the ``pre_ping`` in the engine, but this would
         be ran at every query.
         """
@@ -113,7 +156,7 @@ class BaseOSDB(metaclass=ABCMeta):
     async def __aenter__(self):
         """This is entered on every request.
         At the moment it does nothing, however, we keep it here
-        in case we ever want to use OpenSearch equivalent of a transaction
+        in case we ever want to use OpenSearch equivalent of a transaction.
         """
         assert not self._conn.get(), "BaseOSDB context cannot be nested"
         assert self._client is not None, "client_context hasn't been entered"

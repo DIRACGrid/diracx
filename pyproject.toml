@@ -32,7 +32,6 @@ line-length = 120
 src = ["diracx-*/src", "diracx-*/tests"]
 exclude = ["diracx-client/src/diracx/client/"]
 
-
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errrors
@@ -40,19 +39,32 @@ select = [
     "B",   # flake8-bugbear
     "I",   # isort
     "PLE", # pylint errors
+    "D",   # pydocstyle
     # "UP",   # pyUpgrade
     "FLY", # flynt
     "DTZ", # flake8-datetimez
     "S",   # flake8-bandit
 ]
-
 ignore = [
     "B905",
     "B008",
     "B006",
     "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+    "D203",
+    "D213",
+    # TODO: Maybe enable these
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    # TODO: These should be re-enabled after fixing
+    "D205",
+    "D401",
+    "D404",
 ]
-
 
 [tool.ruff.lint.per-file-ignores]
 # Ignore Bandit security checks in the test directories

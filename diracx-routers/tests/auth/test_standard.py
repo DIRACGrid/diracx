@@ -70,7 +70,7 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
 
 
 async def fake_parse_id_token(raw_id_token: str, *args, **kwargs):
-    """Return a fake ID token as if it were returned by an external IdP"""
+    """Return a fake ID token as if it were returned by an external IdP."""
     id_tokens = {
         "user1": {
             "aud": "5c0541bf-85c8-4d7f-b1df-beaeea19ff5b",
@@ -417,12 +417,13 @@ async def test_flows_with_invalid_properties(test_client):
 
 async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
     """Test the refresh token rotation.
+
     - initiate a device code flow to get an initial refresh token
     - use the refresh token to get a new access token
     - make sure that the initial refresh token is different from the new one (refresh token rotation
     - act as a malicious attacker providing an old refresh token and make sure it has been revoked
     - make sure the user needs to reauthenticate to get a new refresh token
-    - last attempt, try to get a refresh token from a non-existing refresh token
+    - last attempt, try to get a refresh token from a non-existing refresh token.
     """
     initial_refresh_token = _get_tokens(test_client)["refresh_token"]
 
@@ -478,7 +479,7 @@ async def test_refresh_token_expired(
     """Test the expiration date of the passed refresh token.
     - get a refresh token
     - decode it and change the expiration time
-    - recode it (with the JWK of the server)
+    - recode it (with the JWK of the server).
     """
     # Get refresh token
     initial_refresh_token = _get_tokens(test_client)["refresh_token"]
@@ -513,7 +514,7 @@ async def test_refresh_token_expired(
 async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     """Test the validity of the passed refresh token.
     - get a refresh token
-    - decode it and recode it with a different JWK key
+    - decode it and recode it with a different JWK key.
     """
     # Get refresh token
     initial_refresh_token = _get_tokens(test_client)["refresh_token"]
@@ -566,7 +567,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     - normal user gets a refresh token and lists it
     - token manager gets a refresh token and lists all of them
     - normal user renews his/her refresh token and list it: should have only one as the first one should be revoked
-    - token manager lists all of them: should still see it as revoked
+    - token manager lists all of them: should still see it as revoked.
     """
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
@@ -633,7 +634,7 @@ async def test_revoke_refresh_tokens_normal_user(
     - token manager gets a refresh token
     - normal user tries to delete a non-existing RT: should not work
     - normal user tries to delete the token manager's RT: should not work
-    - normal user tries to delete his/her RT: should work
+    - normal user tries to delete his/her RT: should work.
     """
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
@@ -692,7 +693,7 @@ async def test_revoke_refresh_tokens_token_manager(
     - normal user gets a refresh token
     - token manager gets a refresh token
     - token manager tries to delete normal user's RT: should work
-    - token manager tries to delete his/her RT: should work too
+    - token manager tries to delete his/her RT: should work too.
     """
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
@@ -731,7 +732,7 @@ async def test_revoke_refresh_tokens_token_manager(
 def _get_tokens(
     test_client, group: str = "lhcb_user", property: SecurityProperty = NORMAL_USER
 ):
-    """Get a pair of tokens (access, refresh) through a device flow code"""
+    """Get a pair of tokens (access, refresh) through a device flow code."""
     # User Initiates a device flow (would normally be done from CLI)
     r = test_client.post(
         "/api/auth/device",
@@ -766,7 +767,8 @@ def _get_tokens(
 
 def _get_and_check_token_response(test_client, request_data):
     """Get a token and check that mandatory fields are present and that the userinfo endpoint returns
-    something sensible"""
+    something sensible.
+    """
     # Check that token request now works
     r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 200, r.json()
@@ -875,7 +877,7 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
 
 
 def test_encrypt_decrypt_state_valid_state(fernet_key):
-    """Test that decrypt_state returns the correct state"""
+    """Test that decrypt_state returns the correct state."""
     fernet = Fernet(fernet_key)
     # Create a valid state
     state_dict = {
@@ -900,7 +902,7 @@ def test_encrypt_decrypt_state_valid_state(fernet_key):
 
 
 def test_encrypt_decrypt_state_invalid_state(fernet_key):
-    """Test that decrypt_state raises an error when the state is invalid"""
+    """Test that decrypt_state raises an error when the state is invalid."""
     state = "invalid_state"  # Invalid state string
 
     with pytest.raises(HTTPException) as exc_info:

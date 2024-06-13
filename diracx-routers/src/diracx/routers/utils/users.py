@@ -75,7 +75,7 @@ async def verify_dirac_access_token(
     settings: AuthSettings,
 ) -> AuthorizedUserInfo:
     """Verify dirac user token and return a UserInfo class
-    Used for each API endpoint
+    Used for each API endpoint.
     """
     if not authorization:
         raise HTTPException(

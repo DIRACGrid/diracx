@@ -117,14 +117,14 @@ async def parse_id_token(config, vo, raw_id_token: str):
 
 
 def encrypt_state(state_dict: dict[str, str], cipher_suite: Fernet) -> str:
-    """Encrypt the state dict and return it as a string"""
+    """Encrypt the state dict and return it as a string."""
     return cipher_suite.encrypt(
         base64.urlsafe_b64encode(json.dumps(state_dict).encode())
     ).decode()
 
 
 def decrypt_state(state: str, cipher_suite: Fernet) -> dict[str, str]:
-    """Decrypt the state string and return it as a dict"""
+    """Decrypt the state string and return it as a dict."""
     try:
         return json.loads(
             base64.urlsafe_b64decode(cipher_suite.decrypt(state.encode())).decode()
@@ -140,7 +140,7 @@ async def verify_dirac_refresh_token(
     settings: AuthSettings,
 ) -> tuple[str, float, bool]:
     """Verify dirac user token and return a UserInfo class
-    Used for each API endpoint
+    Used for each API endpoint.
     """
     try:
         jwt = JsonWebToken(settings.token_algorithm)
@@ -165,13 +165,12 @@ async def verify_dirac_refresh_token(
 def parse_and_validate_scope(
     scope: str, config: Config, available_properties: set[SecurityProperty]
 ) -> ScopeInfoDict:
-    """
-    Check:
+    """Check:
         * At most one VO
         * At most one group
         * group belongs to VO
         * properties are known
-    return dict with group and properties
+    return dict with group and properties.
 
     :raises:
         * ValueError in case the scope isn't valide

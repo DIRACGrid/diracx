@@ -12,7 +12,7 @@ EXPIRES_GRACE_SECONDS = 15
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
-    """Get the sorted list of .env files to use for configuration"""
+    """Get the sorted list of .env files to use for configuration."""
     env_files = {}
     for key, value in os.environ.items():
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
@@ -21,7 +21,7 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
 
 
 def serialize_credentials(token_response: TokenResponse) -> str:
-    """Serialize DiracX client credentials to a string
+    """Serialize DiracX client credentials to a string.
 
     This method is separated from write_credentials to allow for DIRAC to be
     able to serialize credentials for inclusion in the proxy file.
@@ -38,7 +38,7 @@ def serialize_credentials(token_response: TokenResponse) -> str:
 
 
 def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
-    """Write credentials received in dirax_preferences.credentials_path"""
+    """Write credentials received in dirax_preferences.credentials_path."""
     from diracx.core.preferences import get_diracx_preferences
 
     credentials_path = location or get_diracx_preferences().credentials_path

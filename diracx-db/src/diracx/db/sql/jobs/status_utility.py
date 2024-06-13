@@ -26,11 +26,10 @@ async def set_job_status(
     """Set various status fields for job specified by its jobId.
     Set only the last status in the JobDB, updating all the status
     logging information in the JobLoggingDB. The status dict has datetime
-    as a key and status information dictionary as values
+    as a key and status information dictionary as values.
 
     :raises: JobNotFound if the job is not found in one of the DBs
     """
-
     from DIRAC.Core.Utilities import TimeUtilities
     from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
     from DIRAC.WorkloadManagementSystem.Utilities.JobStatusUtility import (
@@ -160,11 +159,10 @@ async def delete_jobs(
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
 ):
-    """
-    "Delete" jobs by removing them from the task queues, set kill as a job command setting the job status to DELETED.
-    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found
-    """
+    """Removing jobs from task queues, send a kill command and set status to DELETED.
 
+    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found.
+    """
     await _remove_jobs_from_task_queue(job_ids, config, task_queue_db, background_task)
     # TODO: implement StorageManagerClient
     # returnValueOrRaise(StorageManagerClient().killTasksBySourceTaskID(job_ids))
@@ -198,9 +196,8 @@ async def kill_jobs(
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
 ):
-    """
-    Kill jobs by removing them from the task queues, set kill as a job command and setting the job status to KILLED.
-    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found
+    """Kill jobs by removing them from the task queues, set kill as a job command and setting the job status to KILLED.
+    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found.
     """
     await _remove_jobs_from_task_queue(job_ids, config, task_queue_db, background_task)
     # TODO: implement StorageManagerClient
@@ -259,11 +256,9 @@ async def remove_jobs(
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
 ):
+    """Fully remove a job from the WMS databases.
+    :raises: nothing.
     """
-    Fully remove a job from the WMS databases.
-    :raises: nothing
-    """
-
     # Remove the staging task from the StorageManager
     # TODO: this was not done in the JobManagerHandler, but it was done in the kill method
     # I think it should be done here too
@@ -290,9 +285,7 @@ async def _remove_jobs_from_task_queue(
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
 ):
-    """
-    Remove the job from TaskQueueDB
-    """
+    """Remove the job from TaskQueueDB."""
     tq_infos = await task_queue_db.get_tq_infos_for_jobs(job_ids)
     await task_queue_db.remove_jobs(job_ids)
     for tq_id, owner, owner_group, vo in tq_infos:

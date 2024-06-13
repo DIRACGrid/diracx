@@ -53,7 +53,7 @@ class ConversionConfig(BaseModel):
 
 @app.command()
 def cs_sync(old_file: Path, new_file: Path):
-    """Load the old CS and convert it to the new YAML format"""
+    """Load the old CS and convert it to the new YAML format."""
     if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
         raise RuntimeError(
             "DIRAC_COMPAT_ENABLE_CS_CONVERSION must be set for the conversion to be possible"
@@ -86,8 +86,7 @@ def cs_sync(old_file: Path, new_file: Path):
 
 
 def _apply_fixes(raw):
-    """Modify raw in place to make any layout changes between the old and new structure"""
-
+    """Modify raw in place to make any layout changes between the old and new structure."""
     conv_config = ConversionConfig.model_validate(raw["DiracX"]["CsSync"])
 
     raw.pop("DiracX", None)
@@ -184,10 +183,10 @@ def generate_helm_values(
     ),
     output_file: Path = Option(help="Where to dump the yam file"),
 ):
-    """Generate an initial values.yaml to run a DiracX installation
-    compatible with a DIRAC instance. The file is not complete, and needs
-    manual editing"""
+    """Generate an initial values.yaml to run a DiracX installation.
 
+    The file generated is not complete, and needs manual editing.
+    """
     helm_values = {
         "developer": {"enabled": False},
         "init-cs": {"enabled": True},

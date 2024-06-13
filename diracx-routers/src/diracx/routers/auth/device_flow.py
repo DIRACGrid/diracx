@@ -1,6 +1,5 @@
 """Device flow.
 
-
 Client Device                      DIRAC Auth Service                  IAM (Identity Access Management)
 -------------                      ------------------                  --------------------------------
      |                                     |                                         |
@@ -104,7 +103,7 @@ async def initiate_device_flow(
     """Initiate the device flow against DIRAC authorization Server.
     Scope must have exactly up to one `group` (otherwise default) and
     one or more `property` scope.
-    If no property, then get default one
+    If no property, then get default one.
 
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
@@ -149,8 +148,7 @@ async def do_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """
-    This is called as the verification URI for the device flow.
+    """This is called as the verification URI for the device flow.
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 
@@ -159,7 +157,6 @@ async def do_device_flow(
     device flow.
     (note: it can't be put as parameter or in the URL)
     """
-
     # Here we make sure the user_code actually exists
     scope = await auth_db.device_flow_validate_user_code(
         user_code, settings.device_flow_expiration_seconds
@@ -192,12 +189,11 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ):
-    """
-    This the url callbacked by IAM/Checkin after the authorization
+    """This the url callbacked by IAM/Checkin after the authorization
     flow was granted.
     It gets us the code we need for the authorization flow, and we
     can map it to the corresponding device flow using the user_code
-    in the cookie/session
+    in the cookie/session.
     """
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code

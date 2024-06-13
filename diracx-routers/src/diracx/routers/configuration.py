@@ -28,9 +28,7 @@ async def serve_config(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ):
-    """
-    Get the latest view of the config.
-
+    """Get the latest view of the config.
 
     If If-None-Match header is given and matches the latest ETag, return 304
 
