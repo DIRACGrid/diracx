@@ -25,12 +25,11 @@ class ActionType(StrEnum):
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
-    """
-    Rules:
-        * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
-        * An admin cannot create any resource but can read everything and modify everything
-        * A NORMAL_USER can create
-        * a NORMAL_USER can query and read only his own jobs
+    """Rules:
+    * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
+    * An admin cannot create any resource but can read everything and modify everything
+    * A NORMAL_USER can create
+    * a NORMAL_USER can query and read only his own jobs.
     """
 
     @staticmethod
@@ -98,9 +97,8 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 
 class SandboxAccessPolicy(BaseAccessPolicy):
-    """
-    Policy for the sandbox
-    It delegates most of it to the WMSPolicy
+    """Policy for the sandbox
+    It delegates most of it to the WMSPolicy.
     """
 
     @staticmethod

@@ -1,6 +1,6 @@
-"""
-This module implements the logic of the configuration server side.
-This is where all the backend abstraction and the caching logic takes place
+"""This module implements the logic of the configuration server side.
+
+This is where all the backend abstraction and the caching logic takes place.
 """
 
 from __future__ import annotations
@@ -46,11 +46,10 @@ ConfigSourceUrl = Annotated[
 
 
 class ConfigSource(metaclass=ABCMeta):
-    """
-    This classe is the abstract base class that should be used everywhere
+    """This class is the abstract base class that should be used everywhere
     throughout the code.
     It acts as a factory for concrete implementations
-    See the abstractmethods to implement a concrete class
+    See the abstractmethods to implement a concrete class.
     """
 
     # Keep a mapping between the scheme and the class
@@ -64,24 +63,21 @@ class ConfigSource(metaclass=ABCMeta):
     def latest_revision(self) -> tuple[str, datetime]:
         """Must return:
         * a unique hash as a string, representing the last version
-        * a datetime object corresponding to when the version dates
+        * a datetime object corresponding to when the version dates.
         """
         ...
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """
-        Return the Config object that corresponds to the
+        """Return the Config object that corresponds to the
         specific hash
-        The `modified` parameter is just added as a attribute to the config
+        The `modified` parameter is just added as a attribute to the config.
 
         """
         ...
 
     def __init_subclass__(cls) -> None:
-        """
-        Keep a record of <scheme: class>
-        """
+        """Keep a record of <scheme: class>."""
         if cls.scheme in cls.__registry:
             raise TypeError(f"{cls.scheme=} is already define")
         cls.__registry[cls.scheme] = cls
@@ -94,19 +90,16 @@ class ConfigSource(metaclass=ABCMeta):
     def create_from_url(
         cls, *, backend_url: ConfigSourceUrl | Path | str
     ) -> ConfigSource:
-        """
-        Factory method to produce a concrete instance depending on
-        the backend URL scheme
+        """Factory method to produce a concrete instance depending on
+        the backend URL scheme.
 
         """
-
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
     def read_config(self) -> Config:
-        """
-        :raises:
-            git.exc.BadName if version does not exist
+        """:raises:
+        git.exc.BadName if version does not exist
         """
         hexsha, modified = self.latest_revision()
         return self.read_raw(hexsha, modified)
@@ -116,11 +109,10 @@ class ConfigSource(metaclass=ABCMeta):
 
 
 class BaseGitConfigSource(ConfigSource):
-    """
-    Base class for the git based config source
+    """Base class for the git based config source
     The caching is based on 2 caches:
     * TTL to find the latest commit hashes
-    * LRU to keep in memory the last few versions
+    * LRU to keep in memory the last few versions.
 
     """
 
@@ -149,10 +141,7 @@ class BaseGitConfigSource(ConfigSource):
 
     @cachedmethod(lambda self: self._read_raw_cache)
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """
-        :param: hexsha commit hash
-
-        """
+        """:param: hexsha commit hash"""
         logger.debug("Reading %s for %s with mtime %s", self, hexsha, modified)
         rev = self.repo.rev_parse(hexsha)
         blob = rev.tree / DEFAULT_CONFIG_FILE
@@ -168,9 +157,8 @@ class BaseGitConfigSource(ConfigSource):
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
-    """
-    The configuration is stored on a local git repository
-    When running on multiple servers, the filesystem must be shared
+    """The configuration is stored on a local git repository
+    When running on multiple servers, the filesystem must be shared.
     """
 
     scheme = "git+file"
@@ -188,9 +176,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
 
 
 class RemoteGitConfigSource(BaseGitConfigSource):
-    """
-    Use a remote directory as a config source
-    """
+    """Use a remote directory as a config source."""
 
     scheme = "git+https"
 
@@ -217,7 +203,7 @@ class RemoteGitConfigSource(BaseGitConfigSource):
 
     @cachedmethod(lambda self: self._pull_cache)
     def _pull(self):
-        """Git pull from remote repo"""
+        """Git pull from remote repo."""
         print("CHRIS PULL")
         self.repo.remotes.origin.pull()
 

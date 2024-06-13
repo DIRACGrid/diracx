@@ -16,8 +16,7 @@ async def auth_db(tmp_path):
 
 
 async def test_insert(auth_db: AuthDB):
-    """Insert two refresh tokens in the DB and check that they don't share the same JWT ID"""
-
+    """Insert two refresh tokens in the DB and check that they don't share the same JWT ID."""
     # Insert a first refresh token
     async with auth_db as auth_db:
         jti1, _ = await auth_db.insert_refresh_token(
@@ -39,7 +38,7 @@ async def test_insert(auth_db: AuthDB):
 
 
 async def test_get(auth_db: AuthDB):
-    """Insert a refresh token in the DB and get it"""
+    """Insert a refresh token in the DB and get it."""
     # Refresh token details we want to insert
     refresh_token_details = {
         "sub": "12345",
@@ -70,7 +69,7 @@ async def test_get(auth_db: AuthDB):
 
 async def test_get_user_refresh_tokens(auth_db: AuthDB):
     """Insert refresh tokens belonging to different users in the DB and
-    get the refresh tokens of each user
+    get the refresh tokens of each user.
     """
     # Two users
     sub1 = "subject1"
@@ -105,7 +104,7 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
 
 
 async def test_revoke(auth_db: AuthDB):
-    """Insert a refresh token in the DB, revoke it, and make sure it appears as REVOKED in the db"""
+    """Insert a refresh token in the DB, revoke it, and make sure it appears as REVOKED in the db."""
     # Insert a refresh token details
     async with auth_db as auth_db:
         jti, _ = await auth_db.insert_refresh_token(
@@ -126,7 +125,7 @@ async def test_revoke(auth_db: AuthDB):
 
 
 async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
-    """Insert refresh tokens in the DB, revoke them, and make sure it appears as REVOKED in the db"""
+    """Insert refresh tokens in the DB, revoke them, and make sure it appears as REVOKED in the db."""
     # Two users
     sub1 = "subject1"
     sub2 = "subject2"
@@ -168,7 +167,7 @@ async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
 
 async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
     """Insert refresh tokens belonging to a user, revoke one of them and
-    make sure that only the active tokens appear
+    make sure that only the active tokens appear.
     """
     # User
     sub = "subject"
@@ -215,7 +214,7 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
 
 async def test_get_refresh_tokens(auth_db: AuthDB):
     """Insert refresh tokens belonging to different users in the DB and
-    get the refresh tokens
+    get the refresh tokens.
     """
     # Two users
     sub1 = "subject1"

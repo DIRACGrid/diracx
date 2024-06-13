@@ -228,7 +228,7 @@ async def test_operators_date(prefilled_db: DummyOSDB):
     ],
 )
 async def test_operators_date_partial_doc1(prefilled_db: DummyOSDB, date_format: str):
-    """Search by datetime without specifying an exact match
+    """Search by datetime without specifying an exact match.
 
     The parameterized date_format argument should match DOC1 but not DOC2 or DOC3.
     """

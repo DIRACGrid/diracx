@@ -71,7 +71,7 @@ async def test_s3_object_exists(moto_s3):
 
 
 async def test_presigned_upload_moto(moto_s3):
-    """Test the presigned upload with moto
+    """Test the presigned upload with moto.
 
     This doesn't actually test the signature, see test_presigned_upload_minio
     """
@@ -94,7 +94,7 @@ async def test_presigned_upload_moto(moto_s3):
 
 @pytest.fixture(scope="function")
 async def minio_client(demo_urls):
-    """Create a S3 client that uses minio from the demo as backend"""
+    """Create a S3 client that uses minio from the demo as backend."""
     async with get_session().create_client(
         "s3",
         endpoint_url=demo_urls["minio"],
@@ -106,7 +106,7 @@ async def minio_client(demo_urls):
 
 @pytest.fixture(scope="function")
 async def test_bucket(minio_client):
-    """Create a test bucket that is cleaned up after the test session"""
+    """Create a test bucket that is cleaned up after the test session."""
     bucket_name = f"dirac-test-{secrets.token_hex(8)}"
     await minio_client.create_bucket(Bucket=bucket_name)
     yield bucket_name
@@ -131,7 +131,7 @@ async def test_bucket(minio_client):
 async def test_presigned_upload_minio(
     minio_client, test_bucket, content, checksum, size, expected_error
 ):
-    """Test the presigned upload with Minio
+    """Test the presigned upload with Minio.
 
     This is a more complete test that checks that the presigned upload works
     and is properly validated by Minio. This is not possible with moto as it

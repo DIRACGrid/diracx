@@ -19,23 +19,23 @@ class AuthorizationError(DiracError): ...
 
 
 class PendingAuthorizationError(AuthorizationError):
-    """Used to signal the device flow the authentication is still ongoing"""
+    """Used to signal the device flow the authentication is still ongoing."""
 
 
 class ExpiredFlowError(AuthorizationError):
-    """Used only for the Device Flow when the polling is expired"""
+    """Used only for the Device Flow when the polling is expired."""
 
 
 class ConfigurationError(DiracError):
-    """Used whenever we encounter a problem with the configuration"""
+    """Used whenever we encounter a problem with the configuration."""
 
 
 class BadConfigurationVersion(ConfigurationError):
-    """The requested version is not known"""
+    """The requested version is not known."""
 
 
 class InvalidQueryError(DiracError):
-    """It was not possible to build a valid database query from the given input"""
+    """It was not possible to build a valid database query from the given input."""
 
 
 class JobNotFound(Exception):

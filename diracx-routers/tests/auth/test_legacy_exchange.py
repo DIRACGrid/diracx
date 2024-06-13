@@ -77,7 +77,7 @@ async def test_valid(test_client, legacy_credentials, expires_seconds):
 
 
 async def test_refresh_token(test_client, legacy_credentials):
-    """Test that the refresh token rotation is disabled"""
+    """Test that the refresh token rotation is disabled."""
     r = test_client.get(
         "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},

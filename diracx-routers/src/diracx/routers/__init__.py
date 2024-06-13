@@ -1,5 +1,4 @@
-"""
-# Startup sequence
+"""# Startup sequence.
 
 uvicorn is called with `create_app` as a factory
 
@@ -53,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 
 def configure_logger():
-    """Configure the console logger
+    """Configure the console logger.
 
     Access logs come from uvicorn, which configure its logger in a certain way
     (https://github.com/tiangolo/fastapi/discussions/7457)
@@ -62,7 +61,6 @@ def configure_logger():
     We cannot configure just the root handler, as uvicorn
     attaches handler to the `uvicorn` logger
     """
-
     diracx_handler = StreamHandler()
     diracx_handler.setFormatter(Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logging.getLogger("diracx").addHandler(diracx_handler)
@@ -104,8 +102,7 @@ def create_app_inner(
     config_source: ConfigSource,
     all_access_policies: dict[str, Sequence[BaseAccessPolicy]],
 ) -> DiracFastAPI:
-    """
-    This method does the heavy lifting work of putting all the pieces together.
+    """This method does the heavy lifting work of putting all the pieces together.
 
     When starting the application normaly, this method is called by create_app,
     and the values of the parameters are taken from environment variables or
@@ -133,7 +130,6 @@ def create_app_inner(
 
 
     """
-
     app = DiracFastAPI()
 
     # Find which settings classes are available and add them to dependency_overrides
@@ -309,7 +305,7 @@ def create_app_inner(
 
 
 def create_app() -> DiracFastAPI:
-    """Load settings from the environment and create the application object
+    """Load settings from the environment and create the application object.
 
     The configuration may be placed in .env files pointed to by
     environment variables DIRACX_SERVICE_DOTENV.
@@ -419,7 +415,7 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
     """Cache the result of pinging the DB
-    (exceptions are not cachable)
+    (exceptions are not cachable).
     """
     if db not in _db_alive_cache:
         try:
@@ -433,10 +429,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
 
 
 async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
-    """
-    Initiate a DB transaction.
-    """
-
+    """Initiate a DB transaction."""
     # Entering the context already triggers a connection to the DB
     # that may fail
     async with db:

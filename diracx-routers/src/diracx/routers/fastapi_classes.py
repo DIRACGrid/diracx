@@ -8,14 +8,9 @@ from fastapi import APIRouter, FastAPI
 
 T = TypeVar("T")
 
-# Rules:
-# All routes must have tags (needed for auto gen of client)
-# Form headers must have a description (autogen)
-# methods name should follow the generate_unique_id_function pattern
-
 
 def _downgrade_openapi_schema(data):
-    """Modify an openapi schema in-place to be compatible with AutoRest"""
+    """Modify an openapi schema in-place to be compatible with AutoRest."""
     if isinstance(data, dict):
         for k, v in list(data.items()):
             if k == "anyOf":

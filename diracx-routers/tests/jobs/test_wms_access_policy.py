@@ -40,7 +40,7 @@ SANDBOX_POLICY_NAME = "SandboxAccessPolicy_AlthoughItDoesNotMatter"
 
 
 async def test_wms_access_policy_weird_user(job_db):
-    """USer without NORMAL_USER or JOB_ADMINISTRATION can't do anything"""
+    """USer without NORMAL_USER or JOB_ADMINISTRATION can't do anything."""
     weird_user = AuthorizedUserInfo(properties=[], **base_payload)
     with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
         await WMSAccessPolicy.policy(
@@ -226,7 +226,7 @@ OTHER_USER_SANDBOX_PFN = (
 async def test_sandbox_access_policy_delegate_to_wms(job_db):
     """We expect that the policy delegates to the WMS policy when given job info
     This will trigger an Assert as the WMSAccessPolicy is None
-    in these tests
+    in these tests.
     """
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
     with pytest.raises(AssertionError):

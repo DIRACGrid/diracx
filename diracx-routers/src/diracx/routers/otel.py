@@ -36,16 +36,14 @@ class OTELSettings(ServiceSettingsBase):
 
 
 def instrument_otel(app: FastAPI) -> None:
-    """
-    Instrument the application to send OpenTelemetryData.
+    """Instrument the application to send OpenTelemetryData.
     Metrics, Traces and Logs are sent to an OTEL collector.
     The Collector can then redirect it to whatever is configured.
-    Typically: Jaeger for traces, Prometheus for metrics, ElasticSearch for logs
+    Typically: Jaeger for traces, Prometheus for metrics, ElasticSearch for logs.
 
     Note: this is highly experimental, and OpenTelemetry is a quickly moving target
 
     """
-
     otel_settings = OTELSettings()
     if not otel_settings.enabled:
         return

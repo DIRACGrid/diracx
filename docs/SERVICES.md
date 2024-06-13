@@ -170,4 +170,14 @@ Implementing a new `AccessPolicy` is done by:
 > [!WARNING]
 > When running tests, no permission is checked. This is to allow testing the router behavior with respect to the policy behavior. For testing a policy, see for example `diracx-routers/tests/jobs/test_wms_access_policy.py`
 
+## Adding routes
+
+When routes are defined they're automatically included in the OpenAPI specification.
+This is then used to automatically generate client bindings and means that more of the Python code is included in the externally visible interface than is typically expected.
+To ensure consistency, the following rules must be followed:
+
+* All routers must be tagged and the first tag becomes the name of the sub-client.
+* The name of the route becomes the name of the client method.
+* Uses of `fastapi.Form` must specify a `description`.
+
 [^1]: The only exception is `/.well-known/`.

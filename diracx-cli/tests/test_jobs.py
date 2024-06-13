@@ -41,7 +41,6 @@ async def jdl_file():
 
 async def test_submit(with_cli_login, jdl_file, capfd):
     """Test submitting a job using a JDL file."""
-
     with open(jdl_file, "r") as temp_file:
         await cli.jobs.submit([temp_file])
 
@@ -52,7 +51,6 @@ async def test_submit(with_cli_login, jdl_file, capfd):
 
 async def test_search(with_cli_login, jdl_file, capfd):
     """Test searching for jobs."""
-
     # Submit 20 jobs
     with open(jdl_file, "r") as temp_file:
         await cli.jobs.submit([temp_file] * 20)

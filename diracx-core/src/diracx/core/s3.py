@@ -54,7 +54,7 @@ async def generate_presigned_upload(
     size: int,
     validity_seconds: int,
 ) -> S3PresignedPostInfo:
-    """Generate a presigned URL and fields for uploading a file to S3
+    """Generate a presigned URL and fields for uploading a file to S3.
 
     The signature is restricted to only accept data with the given checksum and size.
     """
@@ -76,5 +76,5 @@ async def generate_presigned_upload(
 
 
 def b16_to_b64(hex_string: str) -> str:
-    """Convert hexadecimal encoded data to base64 encoded data"""
+    """Convert hexadecimal encoded data to base64 encoded data."""
     return base64.b64encode(base64.b16decode(hex_string.upper())).decode()

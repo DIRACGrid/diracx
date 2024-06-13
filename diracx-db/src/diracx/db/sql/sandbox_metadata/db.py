@@ -15,7 +15,7 @@ class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
 
     async def upsert_owner(self, user: UserInfo) -> int:
-        """Get the id of the owner from the database"""
+        """Get the id of the owner from the database."""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         stmt = sqlalchemy.select(sb_Owners.OwnerID).where(
             sb_Owners.Owner == user.preferred_username,
@@ -36,7 +36,7 @@ class SandboxMetadataDB(BaseSQLDB):
 
     @staticmethod
     def get_pfn(bucket_name: str, user: UserInfo, sandbox_info: SandboxInfo) -> str:
-        """Get the sandbox's user namespaced and content addressed PFN"""
+        """Get the sandbox's user namespaced and content addressed PFN."""
         parts = [
             "S3",
             bucket_name,
@@ -50,7 +50,7 @@ class SandboxMetadataDB(BaseSQLDB):
     async def insert_sandbox(
         self, se_name: str, user: UserInfo, pfn: str, size: int
     ) -> None:
-        """Add a new sandbox in SandboxMetadataDB"""
+        """Add a new sandbox in SandboxMetadataDB."""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         owner_id = await self.upsert_owner(user)
         stmt = sqlalchemy.insert(sb_SandBoxes).values(
@@ -88,13 +88,13 @@ class SandboxMetadataDB(BaseSQLDB):
 
     @staticmethod
     def jobid_to_entity_id(job_id: int) -> str:
-        """Define the entity id as 'Entity:entity_id' due to the DB definition"""
+        """Define the entity id as 'Entity:entity_id' due to the DB definition."""
         return f"Job:{job_id}"
 
     async def get_sandbox_assigned_to_job(
         self, job_id: int, sb_type: SandboxType
     ) -> list[Any]:
-        """Get the sandbox assign to job"""
+        """Get the sandbox assign to job."""
         entity_id = self.jobid_to_entity_id(job_id)
         stmt = (
             sqlalchemy.select(sb_SandBoxes.SEPFN)
@@ -114,7 +114,7 @@ class SandboxMetadataDB(BaseSQLDB):
         sb_type: SandboxType,
         se_name: str,
     ) -> None:
-        """Mapp sandbox and jobs"""
+        """Mapp sandbox and jobs."""
         for job_id in jobs_ids:
             # Define the entity id as 'Entity:entity_id' due to the DB definition:
             entity_id = self.jobid_to_entity_id(job_id)
@@ -140,7 +140,7 @@ class SandboxMetadataDB(BaseSQLDB):
             assert result.rowcount == 1
 
     async def unassign_sandboxes_to_jobs(self, jobs_ids: list[int]) -> None:
-        """Delete mapping between jobs and sandboxes"""
+        """Delete mapping between jobs and sandboxes."""
         for job_id in jobs_ids:
             entity_id = self.jobid_to_entity_id(job_id)
             sb_sel_stmt = sqlalchemy.select(sb_SandBoxes.SBId)

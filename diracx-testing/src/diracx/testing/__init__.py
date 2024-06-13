@@ -46,9 +46,7 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    """
-    Disable the test_regenerate_client if not explicitly asked for
-    """
+    """Disable the test_regenerate_client if not explicitly asked for."""
     if config.getoption("--regenerate-client"):
         # --regenerate-client given in cli: allow client re-generation
         return
@@ -93,7 +91,7 @@ def test_auth_settings(rsa_private_key_pem, fernet_key) -> AuthSettings:
 
 @pytest.fixture(scope="session")
 def aio_moto(worker_id):
-    """Start the moto server in a separate thread and return the base URL
+    """Start the moto server in a separate thread and return the base URL.
 
     The mocking provided by moto doesn't play nicely with aiobotocore so we use
     the server directly. See https://github.com/aio-libs/aiobotocore/issues/755
@@ -151,9 +149,7 @@ class ClientFactory:
         from diracx.routers.access_policies import BaseAccessPolicy
 
         class AlwaysAllowAccessPolicy(BaseAccessPolicy):
-            """
-            Dummy access policy
-            """
+            """Dummy access policy."""
 
             async def policy(
                 policy_name: str, user_info: AuthorizedUserInfo, /, **kwargs
@@ -242,7 +238,7 @@ class ClientFactory:
 
     @contextlib.asynccontextmanager
     async def create_db_schemas(self):
-        """Create DB schema's based on the DBs available in app.dependency_overrides"""
+        """Create DB schema's based on the DBs available in app.dependency_overrides."""
         import aiosqlite
         import sqlalchemy
         from sqlalchemy.util.concurrency import greenlet_spawn
@@ -350,8 +346,9 @@ def session_client_factory(
     with_config_repo,
     tmp_path_factory,
 ):
-    """
-    TODO
+    """TODO.
+    ----
+
     """
     yield ClientFactory(
         tmp_path_factory, with_config_repo, test_auth_settings, test_sandbox_settings
@@ -443,7 +440,7 @@ def demo_urls(demo_dir):
 
 @pytest.fixture(scope="session")
 def demo_kubectl_env(demo_dir):
-    """Get the dictionary of environment variables for kubectl to control the demo"""
+    """Get the dictionary of environment variables for kubectl to control the demo."""
     kube_conf = demo_dir / "kube.conf"
     if not kube_conf.exists():
         raise RuntimeError(f"Could not find {kube_conf}, is the demo running?")
@@ -465,7 +462,7 @@ def demo_kubectl_env(demo_dir):
 
 @pytest.fixture
 def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
-    """Set up the environment for the CLI"""
+    """Set up the environment for the CLI."""
     import httpx
 
     from diracx.core.preferences import get_diracx_preferences
@@ -561,7 +558,7 @@ async def test_login(monkeypatch, capfd, cli_env):
 
 
 def do_device_flow_with_dex(url: str, ca_path: str) -> None:
-    """Do the device flow with dex"""
+    """Do the device flow with dex."""
 
     class DexLoginFormParser(HTMLParser):
         def handle_starttag(self, tag, attrs):

@@ -23,7 +23,7 @@ TaskQueueDBBase = declarative_base()
 
 
 class EnumBackedBool(types.TypeDecorator):
-    """Maps a ``EnumBackedBool()`` column to True/False in Python"""
+    """Maps a ``EnumBackedBool()`` column to True/False in Python."""
 
     impl = types.Enum
     cache_ok: bool = True

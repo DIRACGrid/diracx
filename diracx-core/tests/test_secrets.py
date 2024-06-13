@@ -8,7 +8,7 @@ from diracx.core.settings import TokenSigningKey
 
 
 def compare_keys(key1, key2):
-    """Compare two keys by checking their public numebrs"""
+    """Compare two keys by checking their public numebrs."""
     assert key1.public_key().public_numbers() == key2.public_key().public_numbers()
 
 

@@ -160,9 +160,7 @@ class JobDB(BaseSQLDB):
         await self.conn.execute(stmt)
 
     async def setJobAttributes(self, job_id, jobData):
-        """
-        TODO: add myDate and force parameters
-        """
+        """TODO: add myDate and force parameters."""
         if "Status" in jobData:
             jobData = jobData | {"LastUpdateTime": datetime.now(tz=timezone.utc)}
         stmt = update(Jobs).where(Jobs.JobID == job_id).values(jobData)
@@ -178,9 +176,8 @@ class JobDB(BaseSQLDB):
         job_attrs,
         vo,
     ):
-        """
-        Check Consistency of Submitted JDL and set some defaults
-        Prepare subJDL with Job Requirements
+        """Check Consistency of Submitted JDL and set some defaults
+        Prepare subJDL with Job Requirements.
         """
         from DIRAC.Core.Utilities.DErrno import EWMSSUBM, cmpError
         from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
@@ -330,7 +327,7 @@ class JobDB(BaseSQLDB):
         }
 
     async def rescheduleJob(self, job_id) -> dict[str, Any]:
-        """Reschedule given job"""
+        """Reschedule given job."""
         from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
         from DIRAC.Core.Utilities.ReturnValues import SErrorException
 
@@ -476,7 +473,7 @@ class JobDB(BaseSQLDB):
             raise JobNotFound(job_id) from e
 
     async def set_job_command(self, job_id: int, command: str, arguments: str = ""):
-        """Store a command to be passed to the job together with the next heart beat"""
+        """Store a command to be passed to the job together with the next heart beat."""
         try:
             stmt = insert(JobCommands).values(
                 JobID=job_id,
@@ -489,9 +486,7 @@ class JobDB(BaseSQLDB):
             raise JobNotFound(job_id) from e
 
     async def delete_jobs(self, job_ids: list[int]):
-        """
-        Delete jobs from the database
-        """
+        """Delete jobs from the database."""
         stmt = delete(JobJDLs).where(JobJDLs.JobID.in_(job_ids))
         await self.conn.execute(stmt)
 
@@ -499,7 +494,7 @@ class JobDB(BaseSQLDB):
         self, properties: dict[int, dict[str, Any]], update_timestamp: bool = False
     ) -> int:
         """Update the job parameters
-        All the jobs must update the same properties
+        All the jobs must update the same properties.
 
         :param properties: {job_id : {prop1: val1, prop2:val2}
         :param update_timestamp: if True, update the LastUpdate to now
@@ -507,7 +502,6 @@ class JobDB(BaseSQLDB):
         :return rowcount
 
         """
-
         # Check that all we always update the same set of properties
         required_parameters_set = set(
             [tuple(sorted(k.keys())) for k in properties.values()]
@@ -538,7 +532,7 @@ MAGIC_EPOC_NUMBER = 1270000000
 
 
 class JobLoggingDB(BaseSQLDB):
-    """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps"""
+    """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps."""
 
     metadata = JobLoggingDBBase.metadata
 
@@ -551,15 +545,13 @@ class JobLoggingDB(BaseSQLDB):
         date: datetime,
         source: str,
     ):
-        """
-        Add a new entry to the JobLoggingDB table. One, two or all the three status
+        """Add a new entry to the JobLoggingDB table. One, two or all the three status
         components (status, minorStatus, applicationStatus) can be specified.
         Optionally the time stamp of the status can
         be provided in a form of a string in a format '%Y-%m-%d %H:%M:%S' or
         as datetime.datetime object. If the time stamp is not provided the current
         UTC time is used.
         """
-
         # First, fetch the maximum SeqNum for the given job_id
         seqnum_stmt = select(func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)).where(
             LoggingInfo.JobID == job_id
@@ -586,9 +578,8 @@ class JobLoggingDB(BaseSQLDB):
 
     async def get_records(self, job_id: int) -> list[JobStatusReturn]:
         """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
-        for each record found for job specified by its jobID in historical order
+        for each record found for job specified by its jobID in historical order.
         """
-
         stmt = (
             select(
                 LoggingInfo.Status,
@@ -654,15 +645,14 @@ class JobLoggingDB(BaseSQLDB):
         return res
 
     async def delete_records(self, job_ids: list[int]):
-        """Delete logging records for given jobs"""
+        """Delete logging records for given jobs."""
         stmt = delete(LoggingInfo).where(LoggingInfo.JobID.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def get_wms_time_stamps(self, job_id):
         """Get TimeStamps for job MajorState transitions
-        return a {State:timestamp} dictionary
+        return a {State:timestamp} dictionary.
         """
-
         result = {}
         stmt = select(
             LoggingInfo.Status,
@@ -684,9 +674,7 @@ class TaskQueueDB(BaseSQLDB):
     async def get_tq_infos_for_jobs(
         self, job_ids: list[int]
     ) -> set[tuple[int, str, str, str]]:
-        """
-        Get the task queue info for given jobs
-        """
+        """Get the task queue info for given jobs."""
         stmt = (
             select(
                 TaskQueues.TQId, TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO
@@ -700,25 +688,19 @@ class TaskQueueDB(BaseSQLDB):
         )
 
     async def get_owner_for_task_queue(self, tq_id: int) -> dict[str, str]:
-        """
-        Get the owner and owner group for a task queue
-        """
+        """Get the owner and owner group for a task queue."""
         stmt = select(TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO).where(
             TaskQueues.TQId == tq_id
         )
         return dict((await self.conn.execute(stmt)).one()._mapping)
 
     async def remove_job(self, job_id: int):
-        """
-        Remove a job from the task queues
-        """
+        """Remove a job from the task queues."""
         stmt = delete(JobsQueue).where(JobsQueue.JobId == job_id)
         await self.conn.execute(stmt)
 
     async def remove_jobs(self, job_ids: list[int]):
-        """
-        Remove jobs from the task queues
-        """
+        """Remove jobs from the task queues."""
         stmt = delete(JobsQueue).where(JobsQueue.JobId.in_(job_ids))
         await self.conn.execute(stmt)
 
@@ -732,9 +714,7 @@ class TaskQueueDB(BaseSQLDB):
         enable_shares_correction: bool,
         allow_background_tqs: bool,
     ):
-        """
-        Try to delete a task queue if it's empty
-        """
+        """Try to delete a task queue if it's empty."""
         # Check if the task queue is empty
         stmt = (
             select(TaskQueues.TQId)
@@ -768,9 +748,7 @@ class TaskQueueDB(BaseSQLDB):
         enable_shares_correction: bool,
         allow_background_tqs: bool,
     ):
-        """
-        Recalculate the shares for a user/userGroup combo
-        """
+        """Recalculate the shares for a user/userGroup combo."""
         if JOB_SHARING in group_properties:
             # If group has JobSharing just set prio for that entry, user is irrelevant
             return await self.__set_priorities_for_entity(
@@ -833,9 +811,7 @@ class TaskQueueDB(BaseSQLDB):
         properties: set[SecurityProperty],
         allow_background_tqs: bool,
     ):
-        """
-        Set the priority for a user/userGroup combo given a splitted share
-        """
+        """Set the priority for a user/userGroup combo given a splitted share."""
         from DIRAC.WorkloadManagementSystem.DB.TaskQueueDB import calculate_priority
 
         stmt = (
@@ -867,9 +843,7 @@ class TaskQueueDB(BaseSQLDB):
             await self.conn.execute(update_stmt)
 
     async def retrieve_task_queues(self, tq_id_list=None):
-        """
-        Get all the task queues
-        """
+        """Get all the task queues."""
         if tq_id_list is not None and not tq_id_list:
             # Empty list => Fast-track no matches
             return {}

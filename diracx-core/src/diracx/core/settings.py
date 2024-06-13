@@ -31,7 +31,7 @@ class _TokenSigningKey(SecretStr):
 
 
 def _maybe_load_key_from_file(value: Any) -> Any:
-    """Load private keys from files if needed"""
+    """Load private keys from files if needed."""
     if isinstance(value, str) and not value.strip().startswith("-----BEGIN"):
         url = TypeAdapter(LocalFileUrl).validate_python(value)
         if not url.scheme == "file":

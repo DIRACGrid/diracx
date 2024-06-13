@@ -83,7 +83,7 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
 async def _dump_db(
     sandbox_metadata_db: SandboxMetadataDB,
 ) -> dict[str, tuple[int, datetime]]:
-    """Dump the contents of the sandbox metadata database
+    """Dump the contents of the sandbox metadata database.
 
     Returns a dict[pfn: str, (owner_id: int, last_access_time: datetime)]
     """

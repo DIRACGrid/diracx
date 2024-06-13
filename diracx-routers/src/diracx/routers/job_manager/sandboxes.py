@@ -102,7 +102,6 @@ async def initiate_sandbox_upload(
     If the sandbox does not exist in the database then the "url" and "fields"
     should be used to upload the sandbox to the storage backend.
     """
-
     pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
     full_pfn = f"SB:{settings.se_name}|{pfn}"
     await check_permissions(
@@ -162,7 +161,7 @@ class SandboxDownloadResponse(BaseModel):
 
 
 def pfn_to_key(pfn: str) -> str:
-    """Convert a PFN to a key for S3
+    """Convert a PFN to a key for S3.
 
     This removes the leading "/S3/<bucket_name>" from the PFN.
     """
@@ -185,7 +184,7 @@ async def get_sandbox_file(
     sandbox_metadata_db: SandboxMetadataDB,
     check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxDownloadResponse:
-    """Get a presigned URL to download a sandbox file
+    """Get a presigned URL to download a sandbox file.
 
     This route cannot use a redirect response most clients will also send the
     authorization header when following a redirect. This is not desirable as
@@ -193,7 +192,6 @@ async def get_sandbox_file(
     most storage backends return an error when they receive an authorization
     header for a presigned URL.
     """
-
     pfn = pfn.split("|", 1)[-1]
     required_prefix = (
         "/"
@@ -225,7 +223,7 @@ async def get_job_sandboxes(
     job_db: JobDB,
     check_permissions: CheckSandboxPolicyCallable,
 ) -> dict[str, list[Any]]:
-    """Get input and output sandboxes of given job"""
+    """Get input and output sandboxes of given job."""
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
 
     input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
@@ -245,8 +243,7 @@ async def get_job_sandbox(
     sandbox_type: Literal["input", "output"],
     check_permissions: CheckSandboxPolicyCallable,
 ) -> list[Any]:
-    """Get input or output sandbox of given job"""
-
+    """Get input or output sandbox of given job."""
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     job_sb_pfns = await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType(sandbox_type.capitalize())
@@ -264,8 +261,7 @@ async def assign_sandbox_to_job(
     settings: SandboxStoreSettings,
     check_permissions: CheckSandboxPolicyCallable,
 ):
-    """Map the pfn as output sandbox to job"""
-
+    """Map the pfn as output sandbox to job."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     short_pfn = pfn.split("|", 1)[-1]
     await sandbox_metadata_db.assign_sandbox_to_jobs(
@@ -283,7 +279,7 @@ async def unassign_job_sandboxes(
     job_db: JobDB,
     check_permissions: CheckSandboxPolicyCallable,
 ):
-    """Delete single job sandbox mapping"""
+    """Delete single job sandbox mapping."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     await sandbox_metadata_db.unassign_sandboxes_to_jobs([job_id])
 
@@ -295,7 +291,6 @@ async def unassign_bulk_jobs_sandboxes(
     job_db: JobDB,
     check_permissions: CheckSandboxPolicyCallable,
 ):
-    """Delete bulk jobs sandbox mapping"""
-
+    """Delete bulk jobs sandbox mapping."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=jobs_ids)
     await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)

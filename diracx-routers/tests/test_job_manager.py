@@ -336,7 +336,7 @@ def test_search_pagination(normal_user_client):
 def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
     normal_user_client,
 ):
-    """Test that a user cannot submit a parametric JDL greater than the max parametric jobs"""
+    """Test that a user cannot submit a parametric JDL greater than the max parametric jobs."""
     job_definitions = [TEST_LARGE_PARAMETRIC_JDL]
     res = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
@@ -345,7 +345,7 @@ def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
 def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
     normal_user_client,
 ):
-    """Test that a user cannot submit a list of JDL greater than the max number of jobs"""
+    """Test that a user cannot submit a list of JDL greater than the max number of jobs."""
     job_definitions = [TEST_JDL for _ in range(100)]
     res = normal_user_client.post("/api/jobs/", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
@@ -421,7 +421,7 @@ def test_get_status_of_nonexistent_job(
 
 
 def test_get_job_status_in_bulk(normal_user_client: TestClient, valid_job_ids: list):
-    """Test that we can get the status of multiple jobs in one request"""
+    """Test that we can get the status of multiple jobs in one request."""
     # Act
     r = normal_user_client.get("/api/jobs/status", params={"job_ids": valid_job_ids})
 

@@ -316,9 +316,7 @@ async def remove_bulk_jobs(
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """
-    Fully remove a list of jobs from the WMS databases.
-
+    """Fully remove a list of jobs from the WMS databases.
 
     WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
@@ -635,7 +633,7 @@ async def summary(
     body: JobSummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Show information suitable for plotting"""
+    """Show information suitable for plotting."""
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
@@ -669,9 +667,7 @@ async def delete_single_job(
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """
-    Delete a job by killing and setting the job status to DELETED.
-    """
+    """Delete a job by killing and setting the job status to DELETED."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     # TODO: implement job policy
@@ -702,9 +698,7 @@ async def kill_single_job(
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """
-    Kill a job.
-    """
+    """Kill a job."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     # TODO: implement job policy
@@ -732,14 +726,12 @@ async def remove_single_job(
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """
-    Fully remove a job from the WMS databases.
+    """Fully remove a job from the WMS databases.
 
     WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
     be removed, and the delete endpoint should be used instead.
     """
-
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # TODO: Remove once legacy DIRAC no longer needs this
 
@@ -826,10 +818,7 @@ async def set_single_job_properties(
     check_permissions: CheckWMSPolicyCallable,
     update_timestamp: bool = False,
 ):
-    """
-    Update the given job properties (MinorStatus, ApplicationStatus, etc)
-    """
-
+    """Update the given job properties (MinorStatus, ApplicationStatus, etc)."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     rowcount = await job_db.set_properties(
