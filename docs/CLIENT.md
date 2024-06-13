@@ -22,7 +22,7 @@ The DiracX client is a comprehensive toolset designed to interact with various s
 
 The `diracx-client` is an auto-generated client library that facilitates communication with services defined by OpenAPI specifications.
 
-### Client Generation
+### Generating a Client
 
 The client is generated using [AutoRest](https://github.com/Azure/autorest), a tool that reads OpenAPI configurations provided by FastAPI routers.
 
@@ -32,14 +32,7 @@ The client is generated using [AutoRest](https://github.com/Azure/autorest), a t
 
 The CI/CD pipeline handles client regeneration upon each push to the `main` branch. This process helps detect breaking changes in the developer's code, causing the CI/CD to fail if such changes are present.
 
-If a breaking change is acknowledged and approved, developers can manually regenerate the client:
-
-1. Ensure `diracx-client` is installed (refer to the installation documentation).
-2. Run the following command to regenerate the client:
-
-```sh
-pytest --no-cov --regenerate-client diracx-client/tests/test_regenerate.py
-```
+If a breaking change is acknowledged and approved, one of the repo admin will regenerate the client on behalf of the developer. Developers can still manually regenerate the client but it requires a few additional tools. The best up-to-date documentation lies in the [`client-generation` CI job](https://github.com/DIRACGrid/diracx/blob/main/.github/workflows/main.yml).
 
 ### Structure of the Generated Client
 
@@ -47,9 +40,15 @@ The generated client consists of several key components:
 
 - **models**: Represent the data structures.
 - **operations**: Contain the methods to interact with the API endpoints.
-- **aio**: Asynchronous operations.
+- **aio**: Asynchronous client.
 
-Modifications to the generated client should be made in `_patch.py` files to ensure maintainability.
+Further details can be found in the [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/client/readme.md).
+
+### Customising the Generated Client
+
+Modifications to the generated client should be made in `_patch.py` files to ensure maintainability. Detailed guidance can be found in [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/customizations.md).
+
+Note: any modification in the synchronous client should also be performed in the asynchronous client (**aio**), and vice-versa.
 
 #### Example Usage
 
@@ -58,9 +57,41 @@ Operations are accessible via the `DiracClient`, which manages token refreshment
 ```python
 from diracx.client.aio import DiracClient
 
-async with DiracClient() as api:
-    jobs = await api.jobs.submit_bulk_jobs([x.read() for x in jdl])
+async with DiracClient() as client:
+    jobs = await client.jobs.submit_bulk_jobs([x.read() for x in jdl])
 ```
+
+### Configuring the Generated Client
+
+Clients need to be configured to interact with services. This is performed through **DiracxPreferences**, which is a [BaseSettings Pydantic model](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) that load configuration from the environment.
+
+### Configuring a client
+
+Required environment variables to interact with the services:
+
+- `DIRACX_URL`: the URL pointing to diracx services
+- `DIRACX_CA_PATH`: CA path used by the diracx services
+
+Optional environment variables:
+
+- `DIRACX_OUTPUT_FORMAT`: output format (e.g. `JSON`). Default value depends whether the output stream is associated to a terminal.
+- `DIRACX_LOG_LEVEL`: logging level (e.g. `ERROR`). Defaults to `INFO`.
+- `DIRACX_CREDENTIALS_PATH`: path where access and refresh tokens are stored. Defaults to `~/.cache/diracx/credentials.json`.
+
+
+### Getting preferences
+
+Developers can get access to the preferences through the following method:
+
+```python
+from diracx.core.preferences import get_diracx_preferences
+
+...
+
+credentials_path = get_diracx_preferences().credentials_path
+```
+
+Note: preferences are cached.
 
 ## diracx-api
 
@@ -92,9 +123,9 @@ In this example, `paths` are the parameters of the API. The `@with_client` decor
 # Useful for basic work requiring a single call to the service
 result = await create_sandbox(paths)
 
-# For optimized performance with multiple service interactions
-async with DiracClient() as api:
-    result = await create_sandbox(paths, api)
+# For optimised performance with multiple service interactions
+async with DiracClient() as client:
+    result = await create_sandbox(paths, client)
 ```
 
 ## diracx-cli
@@ -119,7 +150,7 @@ app = AsyncTyper()
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
-    async with DiracClient() as api:
+    async with DiracClient() as client:
         ...
 ```
 
