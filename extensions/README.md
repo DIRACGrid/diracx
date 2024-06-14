@@ -26,12 +26,18 @@ Here we make sure to use the local versions of ``diracx`` packages to make sure 
 
 To develop, follow the same instruction as ``diracx``
 
+Do not forget to add the database in your `[project.entry-points."diracx.db.sql"]`
 
 ## DB
 
 ### New DB
 
 ``lollygag`` is a DB which is specific to ``gubbins``, i.e. it does not modify or extend an existing ``diracx`` db
+
+### Extended DB
+
+``GubbinsJobDB`` illustrate how to extend an existing ``diracx`` DB, add new methods, modify methods, add a table.
+
 
 
 ## Routers
