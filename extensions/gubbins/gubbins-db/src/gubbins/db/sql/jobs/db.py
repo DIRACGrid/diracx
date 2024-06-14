@@ -27,6 +27,9 @@ class GubbinsJobDB(JobDB):
         This method modifes the one in the parent class:
         * adds an extra argument
         * changes the return type
+
+        Note that this requires to disable mypy error with
+        # type: ignore[override]
         """
         jdl = await super().getJobJDL(job_id, original=original)
         if not with_info:
