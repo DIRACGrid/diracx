@@ -178,7 +178,12 @@ def create_app_inner(
     fail_startup = True
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
+
+    # SQL Classes that are overridden.
+    overriden_sql_db_classes: set[type[BaseSQLDB]] = set()
+
     for db_name, db_url in database_urls.items():
+
         try:
             sql_db_classes = BaseSQLDB.available_implementations(db_name)
 
@@ -188,9 +193,16 @@ def create_app_inner(
             app.lifetime_functions.append(sql_db.engine_context)
             # Add overrides for all the DB classes, including those from extensions
             # This means vanilla DiracX routers get an instance of the extension's DB
-            for sql_db_class in sql_db_classes:
+            for db_id, sql_db_class in enumerate(sql_db_classes):
                 assert sql_db_class.transaction not in app.dependency_overrides
                 available_sql_db_classes.add(sql_db_class)
+
+                # If this is not the highest priority one,
+                # add it to the list of overriden DBs
+
+                if db_id != 0:
+                    overriden_sql_db_classes.add(sql_db_class)
+
                 app.dependency_overrides[sql_db_class.transaction] = partial(
                     db_transaction, sql_db
                 )
@@ -244,8 +256,11 @@ def create_app_inner(
 
         # Ensure required DBs are available
         missing_sql_dbs = (
-            set(find_dependents(router, BaseSQLDB)) - available_sql_db_classes
+            set(find_dependents(router, BaseSQLDB))
+            - available_sql_db_classes
+            - overriden_sql_db_classes
         )
+
         if missing_sql_dbs:
             raise NotImplementedError(
                 f"Cannot enable {system_name=} as it requires {missing_sql_dbs=}"

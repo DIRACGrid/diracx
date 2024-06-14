@@ -24,6 +24,7 @@ testing = ["diracx-testing"]
 
 [project.entry-points."diracx.db.sql"]
 LollygagDB = "gubbins.db.sql:LollygagDB"
+JobDB = "gubbins.db.sql:GubbinsJobDB"
 
 [tool.setuptools.packages.find]
 where = ["src"]

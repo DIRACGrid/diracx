@@ -38,6 +38,10 @@ Do not forget to add the database in your `[project.entry-points."diracx.db.sql"
 
 ``GubbinsJobDB`` illustrate how to extend an existing ``diracx`` DB, add new methods, modify methods, add a table.
 
+A router test exists, even though no router is redefined.
+
+WARNING: in the dependency override, you need to specify both the original DiracX JobDB as well as the extended one GubbinsJobDB
+
 
 
 ## Routers

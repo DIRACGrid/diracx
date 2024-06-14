@@ -210,6 +210,7 @@ class ClientFactory:
 
     @contextlib.contextmanager
     def configure(self, enabled_dependencies):
+
         assert (
             self.app.dependency_overrides == {} and self.app.lifetime_functions == []
         ), "configure cannot be nested"

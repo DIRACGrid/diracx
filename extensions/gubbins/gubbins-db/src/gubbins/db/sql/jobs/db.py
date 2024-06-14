@@ -39,3 +39,15 @@ class GubbinsJobDB(JobDB):
 
         info = (await self.conn.execute(stmt)).scalar_one()
         return {"JDL": jdl, "Info": info}
+
+    async def setJobAttributes(self, job_id, jobData):
+        """
+        This method modified the one in the parent class,
+        without changing the argument nor the return type
+
+        Also, this method is called by the router via the status_utility
+        so we can test in test_gubbins_job_router that the behavior
+        is altered without even redefining a gubbins specific router
+        """
+        # We do nothing
+        ...
