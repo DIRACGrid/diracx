@@ -30,7 +30,13 @@ from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 
-from ..dependencies import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
+from ..dependencies import (
+    JobDB,
+    JobLoggingDB,
+    JobParametersDB,
+    SandboxMetadataDB,
+    TaskQueueDB,
+)
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
@@ -567,6 +573,7 @@ MAX_PER_PAGE = 10000
 async def search(
     config: Annotated[Config, Depends(ConfigSource.create)],
     job_db: JobDB,
+    job_parameters_db: JobParametersDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
     response: Response,

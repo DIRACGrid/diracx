@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import secrets
 import socket
 from subprocess import PIPE, Popen, check_output
 
 import pytest
 
-from diracx.db.os.utils import BaseOSDB
+from .dummy_osdb import DummyOSDB
+from .mock_osdb import MockOSDBMixin
 
 OPENSEARCH_PORT = 28000
 
@@ -16,31 +16,6 @@ def require_port_availability(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if s.connect_ex(("localhost", port)) == 0:
             raise RuntimeError(f"This test requires port {port} to be available")
-
-
-class DummyOSDB(BaseOSDB):
-    """Example DiracX OpenSearch database class for testing.
-
-    A new random prefix is created each time the class is defined to ensure
-    test runs are independent of each other.
-    """
-
-    fields = {
-        "DateField": {"type": "date"},
-        "IntField": {"type": "long"},
-        "KeywordField0": {"type": "keyword"},
-        "KeywordField1": {"type": "keyword"},
-        "KeywordField2": {"type": "keyword"},
-        "TextField": {"type": "text"},
-    }
-
-    def __init__(self, *args, **kwargs):
-        # Randomize the index prefix to ensure tests are independent
-        self.index_prefix = f"dummy_{secrets.token_hex(8)}"
-        super().__init__(*args, **kwargs)
-
-    def index_name(self, doc_id: int) -> str:
-        return f"{self.index_prefix}-{doc_id // 1e6:.0f}m"
 
 
 @pytest.fixture(scope="session")
@@ -108,3 +83,19 @@ async def dummy_opensearch_db(dummy_opensearch_db_without_template):
     await db.create_index_template()
     yield db
     await db.client.indices.delete_index_template(name=db.index_prefix)
+
+
+@pytest.fixture
+async def sql_opensearch_db():
+    """Fixture which returns a SQLOSDB object."""
+
+    class MockDummyOSDB(MockOSDBMixin, DummyOSDB):
+        pass
+
+    db = MockDummyOSDB(
+        connection_kwargs={"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
+    )
+    async with db.client_context():
+        await db.create_index_template()
+        yield db
+        # No need to cleanup as this uses an in-memory sqlite database
