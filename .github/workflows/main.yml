@@ -62,7 +62,7 @@ jobs:
           pip install .[testing]
           pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
 
   pytest-integration:
     runs-on: ubuntu-latest
@@ -129,7 +129,7 @@ jobs:
 
           coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
 
