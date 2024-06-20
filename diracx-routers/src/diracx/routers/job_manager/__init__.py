@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from sqlalchemy.exc import NoResultFound
 from typing_extensions import TypedDict
 
-from diracx.core.config import Config, ConfigSource
 from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
     JobStatus,
@@ -30,7 +29,7 @@ from diracx.db.sql.jobs.status_utility import (
     set_job_status,
 )
 
-from ..dependencies import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
+from ..dependencies import Config, JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
@@ -234,7 +233,7 @@ async def submit_bulk_jobs(
 @router.delete("/")
 async def delete_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
@@ -272,7 +271,7 @@ async def delete_bulk_jobs(
 @router.post("/kill")
 async def kill_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
@@ -308,7 +307,7 @@ async def kill_bulk_jobs(
 @router.post("/remove")
 async def remove_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     sandbox_metadata_db: SandboxMetadataDB,
@@ -565,7 +564,7 @@ MAX_PER_PAGE = 10000
 
 @router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
@@ -627,7 +626,7 @@ async def search(
 
 @router.post("/summary")
 async def summary(
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     body: JobSummaryParams,
@@ -660,7 +659,7 @@ async def get_single_job(
 @router.delete("/{job_id}")
 async def delete_single_job(
     job_id: int,
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
@@ -691,7 +690,7 @@ async def delete_single_job(
 @router.post("/{job_id}/kill")
 async def kill_single_job(
     job_id: int,
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
@@ -718,7 +717,7 @@ async def kill_single_job(
 @router.post("/{job_id}/remove")
 async def remove_single_job(
     job_id: int,
-    config: Annotated[Config, Depends(ConfigSource.create)],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     sandbox_metadata_db: SandboxMetadataDB,
