@@ -189,9 +189,9 @@ def generate_helm_values(
     """
     helm_values = {
         "developer": {"enabled": False},
-        "init-cs": {"enabled": True},
-        "init-secrets": {"enabled": True},
-        "init-sql": {"enabled": False, "env": {}},
+        "initCs": {"enabled": True},
+        "initSecrets": {"enabled": True},
+        "initSql": {"enabled": False, "env": {}},
         "cert-manager": {"enabled": False},
         "cert-manager-issuer": {"enabled": False},
         "minio": {"enabled": False},
