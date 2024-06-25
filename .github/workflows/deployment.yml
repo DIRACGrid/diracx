@@ -183,7 +183,7 @@ jobs:
           done
 
       - name: Build and push client (release)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: containers/client/
@@ -192,7 +192,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: EXTRA_PACKAGES_TO_INSTALL=DIRAC~=9.0.0a1
       - name: Build and push services (release)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: containers/services/
@@ -202,7 +202,7 @@ jobs:
           build-args: EXTRA_PACKAGES_TO_INSTALL=DIRAC~=9.0.0a1
 
       - name: Build and push client (dev)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         with:
           context: containers/client/
@@ -212,7 +212,7 @@ jobs:
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
       - name: Build and push services (dev)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         with:
           context: containers/services/
