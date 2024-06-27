@@ -12,17 +12,21 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from functools import partial
+from http import HTTPStatus
+from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from logging import Formatter, StreamHandler
 from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
+from packaging.version import parse
 from pydantic import TypeAdapter
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # from starlette.types import ASGIApp
 from uvicorn.logging import AccessFormatter, DefaultFormatter
@@ -289,7 +293,6 @@ def create_app_inner(
     origins = [
         "http://localhost:8000",
     ]
-
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -297,7 +300,7 @@ def create_app_inner(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
+    app.add_middleware(ClientMinVersionCheckMiddleware)
     configure_logger()
     instrument_otel(app)
 
@@ -437,3 +440,53 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
         if reason := await is_db_unavailable(db):
             raise DBUnavailable(reason)
         yield db
+
+
+class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
+    """Custom FastAPI middleware to verify that the client has the minimum version required."""
+
+    def __init__(self, app: FastAPI):
+        super().__init__(app)
+        self.min_client_version = get_min_client_version()
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        client_version = request.headers.get("X-DIRACX-CLIENT-VERSION")
+        print(f">>>>> {client_version}")
+        if not client_version:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail="Client version header is missing.",
+            )
+
+        if self.is_version_too_old(client_version):
+            raise HTTPException(
+                status_code=HTTPStatus.UPGRADE_REQUIRED,
+                detail=f"Client version ({client_version}) not recent enough (>= {self.min_client_version}). Upgrade.",
+            )
+
+        response = await call_next(request)
+        return response
+
+    def is_version_too_old(self, client_version: str) -> bool:
+        """Verify that client version is ge than min."""
+        return parse(client_version) < parse(self.min_client_version)
+
+
+# I'm not sure if this has to be define here:
+DIRACX_MIN_CLIENT_VERSION = "0.1.1"
+
+
+def get_min_client_version():
+    """Extracting min client version from entry_points and seraching for extension."""
+    matched_entry_points: EntryPoints = entry_points(group="diracx.min_client_version")
+    # Searching for an extension:
+    entry_points_dict: dict[str, EntryPoint] = {
+        ep.name: ep for ep in matched_entry_points
+    }
+    for ep_name, ep in entry_points_dict.items():
+        if ep_name != "diracx":
+            return ep.load()
+
+    # Taking diracx if no extension:
+    if "diracx" in entry_points_dict:
+        return entry_points_dict["diracx"].load()
