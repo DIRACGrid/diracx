@@ -29,6 +29,7 @@ types = [
 
 [project.entry-points."diracx.services"]
 lollygag = "gubbins.routers.lollygag:router"
+auth = "gubbins.routers.auth:router"
 
 [tool.setuptools.packages.find]
 where = ["src"]
