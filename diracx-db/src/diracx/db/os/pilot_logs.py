@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from diracx.db.os.utils import BaseOSDB
 
+
 class PilotLogsDB(BaseOSDB):
     fields = {
         "PilotStamp": {"type": "keyword"},
         "LineNumber": {"type": "long"},
         "Message": {"type": "text"},
         "VO": {"type": "keyword"},
-        "timestamp": {"type": "date"}
+        "timestamp": {"type": "date"},
     }
     index_prefix = "pilot_logs"
 

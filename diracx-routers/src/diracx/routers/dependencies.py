@@ -20,13 +20,13 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.db.os import JobParametersDB as _JobParametersDB
+from diracx.db.os import PilotLogsDB as _PilotLogsDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
 from diracx.db.sql import SandboxMetadataDB as _SandboxMetadataDB
 from diracx.db.sql import TaskQueueDB as _TaskQueueDB
-from diracx.db.os import JobParametersDB as _JobParametersDB
-from diracx.db.os import PilotLogsDB as _PilotLogsDB
 
 T = TypeVar("T")
 

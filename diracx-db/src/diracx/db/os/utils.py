@@ -193,8 +193,7 @@ class BaseOSDB(metaclass=ABCMeta):
     async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
         # bulk inserting to database
         n_inserted = await async_bulk(
-            self.client,
-            actions=[doc | {"_index": index_name} for doc in docs]
+            self.client, actions=[doc | {"_index": index_name} for doc in docs]
         )
         logger.info("Inserted %s documents to %s", n_inserted, index_name)
 
