@@ -178,7 +178,9 @@ def create_app_inner(
     fail_startup = True
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
+
     for db_name, db_url in database_urls.items():
+
         try:
             sql_db_classes = BaseSQLDB.available_implementations(db_name)
 
@@ -191,6 +193,7 @@ def create_app_inner(
             for sql_db_class in sql_db_classes:
                 assert sql_db_class.transaction not in app.dependency_overrides
                 available_sql_db_classes.add(sql_db_class)
+
                 app.dependency_overrides[sql_db_class.transaction] = partial(
                     db_transaction, sql_db
                 )
@@ -246,6 +249,7 @@ def create_app_inner(
         missing_sql_dbs = (
             set(find_dependents(router, BaseSQLDB)) - available_sql_db_classes
         )
+
         if missing_sql_dbs:
             raise NotImplementedError(
                 f"Cannot enable {system_name=} as it requires {missing_sql_dbs=}"

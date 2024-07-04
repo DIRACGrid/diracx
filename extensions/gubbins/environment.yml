@@ -1,4 +1,4 @@
-name: diracx-dev
+name: gubbins-dev
 channels:
   - diracgrid
   - conda-forge
