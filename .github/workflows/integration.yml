@@ -46,16 +46,21 @@ jobs:
         run:  cd /tmp/DIRACRepo && ./integration_tests.py install-server
       - name: Install client
         run: cd /tmp/DIRACRepo && ./integration_tests.py install-client
+      - name: Install pilot
+        run: cd /tmp/DIRACRepo && ./integration_tests.py install-pilot
       - name: Server tests
         run: cd /tmp/DIRACRepo && ./integration_tests.py test-server || touch server-tests-failed
       - name: Client tests
         run: cd /tmp/DIRACRepo && ./integration_tests.py test-client || touch client-tests-failed
+      - name: Pilot tests
+        run: cd /tmp/DIRACRepo && ./integration_tests.py test-pilot || touch pilot-tests-failed
       - name: Check test status
         run: |
           has_error=0
           # TODO: set has_error=1 when we are ready to really run the tests
           if [ -f server-tests-failed ]; then has_error=0; echo "Server tests failed"; fi
           if [ -f client-tests-failed ]; then has_error=0; echo "Client tests failed"; fi
+          if [ -f pilot-tests-failed ]; then has_error=0; echo "Pilot tests failed"; fi
           if [ ${has_error} = 1 ]; then exit 1; fi
       - name: diracx logs
         if: ${{ failure() }}
