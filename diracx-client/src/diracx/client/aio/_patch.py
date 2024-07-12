@@ -6,6 +6,7 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
+from importlib.metadata import PackageNotFoundError, distribution
 import json
 from types import TracebackType
 from pathlib import Path
@@ -162,6 +163,20 @@ class DiracClient(DiracGenerated):
 
         # Get .well-known configuration
         openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
+
+        try:
+            self.client_version = distribution("diracx").version
+        except PackageNotFoundError:
+            try:
+                self.client_version = distribution("diracx-client").version
+            except PackageNotFoundError:
+                print("Error while getting client version")
+                self.client_version = "Unknown"
+
+        # Setting default headers
+        kwargs.setdefault("base_headers", {})[
+            "DiracX-Client-Version"
+        ] = self.client_version
 
         # Initialize Dirac with a Dirac-specific token credential policy
         super().__init__(
