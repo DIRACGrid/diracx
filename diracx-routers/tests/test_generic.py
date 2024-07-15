@@ -2,6 +2,9 @@ from http import HTTPStatus
 
 import pytest
 from fastapi import HTTPException
+from packaging.version import Version, parse
+
+from diracx.routers import DIRACX_MIN_CLIENT_VERSION
 
 pytestmark = pytest.mark.enabled_dependencies(
     ["ConfigSource", "AuthSettings", "OpenAccessPolicy"]
@@ -47,7 +50,11 @@ def test_unavailable_db(monkeypatch, test_client):
 
 
 def test_min_client_version(test_client):
+    min_client_version: Version = parse(DIRACX_MIN_CLIENT_VERSION)
+    lower_version_than_min: Version = (
+        f"{min_client_version.major}.{min_client_version.minor}.dev123"
+    )
     with pytest.raises(HTTPException) as response:
-        test_client.get("/", headers={"DiracX-Client-Version": "0.1.0"})
+        test_client.get("/", headers={"DiracX-Client-Version": lower_version_than_min})
     assert response.value.status_code == HTTPStatus.UPGRADE_REQUIRED
     assert "not recent enough" in response.value.detail
