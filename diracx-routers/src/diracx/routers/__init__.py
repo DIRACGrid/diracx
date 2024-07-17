@@ -24,7 +24,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
-from packaging.version import parse
+from packaging.version import InvalidVersion, parse
 from pydantic import TypeAdapter
 
 # from starlette.types import ASGIApp
@@ -464,7 +464,6 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
             #     status_code=HTTPStatus.BAD_REQUEST,
             #     detail="Client version header is missing.",
             # )
-
         elif self.is_version_too_old(client_version):
             raise HTTPException(
                 status_code=HTTPStatus.UPGRADE_REQUIRED,
@@ -474,9 +473,13 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-    def is_version_too_old(self, client_version: str) -> bool:
+    def is_version_too_old(self, client_version: str) -> bool | None:
         """Verify that client version is ge than min."""
-        return parse(client_version) < parse(self.min_client_version)
+        try:
+            return parse(client_version) < parse(self.min_client_version)
+        except InvalidVersion as iv_exc:
+            logger.info(iv_exc)
+            return None
 
 
 # I'm not sure if this has to be define here:

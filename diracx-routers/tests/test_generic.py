@@ -63,3 +63,11 @@ def test_min_client_version_lower_than_expected(test_client):
 def test_client_version_not_in_header(test_client, caplog: pytest.LogCaptureFixture):
     test_client.get("/", headers={})
     assert "header is missing" in caplog.text
+
+    test_client.get("/", headers={"DiracX-Client-Version": ""})
+    assert "header is missing" in caplog.text
+
+
+def test_wrong_client_version(test_client, caplog: pytest.LogCaptureFixture):
+    test_client.get("/", headers={"DiracX-Client-Version": "Unknown"})
+    assert "Invalid version: 'Unknown'" in caplog.text
