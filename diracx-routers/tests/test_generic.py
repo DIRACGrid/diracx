@@ -49,7 +49,7 @@ def test_unavailable_db(monkeypatch, test_client):
     assert r.json()
 
 
-def test_min_client_version(test_client):
+def test_min_client_version_lower_than_expected(test_client):
     min_client_version: Version = parse(DIRACX_MIN_CLIENT_VERSION)
     lower_version_than_min: Version = (
         f"{min_client_version.major}.{min_client_version.minor}.dev123"
@@ -58,3 +58,8 @@ def test_min_client_version(test_client):
         test_client.get("/", headers={"DiracX-Client-Version": lower_version_than_min})
     assert response.value.status_code == HTTPStatus.UPGRADE_REQUIRED
     assert "not recent enough" in response.value.detail
+
+
+def test_client_version_not_in_header(test_client, caplog: pytest.LogCaptureFixture):
+    test_client.get("/", headers={})
+    assert "header is missing" in caplog.text
