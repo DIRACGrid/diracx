@@ -25,8 +25,8 @@ class ActionType(StrEnum):
 
 class PilotLogsAccessPolicy(BaseAccessPolicy):
     """Rules:
-      Only PILOT, GENERIC_PILOT, SERVICE_ADMINISTRATOR and OPERATOR can create log records.
-      Policies for other actions to be determined.
+    Only PILOT, GENERIC_PILOT, SERVICE_ADMINISTRATOR and OPERATOR can create log records.
+    Policies for other actions to be determined.
     """
 
     @staticmethod
