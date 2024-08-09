@@ -144,8 +144,8 @@ class ClientFactory:
         from diracx.core.config import ConfigSource
         from diracx.core.extensions import select_from_extension
         from diracx.core.settings import ServiceSettingsBase
-        from diracx.db.sql.utils import BaseSQLDB
         from diracx.db.os.utils import BaseOSDB
+        from diracx.db.sql.utils import BaseSQLDB
         from diracx.routers import create_app_inner
         from diracx.routers.access_policies import BaseAccessPolicy
 
@@ -200,7 +200,13 @@ class ClientFactory:
         for obj in self.all_dependency_overrides:
             assert issubclass(
                 obj.__self__,
-                (ServiceSettingsBase, BaseSQLDB, BaseOSDB, ConfigSource, BaseAccessPolicy),
+                (
+                    ServiceSettingsBase,
+                    BaseSQLDB,
+                    BaseOSDB,
+                    ConfigSource,
+                    BaseAccessPolicy,
+                ),
             ), obj
 
         self.all_lifetime_functions = self.app.lifetime_functions[:]
