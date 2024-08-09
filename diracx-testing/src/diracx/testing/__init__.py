@@ -157,6 +157,7 @@ class ClientFactory:
         from diracx.core.settings import ServiceSettingsBase
         from diracx.db.os.utils import BaseOSDB
         from diracx.db.sql.utils import BaseSQLDB
+        from diracx.db.os.utils import BaseOSDB
         from diracx.routers import create_app_inner
         from diracx.routers.access_policies import BaseAccessPolicy
 
@@ -211,7 +212,10 @@ class ClientFactory:
                 test_dev_settings,
             ],
             database_urls=database_urls,
-            os_database_conn_kwargs=os_database_conn_kwargs,
+            os_database_conn_kwargs={
+                # TODO: JobParametersDB
+                "PilotLogsDB": {}
+            },
             config_source=ConfigSource.create_from_url(
                 backend_url=f"git+file://{with_config_repo}"
             ),
