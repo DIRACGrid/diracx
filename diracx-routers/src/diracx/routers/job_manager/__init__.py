@@ -291,7 +291,7 @@ async def kill_bulk_jobs(
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     # TODO: implement job policy
     try:
-        await kill_jobs(
+        return await kill_jobs(
             job_ids,
             config,
             job_db,
@@ -310,8 +310,6 @@ async def kill_bulk_jobs(
                 "failed_job_ids": failed_job_ids,
             },
         ) from group_exc
-
-    return job_ids
 
 
 @router.post("/remove")
@@ -362,8 +360,7 @@ async def get_job_status_bulk(
         result = await asyncio.gather(
             *(job_db.get_job_status(job_id) for job_id in job_ids)
         )
-        print(result)
-        return {job_id: status for job_id, status in zip(job_ids, result)}
+        return {job_id: job_status for job_id, job_status in zip(job_ids, result)}
     except JobNotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
@@ -390,11 +387,11 @@ async def set_job_status_bulk(
 
     res = await asyncio.gather(
         *(
-            set_job_status(job_id, status, job_db, job_logging_db, force)
-            for job_id, status in job_update.items()
+            set_job_status(job_id, job_status, job_db, job_logging_db, force)
+            for job_id, job_status in job_update.items()
         )
     )
-    return {job_id: status for job_id, status in zip(job_update.keys(), res)}
+    return {job_id: job_status for job_id, job_status in zip(job_update.keys(), res)}
 
 
 @router.get("/status/history")
@@ -405,11 +402,9 @@ async def get_job_status_history_bulk(
     check_permissions: CheckWMSPolicyCallable,
 ) -> dict[int, list[JobStatusReturn]]:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
-    result = await asyncio.gather(
+    return await asyncio.gather(
         *(job_logging_db.get_records(job_id) for job_id in job_ids)
     )
-    return {job_id: status for job_id, status in zip(job_ids, result)}
-
 
 @router.post("/reschedule")
 async def reschedule_bulk_jobs(
