@@ -762,9 +762,7 @@ async def remove_single_job(
 
 @router.get("/{job_id}/status")
 async def get_single_job_status(
-    job_id: int,
-    job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable
+    job_id: int, job_db: JobDB, check_permissions: CheckWMSPolicyCallable
 ) -> LimitedJobStatusReturn:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     try:
@@ -782,7 +780,7 @@ async def set_single_job_status(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     check_permissions: CheckWMSPolicyCallable,
-    force: bool = False
+    force: bool = False,
 ) -> SetJobStatusReturn:
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # check that the datetime contains timezone info
@@ -794,13 +792,9 @@ async def set_single_job_status(
             )
 
     try:
-        return await set_job_status(
-            job_id, job_status, job_db, job_logging_db, force
-        )
+        return await set_job_status(job_id, job_status, job_db, job_logging_db, force)
     except JobNotFound as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.get("/{job_id}/status/history")
