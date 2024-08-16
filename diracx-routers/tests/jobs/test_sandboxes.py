@@ -34,7 +34,7 @@ def normal_user_client(client_factory):
 def test_upload_then_download(
     normal_user_client: TestClient, test_auth_settings: AuthSettings
 ):
-    data = secrets.token_bytes(512)
+    data = secrets.token_bytes(1024)
     checksum = hashlib.sha256(data).hexdigest()
 
     # Initiate the upload
@@ -85,7 +85,7 @@ def test_upload_then_download(
 
 
 def test_upload_oversized(normal_user_client: TestClient):
-    data = secrets.token_bytes(512)
+    data = secrets.token_bytes(1024)
     checksum = hashlib.sha256(data).hexdigest()
 
     # Initiate the upload
@@ -125,7 +125,7 @@ TEST_JDL = """
 
 
 def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
-    data = secrets.token_bytes(512)
+    data = secrets.token_bytes(1024)
     checksum = hashlib.sha256(data).hexdigest()
 
     # Upload Sandbox:

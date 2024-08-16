@@ -14,12 +14,12 @@ async def test_upload_download_sandbox(tmp_path, with_cli_login, caplog):
     input_files = []
 
     input_file = input_directory / "input.dat"
-    input_file.write_bytes(secrets.token_bytes(512))
+    input_file.write_bytes(secrets.token_bytes(1024))
     input_files.append(input_file)
 
     input_file = input_directory / "a" / "b" / "c" / "nested.dat"
     input_file.parent.mkdir(parents=True)
-    input_file.write_bytes(secrets.token_bytes(512))
+    input_file.write_bytes(secrets.token_bytes(1024))
     input_files.append(input_file)
 
     # Upload the sandbox
