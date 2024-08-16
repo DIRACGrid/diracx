@@ -14,6 +14,34 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install pre-commit
+      run: pip install pre-commit
+    - name: Run pre-commit
+      run: pre-commit run --all-files --show-diff-on-failure
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run shellcheck
+      # Excluded codes related to sourcing files
+      #     SC1090: Can't follow non-constant source
+      #     SC1091: Not following sourced file
+      run: |
+        find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
+
   pytest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
