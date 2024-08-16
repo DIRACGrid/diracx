@@ -527,8 +527,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     # Encode it differently (using another algorithm)
     private_key = rsa.generate_private_key(
         public_exponent=65537,
-        # DANGER: 512-bits is a bad idea for prod but makes the test notably faster!
-        key_size=512,
+        key_size=1024,
     )
     pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
