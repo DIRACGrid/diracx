@@ -5,7 +5,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
-from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    status,
+)
 from pydantic import BaseModel
 from sqlalchemy.exc import NoResultFound
 from typing_extensions import TypedDict
@@ -125,7 +133,10 @@ async def submit_bulk_jobs(
     # Check job submission permission
     policyDict = returnValueOrRaise(DiracxJobPolicy(user_info).getJobPolicy())
     if not policyDict[RIGHT_SUBMIT]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to submit jobs")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to submit jobs",
+        )
 
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
@@ -680,8 +691,7 @@ async def delete_single_job(
         )
     except* JobNotFound as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=str(e.exceptions[0])
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e.exceptions[0])
         ) from e
 
     return f"Job {job_id} has been successfully deleted"
@@ -708,8 +718,7 @@ async def kill_single_job(
         )
     except* JobNotFound as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=str(e.exceptions[0])
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e.exceptions[0])
         ) from e
 
     return f"Job {job_id} has been successfully killed"
@@ -825,4 +834,6 @@ async def set_single_job_properties(
         {job_id: job_properties}, update_timestamp=update_timestamp
     )
     if not rowcount:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
