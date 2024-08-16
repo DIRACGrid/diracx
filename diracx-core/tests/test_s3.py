@@ -6,7 +6,7 @@ import random
 import secrets
 
 import pytest
-import requests
+import httpx
 from aiobotocore.session import get_session
 
 from diracx.core.s3 import (
@@ -82,7 +82,7 @@ async def test_presigned_upload_moto(moto_s3):
     )
 
     # Upload the file
-    r = requests.post(
+    r = httpx.post(
         upload_info["url"], data=upload_info["fields"], files={"file": file_content}
     )
     assert r.status_code == 204, r.text
@@ -143,7 +143,7 @@ async def test_presigned_upload_minio(
         minio_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
-    r = requests.post(
+    r = httpx.post(
         upload_info["url"], data=upload_info["fields"], files={"file": content}
     )
     if expected_error is None:

@@ -2,7 +2,7 @@
 import argparse
 from pathlib import Path
 
-import requests
+import httpx
 from packaging.version import Version
 
 
@@ -19,7 +19,7 @@ def make_release(version, commit_hash, release_notes=""):
     :param str release_notes: Release notes
     """
     # Create a draft release
-    r = requests.post(
+    r = httpx.post(
         f"{api_root}/releases",
         json={
             "tag_name": version,
@@ -36,7 +36,7 @@ def make_release(version, commit_hash, release_notes=""):
     print(f"Created draft release at: {release_data['html_url']}")
 
     # Publish the release
-    r = requests.patch(
+    r = httpx.patch(
         release_data["url"],
         json={
             "draft": False,
