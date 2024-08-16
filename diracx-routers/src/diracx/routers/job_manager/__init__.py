@@ -356,13 +356,12 @@ async def get_job_status_bulk(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, LimitedJobStatusReturn]:
+) -> list[LimitedJobStatusReturn]:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
     try:
-        result = await asyncio.gather(
+        return await asyncio.gather(
             *(job_db.get_job_status(job_id) for job_id in job_ids)
         )
-        return {job_id: status for job_id, status in zip(job_ids, result)}
     except JobNotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
@@ -763,30 +762,29 @@ async def remove_single_job(
 async def get_single_job_status(
     job_id: int,
     job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, LimitedJobStatusReturn]:
+    check_permissions: CheckWMSPolicyCallable
+) -> LimitedJobStatusReturn:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     try:
-        status = await job_db.get_job_status(job_id)
+        return await job_db.get_job_status(job_id)
     except JobNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
         ) from e
-    return {job_id: status}
 
 
 @router.patch("/{job_id}/status")
 async def set_single_job_status(
     job_id: int,
-    status: Annotated[dict[datetime, JobStatusUpdate], Body()],
+    job_status: Annotated[dict[datetime, JobStatusUpdate], Body()],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     check_permissions: CheckWMSPolicyCallable,
-    force: bool = False,
-) -> dict[int, SetJobStatusReturn]:
+    force: bool = False
+) -> SetJobStatusReturn:
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # check that the datetime contains timezone info
-    for dt in status:
+    for dt in job_status:
         if dt.tzinfo is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -794,12 +792,13 @@ async def set_single_job_status(
             )
 
     try:
-        latest_status = await set_job_status(
-            job_id, status, job_db, job_logging_db, force
+        return await set_job_status(
+            job_id, job_status, job_db, job_logging_db, force
         )
     except JobNotFound as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
-    return {job_id: latest_status}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        ) from e
 
 
 @router.get("/{job_id}/status/history")
@@ -808,15 +807,14 @@ async def get_single_job_status_history(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, list[JobStatusReturn]]:
+) -> list[JobStatusReturn]:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     try:
-        status = await job_logging_db.get_records(job_id)
+        return await job_logging_db.get_records(job_id)
     except JobNotFound as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         ) from e
-    return {job_id: status}
 
 
 @router.patch("/{job_id}")
