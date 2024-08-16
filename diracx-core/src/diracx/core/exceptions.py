@@ -1,6 +1,3 @@
-from http import HTTPStatus
-
-
 class DiracHttpResponse(RuntimeError):
     def __init__(self, status_code: int, data):
         self.status_code = status_code
@@ -8,7 +5,7 @@ class DiracHttpResponse(RuntimeError):
 
 
 class DiracError(RuntimeError):
-    http_status_code = HTTPStatus.BAD_REQUEST  # 400
+    http_status_code = 400  # BAD REQUEST
     http_headers: dict[str, str] | None = None
 
     def __init__(self, detail: str = "Unknown"):

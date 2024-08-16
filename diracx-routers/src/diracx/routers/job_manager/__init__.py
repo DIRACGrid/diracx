@@ -3,10 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timezone
-from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query, Response
+from fastapi import BackgroundTasks, Body, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy.exc import NoResultFound
 from typing_extensions import TypedDict
@@ -126,7 +125,7 @@ async def submit_bulk_jobs(
     # Check job submission permission
     policyDict = returnValueOrRaise(DiracxJobPolicy(user_info).getJobPolicy())
     if not policyDict[RIGHT_SUBMIT]:
-        raise HTTPException(HTTPStatus.FORBIDDEN, "You are not allowed to submit jobs")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to submit jobs")
 
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
@@ -161,11 +160,11 @@ async def submit_bulk_jobs(
             res = getParameterVectorLength(ClassAd(job_definition))
             if not res["OK"]:
                 raise HTTPException(
-                    status_code=HTTPStatus.BAD_REQUEST, detail=res["Message"]
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=res["Message"]
                 )
             if res["Value"]:
                 raise HTTPException(
-                    status_code=HTTPStatus.BAD_REQUEST,
+                    status_code=status.HTTP_400_BAD_REQUEST,
                     detail="You cannot submit parametric jobs in a bulk fashion",
                 )
 
@@ -175,7 +174,7 @@ async def submit_bulk_jobs(
     # TODO: make the max number of jobs configurable in the CS
     if len(jobDescList) > MAX_PARAMETRIC_JOBS:
         raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Normal user cannot submit more than {MAX_PARAMETRIC_JOBS} jobs at once",
         )
 
@@ -257,7 +256,7 @@ async def delete_bulk_jobs(
         failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
 
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "message": f"Failed to delete {len(failed_job_ids)} jobs out of {len(job_ids)}",
                 "valid_job_ids": list(set(job_ids) - set(failed_job_ids)),
@@ -293,7 +292,7 @@ async def kill_bulk_jobs(
         failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
 
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "message": f"Failed to kill {len(failed_job_ids)} jobs out of {len(job_ids)}",
                 "valid_job_ids": list(set(job_ids) - set(failed_job_ids)),
@@ -354,7 +353,7 @@ async def get_job_status_bulk(
         )
         return {job_id: status for job_id, status in zip(job_ids, result)}
     except JobNotFound as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.patch("/status")
@@ -369,11 +368,11 @@ async def set_job_status_bulk(
         action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)
     )
     # check that the datetime contains timezone info
-    for job_id, status in job_update.items():
-        for dt in status:
+    for job_id, job_status in job_update.items():
+        for dt in job_status:
             if dt.tzinfo is None:
                 raise HTTPException(
-                    status_code=HTTPStatus.BAD_REQUEST,
+                    status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Timestamp {dt} is not timezone aware for job {job_id}",
                 )
 
@@ -423,7 +422,7 @@ async def reschedule_bulk_jobs(
             res_status = await job_db.get_job_status(job_id)
         except NoResultFound as e:
             raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
             ) from e
 
         initial_status = res_status.Status
@@ -462,7 +461,7 @@ async def reschedule_single_job(
     try:
         result = await job_db.rescheduleJob(job_id)
     except ValueError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     return result
 
 
@@ -612,7 +611,7 @@ async def search(
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
     if len(jobs) == 0 and total > 0:
         response.headers["Content-Range"] = f"jobs */{total}"
-        response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
+        response.status_code = status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
 
     # The total number of jobs is greater than the number of jobs returned
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
@@ -620,7 +619,7 @@ async def search(
         first_idx = per_page * (page - 1)
         last_idx = min(first_idx + len(jobs), total) - 1 if total > 0 else 0
         response.headers["Content-Range"] = f"jobs {first_idx}-{last_idx}/{total}"
-        response.status_code = HTTPStatus.PARTIAL_CONTENT
+        response.status_code = status.HTTP_206_PARTIAL_CONTENT
     return jobs
 
 
@@ -681,7 +680,8 @@ async def delete_single_job(
         )
     except* JobNotFound as e:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND.value, detail=str(e.exceptions[0])
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=str(e.exceptions[0])
         ) from e
 
     return f"Job {job_id} has been successfully deleted"
@@ -708,7 +708,8 @@ async def kill_single_job(
         )
     except* JobNotFound as e:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail=str(e.exceptions[0])
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=str(e.exceptions[0])
         ) from e
 
     return f"Job {job_id} has been successfully killed"
@@ -760,7 +761,7 @@ async def get_single_job_status(
         status = await job_db.get_job_status(job_id)
     except JobNotFound as e:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
         ) from e
     return {job_id: status}
 
@@ -779,7 +780,7 @@ async def set_single_job_status(
     for dt in status:
         if dt.tzinfo is None:
             raise HTTPException(
-                status_code=HTTPStatus.BAD_REQUEST,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Timestamp {dt} is not timezone aware",
             )
 
@@ -788,7 +789,7 @@ async def set_single_job_status(
             job_id, status, job_db, job_logging_db, force
         )
     except JobNotFound as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     return {job_id: latest_status}
 
 
@@ -804,7 +805,7 @@ async def get_single_job_status_history(
         status = await job_logging_db.get_records(job_id)
     except JobNotFound as e:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Job not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         ) from e
     return {job_id: status}
 
@@ -824,4 +825,4 @@ async def set_single_job_properties(
         {job_id: job_properties}, update_timestamp=update_timestamp
     )
     if not rowcount:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Job not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import contextlib
-from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, AsyncIterator, Literal
 
 from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
-from fastapi import Body, Depends, HTTPException, Query
+from fastapi import Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, PrivateAttr
 from pydantic_settings import SettingsConfigDict
 from pyparsing import Any
@@ -114,7 +113,7 @@ async def initiate_sandbox_upload(
 
     if sandbox_info.size > MAX_SANDBOX_SIZE_BYTES:
         raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Sandbox too large. Max size is {MAX_SANDBOX_SIZE_BYTES} bytes",
         )
 

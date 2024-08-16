@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from http import HTTPStatus
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from diracx.core.models import JobStatus
@@ -339,7 +339,7 @@ def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
     """Test that a user cannot submit a parametric JDL greater than the max parametric jobs."""
     job_definitions = [TEST_LARGE_PARAMETRIC_JDL]
     res = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
+    assert res.status_code == status.HTTP_400_BAD_REQUEST, res.json()
 
 
 def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
@@ -348,7 +348,7 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
     """Test that a user cannot submit a list of JDL greater than the max number of jobs."""
     job_definitions = [TEST_JDL for _ in range(100)]
     res = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
+    assert res.status_code == status.HTTP_400_BAD_REQUEST, res.json()
 
 
 @pytest.mark.parametrize(
@@ -359,12 +359,12 @@ def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
     normal_user_client, job_definitions
 ):
     res = normal_user_client.post("/api/jobs/", json=job_definitions)
-    assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
+    assert res.status_code == status.HTTP_400_BAD_REQUEST, res.json()
 
 
 def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_client):
     res = admin_user_client.post("/api/jobs/", json=[TEST_JDL])
-    assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
+    assert res.status_code == status.HTTP_403_FORBIDDEN, res.json()
 
 
 @pytest.fixture
@@ -416,7 +416,7 @@ def test_get_status_of_nonexistent_job(
     r = normal_user_client.get(f"/api/jobs/{invalid_job_id}/status")
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
@@ -560,7 +560,7 @@ def test_set_job_status_invalid_job(
     )
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
@@ -581,7 +581,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
     )
 
     # Assert
-    assert r.status_code == HTTPStatus.BAD_REQUEST, r.json()
+    assert r.status_code == status.HTTP_400_BAD_REQUEST, r.json()
     assert r.json() == {"detail": f"Timestamp {date} is not timezone aware"}
 
 
@@ -706,7 +706,7 @@ def test_set_job_status_with_invalid_job_id(
     )
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
@@ -747,7 +747,7 @@ def test_delete_job_invalid_job_id(normal_user_client: TestClient, invalid_job_i
     r = normal_user_client.delete(f"/api/jobs/{invalid_job_id}")
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
@@ -774,7 +774,7 @@ def test_delete_bulk_jobs_invalid_job_ids(
     r = normal_user_client.delete("/api/jobs/", params={"job_ids": invalid_job_ids})
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
             "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
@@ -794,7 +794,7 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     r = normal_user_client.delete("/api/jobs/", params={"job_ids": job_ids})
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
             "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(job_ids)}",
@@ -829,7 +829,7 @@ def test_kill_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id:
     r = normal_user_client.post(f"/api/jobs/{invalid_job_id}/kill")
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
 
 
@@ -857,7 +857,7 @@ def test_kill_bulk_jobs_invalid_job_ids(
     r = normal_user_client.post("/api/jobs/kill", params={"job_ids": invalid_job_ids})
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
             "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
@@ -877,7 +877,7 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     r = normal_user_client.post("/api/jobs/kill", params={"job_ids": job_ids})
 
     # Assert
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
             "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(job_ids)}",
@@ -902,7 +902,7 @@ def test_remove_job_valid_job_id(normal_user_client: TestClient, valid_job_id: i
     # Assert
     assert r.status_code == 200, r.json()
     r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
-    assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+    assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
 
 
 def test_remove_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
@@ -923,7 +923,7 @@ def test_remove_bulk_jobs_valid_job_ids(
     assert r.status_code == 200, r.json()
     for job_id in valid_job_ids:
         r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-        assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+        assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
 
 
 # Test setting job properties
@@ -1014,7 +1014,7 @@ def test_set_single_job_properties_non_existing_job(
         f"/api/jobs/{job_id}",
         json={"UserPriority": 2},
     )
-    assert res.status_code == HTTPStatus.NOT_FOUND, res.json()
+    assert res.status_code == status.HTTP_404_NOT_FOUND, res.json()
 
 
 # def test_remove_bulk_jobs_invalid_job_ids(
@@ -1024,7 +1024,7 @@ def test_set_single_job_properties_non_existing_job(
 #     r = normal_user_client.post("/api/jobs/remove", params={"job_ids": invalid_job_ids})
 
 #     # Assert
-#     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+#     assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
 #     assert r.json() == {
 #         "detail": {
 #             "message": f"Failed to remove {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
@@ -1046,7 +1046,7 @@ def test_set_single_job_properties_non_existing_job(
 #     r = normal_user_client.post("/api/jobs/remove", params={"job_ids": job_ids})
 
 #     # Assert
-#     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+#     assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
 #     assert r.json() == {
 #         "detail": {
 #             "message": f"Failed to remove {len(invalid_job_ids)} jobs out of {len(job_ids)}",
@@ -1058,4 +1058,4 @@ def test_set_single_job_properties_non_existing_job(
 #     }
 #     for job_id in valid_job_ids:
 #         r = normal_user_client.get(f"/api/jobs/{job_id}/status")
-#         assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+#         assert r.status_code == status.HTTP_404_NOT_FOUND, r.json()
