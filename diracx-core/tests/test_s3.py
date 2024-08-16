@@ -5,8 +5,8 @@ import hashlib
 import random
 import secrets
 
-import pytest
 import httpx
+import pytest
 from aiobotocore.session import get_session
 
 from diracx.core.s3 import (

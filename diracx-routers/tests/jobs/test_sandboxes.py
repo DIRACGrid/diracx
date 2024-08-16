@@ -5,8 +5,8 @@ import secrets
 from copy import deepcopy
 from io import BytesIO
 
-import pytest
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from diracx.routers.auth.token import create_token
