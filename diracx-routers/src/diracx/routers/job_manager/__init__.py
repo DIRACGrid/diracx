@@ -356,12 +356,14 @@ async def get_job_status_bulk(
     job_ids: Annotated[list[int], Query()],
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
-) -> list[LimitedJobStatusReturn]:
+) -> dict[int, LimitedJobStatusReturn]:
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
     try:
-        return await asyncio.gather(
+        result = await asyncio.gather(
             *(job_db.get_job_status(job_id) for job_id in job_ids)
         )
+        print(result)
+        return {job_id: status for job_id, status in zip(job_ids, result)}
     except JobNotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
