@@ -477,11 +477,7 @@ async def test_get_job_status_history(
     assert r.json()[1]["Status"] == JobStatus.CHECKING.value
     assert r.json()[1]["MinorStatus"] == "JobPath"
     assert r.json()[1]["ApplicationStatus"] == "Unknown"
-    assert (
-        before
-        < datetime.fromisoformat(r.json()[1]["StatusTime"])
-        < after
-    )
+    assert before < datetime.fromisoformat(r.json()[1]["StatusTime"]) < after
     assert r.json()[1]["Source"] == "Unknown"
 
 

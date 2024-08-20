@@ -406,6 +406,7 @@ async def get_job_status_history_bulk(
         *(job_logging_db.get_records(job_id) for job_id in job_ids)
     )
 
+
 @router.post("/reschedule")
 async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
