@@ -53,7 +53,8 @@ dependencies:
   - rich
   - sqlalchemy
   - shellcheck
-  - typer
+  # Exclude version from 0.12.4 because of https://github.com/DIRACGrid/diracx/issues/280
+  - typer <0.12.4
   - types-cachetools
   - types-PyYAML
   - types-requests
