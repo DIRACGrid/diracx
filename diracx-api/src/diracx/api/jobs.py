@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 __all__ = ("create_sandbox", "download_sandbox")
 
 import hashlib

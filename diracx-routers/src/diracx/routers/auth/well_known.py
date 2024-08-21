@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from fastapi import Request
 from typing_extensions import TypedDict
 

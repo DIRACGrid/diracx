@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .authorize_code_flow import router as authorize_code_flow_router

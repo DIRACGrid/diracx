@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 __all__ = ("AuthDB", "JobDB", "JobLoggingDB", "SandboxMetadataDB", "TaskQueueDB")
 
 from .auth.db import AuthDB

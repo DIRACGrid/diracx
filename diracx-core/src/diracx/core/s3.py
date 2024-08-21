@@ -1,7 +1,5 @@
 """Utilities for interacting with S3-compatible storage."""
 
-from __future__ import annotations
-
 __all__ = (
     "s3_bucket_exists",
     "s3_object_exists",

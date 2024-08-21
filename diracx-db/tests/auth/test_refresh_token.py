@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from diracx.db.sql.auth.db import AuthDB

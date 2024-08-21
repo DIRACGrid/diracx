@@ -5,8 +5,6 @@ uvicorn is called with `create_app` as a factory
 create_app loads the environment configuration
 """
 
-from __future__ import annotations
-
 import inspect
 import logging
 import os

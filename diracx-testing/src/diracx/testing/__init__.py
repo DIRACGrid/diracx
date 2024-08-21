@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # TODO: this needs a lot of documentation, in particular what will matter for users
 # are the enabled_dependencies markers
 import asyncio

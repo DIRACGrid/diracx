@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from diracx.api.utils import with_client
 from diracx.client.aio import DiracClient
 

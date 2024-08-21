@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from diracx.db.os.utils import BaseOSDB
 
 

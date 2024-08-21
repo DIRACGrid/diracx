@@ -1,5 +1,5 @@
 # Can't using PEP-604 with typer: https://github.com/tiangolo/typer/issues/348
-# from __future__ import annotations
+#
 
 __all__ = ("dump",)
 

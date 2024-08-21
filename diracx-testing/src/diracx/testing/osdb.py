@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import secrets
 import socket
 from subprocess import PIPE, Popen, check_output

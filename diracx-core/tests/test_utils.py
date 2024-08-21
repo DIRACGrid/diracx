@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from diracx.core.utils import dotenv_files_from_environment
 
 
