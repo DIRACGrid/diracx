@@ -7,9 +7,10 @@ import json
 import logging
 import os
 from abc import ABCMeta, abstractmethod
+from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
-from typing import Any, AsyncIterator, Self
+from typing import Any, Self
 
 from opensearchpy import AsyncOpenSearch
 

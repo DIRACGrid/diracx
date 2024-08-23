@@ -10,10 +10,10 @@ from __future__ import annotations
 import inspect
 import logging
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from logging import Formatter, StreamHandler
-from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
@@ -346,12 +346,10 @@ def create_app() -> DiracFastAPI:
 
     # Find all the access policies
 
-    available_access_policy_names = set(
-        [
-            entry_point.name
-            for entry_point in select_from_extension(group="diracx.access_policies")
-        ]
-    )
+    available_access_policy_names = {
+        entry_point.name
+        for entry_point in select_from_extension(group="diracx.access_policies")
+    }
 
     all_access_policies = {}
 
@@ -428,7 +426,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
     return _db_alive_cache[db]
 
 
-async def db_transaction(db: T2) -> AsyncGenerator[T2, None]:
+async def db_transaction(db: T2) -> AsyncGenerator[T2]:
     """Initiate a DB transaction."""
     # Entering the context already triggers a connection to the DB
     # that may fail

@@ -503,9 +503,7 @@ class JobDB(BaseSQLDB):
 
         """
         # Check that all we always update the same set of properties
-        required_parameters_set = set(
-            [tuple(sorted(k.keys())) for k in properties.values()]
-        )
+        required_parameters_set = {tuple(sorted(k.keys())) for k in properties.values()}
 
         if len(required_parameters_set) != 1:
             raise NotImplementedError(
@@ -682,10 +680,10 @@ class TaskQueueDB(BaseSQLDB):
             .join(JobsQueue, TaskQueues.TQId == JobsQueue.TQId)
             .where(JobsQueue.JobId.in_(job_ids))
         )
-        return set(
+        return {
             (int(row[0]), str(row[1]), str(row[2]), str(row[3]))
             for row in (await self.conn.execute(stmt)).all()
-        )
+        }
 
     async def get_owner_for_task_queue(self, tq_id: int) -> dict[str, str]:
         """Get the owner and owner group for a task queue."""

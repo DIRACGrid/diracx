@@ -21,7 +21,8 @@ import functools
 import os
 import time
 from abc import ABCMeta, abstractmethod
-from typing import Annotated, Callable, Self
+from collections.abc import Callable
+from typing import Annotated, Self
 
 from fastapi import Depends
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import StrEnum, auto
-from typing import Annotated, Callable
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
