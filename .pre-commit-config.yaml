@@ -36,3 +36,10 @@ repos:
           - types-aiobotocore[essential]
           - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/|diracx-[a-z]+/tests/|diracx-testing/|build)
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.17.0
+    hooks:
+    -   id: pyupgrade
+        args: ["--py311-plus"]
+        exclude: ^(diracx-client/src/diracx/client/|diracx-cli/tests/|diracx-cli/src/diracx/cli/)
