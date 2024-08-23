@@ -489,9 +489,7 @@ class JobDB(BaseSQLDB):
 
         """
         # Check that all we always update the same set of properties
-        required_parameters_set = set(
-            [tuple(sorted(k.keys())) for k in properties.values()]
-        )
+        required_parameters_set = {tuple(sorted(k.keys())) for k in properties.values()}
 
         if len(required_parameters_set) != 1:
             raise NotImplementedError(
