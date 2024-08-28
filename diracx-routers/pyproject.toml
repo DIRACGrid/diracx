@@ -25,6 +25,7 @@ dependencies = [
     "fastapi",
     "httpx",
     "pydantic >=2.4",
+    "uvicorn",
     "sqlalchemy",
     "opentelemetry-api",
     "opentelemetry-exporter-otlp",
