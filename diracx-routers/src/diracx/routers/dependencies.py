@@ -18,6 +18,7 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.core.settings import DevelopmentSettings as _DevelopmentSettings
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
@@ -45,4 +46,8 @@ TaskQueueDB = Annotated[_TaskQueueDB, Depends(_TaskQueueDB.transaction)]
 Config = Annotated[_Config, Depends(ConfigSource.create)]
 AvailableSecurityProperties = Annotated[
     set[SecurityProperty], Depends(SecurityProperty.available_properties)
+]
+
+DevelopmentSettings = Annotated[
+    _DevelopmentSettings, Depends(_DevelopmentSettings.create)
 ]

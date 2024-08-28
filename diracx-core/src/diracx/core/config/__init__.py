@@ -204,7 +204,6 @@ class RemoteGitConfigSource(BaseGitConfigSource):
     @cachedmethod(lambda self: self._pull_cache)
     def _pull(self):
         """Git pull from remote repo."""
-        print("CHRIS PULL")
         self.repo.remotes.origin.pull()
 
     def latest_revision(self) -> tuple[str, datetime]:

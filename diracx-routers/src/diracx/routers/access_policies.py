@@ -26,6 +26,7 @@ from typing import Annotated, Callable, Self
 from fastapi import Depends
 
 from diracx.core.extensions import select_from_extension
+from diracx.routers.dependencies import DevelopmentSettings
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 # FastAPI bug:
@@ -99,6 +100,7 @@ def check_permissions(
     policy: Callable,
     policy_name: str,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    dev_settings: DevelopmentSettings,
 ):
     """This wrapper just calls the actual implementation, but also makes sure
     that the policy has been called.
@@ -120,6 +122,7 @@ def check_permissions(
     try:
         yield wrapped_policy
     finally:
+
         if not has_been_called:
             # TODO nice error message with inspect
             # That should really not happen
@@ -128,9 +131,11 @@ def check_permissions(
                 "(PS: I hope you are in a CI)",
                 flush=True,
             )
-            # Sleep a bit to make sure the flush happened
-            time.sleep(1)
-            os._exit(1)
+            # If enable, just crash, meanly
+            if dev_settings.crash_on_missed_access_policy:
+                # Sleep a bit to make sure the flush happened
+                time.sleep(1)
+                os._exit(1)
 
 
 def open_access(f):

@@ -21,6 +21,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "SandboxStoreSettings",
         "WMSAccessPolicy",
         "SandboxAccessPolicy",
+        "DevelopmentSettings",
     ]
 )
 

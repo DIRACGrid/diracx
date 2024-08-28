@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import Request
 from typing_extensions import TypedDict
 
-from ..dependencies import Config
+from ..dependencies import Config, DevelopmentSettings
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthSettings
 
@@ -17,7 +17,6 @@ async def openid_configuration(
     request: Request,
     config: Config,
     settings: AuthSettings,
-    # check_permissions: OpenAccessPolicyCallable,
 ):
     """OpenID Connect discovery endpoint."""
     # await check_permissions()
@@ -65,17 +64,20 @@ class VOInfo(TypedDict):
 
 class Metadata(TypedDict):
     virtual_organizations: dict[str, VOInfo]
+    development_settings: DevelopmentSettings
 
 
 @router.get("/dirac-metadata")
 async def installation_metadata(
     config: Config,
     # check_permissions: OpenAccessPolicyCallable,
+    dev_settings: DevelopmentSettings,
 ) -> Metadata:
     """Get metadata about the dirac installation."""
     # await check_permissions()
     metadata: Metadata = {
         "virtual_organizations": {},
+        "development_settings": dev_settings,
     }
     for vo, vo_info in config.Registry.items():
         groups: dict[str, GroupInfo] = {

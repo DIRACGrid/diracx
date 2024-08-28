@@ -13,7 +13,15 @@ import os
 from collections.abc import AsyncGenerator
 from functools import partial
 from logging import Formatter, StreamHandler
-from typing import Any, Awaitable, Callable, Iterable, Sequence, TypeVar, cast
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Iterable,
+    Sequence,
+    TypeVar,
+    cast,
+)
 
 import dotenv
 from cachetools import TTLCache
@@ -139,6 +147,7 @@ def create_app_inner(
     # Please see ServiceSettingsBase for more details
 
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
+
     for service_settings in all_service_settings:
         cls = type(service_settings)
         assert cls not in available_settings_classes
