@@ -12,8 +12,8 @@ from diracx.core.models import (
     ScalarSearchOperator,
     SetJobStatusReturn,
 )
-from diracx.db.sql.jobs.db import JobDB, JobLoggingDB, TaskQueueDB
-from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
+
+from .. import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 
 
 async def set_job_status(

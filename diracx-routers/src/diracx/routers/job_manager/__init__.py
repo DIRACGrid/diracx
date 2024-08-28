@@ -22,7 +22,7 @@ from diracx.core.models import (
     SetJobStatusReturn,
     SortSpec,
 )
-from diracx.db.sql.jobs.status_utility import (
+from diracx.db.sql.utils.job_status import (
     delete_jobs,
     kill_jobs,
     remove_jobs,
