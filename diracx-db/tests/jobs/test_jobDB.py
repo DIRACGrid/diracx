@@ -13,7 +13,7 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql.jobs.db import JobDB
+from diracx.db.sql.job.db import JobDB
 
 
 @pytest.fixture
