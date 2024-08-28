@@ -1,59 +1,10 @@
 name: diracx-dev
 channels:
-  - diracgrid
   - conda-forge
   - nodefaults
 dependencies:
-  - authlib
-  - aiohttp
-  - aiomysql
-  - aiosqlite
-  - azure-core
-  - cachetools
-  ########
-  # Building the docker image on some system may fail
-  # as long as this bug is still present
-  # https://github.com/DaanDeMeyer/reproc/pull/103
-  # or that this is merged
-  # https://github.com/conda-forge/reproc-feedstock/pull/10
-  # If it does, we need to comment out `dirac-grid` here
-  # and install it via pip
-  - dirac-grid
-  - m2crypto >=0.38.0
-  - python-gfal2
-  - importlib_resources
-  #######
-  - email-validator
-  - fastapi
-  - git
-  - gitpython
-  - httpx
-  - isodate
-  - mypy
-  - opensearch-py
-  - pydantic >=2.4
-  - pyjwt
-  - pytest
-  - pytest-asyncio
-  - pytest-cov
-  - pytest-httpx
   - python
-  - python-dotenv
-  - python-jose
-  - python-multipart
-  - pyyaml
-  - requests
-  - rich
-  - sqlalchemy
-  - typer
-  - types-cachetools
-  - types-PyYAML
-  - types-requests
-  - uvicorn
-  - moto
-  - aiobotocore
-  - botocore
   - pip
-  - pip:
-    - types-aiobotocore[essential]
-    - boto3-stubs[essential]
+  - m2crypto
+  - python-gfal2
+  - mypy

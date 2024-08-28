@@ -57,11 +57,11 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def rsa_private_key_pem() -> str:
+def private_key_pem() -> str:
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    private_key = Ed25519PrivateKey.generate()
     return private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -77,11 +77,12 @@ def fernet_key() -> str:
 
 
 @pytest.fixture(scope="session")
-def test_auth_settings(rsa_private_key_pem, fernet_key) -> AuthSettings:
+def test_auth_settings(private_key_pem, fernet_key) -> AuthSettings:
     from diracx.routers.utils.users import AuthSettings
 
     yield AuthSettings(
-        token_key=rsa_private_key_pem,
+        token_algorithm="EdDSA",
+        token_key=private_key_pem,
         state_key=fernet_key,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",

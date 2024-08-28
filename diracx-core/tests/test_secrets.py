@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import TypeAdapter
 
 from diracx.core.settings import TokenSigningKey
 
 
 def compare_keys(key1, key2):
-    """Compare two keys by checking their public numebrs."""
-    assert key1.public_key().public_numbers() == key2.public_key().public_numbers()
+    """Compare two keys by checking their public keys."""
+    assert key1.public_key() == key2.public_key()
 
 
 def test_token_signing_key(tmp_path):
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        # DANGER: 512-bits is a bad idea for prod but makes the test notably faster!
-        key_size=512,
-    )
+    private_key = Ed25519PrivateKey.generate()
     private_key_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
