@@ -26,7 +26,11 @@ from diracx.core.s3 import (
 from diracx.core.settings import ServiceSettingsBase
 
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from .access_policies import ActionType, CheckSandboxPolicyCallable
+from .access_policies import (
+    ActionType,
+    CheckSandboxPolicyCallable,
+    CheckWMSPolicyCallable,
+)
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3.client import S3Client
@@ -221,7 +225,7 @@ async def get_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
-    check_permissions: CheckSandboxPolicyCallable,
+    check_permissions: CheckWMSPolicyCallable,
 ) -> dict[str, list[Any]]:
     """Get input and output sandboxes of given job."""
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
@@ -241,7 +245,7 @@ async def get_job_sandbox(
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
     sandbox_type: Literal["input", "output"],
-    check_permissions: CheckSandboxPolicyCallable,
+    check_permissions: CheckWMSPolicyCallable,
 ) -> list[Any]:
     """Get input or output sandbox of given job."""
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
@@ -259,7 +263,7 @@ async def assign_sandbox_to_job(
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
     settings: SandboxStoreSettings,
-    check_permissions: CheckSandboxPolicyCallable,
+    check_permissions: CheckWMSPolicyCallable,
 ):
     """Map the pfn as output sandbox to job."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
@@ -277,7 +281,7 @@ async def unassign_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
-    check_permissions: CheckSandboxPolicyCallable,
+    check_permissions: CheckWMSPolicyCallable,
 ):
     """Delete single job sandbox mapping."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
@@ -289,7 +293,7 @@ async def unassign_bulk_jobs_sandboxes(
     jobs_ids: Annotated[list[int], Query()],
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
-    check_permissions: CheckSandboxPolicyCallable,
+    check_permissions: CheckWMSPolicyCallable,
 ):
     """Delete bulk jobs sandbox mapping."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=jobs_ids)

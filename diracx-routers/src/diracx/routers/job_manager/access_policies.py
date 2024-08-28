@@ -97,8 +97,8 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 
 class SandboxAccessPolicy(BaseAccessPolicy):
-    """Policy for the sandbox
-    It delegates most of it to the WMSPolicy.
+    """Policy for the sandbox.
+    They are similar to the WMS access policies.
     """
 
     @staticmethod
@@ -108,25 +108,11 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
-        job_db: JobDB | None = None,
         sandbox_metadata_db: SandboxMetadataDB | None = None,
         pfns: list[str] | None = None,
         required_prefix: str | None = None,
-        job_ids: list[int] | None = None,
-        check_wms_permissions: CheckWMSPolicyCallable | None = None,
     ):
-
         assert action, "action is a mandatory parameter"
-
-        # if we pass the job_db or job_ids,
-        # delegate the check to the WMSAccessPolicy
-        if job_db or job_ids:
-            # Make sure that check_wms_permission is set
-            # It should always be by fastapi Depends,
-            # but not when we test the policy in itself
-            assert check_wms_permissions
-            return check_wms_permissions(action=action, job_db=job_db, job_ids=job_ids)
-
         assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
         assert pfns, "pfns is a mandatory parameter"
 

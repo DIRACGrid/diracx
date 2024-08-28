@@ -223,18 +223,6 @@ OTHER_USER_SANDBOX_PFN = (
 )
 
 
-async def test_sandbox_access_policy_delegate_to_wms(job_db):
-    """We expect that the policy delegates to the WMS policy when given job info
-    This will trigger an Assert as the WMSAccessPolicy is None
-    in these tests.
-    """
-    normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
-    with pytest.raises(AssertionError):
-        await SandboxAccessPolicy.policy(
-            SANDBOX_POLICY_NAME, normal_user, action=ActionType.CREATE, job_db=job_db
-        )
-
-
 async def test_sandbox_access_policy_create(sandbox_db):
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
