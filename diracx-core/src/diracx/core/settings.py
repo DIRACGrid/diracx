@@ -78,3 +78,13 @@ class ServiceSettingsBase(BaseSettings):
     async def lifetime_function(self) -> AsyncIterator[None]:
         """A context manager that can be used to run code at startup and shutdown."""
         yield
+
+
+class DevelopmentSettings(ServiceSettingsBase):
+    """Settings for the Development Configuration that can influence run time."""
+
+    model_config = SettingsConfigDict(env_prefix="DIRACX_DEV_")
+
+    # When then to true (only for demo/CI), crash if an access policy isn't
+    # called
+    crash_on_missed_access_policy: bool = False

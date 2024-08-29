@@ -1,7 +1,12 @@
 import pytest
 
 pytestmark = pytest.mark.enabled_dependencies(
-    ["ConfigSource", "AuthSettings", "OpenAccessPolicy"]
+    [
+        "ConfigSource",
+        "AuthSettings",
+        "OpenAccessPolicy",
+        "DevelopmentSettings",
+    ]
 )
 
 

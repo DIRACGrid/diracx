@@ -78,6 +78,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "TaskQueueDB",
         "SandboxMetadataDB",
         "WMSAccessPolicy",
+        "DevelopmentSettings",
     ]
 )
 

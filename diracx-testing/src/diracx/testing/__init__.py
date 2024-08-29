@@ -18,6 +18,7 @@ import pytest
 import requests
 
 if TYPE_CHECKING:
+    from diracx.core.settings import DevelopmentSettings
     from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
     from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
 
@@ -74,6 +75,13 @@ def fernet_key() -> str:
     from cryptography.fernet import Fernet
 
     return Fernet.generate_key().decode()
+
+
+@pytest.fixture(scope="session")
+def test_dev_settings() -> DevelopmentSettings:
+    from diracx.core.settings import DevelopmentSettings
+
+    yield DevelopmentSettings()
 
 
 @pytest.fixture(scope="session")
@@ -141,6 +149,7 @@ class ClientFactory:
         with_config_repo,
         test_auth_settings,
         test_sandbox_settings,
+        test_dev_settings,
     ):
         from diracx.core.config import ConfigSource
         from diracx.core.extensions import select_from_extension
@@ -171,6 +180,7 @@ class ClientFactory:
         self._cache_dir = tmp_path_factory.mktemp("empty-dbs")
 
         self.test_auth_settings = test_auth_settings
+        self.test_dev_settings = test_dev_settings
 
         all_access_policies = {
             e.name: [AlwaysAllowAccessPolicy]
@@ -183,6 +193,7 @@ class ClientFactory:
             all_service_settings=[
                 test_auth_settings,
                 test_sandbox_settings,
+                test_dev_settings,
             ],
             database_urls=database_urls,
             os_database_conn_kwargs={
@@ -346,13 +357,18 @@ def session_client_factory(
     test_sandbox_settings,
     with_config_repo,
     tmp_path_factory,
+    test_dev_settings,
 ):
     """TODO.
     ----
 
     """
     yield ClientFactory(
-        tmp_path_factory, with_config_repo, test_auth_settings, test_sandbox_settings
+        tmp_path_factory,
+        with_config_repo,
+        test_auth_settings,
+        test_sandbox_settings,
+        test_dev_settings,
     )
 
 
