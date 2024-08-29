@@ -157,6 +157,26 @@ async def test_search_conditions(job_db):
         assert len(result) == 2
         assert all(r["JobID"] in [1, 2] for r in result)
 
+        # Search a specific vector condition: JobID not in 1,2,3
+        condition = VectorSearchSpec(
+            parameter="JobID", operator=VectorSearchOperator.NOT_IN, values=[1, 2, 3]
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 97
+        assert result
+        assert len(result) == 97
+        assert all(r["JobID"] not in [1, 2, 3] for r in result)
+
+        # Search a specific vector condition: JobID not in 1,2,5873 (one of them does not exist)
+        condition = VectorSearchSpec(
+            parameter="JobID", operator=VectorSearchOperator.NOT_IN, values=[1, 2, 5873]
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 98
+        assert result
+        assert len(result) == 98
+        assert all(r["JobID"] not in [1, 2] for r in result)
+
         # Search for multiple conditions based on different parameters: JobID eq 70, JobID in 4,5,6
         condition1 = ScalarSearchSpec(
             parameter="Owner", operator=ScalarSearchOperator.EQUAL, value="owner4"
