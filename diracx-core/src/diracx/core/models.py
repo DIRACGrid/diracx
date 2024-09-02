@@ -122,7 +122,7 @@ class SandboxFormat(StrEnum):
 
 class SandboxInfo(BaseModel):
     checksum_algorithm: ChecksumAlgorithm
-    checksum: str = Field(pattern=r"^[0-f]{64}$")
+    checksum: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     size: int = Field(ge=1)
     format: SandboxFormat
 

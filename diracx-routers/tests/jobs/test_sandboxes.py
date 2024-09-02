@@ -35,6 +35,7 @@ def normal_user_client(client_factory):
 def test_upload_then_download(
     normal_user_client: TestClient, test_auth_settings: AuthSettings
 ):
+    """Test that we can upload a sandbox and then download it."""
     data = secrets.token_bytes(512)
     checksum = hashlib.sha256(data).hexdigest()
 
@@ -85,26 +86,6 @@ def test_upload_then_download(
     assert r.status_code == 200, r.text
 
 
-def test_upload_oversized(normal_user_client: TestClient):
-    data = secrets.token_bytes(512)
-    checksum = hashlib.sha256(data).hexdigest()
-
-    # Initiate the upload
-    r = normal_user_client.post(
-        "/api/jobs/sandbox",
-        json={
-            "checksum_algorithm": "sha256",
-            "checksum": checksum,
-            # We can forge the size here to be larger than the actual data as
-            # we should get an error and never actually upload the data
-            "size": 1024 * 1024 * 1024,
-            "format": "tar.bz2",
-        },
-    )
-    assert r.status_code == 400, r.text
-    assert "Sandbox too large" in r.json()["detail"], r.text
-
-
 TEST_JDL = """
     Arguments = "jobDescription.xml -o LogLevel=INFO";
     Executable = "dirac-jobexec";
@@ -126,6 +107,7 @@ TEST_JDL = """
 
 
 def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
+    """Test that we can assign and unassign sandboxes to jobs."""
     data = secrets.token_bytes(512)
     checksum = hashlib.sha256(data).hexdigest()
 
@@ -139,6 +121,7 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
             "format": "tar.bz2",
         },
     )
+
     assert r.status_code == 200, r.text
     upload_info = r.json()
     assert upload_info["url"]
@@ -152,7 +135,15 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
-    # Getting job sb:
+    # Getting job input sb:
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/input")
+    assert r.status_code == 200
+    # Should be empty because
+    # (i) JDL doesn't specify any input sb
+    # (ii) The sb is not assigned to the job yet
+    assert r.json()[0] is None
+
+    # Getting job output sb:
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/output")
     assert r.status_code == 200
     # Should be empty
@@ -187,3 +178,74 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     assert r.status_code == 200
     assert r.json()["Input"] == [None]
     assert r.json()["Output"] == [None]
+
+
+def test_upload_malformed_checksum(normal_user_client: TestClient):
+    """Test that a malformed checksum returns an error."""
+    data = secrets.token_bytes(512)
+    # Malformed checksum (not a valid sha256)
+    checksum = "36_<1P0^Y^OS7SH7P;D<L`>SDV@6`GIUUW^aGEASUKU5dba@KLYVaYDIO3\\=N=KA"
+
+    # Upload Sandbox:
+    r = normal_user_client.post(
+        "/api/jobs/sandbox",
+        json={
+            "checksum_algorithm": "sha256",
+            "checksum": checksum,
+            "size": len(data),
+            "format": "tar.bz2",
+        },
+    )
+
+    assert r.status_code == 422, r.text
+
+
+def test_upload_oversized(normal_user_client: TestClient):
+    """Test that uploading a sandbox that is too large returns an error."""
+    data = secrets.token_bytes(512)
+    checksum = hashlib.sha256(data).hexdigest()
+
+    # Initiate the upload
+    r = normal_user_client.post(
+        "/api/jobs/sandbox",
+        json={
+            "checksum_algorithm": "sha256",
+            "checksum": checksum,
+            # We can forge the size here to be larger than the actual data as
+            # we should get an error and never actually upload the data
+            "size": 1024 * 1024 * 1024,
+            "format": "tar.bz2",
+        },
+    )
+    assert r.status_code == 400, r.text
+    assert "Sandbox too large" in r.json()["detail"], r.text
+
+
+def test_malformed_request_to_get_job_sandbox(normal_user_client: TestClient):
+    """Test that a malformed request to get a job sandbox returns an information to help user."""
+    # Submit a job:
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+    job_id = r.json()[0]["JobID"]
+
+    # Malformed request:
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/malformed-endpoint")
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "Input should be 'input' or 'output'"
+
+
+def test_get_empty_job_sandboxes(normal_user_client: TestClient):
+    """Test that we can get the sandboxes of a job that has no sandboxes assigned."""
+    # Submit a job:
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+    job_id = r.json()[0]["JobID"]
+
+    # Malformed request:
+    r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
+    assert r.status_code == 200
+    assert r.json() == {"Input": [None], "Output": [None]}
