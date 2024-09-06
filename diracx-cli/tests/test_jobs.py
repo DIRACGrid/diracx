@@ -8,7 +8,6 @@ import pytest
 from pytest import raises
 
 from diracx import cli
-from diracx.core.models import ScalarSearchSpec
 from diracx.core.preferences import get_diracx_preferences
 
 TEST_JDL = """
@@ -80,8 +79,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "JobGroup" in cap.out
 
     # Search for a job that doesn't exist
-    condition = ScalarSearchSpec(parameter="Status", operator="eq", value="nonexistent")
-    await cli.jobs.search(condition=[condition])
+    await cli.jobs.search(condition=["Status eq nonexistent"])
     cap = capfd.readouterr()
     assert cap.err == ""
     assert "[]" == cap.out.strip()
@@ -114,7 +112,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "Showing all jobs" in cap.out
 
     # Search for a job that doesn't exist
-    await cli.jobs.search(condition=[condition])
+    await cli.jobs.search(condition=["Status eq nonexistent"])
     cap = capfd.readouterr()
     assert cap.err == ""
     assert "No jobs found" in cap.out
