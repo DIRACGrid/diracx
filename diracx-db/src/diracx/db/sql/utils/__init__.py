@@ -270,6 +270,8 @@ def apply_search_filters(table, stmt, search):
             expr = column < query["value"]
         elif query["operator"] == "in":
             expr = column.in_(query["values"])
+        elif query["operator"] == "not in":
+            expr = column.notin_(query["values"])
         elif query["operator"] in "like":
             expr = column.like(query["value"])
         elif query["operator"] in "ilike":

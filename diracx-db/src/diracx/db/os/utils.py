@@ -279,6 +279,11 @@ def apply_search_filters(db_fields, search):
                     operator, field_name, field_type, {"keyword", "long", "date"}
                 )
                 result["must"].append({"terms": {field_name: query["values"]}})
+            case "not in":
+                require_type(
+                    operator, field_name, field_type, {"keyword", "long", "date"}
+                )
+                result["must_not"].append({"terms": {field_name: query["values"]}})
             # TODO: Implement like and ilike
             # If the pattern is a simple "col like 'abc%'", we can use a prefix query
             # Else we need to use a wildcard query where we replace % with * and _ with ?

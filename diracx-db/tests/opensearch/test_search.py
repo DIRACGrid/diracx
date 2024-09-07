@@ -156,6 +156,10 @@ async def test_operators_long(prefilled_db: DummyOSDB):
     results = await prefilled_db.search(["IntField"], [query], [])
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC3["IntField"]}
 
+    query = part | {"operator": "not in", "values": ["1234", "42"]}
+    results = await prefilled_db.search(["IntField"], [query], [])
+    assert {x["IntField"] for x in results} == {DOC2["IntField"]}
+
     query = part | {"operator": "lt", "value": "1234"}
     results = await prefilled_db.search(["IntField"], [query], [])
     assert {x["IntField"] for x in results} == {DOC2["IntField"], DOC3["IntField"]}
@@ -191,6 +195,10 @@ async def test_operators_date(prefilled_db: DummyOSDB):
     query = part | {"operator": "in", "values": [doc1_time, doc2_time]}
     results = await prefilled_db.search(["IntField"], [query], [])
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC2["IntField"]}
+
+    query = part | {"operator": "not in", "values": [doc1_time, doc2_time]}
+    results = await prefilled_db.search(["IntField"], [query], [])
+    assert {x["IntField"] for x in results} == {DOC3["IntField"]}
 
     query = part | {"operator": "lt", "value": doc1_time}
     results = await prefilled_db.search(["IntField"], [query], [])
@@ -266,6 +274,21 @@ async def test_operators_keyword(prefilled_db: DummyOSDB):
     query = part | {"operator": "in", "values": ["missing"]}
     results = await prefilled_db.search(["IntField"], [query], [])
     assert {x["IntField"] for x in results} == set()
+
+    query = part | {
+        "operator": "not in",
+        "values": [DOC1["KeywordField0"], DOC3["KeywordField0"]],
+    }
+    results = await prefilled_db.search(["IntField"], [query], [])
+    assert {x["IntField"] for x in results} == {DOC2["IntField"]}
+
+    query = part | {"operator": "not in", "values": ["missing"]}
+    results = await prefilled_db.search(["IntField"], [query], [])
+    assert {x["IntField"] for x in results} == {
+        DOC1["IntField"],
+        DOC2["IntField"],
+        DOC3["IntField"],
+    }
 
     with pytest.raises(InvalidQueryError):
         query = part | {"operator": "lt", "value": "a"}
