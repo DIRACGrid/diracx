@@ -105,6 +105,26 @@ async def delete_single_job(job_db: JobDB, job_logging_db: JobLoggingDB):
     ...
 ```
 
+There are advanced and uncommon scenarios where committing a transaction is necessary even when returning an error response (e.g., revoking tokens in the database and returning an error to a potentially malicious user). In such cases, explicitly committing the transaction before raising an exception is crucial. Without this explicit commit, the intended changes would be rolled back along with the transaction, leading to unintended consequences:
+
+```python
+from diracx.routers.dependencies import AuthDB
+
+@router.post("/token")
+async def token(auth_db: AuthDB, ...)
+    ...
+    if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
+        # Revoke all the user tokens associated with the subject
+        await auth_db.revoke_user_refresh_tokens(sub)
+
+        # Explicitly commit the transaction to ensure the revocation is saved,
+        # even though an error will be returned to the user.
+        await auth_db.conn.commit()
+
+        # Raise an HTTP exception to signal the error
+        raise HTTPException(status_code=401)
+```
+
 Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/pooling.html) for more details.
 
 ### OpenSearch Databases
