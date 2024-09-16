@@ -20,6 +20,12 @@ from .utils import AsyncTyper
 app = AsyncTyper()
 
 
+available_operators = (
+    f"Scalar operators: {', '.join([op.value for op in ScalarSearchOperator])}. "
+    f"Vector operators: {', '.join([op.value for op in VectorSearchOperator])}."
+)
+
+
 def parse_condition(value: str) -> SearchSpec:
     parameter, operator, rest = value.split(" ", 2)
     if operator in set(ScalarSearchOperator):
@@ -51,15 +57,18 @@ async def search(
         "Owner",
         "LastUpdateTime",
     ],
-    condition: Annotated[list[SearchSpec], Option(parser=parse_condition)] = [],
+    condition: Annotated[
+        list[str], Option(help=f'Example: "JobID eq 1000". {available_operators}')
+    ] = [],
     all: bool = False,
     page: int = 1,
     per_page: int = 10,
 ):
+    search_specs = [parse_condition(cond) for cond in condition]
     async with DiracClient() as api:
         jobs, content_range = await api.jobs.search(
             parameters=None if all else parameter,
-            search=condition if condition else None,
+            search=search_specs if search_specs else None,
             page=page,
             per_page=per_page,
             cls=lambda _, jobs, headers: (

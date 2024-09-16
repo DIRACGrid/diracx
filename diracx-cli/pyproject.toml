@@ -20,7 +20,7 @@ dependencies = [
     "gitpython",
     "pydantic",
     "rich",
-    "typer <0.12.4",
+    "typer",
     "pyyaml",
 ]
 dynamic = ["version"]
