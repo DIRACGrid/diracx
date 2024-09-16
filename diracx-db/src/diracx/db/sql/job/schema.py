@@ -72,7 +72,9 @@ class Jobs(JobDBBase):
     VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
     AccountedFlag = Column(
-        "AccountedFlag", Enum("True", "False", "Failed", name="AccountedFlag"), default="False"
+        "AccountedFlag",
+        Enum("True", "False", "Failed", name="AccountedFlag"),
+        default="False",
     )
 
     __table_args__ = (

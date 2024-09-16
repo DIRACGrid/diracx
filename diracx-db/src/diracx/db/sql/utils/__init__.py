@@ -125,7 +125,9 @@ DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=ut
 
 
 def EnumColumn(enum_type, **kwargs):
-    return Column(Enum(enum_type, native_enum=False, length=16, name=str(enum_type)), **kwargs)
+    return Column(
+        Enum(enum_type, native_enum=False, length=16, name=str(enum_type)), **kwargs
+    )
 
 
 class SQLDBError(Exception):
