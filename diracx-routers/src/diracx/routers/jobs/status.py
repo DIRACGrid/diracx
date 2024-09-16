@@ -10,6 +10,7 @@ from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
+    JobStatus,
     JobStatusUpdate,
     SetJobStatusReturn,
 )
@@ -36,8 +37,7 @@ logger = logging.getLogger(__name__)
 router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
 
 
-# TODO: Change to DELETE
-@router.delete("/")
+@router.post("/remove")
 async def remove_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
     config: Config,
@@ -133,16 +133,27 @@ async def set_job_status_bulk(
                     status_code=HTTPStatus.BAD_REQUEST,
                     detail=f"Timestamp {dt} is not timezone aware for job {job_id}",
                 )
+    try:
+        return await set_job_statuses(
+            job_update,
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+            force=force,
+        )
+    except* JobNotFound as group_exc:
+        failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
 
-    return await set_job_statuses(
-        job_update,
-        config,
-        job_db,
-        job_logging_db,
-        task_queue_db,
-        background_task,
-        force=force,
-    )
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={
+                "message": f"Failed to set job status on {len(failed_job_ids)} jobs out of {len(job_update)}",
+                "valid_job_ids": list(set(job_update) - set(failed_job_ids)),
+                "failed_job_ids": failed_job_ids,
+            },
+        ) from group_exc
 
 
 # TODO: Add a parameter to replace "resetJob"
@@ -214,6 +225,42 @@ async def reschedule_single_job(
 
 
 @router.delete("/{job_id}")
+async def delete_single_job(
+    job_id: int,
+    config: Config,
+    job_db: JobDB,
+    job_logging_db: JobLoggingDB,
+    sandbox_metadata_db: SandboxMetadataDB,
+    task_queue_db: TaskQueueDB,
+    background_task: BackgroundTasks,
+    check_permissions: CheckWMSPolicyCallable,
+):
+    """Set deleted status on a single job."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    try:
+        return await set_job_status(
+            job_id,
+            {
+                datetime.now(timezone.utc): JobStatusUpdate(
+                    Status=JobStatus.DELETED,
+                    MinorStatus="Checking accounting",
+                    Source="job_manager",
+                )
+            },
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+        )
+    except JobNotFound as e:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
+        ) from e
+
+
+@router.delete("/{job_id}/remove")
 async def remove_single_job(
     job_id: int,
     config: Config,
