@@ -140,8 +140,10 @@ class BaseOSDB(metaclass=ABCMeta):
         """
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
-            yield
-        self._client = None
+            try:
+                yield
+            finally:
+                self._client = None
 
     async def ping(self):
         """Check whether the connection to the DB is still working.
@@ -166,7 +168,6 @@ class BaseOSDB(metaclass=ABCMeta):
     async def __aexit__(self, exc_type, exc, tb):
         assert self._conn.get()
         self._conn.set(False)
-        return
 
     async def create_index_template(self) -> None:
         template_body = {

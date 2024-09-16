@@ -18,11 +18,10 @@ from diracx.core.models import (
     ScalarSearchOperator,
     ScalarSearchSpec,
     SearchSpec,
-    SortDirection,
     SortSpec,
 )
 
-from ..utils import BaseSQLDB, apply_search_filters
+from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints
 from .schema import (
     InputData,
     JobCommands,
@@ -60,7 +59,7 @@ class JobDB(BaseSQLDB):
         columns = _get_columns(Jobs.__table__, group_by)
 
         stmt = select(*columns, func.count(Jobs.JobID).label("count"))
-        stmt = apply_search_filters(Jobs.__table__, stmt, search)
+        stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
         stmt = stmt.group_by(*columns)
 
         # Execute the query
@@ -84,27 +83,8 @@ class JobDB(BaseSQLDB):
         columns = _get_columns(Jobs.__table__, parameters)
         stmt = select(*columns)
 
-        stmt = apply_search_filters(Jobs.__table__, stmt, search)
-
-        # Apply any sort constraints
-        sort_columns = []
-        for sort in sorts:
-            if sort["parameter"] not in Jobs.__table__.columns:
-                raise InvalidQueryError(
-                    f"Cannot sort by {sort['parameter']}: unknown column"
-                )
-            column = Jobs.__table__.columns[sort["parameter"]]
-            sorted_column = None
-            if sort["direction"] == SortDirection.ASC:
-                sorted_column = column.asc()
-            elif sort["direction"] == SortDirection.DESC:
-                sorted_column = column.desc()
-            else:
-                raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
-            sort_columns.append(sorted_column)
-
-        if sort_columns:
-            stmt = stmt.order_by(*sort_columns)
+        stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
+        stmt = apply_sort_constraints(Jobs.__table__.columns.__getitem__, stmt, sorts)
 
         if distinct:
             stmt = stmt.distinct()
