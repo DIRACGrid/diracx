@@ -5,11 +5,13 @@ __all__ = ("utcnow", "Column", "NullColumn", "DateNowColumn", "BaseSQLDB")
 import contextlib
 import logging
 import os
+import re
 from abc import ABCMeta
+from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING, AsyncIterator, Self, cast
+from typing import TYPE_CHECKING, Self, cast
 
 from pydantic import TypeAdapter
 from sqlalchemy import Column as RawColumn
@@ -21,6 +23,7 @@ from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
+from diracx.core.models import SortDirection
 from diracx.core.settings import SqlalchemyDsn
 from diracx.db.exceptions import DBUnavailable
 
@@ -55,13 +58,70 @@ def sqlite_utcnow(element, compiler, **kw) -> str:
     return "DATETIME('now')"
 
 
+class date_trunc(expression.FunctionElement):
+    """Sqlalchemy function to truncate a date to a given resolution.
+
+    Primarily used to be able to query for a specific resolution of a date e.g.
+
+        select * from table where date_trunc('day', date_column) = '2021-01-01'
+        select * from table where date_trunc('year', date_column) = '2021'
+        select * from table where date_trunc('minute', date_column) = '2021-01-01 12:00'
+    """
+
+    type = DateTime()
+    inherit_cache = True
+
+    def __init__(self, *args, time_resolution, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._time_resolution = time_resolution
+
+
+@compiles(date_trunc, "postgresql")
+def pg_date_trunc(element, compiler, **kw):
+    res = {
+        "SECOND": "second",
+        "MINUTE": "minute",
+        "HOUR": "hour",
+        "DAY": "day",
+        "MONTH": "month",
+        "YEAR": "year",
+    }[element._time_resolution]
+    return f"date_trunc('{res}', {compiler.process(element.clauses)})"
+
+
+@compiles(date_trunc, "mysql")
+def mysql_date_trunc(element, compiler, **kw):
+    pattern = {
+        "SECOND": "%Y-%m-%d %H:%i:%S",
+        "MINUTE": "%Y-%m-%d %H:%i",
+        "HOUR": "%Y-%m-%d %H",
+        "DAY": "%Y-%m-%d",
+        "MONTH": "%Y-%m",
+        "YEAR": "%Y",
+    }[element._time_resolution]
+    return f"DATE_FORMAT({compiler.process(element.clauses)}, '{pattern}')"
+
+
+@compiles(date_trunc, "sqlite")
+def sqlite_date_trunc(element, compiler, **kw):
+    pattern = {
+        "SECOND": "%Y-%m-%d %H:%M:%S",
+        "MINUTE": "%Y-%m-%d %H:%M",
+        "HOUR": "%Y-%m-%d %H",
+        "DAY": "%Y-%m-%d",
+        "MONTH": "%Y-%m",
+        "YEAR": "%Y",
+    }[element._time_resolution]
+    return f"strftime('{pattern}', {compiler.process(element.clauses)})"
+
+
 def substract_date(**kwargs: float) -> datetime:
     return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
 
 
 Column: partial[RawColumn] = partial(RawColumn, nullable=False)
 NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
-DateNowColumn = partial(Column, DateTime(timezone=True), server_default=utcnow())
+DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
 
 
 def EnumColumn(enum_type, **kwargs):
@@ -207,11 +267,11 @@ class BaseSQLDB(metaclass=ABCMeta):
         # after 60mn by default
         engine = create_async_engine(self._db_url, pool_recycle=60 * 30)
         self._engine = engine
-
-        yield
-
-        self._engine = None
-        await engine.dispose()
+        try:
+            yield
+        finally:
+            self._engine = None
+            await engine.dispose()
 
     @property
     def conn(self) -> AsyncConnection:
@@ -229,7 +289,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             self._conn.set(await self.engine.connect().__aenter__())
         except Exception as e:
-            raise SQLDBUnavailable("Cannot connect to DB") from e
+            raise SQLDBUnavailable(
+                f"Cannot connect to {self.__class__.__name__}"
+            ) from e
 
         return self
 
@@ -256,10 +318,62 @@ class BaseSQLDB(metaclass=ABCMeta):
             raise SQLDBUnavailable("Cannot ping the DB") from e
 
 
-def apply_search_filters(table, stmt, search):
-    # Apply any filters
+def find_time_resolution(value):
+    if isinstance(value, datetime):
+        return None, value
+    if match := re.fullmatch(
+        r"\d{4}(-\d{2}(-\d{2}(([ T])\d{2}(:\d{2}(:\d{2}(\.\d{6}Z?)?)?)?)?)?)?", value
+    ):
+        if match.group(6):
+            precision, pattern = "SECOND", r"\1-\2-\3 \4:\5:\6"
+        elif match.group(5):
+            precision, pattern = "MINUTE", r"\1-\2-\3 \4:\5"
+        elif match.group(3):
+            precision, pattern = "HOUR", r"\1-\2-\3 \4"
+        elif match.group(2):
+            precision, pattern = "DAY", r"\1-\2-\3"
+        elif match.group(1):
+            precision, pattern = "MONTH", r"\1-\2"
+        else:
+            precision, pattern = "YEAR", r"\1"
+        return (
+            precision,
+            re.sub(
+                r"^(\d{4})-?(\d{2})?-?(\d{2})?[ T]?(\d{2})?:?(\d{2})?:?(\d{2})?\.?(\d{6})?Z?$",
+                pattern,
+                value,
+            ),
+        )
+
+    raise InvalidQueryError(f"Cannot parse {value=}")
+
+
+def apply_search_filters(column_mapping, stmt, search):
     for query in search:
-        column = table.columns[query["parameter"]]
+        try:
+            column = column_mapping(query["parameter"])
+        except KeyError as e:
+            raise InvalidQueryError(f"Unknown column {query['parameter']}") from e
+
+        if isinstance(column.type, DateTime):
+            if "value" in query and isinstance(query["value"], str):
+                resolution, value = find_time_resolution(query["value"])
+                if resolution:
+                    column = date_trunc(column, time_resolution=resolution)
+                query["value"] = value
+
+            if query.get("values"):
+                resolutions, values = zip(
+                    *map(find_time_resolution, query.get("values"))
+                )
+                if len(set(resolutions)) != 1:
+                    raise InvalidQueryError(
+                        f"Cannot mix different time resolutions in {query=}"
+                    )
+                if resolution := resolutions[0]:
+                    column = date_trunc(column, time_resolution=resolution)
+                query["values"] = values
+
         if query["operator"] == "eq":
             expr = column == query["value"]
         elif query["operator"] == "neq":
@@ -279,4 +393,26 @@ def apply_search_filters(table, stmt, search):
         else:
             raise InvalidQueryError(f"Unknown filter {query=}")
         stmt = stmt.where(expr)
+    return stmt
+
+
+def apply_sort_constraints(column_mapping, stmt, sorts):
+    sort_columns = []
+    for sort in sorts or []:
+        try:
+            column = column_mapping(sort["parameter"])
+        except KeyError as e:
+            raise InvalidQueryError(
+                f"Cannot sort by {sort['parameter']}: unknown column"
+            ) from e
+        sorted_column = None
+        if sort["direction"] == SortDirection.ASC:
+            sorted_column = column.asc()
+        elif sort["direction"] == SortDirection.DESC:
+            sorted_column = column.desc()
+        else:
+            raise InvalidQueryError(f"Unknown sort {sort['direction']=}")
+        sort_columns.append(sorted_column)
+    if sort_columns:
+        stmt = stmt.order_by(*sort_columns)
     return stmt

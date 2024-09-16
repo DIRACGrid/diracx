@@ -7,8 +7,9 @@ __all__ = (
 )
 
 import contextlib
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterator, Self, TypeVar
+from typing import Annotated, Any, Self, TypeVar
 
 from authlib.jose import JsonWebKey
 from cryptography.fernet import Fernet

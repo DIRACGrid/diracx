@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Annotated, Any, Optional, TypeVar
+from typing import Annotated, Any, TypeVar
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator
@@ -65,10 +65,10 @@ class GroupConfig(BaseModel):
     AutoUploadProxy: bool = False
     JobShare: int = 1000
     Properties: SerializableSet[SecurityProperty]
-    Quota: Optional[int] = None
+    Quota: int | None = None
     Users: SerializableSet[str]
     AllowBackgroundTQs: bool = False
-    VOMSRole: Optional[str] = None
+    VOMSRole: str | None = None
     AutoSyncVOMS: bool = False
 
 

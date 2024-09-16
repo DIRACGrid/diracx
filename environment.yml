@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python
+  - python =3.11
   - pip
   - m2crypto
   - python-gfal2

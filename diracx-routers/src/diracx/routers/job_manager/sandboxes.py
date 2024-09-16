@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import AsyncIterator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, AsyncIterator, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from aiobotocore.session import get_session
 from botocore.config import Config

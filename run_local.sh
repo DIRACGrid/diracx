@@ -27,25 +27,29 @@ dirac internal add-user "${tmp_dir}/cs_store/initialRepo" \
   --preferred-username=localuser
 
 export DIRACX_CONFIG_BACKEND_URL="git+file://${tmp_dir}/cs_store/initialRepo"
-export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///:memory:"
-export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///:memory:"
+export DIRACX_DB_URL_AUTHDB="sqlite+aiosqlite:///${tmp_dir}/authdb.db"
+export DIRACX_DB_URL_JOBDB="sqlite+aiosqlite:///${tmp_dir}/jobdb.db"
+export DIRACX_DB_URL_JOBLOGGINGDB="sqlite+aiosqlite:///${tmp_dir}/jobloggingdb.db"
+export DIRACX_DB_URL_SANDBOXMETADATADB="sqlite+aiosqlite:///${tmp_dir}/sandboxmetadatadb.db"
+export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///${tmp_dir}/taskqueuedb.db"
+# This script monkey patches the parameter db to use a sqlite database rather
+# than requiring a full opensearch instance so we use a sqlalchmey dsn here
+export DIRACX_OS_DB_JOBPARAMETERSDB='{"sqlalchemy_dsn": "sqlite+aiosqlite:///'${tmp_dir}'/jobparametersdb.db"}'
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
 export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
-export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
+hostname_lower=$(hostname | tr -s '[:upper:]' '[:lower:]')
+export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'"$hostname_lower"':8000/docs/oauth2-redirect"]'
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
 export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost:3000", "aws_access_key_id": "console", "aws_secret_access_key": "console123"}'
 
 moto_server -p3000 &
 moto_pid=$!
-uvicorn --factory diracx.routers:create_app --reload &
+uvicorn --factory diracx.testing.routers:create_app --reload &
 diracx_pid=$!
 
 success=0
-for i in {1..10}; do
+for _ in {1..10}; do
   if curl --silent --head http://localhost:8000 > /dev/null; then
     success=1
     break
@@ -66,7 +70,7 @@ echo ""
 echo "1. Use the CLI:"
 echo ""
 echo "    export DIRACX_URL=http://localhost:8000"
-echo "    tests/make-token-local.py ${signing_key}"
+echo "    env DIRACX_SERVICE_AUTH_STATE_KEY='${state_key}' tests/make-token-local.py ${signing_key}"
 echo ""
 echo "2. Using swagger: http://localhost:8000/api/docs"
 
