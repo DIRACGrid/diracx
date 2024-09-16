@@ -30,8 +30,8 @@ async def set_job_statuses(
 
     """
     async with ForgivingTaskGroup() as tg:
-        results = [
-            tg.create_task(
+        tasks = {
+            job_id: tg.create_task(
                 set_job_status(
                     job_id,
                     status_dict,
@@ -44,9 +44,9 @@ async def set_job_statuses(
                 )
             )
             for job_id, status_dict in job_update.items()
-        ]
+        }
 
-    return {job_id: status for job_id, status in zip(job_update.keys(), results)}
+    return {k: v.result() for k, v in tasks.items()}
 
 
 async def set_job_status(
