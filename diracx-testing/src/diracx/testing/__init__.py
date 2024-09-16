@@ -20,7 +20,7 @@ import requests
 
 if TYPE_CHECKING:
     from diracx.core.settings import DevelopmentSettings
-    from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
+    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
     from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
 
 
@@ -123,7 +123,7 @@ def aio_moto(worker_id):
 
 @pytest.fixture(scope="session")
 def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
-    from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
+    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
 
     yield SandboxStoreSettings(
         bucket_name="sandboxes",
