@@ -155,46 +155,41 @@ async def set_job_status(
         job_data["EndExecTime"] = newEndTime
 
     #####################################################################################################
-    async with asyncio.TaskGroup() as tg:
-        # delete or kill job, if we transition to DELETED or KILLED state
-        # TODO
-        if new_status in [JobStatus.DELETED, JobStatus.KILLED]:
-            tg.create_task(
-                _remove_jobs_from_task_queue(
-                    [job_id], config, task_queue_db, background_task
-                )
-            )
+    # delete or kill job, if we transition to DELETED or KILLED state
+    # TODO
+    if new_status in [JobStatus.DELETED, JobStatus.KILLED]:
+        await _remove_jobs_from_task_queue(
+            [job_id], config, task_queue_db, background_task
+        )
 
-            # TODO: implement StorageManagerClient
-            # returnValueOrRaise(StorageManagerClient().killTasksBySourceTaskID(job_ids))
+        # TODO: implement StorageManagerClient
+        # returnValueOrRaise(StorageManagerClient().killTasksBySourceTaskID(job_ids))
 
-            tg.create_task(job_db.set_job_command(job_id, "Kill"))
+        await job_db.set_job_command(job_id, "Kill")
 
-        # Update database tables
-        if job_data:
-            tg.create_task(job_db.setJobAttributes(job_id, job_data))
+    # Update database tables
+    if job_data:
+        await job_db.setJobAttributes(job_id, job_data)
 
-        for updTime in updateTimes:
-            sDict = statusDict[updTime]
-            if not sDict.get("Status"):
-                sDict["Status"] = "idem"
-            if not sDict.get("MinorStatus"):
-                sDict["MinorStatus"] = "idem"
-            if not sDict.get("ApplicationStatus"):
-                sDict["ApplicationStatus"] = "idem"
-            if not sDict.get("Source"):
-                sDict["Source"] = "Unknown"
+    for updTime in updateTimes:
+        sDict = statusDict[updTime]
+        if not sDict.get("Status"):
+            sDict["Status"] = "idem"
+        if not sDict.get("MinorStatus"):
+            sDict["MinorStatus"] = "idem"
+        if not sDict.get("ApplicationStatus"):
+            sDict["ApplicationStatus"] = "idem"
+        if not sDict.get("Source"):
+            sDict["Source"] = "Unknown"
 
-            tg.create_task(
-                job_logging_db.insert_record(
-                    job_id,
-                    sDict["Status"],
-                    sDict["MinorStatus"],
-                    sDict["ApplicationStatus"],
-                    updTime,
-                    sDict["Source"],
-                )
-            )
+        await job_logging_db.insert_record(
+            job_id,
+            sDict["Status"],
+            sDict["MinorStatus"],
+            sDict["ApplicationStatus"],
+            updTime,
+            sDict["Source"],
+        )
 
     return SetJobStatusReturn(**job_data)
 

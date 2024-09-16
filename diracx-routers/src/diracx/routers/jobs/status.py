@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
 
 
-# TODO: Change to DELETE
 @router.delete("/")
 async def remove_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
@@ -133,16 +132,27 @@ async def set_job_status_bulk(
                     status_code=HTTPStatus.BAD_REQUEST,
                     detail=f"Timestamp {dt} is not timezone aware for job {job_id}",
                 )
+    try:
+        return await set_job_statuses(
+            job_update,
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+            force=force,
+        )
+    except* JobNotFound as group_exc:
+        failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
 
-    return await set_job_statuses(
-        job_update,
-        config,
-        job_db,
-        job_logging_db,
-        task_queue_db,
-        background_task,
-        force=force,
-    )
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={
+                "message": f"Failed to set job status on {len(failed_job_ids)} jobs out of {len(job_update)}",
+                "valid_job_ids": list(set(job_update) - set(failed_job_ids)),
+                "failed_job_ids": failed_job_ids,
+            },
+        ) from group_exc
 
 
 # TODO: Add a parameter to replace "resetJob"
@@ -248,7 +258,7 @@ async def remove_single_job(
     return f"Job {job_id} has been successfully removed"
 
 
-@router.patch("/{job_id}/")
+@router.patch("/{job_id}")
 async def set_single_job_properties(
     job_id: int,
     job_properties: Annotated[dict[str, Any], Body()],
