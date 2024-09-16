@@ -27,6 +27,7 @@ async def job_db(tmp_path):
             await conn.run_sync(job_db.metadata.create_all)
         yield job_db
 
+
 async def test_search_parameters(job_db):
     """Test that we can search specific parameters for jobs in the database."""
     async with job_db as job_db:
