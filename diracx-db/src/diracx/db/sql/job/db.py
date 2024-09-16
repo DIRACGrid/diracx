@@ -135,7 +135,7 @@ class JobDB(BaseSQLDB):
         )
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
-        return result.lastrowid
+        return result.inserted_primary_key[0]
 
     async def _insertJob(self, jobData: dict[str, Any]):
         stmt = insert(Jobs).values(jobData)

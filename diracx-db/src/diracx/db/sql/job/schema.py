@@ -22,7 +22,7 @@ class EnumBackedBool(types.TypeDecorator):
     cache_ok: bool = True
 
     def __init__(self) -> None:
-        super().__init__("True", "False")
+        super().__init__("True", "False", name="EnumBackedBool")
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:
@@ -72,7 +72,7 @@ class Jobs(JobDBBase):
     VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
     AccountedFlag = Column(
-        "AccountedFlag", Enum("True", "False", "Failed"), default="False"
+        "AccountedFlag", Enum("True", "False", "Failed", name="AccountedFlag"), default="False"
     )
 
     __table_args__ = (
