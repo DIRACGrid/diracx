@@ -14,6 +14,21 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run shellcheck
+      # Excluded codes related to sourcing files
+      #     SC1090: Can't follow non-constant source
+      #     SC1091: Not following sourced file
+      run: |
+        find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
+
   pytest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest

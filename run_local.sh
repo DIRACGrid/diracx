@@ -37,7 +37,8 @@ export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///${tmp_dir}/taskqueuedb.db"
 export DIRACX_OS_DB_JOBPARAMETERSDB='{"sqlalchemy_dsn": "sqlite+aiosqlite:///'${tmp_dir}'/jobparametersdb.db"}'
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
 export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
-export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'$(hostname| tr -s '[:upper:]' '[:lower:]')':8000/docs/oauth2-redirect"]'
+hostname_lower=$(hostname | tr -s '[:upper:]' '[:lower:]')
+export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'"$hostname_lower"':8000/docs/oauth2-redirect"]'
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
 export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost:3000", "aws_access_key_id": "console", "aws_secret_access_key": "console123"}'
@@ -48,7 +49,7 @@ uvicorn --factory diracx.testing.routers:create_app --reload &
 diracx_pid=$!
 
 success=0
-for i in {1..10}; do
+for _ in {1..10}; do
   if curl --silent --head http://localhost:8000 > /dev/null; then
     success=1
     break

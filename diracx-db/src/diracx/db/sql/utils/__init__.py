@@ -7,10 +7,11 @@ import logging
 import os
 import re
 from abc import ABCMeta
+from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import TYPE_CHECKING, AsyncIterator, Self, cast
+from typing import TYPE_CHECKING, Self, cast
 
 from pydantic import TypeAdapter
 from sqlalchemy import Column as RawColumn
