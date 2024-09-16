@@ -17,6 +17,7 @@ dependencies = [
     "opensearch-py[async]",
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
+    "asyncpg",
 ]
 dynamic = ["version"]
 
