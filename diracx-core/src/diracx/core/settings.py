@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 T = TypeVar("T")
 
 SqlalchemyDsn = Annotated[
-    AnyUrl, UrlConstraints(allowed_schemes={"sqlite+aiosqlite", "mysql+aiomysql"})
+    AnyUrl, UrlConstraints(allowed_schemes={"sqlite+aiosqlite", "mysql+aiomysql", "postgresql+asyncpg"})
 ]
 
 
