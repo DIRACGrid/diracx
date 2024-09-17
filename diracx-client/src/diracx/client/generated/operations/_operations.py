@@ -501,70 +501,79 @@ def build_jobs_delete_bulk_jobs_request(
     )
 
 
-def build_jobs_kill_bulk_jobs_request(
-    *, job_ids: List[int], **kwargs: Any
+def build_jobs_submit_bulk_jobs_request(**kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/jobs/"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_set_single_job_status_request(
+    job_id: int, *, force: bool = False, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/kill"
+    _url = "/api/jobs/{job_id}/status"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _url.format(**path_format_arguments)  # type: ignore
 
     # Construct parameters
-    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
+    if force is not None:
+        _params["force"] = _SERIALIZER.query("force", force, "bool")
 
     # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+        method="PATCH", url=_url, params=_params, headers=_headers, **kwargs
     )
 
 
-def build_jobs_remove_bulk_jobs_request(
-    *, job_ids: List[int], **kwargs: Any
-) -> HttpRequest:
+def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/remove"
+    _url = "/api/jobs/{job_id}/status"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
 
-    # Construct parameters
-    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
-
-
-def build_jobs_get_job_status_bulk_request(
-    *, job_ids: List[int], **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/status"
-
-    # Construct parameters
-    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
+    _url: str = _url.format(**path_format_arguments)  # type: ignore
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
 def build_jobs_set_job_status_bulk_request(
@@ -597,7 +606,7 @@ def build_jobs_set_job_status_bulk_request(
     )
 
 
-def build_jobs_get_job_status_history_bulk_request(  # pylint: disable=name-too-long
+def build_jobs_get_job_status_bulk_request(
     *, job_ids: List[int], **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
@@ -606,7 +615,7 @@ def build_jobs_get_job_status_history_bulk_request(  # pylint: disable=name-too-
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/status/history"
+    _url = "/api/jobs/status"
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
@@ -660,79 +669,7 @@ def build_jobs_reschedule_single_job_request(job_id: int, **kwargs: Any) -> Http
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_search_request(
-    *, page: int = 1, per_page: int = 100, **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/search"
-
-    # Construct parameters
-    if page is not None:
-        _params["page"] = _SERIALIZER.query("page", page, "int")
-    if per_page is not None:
-        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
-
-
-def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/summary"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_get_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/{job_id}"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _url.format(**path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_delete_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
+def build_jobs_remove_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
@@ -788,51 +725,13 @@ def build_jobs_set_single_job_properties_request(  # pylint: disable=name-too-lo
     )
 
 
-def build_jobs_kill_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
+def build_jobs_get_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/{job_id}/kill"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _url.format(**path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_remove_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/{job_id}/remove"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _url.format(**path_format_arguments)  # type: ignore
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/{job_id}/status"
+    _url = "/api/jobs/{job_id}"
     path_format_arguments = {
         "job_id": _SERIALIZER.url("job_id", job_id, "int"),
     }
@@ -845,8 +744,8 @@ def build_jobs_get_single_job_status_request(job_id: int, **kwargs: Any) -> Http
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_set_single_job_status_request(
-    job_id: int, *, force: bool = False, **kwargs: Any
+def build_jobs_search_request(
+    *, page: int = 1, per_page: int = 100, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -857,16 +756,13 @@ def build_jobs_set_single_job_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/{job_id}/status"
-    path_format_arguments = {
-        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
-    }
-
-    _url: str = _url.format(**path_format_arguments)  # type: ignore
+    _url = "/api/jobs/search"
 
     # Construct parameters
-    if force is not None:
-        _params["force"] = _SERIALIZER.query("force", force, "bool")
+    if page is not None:
+        _params["page"] = _SERIALIZER.query("page", page, "int")
+    if per_page is not None:
+        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
 
     # Construct headers
     if content_type is not None:
@@ -876,7 +772,50 @@ def build_jobs_set_single_job_status_request(
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(
-        method="PATCH", url=_url, params=_params, headers=_headers, **kwargs
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/jobs/summary"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_get_job_status_history_bulk_request(  # pylint: disable=name-too-long
+    *, job_ids: List[int], **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/jobs/status/history"
+
+    # Construct parameters
+    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="GET", url=_url, params=_params, headers=_headers, **kwargs
     )
 
 
@@ -2351,16 +2290,31 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
 
         return deserialized  # type: ignore
 
-    @distributed_trace
-    def delete_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
-        """Delete Bulk Jobs.
+    @overload
+    def set_single_job_status(
+        self,
+        job_id: int,
+        body: Dict[str, _models.JobStatusUpdate],
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Dict[str, _models.SetJobStatusReturn]:
+        """Set Single Job Status.
 
-        Delete Bulk Jobs.
+        Set Single Job Status.
 
-        :keyword job_ids: Required.
-        :paramtype job_ids: list[int]
-        :return: any
-        :rtype: any
+        :param job_id: Required.
+        :type job_id: int
+        :param body: Required.
+        :type body: dict[str, ~client.models.JobStatusUpdate]
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: dict mapping str to SetJobStatusReturn
+        :rtype: dict[str, ~client.models.SetJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2371,13 +2325,28 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Dict[str, _models.SetJobStatusReturn]] = kwargs.pop("cls", None)
 
-        _request = build_jobs_delete_bulk_jobs_request(
-            job_ids=job_ids,
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{JobStatusUpdate}")
+
+        _request = build_jobs_set_single_job_status_request(
+            job_id=job_id,
+            force=force,
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2521,12 +2490,12 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
     def get_job_status_bulk(
         self, *, job_ids: List[int], **kwargs: Any
     ) -> Dict[str, _models.LimitedJobStatusReturn]:
-        """Get Job Status Bulk.
+        """Get Single Job Status.
 
-        Get Job Status Bulk.
+        Get Single Job Status.
 
-        :keyword job_ids: Required.
-        :paramtype job_ids: list[int]
+        :param job_id: Required.
+        :type job_id: int
         :return: dict mapping str to LimitedJobStatusReturn
         :rtype: dict[str, ~generated.models.LimitedJobStatusReturn]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2546,8 +2515,8 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
             "cls", None
         )
 
-        _request = build_jobs_get_job_status_bulk_request(
-            job_ids=job_ids,
+        _request = build_jobs_get_single_job_status_request(
+            job_id=job_id,
             headers=_headers,
             params=_params,
         )
@@ -2706,12 +2675,12 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace
-    def get_job_status_history_bulk(
+    def get_job_status_bulk(
         self, *, job_ids: List[int], **kwargs: Any
-    ) -> Dict[str, List[_models.JobStatusReturn]]:
-        """Get Job Status History Bulk.
+    ) -> Dict[str, _models.LimitedJobStatusReturn]:
+        """Get Job Status Bulk.
 
-        Get Job Status History Bulk.
+        Get Job Status Bulk.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
@@ -2730,9 +2699,11 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Dict[str, List[_models.JobStatusReturn]]] = kwargs.pop("cls", None)
+        cls: ClsType[Dict[str, _models.LimitedJobStatusReturn]] = kwargs.pop(
+            "cls", None
+        )
 
-        _request = build_jobs_get_job_status_history_bulk_request(
+        _request = build_jobs_get_job_status_bulk_request(
             job_ids=job_ids,
             headers=_headers,
             params=_params,
@@ -3132,15 +3103,17 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace
-    def get_single_job(self, job_id: int, **kwargs: Any) -> Any:
-        """Get Single Job.
+    def get_job_status_history_bulk(
+        self, *, job_ids: List[int], **kwargs: Any
+    ) -> Dict[str, List[_models.JobStatusReturn]]:
+        """Get Job Status History Bulk.
 
-        Get Single Job.
+        Get Job Status History Bulk.
 
-        :param job_id: Required.
-        :type job_id: int
-        :return: any
-        :rtype: any
+        :keyword job_ids: Required.
+        :paramtype job_ids: list[int]
+        :return: dict mapping str to list of JobStatusReturn
+        :rtype: dict[str, list[~client.models.JobStatusReturn]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -3154,10 +3127,10 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[Dict[str, List[_models.JobStatusReturn]]] = kwargs.pop("cls", None)
 
-        _request = build_jobs_get_single_job_request(
-            job_id=job_id,
+        _request = build_jobs_get_job_status_history_bulk_request(
+            job_ids=job_ids,
             headers=_headers,
             params=_params,
         )
