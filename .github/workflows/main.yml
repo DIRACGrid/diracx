@@ -83,6 +83,14 @@ jobs:
 
   pytest-integration:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dbName: "MySQL"
+            cliOption: ""
+          - dbName: "PostgreSQL"
+            cliOption: "--postgres"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,10 +104,10 @@ jobs:
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/
-      - name: Start demo
+      - name: Start demo using ${{ matrix.dbName }} 
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
+          git clone -b diracx-issue-147-postgres-integration https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
+          ../diracx-charts/run_demo.sh ${{ matrix.cliOption }} --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
