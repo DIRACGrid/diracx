@@ -384,7 +384,7 @@ async def exchange_token(
             f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
         )
 
-    allowed_user_properties = get_allowed_user_properties(config, user_info, vo)
+    allowed_user_properties = get_allowed_user_properties(config, sub, vo)
     if not set(properties).issubset(allowed_user_properties):
         raise ValueError(
             f"{set(properties) - allowed_user_properties} are not valid properties for user {preferred_username}, "
