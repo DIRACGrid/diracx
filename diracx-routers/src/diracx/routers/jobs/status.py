@@ -212,12 +212,14 @@ async def reschedule_bulk_jobs(
 @router.post("/{job_id}/reschedule")
 async def reschedule_single_job(
     job_id: int,
+    reset_job: Annotated[bool, Query()],
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
     try:
-        result = await job_db.rescheduleJob(job_id)
+        result = await job_db.rescheduleJob(job_id, reset_counter=reset_job)
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     return result
