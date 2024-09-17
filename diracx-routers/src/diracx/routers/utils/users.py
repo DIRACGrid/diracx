@@ -8,10 +8,11 @@ from fastapi.security import OpenIdConnect
 from pydantic import BaseModel, Field
 from pydantic_settings import SettingsConfigDict
 
+from diracx.core.config.schema import UserConfig
 from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import FernetKey, ServiceSettingsBase, TokenSigningKey
-from diracx.routers.dependencies import add_settings_annotation
+from diracx.routers.dependencies import Config, add_settings_annotation
 
 # auto_error=False is used to avoid raising the wrong exception when the token is missing
 # The error is handled in the verify_dirac_access_token function
@@ -117,3 +118,14 @@ async def verify_dirac_access_token(
         vo=token["vo"],
         policies=token.get("dirac_policies", {}),
     )
+
+
+def get_allowed_user_properties(
+    config: Config, user_info: UserConfig, vo: str
+) -> set[SecurityProperty]:
+    """Retrieve all properties of groups a user is registered in."""
+    allowed_user_properties = set()
+    for group in config.Registry[vo].Groups:
+        if user_info.PreferedUsername in config.Registry[vo].Groups[group].Users:
+            allowed_user_properties.update(config.Registry[vo].Groups[group].Properties)
+    return allowed_user_properties

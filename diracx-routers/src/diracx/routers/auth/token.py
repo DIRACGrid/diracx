@@ -23,7 +23,7 @@ from diracx.routers.auth.utils import GrantType
 
 from ..dependencies import AuthDB, AvailableSecurityProperties, Config
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthSettings
+from ..utils.users import AuthSettings, get_allowed_user_properties
 from .utils import (
     parse_and_validate_scope,
     verify_dirac_refresh_token,
@@ -363,6 +363,7 @@ async def exchange_token(
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     vo = parsed_scope["vo"]
     dirac_group = parsed_scope["group"]
+    properties = parsed_scope["properties"]
 
     # Extract attributes from the OIDC token details
     sub = oidc_token_info["sub"]
@@ -381,6 +382,13 @@ async def exchange_token(
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
         raise ValueError(
             f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
+        )
+
+    allowed_user_properties = get_allowed_user_properties(config, user_info, vo)
+    if not set(properties).issubset(allowed_user_properties):
+        raise ValueError(
+            f"{set(properties) - allowed_user_properties} are not valid properties for user {preferred_username}, "
+            f"available values: {' '.join(allowed_user_properties)}"
         )
 
     # Merge the VO with the subject to get a unique DIRAC sub

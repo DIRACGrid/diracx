@@ -226,12 +226,6 @@ def parse_and_validate_scope(
             f"{set(properties)-set(available_properties)} are not valid properties"
         )
 
-    if not set(properties).issubset(allowed_properties):
-        raise PermissionError(
-            f"Attempted to access properties {set(properties)-set(allowed_properties)} which are not allowed."
-            f" Allowed properties are: {allowed_properties}"
-        )
-
     return {
         "group": group,
         "properties": sorted(properties),
