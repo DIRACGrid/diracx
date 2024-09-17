@@ -159,13 +159,13 @@ async def set_job_status_bulk(
 @router.post("/reschedule")
 async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
-    reset_jobs: Annotated[bool, Query()],
     config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
+    reset_jobs: Annotated[bool, Query()] = False,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
 
@@ -201,13 +201,13 @@ async def reschedule_bulk_jobs(
 @router.post("/{job_id}/reschedule")
 async def reschedule_single_job(
     job_id: int,
-    reset_job: Annotated[bool, Query()],
     config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
     background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
+    reset_job: Annotated[bool, Query()] = False,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
