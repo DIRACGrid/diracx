@@ -292,7 +292,7 @@ class JobDB(BaseSQLDB):
             "TimeStamp": datetime.now(tz=timezone.utc),
         }
 
-    async def rescheduleJob(self, job_id) -> dict[str, Any]:
+    async def rescheduleJob(self, job_id, *, reset_counter=False) -> dict[str, Any]:
         """Reschedule given job."""
         from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
         from DIRAC.Core.Utilities.ReturnValues import SErrorException
@@ -326,7 +326,10 @@ class JobDB(BaseSQLDB):
                 f"Job {job_id} not Verified: Status {jobAttrs['Status']}, Minor Status: {jobAttrs['MinorStatus']}"
             )
 
-        reschedule_counter = int(jobAttrs["RescheduleCounter"]) + 1
+        if reset_counter:
+            reschedule_counter = 0
+        else:
+            reschedule_counter = int(jobAttrs["RescheduleCounter"]) + 1
 
         # TODO: update maxRescheduling:
         # self.maxRescheduling = self.getCSOption("MaxRescheduling", self.maxRescheduling)
@@ -396,6 +399,9 @@ class JobDB(BaseSQLDB):
         else:
             site = siteList[0]
 
+        ## TODO: Enforce state machine first
+        # then overwrite the other attributes once we know it makes sense
+        # to continue.
         jobAttrs["Site"] = site
 
         jobAttrs["Status"] = JobStatus.RECEIVED
