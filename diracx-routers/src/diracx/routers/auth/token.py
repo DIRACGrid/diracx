@@ -98,7 +98,6 @@ async def token(
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
     # Get a TokenResponse to return to the user
-
     return await exchange_token(
         auth_db,
         scope,
@@ -360,7 +359,13 @@ async def exchange_token(
 ) -> TokenResponse:
     """Method called to exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
-    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+    try:
+        parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.args[0],
+        ) from e
     vo = parsed_scope["vo"]
     dirac_group = parsed_scope["group"]
     properties = parsed_scope["properties"]
@@ -380,15 +385,18 @@ async def exchange_token(
 
     # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
-        raise ValueError(
-            f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"User is not a member of the requested group ({preferred_username}, {dirac_group})",
         )
 
+    # Check that the user properties are valid
     allowed_user_properties = get_allowed_user_properties(config, sub, vo)
-    if not set(properties).issubset(allowed_user_properties):
-        raise ValueError(
-            f"{set(properties) - allowed_user_properties} are not valid properties for user {preferred_username}, "
-            f"available values: {' '.join(allowed_user_properties)}"
+    if not properties.issubset(allowed_user_properties):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"{' '.join(properties - allowed_user_properties)} are not valid properties "
+            f"for user {preferred_username}, available values: {' '.join(allowed_user_properties)}",
         )
 
     # Merge the VO with the subject to get a unique DIRAC sub
@@ -420,7 +428,7 @@ async def exchange_token(
         "sub": sub,
         "vo": vo,
         "iss": issuer,
-        "dirac_properties": parsed_scope["properties"],
+        "dirac_properties": list(properties),
         "jti": str(uuid4()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
