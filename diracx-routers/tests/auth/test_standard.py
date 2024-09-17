@@ -793,30 +793,61 @@ def _get_and_check_token_response(test_client, request_data):
 @pytest.mark.parametrize(
     "vos, groups, scope, expected",
     [
+        # Classic use case, we ask for a vo and a group, we get the properties of the group
         [
-            ["lhcb"],
-            ["lhcb_user"],
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {"lhcb_user": {"properties": ["NormalUser"]}},
             "vo:lhcb group:lhcb_user",
             {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
+        ],
+        # We ask for a vo and a group with additional property
+        # We get the properties of the group + the additional property
+        # Authorization to access the additional property is checked later when user effectively requests a token
+        [
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["AdminUser"]},
+            },
+            "vo:lhcb group:lhcb_user property:AdminUser",
+            {
+                "group": "lhcb_user",
+                "properties": ["NormalUser", "AdminUser"],
+                "vo": "lhcb",
+            },
+        ],
+        # We ask for a vo, no group, and an additional existing property
+        # We get the default group but not its properties: only the one we asked for
+        # Authorization to access the additional property is checked later when user effectively requests a token
+        [
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["AdminUser"]},
+            },
+            "vo:lhcb property:AdminUser",
+            {"group": "lhcb_user", "properties": ["AdminUser"], "vo": "lhcb"},
         ],
     ],
 )
 def test_parse_scopes(vos, groups, scope, expected):
-    # TODO: Extend test for extra properties
     config = Config.model_validate(
         {
             "DIRAC": {},
             "Registry": {
-                vo: {
-                    "DefaultGroup": "lhcb_user",
+                vo_name: {
+                    "DefaultGroup": vo_conf["default_group"],
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
                     "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
+                        group_name: {
+                            "Properties": group_conf["properties"],
+                            "Users": [],
+                        }
+                        for group_name, group_conf in groups.items()
                     },
                 }
-                for vo in vos
+                for vo_name, vo_conf in vos.items()
             },
             "Operations": {"Defaults": {}},
         }
@@ -855,7 +886,6 @@ def test_parse_scopes(vos, groups, scope, expected):
     ],
 )
 def test_parse_scopes_invalid(vos, groups, scope, expected_error):
-    # TODO: Extend test for extra properties
     config = Config.model_validate(
         {
             "DIRAC": {},
