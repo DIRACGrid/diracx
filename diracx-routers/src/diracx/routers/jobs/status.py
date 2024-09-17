@@ -51,7 +51,7 @@ async def remove_bulk_jobs(
 
     WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
-    be removed, and the delete endpoint should be used instead for any other purpose.
+    be removed, and a status change to Deleted (PATCH /jobs/status) should be used instead for any other purpose.
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     # TODO: Remove once legacy DIRAC no longer needs this
@@ -238,7 +238,7 @@ async def remove_single_job(
 
     WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
     and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
-    be removed, and the delete endpoint should be used instead.
+    be removed, and a status change to "Deleted" (PATCH /jobs/{job_id}/status) should be used instead.
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     # TODO: Remove once legacy DIRAC no longer needs this
