@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from http import HTTPStatus
 from typing import Annotated, Any
 
 from fastapi import BackgroundTasks, Body, HTTPException, Query
-from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
@@ -16,6 +15,8 @@ from diracx.core.models import (
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql.utils.job_status import (
     remove_jobs,
+    reschedule_job,
+    reschedule_jobs,
     set_job_status,
     set_job_statuses,
 )
@@ -103,7 +104,7 @@ async def set_single_job_status(
             job_logging_db,
             task_queue_db,
             background_task,
-            force,
+            force=force,
         )
     except JobNotFound as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
@@ -155,57 +156,45 @@ async def set_job_status_bulk(
         ) from group_exc
 
 
-# TODO: Add a parameter to replace "resetJob"
 @router.post("/reschedule")
 async def reschedule_bulk_jobs(
     job_ids: Annotated[list[int], Query()],
+    reset_jobs: Annotated[bool, Query()],
+    config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
+    task_queue_db: TaskQueueDB,
+    background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
-    rescheduled_jobs = []
-    # TODO: Joblist Policy:
-    # validJobList, invalidJobList, nonauthJobList, ownerJobList = self.jobPolicy.evaluateJobRights(
-    #        jobList, RIGHT_RESCHEDULE
-    #    )
-    # For the moment all jobs are valid:
-    valid_job_list = job_ids
-    for job_id in valid_job_list:
-        # TODO: delete job in TaskQueueDB
-        # self.taskQueueDB.deleteJob(jobID)
-        result = await job_db.rescheduleJob(job_id)
-        try:
-            res_status = await job_db.get_job_status(job_id)
-        except NoResultFound as e:
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
-            ) from e
 
-        initial_status = res_status.Status
-        initial_minor_status = res_status.MinorStatus
-
-        await job_logging_db.insert_record(
-            int(job_id),
-            initial_status,
-            initial_minor_status,
-            "Unknown",
-            datetime.now(timezone.utc),
-            "JobManager",
+    try:
+        resched_jobs = await reschedule_jobs(
+            job_ids,
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+            reset_counter=reset_jobs,
         )
-        if result:
-            rescheduled_jobs.append(job_id)
-    # To uncomment when jobPolicy is setup:
-    # if invalid_job_list or non_auth_job_list:
-    #     logging.error("Some jobs failed to reschedule")
-    #     if invalid_job_list:
-    #         logging.info(f"Invalid jobs: {invalid_job_list}")
-    #     if non_auth_job_list:
-    #         logging.info(f"Non authorized jobs: {nonauthJobList}")
+    except* JobNotFound as group_exc:
+        failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
+
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={
+                "message": f"Failed to reschedule {len(failed_job_ids)} jobs out of {len(job_ids)}",
+                "valid_job_ids": list(set(job_ids) - set(failed_job_ids)),
+                "failed_job_ids": failed_job_ids,
+            },
+        ) from group_exc
 
     # TODO: send jobs to OtimizationMind
     #  self.__sendJobsToOptimizationMind(validJobList)
-    return rescheduled_jobs
+
+    return resched_jobs
 
 
 # TODO: Add a parameter to replace "resetJob"
@@ -213,13 +202,25 @@ async def reschedule_bulk_jobs(
 async def reschedule_single_job(
     job_id: int,
     reset_job: Annotated[bool, Query()],
+    config: Config,
     job_db: JobDB,
+    job_logging_db: JobLoggingDB,
+    task_queue_db: TaskQueueDB,
+    background_task: BackgroundTasks,
     check_permissions: CheckWMSPolicyCallable,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     try:
-        result = await job_db.rescheduleJob(job_id, reset_counter=reset_job)
+        result = await reschedule_job(
+            job_id,
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+            reset_counter=reset_job,
+        )
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     return result
