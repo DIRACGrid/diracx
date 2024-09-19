@@ -30,7 +30,7 @@ class PilotAgents(PilotAgentsDBBase):
     OwnerDN = Column("OwnerDN", String(255))
     OwnerGroup = Column("OwnerGroup", String(128))
     GridType = Column("GridType", String(32), default="LCG")
-    GridRequirements = Column("GridRequirements", Text)
+    GridRequirements = Column("GridRequirements", Text, default="")
     BenchMark = Column("BenchMark", Double, default=0.0)
     SubmissionTime = NullColumn("SubmissionTime", DateTime)
     LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
