@@ -211,10 +211,8 @@ class ClientFactory:
                 test_dev_settings,
             ],
             database_urls=database_urls,
-            os_database_conn_kwargs={
-                # TODO: JobParametersDB
-                "PilotLogsDB": {}
-            },
+            os_database_conn_kwargs=os_database_conn_kwargs
+            | {"PilotLogsDB": {"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}},
             config_source=ConfigSource.create_from_url(
                 backend_url=f"git+file://{with_config_repo}"
             ),
