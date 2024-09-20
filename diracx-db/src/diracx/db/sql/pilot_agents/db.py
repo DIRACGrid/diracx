@@ -14,7 +14,7 @@ class PilotAgentsDB(BaseSQLDB):
     async def addPilotReferences(
         self,
         pilotRef: list[str],
-        ownerGroup: str,
+        VO: str,
         gridType: str = "DIRAC",
         pilotStampDict: dict = {},
     ) -> list[int]:
@@ -27,13 +27,11 @@ class PilotAgentsDB(BaseSQLDB):
             now = datetime.now(tz=timezone.utc)
             stmt = insert(PilotAgents).values(
                 PilotJobReference=ref,
-                TaskQueueID=0,
-                OwnerDN="Unknown",
-                OwnerGroup=ownerGroup,
+                VO=VO,
                 GridType=gridType,
                 SubmissionTime=now,
                 LastUpdateTime=now,
-                Status="submitted",
+                Status="Submitted",
                 PilotStamp=stamp,
             )
             result = await self.conn.execute(stmt)
