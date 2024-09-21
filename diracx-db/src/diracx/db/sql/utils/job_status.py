@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from fastapi import BackgroundTasks
 
 from diracx.core.config.schema import Config
-from diracx.core.exceptions import JobNotFound
+from diracx.core.exceptions import JobException, JobNotFound
 from diracx.core.models import (
     JobMinorStatus,
     JobStatus,
@@ -71,7 +71,9 @@ async def reschedule_job(
     else:
         reschedule_counter = int(job_attrs["RescheduleCounter"]) + 1
 
-    reschedule_max = job_db.reschedule_max
+    reschedule_max = (
+        config.Systems.WorkloadManagement.Production.Databases.JobDB.MaxRescheduling  # type: ignore
+    )
     if reschedule_counter > reschedule_max:
         await set_job_status(
             job_id,
@@ -89,8 +91,8 @@ async def reschedule_job(
             background_task,
         )
 
-        raise ValueError(
-            f"Maximum number of reschedulings ({reschedule_max}) is reached."
+        raise JobException(
+            job_id, f"Maximum number of reschedules exceeded ({reschedule_max})"
         )
 
     # TODO: get the job parameters from JobMonitoringClient
@@ -125,7 +127,7 @@ async def reschedule_job(
             classAdJob.getAttributeString("VirtualOrganization"),
         )
     except SErrorException as e:
-        raise ValueError(e) from e
+        raise JobException(job_id, e) from e
 
     priority = classAdJob.getAttributeInt("Priority")
     if priority is None:

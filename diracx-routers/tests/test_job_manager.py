@@ -720,12 +720,37 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    # Test /jobs/reschedule
+    # Test /jobs/reschedule and
+    # test max_reschedule
+
+    max_resched = 3
+    jid = str(submitted_job_ids[0])
+
+    for i in range(max_resched):
+        r = normal_user_client.post(
+            "/api/jobs/reschedule",
+            params={"job_ids": submitted_job_ids},
+        )
+        assert r.status_code == 200, r.json()
+        result = r.json()
+        assert result[jid]["Status"] == JobStatus.RECEIVED
+        assert result[jid]["MinorStatus"] == "Job Rescheduled"
+        assert result[jid]["RescheduleCounter"] == i + 1
+
     r = normal_user_client.post(
         "/api/jobs/reschedule",
         params={"job_ids": submitted_job_ids},
     )
-    assert r.status_code == 200, r.json()
+    assert (
+        r.status_code != 200
+    ), f"Rescheduling more than {max_resched} times should have failed by now"
+    assert r.json() == {
+        "detail": {
+            "success": [],
+            "message": "Failed to reschedule 1 jobs out of 1",
+            "failed": {"1": f"Maximum number of reschedules exceeded ({max_resched})"},
+        }
+    }
 
 
 # Test delete job
@@ -817,8 +842,8 @@ def test_delete_bulk_jobs_invalid_job_ids(
     assert r.json() == {
         "detail": {
             "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
-            "valid_job_ids": [],
-            "failed_job_ids": invalid_job_ids,
+            "success": [],
+            "failed": invalid_job_ids,
         }
     }
 
@@ -848,8 +873,8 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     assert r.json() == {
         "detail": {
             "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(job_ids)}",
-            "valid_job_ids": valid_job_ids,
-            "failed_job_ids": invalid_job_ids,
+            "success": valid_job_ids,
+            "failed": invalid_job_ids,
         }
     }
     for job_id in valid_job_ids:
@@ -951,8 +976,8 @@ def test_kill_bulk_jobs_invalid_job_ids(
     assert r.json() == {
         "detail": {
             "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
-            "valid_job_ids": [],
-            "failed_job_ids": invalid_job_ids,
+            "success": [],
+            "failed": invalid_job_ids,
         }
     }
 
@@ -981,8 +1006,8 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     assert r.json() == {
         "detail": {
             "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(job_ids)}",
-            "valid_job_ids": valid_job_ids,
-            "failed_job_ids": invalid_job_ids,
+            "success": valid_job_ids,
+            "failed": invalid_job_ids,
         }
     }
     for valid_job_id in valid_job_ids:
