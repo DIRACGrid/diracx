@@ -7,7 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import BackgroundTasks, Body, HTTPException, Query
 
-from diracx.core.exceptions import JobNotFound
+from diracx.core.exceptions import JobException, JobNotFound
 from diracx.core.models import (
     JobStatusUpdate,
     SetJobStatusReturn,
@@ -150,8 +150,8 @@ async def set_job_status_bulk(
             status_code=HTTPStatus.NOT_FOUND,
             detail={
                 "message": f"Failed to set job status on {len(failed_job_ids)} jobs out of {len(job_update)}",
-                "valid_job_ids": list(set(job_update) - set(failed_job_ids)),
-                "failed_job_ids": failed_job_ids,
+                "success": list(set(job_update) - set(failed_job_ids)),
+                "failed": failed_job_ids,
             },
         ) from group_exc
 
@@ -179,15 +179,16 @@ async def reschedule_bulk_jobs(
             background_task,
             reset_counter=reset_jobs,
         )
-    except* JobNotFound as group_exc:
-        failed_job_ids: list[int] = list({e.job_id for e in group_exc.exceptions})  # type: ignore
+
+    except* (JobNotFound, JobException) as group_exc:
+        failed_job_ids_detail = {e.job_id: e.detail for e in group_exc.exceptions}  # type: ignore
 
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail={
-                "message": f"Failed to reschedule {len(failed_job_ids)} jobs out of {len(job_ids)}",
-                "valid_job_ids": list(set(job_ids) - set(failed_job_ids)),
-                "failed_job_ids": failed_job_ids,
+                "message": f"Failed to reschedule {len(failed_job_ids_detail.keys())} jobs out of {len(job_ids)}",
+                "success": list(set(job_ids) - set(failed_job_ids_detail.keys())),
+                "failed": failed_job_ids_detail,
             },
         ) from group_exc
 
@@ -221,7 +222,7 @@ async def reschedule_single_job(
             background_task,
             reset_counter=reset_job,
         )
-    except ValueError as e:
+    except JobException as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     return result
 

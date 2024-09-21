@@ -457,6 +457,49 @@ def with_config_repo(tmp_path_factory):
                 }
             },
             "Operations": {"Defaults": {}},
+            "Systems": {
+                "WorkloadManagement": {
+                    "Production": {
+                        "Databases": {
+                            "JobDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "JobLoggingDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "PilotAgentsDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "SandboxMetadataDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "TaskQueueDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "ElasticJobParametersDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "VirtualMachineDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                        },
+                    },
+                },
+            },
         }
     )
     cs_file.write_text(example_cs.model_dump_json())

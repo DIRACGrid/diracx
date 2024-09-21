@@ -46,13 +46,6 @@ class JobDB(BaseSQLDB):
     # to find a way to make it dynamic
     jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
 
-    @property
-    def reschedule_max(self):
-        # TODO: set maxRescheduling value from CS
-        # maxRescheduling = self.getCSOption("MaxRescheduling", 3)
-        # For now:
-        return 3
-
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = _get_columns(Jobs.__table__, group_by)
 
