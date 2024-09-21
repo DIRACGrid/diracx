@@ -629,7 +629,7 @@ def build_jobs_get_job_status_bulk_request(
 
 
 def build_jobs_reschedule_bulk_jobs_request(
-    *, job_ids: List[int], **kwargs: Any
+    *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -641,6 +641,8 @@ def build_jobs_reschedule_bulk_jobs_request(
 
     # Construct parameters
     _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
+    if reset_jobs is not None:
+        _params["reset_jobs"] = _SERIALIZER.query("reset_jobs", reset_jobs, "bool")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
@@ -650,8 +652,11 @@ def build_jobs_reschedule_bulk_jobs_request(
     )
 
 
-def build_jobs_reschedule_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
+def build_jobs_reschedule_single_job_request(
+    job_id: int, *, reset_job: bool = False, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
@@ -663,10 +668,16 @@ def build_jobs_reschedule_single_job_request(job_id: int, **kwargs: Any) -> Http
 
     _url: str = _url.format(**path_format_arguments)  # type: ignore
 
+    # Construct parameters
+    if reset_job is not None:
+        _params["reset_job"] = _SERIALIZER.query("reset_job", reset_job, "bool")
+
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
 
 
 def build_jobs_remove_single_job_request(job_id: int, **kwargs: Any) -> HttpRequest:
@@ -2735,13 +2746,17 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace
-    def reschedule_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
+    def reschedule_bulk_jobs(
+        self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
+    ) -> Any:
         """Reschedule Bulk Jobs.
 
         Reschedule Bulk Jobs.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
+        :keyword reset_jobs: Default value is False.
+        :paramtype reset_jobs: bool
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2761,6 +2776,7 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
 
         _request = build_jobs_reschedule_bulk_jobs_request(
             job_ids=job_ids,
+            reset_jobs=reset_jobs,
             headers=_headers,
             params=_params,
         )
@@ -2789,13 +2805,17 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace
-    def reschedule_single_job(self, job_id: int, **kwargs: Any) -> Any:
+    def reschedule_single_job(
+        self, job_id: int, *, reset_job: bool = False, **kwargs: Any
+    ) -> Any:
         """Reschedule Single Job.
 
         Reschedule Single Job.
 
         :param job_id: Required.
         :type job_id: int
+        :keyword reset_job: Default value is False.
+        :paramtype reset_job: bool
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2815,6 +2835,7 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
 
         _request = build_jobs_reschedule_single_job_request(
             job_id=job_id,
+            reset_job=reset_job,
             headers=_headers,
             params=_params,
         )

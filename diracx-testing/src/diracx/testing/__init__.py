@@ -465,6 +465,7 @@ def with_config_repo(tmp_path_factory):
                                 "DBName": "xyz",
                                 "Host": "xyz",
                                 "Port": 9999,
+                                "MaxRescheduling": 3,
                             },
                             "JobLoggingDB": {
                                 "DBName": "xyz",

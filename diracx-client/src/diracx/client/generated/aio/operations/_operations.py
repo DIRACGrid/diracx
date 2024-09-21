@@ -1970,13 +1970,17 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def reschedule_bulk_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
+    async def reschedule_bulk_jobs(
+        self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
+    ) -> Any:
         """Reschedule Bulk Jobs.
 
         Reschedule Bulk Jobs.
 
         :keyword job_ids: Required.
         :paramtype job_ids: list[int]
+        :keyword reset_jobs: Default value is False.
+        :paramtype reset_jobs: bool
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1996,6 +2000,7 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
 
         _request = build_jobs_reschedule_bulk_jobs_request(
             job_ids=job_ids,
+            reset_jobs=reset_jobs,
             headers=_headers,
             params=_params,
         )
@@ -2024,13 +2029,17 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def reschedule_single_job(self, job_id: int, **kwargs: Any) -> Any:
+    async def reschedule_single_job(
+        self, job_id: int, *, reset_job: bool = False, **kwargs: Any
+    ) -> Any:
         """Reschedule Single Job.
 
         Reschedule Single Job.
 
         :param job_id: Required.
         :type job_id: int
+        :keyword reset_job: Default value is False.
+        :paramtype reset_job: bool
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2050,6 +2059,7 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
 
         _request = build_jobs_reschedule_single_job_request(
             job_id=job_id,
+            reset_job=reset_job,
             headers=_headers,
             params=_params,
         )
