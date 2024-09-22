@@ -1,4 +1,5 @@
 import asyncio
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock
@@ -6,21 +7,22 @@ from unittest.mock import MagicMock
 from fastapi import BackgroundTasks
 
 from diracx.core.config.schema import Config
-from diracx.core.exceptions import JobException, JobNotFound
+from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
     JobMinorStatus,
     JobStatus,
     JobStatusUpdate,
     ScalarSearchOperator,
-    ScalarSearchSpec,
     SetJobStatusReturn,
+    VectorSearchOperator,
+    VectorSearchSpec,
 )
 
 from .. import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 
 
-async def reschedule_job(
-    job_id: int,
+async def reschedule_jobs_bulk(
+    job_ids: list[int],
     config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
@@ -33,7 +35,16 @@ async def reschedule_job(
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.ReturnValues import SErrorException
 
-    _, result = await job_db.search(
+    failed = {}
+    reschedule_max = (
+        config.Systems.WorkloadManagement.Production.Databases.JobDB.MaxRescheduling  # type: ignore
+    )
+
+    status_changes = {}
+    attribute_changes: dict[int, dict[str, str]] = defaultdict(dict)
+    jdl_changes = {}
+
+    _, results = await job_db.search(
         parameters=[
             "Status",
             "MinorStatus",
@@ -43,57 +54,57 @@ async def reschedule_job(
             "OwnerGroup",
         ],
         search=[
-            ScalarSearchSpec(
-                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            VectorSearchSpec(
+                parameter="JobID", operator=VectorSearchOperator.IN, values=job_ids
             )
         ],
         sorts=[],
     )
-    if not result:
-        raise JobNotFound(job_id)
+    if not results:
+        for job_id in job_ids:
+            failed[job_id] = {"detail": "Not found"}
 
-    job_attrs = result[0]
+    jobs_to_resched = {}
 
-    if "VerifiedFlag" not in job_attrs:
-        raise JobNotFound(job_id, detail="No verified flag")
+    for job_attrs in results or []:
+        job_id = int(job_attrs["JobID"])
 
-    if not job_attrs["VerifiedFlag"]:
-        raise JobNotFound(
-            job_id=job_id,
-            detail=(
-                f"VerifiedFlag is False: Status {job_attrs['Status']}, "
-                f"Minor Status: {job_attrs['MinorStatus']}"
-            ),
-        )
+        if "VerifiedFlag" not in job_attrs:
+            failed[job_id] = {"detail": "Not found: No verified flag"}
+            # Noop
+            continue
 
-    if reset_counter:
-        reschedule_counter = 0
-    else:
-        reschedule_counter = int(job_attrs["RescheduleCounter"]) + 1
+        if not job_attrs["VerifiedFlag"]:
+            failed[job_id] = {
+                "detail": (
+                    f"VerifiedFlag is False: Status {job_attrs['Status']}, "
+                    f"Minor Status: {job_attrs['MinorStatus']}"
+                )
+            }
+            # Noop
+            continue
 
-    reschedule_max = (
-        config.Systems.WorkloadManagement.Production.Databases.JobDB.MaxRescheduling  # type: ignore
-    )
-    if reschedule_counter > reschedule_max:
-        await set_job_status(
-            job_id,
-            {
+        if reset_counter:
+            job_attrs["RescheduleCounter"] = 0
+        else:
+            job_attrs["RescheduleCounter"] = int(job_attrs["RescheduleCounter"]) + 1
+
+        if job_attrs["RescheduleCounter"] > reschedule_max:
+            status_changes[job_id] = {
                 datetime.now(tz=timezone.utc): JobStatusUpdate(
                     Status=JobStatus.FAILED,
                     MinorStatus=JobMinorStatus.MAX_RESCHEDULING,
                     ApplicationStatus="Unknown",
                 )
-            },
-            config,
-            job_db,
-            job_logging_db,
-            task_queue_db,
-            background_task,
-        )
+            }
+            failed[job_id] = {
+                "detail": f"Maximum number of reschedules exceeded ({reschedule_max})"
+            }
+            # DATABASE OPERATION (status change)
+            continue
+        jobs_to_resched[job_id] = job_attrs
 
-        raise JobException(
-            job_id, f"Maximum number of reschedules exceeded ({reschedule_max})"
-        )
+    surviving_job_ids = set(jobs_to_resched.keys())
 
     # TODO: get the job parameters from JobMonitoringClient
     # result = JobMonitoringClient().getJobParameters(jobID)
@@ -108,110 +119,108 @@ async def reschedule_job(
     # await self.delete_job_parameters(job_id)
     # await self.delete_job_optimizer_parameters(job_id)
 
-    job_jdl = await job_db.getJobJDL(job_id, original=True)
-    if not job_jdl.strip().startswith("["):
-        job_jdl = f"[{job_jdl}]"
+    def parse_jdl(job_id, job_jdl):
+        if not job_jdl.strip().startswith("["):
+            job_jdl = f"[{job_jdl}]"
+        class_ad_job = ClassAd(job_jdl)
+        class_ad_job.insertAttributeInt("JobID", job_id)
+        return class_ad_job
 
-    classAdJob = ClassAd(job_jdl)
-    classAdReq = ClassAd("[]")
-    classAdJob.insertAttributeInt("JobID", job_id)
-
-    try:
-        result = await job_db.checkAndPrepareJob(
-            job_id,
-            classAdJob,
-            classAdReq,
-            job_attrs["Owner"],
-            job_attrs["OwnerGroup"],
-            {"RescheduleCounter": reschedule_counter},
-            classAdJob.getAttributeString("VirtualOrganization"),
+    # DATABASE OPERATION (BULKED)
+    job_jdls = {
+        jobid: parse_jdl(jobid, jdl)
+        for jobid, jdl in (
+            (await job_db.getJobJDLs(surviving_job_ids, original=True)).items()
         )
-    except SErrorException as e:
-        raise JobException(job_id, e) from e
-
-    priority = classAdJob.getAttributeInt("Priority")
-    if priority is None:
-        priority = 0
-
-    site_list = classAdJob.getListFromExpression("Site")
-    if not site_list:
-        site = "ANY"
-    elif len(site_list) > 1:
-        site = "Multiple"
-    else:
-        site = site_list[0]
-
-    additional_attrs = {
-        "Site": site,
-        "UserPriority": priority,
-        "RescheduleTime": datetime.now(tz=timezone.utc),
-        "RescheduleCounter": reschedule_counter,
     }
 
-    set_job_status_result = await set_job_status(
-        job_id,
-        {
+    for job_id in surviving_job_ids:
+        class_ad_job = job_jdls[job_id]
+        class_ad_req = ClassAd("[]")
+        try:
+            # NOT A DATABASE OPERATION
+            await job_db.checkAndPrepareJob(
+                job_id,
+                class_ad_job,
+                class_ad_req,
+                jobs_to_resched[job_id]["Owner"],
+                jobs_to_resched[job_id]["OwnerGroup"],
+                {"RescheduleCounter": jobs_to_resched[job_id]["RescheduleCounter"]},
+                class_ad_job.getAttributeString("VirtualOrganization"),
+            )
+        except SErrorException as e:
+            failed[job_id] = {"detail": str(e)}
+            # surviving_job_ids.remove(job_id)
+            continue
+
+        priority = class_ad_job.getAttributeInt("Priority")
+        if priority is None:
+            priority = 0
+
+        site_list = class_ad_job.getListFromExpression("Site")
+        if not site_list:
+            site = "ANY"
+        elif len(site_list) > 1:
+            site = "Multiple"
+        else:
+            site = site_list[0]
+
+        reqJDL = class_ad_req.asJDL()
+        class_ad_job.insertAttributeInt("JobRequirements", reqJDL)
+        jobJDL = class_ad_job.asJDL()
+        # Replace the JobID placeholder if any
+        jobJDL = jobJDL.replace("%j", str(job_id))
+
+        additional_attrs = {
+            "Site": site,
+            "UserPriority": priority,
+            "RescheduleTime": datetime.now(tz=timezone.utc),
+            "RescheduleCounter": jobs_to_resched[job_id]["RescheduleCounter"],
+        }
+
+        # set new JDL
+        jdl_changes[job_id] = jobJDL
+
+        # set new status
+        status_changes[job_id] = {
             datetime.now(tz=timezone.utc): JobStatusUpdate(
                 Status=JobStatus.RECEIVED,
                 MinorStatus=JobMinorStatus.RESCHEDULED,
                 ApplicationStatus="Unknown",
             )
-        },
+        }
+        # set new attributes
+        attribute_changes[job_id].update(additional_attrs)
+
+    # BULK STATUS UPDATE
+    # DATABASE OPERATION
+    set_job_status_result = await set_job_statuses(
+        status_changes,
         config,
         job_db,
         job_logging_db,
         task_queue_db,
         background_task,
-        additional_attributes=additional_attrs,
+        additional_attributes=attribute_changes,
     )
 
-    reqJDL = classAdReq.asJDL()
-    classAdJob.insertAttributeInt("JobRequirements", reqJDL)
-
-    jobJDL = classAdJob.asJDL()
-
-    # Replace the JobID placeholder if any
-    jobJDL = jobJDL.replace("%j", str(job_id))
+    # BULK JDL UPDATE
+    # DATABASE OPERATION
 
     # Update JDL (Should we be doing this here?)
-    result = await job_db.setJobJDL(job_id, jobJDL)
+    # DATABASE OPERATION
+    await job_db.setJobJDLsBulk(jdl_changes)
 
     return {
-        "JobID": job_id,
-        "InputData": classAdJob.lookupAttribute("InputData"),
-        **additional_attrs,
-        **dict(set_job_status_result),
+        "failed": failed,
+        "success": {
+            job_id: {
+                "InputData": job_jdls[job_id],
+                **attribute_changes[job_id],
+                **set_job_status_result[job_id],
+            }
+        },
     }
-
-
-async def reschedule_jobs(
-    job_ids: list[int],
-    config: Config,
-    job_db: JobDB,
-    job_logging_db: JobLoggingDB,
-    task_queue_db: TaskQueueDB,
-    background_task: BackgroundTasks,
-    *,
-    reset_counter=False,
-) -> dict[int, Any]:
-    """Bulk job rescheduling operation on multiple job IDs, returning a dictionary of job ID to result."""
-    async with ForgivingTaskGroup() as tg:
-        tasks = {
-            job_id: tg.create_task(
-                reschedule_job(
-                    job_id,
-                    config,
-                    job_db,
-                    job_logging_db,
-                    task_queue_db,
-                    background_task,
-                    reset_counter=reset_counter,
-                )
-            )
-            for job_id in job_ids
-        }
-
-    return {k: v.result() for k, v in tasks.items()}
 
 
 async def set_job_statuses(
@@ -223,7 +232,7 @@ async def set_job_statuses(
     background_task: BackgroundTasks,
     *,
     force: bool = False,
-    additional_attributes: dict[str, str] = {},
+    additional_attributes: dict[int, dict[str, str]] = {},
 ):
     """Bulk operation setting status on multiple job IDs, returning a dictionary of job ID to result.
     This is done by calling set_job_status for each ID and status dictionary provided within a ForgivingTaskGroup.
@@ -241,7 +250,7 @@ async def set_job_statuses(
                     task_queue_db,
                     background_task,
                     force=force,
-                    additional_attributes=additional_attributes,
+                    additional_attributes=additional_attributes[job_id],
                 )
             )
             for job_id, status_dict in job_update.items()
