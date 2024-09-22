@@ -166,6 +166,15 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
+    async def setJobJDLsBulk(self, jdls):
+        from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
+
+        # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-queryguide-bulk-update
+        await self.conn.execute(
+            update(JobJDLs),
+            [{jid: compressJDL(jdl)} for jid, jdl in jdls.items()],
+        )
+
     async def getJobJDL(self, job_id: int, original: bool = False) -> str:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
 
@@ -179,6 +188,22 @@ class JobDB(BaseSQLDB):
             jdl = extractJDL(jdl)
 
         return jdl
+
+    async def getJobJDLs(self, job_ids, original: bool = False) -> dict[int | str, str]:
+        from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
+
+        if original:
+            stmt = select(JobJDLs.JobID, JobJDLs.OriginalJDL).where(
+                JobJDLs.JobID.in_(job_ids)
+            )
+        else:
+            stmt = select(JobJDLs.JobID, JobJDLs.JDL).where(JobJDLs.JobID.in_(job_ids))
+
+        return {
+            jobid: extractJDL(jdl)
+            for jobid, jdl in (await self.conn.execute(stmt))
+            if jdl
+        }
 
     async def insert(
         self,
