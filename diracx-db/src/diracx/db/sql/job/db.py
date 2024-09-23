@@ -171,8 +171,21 @@ class JobDB(BaseSQLDB):
 
         # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-queryguide-bulk-update
         await self.conn.execute(
-            update(JobJDLs),
-            [{jid: compressJDL(jdl)} for jid, jdl in jdls.items()],
+            update(Jobs),
+            [{"JobID": jid, "JDL": compressJDL(jdl)} for jid, jdl in jdls.items()],
+        )
+
+    async def setJobAttributesBulk(self, jobData):
+        """TODO: add myDate and force parameters."""
+        for job_id in jobData.keys():
+            if "Status" in jobData[job_id]:
+                jobData[job_id].update(
+                    {"LastUpdateTime": datetime.now(tz=timezone.utc)}
+                )
+
+        await self.conn.execute(
+            update(Jobs),
+            [{"JobID": job_id, **attrs} for job_id, attrs in jobData.items()],
         )
 
     async def getJobJDL(self, job_id: int, original: bool = False) -> str:
@@ -331,6 +344,24 @@ class JobDB(BaseSQLDB):
             await self.conn.execute(stmt)
         except IntegrityError as e:
             raise JobNotFound(job_id) from e
+
+    async def set_job_command_bulk(self, commands):
+        """Store a command to be passed to the job together with the next heart beat."""
+        try:
+            self.conn.execute(
+                insert(JobCommands),
+                [
+                    {
+                        "JobID": job_id,
+                        "Command": command,
+                        "Arguments": arguments,
+                        "ReceptionTime": datetime.now(tz=timezone.utc),
+                    }
+                    for job_id, command, arguments in commands
+                ],
+            )
+        except IntegrityError as e:
+            raise JobNotFound(job_id) from e  # FIXME
 
     async def delete_jobs(self, job_ids: list[int]):
         """Delete jobs from the database."""

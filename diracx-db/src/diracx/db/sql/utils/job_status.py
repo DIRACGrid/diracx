@@ -7,16 +7,15 @@ from unittest.mock import MagicMock
 from fastapi import BackgroundTasks
 
 from diracx.core.config.schema import Config
-from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
     JobMinorStatus,
     JobStatus,
     JobStatusUpdate,
-    ScalarSearchOperator,
     SetJobStatusReturn,
     VectorSearchOperator,
     VectorSearchSpec,
 )
+from diracx.db.sql.job_logging.db import JobLoggingRecord
 
 from .. import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
 
@@ -206,9 +205,7 @@ async def reschedule_jobs_bulk(
 
     # BULK JDL UPDATE
     # DATABASE OPERATION
-
-    # Update JDL (Should we be doing this here?)
-    # DATABASE OPERATION
+    # TODO: Update JDL (Should we be doing this here?)
     await job_db.setJobJDLsBulk(jdl_changes)
 
     return {
@@ -223,8 +220,8 @@ async def reschedule_jobs_bulk(
     }
 
 
-async def set_job_statuses(
-    job_update: dict[int, dict[datetime, JobStatusUpdate]],
+async def set_job_status_bulk(
+    status_changes: dict[int, dict[datetime, JobStatusUpdate]],
     config: Config,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
@@ -233,43 +230,6 @@ async def set_job_statuses(
     *,
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
-):
-    """Bulk operation setting status on multiple job IDs, returning a dictionary of job ID to result.
-    This is done by calling set_job_status for each ID and status dictionary provided within a ForgivingTaskGroup.
-
-    """
-    async with ForgivingTaskGroup() as tg:
-        tasks = {
-            job_id: tg.create_task(
-                set_job_status(
-                    job_id,
-                    status_dict,
-                    config,
-                    job_db,
-                    job_logging_db,
-                    task_queue_db,
-                    background_task,
-                    force=force,
-                    additional_attributes=additional_attributes[job_id],
-                )
-            )
-            for job_id, status_dict in job_update.items()
-        }
-
-    return {k: v.result() for k, v in tasks.items()}
-
-
-async def set_job_status(
-    job_id: int,
-    status: dict[datetime, JobStatusUpdate],
-    config: Config,
-    job_db: JobDB,
-    job_logging_db: JobLoggingDB,
-    task_queue_db: TaskQueueDB,
-    background_task: BackgroundTasks,
-    *,
-    force: bool = False,
-    additional_attributes: dict[str, str] = {},
 ) -> SetJobStatusReturn:
     """Set various status fields for job specified by its jobId.
     Set only the last status in the JobDB, updating all the status
@@ -285,125 +245,151 @@ async def set_job_status(
         getStartAndEndTime,
     )
 
-    # transform JobStateUpdate objects into dicts
-    statusDict = {}
-    for key, value in status.items():
-        statusDict[key] = {k: v for k, v in value.model_dump().items() if v is not None}
+    failed = {}
+    deletable_killable_jobs = set()
+    job_attribute_updates: dict[int, dict[str, str]] = {}
+    job_logging_updates: list[JobLoggingRecord] = []
+    status_dicts: dict[int, dict[str, str]] = defaultdict(dict)
 
-    _, res = await job_db.search(
+    # transform JobStateUpdate objects into dicts
+    for job_id, status in status_changes.items():
+        for key, value in status.items():
+            # TODO: is this really the right way to do this?
+            status_dicts[job_id][key] = {
+                k: v for k, v in value.model_dump().items() if v is not None
+            }
+
+    # search all jobs at once
+    _, results = await job_db.search(
         parameters=["Status", "StartExecTime", "EndExecTime"],
         search=[
             {
                 "parameter": "JobID",
-                "operator": ScalarSearchOperator.EQUAL,
-                "value": str(job_id),
+                "operator": VectorSearchOperator.IN,
+                "values": set(status_changes.keys()),
             }
         ],
         sorts=[],
     )
-    if not res:
-        raise JobNotFound(job_id) from None
+    if not results:
+        return {
+            "failed": {
+                job_id: {"detail": "Not found"} for job_id in status_changes.keys()
+            },
+        }
 
-    currentStatus = res[0]["Status"]
-    startTime = res[0]["StartExecTime"]
-    endTime = res[0]["EndExecTime"]
-
-    # If the current status is Stalled and we get an update, it should probably be "Running"
-    if currentStatus == JobStatus.STALLED:
-        currentStatus = JobStatus.RUNNING
-
+    found_jobs = set(int(res["JobID"]) for res in results)
     # Get the latest time stamps of major status updates
-    result = await job_logging_db.get_wms_time_stamps(job_id)
+    wms_time_stamps = await job_logging_db.get_wms_time_stamps_bulk(found_jobs)
 
-    #####################################################################################################
+    for res in results:
+        job_id = int(res["JobID"])
+        currentStatus = res["Status"]
+        startTime = res["StartExecTime"]
+        endTime = res["EndExecTime"]
 
-    # This is more precise than "LastTime". timeStamps is a sorted list of tuples...
-    timeStamps = sorted((float(t), s) for s, t in result.items())
-    lastTime = TimeUtilities.fromEpoch(timeStamps[-1][0]).replace(tzinfo=timezone.utc)
+        # If the current status is Stalled and we get an update, it should probably be "Running"
+        if currentStatus == JobStatus.STALLED:
+            currentStatus = JobStatus.RUNNING
 
-    # Get chronological order of new updates
-    updateTimes = sorted(statusDict)
+        #####################################################################################################
+        statusDict = status_dicts[job_id]
+        # This is more precise than "LastTime". timeStamps is a sorted list of tuples...
+        timeStamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
+        lastTime = TimeUtilities.fromEpoch(timeStamps[-1][0]).replace(
+            tzinfo=timezone.utc
+        )
 
-    newStartTime, newEndTime = getStartAndEndTime(
-        startTime, endTime, updateTimes, timeStamps, statusDict
+        # Get chronological order of new updates
+        updateTimes = sorted(statusDict)
+
+        newStartTime, newEndTime = getStartAndEndTime(
+            startTime, endTime, updateTimes, timeStamps, statusDict
+        )
+
+        job_data = {}
+        if updateTimes[-1] >= lastTime:
+            new_status, new_minor, new_application = (
+                returnValueOrRaise(  # TODO: Catch this
+                    getNewStatus(
+                        job_id,
+                        updateTimes,
+                        lastTime,
+                        statusDict,
+                        currentStatus,
+                        force,
+                        MagicMock(),  # FIXME
+                    )
+                )
+            )
+
+            if new_status:
+                job_data.update(additional_attributes)
+                job_data["Status"] = new_status
+                job_data["LastUpdateTime"] = str(datetime.now(timezone.utc))
+            if new_minor:
+                job_data["MinorStatus"] = new_minor
+            if new_application:
+                job_data["ApplicationStatus"] = new_application
+
+            # TODO: implement elasticJobParametersDB ?
+            # if cls.elasticJobParametersDB:
+            #     result = cls.elasticJobParametersDB.setJobParameter(int(jobID), "Status", status)
+            #     if not result["OK"]:
+            #         return result
+
+        for updTime in updateTimes:
+            if statusDict[updTime]["Source"].startswith("Job"):
+                job_data["HeartBeatTime"] = str(updTime)
+
+        if not startTime and newStartTime:
+            job_data["StartExecTime"] = newStartTime
+
+        if not endTime and newEndTime:
+            job_data["EndExecTime"] = newEndTime
+
+        #####################################################################################################
+        # delete or kill job, if we transition to DELETED or KILLED state
+        if new_status in [JobStatus.DELETED, JobStatus.KILLED]:
+            deletable_killable_jobs.add(job_id)
+
+        # Update database tables
+        if job_data:
+            job_attribute_updates[job_id] = job_data
+
+        for updTime in updateTimes:
+            sDict = statusDict[updTime]
+            job_logging_updates.append(
+                JobLoggingRecord(
+                    job_id=job_id,
+                    status=sDict.get("Status", "idem"),
+                    minor_status=sDict.get("MinorStatus", "idem"),
+                    application_status=sDict.get("ApplicationStatus", "idem"),
+                    date=updTime,
+                    source=sDict.get("Source", "Unknown"),
+                )
+            )
+
+    await job_db.setJobAttributesBulk(job_attribute_updates)
+
+    await _remove_jobs_from_task_queue(
+        list(deletable_killable_jobs), config, task_queue_db, background_task
     )
 
-    job_data = {}
-    if updateTimes[-1] >= lastTime:
-        new_status, new_minor, new_application = returnValueOrRaise(
-            getNewStatus(
-                job_id,
-                updateTimes,
-                lastTime,
-                statusDict,
-                currentStatus,
-                force,
-                MagicMock(),  # FIXME
-            )
+    # TODO: implement StorageManagerClient
+    # returnValueOrRaise(StorageManagerClient().killTasksBySourceTaskID(job_ids))
+
+    if deletable_killable_jobs:
+        await job_db.set_job_command_bulk(
+            [(job_id, "Kill", "") for job_id in deletable_killable_jobs]
         )
 
-        if new_status:
-            job_data.update(additional_attributes)
-            job_data["Status"] = new_status
-            job_data["LastUpdateTime"] = str(datetime.now(timezone.utc))
-        if new_minor:
-            job_data["MinorStatus"] = new_minor
-        if new_application:
-            job_data["ApplicationStatus"] = new_application
+    await job_logging_db.bulk_insert_record(job_logging_updates)
 
-        # TODO: implement elasticJobParametersDB ?
-        # if cls.elasticJobParametersDB:
-        #     result = cls.elasticJobParametersDB.setJobParameter(int(jobID), "Status", status)
-        #     if not result["OK"]:
-        #         return result
-
-    for updTime in updateTimes:
-        if statusDict[updTime]["Source"].startswith("Job"):
-            job_data["HeartBeatTime"] = str(updTime)
-
-    if not startTime and newStartTime:
-        job_data["StartExecTime"] = newStartTime
-
-    if not endTime and newEndTime:
-        job_data["EndExecTime"] = newEndTime
-
-    #####################################################################################################
-    # delete or kill job, if we transition to DELETED or KILLED state
-    if new_status in [JobStatus.DELETED, JobStatus.KILLED]:
-        await _remove_jobs_from_task_queue(
-            [job_id], config, task_queue_db, background_task
-        )
-
-        # TODO: implement StorageManagerClient
-        # returnValueOrRaise(StorageManagerClient().killTasksBySourceTaskID(job_ids))
-
-        await job_db.set_job_command(job_id, "Kill")
-
-    # Update database tables
-    if job_data:
-        await job_db.setJobAttributes(job_id, job_data)
-
-    for updTime in updateTimes:
-        sDict = statusDict[updTime]
-        if not sDict.get("Status"):
-            sDict["Status"] = "idem"
-        if not sDict.get("MinorStatus"):
-            sDict["MinorStatus"] = "idem"
-        if not sDict.get("ApplicationStatus"):
-            sDict["ApplicationStatus"] = "idem"
-        if not sDict.get("Source"):
-            sDict["Source"] = "Unknown"
-
-        await job_logging_db.insert_record(
-            job_id,
-            sDict["Status"],
-            sDict["MinorStatus"],
-            sDict["ApplicationStatus"],
-            updTime,
-            sDict["Source"],
-        )
-
-    return SetJobStatusReturn(**job_data)
+    return {
+        "success": job_attribute_updates,
+        "failed": failed,
+    }
 
 
 class ForgivingTaskGroup(asyncio.TaskGroup):

@@ -4,10 +4,13 @@ import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
 from sqlalchemy import delete, func, insert, select
 
 if TYPE_CHECKING:
     pass
+
+from collections import defaultdict
 
 from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
@@ -22,6 +25,15 @@ from .schema import (
 )
 
 MAGIC_EPOC_NUMBER = 1270000000
+
+
+class JobLoggingRecord(BaseModel):
+    job_id: int
+    status: JobStatus
+    minor_status: str
+    application_status: str
+    date: datetime
+    source: str
 
 
 class JobLoggingDB(BaseSQLDB):
@@ -68,6 +80,43 @@ class JobLoggingDB(BaseSQLDB):
             Source=source[:32],
         )
         await self.conn.execute(stmt)
+
+    async def bulk_insert_record(
+        self,
+        records: list[JobLoggingRecord],
+    ):
+        """Bulk insert entries to the JobLoggingDB table."""
+
+        def get_epoc(date):
+            return (
+                time.mktime(date.timetuple())
+                + date.microsecond / 1000000.0
+                - MAGIC_EPOC_NUMBER
+            )
+
+        # First, fetch the maximum SeqNums for the given job_ids
+        seqnum_stmt = select(
+            LoggingInfo.JobID, func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)
+        ).where(LoggingInfo.JobID.in_([record.job_id for record in records]))
+        seqnum = {jid: seqnum for jid, seqnum in (await self.conn.execute(seqnum_stmt))}
+
+        # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-bulk-insert-statements
+        await self.conn.execute(
+            insert(LoggingInfo),
+            [
+                {
+                    "JobID": record.job_id,
+                    "SeqNum": seqnum[record.job_id],
+                    "Status": record.status,
+                    "MinorStatus": record.minor_status,
+                    "ApplicationStatus": record.application_status[:255],
+                    "StatusTime": record.date,
+                    "StatusTimeOrder": get_epoc(record.date),
+                    "Source": record.source[:32],
+                }
+                for record in records
+            ],
+        )
 
     async def get_records(self, job_id: int) -> list[JobStatusReturn]:
         """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
@@ -157,5 +206,24 @@ class JobLoggingDB(BaseSQLDB):
 
         for event, etime in rows:
             result[event] = str(etime + MAGIC_EPOC_NUMBER)
+
+        return result
+
+    async def get_wms_time_stamps_bulk(self, job_ids):
+        """Get TimeStamps for job MajorState transitions for multiple jobs at once
+        return a {JobID: {State:timestamp}} dictionary.
+        """
+        result = defaultdict(dict)
+        stmt = select(
+            LoggingInfo.JobID,
+            LoggingInfo.Status,
+            LoggingInfo.StatusTimeOrder,
+        ).where(LoggingInfo.JobID.in_(job_ids))
+        rows = await self.conn.execute(stmt)
+        if not rows.rowcount:
+            return {}
+
+        for job_id, event, etime in rows:
+            result[job_id][event] = str(etime + MAGIC_EPOC_NUMBER)
 
         return result
