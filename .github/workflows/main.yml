@@ -76,6 +76,7 @@ jobs:
         uses: codecov/codecov-action@v4.5.0
 
   pytest-integration:
+    name: Integration test - ${{ matrix.dbName }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -98,7 +99,7 @@ jobs:
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/[testing] ./diracx-testing/
-      - name: Start demo using ${{ matrix.dbName }}
+      - name: Start demo
         run: |
           git clone -b diracx-issue-147-postgres-integration https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
           ../diracx-charts/run_demo.sh ${{ matrix.cliOption }} --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
