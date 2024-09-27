@@ -50,6 +50,12 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
     httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
 
+    # Since 0.32.0, pytest_httpx does not expect to be queried multiple
+    # times for the same URL. So force it to allow it
+    # By default, it should be done on a per test bases, but well...
+    # https://colin-b.github.io/pytest_httpx/#allow-to-register-a-response-for-more-than-one-request
+    httpx_mock._options.can_send_already_matched_responses = True
+
     server_metadata = await get_server_metadata(f"https://{path}")
 
     id_tokens = ["user1", "user2"]
