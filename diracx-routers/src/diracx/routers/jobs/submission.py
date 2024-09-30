@@ -114,6 +114,7 @@ async def submit_bulk_jobs(
         jobClassAd = ClassAd(job_definitions[0])
         result = getParameterVectorLength(jobClassAd)
         if not result["OK"]:
+            # FIXME dont do this
             print("Issue with getParameterVectorLength", result["Message"])
             return result
         nJobs = result["Value"]
@@ -123,6 +124,7 @@ async def submit_bulk_jobs(
             parametricJob = True
             result = generateParametricJobs(jobClassAd)
             if not result["OK"]:
+                # FIXME why?
                 return result
             jobDescList = result["Value"]
         else:
@@ -162,6 +164,7 @@ async def submit_bulk_jobs(
         initialStatus = JobStatus.RECEIVED
         initialMinorStatus = "Job accepted"
 
+    # FIXME this is not really bulk insert
     for (
         jobDescription
     ) in (
