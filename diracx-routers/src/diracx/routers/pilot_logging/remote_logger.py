@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
+from sqlalchemy import select
+
+from diracx.db.sql.pilot_agents.schema import PilotAgents
+from diracx.db.sql.utils import BaseSQLDB
 
 from ..dependencies import PilotLogsDB
 from ..fastapi_classes import DiracxRouter
@@ -30,7 +34,17 @@ async def send_message(
     logger.warning(f"Message received '{data}'")
     await check_permissions(action=ActionType.CREATE, pilot_db=pilot_logs_db)
 
-    pilot_id = 1234  # need to get pilot id from pilot_stamp (via pilot DB)
+    pilot_id = 0  # need to get pilot id from pilot_stamp (via PilotAgentsDB)
+    piloAgentsDB = BaseSQLDB.available_implementations("PilotAgentsDB")[0]
+    url = BaseSQLDB.available_urls()["PilotAgentsDB"]
+    db = piloAgentsDB(url)
+
+    async with db.engine_context():
+        async with db:
+            stmt = select(
+                (PilotAgents.PilotID).where(PilotAgents.PilotStamp == data.pilot_stamp)
+            )
+            pilot_id = (await db.conn.execute(stmt)).scalar_one()
 
     docs = []
     for line in data.lines:
