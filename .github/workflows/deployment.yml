@@ -203,7 +203,6 @@ jobs:
 
       - name: Build and push client (dev)
         uses: docker/build-push-action@v6
-        if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         with:
           context: containers/client/
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
@@ -213,7 +212,6 @@ jobs:
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
       - name: Build and push services (dev)
         uses: docker/build-push-action@v6
-        if: ${{ needs.deploy-pypi.outputs.create-release != 'true' }}
         with:
           context: containers/services/
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
