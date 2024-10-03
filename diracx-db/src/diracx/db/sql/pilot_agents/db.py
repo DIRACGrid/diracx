@@ -16,9 +16,11 @@ class PilotAgentsDB(BaseSQLDB):
         pilotRef: list[str],
         VO: str,
         gridType: str = "DIRAC",
-        pilotStampDict: dict = {},
+        pilotStampDict: dict | None = None,
     ) -> list[int]:
 
+        if pilotStampDict is None:
+            pilotStampDict = {}
         row_ids = []
         for ref in pilotRef:
             stamp = ""
