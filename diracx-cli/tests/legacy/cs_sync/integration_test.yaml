@@ -858,8 +858,6 @@ Systems:
             allowSite: SiteManager, Operator
             banSite: SiteManager, Operator
             getJobPilotOutput: authenticated
-            getSiteMask: authenticated
-            getSiteMaskStatus: authenticated
             ping: authenticated
           Protocol: https
       URLs:

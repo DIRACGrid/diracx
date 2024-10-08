@@ -134,24 +134,6 @@ class AtticJobParameters(JobDBBase):
     RescheduleCycle = Column(Integer)
 
 
-class SiteMask(JobDBBase):
-    __tablename__ = "SiteMask"
-    Site = Column(String(64), primary_key=True)
-    Status = Column(String(64))
-    LastUpdateTime = Column(DateTime)
-    Author = Column(String(255))
-    Comment = Column(Text)
-
-
-class SiteMaskLogging(JobDBBase):
-    __tablename__ = "SiteMaskLogging"
-    Site = Column(String(64), primary_key=True)
-    UpdateTime = Column(DateTime, primary_key=True)
-    Status = Column(String(64))
-    Author = Column(String(255))
-    Comment = Column(Text)
-
-
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
     JobID = Column(
