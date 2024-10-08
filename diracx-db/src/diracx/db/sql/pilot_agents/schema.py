@@ -8,8 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from ..job.schema import EnumBackedBool
-from ..utils import Column, NullColumn
+from ..utils import Column, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
 
