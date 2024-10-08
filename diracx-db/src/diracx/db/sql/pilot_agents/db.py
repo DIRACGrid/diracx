@@ -13,23 +13,21 @@ class PilotAgentsDB(BaseSQLDB):
 
     async def addPilotReferences(
         self,
-        pilotRef: list[str],
-        VO: str,
-        gridType: str = "DIRAC",
-        pilotStampDict: dict | None = None,
+        pilot_ref: list[str],
+        vo: str,
+        grid_type: str = "DIRAC",
+        pilot_stamps: dict | None = None,
     ) -> list[int]:
 
         if pilotStampDict is None:
             pilotStampDict = {}
         row_ids = []
         for ref in pilotRef:
-            stamp = ""
-            if ref in pilotStampDict:
-                stamp = pilotStampDict[ref]
+            stamp = pilotStampDict.get(ref, "")
             now = datetime.now(tz=timezone.utc)
             stmt = insert(PilotAgents).values(
                 PilotJobReference=ref,
-                VO=VO,
+                VO=vo,
                 GridType=gridType,
                 SubmissionTime=now,
                 LastUpdateTime=now,
