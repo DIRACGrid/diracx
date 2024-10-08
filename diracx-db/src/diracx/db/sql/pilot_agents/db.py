@@ -19,16 +19,16 @@ class PilotAgentsDB(BaseSQLDB):
         pilot_stamps: dict | None = None,
     ) -> list[int]:
 
-        if pilotStampDict is None:
-            pilotStampDict = {}
+        if pilot_stamps is None:
+            pilot_stamps = {}
         row_ids = []
-        for ref in pilotRef:
-            stamp = pilotStampDict.get(ref, "")
+        for ref in pilot_ref:
+            stamp = pilot_stamps.get(ref, "")
             now = datetime.now(tz=timezone.utc)
             stmt = insert(PilotAgents).values(
                 PilotJobReference=ref,
                 VO=vo,
-                GridType=gridType,
+                GridType=grid_type,
                 SubmissionTime=now,
                 LastUpdateTime=now,
                 Status="Submitted",
