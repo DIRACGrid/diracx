@@ -720,12 +720,37 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
 
-    # Test /jobs/reschedule
+    # Test /jobs/reschedule and
+    # test max_reschedule
+
+    max_resched = 3
+    jid = str(submitted_job_ids[0])
+
+    for i in range(max_resched):
+        r = normal_user_client.post(
+            "/api/jobs/reschedule",
+            params={"job_ids": submitted_job_ids},
+        )
+        assert r.status_code == 200, r.json()
+        result = r.json()
+        assert result[jid]["Status"] == JobStatus.RECEIVED
+        assert result[jid]["MinorStatus"] == "Job Rescheduled"
+        assert result[jid]["RescheduleCounter"] == i + 1
+
     r = normal_user_client.post(
         "/api/jobs/reschedule",
         params={"job_ids": submitted_job_ids},
     )
-    assert r.status_code == 200, r.json()
+    assert (
+        r.status_code != 200
+    ), f"Rescheduling more than {max_resched} times should have failed by now"
+    assert r.json() == {
+        "detail": {
+            "success": [],
+            "message": "Failed to reschedule 1 jobs out of 1",
+            "failed": {"1": f"Maximum number of reschedules exceeded ({max_resched})"},
+        }
+    }
 
 
 # Test delete job
@@ -733,7 +758,15 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
 
 def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
     # Act
-    r = normal_user_client.delete(f"/api/jobs/{valid_job_id}")
+    r = normal_user_client.patch(
+        f"/api/jobs/{valid_job_id}/status",
+        json={
+            str(datetime.now(tz=timezone.utc)): {
+                "Status": JobStatus.DELETED,
+                "MinorStatus": "Checking accounting",
+            }
+        },
+    )
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -746,8 +779,15 @@ def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: i
 
 def test_delete_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
     # Act
-    r = normal_user_client.delete(f"/api/jobs/{invalid_job_id}")
-
+    r = normal_user_client.patch(
+        f"/api/jobs/{invalid_job_id}/status",
+        json={
+            str(datetime.now(tz=timezone.utc)): {
+                "Status": JobStatus.DELETED,
+                "MinorStatus": "Checking accounting",
+            }
+        },
+    )
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
     assert r.json() == {"detail": f"Job {invalid_job_id} not found"}
@@ -757,7 +797,18 @@ def test_delete_bulk_jobs_valid_job_ids(
     normal_user_client: TestClient, valid_job_ids: list[int]
 ):
     # Act
-    r = normal_user_client.delete("/api/jobs/", params={"job_ids": valid_job_ids})
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(tz=timezone.utc)): {
+                    "Status": JobStatus.DELETED,
+                    "MinorStatus": "Checking accounting",
+                }
+            }
+            for job_id in valid_job_ids
+        },
+    )
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -773,15 +824,26 @@ def test_delete_bulk_jobs_invalid_job_ids(
     normal_user_client: TestClient, invalid_job_ids: list[int]
 ):
     # Act
-    r = normal_user_client.delete("/api/jobs/", params={"job_ids": invalid_job_ids})
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(tz=timezone.utc)): {
+                    "Status": JobStatus.DELETED,
+                    "MinorStatus": "Checking accounting",
+                }
+            }
+            for job_id in invalid_job_ids
+        },
+    )
 
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
-            "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
-            "valid_job_ids": [],
-            "failed_job_ids": invalid_job_ids,
+            "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
+            "success": [],
+            "failed": invalid_job_ids,
         }
     }
 
@@ -793,15 +855,26 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     job_ids = valid_job_ids + invalid_job_ids
 
     # Act
-    r = normal_user_client.delete("/api/jobs/", params={"job_ids": job_ids})
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(tz=timezone.utc)): {
+                    "Status": JobStatus.DELETED,
+                    "MinorStatus": "Checking accounting",
+                }
+            }
+            for job_id in job_ids
+        },
+    )
 
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
-            "message": f"Failed to delete {len(invalid_job_ids)} jobs out of {len(job_ids)}",
-            "valid_job_ids": valid_job_ids,
-            "failed_job_ids": invalid_job_ids,
+            "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(job_ids)}",
+            "success": valid_job_ids,
+            "failed": invalid_job_ids,
         }
     }
     for job_id in valid_job_ids:
@@ -815,10 +888,19 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
 
 def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
     # Act
-    r = normal_user_client.post(f"/api/jobs/{valid_job_id}/kill")
+    r = normal_user_client.patch(
+        f"/api/jobs/{valid_job_id}/status",
+        json={
+            str(datetime.now(timezone.utc)): {
+                "Status": JobStatus.KILLED,
+                "MinorStatus": "Marked for termination",
+            }
+        },
+    )
 
     # Assert
     assert r.status_code == 200, r.json()
+    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.KILLED
     r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
     assert r.status_code == 200, r.json()
     assert r.json()[str(valid_job_id)]["Status"] == JobStatus.KILLED
@@ -828,7 +910,16 @@ def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int
 
 def test_kill_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
     # Act
-    r = normal_user_client.post(f"/api/jobs/{invalid_job_id}/kill")
+    # r = normal_user_client.patch(f"/api/jobs/{invalid_job_id}/status")
+    r = normal_user_client.patch(
+        f"/api/jobs/{invalid_job_id}/status",
+        json={
+            str(datetime.now(timezone.utc)): {
+                "Status": JobStatus.KILLED,
+                "MinorStatus": "Marked for termination",
+            }
+        },
+    )
 
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
@@ -839,11 +930,23 @@ def test_kill_bulk_jobs_valid_job_ids(
     normal_user_client: TestClient, valid_job_ids: list[int]
 ):
     # Act
-    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": valid_job_ids})
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(timezone.utc)): {
+                    "Status": JobStatus.KILLED,
+                    "MinorStatus": "Marked for termination",
+                }
+            }
+            for job_id in valid_job_ids
+        },
+    )
+
+    # r = normal_user_client.post("/api/jobs/kill", params={"job_ids": valid_job_ids})
 
     # Assert
     assert r.status_code == 200, r.json()
-    assert r.json() == valid_job_ids
     for valid_job_id in valid_job_ids:
         r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
         assert r.status_code == 200, r.json()
@@ -856,15 +959,25 @@ def test_kill_bulk_jobs_invalid_job_ids(
     normal_user_client: TestClient, invalid_job_ids: list[int]
 ):
     # Act
-    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": invalid_job_ids})
-
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(timezone.utc)): {
+                    "Status": JobStatus.KILLED,
+                    "MinorStatus": "Marked for termination",
+                }
+            }
+            for job_id in invalid_job_ids
+        },
+    )
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
-            "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
-            "valid_job_ids": [],
-            "failed_job_ids": invalid_job_ids,
+            "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(invalid_job_ids)}",
+            "success": [],
+            "failed": invalid_job_ids,
         }
     }
 
@@ -876,15 +989,25 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
     job_ids = valid_job_ids + invalid_job_ids
 
     # Act
-    r = normal_user_client.post("/api/jobs/kill", params={"job_ids": job_ids})
-
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            job_id: {
+                str(datetime.now(timezone.utc)): {
+                    "Status": JobStatus.KILLED,
+                    "MinorStatus": "Marked for termination",
+                }
+            }
+            for job_id in job_ids
+        },
+    )
     # Assert
     assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
     assert r.json() == {
         "detail": {
-            "message": f"Failed to kill {len(invalid_job_ids)} jobs out of {len(job_ids)}",
-            "valid_job_ids": valid_job_ids,
-            "failed_job_ids": invalid_job_ids,
+            "message": f"Failed to set job status on {len(invalid_job_ids)} jobs out of {len(job_ids)}",
+            "success": valid_job_ids,
+            "failed": invalid_job_ids,
         }
     }
     for valid_job_id in valid_job_ids:
@@ -899,7 +1022,7 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
 
 def test_remove_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
     # Act
-    r = normal_user_client.post(f"/api/jobs/{valid_job_id}/remove")
+    r = normal_user_client.delete(f"/api/jobs/{valid_job_id}")
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -909,7 +1032,7 @@ def test_remove_job_valid_job_id(normal_user_client: TestClient, valid_job_id: i
 
 def test_remove_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
     # Act
-    r = normal_user_client.post(f"/api/jobs/{invalid_job_id}/remove")
+    r = normal_user_client.delete(f"/api/jobs/{invalid_job_id}")
 
     # Assert
     assert r.status_code == 200, r.json()
@@ -919,7 +1042,7 @@ def test_remove_bulk_jobs_valid_job_ids(
     normal_user_client: TestClient, valid_job_ids: list[int]
 ):
     # Act
-    r = normal_user_client.post("/api/jobs/remove", params={"job_ids": valid_job_ids})
+    r = normal_user_client.delete("/api/jobs/", params={"job_ids": valid_job_ids})
 
     # Assert
     assert r.status_code == 200, r.json()
