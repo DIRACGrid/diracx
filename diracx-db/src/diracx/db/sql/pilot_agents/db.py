@@ -39,6 +39,6 @@ class PilotAgentsDB(BaseSQLDB):
         ]
 
         # Insert multiple rows in a single execute call
-        stmt = insert(PilotAgents)
-        await self.conn.execute(stmt, values)
+        stmt = insert(PilotAgents).values(values)
+        await self.conn.execute(stmt)
         return
