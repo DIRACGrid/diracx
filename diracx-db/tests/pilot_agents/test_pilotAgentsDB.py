@@ -27,3 +27,8 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
         )
         assert pilot_id
         assert pilot_id == list(range(1, 11))
+
+        pilot_id = await pilot_agents_db.addPilotReferences(
+            refs, "test_vo", grid_type="DIRAC", pilot_stamps=None
+        )
+        assert pilot_id
