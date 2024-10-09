@@ -17,24 +17,28 @@ class PilotAgentsDB(BaseSQLDB):
         vo: str,
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
-    ) -> list[int]:
+    ) -> None:
 
         if pilot_stamps is None:
             pilot_stamps = {}
-        row_ids = []
-        for ref in pilot_ref:
-            stamp = pilot_stamps.get(ref, "")
-            now = datetime.now(tz=timezone.utc)
-            stmt = insert(PilotAgents).values(
-                PilotJobReference=ref,
-                VO=vo,
-                GridType=grid_type,
-                SubmissionTime=now,
-                LastUpdateTime=now,
-                Status="Submitted",
-                PilotStamp=stamp,
-            )
-            result = await self.conn.execute(stmt)
-            row_ids.append(result.lastrowid)
 
-        return row_ids
+        now = datetime.now(tz=timezone.utc)
+
+        # Prepare the list of dictionaries for bulk insertion
+        values = [
+            {
+                "PilotJobReference": ref,
+                "VO": vo,
+                "GridType": grid_type,
+                "SubmissionTime": now,
+                "LastUpdateTime": now,
+                "Status": "Submitted",
+                "PilotStamp": pilot_stamps.get(ref, ""),
+            }
+            for ref in pilot_ref
+        ]
+
+        # Insert multiple rows in a single execute call
+        stmt = insert(PilotAgents)
+        await self.conn.execute(stmt, values)
+        return

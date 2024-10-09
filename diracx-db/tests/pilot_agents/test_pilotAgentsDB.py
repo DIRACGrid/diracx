@@ -22,13 +22,10 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
         stamps = [f"stamp_{i}" for i in range(10)]
         stamp_dict = dict(zip(refs, stamps))
 
-        pilot_id = await pilot_agents_db.addPilotReferences(
+        await pilot_agents_db.addPilotReferences(
             refs, "test_vo", grid_type="DIRAC", pilot_stamps=stamp_dict
         )
-        assert pilot_id
-        assert pilot_id == list(range(1, 11))
 
-        pilot_id = await pilot_agents_db.addPilotReferences(
+        await pilot_agents_db.addPilotReferences(
             refs, "test_vo", grid_type="DIRAC", pilot_stamps=None
         )
-        assert pilot_id
