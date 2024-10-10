@@ -9,9 +9,11 @@ from .schema import PilotAgents, PilotAgentsDBBase
 
 
 class PilotAgentsDB(BaseSQLDB):
+    """PilotAgentsDB class is a front-end to the PilotAgents Database."""
+
     metadata = PilotAgentsDBBase.metadata
 
-    async def addPilotReferences(
+    async def add_pilot_references(
         self,
         pilot_ref: list[str],
         vo: str,
