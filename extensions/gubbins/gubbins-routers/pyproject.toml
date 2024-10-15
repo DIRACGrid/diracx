@@ -1,0 +1,68 @@
+[project]
+name = "gubbins-routers"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = []
+license = { text = "GPL-3.0-only" }
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+
+dependencies = [
+    # This is obvious
+    "diracx-routers",
+    # We should add something else
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["diracx-testing", "moto[server]", "pytest-httpx"]
+types = [
+    "boto3-stubs",
+    "types-aiobotocore[essential]",
+    "types-aiobotocore-s3",
+    "types-cachetools",
+    "types-python-dateutil",
+    "types-PyYAML",
+    "types-requests",
+]
+
+[project.entry-points."diracx.services"]
+lollygag = "gubbins.routers.lollygag:router"
+".well-known" = "gubbins.routers.well_known:router"
+
+[project.entry-points."diracx.access_policies"]
+lollygagAccessPolicy = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=gubbins.routers",
+    "--cov-report=term-missing",
+    # Both gubbins and diracx are needed here
+    "-pgubbins.testing",
+    "-pdiracx.testing",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
+markers = [
+    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+]

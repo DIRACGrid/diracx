@@ -20,7 +20,12 @@ The DiracX client is a comprehensive toolset designed to interact with various s
 
 ## diracx-client
 
-The `diracx-client` is an auto-generated client library that facilitates communication with services defined by OpenAPI specifications.
+The `diracx-client` consists of three parts:
+* an auto-generated client library that facilitates communication with services defined by OpenAPI specifications. (the `generated` folder)
+* customization, in the `patches` folder, which mirror the structure of the generated client.
+* the base modules (`aio`, `extensions`, `models`) just exporting what we want to be exporting
+
+`diracx-client` also defines a `DiracClient` class which exposes all these low level calls, and handles the authentication/authorisation aspects, as well as the interactions with extensions.
 
 ### Generating a Client
 
@@ -46,7 +51,7 @@ Further details can be found in the [Python Autorest documentation](https://gith
 
 ### Customising the Generated Client
 
-Modifications to the generated client should be made in `_patch.py` files to ensure maintainability. Detailed guidance can be found in [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/customizations.md).
+Modifications to the generated client should be made in the `patches` files to ensure maintainability, and possibly imported in the `_patch.py` files if needed. Detailed guidance can be found in [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/customizations.md).
 
 Note: any modification in the synchronous client should also be performed in the asynchronous client (**aio**), and vice-versa.
 
@@ -139,6 +144,17 @@ CLI commands are located in `diracx-cli/src/diracx/cli/`. To create a CLI comman
 1. Import `DiracClient` and/or the diracx API.
 2. Import `utils.AsyncTyper`.
 3. Use the `@app.async_command` decorator to define commands.
+
+For adding a new command, it needs to be added to one of the following entrypoint:
+
+```toml
+[project.entry-points."diracx.cli"]
+jobs = "diracx.cli.jobs:app"
+config = "diracx.cli.config:app"
+
+[project.entry-points."diracx.cli.hidden"]
+internal = "diracx.cli.internal:app"
+```
 
 #### Example
 

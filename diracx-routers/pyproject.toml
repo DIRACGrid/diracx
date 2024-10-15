@@ -82,3 +82,6 @@ asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
 ]
+
+
+asyncio_default_fixture_loop_scope = "function"

@@ -12,6 +12,10 @@ coverage:
 
 codecov:
   notify:
-    after_n_builds: 7
+    # 6 diracx unit tests
+    # 1 diracx integration test
+    # 5 gubbins unit test
+    # 1 gubbins integration test
+    after_n_builds: 13
 
 comment: false

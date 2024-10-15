@@ -4,7 +4,7 @@ from pathlib import Path
 import git
 import pytest
 
-import diracx.client
+import diracx.client.generated
 
 pytestmark = pytest.mark.enabled_dependencies([])
 # pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
@@ -36,14 +36,13 @@ def test_regenerate_client(test_client, tmp_path):
 
     openapi_spec = tmp_path / "openapi.json"
     openapi_spec.write_text(r.text)
-
-    output_folder = Path(diracx.client.__file__).parent.parent
-    assert (output_folder / "client").is_dir()
-    repo_root = output_folder.parent.parent.parent
+    output_folder = Path(diracx.client.generated.__file__).parent
+    assert (output_folder).is_dir()
+    repo_root = output_folder.parents[4]
     assert (repo_root / "diracx-client" / "src").is_dir()
     assert (repo_root / ".git").is_dir()
     repo = git.Repo(repo_root)
-    if repo.is_dirty(path=repo_root / "src" / "diracx" / "client"):
+    if repo.is_dirty(path=repo_root / "diracx-client" / "src" / "diracx" / "client"):
         raise AssertionError(
             "Client is currently in a modified state, skipping regeneration"
         )
@@ -53,8 +52,8 @@ def test_regenerate_client(test_client, tmp_path):
         "--python",
         f"--input-file={openapi_spec}",
         "--models-mode=msrest",
-        "--namespace=client",
-        f"--output-folder={output_folder}",
+        "--namespace=generated",
+        f"--output-folder={output_folder.parent}",
     ]
 
     # This is required to be able to work offline

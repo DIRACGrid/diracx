@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, Any, MutableMapping, TypeVar
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator
@@ -95,8 +95,8 @@ class RegistryConfig(BaseModel):
     DefaultProxyLifeTime: int = 12 * 60 * 60
     VOMSName: str | None = None
 
-    Users: dict[str, UserConfig]
-    Groups: dict[str, GroupConfig]
+    Users: MutableMapping[str, UserConfig]
+    Groups: MutableMapping[str, GroupConfig]
 
     def sub_from_preferred_username(self, preferred_username: str) -> str:
         """Get the user sub from the preferred username.
@@ -123,7 +123,7 @@ class JobSchedulingConfig(BaseModel):
 
 
 class ServicesConfig(BaseModel):
-    Catalogs: dict[str, Any] | None = None
+    Catalogs: MutableMapping[str, Any] | None = None
     JobMonitoring: JobMonitoringConfig = JobMonitoringConfig()
     JobScheduling: JobSchedulingConfig = JobSchedulingConfig()
 
@@ -132,38 +132,38 @@ class OperationsConfig(BaseModel):
     EnableSecurityLogging: bool = False
     Services: ServicesConfig = ServicesConfig()
 
-    Cloud: dict[str, Any] | None = None
-    DataConsistency: dict[str, Any] | None = None
-    DataManagement: dict[str, Any] | None = None
-    EMail: dict[str, Any] | None = None
-    ExternalsPolicy: dict[str, Any] | None = None
-    GaudiExecution: dict[str, Any] | None = None
-    Hospital: dict[str, Any] | None = None
-    InputDataPolicy: dict[str, Any] | None = None
-    JobDescription: dict[str, Any] | None = None
-    JobScheduling: dict[str, Any] | None = None
-    JobTypeMapping: dict[str, Any] | None = None
-    LogFiles: dict[str, Any] | None = None
-    LogStorage: dict[str, Any] | None = None
-    Logging: dict[str, Any] | None = None
-    Matching: dict[str, Any] | None = None
-    MonitoringBackends: dict[str, Any] | None = None
-    NagiosConnector: dict[str, Any] | None = None
-    Pilot: dict[str, Any] | None = None
-    Productions: dict[str, Any] | None = None
-    Shares: dict[str, Any] | None = None
-    Shifter: dict[str, Any] | None = None
-    SiteSEMappingByProtocol: dict[str, Any] | None = None
-    TransformationPlugins: dict[str, Any] | None = None
-    Transformations: dict[str, Any] | None = None
-    ResourceStatus: dict[str, Any] | None = None
+    Cloud: MutableMapping[str, Any] | None = None
+    DataConsistency: MutableMapping[str, Any] | None = None
+    DataManagement: MutableMapping[str, Any] | None = None
+    EMail: MutableMapping[str, Any] | None = None
+    ExternalsPolicy: MutableMapping[str, Any] | None = None
+    GaudiExecution: MutableMapping[str, Any] | None = None
+    Hospital: MutableMapping[str, Any] | None = None
+    InputDataPolicy: MutableMapping[str, Any] | None = None
+    JobDescription: MutableMapping[str, Any] | None = None
+    JobScheduling: MutableMapping[str, Any] | None = None
+    JobTypeMapping: MutableMapping[str, Any] | None = None
+    LogFiles: MutableMapping[str, Any] | None = None
+    LogStorage: MutableMapping[str, Any] | None = None
+    Logging: MutableMapping[str, Any] | None = None
+    Matching: MutableMapping[str, Any] | None = None
+    MonitoringBackends: MutableMapping[str, Any] | None = None
+    NagiosConnector: MutableMapping[str, Any] | None = None
+    Pilot: MutableMapping[str, Any] | None = None
+    Productions: MutableMapping[str, Any] | None = None
+    Shares: MutableMapping[str, Any] | None = None
+    Shifter: MutableMapping[str, Any] | None = None
+    SiteSEMappingByProtocol: MutableMapping[str, Any] | None = None
+    TransformationPlugins: MutableMapping[str, Any] | None = None
+    Transformations: MutableMapping[str, Any] | None = None
+    ResourceStatus: MutableMapping[str, Any] | None = None
 
 
 class Config(BaseModel):
-    Registry: dict[str, RegistryConfig]
+    Registry: MutableMapping[str, RegistryConfig]
     DIRAC: DIRACConfig
     # TODO: Should this be split by vo rather than setup?
-    Operations: dict[str, OperationsConfig]
+    Operations: MutableMapping[str, OperationsConfig]
 
     LocalSite: Any = None
     LogLevel: Any = None

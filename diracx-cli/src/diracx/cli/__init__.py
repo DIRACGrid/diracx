@@ -8,10 +8,10 @@ import typer
 
 from diracx.client.aio import DiracClient
 from diracx.client.models import DeviceFlowErrorResponse
+from diracx.core.extensions import select_from_extension
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.utils import write_credentials
 
-from . import config, internal, jobs
 from .utils import AsyncTyper
 
 app = AsyncTyper()
@@ -115,9 +115,25 @@ def callback(output_format: Optional[str] = None):
         os.environ["DIRACX_OUTPUT_FORMAT"] = output_format
 
 
-app.add_typer(jobs.app, name="jobs")
-app.add_typer(config.app, name="config")
-app.add_typer(internal.app, name="internal", hidden=True)
+# Load all the sub commands
+
+cli_names = set(
+    [entry_point.name for entry_point in select_from_extension(group="diracx.cli")]
+)
+for cli_name in cli_names:
+    entry_point = select_from_extension(group="diracx.cli", name=cli_name)[0]
+    app.add_typer(entry_point.load(), name=entry_point.name)
+
+
+cli_hidden_names = set(
+    [
+        entry_point.name
+        for entry_point in select_from_extension(group="diracx.cli.hidden")
+    ]
+)
+for cli_name in cli_hidden_names:
+    entry_point = select_from_extension(group="diracx.cli.hidden", name=cli_name)[0]
+    app.add_typer(entry_point.load(), name=entry_point.name, hidden=True)
 
 
 if __name__ == "__main__":

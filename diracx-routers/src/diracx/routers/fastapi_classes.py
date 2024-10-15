@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import TypeVar
+from typing import Any, Callable, TypeVar, cast
 
 from fastapi import APIRouter, FastAPI
+from starlette.routing import Route
 
 T = TypeVar("T")
 
@@ -60,6 +61,7 @@ class DiracFastAPI(FastAPI):
         if not self.openapi_schema:
             super().openapi(*args, **kwargs)
             _downgrade_openapi_schema(self.openapi_schema)
+
             # Remove 422 responses as we don't want autorest to use it
             for _, method_item in self.openapi_schema.get("paths").items():
                 for _, param in method_item.items():
@@ -81,3 +83,26 @@ class DiracxRouter(APIRouter):
         super().__init__(dependencies=dependencies)
         self.diracx_require_auth = require_auth
         self.diracx_path_root = path_root
+
+    ####
+    # These 2 methods are needed to overwrite routes
+    # https://github.com/tiangolo/fastapi/discussions/8489
+
+    def add_api_route(self, path: str, endpoint: Callable[..., Any], **kwargs):
+
+        route_index = self._get_route_index_by_path_and_methods(
+            path, set(kwargs.get("methods", []))
+        )
+        if route_index >= 0:
+            self.routes.pop(route_index)
+
+        return super().add_api_route(path, endpoint, **kwargs)
+
+    def _get_route_index_by_path_and_methods(self, path: str, methods: set[str]) -> int:
+        routes = cast(list[Route], self.routes)
+        for index, route in enumerate(routes):
+            if route.path == path and methods == route.methods:
+                return index
+        return -1
+
+    ######

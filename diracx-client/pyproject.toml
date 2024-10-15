@@ -4,7 +4,7 @@ description = "TODO"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -12,21 +12,12 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = [
-    "azure-core",
-    "diracx-core",
-    "isodate",
-    "requests",
-]
+dependencies = ["azure-core", "diracx-core", "isodate", "requests"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-]
-types = [
-    "types-requests",
-]
+testing = ["diracx-testing"]
+types = ["types-requests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -35,6 +26,11 @@ where = ["src"]
 requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
+[project.entry-points."diracx"]
+client_class = "diracx.client.generated._client:Dirac"
+aio_client_class = "diracx.client.generated.aio._client:Dirac"
+
+
 [tool.setuptools_scm]
 root = ".."
 
@@ -42,7 +38,8 @@ root = ".."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.client", "--cov-report=term-missing",
+    "--cov=diracx.client",
+    "--cov-report=term-missing",
     "-pdiracx.testing",
     "--import-mode=importlib",
 ]

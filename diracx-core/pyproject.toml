@@ -38,7 +38,8 @@ types = [
 ]
 
 [project.entry-points."diracx"]
-properties_module = "diracx.core:properties"
+properties_module = "diracx.core.properties"
+config = "diracx.core.config.schema:Config"
 
 [tool.setuptools.packages.find]
 where = ["src"]
