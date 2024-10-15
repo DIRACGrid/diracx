@@ -26,7 +26,7 @@ def fake_cli_env(monkeypatch, tmp_path):
         monkeypatch.setenv(key, value)
 
     data_dir = (
-        Path(__file__).parents[2] / "gubbins-routers/tests/data/lhcb-auth.web.cern.ch"
+        Path(__file__).parents[2] / "gubbins-routers/tests/data/idp-server.invalid"
     )
 
     run_server_cmd = f"{shutil.which('python')} -m http.server -d {data_dir} 9999"

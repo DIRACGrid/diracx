@@ -423,7 +423,7 @@ def with_config_repo(tmp_path_factory):
                     "DefaultProxyLifeTime": 432000,
                     "DefaultStorageQuota": 2000,
                     "IdP": {
-                        "URL": "https://lhcb-auth.web.cern.ch",
+                        "URL": "https://idp-server.invalid",
                         "ClientID": "test-idp",
                     },
                     "Users": {
