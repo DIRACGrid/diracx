@@ -444,6 +444,10 @@ def with_config_repo(tmp_path_factory):
                                 "c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152",
                             ],
                         },
+                        "lhcb_prmgr": {
+                            "Properties": ["NormalUser", "ProductionManagement"],
+                            "Users": ["b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"],
+                        },
                         "lhcb_tokenmgr": {
                             "Properties": ["NormalUser", "ProxyManagement"],
                             "Users": ["c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152"],

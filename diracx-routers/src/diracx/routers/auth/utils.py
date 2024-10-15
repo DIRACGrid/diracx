@@ -36,7 +36,7 @@ class GrantType(StrEnum):
 
 class ScopeInfoDict(TypedDict):
     group: str
-    properties: list[str]
+    properties: set[str]
     vo: str
 
 
@@ -217,24 +217,16 @@ def parse_and_validate_scope(
             raise ValueError(f"{group} not in {vo} groups")
 
     allowed_properties = config.Registry[vo].Groups[group].Properties
-    if not properties:
-        # If there are no properties set get the defaults from the CS
-        properties = [str(p) for p in allowed_properties]
+    properties.extend([str(p) for p in allowed_properties])
 
     if not set(properties).issubset(available_properties):
         raise ValueError(
             f"{set(properties)-set(available_properties)} are not valid properties"
         )
 
-    if not set(properties).issubset(allowed_properties):
-        raise PermissionError(
-            f"Attempted to access properties {set(properties)-set(allowed_properties)} which are not allowed."
-            f" Allowed properties are: {allowed_properties}"
-        )
-
     return {
         "group": group,
-        "properties": sorted(properties),
+        "properties": set(sorted(properties)),
         "vo": vo,
     }
 
