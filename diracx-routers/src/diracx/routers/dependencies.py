@@ -7,6 +7,7 @@ __all__ = (
     "JobLoggingDB",
     "SandboxMetadataDB",
     "TaskQueueDB",
+    "PilotAgentsDB",
     "add_settings_annotation",
     "AvailableSecurityProperties",
 )
@@ -23,6 +24,7 @@ from diracx.db.os import JobParametersDB as _JobParametersDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
+from diracx.db.sql import PilotAgentsDB as _PilotAgentsDB
 from diracx.db.sql import SandboxMetadataDB as _SandboxMetadataDB
 from diracx.db.sql import TaskQueueDB as _TaskQueueDB
 
@@ -38,6 +40,7 @@ def add_settings_annotation(cls: T) -> T:
 AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
 JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
 JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
+PilotAgentsDB = Annotated[_PilotAgentsDB, Depends(_PilotAgentsDB.transaction)]
 SandboxMetadataDB = Annotated[
     _SandboxMetadataDB, Depends(_SandboxMetadataDB.transaction)
 ]
