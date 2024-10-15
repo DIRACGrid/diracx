@@ -13,9 +13,9 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "aiobotocore>=2.12",
+    "aiobotocore>=2.15",
     "authlib",
-    "botocore",
+    "botocore>=1.35",
     "cachetools",
     "email_validator",
     "gitpython",

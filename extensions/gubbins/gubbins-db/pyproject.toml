@@ -2,7 +2,7 @@
 name = "gubbins-db"
 description = "DB classes for the Gubbins diracx extension"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = []
 license = { text = "GPL-3.0-only" }
 classifiers = [
@@ -45,7 +45,6 @@ addopts = [
     "-v",
     "--cov=gubbins.db",
     "--cov-report=term-missing",
-    "-pgubbins.testing",
     # Both gubbins and diracx are needed here
     "-pgubbins.testing",
     "-pdiracx.testing",
