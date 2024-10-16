@@ -36,6 +36,7 @@ class TokenResult:
     access_token: Optional[AccessToken] = None
     refresh_token: Optional[str] = None
 
+
 def get_openid_configuration(
     endpoint: str, *, verify: bool | str = True
 ) -> Dict[str, str]:
