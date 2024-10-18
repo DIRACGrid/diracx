@@ -38,12 +38,34 @@ def vo_callback(vo: str | None) -> str:
 
 @app.async_command()
 async def login(
-    vo: Annotated[Optional[str], typer.Argument(callback=vo_callback)] = None,
-    group: Optional[str] = None,
+    vo: Annotated[
+        Optional[str],
+        typer.Argument(callback=vo_callback, help="Virtual Organization name"),
+    ] = None,
+    group: Optional[str] = typer.Option(
+        None,
+        help="Group name within the VO. If not provided, the default group for the VO will be used.",
+    ),
     property: Optional[list[str]] = typer.Option(
-        None, help="Override the default(s) with one or more properties"
+        None,
+        help=(
+            "List of properties to add to the default properties of the group. "
+            "If not provided, default properties of the group will be used."
+        ),
     ),
 ):
+    """Login to the DIRAC system using the device flow.
+
+    - If only VO is provided: Uses the default group and its properties for the VO.
+
+    - If VO and group are provided: Uses the specified group and its properties for the VO.
+
+    - If VO and properties are provided: Uses the default group and combines its properties with the
+      provided properties.
+
+    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
+      provided properties.
+    """
     scopes = [f"vo:{vo}"]
     if group:
         scopes.append(f"group:{group}")
