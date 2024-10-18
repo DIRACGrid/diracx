@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import abc
 import json
+from importlib.metadata import PackageNotFoundError, distribution
 from types import TracebackType
 from pathlib import Path
 from typing import Any, List, Optional, Self
@@ -155,6 +156,20 @@ class DiracClientMixin(metaclass=abc.ABCMeta):
 
         # Get .well-known configuration
         openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
+
+        try:
+            self.client_version = distribution("diracx").version
+        except PackageNotFoundError:
+            try:
+                self.client_version = distribution("diracx-client").version
+            except PackageNotFoundError:
+                print("Error while getting client version")
+                self.client_version = "Unknown"
+
+        # Setting default headers
+        kwargs.setdefault("base_headers", {})[
+            "DiracX-Client-Version"
+        ] = self.client_version
 
         # Initialize Dirac with a Dirac-specific token credential policy
         # We need to ignore types here because mypy complains that we give

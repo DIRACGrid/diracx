@@ -94,6 +94,9 @@ See this diagram for an example of how this looks in practice:
 
 TODO: document the entry point
 
+- `diracx-routers`:
+  - `diracx.diracx_min_client_version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `diracx-routers/src/diracx/version.py`
+
 ## Extensions
 
 - Extensions will extend one or more of `diracx`, `diracx-routers`, `diracx-tasks` images (e.g. `lhcbdiracx`, `lhcbdiracx-routers`, `lhcbdiracx-tasks`).
