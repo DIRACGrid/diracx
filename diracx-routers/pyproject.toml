@@ -57,6 +57,9 @@ auth = "diracx.routers.auth:router"
 WMSAccessPolicy = "diracx.routers.job_manager.access_policies:WMSAccessPolicy"
 SandboxAccessPolicy = "diracx.routers.job_manager.access_policies:SandboxAccessPolicy"
 
+# Minimum version of the client supported
+[project.entry-points."diracx.min_client_version"]
+diracx = "diracx.routers:DIRACX_MIN_CLIENT_VERSION"
 
 [tool.setuptools.packages.find]
 where = ["src"]

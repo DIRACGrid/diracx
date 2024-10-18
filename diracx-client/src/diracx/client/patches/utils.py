@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+
 import json
 import jwt
 import requests
 
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, distribution
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast, Self
@@ -220,6 +222,20 @@ class DiracClientMixin:
 
         # Get .well-known configuration
         openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
+
+        try:
+            self.client_version = distribution("diracx").version
+        except PackageNotFoundError:
+            try:
+                self.client_version = distribution("diracx-client").version
+            except PackageNotFoundError:
+                print("Error while getting client version")
+                self.client_version = "Unknown"
+
+        # Setting default headers
+        kwargs.setdefault("base_headers", {})[
+            "DiracX-Client-Version"
+        ] = self.client_version
 
         # Initialize Dirac with a Dirac-specific token credential policy
         # We need to ignore types here because mypy complains that we give
