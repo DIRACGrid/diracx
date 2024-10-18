@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from packaging.version import Version, parse
 
-from diracx.routers.version import DIRACX_MIN_CLIENT_VERSION
+from diracx.routers import DIRACX_MIN_CLIENT_VERSION
 
 pytestmark = pytest.mark.enabled_dependencies(
     [

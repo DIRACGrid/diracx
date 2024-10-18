@@ -54,6 +54,8 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 logger = logging.getLogger(__name__)
 
 
+DIRACX_MIN_CLIENT_VERSION = "0.0.1"
+
 ###########################################3
 
 
