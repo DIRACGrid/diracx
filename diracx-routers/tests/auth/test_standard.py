@@ -47,8 +47,14 @@ def non_mocked_hosts(test_client) -> list[str]:
 @pytest.fixture
 async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     data_dir = Path(__file__).parent.parent / "data"
-    path = "lhcb-auth.web.cern.ch/.well-known/openid-configuration"
+    path = "idp-server.invalid/.well-known/openid-configuration"
     httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
+
+    # Since 0.32.0, pytest_httpx does not expect to be queried multiple
+    # times for the same URL. So force it to allow it
+    # By default, it should be done on a per test bases, but well...
+    # https://colin-b.github.io/pytest_httpx/#allow-to-register-a-response-for-more-than-one-request
+    httpx_mock._options.can_send_already_matched_responses = True
 
     server_metadata = await get_server_metadata(f"https://{path}")
 
@@ -115,6 +121,12 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
         .replace("=", "")
     )
 
+    # The scope is valid and should return a token with the following claims
+    # vo:lhcb group:lhcb_user (default group) property:[NormalUser,ProductionManagement]
+    # Note: the property ProductionManagement is not part of the lhcb_user group properties
+    # but the user has the right to have it.
+    scope = "vo:lhcb property:ProductionManagement"
+
     # Initiate the authorization flow with a wrong client ID
     # Check that the client ID is not recognized
     r = test_client.get(
@@ -125,7 +137,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
             "code_challenge_method": "S256",
             "client_id": "Unknown client ID",
             "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
-            "scope": "vo:lhcb property:NormalUser",
+            "scope": scope,
             "state": "external-state",
         },
         follow_redirects=False,
@@ -142,7 +154,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
             "redirect_uri": "http://diracx.test.unrecognized:8000/api/docs/oauth2-redirect",
-            "scope": "vo:lhcb property:NormalUser",
+            "scope": scope,
             "state": "external-state",
         },
         follow_redirects=False,
@@ -158,7 +170,7 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
             "code_challenge_method": "S256",
             "client_id": DIRAC_CLIENT_ID,
             "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
-            "scope": "vo:lhcb property:NormalUser",
+            "scope": scope,
             "state": "external-state",
         },
         follow_redirects=False,
@@ -237,13 +249,19 @@ async def test_authorization_flow(test_client, auth_httpx_mock: HTTPXMock):
 
 
 async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
+    # The scope is valid and should return a token with the following claims
+    # vo:lhcb group:lhcb_user (default group) property:[NormalUser,ProductionManagement]
+    # Note: the property ProductionManagement is not part of the lhcb_user group properties
+    # but the user has the right to have it.
+    scope = "vo:lhcb property:ProductionManagement"
+
     # Initiate the device flow with a wrong client ID
     # Check that the client ID is not recognized
     r = test_client.post(
         "/api/auth/device",
         params={
             "client_id": "Unknown client ID",
-            "scope": "vo:lhcb property:NormalUser",
+            "scope": scope,
         },
     )
     assert r.status_code == 400, r.json()
@@ -253,7 +271,7 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
         "/api/auth/device",
         params={
             "client_id": DIRAC_CLIENT_ID,
-            "scope": "vo:lhcb group:lhcb_user property:NormalUser",
+            "scope": scope,
         },
     )
     assert r.status_code == 200, r.json()
@@ -331,11 +349,14 @@ async def test_device_flow(test_client, auth_httpx_mock: HTTPXMock):
     assert r.json()["detail"] == "Code was already used"
 
 
-async def test_flows_with_unallowed_properties(test_client):
+async def test_authorization_flow_with_unallowed_properties(
+    test_client, auth_httpx_mock: HTTPXMock
+):
     """Test the authorization flow and the device flow with unallowed properties."""
-    unallowed_property = "FileCatalogManagement"
+    # ProxyManagement is a valid property but not allowed for the user
+    unallowed_property = "ProxyManagement"
 
-    # Initiate the authorization flow
+    # Initiate the authorization flow: should not fail
     code_verifier = secrets.token_hex()
     code_challenge = (
         base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
@@ -355,11 +376,42 @@ async def test_flows_with_unallowed_properties(test_client):
         },
         follow_redirects=False,
     )
+    assert r.status_code == 307, r.json()
+    query_parameters = parse_qs(urlparse(r.headers["Location"]).query)
+    redirect_uri = query_parameters["redirect_uri"][0]
+    state = query_parameters["state"][0]
+
+    r = test_client.get(
+        redirect_uri,
+        params={"code": "valid-code", "state": state},
+        follow_redirects=False,
+    )
+    assert r.status_code == 307, r.text
+    query_parameters = parse_qs(urlparse(r.headers["Location"]).query)
+    code = query_parameters["code"][0]
+
+    request_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "state": state,
+        "client_id": DIRAC_CLIENT_ID,
+        "redirect_uri": "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+        "code_verifier": code_verifier,
+    }
+    # Ensure the token request doesn't work because of the unallowed property
+    r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 403, r.json()
     assert (
-        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
-        in r.json()["detail"]
+        f"{unallowed_property} are not valid properties for user" in r.json()["detail"]
     )
+
+
+async def test_device_flow_with_unallowed_properties(
+    test_client, auth_httpx_mock: HTTPXMock
+):
+    """Test the authorization flow and the device flow with unallowed properties."""
+    # ProxyManagement is a valid property but not allowed for the user
+    unallowed_property = "ProxyManagement"
 
     # Initiate the device flow
     r = test_client.post(
@@ -369,10 +421,36 @@ async def test_flows_with_unallowed_properties(test_client):
             "scope": f"vo:lhcb group:lhcb_user property:{unallowed_property} property:NormalUser",
         },
     )
+    assert r.status_code == 200, r.json()
+
+    data = r.json()
+    assert data["user_code"]
+    assert data["device_code"]
+    assert data["verification_uri_complete"]
+    assert data["verification_uri"]
+    assert data["expires_in"] == 600
+
+    r = test_client.get(data["verification_uri_complete"], follow_redirects=False)
+    assert r.status_code == 307, r.text
+    login_url = r.headers["Location"]
+    query_parameters = parse_qs(urlparse(login_url).query)
+    redirect_uri = query_parameters["redirect_uri"][0]
+    state = query_parameters["state"][0]
+
+    r = test_client.get(redirect_uri, params={"code": "valid-code", "state": state})
+    assert r.status_code == 200, r.text
+
+    request_data = {
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "device_code": data["device_code"],
+        "client_id": DIRAC_CLIENT_ID,
+    }
+
+    # Ensure the token request doesn't work a second time
+    r = test_client.post("/api/auth/token", data=request_data)
     assert r.status_code == 403, r.json()
     assert (
-        f"Attempted to access properties {{'{unallowed_property}'}} which are not allowed."
-        in r.json()["detail"]
+        f"{unallowed_property} are not valid properties for user" in r.json()["detail"]
     )
 
 
@@ -787,30 +865,82 @@ def _get_and_check_token_response(test_client, request_data):
 @pytest.mark.parametrize(
     "vos, groups, scope, expected",
     [
+        # We ask for a vo, we get the properties of the default group
         [
-            ["lhcb"],
-            ["lhcb_user"],
-            "vo:lhcb group:lhcb_user",
-            {"group": "lhcb_user", "properties": ["NormalUser"], "vo": "lhcb"},
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["ProxyManagement"]},
+                "lhcb_production": {"properties": ["ProductionManagement"]},
+            },
+            "vo:lhcb",
+            {"group": "lhcb_user", "properties": {"NormalUser"}, "vo": "lhcb"},
+        ],
+        # We ask for a vo and a group, we get the properties of the group
+        [
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["ProxyManagement"]},
+                "lhcb_production": {"properties": ["ProductionManagement"]},
+            },
+            "vo:lhcb group:lhcb_admin",
+            {"group": "lhcb_admin", "properties": {"ProxyManagement"}, "vo": "lhcb"},
+        ],
+        # We ask for a vo, no group, and an additional existing property
+        # We get the default group with its properties along with with the extra properties we asked for
+        # Authorization to access the additional property is checked later when user effectively requests a token
+        [
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["ProxyManagement"]},
+                "lhcb_production": {"properties": ["ProductionManagement"]},
+            },
+            "vo:lhcb property:ProxyManagement",
+            {
+                "group": "lhcb_user",
+                "properties": {"NormalUser", "ProxyManagement"},
+                "vo": "lhcb",
+            },
+        ],
+        # We ask for a vo and a group with additional property
+        # We get the properties of the group + the additional property
+        # Authorization to access the additional property is checked later when user effectively requests a token
+        [
+            {"lhcb": {"default_group": "lhcb_user"}},
+            {
+                "lhcb_user": {"properties": ["NormalUser"]},
+                "lhcb_admin": {"properties": ["ProxyManagement"]},
+                "lhcb_production": {"properties": ["ProductionManagement"]},
+            },
+            "vo:lhcb group:lhcb_admin property:ProductionManagement",
+            {
+                "group": "lhcb_admin",
+                "properties": {"ProductionManagement", "ProxyManagement"},
+                "vo": "lhcb",
+            },
         ],
     ],
 )
 def test_parse_scopes(vos, groups, scope, expected):
-    # TODO: Extend test for extra properties
     config = Config.model_validate(
         {
             "DIRAC": {},
             "Registry": {
-                vo: {
-                    "DefaultGroup": "lhcb_user",
+                vo_name: {
+                    "DefaultGroup": vo_conf["default_group"],
                     "IdP": {"URL": "https://idp.invalid", "ClientID": "test-idp"},
                     "Users": {},
                     "Groups": {
-                        group: {"Properties": ["NormalUser"], "Users": []}
-                        for group in groups
+                        group_name: {
+                            "Properties": group_conf["properties"],
+                            "Users": [],
+                        }
+                        for group_name, group_conf in groups.items()
                     },
                 }
-                for vo in vos
+                for vo_name, vo_conf in vos.items()
             },
             "Operations": {"Defaults": {}},
         }
@@ -827,6 +957,12 @@ def test_parse_scopes(vos, groups, scope, expected):
             ["lhcb_user"],
             "group:lhcb_user undefinedscope:undefined",
             "Unrecognised scopes",
+        ],
+        [
+            ["lhcb"],
+            ["lhcb_user", "lhcb_admin"],
+            "vo:lhcb group:lhcb_user property:undefined_property",
+            "{'undefined_property'} are not valid properties",
         ],
         [
             ["lhcb"],
@@ -849,7 +985,6 @@ def test_parse_scopes(vos, groups, scope, expected):
     ],
 )
 def test_parse_scopes_invalid(vos, groups, scope, expected_error):
-    # TODO: Extend test for extra properties
     config = Config.model_validate(
         {
             "DIRAC": {},

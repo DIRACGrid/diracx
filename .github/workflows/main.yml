@@ -29,7 +29,8 @@ jobs:
       run: |
         find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
 
-  pytest:
+
+  unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
@@ -51,7 +52,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           # TODO: Use a conda environment file used for the diracx/base container image
           environment-name: test-env
@@ -61,6 +62,9 @@ jobs:
       - name: Set up environment
         run: |
           pip install pytest-github-actions-annotate-failures
+          # Note: DIRAC will install pretty much everything
+          # from diracx so installing just the dependency may
+          # be a bit useless
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install ${{ matrix.dependencies }}
       - name: Run pytest
@@ -73,7 +77,7 @@ jobs:
           pip install mypy ${{ matrix.package }}[types]
           mypy ${{ matrix.package }}/src
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v4.6.0
 
   pytest-integration:
     name: Integration test - ${{ matrix.dbName }}
@@ -89,7 +93,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           init-shell: bash
@@ -149,7 +153,7 @@ jobs:
 
           coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v4.6.0
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
 
@@ -158,7 +162,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           init-shell: bash

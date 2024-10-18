@@ -1,0 +1,10 @@
+name: gubbins-dev
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python
+  - pip
+  - m2crypto
+  - python-gfal2
+  - mypy

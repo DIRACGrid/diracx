@@ -1,0 +1,130 @@
+[project]
+name = "gubbins"
+description = "Client installation for users of DiracX installations"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = []
+license = { text = "GPL-3.0-only" }
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    #    "gubbins-api",
+    #    "gubbins-cli",
+    #    "gubbins-client",
+    #    "gubbins-core",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["gubbins-testing"]
+
+[tool.setuptools]
+packages = []
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = "../.."
+
+[tool.ruff]
+line-length = 120
+src = ["gubbins-*/src", "gubbins-*/tests"]
+exclude = ["gubbins-client/src/gubbins/client/generated"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errrors
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "I",   # isort
+    "PLE", # pylint errors
+    # "UP",   # pyUpgrade
+    "FLY", # flynt
+    "DTZ", # flake8-datetimez
+    "S",   # flake8-bandit
+]
+
+ignore = [
+    "B905",
+    "B008",
+    "B006",
+    "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+]
+
+
+
+[tool.ruff.lint.flake8-bugbear]
+# Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
+
+[tool.mypy]
+files = [
+#    "gubbins-api/src/**/*.py",
+    "gubbins-cli/src/**/*.py",
+    "gubbins-client/src/**/_patch.py",
+    "gubbins-client/src/gubbins/client/patches/**/*.py",
+#    "gubbins-core/src/**/*.py",
+    "gubbins-db/src/**/*.py",
+    "gubbins-routers/src/**/*.py",
+]
+mypy_path = [
+#    "$MYPY_CONFIG_FILE_DIR/gubbins-api/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-cli/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-client/src",
+#    "$MYPY_CONFIG_FILE_DIR/gubbins-core/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-db/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-routers/src",
+]
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+allow_redefinition = true
+explicit_package_bases = true
+# disallow_untyped_defs = true
+# strict = true
+enable_error_code = ["import", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = 'DIRAC.*'
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = 'authlib.*'
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "gubbins-api/tests",
+    "gubbins-cli/tests",
+    "gubbins-client/tests",
+    "gubbins-core/tests",
+    "gubbins-db/tests",
+    "gubbins-routers/tests",
+]
+addopts = [
+    "-v",
+    "--cov=gubbins",
+    "--cov-report=term-missing",
+    "-pgubbins.testing",
+    "-pdiracx.testing",
+    "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
+markers = [
+    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+]

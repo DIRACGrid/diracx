@@ -1,0 +1,52 @@
+[project]
+name = "gubbins-cli"
+description = "CLI for the gubbins diracx extension"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = ["diracx-cli"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["diracx-cli[testing]", "diracx-testing"]
+types = [
+    "types-PyYAML",
+]
+
+
+[project.entry-points."diracx.cli"]
+lollygag = "gubbins.cli.lollygag:app"
+config = "gubbins.cli.config:app"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=diracx.cli", "--cov-report=term-missing",
+    "-pdiracx.testing",
+    "-pgubbins.testing",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
+markers = [
+    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+]

@@ -32,6 +32,7 @@ testing = [
 AuthDB = "diracx.db.sql:AuthDB"
 JobDB = "diracx.db.sql:JobDB"
 JobLoggingDB = "diracx.db.sql:JobLoggingDB"
+PilotAgentsDB = "diracx.db.sql:PilotAgentsDB"
 SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 
@@ -47,6 +48,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 root = ".."
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

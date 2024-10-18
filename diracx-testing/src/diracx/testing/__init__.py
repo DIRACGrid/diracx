@@ -241,6 +241,7 @@ class ClientFactory:
 
     @contextlib.contextmanager
     def configure(self, enabled_dependencies):
+
         assert (
             self.app.dependency_overrides == {} and self.app.lifetime_functions == []
         ), "configure cannot be nested"
@@ -422,7 +423,7 @@ def with_config_repo(tmp_path_factory):
                     "DefaultProxyLifeTime": 432000,
                     "DefaultStorageQuota": 2000,
                     "IdP": {
-                        "URL": "https://lhcb-auth.web.cern.ch",
+                        "URL": "https://idp-server.invalid",
                         "ClientID": "test-idp",
                     },
                     "Users": {
@@ -442,6 +443,10 @@ def with_config_repo(tmp_path_factory):
                                 "b824d4dc-1f9d-4ee8-8df5-c0ae55d46041",
                                 "c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152",
                             ],
+                        },
+                        "lhcb_prmgr": {
+                            "Properties": ["NormalUser", "ProductionManagement"],
+                            "Users": ["b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"],
                         },
                         "lhcb_tokenmgr": {
                             "Properties": ["NormalUser", "ProxyManagement"],
@@ -532,8 +537,8 @@ def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
 async def with_cli_login(monkeypatch, capfd, cli_env, tmp_path):
     try:
         credentials = await test_login(monkeypatch, capfd, cli_env)
-    except Exception:
-        pytest.skip("Login failed, fix test_login to re-enable this test")
+    except Exception as e:
+        pytest.skip(f"Login failed, fix test_login to re-enable this test: {e!r}")
 
     credentials_path = tmp_path / "credentials.json"
     credentials_path.write_text(credentials)
@@ -575,7 +580,6 @@ async def test_login(monkeypatch, capfd, cli_env):
     expected_credentials_path = Path(
         cli_env["HOME"], ".cache", "diracx", "credentials.json"
     )
-
     # Ensure the credentials file does not exist before logging in
     assert not expected_credentials_path.exists()
 

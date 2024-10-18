@@ -79,7 +79,9 @@ async def test_valid(test_client, legacy_credentials, expires_seconds):
     assert user_info["sub"] == "lhcb:b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"
     assert user_info["vo"] == "lhcb"
     assert user_info["dirac_group"] == "lhcb_user"
-    assert user_info["properties"] == ["NormalUser", "PrivateLimitedDelegation"]
+    assert sorted(user_info["properties"]) == sorted(
+        ["PrivateLimitedDelegation", "NormalUser"]
+    )
 
 
 async def test_refresh_token(test_client, legacy_credentials):

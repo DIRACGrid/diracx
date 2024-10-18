@@ -36,6 +36,15 @@ types = [
 [project.scripts]
 dirac = "diracx.cli:app"
 
+[project.entry-points."diracx.cli"]
+jobs = "diracx.cli.jobs:app"
+config = "diracx.cli.config:app"
+
+[project.entry-points."diracx.cli.hidden"]
+internal = "diracx.cli.internal:app"
+
+
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -58,3 +67,4 @@ asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
 ]
+asyncio_default_fixture_loop_scope = "session"

@@ -7,8 +7,6 @@ from ..dependencies import Config, DevelopmentSettings
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthSettings
 
-# from ..access_policies import OpenAccessPolicyCallable
-
 router = DiracxRouter(require_auth=False, path_root="")
 
 

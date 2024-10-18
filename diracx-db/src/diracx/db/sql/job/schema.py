@@ -1,4 +1,3 @@
-import sqlalchemy.types as types
 from sqlalchemy import (
     DateTime,
     Enum,
@@ -10,35 +9,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, NullColumn
+from ..utils import Column, EnumBackedBool, NullColumn
 
 JobDBBase = declarative_base()
-
-
-class EnumBackedBool(types.TypeDecorator):
-    """Maps a ``EnumBackedBool()`` column to True/False in Python."""
-
-    impl = types.Enum
-    cache_ok: bool = True
-
-    def __init__(self) -> None:
-        super().__init__("True", "False", name="EnumBackedBool")
-
-    def process_bind_param(self, value, dialect) -> str:
-        if value is True:
-            return "True"
-        elif value is False:
-            return "False"
-        else:
-            raise NotImplementedError(value, dialect)
-
-    def process_result_value(self, value, dialect) -> bool:
-        if value == "True":
-            return True
-        elif value == "False":
-            return False
-        else:
-            raise NotImplementedError(f"Unknown {value=}")
 
 
 class Jobs(JobDBBase):
@@ -134,24 +107,6 @@ class AtticJobParameters(JobDBBase):
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
     RescheduleCycle = Column(Integer)
-
-
-class SiteMask(JobDBBase):
-    __tablename__ = "SiteMask"
-    Site = Column(String(64), primary_key=True)
-    Status = Column(String(64))
-    LastUpdateTime = Column(DateTime(timezone=True))
-    Author = Column(String(255))
-    Comment = Column(Text)
-
-
-class SiteMaskLogging(JobDBBase):
-    __tablename__ = "SiteMaskLogging"
-    Site = Column(String(64), primary_key=True)
-    UpdateTime = Column(DateTime(timezone=True), primary_key=True)
-    Status = Column(String(64))
-    Author = Column(String(255))
-    Comment = Column(Text)
 
 
 class HeartBeatLoggingInfo(JobDBBase):
