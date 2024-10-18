@@ -31,12 +31,12 @@ class Jobs(JobDBBase):
     Owner = Column("Owner", String(64), default="Unknown")
     OwnerGroup = Column("OwnerGroup", String(128), default="Unknown")
     VO = Column("VO", String(32))
-    SubmissionTime = NullColumn("SubmissionTime", DateTime)
-    RescheduleTime = NullColumn("RescheduleTime", DateTime)
-    LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
-    StartExecTime = NullColumn("StartExecTime", DateTime)
-    HeartBeatTime = NullColumn("HeartBeatTime", DateTime)
-    EndExecTime = NullColumn("EndExecTime", DateTime)
+    SubmissionTime = NullColumn("SubmissionTime", DateTime(timezone=True))
+    RescheduleTime = NullColumn("RescheduleTime", DateTime(timezone=True))
+    LastUpdateTime = NullColumn("LastUpdateTime", DateTime(timezone=True))
+    StartExecTime = NullColumn("StartExecTime", DateTime(timezone=True))
+    HeartBeatTime = NullColumn("HeartBeatTime", DateTime(timezone=True))
+    EndExecTime = NullColumn("EndExecTime", DateTime(timezone=True))
     Status = Column("Status", String(32), default="Received")
     MinorStatus = Column("MinorStatus", String(128), default="Unknown")
     ApplicationStatus = Column("ApplicationStatus", String(255), default="Unknown")
@@ -45,7 +45,9 @@ class Jobs(JobDBBase):
     VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
     AccountedFlag = Column(
-        "AccountedFlag", Enum("True", "False", "Failed"), default="False"
+        "AccountedFlag",
+        Enum("True", "False", "Failed", name="AccountedFlag"),
+        default="False",
     )
 
     __table_args__ = (
@@ -114,7 +116,7 @@ class HeartBeatLoggingInfo(JobDBBase):
     )
     Name = Column(String(100), primary_key=True)
     Value = Column(Text)
-    HeartBeatTime = Column(DateTime, primary_key=True)
+    HeartBeatTime = Column(DateTime(timezone=True), primary_key=True)
 
 
 class JobCommands(JobDBBase):
@@ -125,5 +127,5 @@ class JobCommands(JobDBBase):
     Command = Column(String(100))
     Arguments = Column(String(100))
     Status = Column(String(64), default="Received")
-    ReceptionTime = Column(DateTime, primary_key=True)
-    ExecutionTime = NullColumn(DateTime)
+    ReceptionTime = Column(DateTime(timezone=True), primary_key=True)
+    ExecutionTime = NullColumn(DateTime(timezone=True))
