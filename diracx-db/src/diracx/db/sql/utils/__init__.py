@@ -138,7 +138,7 @@ class EnumBackedBool(types.TypeDecorator):
     cache_ok: bool = True
 
     def __init__(self) -> None:
-        super().__init__("True", "False")
+        super().__init__("True", "False", name="EnumBackedBool")
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:
