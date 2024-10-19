@@ -78,6 +78,17 @@ async def authorization_flow(
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 
+    Scope details:
+    - If only VO is provided: Uses the default group and its properties for the VO.
+
+    - If VO and group are provided: Uses the specified group and its properties for the VO.
+
+    - If VO and properties are provided: Uses the default group and combines its properties with the
+      provided properties.
+
+    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
+      provided properties.
+
     We set the user details obtained from the user authorize flow in a cookie
     to be able to map the authorization flow with the corresponding
     user authorize flow.

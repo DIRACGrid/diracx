@@ -101,9 +101,17 @@ async def initiate_device_flow(
     settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
     """Initiate the device flow against DIRAC authorization Server.
-    Scope must have exactly up to one `group` (otherwise default) and
-    one or more `property` scope.
-    If no property, then get default one.
+
+    Scope details:
+    - If only VO is provided: Uses the default group and its properties for the VO.
+
+    - If VO and group are provided: Uses the specified group and its properties for the VO.
+
+    - If VO and properties are provided: Uses the default group and combines its properties with the
+      provided properties.
+
+    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
+      provided properties.
 
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
