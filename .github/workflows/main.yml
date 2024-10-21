@@ -80,7 +80,16 @@ jobs:
         uses: codecov/codecov-action@v4.6.0
 
   pytest-integration:
+    name: Integration test - ${{ matrix.dbName }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dbName: "MySQL"
+            cliOption: ""
+          - dbName: "PostgreSQL"
+            cliOption: "--postgres"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,15 +105,15 @@ jobs:
           pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/[testing] ./diracx-testing/
       - name: Start demo
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
+          git clone -b diracx-issue-147-postgres-integration https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
+          ../diracx-charts/run_demo.sh ${{ matrix.cliOption }} --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
           export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
           export PATH=${DIRACX_DEMO_DIR}:$PATH
           kubectl get pods
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|postgres|rabbitmq|opensearch)'); do
             echo "${pod_name}"
             kubectl describe pod/"${pod_name}" || true
             for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
