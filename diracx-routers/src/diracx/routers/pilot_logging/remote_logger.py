@@ -41,8 +41,8 @@ async def send_message(
 
     async with db.engine_context():
         async with db:
-            stmt = select(
-                (PilotAgents.PilotID).where(PilotAgents.PilotStamp == data.pilot_stamp)
+            stmt = select(PilotAgents.PilotID).where(
+                PilotAgents.PilotStamp == data.pilot_stamp
             )
             pilot_id = (await db.conn.execute(stmt)).scalar_one()
 
