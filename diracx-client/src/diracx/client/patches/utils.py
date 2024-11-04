@@ -84,27 +84,37 @@ def get_token(
                 fcntl.flock(f, fcntl.LOCK_UN)
                 return None
 
-            # If we are here, it means the token needs to be refreshed
-            token_response = refresh_token(
-                token_endpoint,
-                client_id,
-                response.refresh_token,
-                verify=verify,
-            )
+            if response.status == TokenStatus.REFRESH and response.refresh_token:
+                # If we are here, it means the token needs to be refreshed
+                token_response = refresh_token(
+                    token_endpoint,
+                    client_id,
+                    response.refresh_token,
+                    verify=verify,
+                )
 
-            # Write the new credentials to the file
-            f.seek(0)
-            f.truncate()
-            f.write(serialize_credentials(token_response))
-            f.flush()
-            os.fsync(f.fileno())
+                # Write the new credentials to the file
+                f.seek(0)
+                f.truncate()
+                f.write(serialize_credentials(token_response))
+                f.flush()
+                os.fsync(f.fileno())
 
-            # Get an AccessToken instance
-            return AccessToken(
-                token=token_response.access_token,
-                expires_on=datetime.now(tz=timezone.utc)
-                + timedelta(seconds=token_response.expires_in - EXPIRES_GRACE_SECONDS),
-            )
+                # Get an AccessToken instance
+                return AccessToken(
+                    token=token_response.access_token,
+                    expires_on=int(
+                        (
+                            datetime.now(tz=timezone.utc)
+                            + timedelta(
+                                seconds=token_response.expires_in
+                                - EXPIRES_GRACE_SECONDS
+                            )
+                        ).timestamp()
+                    ),
+                )
+            else:
+                return None
         finally:
             # Release the lock
             fcntl.flock(f, fcntl.LOCK_UN)
@@ -167,7 +177,7 @@ def extract_token_from_credentials(
         return TokenResult(TokenStatus.VALID, access_token=token)
 
     if is_refresh_token_valid(refresh_token):
-        return TokenResult(TokenStatus.REFRESH, refresh_token=credentials.refresh_token)
+        return TokenResult(TokenStatus.REFRESH, refresh_token=refresh_token)
 
     # If we are here, it means the refresh token is not valid anymore
     return TokenResult(TokenStatus.INVALID)
@@ -244,7 +254,9 @@ class DiracBearerTokenCredentialPolicy(BearerTokenCredentialPolicy):
         :type request: ~azure.core.pipeline.PipelineRequest
         :raises: :class:`~azure.core.exceptions.ServiceRequestError`
         """
-        self._token = self._credential.get_token("", token=self._token)
+        self._token: AccessToken | None = self._credential.get_token(
+            "", token=self._token
+        )
         if not self._token:
             # If we are here, it means the token is not available
             # we suppose it is not needed to perform the request

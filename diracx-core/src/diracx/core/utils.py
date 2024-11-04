@@ -46,14 +46,14 @@ def read_credentials(location: Path) -> TokenResponse:
     try:
         with open(credentials_path, "r") as f:
             # Lock the file to prevent other processes from writing to it at the same time
-            fcntl.flock(f, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            fcntl.flock(f, fcntl.LOCK_SH)
             # Read the credentials from the file
             try:
                 credentials = json.load(f)
             finally:
                 # Release the lock
                 fcntl.flock(f, fcntl.LOCK_UN)
-    except (BlockingIOError, FileNotFoundError, json.JSONDecodeError) as e:
+    except (FileNotFoundError, json.JSONDecodeError) as e:
         raise RuntimeError(f"Error reading credentials: {e}") from e
 
     return TokenResponse(
@@ -74,7 +74,7 @@ def write_credentials(token_response: TokenResponse, *, location: Path | None = 
 
     with open(credentials_path, "w") as f:
         # Lock the file to prevent other processes from writing to it at the same time
-        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(f, fcntl.LOCK_EX)
         try:
             # Write the credentials to the file
             f.write(serialize_credentials(token_response))
