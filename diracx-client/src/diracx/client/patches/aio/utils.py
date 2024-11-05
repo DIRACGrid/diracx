@@ -9,7 +9,6 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 from __future__ import annotations
 
 import abc
-import json
 from importlib.metadata import PackageNotFoundError, distribution
 from types import TracebackType
 from pathlib import Path
@@ -89,6 +88,9 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
     * It does not ensure that an access token is available.
     """
 
+    # Make mypy happy
+    _token: Optional[AccessToken] = None
+
     def __init__(
         self, credential: DiracTokenCredential, *scopes: str, **kwargs: Any
     ) -> None:
@@ -102,8 +104,12 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
         :type request: ~azure.core.pipeline.PipelineRequest
         :raises: :class:`~azure.core.exceptions.ServiceRequestError`
         """
+        # Make mypy happy
+        if not isinstance(self._credential, AsyncTokenCredential):
+            return
+
         self._token = await self._credential.get_token("", token=self._token)
-        if not self._token:
+        if not self._token.token:
             # If we are here, it means the token is not available
             # we suppose it is not needed to perform the request
             return

@@ -272,10 +272,10 @@ def test_get_token_valid_input_credential():
 
 
 def test_get_token_input_token_not_exists(token_setup):
-    _, token_location, access_token = token_setup
+    _, token_location, _ = token_setup
     result = get_token(
         location=token_location,
-        token=access_token,
+        token=None,
         token_endpoint="",
         client_id="ID",
         verify=False,
