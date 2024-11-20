@@ -32,7 +32,7 @@ class SandboxMetadataDB(BaseSQLDB):
             VO=user.vo,
         )
         result = await self.conn.execute(stmt)
-        return result.lastrowid
+        return result.inserted_primary_key[0]
 
     @staticmethod
     def get_pfn(bucket_name: str, user: UserInfo, sandbox_info: SandboxInfo) -> str:

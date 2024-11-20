@@ -126,7 +126,9 @@ DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=ut
 
 
 def EnumColumn(enum_type, **kwargs):
-    return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
+    return Column(
+        Enum(enum_type, native_enum=False, length=16, name=str(enum_type)), **kwargs
+    )
 
 
 class EnumBackedBool(types.TypeDecorator):
@@ -136,7 +138,7 @@ class EnumBackedBool(types.TypeDecorator):
     cache_ok: bool = True
 
     def __init__(self) -> None:
-        super().__init__("True", "False")
+        super().__init__("True", "False", name="EnumBackedBool")
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:

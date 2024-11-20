@@ -40,7 +40,7 @@ class DummyDB(BaseSQLDB):
         stmt = insert(Owners).values(name=name)
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
-        return result.lastrowid
+        return result.inserted_primary_key[0]
 
     async def insert_car(self, license_plate: UUID, model: str, owner_id: int) -> int:
         stmt = insert(Cars).values(
@@ -49,4 +49,4 @@ class DummyDB(BaseSQLDB):
 
         result = await self.conn.execute(stmt)
         # await self.engine.commit()
-        return result.lastrowid
+        return result.inserted_primary_key[0]
