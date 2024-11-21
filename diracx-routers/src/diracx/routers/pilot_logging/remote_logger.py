@@ -51,10 +51,42 @@ async def send_message(
         docs.append(
             {
                 "PilotStamp": data.pilot_stamp,
+                "PilotID": pilot_id,
                 "VO": data.vo,
                 "LineNumber": line.line_no,
                 "Message": line.line,
             }
         )
     await pilot_logs_db.bulk_insert(pilot_logs_db.index_name(pilot_id), docs)
-    return data
+    return pilot_id
+
+
+@router.get("/logs")
+async def get_logs(
+    pilot_id: int,
+    db: PilotLogsDB,
+    check_permissions: CheckPilotLogsPolicyCallable,
+):
+    logger.warning(f"Retrieving logs for pilot ID '{pilot_id}'")
+    await check_permissions(action=ActionType.QUERY, pilot_db=db)
+
+    result = await db.search(
+        ["Message"],
+        [{"parameter": "PilotID", "operator": "eq"} | {"value": pilot_id}],
+        [{"parameter": "LineNumber", "direction": "asc"}],
+    )
+    if not result:
+        return [f"No logs for pilot ID = {pilot_id}"]
+    return result
+
+
+@router.delete("/delete")
+async def delete_by_pilot_id(
+    pilot_id: int,
+    db: PilotLogsDB,
+    check_permissions: CheckPilotLogsPolicyCallable,
+):
+    logger.warning(f"Deleting logs for pilot ID '{pilot_id}'")
+    await check_permissions(action=ActionType.DELETE, pilot_db=db)
+    await db.delete([{"parameter": "PilotID", "operator": "eq"} | {"value": pilot_id}])
+    return f"Logs for pilot ID '{pilot_id}' successfully deleted"
