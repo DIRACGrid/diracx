@@ -55,7 +55,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
     auto_create_bucket: bool = False
     url_validity_seconds: int = 5 * 60
     se_name: str = "SandboxSE"
-    _client: S3Client = PrivateAttr(None)
+    _client: S3Client = PrivateAttr()
 
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
