@@ -13,14 +13,23 @@ from typing import Annotated, Any, Self, TypeVar
 
 from authlib.jose import JsonWebKey
 from cryptography.fernet import Fernet
-from pydantic import AnyUrl, BeforeValidator, SecretStr, TypeAdapter, UrlConstraints
+from pydantic import (
+    AnyUrl,
+    BeforeValidator,
+    FileUrl,
+    SecretStr,
+    TypeAdapter,
+    UrlConstraints,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 T = TypeVar("T")
 
-SqlalchemyDsn = Annotated[
-    AnyUrl, UrlConstraints(allowed_schemes={"sqlite+aiosqlite", "mysql+aiomysql"})
-]
+
+class SqlalchemyDsn(AnyUrl):
+    _constraints = UrlConstraints(
+        allowed_schemes=["sqlite+aiosqlite", "mysql+aiomysql"]
+    )
 
 
 class _TokenSigningKey(SecretStr):
@@ -63,9 +72,7 @@ def _apply_default_scheme(value: str) -> str:
     return value
 
 
-LocalFileUrl = Annotated[
-    AnyUrl, UrlConstraints(host_required=False), BeforeValidator(_apply_default_scheme)
-]
+LocalFileUrl = Annotated[FileUrl, BeforeValidator(_apply_default_scheme)]
 
 
 class ServiceSettingsBase(BaseSettings):
