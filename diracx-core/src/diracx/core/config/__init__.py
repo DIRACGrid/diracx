@@ -42,6 +42,7 @@ def _apply_default_scheme(value: str) -> str:
 
 
 class AnyUrlWithoutHost(AnyUrl):
+
     _constraints = UrlConstraints(host_required=False)
 
 
