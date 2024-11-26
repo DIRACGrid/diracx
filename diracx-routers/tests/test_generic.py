@@ -1,7 +1,6 @@
 from http import HTTPStatus
 
 import pytest
-from fastapi import HTTPException
 from packaging.version import Version, parse
 
 from diracx.routers import DIRACX_MIN_CLIENT_VERSION
@@ -59,15 +58,14 @@ def test_min_client_version_lower_than_expected(test_client):
     lower_version_than_min: Version = (
         f"{min_client_version.major}.{min_client_version.minor}.dev123"
     )
-    with pytest.raises(HTTPException) as response:
-        test_client.get("/", headers={"DiracX-Client-Version": lower_version_than_min})
-    assert response.value.status_code == HTTPStatus.UPGRADE_REQUIRED
-    assert str(min_client_version) in response.value.detail
+
+    r = test_client.get("/", headers={"DiracX-Client-Version": lower_version_than_min})
+    assert r.status_code == HTTPStatus.UPGRADE_REQUIRED
+    assert str(min_client_version) in r.json()["detail"]
 
 
 def test_invalid_client_version(test_client, caplog: pytest.LogCaptureFixture):
     invalid_version = "invalid.version"
-    with pytest.raises(HTTPException) as response:
-        test_client.get("/", headers={"DiracX-Client-Version": invalid_version})
-    assert response.value.status_code == 400
-    assert invalid_version in response.value.detail
+    r = test_client.get("/", headers={"DiracX-Client-Version": invalid_version})
+    assert r.status_code == 400
+    assert invalid_version in r.json()["detail"]

@@ -41,9 +41,12 @@ def _apply_default_scheme(value: str) -> str:
     return value
 
 
-ConfigSourceUrl = Annotated[
-    AnyUrl, UrlConstraints(host_required=False), BeforeValidator(_apply_default_scheme)
-]
+class AnyUrlWithoutHost(AnyUrl):
+
+    _constraints = UrlConstraints(host_required=False)
+
+
+ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_scheme)]
 
 
 class ConfigSource(metaclass=ABCMeta):

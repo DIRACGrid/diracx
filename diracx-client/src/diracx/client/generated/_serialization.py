@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # --------------------------------------------------------------------------
 #
 # Copyright (c) Microsoft Corporation. All rights reserved.
@@ -536,7 +537,6 @@ class Model(object):
     def _classify(cls, response, objects):
         """Check the class _subtype_map for any child classes.
         We want to ignore any inherited _subtype_maps.
-        Remove the polymorphic key from the initial data.
 
         :param dict response: The initial data
         :param dict objects: The class objects
@@ -548,9 +548,9 @@ class Model(object):
 
             if not isinstance(response, ET.Element):
                 rest_api_response_key = cls._get_rest_key_parts(subtype_key)[-1]
-                subtype_value = response.pop(
+                subtype_value = response.get(
                     rest_api_response_key, None
-                ) or response.pop(subtype_key, None)
+                ) or response.get(subtype_key, None)
             else:
                 subtype_value = xml_key_extractor(
                     subtype_key, cls._attribute_map[subtype_key], response
@@ -1802,13 +1802,13 @@ class Deserializer(object):
             try:
                 readonly = [
                     k
-                    for k, v in response._validation.items()
-                    if v.get("readonly")  # pylint: disable=protected-access
+                    for k, v in response._validation.items()  # pylint: disable=protected-access  # type: ignore
+                    if v.get("readonly")
                 ]
                 const = [
                     k
-                    for k, v in response._validation.items()
-                    if v.get("constant")  # pylint: disable=protected-access
+                    for k, v in response._validation.items()  # pylint: disable=protected-access  # type: ignore
+                    if v.get("constant")
                 ]
                 kwargs = {
                     k: v
@@ -1819,7 +1819,7 @@ class Deserializer(object):
                 for attr in readonly:
                     setattr(response_obj, attr, attrs.get(attr))
                 if additional_properties:
-                    response_obj.additional_properties = additional_properties
+                    response_obj.additional_properties = additional_properties  # type: ignore
                 return response_obj
             except TypeError as err:
                 msg = "Unable to deserialize {} into model {}. ".format(kwargs, response)  # type: ignore
