@@ -64,7 +64,7 @@ jobs:
           export DIRACX_EXTENSIONS=gubbins,diracx
           pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@v5.0.7
 
 
   build-wheels:
@@ -256,7 +256,7 @@ jobs:
 
           coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@v5.0.7
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
 
