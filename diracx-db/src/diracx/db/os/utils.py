@@ -239,6 +239,15 @@ class BaseOSDB(metaclass=ABCMeta):
 
         return hits
 
+    async def delete(self, query: list[dict[str, Any]]) -> None:
+
+        # Delete multiple documents by query.
+
+        body = {}
+        if query:
+            body["query"] = apply_search_filters(self.fields, query)
+            await self.client.delete_by_query(body=body, index=f"{self.index_prefix}*")
+
 
 def require_type(operator, field_name, field_type, allowed_types):
     if field_type not in allowed_types:

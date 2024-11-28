@@ -67,7 +67,7 @@ async def get_logs(
     db: PilotLogsDB,
     check_permissions: CheckPilotLogsPolicyCallable,
 ):
-    logger.warning(f"Retrieving message for pilot ID '{pilot_id}'")
+    logger.warning(f"Retrieving logs for pilot ID '{pilot_id}'")
     await check_permissions(action=ActionType.QUERY, pilot_db=db)
 
     result = await db.search(
@@ -75,4 +75,18 @@ async def get_logs(
         [{"parameter": "PilotID", "operator": "eq"} | {"value": pilot_id}],
         [{"parameter": "LineNumber", "direction": "asc"}],
     )
+    if not result:
+        return [f"No logs for pilot ID = {pilot_id}"]
     return result
+
+
+@router.delete("/delete")
+async def delete_by_pilot_id(
+    pilot_id: int,
+    db: PilotLogsDB,
+    check_permissions: CheckPilotLogsPolicyCallable,
+):
+    logger.warning(f"Deleting logs for pilot ID '{pilot_id}'")
+    await check_permissions(action=ActionType.DELETE, pilot_db=db)
+    await db.delete([{"parameter": "PilotID", "operator": "eq"} | {"value": pilot_id}])
+    return f"Logs for pilot ID '{pilot_id}' successfully deleted"
