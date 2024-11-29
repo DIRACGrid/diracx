@@ -98,7 +98,7 @@ def admin_user_client(client_factory):
 
 def test_insert_and_list_parametric_jobs(normal_user_client):
     job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3  # Parameters.JOB_ID is 3
 
@@ -125,7 +125,7 @@ def test_insert_and_list_parametric_jobs(normal_user_client):
     ],
 )
 def test_insert_and_list_bulk_jobs(job_definitions, normal_user_client):
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
 
@@ -147,7 +147,7 @@ def test_insert_and_search(normal_user_client):
     """Test inserting a job and then searching for it."""
     # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
     assert r.status_code == 200, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
@@ -244,7 +244,7 @@ def test_insert_and_search(normal_user_client):
 def test_search_distinct(normal_user_client):
     """Test that the distinct parameter works as expected."""
     job_definitions = [TEST_JDL, TEST_JDL, TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
     assert r.status_code == 200, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
@@ -272,7 +272,7 @@ def test_search_distinct(normal_user_client):
 def test_search_pagination(normal_user_client):
     """Test that the pagination works as expected."""
     job_definitions = [TEST_JDL] * 20
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
     assert r.status_code == 200, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
@@ -340,7 +340,7 @@ def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
 ):
     """Test that a user cannot submit a parametric JDL greater than the max parametric jobs."""
     job_definitions = [TEST_LARGE_PARAMETRIC_JDL]
-    res = normal_user_client.post("/api/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
@@ -349,7 +349,7 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
 ):
     """Test that a user cannot submit a list of JDL greater than the max number of jobs."""
     job_definitions = [TEST_JDL for _ in range(100)]
-    res = normal_user_client.post("/api/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
@@ -360,19 +360,19 @@ def test_user_cannot_submit_list_of_jdl_greater_than_max_number_of_jobs(
 def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
     normal_user_client, job_definitions
 ):
-    res = normal_user_client.post("/api/jobs/", json=job_definitions)
+    res = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert res.status_code == HTTPStatus.BAD_REQUEST, res.json()
 
 
 def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_client):
-    res = admin_user_client.post("/api/jobs/", json=[TEST_JDL])
+    res = admin_user_client.post("/api/jobs/jdl", json=[TEST_JDL])
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
 
 
 @pytest.fixture
 def valid_job_id(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     return r.json()[0]["JobID"]
@@ -381,7 +381,7 @@ def valid_job_id(normal_user_client: TestClient):
 @pytest.fixture
 def valid_job_ids(normal_user_client: TestClient):
     job_definitions = [TEST_PARAMETRIC_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 3
     return sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -714,7 +714,7 @@ def test_set_job_status_with_invalid_job_id(
 
 def test_insert_and_reschedule(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
 

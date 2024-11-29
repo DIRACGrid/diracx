@@ -159,7 +159,7 @@ Each route must have a policy as an argument and call it:
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 @router.post("/")
-async def submit_bulk_jobs(
+async def submit_jobs(
     job_definitions: Annotated[list[str], Body()],
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,

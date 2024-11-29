@@ -458,7 +458,7 @@ def build_jobs_assign_sandbox_to_job_request(
     )
 
 
-def build_jobs_submit_bulk_jobs_request(**kwargs: Any) -> HttpRequest:
+def build_jobs_submit_bulk_jdl_jobs_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop(
@@ -467,7 +467,7 @@ def build_jobs_submit_bulk_jobs_request(**kwargs: Any) -> HttpRequest:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/"
+    _url = "/api/jobs/jdl"
 
     # Construct headers
     if content_type is not None:
@@ -2245,12 +2245,12 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         return deserialized  # type: ignore
 
     @overload
-    def submit_bulk_jobs(
+    def submit_bulk_jdl_jobs(
         self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
     ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
+        """Submit Bulk Jdl Jobs.
 
-        Submit Bulk Jobs.
+        Submit Bulk Jdl Jobs.
 
         :param body: Required.
         :type body: list[str]
@@ -2263,12 +2263,12 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         """
 
     @overload
-    def submit_bulk_jobs(
+    def submit_bulk_jdl_jobs(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
     ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
+        """Submit Bulk Jdl Jobs.
 
-        Submit Bulk Jobs.
+        Submit Bulk Jdl Jobs.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2281,12 +2281,12 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         """
 
     @distributed_trace
-    def submit_bulk_jobs(
+    def submit_bulk_jdl_jobs(
         self, body: Union[List[str], IO[bytes]], **kwargs: Any
     ) -> List[_models.InsertedJob]:
-        """Submit Bulk Jobs.
+        """Submit Bulk Jdl Jobs.
 
-        Submit Bulk Jobs.
+        Submit Bulk Jdl Jobs.
 
         :param body: Is either a [str] type or a IO[bytes] type. Required.
         :type body: list[str] or IO[bytes]
@@ -2318,7 +2318,7 @@ class JobsOperations:  # pylint: disable=too-many-public-methods
         else:
             _json = self._serialize.body(body, "[str]")
 
-        _request = build_jobs_submit_bulk_jobs_request(
+        _request = build_jobs_submit_bulk_jdl_jobs_request(
             content_type=content_type,
             json=_json,
             content=_content,
