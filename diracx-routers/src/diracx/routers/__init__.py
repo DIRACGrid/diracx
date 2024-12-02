@@ -34,11 +34,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponse
+from diracx.core.exceptions import DiracError, DiracHttpResponseError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.db.exceptions import DBUnavailable
+from diracx.db.exceptions import DBUnavailableError
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
@@ -291,10 +291,10 @@ def create_app_inner(
     handler_signature = Callable[[Request, Exception], Response | Awaitable[Response]]
     app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))
     app.add_exception_handler(
-        DiracHttpResponse, cast(handler_signature, http_response_handler)
+        DiracHttpResponseError, cast(handler_signature, http_response_handler)
     )
     app.add_exception_handler(
-        DBUnavailable, cast(handler_signature, route_unavailable_error_hander)
+        DBUnavailableError, cast(handler_signature, route_unavailable_error_hander)
     )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
@@ -393,11 +393,11 @@ def dirac_error_handler(request: Request, exc: DiracError) -> Response:
     )
 
 
-def http_response_handler(request: Request, exc: DiracHttpResponse) -> Response:
+def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Response:
     return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
-def route_unavailable_error_hander(request: Request, exc: DBUnavailable):
+def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
@@ -435,7 +435,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
             await db.ping()
             _db_alive_cache[db] = ""
 
-        except DBUnavailable as e:
+        except DBUnavailableError as e:
             _db_alive_cache[db] = e.args[0]
 
     return _db_alive_cache[db]
@@ -448,7 +448,7 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2]:
     async with db:
         # Check whether the connection still works before executing the query
         if reason := await is_db_unavailable(db):
-            raise DBUnavailable(reason)
+            raise DBUnavailableError(reason)
         yield db
 
 

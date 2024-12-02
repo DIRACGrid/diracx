@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from collections import defaultdict
 
-from diracx.core.exceptions import JobNotFound
+from diracx.core.exceptions import JobNotFoundError
 from diracx.core.models import (
     JobStatus,
     JobStatusReturn,
@@ -212,7 +212,7 @@ class JobLoggingDB(BaseSQLDB):
         ).where(LoggingInfo.JobID == job_id)
         rows = await self.conn.execute(stmt)
         if not rows.rowcount:
-            raise JobNotFound(job_id) from None
+            raise JobNotFoundError(job_id) from None
 
         for event, etime in rows:
             result[event] = str(etime + MAGIC_EPOC_NUMBER)

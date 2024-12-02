@@ -8,7 +8,8 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
-from diracx.core.exceptions import InvalidQueryError, JobNotFound
+
+from diracx.core.exceptions import InvalidQueryError, JobNotFoundError
 from diracx.core.models import (
     LimitedJobStatusReturn,
     SearchSpec,
@@ -42,7 +43,7 @@ class JobDB(BaseSQLDB):
     # TODO: this is copied from the DIRAC JobDB
     # but is overwriten in LHCbDIRAC, so we need
     # to find a way to make it dynamic
-    jdl2DBParameters = ["JobName", "JobType", "JobGroup"]
+    jdl_2_db_parameters = ["JobName", "JobType", "JobGroup"]
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = _get_columns(Jobs.__table__, group_by)
@@ -110,11 +111,11 @@ class JobDB(BaseSQLDB):
             ],
         )
 
-    async def setJobAttributes(self, job_id, jobData):
+    async def set_job_attributes(self, job_id, job_data):
         """TODO: add myDate and force parameters."""
-        if "Status" in jobData:
-            jobData = jobData | {"LastUpdateTime": datetime.now(tz=timezone.utc)}
-        stmt = update(Jobs).where(Jobs.JobID == job_id).values(jobData)
+        if "Status" in job_data:
+            job_data = job_data | {"LastUpdateTime": datetime.now(tz=timezone.utc)}
+        stmt = update(Jobs).where(Jobs.JobID == job_id).values(job_data)
         await self.conn.execute(stmt)
 
     async def create_job(self, original_jdl):
@@ -159,9 +160,9 @@ class JobDB(BaseSQLDB):
             ],
         )
 
-    async def checkAndPrepareJob(
+    async def check_and_prepare_job(
         self,
-        jobID,
+        job_id,
         class_ad_job,
         class_ad_req,
         owner,
@@ -178,8 +179,8 @@ class JobDB(BaseSQLDB):
             checkAndPrepareJob,
         )
 
-        retVal = checkAndPrepareJob(
-            jobID,
+        ret_val = checkAndPrepareJob(
+            job_id,
             class_ad_job,
             class_ad_req,
             owner,
@@ -188,13 +189,13 @@ class JobDB(BaseSQLDB):
             vo,
         )
 
-        if not retVal["OK"]:
-            if cmpError(retVal, EWMSSUBM):
-                await self.setJobAttributes(jobID, job_attrs)
+        if not ret_val["OK"]:
+            if cmpError(ret_val, EWMSSUBM):
+                await self.set_job_attributes(job_id, job_attrs)
 
-            returnValueOrRaise(retVal)
+            returnValueOrRaise(ret_val)
 
-    async def setJobJDL(self, job_id, jdl):
+    async def set_job_jdl(self, job_id, jdl):
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
         stmt = (
@@ -202,7 +203,7 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
-    async def setJobJDLsBulk(self, jdls):
+    async def set_job_jdl_bulk(self, jdls):
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
         await self.conn.execute(
@@ -212,19 +213,19 @@ class JobDB(BaseSQLDB):
             [{"b_JobID": jid, "JDL": compressJDL(jdl)} for jid, jdl in jdls.items()],
         )
 
-    async def setJobAttributesBulk(self, jobData):
+    async def set_job_attributes_bulk(self, job_data):
         """TODO: add myDate and force parameters."""
-        for job_id in jobData.keys():
-            if "Status" in jobData[job_id]:
-                jobData[job_id].update(
+        for job_id in job_data.keys():
+            if "Status" in job_data[job_id]:
+                job_data[job_id].update(
                     {"LastUpdateTime": datetime.now(tz=timezone.utc)}
                 )
-        columns = set(key for attrs in jobData.values() for key in attrs.keys())
+        columns = set(key for attrs in job_data.values() for key in attrs.keys())
         case_expressions = {
             column: case(
                 *[
                     (Jobs.__table__.c.JobID == job_id, attrs[column])
-                    for job_id, attrs in jobData.items()
+                    for job_id, attrs in job_data.items()
                     if column in attrs
                 ],
                 else_=getattr(Jobs.__table__.c, column),  # Retain original value
@@ -235,25 +236,11 @@ class JobDB(BaseSQLDB):
         stmt = (
             Jobs.__table__.update()
             .values(**case_expressions)
-            .where(Jobs.__table__.c.JobID.in_(jobData.keys()))
+            .where(Jobs.__table__.c.JobID.in_(job_data.keys()))
         )
         await self.conn.execute(stmt)
 
-    async def getJobJDL(self, job_id: int, original: bool = False) -> str:
-        from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
-
-        if original:
-            stmt = select(JobJDLs.OriginalJDL).where(JobJDLs.JobID == job_id)
-        else:
-            stmt = select(JobJDLs.JDL).where(JobJDLs.JobID == job_id)
-
-        jdl = (await self.conn.execute(stmt)).scalar_one()
-        if jdl:
-            jdl = extractJDL(jdl)
-
-        return jdl
-
-    async def getJobJDLs(self, job_ids, original: bool = False) -> dict[int | str, str]:
+    async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int | str, str]:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
 
         if original:
@@ -278,7 +265,7 @@ class JobDB(BaseSQLDB):
                 **dict((await self.conn.execute(stmt)).one()._mapping)
             )
         except NoResultFound as e:
-            raise JobNotFound(job_id) from e
+            raise JobNotFoundError(job_id) from e
 
     async def set_job_command(self, job_id: int, command: str, arguments: str = ""):
         """Store a command to be passed to the job together with the next heart beat."""
@@ -291,7 +278,7 @@ class JobDB(BaseSQLDB):
             )
             await self.conn.execute(stmt)
         except IntegrityError as e:
-            raise JobNotFound(job_id) from e
+            raise JobNotFoundError(job_id) from e
 
     async def set_job_command_bulk(self, commands):
         """Store a command to be passed to the job together with the next heart beat."""

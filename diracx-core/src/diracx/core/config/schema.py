@@ -115,7 +115,6 @@ class DIRACConfig(BaseModel):
 
 class JobMonitoringConfig(BaseModel):
     GlobalJobsInfo: bool = True
-    useESForJobParametersFlag: bool = False
 
 
 class JobSchedulingConfig(BaseModel):

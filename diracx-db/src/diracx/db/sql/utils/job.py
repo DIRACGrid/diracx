@@ -99,7 +99,7 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
             # TODO is this even needed?
             class_ad_job.insertAttributeInt("JobID", job_id)
 
-            await job_db.checkAndPrepareJob(
+            await job_db.check_and_prepare_job(
                 job_id,
                 class_ad_job,
                 class_ad_req,
@@ -243,7 +243,7 @@ async def reschedule_jobs_bulk(
     job_jdls = {
         jobid: parse_jdl(jobid, jdl)
         for jobid, jdl in (
-            (await job_db.getJobJDLs(surviving_job_ids, original=True)).items()
+            (await job_db.get_job_jdls(surviving_job_ids, original=True)).items()
         )
     }
 
@@ -319,7 +319,7 @@ async def reschedule_jobs_bulk(
 
         # BULK JDL UPDATE
         # DATABASE OPERATION
-        await job_db.setJobJDLsBulk(jdl_changes)
+        await job_db.set_job_jdl_bulk(jdl_changes)
 
         return {
             "failed": failed,
@@ -499,7 +499,7 @@ async def set_job_status_bulk(
                 )
             )
 
-    await job_db.setJobAttributesBulk(job_attribute_updates)
+    await job_db.set_job_attributes_bulk(job_attribute_updates)
 
     await remove_jobs_from_task_queue(
         list(deletable_killable_jobs), config, task_queue_db, background_task

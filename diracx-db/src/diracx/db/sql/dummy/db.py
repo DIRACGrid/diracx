@@ -25,7 +25,7 @@ class DummyDB(BaseSQLDB):
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = [Cars.__table__.columns[x] for x in group_by]
 
-        stmt = select(*columns, func.count(Cars.licensePlate).label("count"))
+        stmt = select(*columns, func.count(Cars.license_plate).label("count"))
         stmt = apply_search_filters(Cars.__table__.columns.__getitem__, stmt, search)
         stmt = stmt.group_by(*columns)
 
@@ -44,7 +44,7 @@ class DummyDB(BaseSQLDB):
 
     async def insert_car(self, license_plate: UUID, model: str, owner_id: int) -> int:
         stmt = insert(Cars).values(
-            licensePlate=license_plate, model=model, ownerID=owner_id
+            license_plate=license_plate, model=model, owner_id=owner_id
         )
 
         result = await self.conn.execute(stmt)

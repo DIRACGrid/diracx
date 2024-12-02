@@ -12,7 +12,7 @@ from authlib.jose import JsonWebToken
 from fastapi import Depends, Form, Header, HTTPException, status
 
 from diracx.core.exceptions import (
-    DiracHttpResponse,
+    DiracHttpResponseError,
     ExpiredFlowError,
     PendingAuthorizationError,
 )
@@ -120,15 +120,15 @@ async def get_oidc_token_info_from_device_flow(
             device_code, settings.device_flow_expiration_seconds
         )
     except PendingAuthorizationError as e:
-        raise DiracHttpResponse(
+        raise DiracHttpResponseError(
             status.HTTP_400_BAD_REQUEST, {"error": "authorization_pending"}
         ) from e
     except ExpiredFlowError as e:
-        raise DiracHttpResponse(
+        raise DiracHttpResponseError(
             status.HTTP_401_UNAUTHORIZED, {"error": "expired_token"}
         ) from e
-    # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
-    # raise DiracHttpResponse(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
+    # raise DiracHttpResponseError(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
+    # raise DiracHttpResponseError(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
 
     if info["client_id"] != client_id:
         raise HTTPException(
