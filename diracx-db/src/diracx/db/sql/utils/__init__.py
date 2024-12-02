@@ -26,7 +26,7 @@ from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.core.models import SortDirection
 from diracx.core.settings import SqlalchemyDsn
-from diracx.db.exceptions import DBUnavailable
+from diracx.db.exceptions import DBUnavailableError
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -34,32 +34,32 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class utcnow(expression.FunctionElement):
+class UTCNow(expression.FunctionElement):
     type: TypeEngine = DateTime()
     inherit_cache: bool = True
 
 
-@compiles(utcnow, "postgresql")
+@compiles(UTCNow, "postgresql")
 def pg_utcnow(element, compiler, **kw) -> str:
     return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
 
 
-@compiles(utcnow, "mssql")
+@compiles(UTCNow, "mssql")
 def ms_utcnow(element, compiler, **kw) -> str:
     return "GETUTCDATE()"
 
 
-@compiles(utcnow, "mysql")
+@compiles(UTCNow, "mysql")
 def mysql_utcnow(element, compiler, **kw) -> str:
     return "(UTC_TIMESTAMP)"
 
 
-@compiles(utcnow, "sqlite")
+@compiles(UTCNow, "sqlite")
 def sqlite_utcnow(element, compiler, **kw) -> str:
     return "DATETIME('now')"
 
 
-class date_trunc(expression.FunctionElement):
+class DateTrunc(expression.FunctionElement):
     """Sqlalchemy function to truncate a date to a given resolution.
 
     Primarily used to be able to query for a specific resolution of a date e.g.
@@ -77,7 +77,7 @@ class date_trunc(expression.FunctionElement):
         self._time_resolution = time_resolution
 
 
-@compiles(date_trunc, "postgresql")
+@compiles(DateTrunc, "postgresql")
 def pg_date_trunc(element, compiler, **kw):
     res = {
         "SECOND": "second",
@@ -90,7 +90,7 @@ def pg_date_trunc(element, compiler, **kw):
     return f"date_trunc('{res}', {compiler.process(element.clauses)})"
 
 
-@compiles(date_trunc, "mysql")
+@compiles(DateTrunc, "mysql")
 def mysql_date_trunc(element, compiler, **kw):
     pattern = {
         "SECOND": "%Y-%m-%d %H:%i:%S",
@@ -105,7 +105,7 @@ def mysql_date_trunc(element, compiler, **kw):
     return compiler.process(func.date_format(dt_col, pattern))
 
 
-@compiles(date_trunc, "sqlite")
+@compiles(DateTrunc, "sqlite")
 def sqlite_date_trunc(element, compiler, **kw):
     pattern = {
         "SECOND": "%Y-%m-%d %H:%M:%S",
@@ -130,10 +130,10 @@ def substract_date(**kwargs: float) -> datetime:
 
 Column: partial[RawColumn] = partial(RawColumn, nullable=False)
 NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
-DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
+DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=UTCNow())
 
 
-def EnumColumn(enum_type, **kwargs):
+def EnumColumn(enum_type, **kwargs):  # noqa: N802
     return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
@@ -167,7 +167,7 @@ class SQLDBError(Exception):
     pass
 
 
-class SQLDBUnavailable(DBUnavailable, SQLDBError):
+class SQLDBUnavailableError(DBUnavailableError, SQLDBError):
     """Used whenever we encounter a problem with the B connection."""
 
 
@@ -324,7 +324,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             self._conn.set(await self.engine.connect().__aenter__())
         except Exception as e:
-            raise SQLDBUnavailable(
+            raise SQLDBUnavailableError(
                 f"Cannot connect to {self.__class__.__name__}"
             ) from e
 
@@ -350,7 +350,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             await self.conn.scalar(select(1))
         except OperationalError as e:
-            raise SQLDBUnavailable("Cannot ping the DB") from e
+            raise SQLDBUnavailableError("Cannot ping the DB") from e
 
 
 def find_time_resolution(value):
@@ -394,7 +394,7 @@ def apply_search_filters(column_mapping, stmt, search):
             if "value" in query and isinstance(query["value"], str):
                 resolution, value = find_time_resolution(query["value"])
                 if resolution:
-                    column = date_trunc(column, time_resolution=resolution)
+                    column = DateTrunc(column, time_resolution=resolution)
                 query["value"] = value
 
             if query.get("values"):
@@ -406,7 +406,7 @@ def apply_search_filters(column_mapping, stmt, search):
                         f"Cannot mix different time resolutions in {query=}"
                     )
                 if resolution := resolutions[0]:
-                    column = date_trunc(column, time_resolution=resolution)
+                    column = DateTrunc(column, time_resolution=resolution)
                 query["values"] = values
 
         if query["operator"] == "eq":

@@ -21,7 +21,7 @@ import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersion
+from ..exceptions import BadConfigurationVersionError
 from ..extensions import select_from_extension
 from .schema import Config
 
@@ -159,7 +159,7 @@ class BaseGitConfigSource(ConfigSource):
             ).strip()
             modified = datetime.fromtimestamp(int(commit_info), tz=timezone.utc)
         except sh.ErrorReturnCode as e:
-            raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
+            raise BadConfigurationVersionError(f"Error parsing latest revision: {e}") from e
         logger.debug("Latest revision for %s is %s with mtime %s", self, rev, modified)
         return rev, modified
 
@@ -176,7 +176,7 @@ class BaseGitConfigSource(ConfigSource):
             )
             raw_obj = yaml.safe_load(blob)
         except sh.ErrorReturnCode as e:
-            raise BadConfigurationVersion(f"Error reading configuration: {e}") from e
+            raise BadConfigurationVersionError(f"Error reading configuration: {e}") from e
 
         config_class: Config = select_from_extension(group="diracx", name="config")[
             0
