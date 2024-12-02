@@ -46,6 +46,7 @@ select = [
     "FLY", # flynt
     "DTZ", # flake8-datetimez
     "S",   # flake8-bandit
+    "N",   # pep8-naming
 ]
 ignore = [
     "B905",

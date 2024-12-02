@@ -121,12 +121,12 @@ class TaskQueueDB(BaseSQLDB):
         # TODO: I guess the rows are already a list of tupes
         # maybe refactor
         data = [(r[0], r[1]) for r in rows if r]
-        numOwners = len(data)
+        num_owners = len(data)
         # If there are no owners do now
-        if numOwners == 0:
+        if num_owners == 0:
             return
         # Split the share amongst the number of owners
-        entities_shares = {row[0]: job_share / numOwners for row in data}
+        entities_shares = {row[0]: job_share / num_owners for row in data}
 
         # TODO: implement the following
         # If corrector is enabled let it work it's magic

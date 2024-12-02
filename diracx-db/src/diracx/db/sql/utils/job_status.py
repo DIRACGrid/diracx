@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from fastapi import BackgroundTasks
 
 from diracx.core.config.schema import Config
-from diracx.core.exceptions import JobNotFound
+from diracx.core.exceptions import JobNotFoundError
 from diracx.core.models import (
     JobStatus,
     JobStatusUpdate,
@@ -28,7 +28,7 @@ async def set_job_status(
     logging information in the JobLoggingDB. The status dict has datetime
     as a key and status information dictionary as values.
 
-    :raises: JobNotFound if the job is not found in one of the DBs
+    :raises: JobNotFoundError if the job is not found in one of the DBs
     """
     from DIRAC.Core.Utilities import TimeUtilities
     from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
@@ -38,9 +38,11 @@ async def set_job_status(
     )
 
     # transform JobStateUpdate objects into dicts
-    statusDict = {}
+    status_dict = {}
     for key, value in status.items():
-        statusDict[key] = {k: v for k, v in value.model_dump().items() if v is not None}
+        status_dict[key] = {
+            k: v for k, v in value.model_dump().items() if v is not None
+        }
 
     _, res = await job_db.search(
         parameters=["Status", "StartExecTime", "EndExecTime"],
@@ -54,41 +56,41 @@ async def set_job_status(
         sorts=[],
     )
     if not res:
-        raise JobNotFound(job_id) from None
+        raise JobNotFoundError(job_id) from None
 
-    currentStatus = res[0]["Status"]
-    startTime = res[0]["StartExecTime"]
-    endTime = res[0]["EndExecTime"]
+    current_status = res[0]["Status"]
+    start_time = res[0]["StartExecTime"]
+    end_time = res[0]["EndExecTime"]
 
     # If the current status is Stalled and we get an update, it should probably be "Running"
-    if currentStatus == JobStatus.STALLED:
-        currentStatus = JobStatus.RUNNING
+    if current_status == JobStatus.STALLED:
+        current_status = JobStatus.RUNNING
 
     # Get the latest time stamps of major status updates
     result = await job_logging_db.get_wms_time_stamps(job_id)
 
     #####################################################################################################
 
-    # This is more precise than "LastTime". timeStamps is a sorted list of tuples...
-    timeStamps = sorted((float(t), s) for s, t in result.items())
-    lastTime = TimeUtilities.fromEpoch(timeStamps[-1][0]).replace(tzinfo=timezone.utc)
+    # This is more precise than "LastTime". time_stamps is a sorted list of tuples...
+    time_stamps = sorted((float(t), s) for s, t in result.items())
+    last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(tzinfo=timezone.utc)
 
     # Get chronological order of new updates
-    updateTimes = sorted(statusDict)
+    update_times = sorted(status_dict)
 
-    newStartTime, newEndTime = getStartAndEndTime(
-        startTime, endTime, updateTimes, timeStamps, statusDict
+    new_start_time, new_end_time = getStartAndEndTime(
+        start_time, end_time, update_times, time_stamps, status_dict
     )
 
     job_data = {}
-    if updateTimes[-1] >= lastTime:
+    if update_times[-1] >= last_time:
         new_status, new_minor, new_application = returnValueOrRaise(
             getNewStatus(
                 job_id,
-                updateTimes,
-                lastTime,
-                statusDict,
-                currentStatus,
+                update_times,
+                last_time,
+                status_dict,
+                current_status,
                 force,
                 MagicMock(),
             )
@@ -108,37 +110,37 @@ async def set_job_status(
         #     if not result["OK"]:
         #         return result
 
-    for updTime in updateTimes:
-        if statusDict[updTime]["Source"].startswith("Job"):
-            job_data["HeartBeatTime"] = updTime
+    for upd_time in update_times:
+        if status_dict[upd_time]["Source"].startswith("Job"):
+            job_data["HeartBeatTime"] = upd_time
 
-    if not startTime and newStartTime:
-        job_data["StartExecTime"] = newStartTime
+    if not start_time and new_start_time:
+        job_data["StartExecTime"] = new_start_time
 
-    if not endTime and newEndTime:
-        job_data["EndExecTime"] = newEndTime
+    if not end_time and new_end_time:
+        job_data["EndExecTime"] = new_end_time
 
     if job_data:
-        await job_db.setJobAttributes(job_id, job_data)
+        await job_db.set_job_attributes(job_id, job_data)
 
-    for updTime in updateTimes:
-        sDict = statusDict[updTime]
-        if not sDict.get("Status"):
-            sDict["Status"] = "idem"
-        if not sDict.get("MinorStatus"):
-            sDict["MinorStatus"] = "idem"
-        if not sDict.get("ApplicationStatus"):
-            sDict["ApplicationStatus"] = "idem"
-        if not sDict.get("Source"):
-            sDict["Source"] = "Unknown"
+    for upd_time in update_times:
+        s_dict = status_dict[upd_time]
+        if not s_dict.get("Status"):
+            s_dict["Status"] = "idem"
+        if not s_dict.get("MinorStatus"):
+            s_dict["MinorStatus"] = "idem"
+        if not s_dict.get("ApplicationStatus"):
+            s_dict["ApplicationStatus"] = "idem"
+        if not s_dict.get("Source"):
+            s_dict["Source"] = "Unknown"
 
         await job_logging_db.insert_record(
             job_id,
-            sDict["Status"],
-            sDict["MinorStatus"],
-            sDict["ApplicationStatus"],
-            updTime,
-            sDict["Source"],
+            s_dict["Status"],
+            s_dict["MinorStatus"],
+            s_dict["ApplicationStatus"],
+            upd_time,
+            s_dict["Source"],
         )
 
     return SetJobStatusReturn(**job_data)
@@ -161,7 +163,7 @@ async def delete_jobs(
 ):
     """Removing jobs from task queues, send a kill command and set status to DELETED.
 
-    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found.
+    :raises: BaseExceptionGroup[JobNotFoundError] for every job that was not found.
     """
     await _remove_jobs_from_task_queue(job_ids, config, task_queue_db, background_task)
     # TODO: implement StorageManagerClient
@@ -197,7 +199,7 @@ async def kill_jobs(
     background_task: BackgroundTasks,
 ):
     """Kill jobs by removing them from the task queues, set kill as a job command and setting the job status to KILLED.
-    :raises: BaseExceptionGroup[JobNotFound] for every job that was not found.
+    :raises: BaseExceptionGroup[JobNotFoundError] for every job that was not found.
     """
     await _remove_jobs_from_task_queue(job_ids, config, task_queue_db, background_task)
     # TODO: implement StorageManagerClient
@@ -240,7 +242,7 @@ async def kill_jobs(
     #             job_logging_db,
     #             force=True,
     #         )
-    #     except JobNotFound as e:
+    #     except JobNotFoundError as e:
     #         errors.append(e)
 
     # if errors:

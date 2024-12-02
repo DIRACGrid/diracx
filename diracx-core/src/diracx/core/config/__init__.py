@@ -20,7 +20,7 @@ import yaml
 from cachetools import Cache, LRUCache, TTLCache, cachedmethod
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersion
+from ..exceptions import BadConfigurationVersionError
 from ..extensions import select_from_extension
 from .schema import Config
 
@@ -136,7 +136,9 @@ class BaseGitConfigSource(ConfigSource):
         try:
             rev = self.repo.rev_parse(DEFAULT_GIT_BRANCH)
         except git.exc.ODBError as e:  # type: ignore
-            raise BadConfigurationVersion(f"Error parsing latest revision: {e}") from e
+            raise BadConfigurationVersionError(
+                f"Error parsing latest revision: {e}"
+            ) from e
         modified = rev.committed_datetime.astimezone(timezone.utc)
         logger.debug(
             "Latest revision for %s is %s with mtime %s", self, rev.hexsha, modified

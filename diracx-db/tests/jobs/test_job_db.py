@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from diracx.core.exceptions import InvalidQueryError, JobNotFound
+from diracx.core.exceptions import InvalidQueryError, JobNotFoundError
 from diracx.core.models import (
     ScalarSearchOperator,
     ScalarSearchSpec,
@@ -330,5 +330,5 @@ async def test_search_pagination(job_db):
 async def test_set_job_command_invalid_job_id(job_db: JobDB):
     """Test that setting a command for a non-existent job raises JobNotFound."""
     async with job_db as job_db:
-        with pytest.raises(JobNotFound):
+        with pytest.raises(JobNotFoundError):
             await job_db.set_job_command(123456, "test_command")
