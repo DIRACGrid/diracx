@@ -17,34 +17,34 @@ JobDBBase = declarative_base()
 class Jobs(JobDBBase):
     __tablename__ = "Jobs"
 
-    JobID = Column(
+    job_id = Column(
         "JobID",
         Integer,
         ForeignKey("JobJDLs.JobID", ondelete="CASCADE"),
         primary_key=True,
         default=0,
     )
-    JobType = Column("JobType", String(32), default="user")
-    JobGroup = Column("JobGroup", String(32), default="00000000")
-    Site = Column("Site", String(100), default="ANY")
-    JobName = Column("JobName", String(128), default="Unknown")
-    Owner = Column("Owner", String(64), default="Unknown")
-    OwnerGroup = Column("OwnerGroup", String(128), default="Unknown")
-    VO = Column("VO", String(32))
-    SubmissionTime = NullColumn("SubmissionTime", DateTime)
-    RescheduleTime = NullColumn("RescheduleTime", DateTime)
-    LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
-    StartExecTime = NullColumn("StartExecTime", DateTime)
-    HeartBeatTime = NullColumn("HeartBeatTime", DateTime)
-    EndExecTime = NullColumn("EndExecTime", DateTime)
-    Status = Column("Status", String(32), default="Received")
-    MinorStatus = Column("MinorStatus", String(128), default="Unknown")
-    ApplicationStatus = Column("ApplicationStatus", String(255), default="Unknown")
-    UserPriority = Column("UserPriority", Integer, default=0)
-    RescheduleCounter = Column("RescheduleCounter", Integer, default=0)
-    VerifiedFlag = Column("VerifiedFlag", EnumBackedBool(), default=False)
+    job_type = Column("JobType", String(32), default="user")
+    job_group = Column("JobGroup", String(32), default="00000000")
+    site = Column("Site", String(100), default="ANY")
+    job_name = Column("JobName", String(128), default="Unknown")
+    owner = Column("Owner", String(64), default="Unknown")
+    owner_group = Column("OwnerGroup", String(128), default="Unknown")
+    vo = Column("VO", String(32))
+    submission_time = NullColumn("SubmissionTime", DateTime)
+    reschedule_time = NullColumn("RescheduleTime", DateTime)
+    last_update_time = NullColumn("LastUpdateTime", DateTime)
+    start_exec_time = NullColumn("StartExecTime", DateTime)
+    heart_beat_time = NullColumn("HeartBeatTime", DateTime)
+    end_exec_time = NullColumn("EndExecTime", DateTime)
+    status = Column("Status", String(32), default="Received")
+    minor_status = Column("MinorStatus", String(128), default="Unknown")
+    application_status = Column("ApplicationStatus", String(255), default="Unknown")
+    user_priority = Column("UserPriority", Integer, default=0)
+    reschedule_counter = Column("RescheduleCounter", Integer, default=0)
+    verified_flag = Column("VerifiedFlag", EnumBackedBool(), default=False)
     # TODO: Should this be True/False/"Failed"? Or True/False/Null?
-    AccountedFlag = Column(
+    accounted_flag = Column(
         "AccountedFlag", Enum("True", "False", "Failed"), default="False"
     )
 
@@ -64,66 +64,66 @@ class Jobs(JobDBBase):
 
 class JobJDLs(JobDBBase):
     __tablename__ = "JobJDLs"
-    JobID = Column(Integer, autoincrement=True, primary_key=True)
-    JDL = Column(Text)
-    JobRequirements = Column(Text)
-    OriginalJDL = Column(Text)
+    job_id = Column("JobID", Integer, autoincrement=True, primary_key=True)
+    jdl = Column("JDL", Text)
+    job_requirements = Column("JobRequirements", Text)
+    original_jdl = Column("OriginalJDL", Text)
 
 
 class InputData(JobDBBase):
     __tablename__ = "InputData"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    LFN = Column(String(255), default="", primary_key=True)
-    Status = Column(String(32), default="AprioriGood")
+    lfn = Column("LFN", String(255), default="", primary_key=True)
+    status = Column("Status", String(32), default="AprioriGood")
 
 
 class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Name = Column(String(100), primary_key=True)
-    Value = Column(Text)
+    name = Column("Name", String(100), primary_key=True)
+    value = Column("Value", Text)
 
 
 class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Name = Column(String(100), primary_key=True)
-    Value = Column(Text)
+    name = Column("Name", String(100), primary_key=True)
+    value = Column("Value", Text)
 
 
 class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Name = Column(String(100), primary_key=True)
-    Value = Column(Text)
-    RescheduleCycle = Column(Integer)
+    name = Column("Name", String(100), primary_key=True)
+    value = Column("Value", Text)
+    reschedule_cycle = Column("RescheduleCycle", Integer)
 
 
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Name = Column(String(100), primary_key=True)
-    Value = Column(Text)
-    HeartBeatTime = Column(DateTime, primary_key=True)
+    name = Column("Name", String(100), primary_key=True)
+    value = Column("Value", Text)
+    heart_beat_time = Column("HeartBeatTime", DateTime, primary_key=True)
 
 
 class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Command = Column(String(100))
-    Arguments = Column(String(100))
-    Status = Column(String(64), default="Received")
-    ReceptionTime = Column(DateTime, primary_key=True)
-    ExecutionTime = NullColumn(DateTime)
+    command = Column("Command", String(100))
+    arguments = Column("Arguments", String(100))
+    status = Column("Status", String(64), default="Received")
+    reception_time = Column("ReceptionTime", DateTime, primary_key=True)
+    execution_time = NullColumn("ExecutionTime", DateTime)
