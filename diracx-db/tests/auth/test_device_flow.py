@@ -107,8 +107,8 @@ async def test_device_flow_lookup(auth_db: AuthDB, monkeypatch):
             await auth_db.get_device_flow(device_code1, EXPIRED)
 
         res = await auth_db.get_device_flow(device_code1, MAX_VALIDITY)
-        assert res["user_code"] == user_code1
-        assert res["id_token"] == {"token": "mytoken"}
+        assert res["UserCode"] == user_code1
+        assert res["IDToken"] == {"token": "mytoken"}
 
     # cannot get it a second time
     async with auth_db as auth_db:
@@ -147,4 +147,4 @@ async def test_device_flow_insert_id_token(auth_db: AuthDB):
 
     async with auth_db as auth_db:
         res = await auth_db.get_device_flow(device_code, MAX_VALIDITY)
-        assert res["id_token"] == id_token
+        assert res["IDToken"] == id_token

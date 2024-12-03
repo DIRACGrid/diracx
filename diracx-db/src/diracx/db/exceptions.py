@@ -1,2 +1,2 @@
-class DBUnavailable(Exception):
+class DBUnavailableError(Exception):
     pass

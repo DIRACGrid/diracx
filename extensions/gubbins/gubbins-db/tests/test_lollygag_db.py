@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 from diracx.core.exceptions import InvalidQueryError
-from diracx.db.sql.utils import SQLDBUnavailable
+from diracx.db.sql.utils import SQLDBUnavailableError
 
 from gubbins.db.sql.lollygag.db import LollygagDB
 
@@ -31,7 +31,7 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
     # So it is important to write test this way
     async with lollygag_db as lollygag_db:
         # First we check that the DB is empty
-        result = await lollygag_db.summary(["model"], [])
+        result = await lollygag_db.summary(["Model"], [])
         assert not result
 
     # Now we add some data in the DB
@@ -51,14 +51,14 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
 
     # Check that there are now 10 cars assigned to a single driver
     async with lollygag_db as lollygag_db:
-        result = await lollygag_db.summary(["ownerID"], [])
+        result = await lollygag_db.summary(["OwnerID"], [])
 
         assert result[0]["count"] == 10
 
     # Test the selection
     async with lollygag_db as lollygag_db:
         result = await lollygag_db.summary(
-            ["ownerID"], [{"parameter": "model", "operator": "eq", "value": "model_1"}]
+            ["OwnerID"], [{"parameter": "Model", "operator": "eq", "value": "model_1"}]
         )
 
         assert result[0]["count"] == 1
@@ -66,10 +66,10 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
     async with lollygag_db as lollygag_db:
         with pytest.raises(InvalidQueryError):
             result = await lollygag_db.summary(
-                ["ownerID"],
+                ["OwnerID"],
                 [
                     {
-                        "parameter": "model",
+                        "parameter": "Model",
                         "operator": "BADSELECTION",
                         "value": "model_1",
                     }
@@ -80,6 +80,6 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
 async def test_bad_connection():
     lollygag_db = LollygagDB("mysql+aiomysql://tata:yoyo@db.invalid:3306/name")
     async with lollygag_db.engine_context():
-        with pytest.raises(SQLDBUnavailable):
+        with pytest.raises(SQLDBUnavailableError):
             async with lollygag_db:
                 lollygag_db.ping()
