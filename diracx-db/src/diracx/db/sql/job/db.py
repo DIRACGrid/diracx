@@ -48,7 +48,7 @@ class JobDB(BaseSQLDB):
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = _get_columns(Jobs.__table__, group_by)
 
-        stmt = select(*columns, func.count(Jobs.JobID).label("count"))
+        stmt = select(*columns, func.count(Jobs.job_id).label("count"))
         stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
         stmt = stmt.group_by(*columns)
 
@@ -115,7 +115,7 @@ class JobDB(BaseSQLDB):
         """TODO: add myDate and force parameters."""
         if "Status" in job_data:
             job_data = job_data | {"LastUpdateTime": datetime.now(tz=timezone.utc)}
-        stmt = update(Jobs).where(Jobs.JobID == job_id).values(job_data)
+        stmt = update(Jobs).where(Jobs.job_id == job_id).values(job_data)
         await self.conn.execute(stmt)
 
     async def create_job(self, original_jdl):
@@ -199,7 +199,7 @@ class JobDB(BaseSQLDB):
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
         stmt = (
-            update(JobJDLs).where(JobJDLs.JobID == job_id).values(JDL=compressJDL(jdl))
+            update(JobJDLs).where(JobJDLs.job_id == job_id).values(JDL=compressJDL(jdl))
         )
         await self.conn.execute(stmt)
 
@@ -240,15 +240,19 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
-    async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int | str, str]:
+    async def get_job_jdls(
+        self, job_ids, original: bool = False
+    ) -> dict[int | str, str]:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
 
         if original:
-            stmt = select(JobJDLs.JobID, JobJDLs.OriginalJDL).where(
-                JobJDLs.JobID.in_(job_ids)
+            stmt = select(JobJDLs.job_id, JobJDLs.original_jdl).where(
+                JobJDLs.job_id.in_(job_ids)
             )
         else:
-            stmt = select(JobJDLs.JobID, JobJDLs.JDL).where(JobJDLs.JobID.in_(job_ids))
+            stmt = select(JobJDLs.job_id, JobJDLs.jdl).where(
+                JobJDLs.job_id.in_(job_ids)
+            )
 
         return {
             jobid: extractJDL(jdl)
@@ -258,9 +262,9 @@ class JobDB(BaseSQLDB):
 
     async def get_job_status(self, job_id: int) -> LimitedJobStatusReturn:
         try:
-            stmt = select(Jobs.Status, Jobs.MinorStatus, Jobs.ApplicationStatus).where(
-                Jobs.JobID == job_id
-            )
+            stmt = select(
+                Jobs.status, Jobs.minor_status, Jobs.application_status
+            ).where(Jobs.job_id == job_id)
             return LimitedJobStatusReturn(
                 **dict((await self.conn.execute(stmt)).one()._mapping)
             )
@@ -298,7 +302,7 @@ class JobDB(BaseSQLDB):
 
     async def delete_jobs(self, job_ids: list[int]):
         """Delete jobs from the database."""
-        stmt = delete(JobJDLs).where(JobJDLs.JobID.in_(job_ids))
+        stmt = delete(JobJDLs).where(JobJDLs.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def set_properties(
@@ -331,7 +335,7 @@ class JobDB(BaseSQLDB):
         if update_timestamp:
             values["LastUpdateTime"] = datetime.now(tz=timezone.utc)
 
-        stmt = update(Jobs).where(Jobs.JobID == bindparam("job_id")).values(**values)
+        stmt = update(Jobs).where(Jobs.job_id == bindparam("job_id")).values(**values)
         rows = await self.conn.execute(stmt, update_parameters)
 
         return rows.rowcount

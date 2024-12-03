@@ -39,27 +39,27 @@ class FlowStatus(Enum):
 
 class DeviceFlows(Base):
     __tablename__ = "DeviceFlows"
-    user_code = Column(String(USER_CODE_LENGTH), primary_key=True)
-    status = EnumColumn(FlowStatus, server_default=FlowStatus.PENDING.name)
-    creation_time = DateNowColumn()
-    client_id = Column(String(255))
-    scope = Column(String(1024))
-    device_code = Column(String(128), unique=True)  # Should be a hash
-    id_token = NullColumn(JSON())
+    user_code = Column("UserCode", String(USER_CODE_LENGTH), primary_key=True)
+    status = EnumColumn("Status", FlowStatus, server_default=FlowStatus.PENDING.name)
+    creation_time = DateNowColumn("CreationTime")
+    client_id = Column("ClientID", String(255))
+    scope = Column("Scope", String(1024))
+    device_code = Column("DeviceCode", String(128), unique=True)  # Should be a hash
+    id_token = NullColumn("IDToken", JSON())
 
 
 class AuthorizationFlows(Base):
     __tablename__ = "AuthorizationFlows"
-    uuid = Column(Uuid(as_uuid=False), primary_key=True)
-    status = EnumColumn(FlowStatus, server_default=FlowStatus.PENDING.name)
-    client_id = Column(String(255))
-    creation_time = DateNowColumn()
-    scope = Column(String(1024))
-    code_challenge = Column(String(255))
-    code_challenge_method = Column(String(8))
-    redirect_uri = Column(String(255))
-    code = NullColumn(String(255))  # Should be a hash
-    id_token = NullColumn(JSON())
+    uuid = Column("UUID", Uuid(as_uuid=False), primary_key=True)
+    status = EnumColumn("Status", FlowStatus, server_default=FlowStatus.PENDING.name)
+    client_id = Column("ClientID", String(255))
+    creation_time = DateNowColumn("CretionTime")
+    scope = Column("Scope", String(1024))
+    code_challenge = Column("CodeChallenge", String(255))
+    code_challenge_method = Column("CodeChallengeMethod", String(8))
+    redirect_uri = Column("RedirectURI", String(255))
+    code = NullColumn("Code", String(255))  # Should be a hash
+    id_token = NullColumn("IDToken", JSON())
 
 
 class RefreshTokenStatus(Enum):
@@ -85,13 +85,13 @@ class RefreshTokens(Base):
 
     __tablename__ = "RefreshTokens"
     # Refresh token attributes
-    jti = Column(Uuid(as_uuid=False), primary_key=True)
+    jti = Column("JTI", Uuid(as_uuid=False), primary_key=True)
     status = EnumColumn(
-        RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
+        "Status", RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
     )
-    creation_time = DateNowColumn()
-    scope = Column(String(1024))
+    creation_time = DateNowColumn("CreationTime")
+    scope = Column("Scope", String(1024))
 
     # User attributes bound to the refresh token
-    sub = Column(String(1024))
-    preferred_username = Column(String(255))
+    sub = Column("Sub", String(1024))
+    preferred_username = Column("PreferredUsername", String(255))

@@ -94,25 +94,25 @@ async def submit_bulk_jdl_jobs(
 
     if len(job_definitions) == 1:
         # Check if the job is a parametric one
-        jobClassAd = ClassAd(job_definitions[0])
-        result = getParameterVectorLength(jobClassAd)
+        job_class_ad = ClassAd(job_definitions[0])
+        result = getParameterVectorLength(job_class_ad)
         if not result["OK"]:
             # FIXME dont do this
             print("Issue with getParameterVectorLength", result["Message"])
             return result
-        nJobs = result["Value"]
-        parametricJob = False
-        if nJobs is not None and nJobs > 0:
+        n_jobs = result["Value"]
+        parametric_job = False
+        if n_jobs is not None and n_jobs > 0:
             # if we are here, then jobDesc was the description of a parametric job. So we start unpacking
-            parametricJob = True
-            result = generateParametricJobs(jobClassAd)
+            parametric_job = True
+            result = generateParametricJobs(job_class_ad)
             if not result["OK"]:
                 # FIXME why?
                 return result
-            jobDescList = result["Value"]
+            job_desc_list = result["Value"]
         else:
             # if we are here, then jobDesc was the description of a single job.
-            jobDescList = job_definitions
+            job_desc_list = job_definitions
     else:
         # if we are here, then jobDesc is a list of JDLs
         # we need to check that none of them is a parametric
@@ -128,12 +128,12 @@ async def submit_bulk_jdl_jobs(
                     detail="You cannot submit parametric jobs in a bulk fashion",
                 )
 
-        jobDescList = job_definitions
-        # parametricJob = True
-        parametricJob = False
+        job_desc_list = job_definitions
+        # parametric_job = True
+        parametric_job = False
 
     # TODO: make the max number of jobs configurable in the CS
-    if len(jobDescList) > MAX_PARAMETRIC_JOBS:
+    if len(job_desc_list) > MAX_PARAMETRIC_JOBS:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail=f"Normal user cannot submit more than {MAX_PARAMETRIC_JOBS} jobs at once",
@@ -141,12 +141,12 @@ async def submit_bulk_jdl_jobs(
 
     result = []
 
-    if parametricJob:
-        initialStatus = JobStatus.SUBMITTING
-        initialMinorStatus = "Bulk transaction confirmation"
+    if parametric_job:
+        initial_status = JobStatus.SUBMITTING
+        initial_minor_status = "Bulk transaction confirmation"
     else:
-        initialStatus = JobStatus.RECEIVED
-        initialMinorStatus = "Job accepted"
+        initial_status = JobStatus.RECEIVED
+        initial_minor_status = "Job accepted"
 
     submitted_job_ids = await submit_jobs_jdl(
         [
@@ -154,11 +154,11 @@ async def submit_bulk_jdl_jobs(
                 jdl=jdl,
                 owner=user_info.preferred_username,
                 owner_group=user_info.dirac_group,
-                initial_status=initialStatus,
-                initial_minor_status=initialMinorStatus,
+                initial_status=initial_status,
+                initial_minor_status=initial_minor_status,
                 vo=user_info.vo,
             )
-            for jdl in jobDescList
+            for jdl in job_desc_list
         ],
         job_db=job_db,
     )
@@ -172,8 +172,8 @@ async def submit_bulk_jdl_jobs(
         [
             JobLoggingRecord(
                 job_id=int(job_id),
-                status=initialStatus,
-                minor_status=initialMinorStatus,
+                status=initial_status,
+                minor_status=initial_minor_status,
                 application_status="Unknown",
                 date=job_created_time,
                 source="JobManager",
@@ -182,14 +182,14 @@ async def submit_bulk_jdl_jobs(
         ]
     )
 
-    # if not parametricJob:
+    # if not parametric_job:
     #     self.__sendJobsToOptimizationMind(submitted_job_ids)
 
     return [
         InsertedJob(
             JobID=job_id,
-            Status=initialStatus,
-            MinorStatus=initialMinorStatus,
+            Status=initial_status,
+            MinorStatus=initial_minor_status,
             TimeStamp=job_created_time,
         )
         for job_id in submitted_job_ids

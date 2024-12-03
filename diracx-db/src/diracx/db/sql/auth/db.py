@@ -58,7 +58,7 @@ class AuthDB(BaseSQLDB):
         stmt = select(
             DeviceFlows,
             (DeviceFlows.creation_time < substract_date(seconds=max_validity)).label(
-                "is_expired"
+                "IsExpired"
             ),
         ).with_for_update()
         stmt = stmt.where(
@@ -66,10 +66,10 @@ class AuthDB(BaseSQLDB):
         )
         res = dict((await self.conn.execute(stmt)).one()._mapping)
 
-        if res["is_expired"]:
+        if res["IsExpired"]:
             raise ExpiredFlowError()
 
-        if res["status"] == FlowStatus.READY:
+        if res["Status"] == FlowStatus.READY:
             # Update the status to Done before returning
             await self.conn.execute(
                 update(DeviceFlows)
@@ -81,10 +81,10 @@ class AuthDB(BaseSQLDB):
             )
             return res
 
-        if res["status"] == FlowStatus.DONE:
+        if res["Status"] == FlowStatus.DONE:
             raise AuthorizationError("Code was already used")
 
-        if res["status"] == FlowStatus.PENDING:
+        if res["Status"] == FlowStatus.PENDING:
             raise PendingAuthorizationError()
 
         raise AuthorizationError("Bad state in device flow")
@@ -190,7 +190,7 @@ class AuthDB(BaseSQLDB):
         stmt = select(AuthorizationFlows.code, AuthorizationFlows.redirect_uri)
         stmt = stmt.where(AuthorizationFlows.uuid == uuid)
         row = (await self.conn.execute(stmt)).one()
-        return code, row.redirect_uri
+        return code, row.RedirectURI
 
     async def get_authorization_flow(self, code: str, max_validity: int):
         hashed_code = hashlib.sha256(code.encode()).hexdigest()
@@ -205,7 +205,7 @@ class AuthDB(BaseSQLDB):
 
         res = dict((await self.conn.execute(stmt)).one()._mapping)
 
-        if res["status"] == FlowStatus.READY:
+        if res["Status"] == FlowStatus.READY:
             # Update the status to Done before returning
             await self.conn.execute(
                 update(AuthorizationFlows)
@@ -215,7 +215,7 @@ class AuthDB(BaseSQLDB):
 
             return res
 
-        if res["status"] == FlowStatus.DONE:
+        if res["Status"] == FlowStatus.DONE:
             raise AuthorizationError("Code was already used")
 
         raise AuthorizationError("Bad state in authorization flow")
@@ -247,7 +247,7 @@ class AuthDB(BaseSQLDB):
         row = (await self.conn.execute(stmt)).one()
 
         # Return the JWT ID and the creation time
-        return jti, row.creation_time
+        return jti, row.CreationTime
 
     async def get_refresh_token(self, jti: str) -> dict:
         """Get refresh token details bound to a given JWT ID."""

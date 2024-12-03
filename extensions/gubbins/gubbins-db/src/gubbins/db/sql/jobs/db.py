@@ -17,12 +17,12 @@ class GubbinsJobDB(JobDB):
         """
         This is a new method that makes use of a new table.
         """
-        stmt = insert(GubbinsInfo).values(JobID=job_id, Info=info)
+        stmt = insert(GubbinsInfo).values(job_id=job_id, info=info)
         await self.conn.execute(stmt)
 
-    async def get_job_jdl(  # type: ignore[override]
-        self, job_id: int, original: bool = False, with_info=False
-    ) -> str | dict[str, str]:
+    async def get_job_jdls(  # type: ignore[override]
+        self, job_ids, original: bool = False, with_info=False
+    ) -> dict:
         """
         This method modifes the one in the parent class:
         * adds an extra argument
@@ -31,14 +31,21 @@ class GubbinsJobDB(JobDB):
         Note that this requires to disable mypy error with
         # type: ignore[override]
         """
-        jdl = await super().get_job_jdl(job_id, original=original)
+        jdl = await super().get_job_jdls(job_ids, original=original)
         if not with_info:
             return jdl
 
-        stmt = select(GubbinsInfo.Info).where(GubbinsInfo.JobID == job_id)
+        stmt = select(GubbinsInfo.job_id, GubbinsInfo.info).where(
+            GubbinsInfo.job_id.in_(job_ids)
+        )
 
-        info = (await self.conn.execute(stmt)).scalar_one()
-        return {"JDL": jdl, "Info": info}
+        rows = await self.conn.execute(stmt)
+        info = {row[0]: row[1] for row in rows.fetchall()}
+
+        result = {}
+        for job_id, jdl_details in jdl.items():
+            result[job_id] = {"JDL": jdl_details, "Info": info.get(job_id, "")}
+        return result
 
     async def set_job_attributes_bulk(self, job_data):
         """

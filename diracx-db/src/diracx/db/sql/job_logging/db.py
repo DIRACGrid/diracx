@@ -57,9 +57,9 @@ class JobLoggingDB(BaseSQLDB):
         as datetime.datetime object. If the time stamp is not provided the current
         UTC time is used.
         """
-        # First, fetch the maximum SeqNum for the given job_id
-        seqnum_stmt = select(func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)).where(
-            LoggingInfo.JobID == job_id
+        # First, fetch the maximum seq_num for the given job_id
+        seqnum_stmt = select(func.coalesce(func.max(LoggingInfo.seq_num) + 1, 1)).where(
+            LoggingInfo.job_id == job_id
         )
         seqnum = await self.conn.scalar(seqnum_stmt)
 
@@ -70,14 +70,14 @@ class JobLoggingDB(BaseSQLDB):
         )
 
         stmt = insert(LoggingInfo).values(
-            JobID=int(job_id),
-            SeqNum=seqnum,
-            Status=status,
-            MinorStatus=minor_status,
-            ApplicationStatus=application_status[:255],
-            StatusTime=date,
-            StatusTimeOrder=epoc,
-            Source=source[:32],
+            job_id=int(job_id),
+            seq_num=seqnum,
+            status=status,
+            minor_status=minor_status,
+            application_status=application_status[:255],
+            status_time=date,
+            status_time_order=epoc,
+            source=source[:32],
         )
         await self.conn.execute(stmt)
 
@@ -97,10 +97,10 @@ class JobLoggingDB(BaseSQLDB):
         # First, fetch the maximum SeqNums for the given job_ids
         seqnum_stmt = (
             select(
-                LoggingInfo.JobID, func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)
+                LoggingInfo.job_id, func.coalesce(func.max(LoggingInfo.seq_num) + 1, 1)
             )
-            .where(LoggingInfo.JobID.in_([record.job_id for record in records]))
-            .group_by(LoggingInfo.JobID)
+            .where(LoggingInfo.job_id.in_([record.job_id for record in records]))
+            .group_by(LoggingInfo.job_id)
         )
 
         seqnum = {jid: seqnum for jid, seqnum in (await self.conn.execute(seqnum_stmt))}
@@ -131,15 +131,15 @@ class JobLoggingDB(BaseSQLDB):
         # results later.
         stmt = (
             select(
-                LoggingInfo.JobID,
-                LoggingInfo.Status,
-                LoggingInfo.MinorStatus,
-                LoggingInfo.ApplicationStatus,
-                LoggingInfo.StatusTime,
-                LoggingInfo.Source,
+                LoggingInfo.job_id,
+                LoggingInfo.status,
+                LoggingInfo.minor_status,
+                LoggingInfo.application_status,
+                LoggingInfo.status_time,
+                LoggingInfo.source,
             )
-            .where(LoggingInfo.JobID.in_(job_ids))
-            .order_by(LoggingInfo.StatusTimeOrder, LoggingInfo.StatusTime)
+            .where(LoggingInfo.job_id.in_(job_ids))
+            .order_by(LoggingInfo.status_time_order, LoggingInfo.status_time)
         )
         rows = await self.conn.execute(stmt)
 
@@ -198,7 +198,7 @@ class JobLoggingDB(BaseSQLDB):
 
     async def delete_records(self, job_ids: list[int]):
         """Delete logging records for given jobs."""
-        stmt = delete(LoggingInfo).where(LoggingInfo.JobID.in_(job_ids))
+        stmt = delete(LoggingInfo).where(LoggingInfo.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def get_wms_time_stamps(self, job_id):
@@ -207,9 +207,9 @@ class JobLoggingDB(BaseSQLDB):
         """
         result = {}
         stmt = select(
-            LoggingInfo.Status,
-            LoggingInfo.StatusTimeOrder,
-        ).where(LoggingInfo.JobID == job_id)
+            LoggingInfo.status,
+            LoggingInfo.status_time_order,
+        ).where(LoggingInfo.job_id == job_id)
         rows = await self.conn.execute(stmt)
         if not rows.rowcount:
             raise JobNotFoundError(job_id) from None
@@ -225,10 +225,10 @@ class JobLoggingDB(BaseSQLDB):
         """
         result = defaultdict(dict)
         stmt = select(
-            LoggingInfo.JobID,
-            LoggingInfo.Status,
-            LoggingInfo.StatusTimeOrder,
-        ).where(LoggingInfo.JobID.in_(job_ids))
+            LoggingInfo.job_id,
+            LoggingInfo.status,
+            LoggingInfo.status_time_order,
+        ).where(LoggingInfo.job_id.in_(job_ids))
         rows = await self.conn.execute(stmt)
         if not rows.rowcount:
             return {}

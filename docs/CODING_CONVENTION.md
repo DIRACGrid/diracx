@@ -47,6 +47,28 @@ ALWAYS DO
 from __future__ import annotations
 ```
 
+# SQL Alchemy
+
+DO
+
+```python
+class Owners(Base):
+    __tablename__ = "Owners"
+    owner_id = Column("OwnerID", Integer, primary_key=True, autoincrement=True)
+    creation_time = DateNowColumn("CreationTime")
+    name = Column("Name", String(255))
+```
+
+DONT
+
+```python
+class Owners(Base):
+    __tablename__ = "Owners"
+    OwnerID = Column(Integer, primary_key=True, autoincrement=True)
+    CreationTime = DateNowColumn()
+    Name = Column(String(255))
+```
+
 
 # Structure
 

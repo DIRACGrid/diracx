@@ -41,14 +41,12 @@ async def test_gubbins_info(gubbins_db):
             ],
             gubbins_db,
         )
+        await gubbins_db.insert_gubbins_info(job_ids[0], "info")
 
-        job_id = job_ids[0]
+        result = await gubbins_db.get_job_jdls(job_ids, original=True)
+        assert result == {1: "[JDL]"}
 
-        await gubbins_db.insert_gubbins_info(job_id, "info")
-
-        result = await gubbins_db.get_job_jdl(job_id, original=True)
-        assert result == "[JDL]"
-
-        result = await gubbins_db.get_job_jdl(job_id, with_info=True)
-        assert "JDL" in result
-        assert result["Info"] == "info"
+        result = await gubbins_db.get_job_jdls(job_ids, with_info=True)
+        assert len(result) == 1
+        assert result[1].get("JDL")
+        assert result[1].get("Info") == "info"
