@@ -102,8 +102,8 @@ StdOutput = std.out;"""
 }
 
 
-@router.post("/")
-async def submit_bulk_jobs(
+@router.post("/jdl")
+async def submit_bulk_jdl_jobs(
     job_definitions: Annotated[list[str], Body(openapi_examples=EXAMPLE_JDLS)],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
