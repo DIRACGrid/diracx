@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import os
 import re
+import ssl
 import subprocess
 from datetime import datetime, timedelta, timezone
 from functools import partial
@@ -516,7 +517,11 @@ def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
         raise RuntimeError(f"Could not find {ca_path}, is the demo running?")
 
     # Ensure the demo is working
-    r = httpx.get(f"{diracx_url}/api/openapi.json", verify=ca_path)
+
+    r = httpx.get(
+        f"{diracx_url}/api/openapi.json",
+        verify=ssl.create_default_context(cafile=ca_path),
+    )
     r.raise_for_status()
     assert r.json()["info"]["title"] == "Dirac"
 
