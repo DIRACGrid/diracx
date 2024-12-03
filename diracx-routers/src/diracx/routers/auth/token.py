@@ -130,17 +130,17 @@ async def get_oidc_token_info_from_device_flow(
     # raise DiracHttpResponseError(status.HTTP_400_BAD_REQUEST, {"error": "slow_down"})
     # raise DiracHttpResponseError(status.HTTP_400_BAD_REQUEST, {"error": "expired_token"})
 
-    if info["client_id"] != client_id:
+    if info["ClientID"] != client_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad client_id",
         )
-    oidc_token_info = info["id_token"]
-    scope = info["scope"]
+    oidc_token_info = info["IDToken"]
+    scope = info["Scope"]
 
     # TODO: use HTTPException while still respecting the standard format
     # required by the RFC
-    if info["status"] != FlowStatus.READY:
+    if info["Status"] != FlowStatus.READY:
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
     return (oidc_token_info, scope)
@@ -159,12 +159,12 @@ async def get_oidc_token_info_from_authorization_flow(
     info = await auth_db.get_authorization_flow(
         code, settings.authorization_flow_expiration_seconds
     )
-    if redirect_uri != info["redirect_uri"]:
+    if redirect_uri != info["RedirectURI"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid redirect_uri",
         )
-    if client_id != info["client_id"]:
+    if client_id != info["ClientID"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad client_id",
@@ -184,18 +184,18 @@ async def get_oidc_token_info_from_authorization_flow(
             detail="Malformed code_verifier",
         ) from e
 
-    if code_challenge != info["code_challenge"]:
+    if code_challenge != info["CodeChallenge"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid code_challenge",
         )
 
-    oidc_token_info = info["id_token"]
-    scope = info["scope"]
+    oidc_token_info = info["IDToken"]
+    scope = info["Scope"]
 
     # TODO: use HTTPException while still respecting the standard format
     # required by the RFC
-    if info["status"] != FlowStatus.READY:
+    if info["Status"] != FlowStatus.READY:
         # That should never ever happen
         raise NotImplementedError(f"Unexpected flow status {info['status']!r}")
 
@@ -214,7 +214,7 @@ async def get_oidc_token_info_from_refresh_flow(
     # Get some useful user information from the refresh token entry in the DB
     refresh_token_attributes = await auth_db.get_refresh_token(jti)
 
-    sub = refresh_token_attributes["sub"]
+    sub = refresh_token_attributes["Sub"]
 
     # Check if the refresh token was obtained from the legacy_exchange endpoint
     # If it is the case, we bypass the refresh token rotation mechanism
@@ -224,7 +224,7 @@ async def get_oidc_token_info_from_refresh_flow(
         # This might indicate that a potential attacker try to impersonate someone
         # In such case, all the refresh tokens bound to a given user (subject) should be revoked
         # Forcing the user to reauthenticate interactively through an authorization/device flow (recommended practice)
-        if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
+        if refresh_token_attributes["Status"] == RefreshTokenStatus.REVOKED:
             # Revoke all the user tokens from the subject
             await auth_db.revoke_user_refresh_tokens(sub)
 
@@ -246,9 +246,9 @@ async def get_oidc_token_info_from_refresh_flow(
         # The sub attribute coming from the DB contains the VO name
         # We need to remove it as if it were coming from an ID token from an external IdP
         "sub": sub.split(":", 1)[1],
-        "preferred_username": refresh_token_attributes["preferred_username"],
+        "preferred_username": refresh_token_attributes["PreferredUsername"],
     }
-    scope = refresh_token_attributes["scope"]
+    scope = refresh_token_attributes["Scope"]
     return (oidc_token_info, scope, legacy_exchange)
 
 

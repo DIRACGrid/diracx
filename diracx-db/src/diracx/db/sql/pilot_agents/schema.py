@@ -16,22 +16,22 @@ PilotAgentsDBBase = declarative_base()
 class PilotAgents(PilotAgentsDBBase):
     __tablename__ = "PilotAgents"
 
-    PilotID = Column("PilotID", Integer, autoincrement=True, primary_key=True)
-    InitialJobID = Column("InitialJobID", Integer, default=0)
-    CurrentJobID = Column("CurrentJobID", Integer, default=0)
-    PilotJobReference = Column("PilotJobReference", String(255), default="Unknown")
-    PilotStamp = Column("PilotStamp", String(32), default="")
-    DestinationSite = Column("DestinationSite", String(128), default="NotAssigned")
-    Queue = Column("Queue", String(128), default="Unknown")
-    GridSite = Column("GridSite", String(128), default="Unknown")
-    VO = Column("VO", String(128))
-    GridType = Column("GridType", String(32), default="LCG")
-    BenchMark = Column("BenchMark", Double, default=0.0)
-    SubmissionTime = NullColumn("SubmissionTime", DateTime)
-    LastUpdateTime = NullColumn("LastUpdateTime", DateTime)
-    Status = Column("Status", String(32), default="Unknown")
-    StatusReason = Column("StatusReason", String(255), default="Unknown")
-    AccountingSent = Column("AccountingSent", EnumBackedBool(), default=False)
+    pilot_id = Column("PilotID", Integer, autoincrement=True, primary_key=True)
+    initial_job_id = Column("InitialJobID", Integer, default=0)
+    current_job_id = Column("CurrentJobID", Integer, default=0)
+    pilot_job_reference = Column("PilotJobReference", String(255), default="Unknown")
+    pilot_stamp = Column("PilotStamp", String(32), default="")
+    destination_site = Column("DestinationSite", String(128), default="NotAssigned")
+    queue = Column("Queue", String(128), default="Unknown")
+    grid_site = Column("GridSite", String(128), default="Unknown")
+    vo = Column("VO", String(128))
+    grid_type = Column("GridType", String(32), default="LCG")
+    benchmark = Column("BenchMark", Double, default=0.0)
+    submission_time = NullColumn("SubmissionTime", DateTime)
+    last_update_time = NullColumn("LastUpdateTime", DateTime)
+    status = Column("Status", String(32), default="Unknown")
+    status_reason = Column("StatusReason", String(255), default="Unknown")
+    accounting_sent = Column("AccountingSent", EnumBackedBool(), default=False)
 
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
@@ -43,9 +43,9 @@ class PilotAgents(PilotAgentsDBBase):
 class JobToPilotMapping(PilotAgentsDBBase):
     __tablename__ = "JobToPilotMapping"
 
-    PilotID = Column("PilotID", Integer, primary_key=True)
-    JobID = Column("JobID", Integer, primary_key=True)
-    StartTime = Column("StartTime", DateTime)
+    pilot_id = Column("PilotID", Integer, primary_key=True)
+    job_id = Column("JobID", Integer, primary_key=True)
+    start_time = Column("StartTime", DateTime)
 
     __table_args__ = (Index("JobID", "JobID"), Index("PilotID", "PilotID"))
 
@@ -53,6 +53,6 @@ class JobToPilotMapping(PilotAgentsDBBase):
 class PilotOutput(PilotAgentsDBBase):
     __tablename__ = "PilotOutput"
 
-    PilotID = Column("PilotID", Integer, primary_key=True)
-    StdOutput = Column("StdOutput", Text)
-    StdError = Column("StdError", Text)
+    pilot_id = Column("PilotID", Integer, primary_key=True)
+    std_output = Column("StdOutput", Text)
+    std_error = Column("StdError", Text)

@@ -13,7 +13,7 @@ class GubbinsInfo(JobDBBase):
 
     __tablename__ = "GubbinsJobs"
 
-    JobID = Column(
-        Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id = Column(
+        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    Info = Column(String(255), default="", primary_key=True)
+    info = Column("Info", String(255), default="", primary_key=True)

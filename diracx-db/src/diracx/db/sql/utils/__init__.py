@@ -133,8 +133,8 @@ NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
 DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=UTCNow())
 
 
-def EnumColumn(enum_type, **kwargs):  # noqa: N802
-    return Column(Enum(enum_type, native_enum=False, length=16), **kwargs)
+def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
+    return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
 class EnumBackedBool(types.TypeDecorator):
