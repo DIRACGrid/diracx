@@ -686,6 +686,5 @@ def entry_points_consistency() -> bool:
 def verify_entry_points(request):
     if not entry_points_consistency():
         raise RuntimeError(
-            "Project and installed entry-points are not consistent. "
-            f"You should run `pip install -e . ./{" ./".join(path for path in glob.glob("diracx-*"))}`"
+            "Project and installed entry-points are not consistent. You should run `pip install -e .`"
         )
