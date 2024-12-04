@@ -4,13 +4,17 @@ from __future__ import annotations
 # are the enabled_dependencies markers
 import asyncio
 import contextlib
+import glob
 import os
 import re
 import ssl
 import subprocess
+import tomllib
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from functools import partial
 from html.parser import HTMLParser
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -642,3 +646,46 @@ def do_device_flow_with_dex(url: str, ca_path: str) -> None:
 
     # This should have redirected to the DiracX page that shows the login is complete
     assert "Please close the window" in r.text
+
+
+def get_installed_entry_points():
+    """Retrieve the installed entry points from the environment."""
+    eps = entry_points()
+    diracx_eps = defaultdict(dict)
+    for ep in eps:
+        if "diracx" in ep.group:
+            diracx_eps[ep.group][ep.name] = ep.value
+    return dict(diracx_eps)
+
+
+def get_entry_points_from_toml(toml_file):
+    """Parse entry points from pyproject.toml."""
+    try:
+        with open(toml_file, "rb") as f:
+            pyproject = tomllib.load(f)
+        return pyproject.get("project", {}).get("entry-points", {})
+    except KeyError:
+        return {}
+
+
+DIRACX_TOMLS = ["pyproject.toml"] + glob.glob("diracx-*/pyproject.toml")
+
+
+def entry_points_consistency() -> bool:
+    """Compare installed entry points with current entry points."""
+    current_eps = {}
+    installed_eps = get_installed_entry_points()
+    for toml_file in DIRACX_TOMLS:
+        eps = get_entry_points_from_toml(f"{toml_file}")
+        for key, value in eps.items():
+            current_eps[key] = current_eps.get(key, {}) | value
+    return installed_eps == current_eps
+
+
+@pytest.fixture(scope="session", autouse=True)
+def verify_entry_points(request):
+    if not entry_points_consistency():
+        raise RuntimeError(
+            "Project and installed entry-points are not consistent. "
+            f"You should run `pip install -e . ./{" ./".join(path for path in glob.glob("diracx-*"))}`"
+        )
