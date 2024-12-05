@@ -7,6 +7,7 @@ class PilotLogsDB(BaseOSDB):
     fields = {
         "PilotStamp": {"type": "keyword"},
         "PilotID": {"type": "long"},
+        "SubmissionTime": {"type": "date"},
         "LineNumber": {"type": "long"},
         "Message": {"type": "text"},
         "VO": {"type": "keyword"},
