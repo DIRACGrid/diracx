@@ -39,7 +39,7 @@ class PilotLogsAccessPolicy(BaseAccessPolicy):
         pilot_db: PilotLogsDB | None = None,
         pilot_ids: list[int] | None = None,  # or pilot stamp list ?
     ):
-        print("user_info.properties:", user_info.properties)
+
         assert action, "action is a mandatory parameter"
         assert pilot_db, "pilot_db is a mandatory parameter"
 
