@@ -6,6 +6,7 @@ from typing_extensions import TypedDict
 from ..dependencies import Config, DevelopmentSettings
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthSettings
+from ..otel import async_tracer, set_trace_attribute
 
 router = DiracxRouter(require_auth=False, path_root="")
 
@@ -24,7 +25,7 @@ async def openid_configuration(
         scopes_supported += [f"group:{vo}" for vo in config.Registry[vo].Groups]
     scopes_supported += [f"property:{p}" for p in settings.available_properties]
 
-    return {
+    res = {
         "issuer": settings.token_issuer,
         "token_endpoint": str(request.url_for("token")),
         "userinfo_endpoint:": str(request.url_for("userinfo")),
@@ -43,6 +44,9 @@ async def openid_configuration(
         "code_challenge_methods_supported": ["S256"],
     }
 
+    set_trace_attribute("config", res)
+
+    return res
 
 class SupportInfo(TypedDict):
     message: str

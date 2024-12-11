@@ -23,6 +23,96 @@ from pydantic_settings import SettingsConfigDict
 
 from diracx.core.settings import ServiceSettingsBase
 
+from functools import wraps
+import inspect
+
+from collections import UserDict
+from timeit import default_timer as timer
+
+
+def async_tracer(name=None):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Obtain the module that contains the decorated function
+            package_name = get_module_name_from_func(func)
+            
+            if not name:
+                tace_name = func.__name__
+            
+            tracer = trace.get_tracer_provider().get_tracer(package_name)
+
+            # Create a span with name: diracx.diracx_xxx.(...).package.function
+            with tracer.start_as_current_span(f"{package_name}.{tace_name}"):
+                return await func(*args, **kwargs)
+        
+        return wrapper
+    return decorator
+
+def sync_tracer(name=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Obtain the module that contains the decorated function
+            module_name = get_module_name_from_func(func)
+
+            if not name:
+                tace_name = func.__name__
+            
+            tracer = trace.get_tracer_provider().get_tracer(module_name)
+
+            # Create a span with name: diracx.diracx_xxx.(...).package.function
+            with tracer.start_as_current_span(f"{module_name}.{tace_name}"):
+                return func(*args, **kwargs)
+
+        return wrapper
+    return decorator
+
+def set_trace_attribute(key, value, stringify=False):
+    span = trace.get_current_span()
+    if stringify:
+        span.set_attribute(f"diracx.{key}", str(value))
+    else:
+        _recursive_set_trace_attribute(span, f"diracx.{key}", value)
+
+
+def _recursive_set_trace_attribute(span, key, value):
+    if isinstance(value, list):
+        zeros = len(str(len(value)))
+        for idx, item in enumerate(value):
+            _recursive_set_trace_attribute(span, f"{key}[{str(idx).zfill(zeros)}]", item)
+    
+    elif isinstance(value, set) or isinstance(value, tuple):
+        zeros = len(str(len(value)))
+        for idx, item in enumerate(value):
+            _recursive_set_trace_attribute(span, f"{key}.item_{str(idx).zfill(zeros)}", item)
+
+    elif isinstance(value, dict) or isinstance(value, UserDict):
+        for k, v in value.items():
+            _recursive_set_trace_attribute(span, f"{key}.{k}", v)
+
+    else:
+        span.set_attribute(key, value)
+        
+
+def increase_counter(meter_name, counter_name, amount=1, is_updown=False):
+    meter = metrics.get_meter_provider().get_meter(meter_name)
+    
+    if is_updown:
+        metric = meter.create_up_down_counter(counter_name)
+    else:
+        metric = meter.create_counter(counter_name)
+
+    metric.add(amount)  
+
+def get_module_name_from_func(func):
+    from_module = inspect.getmodule(func)
+    
+    if not from_module:
+        return "diracx"
+
+    module_name = from_module.__name__
+    return module_name
 
 class OTELSettings(ServiceSettingsBase):
     """Settings for the Open Telemetry Configuration."""

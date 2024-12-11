@@ -13,6 +13,8 @@ from cachetools import TTLCache
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, status
 
+from ..otel import async_tracer, sync_tracer, set_trace_attribute
+
 from diracx.core.properties import (
     SecurityProperty,
     UnevaluatedProperty,
@@ -59,7 +61,7 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
 
 _server_metadata_cache: TTLCache = TTLCache(maxsize=1024, ttl=3600)
 
-
+@async_tracer()
 async def get_server_metadata(url: str):
     """Get the server metadata from the IAM."""
     server_metadata = _server_metadata_cache.get(url)
@@ -71,6 +73,8 @@ async def get_server_metadata(url: str):
                 raise NotImplementedError(res)
             server_metadata = res.json()
             _server_metadata_cache[url] = server_metadata
+    
+    set_trace_attribute("meta", server_metadata)
     return server_metadata
 
 
@@ -161,7 +165,7 @@ async def verify_dirac_refresh_token(
 
     return (token["jti"], float(token["exp"]), token["legacy_exchange"])
 
-
+@sync_tracer()
 def parse_and_validate_scope(
     scope: str, config: Config, available_properties: set[SecurityProperty]
 ) -> ScopeInfoDict:
@@ -224,6 +228,10 @@ def parse_and_validate_scope(
             f"{set(properties)-set(available_properties)} are not valid properties"
         )
 
+    set_trace_attribute("group", group)
+    set_trace_attribute("properties", set(sorted(properties)))
+    set_trace_attribute("vo", vo)
+
     return {
         "group": group,
         "properties": set(sorted(properties)),
@@ -231,6 +239,7 @@ def parse_and_validate_scope(
     }
 
 
+@async_tracer()
 async def initiate_authorization_flow_with_iam(
     config, vo: str, redirect_uri: str, state: dict[str, str], cipher_suite: Fernet
 ):
@@ -272,6 +281,12 @@ async def initiate_authorization_flow_with_iam(
         f"state={encrypted_state}",
     ]
     authorization_flow_url = f"{authorization_endpoint}?{'&'.join(urlParams)}"
+    
+    set_trace_attribute("endpoint", authorization_endpoint)
+    for param in urlParams:
+        k, v = param.split("=", maxsplit=1)
+        set_trace_attribute(k, v)
+
     return authorization_flow_url
 
 
