@@ -41,7 +41,10 @@ class PilotLogsAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
     ):
 
-        assert action, "action is a mandatory parameter"
+        if action is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, detail="Action is a mandatory argument"
+            )
 
         if GENERIC_PILOT in user_info.properties and action == ActionType.CREATE:
             return user_info
