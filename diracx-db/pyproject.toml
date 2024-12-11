@@ -17,7 +17,7 @@ dependencies = [
     "diracx-core",
     "fastapi",
     "opensearch-py[async]",
-    "pydantic >=2.4",
+    "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
 ]
 dynamic = ["version"]

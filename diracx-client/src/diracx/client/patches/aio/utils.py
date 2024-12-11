@@ -9,11 +9,12 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 from __future__ import annotations
 
 import abc
-import json
 from importlib.metadata import PackageNotFoundError, distribution
 from types import TracebackType
 from pathlib import Path
-from typing import Any, List, Optional, Self
+
+from typing import Any, List, Optional, cast
+
 from azure.core.credentials import AccessToken
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.pipeline import PipelineRequest
@@ -24,8 +25,6 @@ from diracx.core.preferences import get_diracx_preferences, DiracxPreferences
 from ..utils import (
     get_openid_configuration,
     get_token,
-    refresh_token,
-    is_refresh_token_valid,
 )
 
 __all__: List[str] = [
@@ -56,20 +55,12 @@ class DiracTokenCredential(AsyncTokenCredential):
         tenant_id: Optional[str] = None,
         **kwargs: Any,
     ) -> AccessToken:
-        """Refresh the access token using the refresh_token flow.
-        :param str scopes: The type of access needed.
-        :keyword str claims: Additional claims required in the token, such as those returned in a resource
-            provider's claims challenge following an authorization failure.
-        :keyword str tenant_id: Optional tenant to include in the token request.
-        :rtype: AccessToken
-        :return: An AccessToken instance containing the token string and its expiration time in Unix time.
-        """
-        return refresh_token(
+        return get_token(
             self.location,
+            kwargs.get("token"),
             self.token_endpoint,
             self.client_id,
-            kwargs["refresh_token"],
-            verify=self.verify,
+            self.verify,
         )
 
     async def close(self) -> None:
@@ -97,6 +88,9 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
     * It does not ensure that an access token is available.
     """
 
+    # Make mypy happy
+    _token: Optional[AccessToken] = None
+
     def __init__(
         self, credential: DiracTokenCredential, *scopes: str, **kwargs: Any
     ) -> None:
@@ -110,28 +104,19 @@ class DiracBearerTokenCredentialPolicy(AsyncBearerTokenCredentialPolicy):
         :type request: ~azure.core.pipeline.PipelineRequest
         :raises: :class:`~azure.core.exceptions.ServiceRequestError`
         """
-        self._token: AccessToken | None
-        self._credential: DiracTokenCredential
-        credentials: dict[str, Any]
-        try:
-            self._token = get_token(self._credential.location, self._token)
-        except RuntimeError:
-            # If we are here, it means the credentials path does not exist
+        # Make mypy happy
+        if not isinstance(self._credential, AsyncTokenCredential):
+            return
+
+        self._token = await self._credential.get_token("", token=self._token)
+        if not self._token.token:
+            # If we are here, it means the token is not available
             # we suppose it is not needed to perform the request
             return
 
-        if not self._token:
-            credentials = json.loads(self._credential.location.read_text())
-            refresh_token = credentials["refresh_token"]
-            if not is_refresh_token_valid(refresh_token):
-                # If we are here, it means the refresh token is not valid anymore
-                # we suppose it is not needed to perform the request
-                return
-            self._token = await self._credential.get_token(
-                "", refresh_token=refresh_token
-            )
-
-        request.http_request.headers["Authorization"] = f"Bearer {self._token.token}"
+        request.http_request.headers["Authorization"] = (
+            "Bearer " + cast(AccessToken, self._token).token
+        )
 
 
 class DiracClientMixin(metaclass=abc.ABCMeta):

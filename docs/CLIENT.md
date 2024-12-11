@@ -63,7 +63,7 @@ Operations are accessible via the `DiracClient`, which manages token refreshment
 from diracx.client.aio import DiracClient
 
 async with DiracClient() as client:
-    jobs = await client.jobs.submit_bulk_jobs([x.read() for x in jdl])
+    jobs = await client.jobs.submit_jobs([x.read() for x in jdl])
 ```
 
 ### Configuring the Generated Client

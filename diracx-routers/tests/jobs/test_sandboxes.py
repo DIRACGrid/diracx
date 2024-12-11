@@ -130,7 +130,7 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
 
     # Submit a job:
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
@@ -225,7 +225,7 @@ def test_malformed_request_to_get_job_sandbox(normal_user_client: TestClient):
     """Test that a malformed request to get a job sandbox returns an information to help user."""
     # Submit a job:
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
@@ -240,7 +240,7 @@ def test_get_empty_job_sandboxes(normal_user_client: TestClient):
     """Test that we can get the sandboxes of a job that has no sandboxes assigned."""
     # Submit a job:
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]

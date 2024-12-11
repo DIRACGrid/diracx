@@ -57,7 +57,7 @@ def valid_job_id(normal_user_client: TestClient):
 
     """
     job_definitions = [TEST_JDL]
-    r = normal_user_client.post("/api/jobs/", json=job_definitions)
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
     return r.json()[0]["JobID"]

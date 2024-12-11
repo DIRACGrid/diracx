@@ -110,7 +110,7 @@ class RegistryConfig(BaseModel):
 
 
 class DIRACConfig(BaseModel):
-    pass
+    NoSetup: bool = False
 
 
 class JobMonitoringConfig(BaseModel):

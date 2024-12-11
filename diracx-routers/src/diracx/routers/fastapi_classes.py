@@ -22,6 +22,10 @@ def _downgrade_openapi_schema(data):
                         data |= v[0]
             elif k == "const":
                 data.pop(k)
+            # https://github.com/fastapi/fastapi/discussions/12984
+            elif k == "propertyNames":
+                data.pop(k)
+
             _downgrade_openapi_schema(v)
     if isinstance(data, list):
         for v in data:

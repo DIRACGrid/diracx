@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import re
@@ -37,10 +38,48 @@ def serialize_credentials(token_response: TokenResponse) -> str:
     return json.dumps(credential_data)
 
 
+def read_credentials(location: Path) -> TokenResponse:
+    """Read credentials from a file."""
+    from diracx.core.preferences import get_diracx_preferences
+
+    credentials_path = location or get_diracx_preferences().credentials_path
+    try:
+        with open(credentials_path, "r") as f:
+            # Lock the file to prevent other processes from writing to it at the same time
+            fcntl.flock(f, fcntl.LOCK_SH)
+            # Read the credentials from the file
+            try:
+                credentials = json.load(f)
+            finally:
+                # Release the lock
+                fcntl.flock(f, fcntl.LOCK_UN)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"Error reading credentials: {e}") from e
+
+    return TokenResponse(
+        access_token=credentials["access_token"],
+        expires_in=credentials["expires_on"]
+        - int(datetime.now(tz=timezone.utc).timestamp()),
+        token_type="Bearer",  # noqa: S106
+        refresh_token=credentials.get("refresh_token"),
+    )
+
+
 def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
     """Write credentials received in dirax_preferences.credentials_path."""
     from diracx.core.preferences import get_diracx_preferences
 
     credentials_path = location or get_diracx_preferences().credentials_path
     credentials_path.parent.mkdir(parents=True, exist_ok=True)
-    credentials_path.write_text(serialize_credentials(token_response))
+
+    with open(credentials_path, "w") as f:
+        # Lock the file to prevent other processes from writing to it at the same time
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            # Write the credentials to the file
+            f.write(serialize_credentials(token_response))
+            f.flush()
+            os.fsync(f.fileno())
+        finally:
+            # Release the lock
+            fcntl.flock(f, fcntl.LOCK_UN)

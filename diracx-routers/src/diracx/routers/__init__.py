@@ -54,7 +54,7 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 logger = logging.getLogger(__name__)
 
 
-DIRACX_MIN_CLIENT_VERSION = "0.0.1"
+DIRACX_MIN_CLIENT_VERSION = "0.0.1a1"
 
 ###########################################3
 
@@ -464,13 +464,29 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         client_version = request.headers.get("DiracX-Client-Version")
-        if client_version and self.is_version_too_old(client_version):
-            # When comes from Swagger or Web, there is no client version header.
-            # This is not managed here.
-            raise HTTPException(
-                status_code=HTTPStatus.UPGRADE_REQUIRED,
-                detail=f"Client version ({client_version}) not recent enough (>= {self.min_client_version}). Upgrade.",
+
+        try:
+            if client_version and self.is_version_too_old(client_version):
+                # When comes from Swagger or Web, there is no client version header.
+                # This is not managed here.
+
+                raise HTTPException(
+                    status_code=HTTPStatus.UPGRADE_REQUIRED,
+                    detail=f"Client version ({client_version})"
+                    f"not recent enough (>= {self.min_client_version})."
+                    "Upgrade.",
+                )
+        except HTTPException as exc:
+            # Return a JSONResponse because the HTTPException
+            # is not handled nicely in the middleware
+            logger.error("Error checking client version %s", client_version)
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
             )
+        # If the version is not given
+        except Exception:  # noqa: S110
+            pass
 
         response = await call_next(request)
         return response

@@ -102,8 +102,8 @@ StdOutput = std.out;"""
 }
 
 
-@router.post("/")
-async def submit_bulk_jobs(
+@router.post("/jdl")
+async def submit_bulk_jdl_jobs(
     job_definitions: Annotated[list[str], Body(openapi_examples=EXAMPLE_JDLS)],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
@@ -773,10 +773,27 @@ async def get_single_job_status(
     return {job_id: status}
 
 
+EXAMPLE_SINGLE_JOB_STATUS = {
+    "Single Job Status": {
+        "summary": "Set single job status",
+        "description": "Send status for the job",
+        "value": {
+            "status": {
+                "2024-11-22T16:02:25.541624+00:00": {"Status": "Running"},
+                "2024-11-22T17:02:25.541624+00:00": {"Status": "Killed"},
+            }
+        },
+    },
+}
+
+
 @router.patch("/{job_id}/status")
 async def set_single_job_status(
     job_id: int,
-    status: Annotated[dict[datetime, JobStatusUpdate], Body()],
+    status: Annotated[
+        dict[datetime, JobStatusUpdate],
+        Body(openapi_examples=EXAMPLE_SINGLE_JOB_STATUS),
+    ],
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     check_permissions: CheckWMSPolicyCallable,

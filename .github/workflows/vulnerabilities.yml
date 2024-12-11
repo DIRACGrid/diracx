@@ -1,0 +1,92 @@
+name: Scan Vulnerabilities
+
+on:
+  schedule:
+    - cron: '30 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-docker-images:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
+
+      - name: Run Trivy (client:dev)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: "ghcr.io/diracgrid/diracx/client:dev"
+          format: "sarif"
+          output: "client-dev-vulnerability-report.sarif"
+
+      - name: Upload SARIF to GitHub Security (client:dev)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "client-dev-vulnerability-report.sarif"
+          category: "client-dev"
+
+      - name: Run Trivy (services:dev)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: "ghcr.io/diracgrid/diracx/services:dev"
+          format: "sarif"
+          output: "services-dev-vulnerability-report.sarif"
+          skip-setup-trivy: true
+
+      - name: Upload SARIF to GitHub Security (services:dev)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "services-dev-vulnerability-report.sarif"
+          category: "services-dev"
+
+      - name: Get Latest Release Tag
+        id: get-latest-tag
+        run: |
+          tag=$(git rev-list --tags --max-count=1 --date-order)
+          if [ -z "$tag" ]; then
+            echo "latest_tag=" >> $GITHUB_OUTPUT
+          else
+            latest_tag=$(git describe --tags "$tag")
+            echo "latest_tag=${latest_tag}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Trivy (client:release)
+        if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: "ghcr.io/diracgrid/diracx/client:${{ steps.get-latest-tag.outputs.latest_tag }}"
+          format: "sarif"
+          output: "client-rel-vulnerability-report.sarif"
+          skip-setup-trivy: true
+
+      - name: Upload SARIF to GitHub Security (client:rel)
+        if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "client-rel-vulnerability-report.sarif"
+          category: "client-rel"
+
+      - name: Run Trivy (services:release)
+        if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: "ghcr.io/diracgrid/diracx/services:${{ steps.get-latest-tag.outputs.latest_tag }}"
+          format: "sarif"
+          output: "services-rel-vulnerability-report.sarif"
+          skip-setup-trivy: true
+
+      - name: Upload SARIF to GitHub Security (services:rel)
+        if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "services-rel-vulnerability-report.sarif"
+          category: "services-rel"

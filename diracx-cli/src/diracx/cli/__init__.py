@@ -10,7 +10,7 @@ from diracx.client.aio import DiracClient
 from diracx.client.models import DeviceFlowErrorResponse
 from diracx.core.extensions import select_from_extension
 from diracx.core.preferences import get_diracx_preferences
-from diracx.core.utils import write_credentials
+from diracx.core.utils import read_credentials, write_credentials
 
 from .utils import AsyncTyper
 
@@ -116,11 +116,11 @@ async def logout():
     async with DiracClient() as api:
         credentials_path = get_diracx_preferences().credentials_path
         if credentials_path.exists():
-            credentials = json.loads(credentials_path.read_text())
+            credentials = read_credentials(credentials_path)
 
             # Revoke refresh token
             try:
-                await api.auth.revoke_refresh_token(credentials["refresh_token"])
+                await api.auth.revoke_refresh_token(credentials.refresh_token)
             except Exception as e:
                 print(f"Error revoking the refresh token {e!r}")
                 pass
