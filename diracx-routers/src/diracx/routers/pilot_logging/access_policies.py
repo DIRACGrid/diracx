@@ -12,7 +12,6 @@ from diracx.core.properties import (
     PILOT,
     SERVICE_ADMINISTRATOR,
 )
-from diracx.db.os import PilotLogsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 
 from ..utils.users import AuthorizedUserInfo
@@ -29,7 +28,7 @@ class ActionType(StrEnum):
 
 class PilotLogsAccessPolicy(BaseAccessPolicy):
     """Rules:
-    Only PILOT, GENERIC_PILOT, SERVICE_ADMINISTRATOR and OPERATOR can create log records.
+    Only PILOT, GENERIC_PILOT, SERVICE_ADMINISTRATOR and OPERATOR can process log records.
     Policies for other actions to be determined.
     """
 
@@ -40,12 +39,9 @@ class PilotLogsAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
-        pilot_db: PilotLogsDB | None = None,
-        pilot_ids: list[int] | None = None,  # or pilot stamp list ?
     ):
 
         assert action, "action is a mandatory parameter"
-        assert pilot_db, "pilot_db is a mandatory parameter"
 
         if GENERIC_PILOT in user_info.properties and action == ActionType.CREATE:
             return user_info
