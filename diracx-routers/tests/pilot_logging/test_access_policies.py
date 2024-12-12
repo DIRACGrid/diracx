@@ -37,6 +37,18 @@ from diracx.routers.pilot_logging.access_policies import (
         (NORMAL_USER, ActionType.CREATE, pytest.raises(HTTPException, match="403")),
         (NORMAL_USER, ActionType.QUERY, nullcontext()),
         (NORMAL_USER, ActionType.DELETE, pytest.raises(HTTPException, match="403")),
+        (
+            "malicious_user",
+            ActionType.CREATE,
+            pytest.raises(HTTPException, match="403"),
+        ),
+        ("malicious_user", ActionType.QUERY, pytest.raises(HTTPException, match="403")),
+        (
+            "malicious_user",
+            ActionType.DELETE,
+            pytest.raises(HTTPException, match="403"),
+        ),
+        ("any_user", None, pytest.raises(HTTPException, match="400")),
     ],
 )
 async def test_access_policies(user, action, expectation):
