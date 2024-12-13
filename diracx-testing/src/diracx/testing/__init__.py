@@ -4,7 +4,6 @@ from __future__ import annotations
 # are the enabled_dependencies markers
 import asyncio
 import contextlib
-import glob
 import os
 import re
 import ssl
@@ -650,11 +649,12 @@ def do_device_flow_with_dex(url: str, ca_path: str) -> None:
 
 def get_installed_entry_points():
     """Retrieve the installed entry points from the environment."""
-    eps = entry_points()
+    entry_pts = entry_points()
     diracx_eps = defaultdict(dict)
-    for ep in eps:
-        if "diracx" in ep.group:
-            diracx_eps[ep.group][ep.name] = ep.value
+    for group in entry_pts.groups:
+        if "diracx" in group:
+            for ep in entry_pts.select(group=group):
+                diracx_eps[group][ep.name] = ep.value
     return dict(diracx_eps)
 
 
@@ -668,17 +668,26 @@ def get_entry_points_from_toml(toml_file):
         return {}
 
 
-DIRACX_TOMLS = ["pyproject.toml"] + glob.glob("diracx-*/pyproject.toml")
+repo_base = Path(__file__).parent.parent.parent.parent.parent
+DIRACX_TOMLS = ["pyproject.toml"] + [
+    str(path) for path in repo_base.glob("diracx-*/pyproject.toml")
+]
 
 
-def entry_points_consistency() -> bool:
-    """Compare installed entry points with current entry points."""
+def get_current_entry_points() -> bool:
+    """Create current entry points dict for comparison."""
     current_eps = {}
-    installed_eps = get_installed_entry_points()
     for toml_file in DIRACX_TOMLS:
-        eps = get_entry_points_from_toml(f"{toml_file}")
-        for key, value in eps.items():
+        entry_pts = get_entry_points_from_toml(f"{toml_file}")
+        for key, value in entry_pts.items():
             current_eps[key] = current_eps.get(key, {}) | value
+    return current_eps
+
+
+def entry_points_consistency():
+    """Compare installed and current entry_points."""
+    installed_eps = get_installed_entry_points()
+    current_eps = get_current_entry_points()
     return installed_eps == current_eps
 
 
@@ -686,5 +695,6 @@ def entry_points_consistency() -> bool:
 def verify_entry_points(request):
     if not entry_points_consistency():
         raise RuntimeError(
-            "Project and installed entry-points are not consistent. You should run `pip install -e .`"
+            "Project and installed entry-points are not consistent. "
+            "You should run `pip install -r requirements-dev.txt`"
         )
