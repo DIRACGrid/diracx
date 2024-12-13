@@ -15,10 +15,8 @@ from diracx.core.models import (
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql.utils.job_status import (
     remove_jobs,
-    reschedule_job,
-    reschedule_jobs,
-    set_job_status,
-    set_job_statuses,
+    reschedule_jobs_bulk,
+    set_job_status_bulk,
 )
 
 from ..auth import has_properties
@@ -96,9 +94,8 @@ async def set_single_job_status(
             )
 
     try:
-        latest_status = await set_job_status(
-            job_id,
-            status,
+        latest_status = await set_job_status_bulk(
+            {job_id: status},
             config,
             job_db,
             job_logging_db,
@@ -134,7 +131,7 @@ async def set_job_status_bulk(
                     detail=f"Timestamp {dt} is not timezone aware for job {job_id}",
                 )
     try:
-        return await set_job_statuses(
+        return await set_job_status_bulk(
             job_update,
             config,
             job_db,
@@ -170,7 +167,7 @@ async def reschedule_bulk_jobs(
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
 
     try:
-        resched_jobs = await reschedule_jobs(
+        resched_jobs = await reschedule_jobs_bulk(
             job_ids,
             config,
             job_db,
@@ -213,7 +210,7 @@ async def reschedule_single_job(
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     try:
-        result = await reschedule_job(
+        result = await reschedule_job_bulk(
             job_id,
             config,
             job_db,
