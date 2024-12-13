@@ -232,7 +232,7 @@ def find_time_resolution(value):
     if isinstance(value, datetime):
         return None, value
     if match := re.fullmatch(
-        r"\d{4}(-\d{2}(-\d{2}(([ T])\d{2}(:\d{2}(:\d{2}(\.\d{6}Z?)?)?)?)?)?)?", value
+        r"\d{4}(-\d{2}(-\d{2}(([ T])\d{2}(:\d{2}(:\d{2}(\.\d{1,6}Z?)?)?)?)?)?)?", value
     ):
         if match.group(6):
             precision, pattern = "SECOND", r"\1-\2-\3 \4:\5:\6"
@@ -249,7 +249,7 @@ def find_time_resolution(value):
         return (
             precision,
             re.sub(
-                r"^(\d{4})-?(\d{2})?-?(\d{2})?[ T]?(\d{2})?:?(\d{2})?:?(\d{2})?\.?(\d{6})?Z?$",
+                r"^(\d{4})-?(\d{2})?-?(\d{2})?[ T]?(\d{2})?:?(\d{2})?:?(\d{2})?\.?(\d{1,6})?Z?$",
                 pattern,
                 value,
             ),

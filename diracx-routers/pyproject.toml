@@ -35,7 +35,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = ["diracx-testing", "moto[server]", "pytest-httpx"]
+testing = ["diracx-testing", "moto[server]", "pytest-httpx", "freezegun",]
 types = [
     "boto3-stubs",
     "types-aiobotocore[essential]",

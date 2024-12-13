@@ -47,7 +47,8 @@ class date_trunc(expression.FunctionElement):  # noqa: N801
     """
 
     type = DateTime()
-    inherit_cache = True
+    # Cache does not work as intended with time resolution values, so we disable it
+    inherit_cache = False
 
     def __init__(self, *args, time_resolution, **kwargs) -> None:
         super().__init__(*args, **kwargs)
