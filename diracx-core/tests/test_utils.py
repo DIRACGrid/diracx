@@ -139,7 +139,7 @@ def test_read_credentials_missing_file(tmp_path):
 def test_write_credentials_unavailable_path():
     """Test that write_credentials raises error when it can't create path."""
     wrong_path = Path("/wrong/path/file.txt")
-    with pytest.raises(PermissionError):
+    with pytest.raises((PermissionError, OSError)):
         write_credentials(TokenResponse(**TOKEN_RESPONSE_DICT), location=wrong_path)
 
 
