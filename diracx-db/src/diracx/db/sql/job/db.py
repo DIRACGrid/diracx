@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -46,6 +47,29 @@ def _get_columns(table, parameters):
     return columns
 
 
+async def get_inserted_job_ids(conn, table, rows):
+    # TODO: We are assuming contiguous inserts for MySQL. Is that the correct thing? Should we be stricter
+    # about enforcing that with an explicit transaction handling?
+    # Retrieve the first inserted ID
+
+    if conn.engine.name == "mysql":
+        # Bulk insert for MySQL
+        await conn.execute(table.insert(), rows)
+        start_id = await conn.scalar(select(func.LAST_INSERT_ID()))
+        return list(range(start_id, start_id + len(rows)))
+    elif conn.engine.name == "sqlite":
+        # Bulk insert for SQLite
+        if conn.engine.dialect.server_version_info >= (3, 35, 0):
+            results = await conn.execute(table.insert().returning(table.c.JobID), rows)
+            return [row[0] for row in results]
+        else:
+            await conn.execute(table.insert(), rows)
+            start_id = await conn.scalar("SELECT last_insert_rowid()")
+            return list(range(start_id, start_id + len(rows)))
+    else:
+        raise NotImplementedError("Unsupported database backend")
+
+
 class JobDB(BaseSQLDB):
     metadata = JobDBBase.metadata
 
@@ -80,6 +104,7 @@ class JobDB(BaseSQLDB):
     ) -> tuple[int, list[dict[Any, Any]]]:
         # Find which columns to select
         columns = _get_columns(Jobs.__table__, parameters)
+
         stmt = select(*columns)
 
         stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
@@ -177,10 +202,11 @@ class JobDB(BaseSQLDB):
     async def setJobJDLsBulk(self, jdls):
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import compressJDL
 
-        # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-queryguide-bulk-update
         await self.conn.execute(
-            update(Jobs),
-            [{"JobID": jid, "JDL": compressJDL(jdl)} for jid, jdl in jdls.items()],
+            JobJDLs.__table__.update().where(
+                JobJDLs.__table__.c.JobID == bindparam("b_JobID")
+            ),
+            [{"b_JobID": jid, "JDL": compressJDL(jdl)} for jid, jdl in jdls.items()],
         )
 
     async def setJobAttributesBulk(self, jobData):
@@ -192,8 +218,10 @@ class JobDB(BaseSQLDB):
                 )
 
         await self.conn.execute(
-            update(Jobs),
-            [{"JobID": job_id, **attrs} for job_id, attrs in jobData.items()],
+            Jobs.__table__.update().where(
+                Jobs.__table__.c.JobID == bindparam("b_JobID")
+            ),
+            [{"b_JobID": job_id, **attrs} for job_id, attrs in jobData.items()],
         )
 
     async def getJobJDL(self, job_id: int, original: bool = False) -> str:
@@ -245,7 +273,7 @@ class JobDB(BaseSQLDB):
 
         # generate the jobIDs first
         for job in jobs:
-            original_jdl = job.jdl
+            original_jdl = deepcopy(job.jdl)
             jobManifest = returnValueOrRaise(
                 checkAndAddOwner(original_jdl, job.owner, job.owner_group)
             )
@@ -256,8 +284,9 @@ class JobDB(BaseSQLDB):
 
             original_jdls.append((original_jdl, jobManifest))
 
-        results = await self.conn.execute(
-            insert(JobJDLs),
+        job_ids = await get_inserted_job_ids(
+            self.conn,
+            JobJDLs.__table__,
             [
                 {
                     "JDL": "",
@@ -267,11 +296,8 @@ class JobDB(BaseSQLDB):
                 for original_jdl, _ in original_jdls
             ],
         )
-        job_ids = [
-            result.lastrowid for result in results
-        ]  # FIXME is SCOPE_IDENTITY() used?
 
-        for job_id, job, (original_jdl, jobManifest) in zip(
+        for job_id, job, (original_jdl, jobManifest_) in zip(
             job_ids, jobs, original_jdls
         ):
             job_attrs = {
@@ -283,16 +309,17 @@ class JobDB(BaseSQLDB):
                 "JobID": job_id,
             }
 
-            jobManifest.setOption("JobID", job_id)
+            jobManifest_.setOption("JobID", job_id)
 
             # 2.- Check JDL and Prepare DIRAC JDL
-            jobJDL = jobManifest.dumpAsJDL()
+            jobJDL = jobManifest_.dumpAsJDL()
 
             # Replace the JobID placeholder if any
             if jobJDL.find("%j") != -1:
                 jobJDL = jobJDL.replace("%j", str(job_id))
 
             class_ad_job = ClassAd(jobJDL)
+
             class_ad_req = ClassAd("[]")
             if not class_ad_job.isOK():
                 # Rollback the entire transaction
@@ -313,7 +340,6 @@ class JobDB(BaseSQLDB):
                 job_attrs,
                 job.vo,
             )
-
             jobJDL = createJDLWithInitialStatus(
                 class_ad_job,
                 class_ad_req,
@@ -323,11 +349,11 @@ class JobDB(BaseSQLDB):
                 job.initial_minor_status,
                 modern=True,
             )
-
+            # assert "JobType" in job_attrs, job_attrs
             jobs_to_insert.append(job_attrs)
             jdls_to_update.append(
                 {
-                    "JobID": job_id,
+                    "b_JobID": job_id,
                     "JDL": compressJDL(jobJDL),
                 }
             )
@@ -338,19 +364,26 @@ class JobDB(BaseSQLDB):
                     {"JobID": job_id, "LFN": lfn} for lfn in inputData if lfn
                 ]
         await self.conn.execute(
-            update(JobJDLs),
+            JobJDLs.__table__.update().where(
+                JobJDLs.__table__.c.JobID == bindparam("b_JobID")
+            ),
             jdls_to_update,
         )
 
+        plen = len(jobs_to_insert[0].keys())
+        for item in jobs_to_insert:
+            assert plen == len(item.keys()), f"{plen} is not == {len(item.keys())}"
+
         await self.conn.execute(
-            insert(Jobs),
+            Jobs.__table__.insert(),
             jobs_to_insert,
         )
 
-        await self.conn.execute(
-            insert(InputData),
-            inputdata_to_insert,
-        )
+        if inputdata_to_insert:
+            await self.conn.execute(
+                InputData.__table__.insert(),
+                inputdata_to_insert,
+            )
 
         return job_ids
 
@@ -363,7 +396,7 @@ class JobDB(BaseSQLDB):
         initial_minor_status,
         vo,
     ):
-        return self.insert_bulk(
+        submitted_job_ids = await self.insert_bulk(
             [
                 JobSubmissionSpec(
                     jdl=jdl,
@@ -375,6 +408,8 @@ class JobDB(BaseSQLDB):
                 )
             ]
         )
+
+        return submitted_job_ids[0]
 
     async def get_job_status(self, job_id: int) -> LimitedJobStatusReturn:
         try:

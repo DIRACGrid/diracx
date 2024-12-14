@@ -320,7 +320,7 @@ def _create_xml_node(tag, prefix=None, ns=None):
     return ET.Element(tag)
 
 
-class Model(object):
+class Model:
     """Mixin for all client request body/response body models to support
     serialization and deserialization.
     """
@@ -601,7 +601,7 @@ def _decode_attribute_map_key(key):
     return key.replace("\\.", ".")
 
 
-class Serializer(object):  # pylint: disable=too-many-public-methods
+class Serializer:  # pylint: disable=too-many-public-methods
     """Request object model serializer."""
 
     basic_types = {str: "str", int: "int", bool: "bool", float: "float"}
@@ -1536,7 +1536,7 @@ def xml_key_extractor(
     return children[0]
 
 
-class Deserializer(object):
+class Deserializer:
     """Response object model deserializer.
 
     :param dict classes: Class type dictionary for deserializing complex types.

@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, HTTPException, Query, Response
+from fastapi import Body, Depends, Response
 from pydantic import BaseModel
 
-from diracx.core.exceptions import JobNotFound
 from diracx.core.models import (
-    JobStatusReturn,
-    LimitedJobStatusReturn,
     ScalarSearchOperator,
     SearchSpec,
     SortSpec,
@@ -22,7 +18,6 @@ from ..auth import has_properties
 from ..dependencies import (
     Config,
     JobDB,
-    JobLoggingDB,
     JobParametersDB,
 )
 from ..fastapi_classes import DiracxRouter
@@ -228,80 +223,3 @@ async def summary(
             }
         )
     return await job_db.summary(body.grouping, body.search)
-
-
-# TODO: To remove?
-@router.get("/status/history")
-async def get_job_status_history_bulk(
-    job_ids: Annotated[list[int], Query()],
-    job_logging_db: JobLoggingDB,
-    job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, list[JobStatusReturn]]:
-    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
-    result = await asyncio.gather(
-        *(job_logging_db.get_records(job_id) for job_id in job_ids)
-    )
-    return {job_id: status for job_id, status in zip(job_ids, result)}
-
-
-# TODO: To remove?
-@router.get("/status")
-async def get_job_status_bulk(
-    job_ids: Annotated[list[int], Query()],
-    job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, LimitedJobStatusReturn]:
-    print("GET /api/jobs/status - we are here in get_job_status_bulk!!!")
-    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=job_ids)
-    try:
-        result = await asyncio.gather(
-            *(job_db.get_job_status(job_id) for job_id in job_ids)
-        )
-        return {job_id: status for job_id, status in zip(job_ids, result)}
-    except JobNotFound as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
-
-
-@router.get("/{job_id}")
-async def get_single_job(
-    job_id: int,
-    job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable,
-):
-    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
-    return f"This job {job_id}"
-
-
-# TODO: To remove?
-@router.get("/{job_id}/status")
-async def get_single_job_status(
-    job_id: int,
-    job_db: JobDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, LimitedJobStatusReturn]:
-    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
-    try:
-        status = await job_db.get_job_status(job_id)
-    except JobNotFound as e:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail=f"Job {job_id} not found"
-        ) from e
-    return {job_id: status}
-
-
-@router.get("/{job_id}/status/history")
-async def get_single_job_status_history(
-    job_id: int,
-    job_db: JobDB,
-    job_logging_db: JobLoggingDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> dict[int, list[JobStatusReturn]]:
-    await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
-    try:
-        status = await job_logging_db.get_records(job_id)
-    except JobNotFound as e:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Job not found"
-        ) from e
-    return {job_id: status}

@@ -96,13 +96,19 @@ class JobStatusReturn(LimitedJobStatusReturn):
 
 
 class SetJobStatusReturn(BaseModel):
-    Status: JobStatus | None = None
-    MinorStatus: str | None = None
-    ApplicationStatus: str | None = None
-    HeartBeatTime: datetime | None = None
-    StartExecTime: datetime | None = None
-    EndExecTime: datetime | None = None
-    LastUpdateTime: datetime | None = None
+    class SetJobStatusReturnSuccess(BaseModel):
+        """Successful new status change."""
+
+        Status: JobStatus | None = None
+        MinorStatus: str | None = None
+        ApplicationStatus: str | None = None
+        HeartBeatTime: datetime | None = None
+        StartExecTime: datetime | None = None
+        EndExecTime: datetime | None = None
+        LastUpdateTime: datetime | None = None
+
+    success: dict[int, SetJobStatusReturnSuccess]
+    failed: dict[int, dict[str, str]]
 
 
 class UserInfo(BaseModel):

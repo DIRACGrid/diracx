@@ -95,10 +95,16 @@ class JobLoggingDB(BaseSQLDB):
             )
 
         # First, fetch the maximum SeqNums for the given job_ids
-        seqnum_stmt = select(
-            LoggingInfo.JobID, func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)
-        ).where(LoggingInfo.JobID.in_([record.job_id for record in records]))
+        seqnum_stmt = (
+            select(
+                LoggingInfo.JobID, func.coalesce(func.max(LoggingInfo.SeqNum) + 1, 1)
+            )
+            .where(LoggingInfo.JobID.in_([record.job_id for record in records]))
+            .group_by(LoggingInfo.JobID)
+        )
+
         seqnum = {jid: seqnum for jid, seqnum in (await self.conn.execute(seqnum_stmt))}
+        # IF a seqnum is not found, then assume it does not exist and the first sequence number is 1.
 
         # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-bulk-insert-statements
         await self.conn.execute(
@@ -106,7 +112,7 @@ class JobLoggingDB(BaseSQLDB):
             [
                 {
                     "JobID": record.job_id,
-                    "SeqNum": seqnum[record.job_id],
+                    "SeqNum": seqnum.get(record.job_id, 1),
                     "Status": record.status,
                     "MinorStatus": record.minor_status,
                     "ApplicationStatus": record.application_status[:255],

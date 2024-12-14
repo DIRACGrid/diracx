@@ -51,6 +51,7 @@ async def reschedule_jobs_bulk(
             "RescheduleCounter",
             "Owner",
             "OwnerGroup",
+            "JobID",
         ],
         search=[
             VectorSearchSpec(
@@ -125,7 +126,6 @@ async def reschedule_jobs_bulk(
         class_ad_job.insertAttributeInt("JobID", job_id)
         return class_ad_job
 
-    # DATABASE OPERATION (BULKED)
     job_jdls = {
         jobid: parse_jdl(jobid, jdl)
         for jobid, jdl in (
@@ -137,7 +137,6 @@ async def reschedule_jobs_bulk(
         class_ad_job = job_jdls[job_id]
         class_ad_req = ClassAd("[]")
         try:
-            # NOT A DATABASE OPERATION
             await job_db.checkAndPrepareJob(
                 job_id,
                 class_ad_job,
@@ -191,32 +190,38 @@ async def reschedule_jobs_bulk(
         # set new attributes
         attribute_changes[job_id].update(additional_attrs)
 
-    # BULK STATUS UPDATE
-    # DATABASE OPERATION
-    set_job_status_result = await set_job_statuses(
-        status_changes,
-        config,
-        job_db,
-        job_logging_db,
-        task_queue_db,
-        background_task,
-        additional_attributes=attribute_changes,
-    )
+    if surviving_job_ids:
+        # BULK STATUS UPDATE
+        # DATABASE OPERATION
+        set_job_status_result = await set_job_status_bulk(
+            status_changes,
+            config,
+            job_db,
+            job_logging_db,
+            task_queue_db,
+            background_task,
+            additional_attributes=attribute_changes,
+        )
 
-    # BULK JDL UPDATE
-    # DATABASE OPERATION
-    # TODO: Update JDL (Should we be doing this here?)
-    await job_db.setJobJDLsBulk(jdl_changes)
+        # BULK JDL UPDATE
+        # DATABASE OPERATION
+        await job_db.setJobJDLsBulk(jdl_changes)
+
+        return {
+            "failed": failed,
+            "success": {
+                job_id: {
+                    "InputData": job_jdls[job_id],
+                    **attribute_changes[job_id],
+                    **set_status_result.model_dump(),
+                }
+                for job_id, set_status_result in set_job_status_result.success.items()
+            },
+        }
 
     return {
+        "success": [],
         "failed": failed,
-        "success": {
-            job_id: {
-                "InputData": job_jdls[job_id],
-                **attribute_changes[job_id],
-                **set_job_status_result[job_id],
-            }
-        },
     }
 
 
@@ -245,40 +250,48 @@ async def set_job_status_bulk(
         getStartAndEndTime,
     )
 
-    failed = {}
+    failed: dict[int, Any] = {}
     deletable_killable_jobs = set()
     job_attribute_updates: dict[int, dict[str, str]] = {}
     job_logging_updates: list[JobLoggingRecord] = []
-    status_dicts: dict[int, dict[str, str]] = defaultdict(dict)
+    status_dicts: dict[int, dict[datetime, dict[str, str]]] = defaultdict(dict)
 
     # transform JobStateUpdate objects into dicts
-    for job_id, status in status_changes.items():
-        for key, value in status.items():
-            # TODO: is this really the right way to do this?
-            status_dicts[job_id][key] = {
-                k: v for k, v in value.model_dump().items() if v is not None
-            }
+    status_dicts = {
+        job_id: {
+            key: {k: v for k, v in value.model_dump().items() if v is not None}
+            for key, value in status.items()
+        }
+        for job_id, status in status_changes.items()
+    }
 
     # search all jobs at once
     _, results = await job_db.search(
-        parameters=["Status", "StartExecTime", "EndExecTime"],
+        parameters=["Status", "StartExecTime", "EndExecTime", "JobID"],
         search=[
             {
                 "parameter": "JobID",
                 "operator": VectorSearchOperator.IN,
-                "values": set(status_changes.keys()),
+                "values": list(set(status_changes.keys())),
             }
         ],
         sorts=[],
     )
     if not results:
-        return {
-            "failed": {
-                job_id: {"detail": "Not found"} for job_id in status_changes.keys()
+        return SetJobStatusReturn(
+            success={},
+            failed={
+                int(job_id): {"detail": "Not found"} for job_id in status_changes.keys()
             },
-        }
+        )
 
     found_jobs = set(int(res["JobID"]) for res in results)
+    failed.update(
+        {
+            int(nf_job_id): {"detail": "Not found"}
+            for nf_job_id in set(status_changes.keys()) - found_jobs
+        }
+    )
     # Get the latest time stamps of major status updates
     wms_time_stamps = await job_logging_db.get_wms_time_stamps_bulk(found_jobs)
 
@@ -307,7 +320,7 @@ async def set_job_status_bulk(
             startTime, endTime, updateTimes, timeStamps, statusDict
         )
 
-        job_data = {}
+        job_data: dict[str, str] = {}
         if updateTimes[-1] >= lastTime:
             new_status, new_minor, new_application = (
                 returnValueOrRaise(  # TODO: Catch this
@@ -324,7 +337,7 @@ async def set_job_status_bulk(
             )
 
             if new_status:
-                job_data.update(additional_attributes)
+                job_data.update(additional_attributes.get(job_id, {}))
                 job_data["Status"] = new_status
                 job_data["LastUpdateTime"] = str(datetime.now(timezone.utc))
             if new_minor:
@@ -386,10 +399,10 @@ async def set_job_status_bulk(
 
     await job_logging_db.bulk_insert_record(job_logging_updates)
 
-    return {
-        "success": job_attribute_updates,
-        "failed": failed,
-    }
+    return SetJobStatusReturn(
+        success=job_attribute_updates,
+        failed=failed,
+    )
 
 
 class ForgivingTaskGroup(asyncio.TaskGroup):
