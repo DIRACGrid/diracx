@@ -44,7 +44,7 @@ class JobNotFound(Exception):
         super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
 
 
-class JobException(Exception):
+class JobError(Exception):
     def __init__(self, job_id, detail: str | None = None):
         self.job_id: int = job_id
         self.detail = detail
