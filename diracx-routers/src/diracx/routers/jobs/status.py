@@ -11,14 +11,12 @@ from diracx.core.models import (
     JobStatusUpdate,
     SetJobStatusReturn,
 )
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql.utils.job_status import (
     remove_jobs,
     reschedule_jobs_bulk,
     set_job_status_bulk,
 )
 
-from ..auth import has_properties
 from ..dependencies import (
     Config,
     JobDB,
@@ -31,7 +29,7 @@ from .access_policies import ActionType, CheckWMSPolicyCallable
 
 logger = logging.getLogger(__name__)
 
-router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router = DiracxRouter()
 
 
 @router.delete("/")

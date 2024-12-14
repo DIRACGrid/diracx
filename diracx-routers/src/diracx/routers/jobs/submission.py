@@ -12,11 +12,9 @@ from typing_extensions import TypedDict
 from diracx.core.models import (
     JobStatus,
 )
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql.job.db import JobSubmissionSpec
 from diracx.db.sql.job_logging.db import JobLoggingRecord
 
-from ..auth import has_properties
 from ..dependencies import (
     JobDB,
     JobLoggingDB,
@@ -27,7 +25,7 @@ from .access_policies import ActionType, CheckWMSPolicyCallable
 
 logger = logging.getLogger(__name__)
 
-router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router = DiracxRouter()
 
 
 class InsertedJob(TypedDict):

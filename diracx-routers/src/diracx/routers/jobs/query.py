@@ -12,9 +12,7 @@ from diracx.core.models import (
     SearchSpec,
     SortSpec,
 )
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 
-from ..auth import has_properties
 from ..dependencies import (
     Config,
     JobDB,
@@ -26,7 +24,7 @@ from .access_policies import ActionType, CheckWMSPolicyCallable
 
 logger = logging.getLogger(__name__)
 
-router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router = DiracxRouter()
 
 
 class JobSummaryParams(BaseModel):

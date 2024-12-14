@@ -18,7 +18,6 @@ from diracx.core.models import (
     SandboxInfo,
     SandboxType,
 )
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.core.s3 import (
     generate_presigned_upload,
     s3_bucket_exists,
@@ -36,12 +35,11 @@ from .access_policies import (
 if TYPE_CHECKING:
     from types_aiobotocore_s3.client import S3Client
 
-from ..auth import has_properties
 from ..dependencies import JobDB, SandboxMetadataDB, add_settings_annotation
 from ..fastapi_classes import DiracxRouter
 
 MAX_SANDBOX_SIZE_BYTES = 100 * 1024 * 1024
-router = DiracxRouter(dependencies=[has_properties(NORMAL_USER | JOB_ADMINISTRATOR)])
+router = DiracxRouter()
 
 
 @add_settings_annotation
