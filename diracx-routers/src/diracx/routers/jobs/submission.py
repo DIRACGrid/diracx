@@ -78,31 +78,14 @@ async def submit_bulk_jdl_jobs(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[InsertedJob]:
-    print(job_definitions)
+
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
 
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
-    from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
-    from DIRAC.WorkloadManagementSystem.Service.JobPolicy import RIGHT_SUBMIT, JobPolicy
     from DIRAC.WorkloadManagementSystem.Utilities.ParametricJob import (
         generateParametricJobs,
         getParameterVectorLength,
     )
-
-    class DiracxJobPolicy(JobPolicy):
-        def __init__(self, user_info: AuthorizedUserInfo, allInfo: bool = True):
-            self.userName = user_info.preferred_username
-            self.userGroup = user_info.dirac_group
-            self.userProperties = user_info.properties
-            self.jobDB = None
-            self.allInfo = allInfo
-            self._permissions: dict[str, bool] = {}
-            self._getUserJobPolicy()
-
-    # Check job submission permission
-    policyDict = returnValueOrRaise(DiracxJobPolicy(user_info).getJobPolicy())
-    if not policyDict[RIGHT_SUBMIT]:
-        raise HTTPException(HTTPStatus.FORBIDDEN, "You are not allowed to submit jobs")
 
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
