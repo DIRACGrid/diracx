@@ -27,7 +27,7 @@ async def test_gubbins_info(gubbins_db):
     * use a method modified in the child db (getJobJDL)
     """
     async with gubbins_db as gubbins_db:
-        result = await gubbins_db.insert(
+        job_id = await gubbins_db.insert(
             "JDL",
             "owner_toto",
             "owner_group1",
@@ -35,8 +35,6 @@ async def test_gubbins_info(gubbins_db):
             "dfdfds",
             "lhcb",
         )
-
-        job_id = result["JobID"]
 
         await gubbins_db.insert_gubbins_info(job_id, "info")
 

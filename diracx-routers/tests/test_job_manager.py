@@ -365,6 +365,9 @@ def test_user_cannot_submit_multiple_jdl_if_at_least_one_of_them_is_parametric(
 
 
 def test_user_without_the_normal_user_property_cannot_submit_job(admin_user_client):
+    pytest.skip(
+        "AlwaysAllowAccessPolicyCallable is forced in testing, so this test can not actually test this access policy."
+    )
     res = admin_user_client.post("/api/jobs/jdl", json=[TEST_JDL])
     assert res.status_code == HTTPStatus.FORBIDDEN, res.json()
 
