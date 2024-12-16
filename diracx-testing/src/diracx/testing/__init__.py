@@ -697,5 +697,7 @@ def verify_entry_points(request):
     if not entry_points_consistency():
         raise RuntimeError(
             "Project and installed entry-points are not consistent. "
-            "You should run `pip install -r requirements-dev.txt`"
+            "You should run `pip install -r requirements-dev.txt`",
+            get_installed_entry_points(),
+            get_current_entry_points(),
         )
