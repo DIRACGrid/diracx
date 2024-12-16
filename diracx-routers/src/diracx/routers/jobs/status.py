@@ -50,11 +50,6 @@ async def remove_bulk_jobs(
     be removed, and a status change to Deleted (PATCH /jobs/status) should be used instead for any other purpose.
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
-    # TODO: Remove once legacy DIRAC no longer needs this
-
-    # TODO: implement job policy
-    # Some tests have already been written in the test_job_manager,
-    # but they need to be uncommented and are not complete
 
     await remove_jobs(
         job_ids,
