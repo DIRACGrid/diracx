@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from functools import partial
 from html.parser import HTMLParser
-from importlib.metadata import entry_points
+from importlib.metadata import PackageNotFoundError, distribution, entry_points
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -660,25 +660,26 @@ def get_installed_entry_points():
 
 def get_entry_points_from_toml(toml_file):
     """Parse entry points from pyproject.toml."""
-    try:
-        with open(toml_file, "rb") as f:
-            pyproject = tomllib.load(f)
-        return pyproject.get("project", {}).get("entry-points", {})
-    except KeyError:
-        return {}
+    with open(toml_file, "rb") as f:
+        pyproject = tomllib.load(f)
+    package_name = pyproject["project"]["name"]
+    return package_name, pyproject.get("project", {}).get("entry-points", {})
 
 
 repo_base = Path(__file__).parent.parent.parent.parent.parent
-DIRACX_TOMLS = ["pyproject.toml"] + [
-    str(path) for path in repo_base.glob("diracx-*/pyproject.toml")
-]
 
 
 def get_current_entry_points() -> bool:
     """Create current entry points dict for comparison."""
     current_eps = {}
-    for toml_file in DIRACX_TOMLS:
-        entry_pts = get_entry_points_from_toml(f"{toml_file}")
+    for toml_file in repo_base.glob("diracx-*/pyproject.toml"):
+        package_name, entry_pts = get_entry_points_from_toml(f"{toml_file}")
+        # Ignore packages that are not installed
+        try:
+            distribution(package_name)
+        except PackageNotFoundError:
+            continue
+        # Merge the entry points
         for key, value in entry_pts.items():
             current_eps[key] = current_eps.get(key, {}) | value
     return current_eps
