@@ -666,10 +666,7 @@ def get_entry_points_from_toml(toml_file):
     return package_name, pyproject.get("project", {}).get("entry-points", {})
 
 
-repo_base = Path(__file__).parent.parent.parent.parent.parent
-
-
-def get_current_entry_points() -> bool:
+def get_current_entry_points(repo_base) -> bool:
     """Create current entry points dict for comparison."""
     current_eps = {}
     for toml_file in repo_base.glob("diracx-*/pyproject.toml"):
@@ -685,19 +682,26 @@ def get_current_entry_points() -> bool:
     return current_eps
 
 
-def entry_points_consistency():
-    """Compare installed and current entry_points."""
-    installed_eps = get_installed_entry_points()
-    current_eps = get_current_entry_points()
-    return installed_eps == current_eps
-
-
 @pytest.fixture(scope="session", autouse=True)
-def verify_entry_points(request):
-    if not entry_points_consistency():
-        raise RuntimeError(
+def verify_entry_points(request, pytestconfig):
+    try:
+        ini_toml_name = tomllib.loads(pytestconfig.inipath.read_text())["project"][
+            "name"
+        ]
+    except tomllib.TOMLDecodeError:
+        return
+    if ini_toml_name == "diracx":
+        repo_base = pytestconfig.inipath.parent
+    elif ini_toml_name.startswith("diracx-"):
+        repo_base = pytestconfig.inipath.parent.parent
+    else:
+        return
+
+    installed_eps = get_installed_entry_points()
+    current_eps = get_current_entry_points(repo_base)
+
+    if installed_eps != current_eps:
+        pytest.fail(
             "Project and installed entry-points are not consistent. "
             "You should run `pip install -r requirements-dev.txt`",
-            get_installed_entry_points(),
-            get_current_entry_points(),
         )
