@@ -126,66 +126,6 @@ class DevelopmentSettings(_serialization.Model):
         self.crash_on_missed_access_policy = crash_on_missed_access_policy
 
 
-class ExtendedMetadata(_serialization.Model):
-    """ExtendedMetadata.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar virtual_organizations: Virtual Organizations. Required.
-    :vartype virtual_organizations: dict[str, ~generated.models.VOInfo]
-    :ivar development_settings: Settings for the Development Configuration that can influence run
-     time. Required.
-    :vartype development_settings: ~generated.models.DevelopmentSettings
-    :ivar gubbins_secrets: Gubbins Secrets. Required.
-    :vartype gubbins_secrets: str
-    :ivar gubbins_user_info: Gubbins User Info. Required.
-    :vartype gubbins_user_info: dict[str, list[str]]
-    """
-
-    _validation = {
-        "virtual_organizations": {"required": True},
-        "development_settings": {"required": True},
-        "gubbins_secrets": {"required": True},
-        "gubbins_user_info": {"required": True},
-    }
-
-    _attribute_map = {
-        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
-        "development_settings": {
-            "key": "development_settings",
-            "type": "DevelopmentSettings",
-        },
-        "gubbins_secrets": {"key": "gubbins_secrets", "type": "str"},
-        "gubbins_user_info": {"key": "gubbins_user_info", "type": "{[str]}"},
-    }
-
-    def __init__(
-        self,
-        *,
-        virtual_organizations: Dict[str, "_models.VOInfo"],
-        development_settings: "_models.DevelopmentSettings",
-        gubbins_secrets: str,
-        gubbins_user_info: Dict[str, List[str]],
-        **kwargs: Any,
-    ) -> None:
-        """
-        :keyword virtual_organizations: Virtual Organizations. Required.
-        :paramtype virtual_organizations: dict[str, ~generated.models.VOInfo]
-        :keyword development_settings: Settings for the Development Configuration that can influence
-         run time. Required.
-        :paramtype development_settings: ~generated.models.DevelopmentSettings
-        :keyword gubbins_secrets: Gubbins Secrets. Required.
-        :paramtype gubbins_secrets: str
-        :keyword gubbins_user_info: Gubbins User Info. Required.
-        :paramtype gubbins_user_info: dict[str, list[str]]
-        """
-        super().__init__(**kwargs)
-        self.virtual_organizations = virtual_organizations
-        self.development_settings = development_settings
-        self.gubbins_secrets = gubbins_secrets
-        self.gubbins_user_info = gubbins_user_info
-
-
 class GroupInfo(_serialization.Model):
     """GroupInfo.
 
@@ -497,6 +437,50 @@ class JobSummaryParamsSearchItem(_serialization.Model):
     """JobSummaryParamsSearchItem."""
 
 
+class Metadata(_serialization.Model):
+    """Metadata.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar virtual_organizations: Virtual Organizations. Required.
+    :vartype virtual_organizations: dict[str, ~generated.models.VOInfo]
+    :ivar development_settings: Settings for the Development Configuration that can influence run
+     time. Required.
+    :vartype development_settings: ~generated.models.DevelopmentSettings
+    """
+
+    _validation = {
+        "virtual_organizations": {"required": True},
+        "development_settings": {"required": True},
+    }
+
+    _attribute_map = {
+        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+        "development_settings": {
+            "key": "development_settings",
+            "type": "DevelopmentSettings",
+        },
+    }
+
+    def __init__(
+        self,
+        *,
+        virtual_organizations: Dict[str, "_models.VOInfo"],
+        development_settings: "_models.DevelopmentSettings",
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword virtual_organizations: Virtual Organizations. Required.
+        :paramtype virtual_organizations: dict[str, ~generated.models.VOInfo]
+        :keyword development_settings: Settings for the Development Configuration that can influence
+         run time. Required.
+        :paramtype development_settings: ~generated.models.DevelopmentSettings
+        """
+        super().__init__(**kwargs)
+        self.virtual_organizations = virtual_organizations
+        self.development_settings = development_settings
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 
@@ -685,6 +669,45 @@ class ScalarSearchSpecValue(_serialization.Model):
 
 class SetJobStatusReturn(_serialization.Model):
     """SetJobStatusReturn.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar success: Success. Required.
+    :vartype success: dict[str, ~generated.models.SetJobStatusReturnSuccess]
+    :ivar failed: Failed. Required.
+    :vartype failed: dict[str, dict[str, str]]
+    """
+
+    _validation = {
+        "success": {"required": True},
+        "failed": {"required": True},
+    }
+
+    _attribute_map = {
+        "success": {"key": "success", "type": "{SetJobStatusReturnSuccess}"},
+        "failed": {"key": "failed", "type": "{{str}}"},
+    }
+
+    def __init__(
+        self,
+        *,
+        success: Dict[str, "_models.SetJobStatusReturnSuccess"],
+        failed: Dict[str, Dict[str, str]],
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword success: Success. Required.
+        :paramtype success: dict[str, ~generated.models.SetJobStatusReturnSuccess]
+        :keyword failed: Failed. Required.
+        :paramtype failed: dict[str, dict[str, str]]
+        """
+        super().__init__(**kwargs)
+        self.success = success
+        self.failed = failed
+
+
+class SetJobStatusReturnSuccess(_serialization.Model):
+    """Successful new status change.
 
     :ivar status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
      "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
