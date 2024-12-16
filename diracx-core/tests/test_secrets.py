@@ -9,7 +9,15 @@ from diracx.core.settings import TokenSigningKey
 
 def compare_keys(key1, key2):
     """Compare two keys by checking their public keys."""
-    assert key1.public_key() == key2.public_key()
+    key1_public = key1.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    key2_public = key2.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    assert key1_public == key2_public
 
 
 def test_token_signing_key(tmp_path):
