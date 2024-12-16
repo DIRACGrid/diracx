@@ -40,7 +40,7 @@ class GubbinsJobDB(JobDB):
         info = (await self.conn.execute(stmt)).scalar_one()
         return {"JDL": jdl, "Info": info}
 
-    async def setJobAttributes(self, job_id, jobData):
+    async def setJobAttributesBulk(self, jobData):
         """
         This method modified the one in the parent class,
         without changing the argument nor the return type
