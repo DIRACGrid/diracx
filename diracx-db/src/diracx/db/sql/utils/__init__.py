@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Self, cast
 
 import sqlalchemy.types as types
 from pydantic import TypeAdapter
-from sqlalchemy import Column as RawColumn, func
-from sqlalchemy import DateTime, Enum, MetaData, select
+from sqlalchemy import Column as RawColumn
+from sqlalchemy import DateTime, Enum, MetaData, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
@@ -101,12 +101,8 @@ def mysql_date_trunc(element, compiler, **kw):
         "YEAR": "%Y",
     }[element._time_resolution]
 
-    dt_col, = list(element.clauses)
-    return compiler.process(
-        func.date_format(
-            dt_col, pattern
-        )
-    )
+    (dt_col,) = list(element.clauses)
+    return compiler.process(func.date_format(dt_col, pattern))
 
 
 @compiles(date_trunc, "sqlite")
@@ -119,12 +115,14 @@ def sqlite_date_trunc(element, compiler, **kw):
         "MONTH": "%Y-%m",
         "YEAR": "%Y",
     }[element._time_resolution]
-    dt_col, = list(element.clauses)
+    (dt_col,) = list(element.clauses)
     return compiler.process(
         func.strftime(
-            pattern, dt_col, 
+            pattern,
+            dt_col,
         )
     )
+
 
 def substract_date(**kwargs: float) -> datetime:
     return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
