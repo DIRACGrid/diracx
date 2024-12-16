@@ -120,6 +120,7 @@ class JobMonitoringConfig(BaseModel):
 
 class JobSchedulingConfig(BaseModel):
     EnableSharesCorrection: bool = False
+    MaxRescheduling: int = 3
 
 
 class ServicesConfig(BaseModel):
@@ -159,56 +160,6 @@ class OperationsConfig(BaseModel):
     ResourceStatus: MutableMapping[str, Any] | None = None
 
 
-class DBConfig(BaseModel):
-    DBName: str
-    Host: str
-    Port: int
-
-
-class JobDBConfig(DBConfig):
-    MaxRescheduling: int = 3
-
-
-class DatabasesConfig(BaseModel):
-    JobDB: JobDBConfig
-    JobLoggingDB: DBConfig
-    PilotAgentsDB: DBConfig
-    SandboxMetadataDB: DBConfig
-    TaskQueueDB: DBConfig
-    ElasticJobParametersDB: DBConfig
-    VirtualMachineDB: DBConfig
-
-
-class ProductionConfig(BaseModel):
-    URLs: dict[str, Any] | None = None
-    Services: dict[str, Any] | None = None
-    Agents: dict[str, Any] | None = None
-    JobWrapper: dict[str, Any] | None = None
-    Databases: DatabasesConfig
-    Executors: dict[str, Any] | None = None
-    FailoverURLs: dict[str, Any] | None = None
-
-
-class WorkloadManagementConfig(BaseModel):
-    Production: ProductionConfig | None = None
-
-
-class SystemsConfig(BaseModel):
-    Accounting: dict[str, Any] | None = None
-    Bookkeeping: dict[str, Any] | None = None
-    Configuration: dict[str, Any] | None = None
-    Framework: dict[str, Any] | None = None
-    DataMangement: dict[str, Any] | None = None
-    Monitoring: dict[str, Any] | None = None
-    ProductionManagement: dict[str, Any] | None = None
-    RequestManagement: dict[str, Any] | None = None
-    ResourceStatus: dict[str, Any] | None = None
-    StorageManagement: dict[str, Any] | None = None
-    Transformation: dict[str, Any] | None = None
-    WorkloadManagement: WorkloadManagementConfig | None = None
-    Tornado: dict[str, Any] | None = None
-
-
 class Config(BaseModel):
     Registry: MutableMapping[str, RegistryConfig]
     DIRAC: DIRACConfig
@@ -219,7 +170,7 @@ class Config(BaseModel):
     LogLevel: Any = None
     MCTestingDestination: Any = None
     Resources: Any = None
-    Systems: SystemsConfig | None = None
+    Systems: Any | None = None
     WebApp: Any = None
 
     # These 2 parameters are used for client side caching

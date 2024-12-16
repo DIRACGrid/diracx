@@ -801,6 +801,7 @@ Systems:
         Optimizers:
           JobScheduling:
             RescheduleDelays: '0'
+            MaxRescheduling: '3'
       FailoverURLs: {}
       Services:
         Matcher:

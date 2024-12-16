@@ -35,9 +35,9 @@ async def reschedule_jobs_bulk(
     from DIRAC.Core.Utilities.ReturnValues import SErrorException
 
     failed = {}
-    reschedule_max = (
-        config.Systems.WorkloadManagement.Production.Databases.JobDB.MaxRescheduling  # type: ignore
-    )
+    reschedule_max = config.Operations[
+        "Defaults"
+    ].Services.JobScheduling.MaxRescheduling  # type: ignore
 
     status_changes = {}
     attribute_changes: dict[int, dict[str, str]] = defaultdict(dict)
