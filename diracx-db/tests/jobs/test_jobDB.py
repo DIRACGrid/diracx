@@ -12,7 +12,7 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.sql.job.db import JobDB
-from diracx.routers.jobs.submission import JobSubmissionSpec, submit_jobs_jdl
+from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 
 @pytest.fixture

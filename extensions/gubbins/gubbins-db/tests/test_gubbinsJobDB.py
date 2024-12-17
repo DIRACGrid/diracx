@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import AsyncGenerator
 
 import pytest
-from diracx.routers.jobs.submission import JobSubmissionSpec, submit_jobs_jdl
+from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 from gubbins.db.sql import GubbinsJobDB
 
