@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from asyncio import TaskGroup
+from copy import deepcopy
 from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Annotated
@@ -66,6 +68,108 @@ StdOutput = std.out;"""
         "value": ["""Arguments = "jobDescription.xml -o LogLevel=INFO"""]
     },
 }
+
+
+async def _submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
+    from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
+    from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
+    from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
+        checkAndAddOwner,
+        createJDLWithInitialStatus,
+    )
+
+    jobs_to_insert = {}
+    jdls_to_update = {}
+    inputdata_to_insert = {}
+    original_jdls = []
+
+    # generate the jobIDs first
+    async with TaskGroup() as tg:
+        for job in jobs:
+            original_jdl = deepcopy(job.jdl)
+            jobManifest = returnValueOrRaise(
+                checkAndAddOwner(original_jdl, job.owner, job.owner_group)
+            )
+
+            # Fix possible lack of brackets
+            if original_jdl.strip()[0] != "[":
+                original_jdl = f"[{original_jdl}]"
+
+            original_jdls.append(
+                (
+                    original_jdl,
+                    jobManifest,
+                    tg.create_task(job_db.create_job(original_jdl)),
+                )
+            )
+
+    async with TaskGroup() as tg:
+        for job, (original_jdl, jobManifest_, job_id_task) in zip(jobs, original_jdls):
+            job_id = job_id_task.result()
+            job_attrs = {
+                "JobID": job_id,
+                "LastUpdateTime": datetime.now(tz=timezone.utc),
+                "SubmissionTime": datetime.now(tz=timezone.utc),
+                "Owner": job.owner,
+                "OwnerGroup": job.owner_group,
+                "VO": job.vo,
+            }
+
+            jobManifest_.setOption("JobID", job_id)
+
+            # 2.- Check JDL and Prepare DIRAC JDL
+            jobJDL = jobManifest_.dumpAsJDL()
+
+            # Replace the JobID placeholder if any
+            if jobJDL.find("%j") != -1:
+                jobJDL = jobJDL.replace("%j", str(job_id))
+
+            class_ad_job = ClassAd(jobJDL)
+
+            class_ad_req = ClassAd("[]")
+            if not class_ad_job.isOK():
+                # Rollback the entire transaction
+                raise ValueError(f"Error in JDL syntax for job JDL: {original_jdl}")
+            # TODO: check if that is actually true
+            if class_ad_job.lookupAttribute("Parameters"):
+                raise NotImplementedError("Parameters in the JDL are not supported")
+
+            # TODO is this even needed?
+            class_ad_job.insertAttributeInt("JobID", job_id)
+
+            await job_db.checkAndPrepareJob(
+                job_id,
+                class_ad_job,
+                class_ad_req,
+                job.owner,
+                job.owner_group,
+                job_attrs,
+                job.vo,
+            )
+            jobJDL = createJDLWithInitialStatus(
+                class_ad_job,
+                class_ad_req,
+                job_db.jdl2DBParameters,
+                job_attrs,
+                job.initial_status,
+                job.initial_minor_status,
+                modern=True,
+            )
+
+            jobs_to_insert[job_id] = job_attrs
+            jdls_to_update[job_id] = jobJDL
+
+            if class_ad_job.lookupAttribute("InputData"):
+                inputData = class_ad_job.getListFromExpression("InputData")
+                inputdata_to_insert[job_id] = [lfn for lfn in inputData if lfn]
+
+        tg.create_task(job_db.update_job_jdls(jdls_to_update))
+        tg.create_task(job_db.insert_job_attributes(jobs_to_insert))
+
+        if inputdata_to_insert:
+            tg.create_task(job_db.insert_input_data(inputdata_to_insert))
+
+    return jobs_to_insert.keys()
 
 
 @router.post("/jdl")
@@ -148,7 +252,7 @@ async def submit_bulk_jdl_jobs(
         initialStatus = JobStatus.RECEIVED
         initialMinorStatus = "Job accepted"
 
-    submitted_job_ids = await job_db.insert_bulk(
+    submitted_job_ids = await _submit_jobs_jdl(
         [
             JobSubmissionSpec(
                 jdl=jdl,
@@ -159,7 +263,8 @@ async def submit_bulk_jdl_jobs(
                 vo=user_info.vo,
             )
             for jdl in jobDescList
-        ]
+        ],
+        job_db=job_db,
     )
 
     logging.debug(
