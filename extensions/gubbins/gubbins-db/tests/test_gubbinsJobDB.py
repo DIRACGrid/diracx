@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import AsyncGenerator
 
 import pytest
+from diracx.routers.jobs.submission import JobSubmissionSpec, submit_jobs_jdl
 
 from gubbins.db.sql import GubbinsJobDB
 
@@ -27,13 +28,17 @@ async def test_gubbins_info(gubbins_db):
     * use a method modified in the child db (getJobJDL)
     """
     async with gubbins_db as gubbins_db:
-        job_id = await gubbins_db.insert(
-            "JDL",
-            "owner_toto",
-            "owner_group1",
-            "New",
-            "dfdfds",
-            "lhcb",
+        job_id = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl="JDL",
+                    owner="owner_toto",
+                    owner_group="owner_group1",
+                    initial_status="New",
+                    initial_minor_status="dfdfds",
+                    vo="lhcb",
+                )
+            ]
         )
 
         await gubbins_db.insert_gubbins_info(job_id, "info")

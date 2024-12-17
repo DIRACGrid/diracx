@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel
 from sqlalchemy import bindparam, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
@@ -24,15 +23,6 @@ from .schema import (
     JobJDLs,
     Jobs,
 )
-
-
-class JobSubmissionSpec(BaseModel):
-    jdl: str
-    owner: str
-    owner_group: str
-    initial_status: str
-    initial_minor_status: str
-    vo: str
 
 
 def _get_columns(table, parameters):

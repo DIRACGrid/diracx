@@ -14,7 +14,6 @@ from typing_extensions import TypedDict
 from diracx.core.models import (
     JobStatus,
 )
-from diracx.db.sql.job.db import JobSubmissionSpec
 from diracx.db.sql.job_logging.db import JobLoggingRecord
 
 from ..dependencies import (
@@ -28,6 +27,15 @@ from .access_policies import ActionType, CheckWMSPolicyCallable
 logger = logging.getLogger(__name__)
 
 router = DiracxRouter()
+
+
+class JobSubmissionSpec(BaseModel):
+    jdl: str
+    owner: str
+    owner_group: str
+    initial_status: str
+    initial_minor_status: str
+    vo: str
 
 
 class InsertedJob(TypedDict):
@@ -70,7 +78,7 @@ StdOutput = std.out;"""
 }
 
 
-async def _submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
+async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
     from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
     from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
     from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
@@ -253,7 +261,7 @@ async def submit_bulk_jdl_jobs(
         initialStatus = JobStatus.RECEIVED
         initialMinorStatus = "Job accepted"
 
-    submitted_job_ids = await _submit_jobs_jdl(
+    submitted_job_ids = await submit_jobs_jdl(
         [
             JobSubmissionSpec(
                 jdl=jdl,
