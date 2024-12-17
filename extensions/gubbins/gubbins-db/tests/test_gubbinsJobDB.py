@@ -38,7 +38,8 @@ async def test_gubbins_info(gubbins_db):
                     initial_minor_status="dfdfds",
                     vo="lhcb",
                 )
-            ]
+            ],
+            gubbins_db,
         )
 
         await gubbins_db.insert_gubbins_info(job_id, "info")
