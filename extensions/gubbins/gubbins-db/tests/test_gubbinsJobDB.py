@@ -40,7 +40,7 @@ async def test_gubbins_info(gubbins_db):
                 )
             ],
             gubbins_db,
-        )
+        )[0]
 
         await gubbins_db.insert_gubbins_info(job_id, "info")
 
