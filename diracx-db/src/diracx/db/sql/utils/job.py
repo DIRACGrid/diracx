@@ -131,7 +131,7 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
         if inputdata_to_insert:
             tg.create_task(job_db.insert_input_data(inputdata_to_insert))
 
-    return jobs_to_insert.keys()
+    return list(jobs_to_insert.keys())
 
 
 async def reschedule_jobs_bulk(
