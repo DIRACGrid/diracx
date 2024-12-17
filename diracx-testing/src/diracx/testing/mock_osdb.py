@@ -96,6 +96,20 @@ class MockOSDBMixin:
             stmt = stmt.on_conflict_do_update(index_elements=["doc_id"], set_=values)
             await self._sql_db.conn.execute(stmt)
 
+    async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
+        async with self:
+            rows = []
+            for item, doc in enumerate(docs):
+                values = {"doc_id": item + 1}
+                for key, value in doc.items():
+                    if key in self.fields:
+                        values[key] = value
+                    else:
+                        values.setdefault("extra", {})[key] = value
+                rows.append(values)
+            stmt = sqlite_insert(self._table).values(rows)
+            await self._sql_db.conn.execute(stmt)
+
     async def search(
         self,
         parameters: list[str] | None,
