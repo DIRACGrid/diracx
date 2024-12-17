@@ -28,7 +28,7 @@ async def test_gubbins_info(gubbins_db):
     * use a method modified in the child db (getJobJDL)
     """
     async with gubbins_db as gubbins_db:
-        job_id = await submit_jobs_jdl(
+        job_ids = await submit_jobs_jdl(
             [
                 JobSubmissionSpec(
                     jdl="JDL",
@@ -40,7 +40,9 @@ async def test_gubbins_info(gubbins_db):
                 )
             ],
             gubbins_db,
-        )[0]
+        )
+
+        job_id = job_ids[0]
 
         await gubbins_db.insert_gubbins_info(job_id, "info")
 
