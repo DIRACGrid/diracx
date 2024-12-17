@@ -84,6 +84,7 @@ async def _submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
     original_jdls = []
 
     # generate the jobIDs first
+    # TODO: should ForgivingTaskGroup be used?
     async with TaskGroup() as tg:
         for job in jobs:
             original_jdl = deepcopy(job.jdl)
