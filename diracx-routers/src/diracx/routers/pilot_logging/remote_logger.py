@@ -45,9 +45,7 @@ async def send_message(
 ) -> int:
 
     logger.warning(f"Message received '{data}'")
-    user_info = await check_permissions(
-        action=ActionType.CREATE, pilot_db=pilot_logs_db
-    )
+    user_info = await check_permissions(action=ActionType.CREATE)
     pilot_id = 0  # need to get pilot id from pilot_stamp (via PilotAgentsDB)
     # also add a timestamp to be able to select and delete logs based on pilot creation dates, even if corresponding
     # pilots have been already deleted from PilotAgentsDB (so the logs can live longer than pilots).
@@ -93,7 +91,7 @@ async def get_logs(
 ) -> list[dict]:
 
     logger.warning(f"Retrieving logs for pilot ID '{pilot_id}'")
-    user_info = await check_permissions(action=ActionType.QUERY, pilot_db=db)
+    user_info = await check_permissions(action=ActionType.QUERY)
 
     # here, users with privileged properties will see logs from all VOs. Is it what we want ?
     search_params = [{"parameter": "PilotID", "operator": "eq", "value": pilot_id}]
@@ -122,7 +120,7 @@ async def delete(
     Non-privileged users can only delete log files within their own VO.
     """
     message = "no-op"
-    user_info = await check_permissions(action=ActionType.DELETE, pilot_db=db)
+    user_info = await check_permissions(action=ActionType.DELETE)
     non_privil_params = {"parameter": "VO", "operator": "eq", "value": user_info.vo}
 
     # id pilot_id is provided we ignore data.min and data.max
