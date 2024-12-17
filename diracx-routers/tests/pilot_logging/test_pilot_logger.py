@@ -7,7 +7,6 @@ from sqlalchemy import inspect, update
 
 from diracx.core.properties import PILOT
 from diracx.db.os import PilotLogsDB
-from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql import PilotAgentsDB
 from diracx.db.sql.pilot_agents.schema import PilotAgents
 from diracx.routers.pilot_logging.remote_logger import (
@@ -16,11 +15,12 @@ from diracx.routers.pilot_logging.remote_logger import (
     get_logs,
     send_message,
 )
-from diracx.testing.mock_osdb import MockOSDBMixin, fake_available_osdb_implementations
+from diracx.testing.mock_osdb import MockOSDBMixin
 
-
-class PilotLogsDB(MockOSDBMixin, PilotLogsDB):
-    pass
+# class PilotLogsDB(MockOSDBMixin, PilotLogsDB):
+#    pass
+# PilotLogsDB = fake_available_osdb_implementations("PilotLogsDB",
+# real_available_implementations=BaseOSDB.available_implementations)[0]
 
 
 @pytest.fixture
@@ -34,10 +34,10 @@ async def pilot_agents_db(tmp_path) -> PilotAgentsDB:
 
 @pytest.fixture
 async def pilot_logs_db():
-    fake_implementation = fake_available_osdb_implementations(
-        "PilotLogsDB", real_available_implementations=BaseOSDB.available_implementations
-    )[0]
-    db = fake_implementation(
+    # create a class that has sqlite backend replacing OpenSearch PilotLogsDB
+    MPilotLogsDB = type("JobParametersDB", (MockOSDBMixin, PilotLogsDB), {})
+
+    db = MPilotLogsDB(
         connection_kwargs={"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
     )
     async with db.client_context():
@@ -48,7 +48,7 @@ async def pilot_logs_db():
 @patch("diracx.routers.pilot_logging.remote_logger.BaseSQLDB.available_implementations")
 @patch("diracx.routers.pilot_logging.remote_logger.BaseSQLDB.available_urls")
 async def test_remote_logger(
-    mock_url, mock_impl, pilot_logs_db: PilotLogsDB, pilot_agents_db: PilotAgentsDB
+    mock_url, mock_impl, pilot_logs_db: "PilotLogsDB", pilot_agents_db: PilotAgentsDB
 ):
 
     async with pilot_agents_db as db:
