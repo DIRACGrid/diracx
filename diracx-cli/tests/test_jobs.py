@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from io import StringIO
 
 import pytest
 from pytest import raises
@@ -51,8 +52,11 @@ async def test_submit(with_cli_login, jdl_file, capfd):
 async def test_search(with_cli_login, jdl_file, capfd):
     """Test searching for jobs."""
     # Submit 20 jobs
-    with open(jdl_file, "r") as temp_file:
-        await cli.jobs.submit([temp_file] * 20)
+    with open(jdl_file, "r") as x:
+        what_we_submit = x.read()
+    jdls = [StringIO(what_we_submit) for _ in range(20)]
+
+    await cli.jobs.submit(jdls)
 
     cap = capfd.readouterr()
 

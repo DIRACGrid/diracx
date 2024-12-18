@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException, status
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.routers.job_manager.access_policies import (
+from diracx.routers.jobs.access_policies import (
     ActionType,
     SandboxAccessPolicy,
     WMSAccessPolicy,

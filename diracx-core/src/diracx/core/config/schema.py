@@ -120,6 +120,7 @@ class JobMonitoringConfig(BaseModel):
 
 class JobSchedulingConfig(BaseModel):
     EnableSharesCorrection: bool = False
+    MaxRescheduling: int = 3
 
 
 class ServicesConfig(BaseModel):
@@ -169,7 +170,7 @@ class Config(BaseModel):
     LogLevel: Any = None
     MCTestingDestination: Any = None
     Resources: Any = None
-    Systems: Any = None
+    Systems: Any | None = None
     WebApp: Any = None
 
     # These 2 parameters are used for client side caching

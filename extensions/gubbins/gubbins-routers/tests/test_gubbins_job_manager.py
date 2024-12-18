@@ -2,6 +2,8 @@
 Just repeat the diracx tests to make sure they still pass
 """
 
+from datetime import datetime, timezone
+
 import pytest
 from diracx.core.models import JobStatus
 from fastapi.testclient import TestClient
@@ -15,6 +17,8 @@ pytestmark = pytest.mark.enabled_dependencies(
         "GubbinsJobDB",
         #######
         "JobLoggingDB",
+        "JobParametersDB",
+        "SandboxMetadataDB",
         "WMSAccessPolicy",
         "ConfigSource",
         "TaskQueueDB",
@@ -71,16 +75,39 @@ def test_gubbins_job_router(normal_user_client, valid_job_id):
     """
 
     # We search for the job
-    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}],
+        },
+    )
     assert r.status_code == 200, r.json()
-    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED
+    assert r.json()[0]["JobID"] == valid_job_id
+    assert r.json()[0]["Status"] == JobStatus.RECEIVED
 
     # We delete the job, and here we expect that nothing
     # actually happened
-    r = normal_user_client.delete(f"/api/jobs/{valid_job_id}")
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            valid_job_id: {
+                str(datetime.now(tz=timezone.utc)): {
+                    "Status": JobStatus.DELETED,
+                    "MinorStatus": "Checking accounting",
+                }
+            }
+        },
+    )
+
     assert r.status_code == 200, r.json()
 
-    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}],
+        },
+    )
     assert r.status_code == 200, r.json()
     # The job would normally be deleted
-    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED
+    assert r.json()[0]["JobID"] == valid_job_id
+    assert r.json()[0]["Status"] == JobStatus.RECEIVED

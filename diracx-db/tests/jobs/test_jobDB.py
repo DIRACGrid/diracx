@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from diracx.core.exceptions import InvalidQueryError, JobNotFound
@@ -14,6 +12,7 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.sql.job.db import JobDB
+from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 
 @pytest.fixture
@@ -35,18 +34,19 @@ async def test_search_parameters(job_db):
         assert total == 0
         assert not result
 
-        result = await asyncio.gather(
-            *(
-                job_db.insert(
-                    f"JDL{i}",
-                    "owner",
-                    "owner_group",
-                    "New",
-                    "dfdfds",
-                    "lhcb",
+        result = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl=f"JDL{i}",
+                    owner="owner",
+                    owner_group="owner_group",
+                    initial_status="New",
+                    initial_minor_status="dfdfds",
+                    vo="lhcb",
                 )
                 for i in range(100)
-            )
+            ],
+            job_db,
         )
 
     async with job_db as job_db:
@@ -84,18 +84,19 @@ async def test_search_parameters(job_db):
 async def test_search_conditions(job_db):
     """Test that we can search for specific jobs in the database."""
     async with job_db as job_db:
-        result = await asyncio.gather(
-            *(
-                job_db.insert(
-                    f"JDL{i}",
-                    f"owner{i}",
-                    "owner_group",
-                    "New",
-                    "dfdfds",
-                    "lhcb",
+        result = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl=f"JDL{i}",
+                    owner=f"owner{i}",
+                    owner_group="owner_group",
+                    initial_status="New",
+                    initial_minor_status="dfdfds",
+                    vo="lhcb",
                 )
                 for i in range(100)
-            )
+            ],
+            job_db,
         )
 
     async with job_db as job_db:
@@ -206,18 +207,19 @@ async def test_search_conditions(job_db):
 async def test_search_sorts(job_db):
     """Test that we can search for jobs in the database and sort the results."""
     async with job_db as job_db:
-        result = await asyncio.gather(
-            *(
-                job_db.insert(
-                    f"JDL{i}",
-                    f"owner{i}",
-                    "owner_group1" if i < 50 else "owner_group2",
-                    "New",
-                    "dfdfds",
-                    "lhcb",
+        result = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl=f"JDL{i}",
+                    owner=f"owner{i}",
+                    owner_group="owner_group1" if i < 50 else "owner_group2",
+                    initial_status="New",
+                    initial_minor_status="dfdfds",
+                    vo="lhcb",
                 )
                 for i in range(100)
-            )
+            ],
+            job_db,
         )
 
     async with job_db as job_db:
@@ -270,18 +272,19 @@ async def test_search_sorts(job_db):
 async def test_search_pagination(job_db):
     """Test that we can search for jobs in the database."""
     async with job_db as job_db:
-        result = await asyncio.gather(
-            *(
-                job_db.insert(
-                    f"JDL{i}",
-                    f"owner{i}",
-                    "owner_group1" if i < 50 else "owner_group2",
-                    "New",
-                    "dfdfds",
-                    "lhcb",
+        result = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl=f"JDL{i}",
+                    owner="owner",
+                    owner_group="owner_group",
+                    initial_status="New",
+                    initial_minor_status="dfdfds",
+                    vo="lhcb",
                 )
                 for i in range(100)
-            )
+            ],
+            job_db,
         )
 
     async with job_db as job_db:

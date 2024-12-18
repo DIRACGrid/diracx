@@ -39,6 +39,15 @@ class InvalidQueryError(DiracError):
 
 
 class JobNotFound(Exception):
-    def __init__(self, job_id: int):
+    def __init__(self, job_id: int, detail: str | None = None):
         self.job_id: int = job_id
-        super().__init__(f"Job {job_id} not found")
+        super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
+
+
+class JobError(Exception):
+    def __init__(self, job_id, detail: str | None = None):
+        self.job_id: int = job_id
+        self.detail = detail
+        super().__init__(
+            f"Error concerning job {job_id}" + (": {detail} " if detail else "")
+        )

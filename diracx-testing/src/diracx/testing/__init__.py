@@ -21,7 +21,7 @@ import requests
 
 if TYPE_CHECKING:
     from diracx.core.settings import DevelopmentSettings
-    from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
+    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
     from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
 
 
@@ -124,7 +124,7 @@ def aio_moto(worker_id):
 
 @pytest.fixture(scope="session")
 def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
-    from diracx.routers.job_manager.sandboxes import SandboxStoreSettings
+    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
 
     yield SandboxStoreSettings(
         bucket_name="sandboxes",
@@ -457,6 +457,50 @@ def with_config_repo(tmp_path_factory):
                 }
             },
             "Operations": {"Defaults": {}},
+            "Systems": {
+                "WorkloadManagement": {
+                    "Production": {
+                        "Databases": {
+                            "JobDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                                "MaxRescheduling": 3,
+                            },
+                            "JobLoggingDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "PilotAgentsDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "SandboxMetadataDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "TaskQueueDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "ElasticJobParametersDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                            "VirtualMachineDB": {
+                                "DBName": "xyz",
+                                "Host": "xyz",
+                                "Port": 9999,
+                            },
+                        },
+                    },
+                },
+            },
         }
     )
     cs_file.write_text(example_cs.model_dump_json())
