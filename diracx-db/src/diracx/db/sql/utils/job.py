@@ -435,6 +435,7 @@ async def set_job_status_bulk(
         )
 
         job_data: dict[str, str] = {}
+        new_status: str | None = None
         if updateTimes[-1] >= lastTime:
             new_status, new_minor, new_application = (
                 returnValueOrRaise(  # TODO: Catch this

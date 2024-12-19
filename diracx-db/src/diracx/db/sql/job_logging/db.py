@@ -105,10 +105,9 @@ class JobLoggingDB(BaseSQLDB):
 
         seqnum = {jid: seqnum for jid, seqnum in (await self.conn.execute(seqnum_stmt))}
         # IF a seqnum is not found, then assume it does not exist and the first sequence number is 1.
-
         # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-bulk-insert-statements
         await self.conn.execute(
-            insert(LoggingInfo),
+            LoggingInfo.__table__.insert(),
             [
                 {
                     "JobID": record.job_id,
@@ -118,38 +117,43 @@ class JobLoggingDB(BaseSQLDB):
                     "ApplicationStatus": record.application_status[:255],
                     "StatusTime": record.date,
                     "StatusTimeOrder": get_epoc(record.date),
-                    "Source": record.source[:32],
+                    "StatusSource": record.source[:32],
                 }
                 for record in records
             ],
         )
 
-    async def get_records(self, job_id: int) -> list[JobStatusReturn]:
+    async def get_records(self, job_ids: list[int]) -> dict[int, JobStatusReturn]:
         """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
         for each record found for job specified by its jobID in historical order.
         """
+        # We could potentially use a group_by here, but we need to post-process the
+        # results later.
         stmt = (
             select(
+                LoggingInfo.JobID,
                 LoggingInfo.Status,
                 LoggingInfo.MinorStatus,
                 LoggingInfo.ApplicationStatus,
                 LoggingInfo.StatusTime,
                 LoggingInfo.Source,
             )
-            .where(LoggingInfo.JobID == int(job_id))
+            .where(LoggingInfo.JobID.in_(job_ids))
             .order_by(LoggingInfo.StatusTimeOrder, LoggingInfo.StatusTime)
         )
         rows = await self.conn.execute(stmt)
 
-        values = []
+        values = defaultdict(list)
         for (
+            job_id,
             status,
             minor_status,
             application_status,
             status_time,
             status_source,
         ) in rows:
-            values.append(
+
+            values[job_id].append(
                 [
                     status,
                     minor_status,
@@ -161,16 +165,16 @@ class JobLoggingDB(BaseSQLDB):
 
         # If no value has been set for the application status in the first place,
         # We put this status to unknown
-        res = []
-        if values:
-            if values[0][2] == "idem":
-                values[0][2] = "Unknown"
+        res: dict = defaultdict(list)
+        for job_id, history in values.items():
+            if history[0][2] == "idem":
+                history[0][2] = "Unknown"
 
             # We replace "idem" values by the value previously stated
-            for i in range(1, len(values)):
+            for i in range(1, len(history)):
                 for j in range(3):
-                    if values[i][j] == "idem":
-                        values[i][j] = values[i - 1][j]
+                    if history[i][j] == "idem":
+                        history[i][j] = history[i - 1][j]
 
             # And we replace arrays with tuples
             for (
@@ -179,8 +183,8 @@ class JobLoggingDB(BaseSQLDB):
                 application_status,
                 status_time,
                 status_source,
-            ) in values:
-                res.append(
+            ) in history:
+                res[job_id].append(
                     JobStatusReturn(
                         Status=status,
                         MinorStatus=minor_status,

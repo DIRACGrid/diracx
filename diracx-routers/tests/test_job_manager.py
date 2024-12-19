@@ -469,56 +469,73 @@ def test_get_job_status_in_bulk(normal_user_client: TestClient, valid_job_ids: l
 async def test_get_job_status_history(
     normal_user_client: TestClient, valid_job_id: int
 ):
-    pytest.skip("TODO: decide whether to keep this")
     # Arrange
-    r = normal_user_client.get(f"/api/jobs/{valid_job_id}/status")
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "parameters": ["JobID", "Status", "MinorStatus", "ApplicationStatus"],
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}],
+        },
+    )
     assert r.status_code == 200, r.json()
-    assert r.json()[str(valid_job_id)]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(valid_job_id)]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(valid_job_id)]["ApplicationStatus"] == "Unknown"
+    assert r.json()[0]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[0]["MinorStatus"] == "Job accepted"
+    assert r.json()[0]["ApplicationStatus"] == "Unknown"
 
     NEW_STATUS = JobStatus.CHECKING.value
     NEW_MINOR_STATUS = "JobPath"
     before = datetime.now(timezone.utc)
 
     r = normal_user_client.patch(
-        f"/api/jobs/{valid_job_id}/status",
+        "/api/jobs/status",
         json={
-            datetime.now(tz=timezone.utc).isoformat(): {
-                "Status": NEW_STATUS,
-                "MinorStatus": NEW_MINOR_STATUS,
+            valid_job_id: {
+                datetime.now(tz=timezone.utc).isoformat(): {
+                    "Status": NEW_STATUS,
+                    "MinorStatus": NEW_MINOR_STATUS,
+                }
             }
         },
     )
+
     after = datetime.now(timezone.utc)
 
     assert r.status_code == 200, r.json()
-    assert r.json()[str(valid_job_id)]["Status"] == NEW_STATUS
-    assert r.json()[str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
+    assert r.json()["success"][str(valid_job_id)]["Status"] == NEW_STATUS
+    assert r.json()["success"][str(valid_job_id)]["MinorStatus"] == NEW_MINOR_STATUS
 
     # Act
-    r = normal_user_client.get(
-        f"/api/jobs/{valid_job_id}/status/history",
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "parameters": [
+                "JobID",
+                "Status",
+                "MinorStatus",
+                "ApplicationStatus",
+                "LoggingInfo",
+            ],
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}],
+        },
     )
-
     # Assert
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
-    assert len(r.json()[str(valid_job_id)]) == 2
-    assert r.json()[str(valid_job_id)][0]["Status"] == JobStatus.RECEIVED.value
-    assert r.json()[str(valid_job_id)][0]["MinorStatus"] == "Job accepted"
-    assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
-    assert r.json()[str(valid_job_id)][0]["Source"] == "JobManager"
+    assert len(r.json()[0]["LoggingInfo"]) == 2
+    assert r.json()[0]["LoggingInfo"][0]["Status"] == JobStatus.RECEIVED.value
+    assert r.json()[0]["LoggingInfo"][0]["MinorStatus"] == "Job accepted"
+    assert r.json()[0]["LoggingInfo"][0]["ApplicationStatus"] == "Unknown"
+    assert r.json()[0]["LoggingInfo"][0]["Source"] == "JobManager"
 
-    assert r.json()[str(valid_job_id)][1]["Status"] == JobStatus.CHECKING.value
-    assert r.json()[str(valid_job_id)][1]["MinorStatus"] == "JobPath"
-    assert r.json()[str(valid_job_id)][1]["ApplicationStatus"] == "Unknown"
+    assert r.json()[0]["LoggingInfo"][1]["Status"] == JobStatus.CHECKING.value
+    assert r.json()[0]["LoggingInfo"][1]["MinorStatus"] == "JobPath"
+    assert r.json()[0]["LoggingInfo"][1]["ApplicationStatus"] == "Unknown"
     assert (
         before
-        < datetime.fromisoformat(r.json()[str(valid_job_id)][1]["StatusTime"])
+        < datetime.fromisoformat(r.json()[0]["LoggingInfo"][1]["StatusTime"])
         < after
     )
-    assert r.json()[str(valid_job_id)][1]["Source"] == "Unknown"
+    assert r.json()[0]["LoggingInfo"][1]["Source"] == "Unknown"
 
 
 def test_get_job_status_history_in_bulk(
