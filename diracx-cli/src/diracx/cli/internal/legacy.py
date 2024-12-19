@@ -40,17 +40,6 @@ class ConversionConfig(BaseModel):
     VOs: dict[str, VOConfig]
 
 
-# def parse_args():
-#     parser = argparse.ArgumentParser("Convert the legacy DIRAC CS to the new format")
-#     parser.add_argument("old_file", type=Path)
-#     parser.add_argument("conversion_config", type=Path)
-#     parser.add_argument("repo", type=Path)
-#     args = parser.parse_args()
-
-
-#     main(args.old_file, args.conversion_config, args.repo / DEFAULT_CONFIG_FILE)
-
-
 @app.command()
 def cs_sync(old_file: Path, new_file: Path):
     """Load the old CS and convert it to the new YAML format."""
