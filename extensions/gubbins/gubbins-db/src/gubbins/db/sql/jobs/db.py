@@ -17,10 +17,10 @@ class GubbinsJobDB(JobDB):
         """
         This is a new method that makes use of a new table.
         """
-        stmt = insert(GubbinsInfo).values(JobID=job_id, Info=info)
+        stmt = insert(GubbinsInfo).values(job_id=job_id, info=info)
         await self.conn.execute(stmt)
 
-    async def getJobJDL(  # type: ignore[override]
+    async def get_job_jdl(  # type: ignore[override]
         self, job_id: int, original: bool = False, with_info=False
     ) -> str | dict[str, str]:
         """
@@ -31,16 +31,16 @@ class GubbinsJobDB(JobDB):
         Note that this requires to disable mypy error with
         # type: ignore[override]
         """
-        jdl = await super().getJobJDL(job_id, original=original)
+        jdl = await super().get_job_jdl(job_id, original=original)
         if not with_info:
             return jdl
 
-        stmt = select(GubbinsInfo.Info).where(GubbinsInfo.JobID == job_id)
+        stmt = select(GubbinsInfo.info).where(GubbinsInfo.job_id == job_id)
 
         info = (await self.conn.execute(stmt)).scalar_one()
         return {"JDL": jdl, "Info": info}
 
-    async def setJobAttributesBulk(self, jobData):
+    async def set_job_attributes_bulk(self, job_data):
         """
         This method modified the one in the parent class,
         without changing the argument nor the return type

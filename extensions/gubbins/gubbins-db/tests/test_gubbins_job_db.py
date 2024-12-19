@@ -46,9 +46,9 @@ async def test_gubbins_info(gubbins_db):
 
         await gubbins_db.insert_gubbins_info(job_id, "info")
 
-        result = await gubbins_db.getJobJDL(job_id, original=True)
+        result = await gubbins_db.get_job_jdl(job_id, original=True)
         assert result == "[JDL]"
 
-        result = await gubbins_db.getJobJDL(job_id, with_info=True)
+        result = await gubbins_db.get_job_jdl(job_id, with_info=True)
         assert "JDL" in result
         assert result["Info"] == "info"

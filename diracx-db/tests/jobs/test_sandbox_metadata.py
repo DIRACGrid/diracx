@@ -9,7 +9,7 @@ import sqlalchemy
 
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
-from diracx.db.sql.sandbox_metadata.schema import sb_EntityMapping, sb_SandBoxes
+from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ async def _dump_db(
     """
     async with sandbox_metadata_db:
         stmt = sqlalchemy.select(
-            sb_SandBoxes.SEPFN, sb_SandBoxes.OwnerId, sb_SandBoxes.LastAccessTime
+            SandBoxes.SEPFN, SandBoxes.OwnerId, SandBoxes.LastAccessTime
         )
         res = await sandbox_metadata_db.conn.execute(stmt)
         return {row.SEPFN: (row.OwnerId, row.LastAccessTime) for row in res}
@@ -109,7 +109,7 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
         await sandbox_metadata_db.insert_sandbox(sandbox_se, user_info, pfn, 100)
 
     async with sandbox_metadata_db:
-        stmt = sqlalchemy.select(sb_SandBoxes.SBId, sb_SandBoxes.SEPFN)
+        stmt = sqlalchemy.select(SandBoxes.SBId, SandBoxes.SEPFN)
         res = await sandbox_metadata_db.conn.execute(stmt)
     db_contents = {row.SEPFN: row.SBId for row in res}
     sb_id_1 = db_contents[pfn]
@@ -120,7 +120,7 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
     # Check there is no mapping
     async with sandbox_metadata_db:
         stmt = sqlalchemy.select(
-            sb_EntityMapping.SBId, sb_EntityMapping.EntityId, sb_EntityMapping.Type
+            SBEntityMapping.SBId, SBEntityMapping.EntityId, SBEntityMapping.Type
         )
         res = await sandbox_metadata_db.conn.execute(stmt)
     db_contents = {row.SBId: (row.EntityId, row.Type) for row in res}
@@ -134,7 +134,7 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
     # Check if sandbox and job are mapped
     async with sandbox_metadata_db:
         stmt = sqlalchemy.select(
-            sb_EntityMapping.SBId, sb_EntityMapping.EntityId, sb_EntityMapping.Type
+            SBEntityMapping.SBId, SBEntityMapping.EntityId, SBEntityMapping.Type
         )
         res = await sandbox_metadata_db.conn.execute(stmt)
     db_contents = {row.SBId: (row.EntityId, row.Type) for row in res}
@@ -144,7 +144,7 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
     assert sb_type == "Output"
 
     async with sandbox_metadata_db:
-        stmt = sqlalchemy.select(sb_SandBoxes.SBId, sb_SandBoxes.SEPFN)
+        stmt = sqlalchemy.select(SandBoxes.SBId, SandBoxes.SEPFN)
         res = await sandbox_metadata_db.conn.execute(stmt)
     db_contents = {row.SEPFN: row.SBId for row in res}
     sb_id_1 = db_contents[pfn]
@@ -158,8 +158,8 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
 
     # Entity should not exists anymore
     async with sandbox_metadata_db:
-        stmt = sqlalchemy.select(sb_EntityMapping.SBId).where(
-            sb_EntityMapping.EntityId == entity_id_1
+        stmt = sqlalchemy.select(SBEntityMapping.SBId).where(
+            SBEntityMapping.EntityId == entity_id_1
         )
         res = await sandbox_metadata_db.conn.execute(stmt)
     entity_sb_id = [row.SBId for row in res]
@@ -170,7 +170,7 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
         assert await sandbox_metadata_db.sandbox_is_assigned(pfn, sandbox_se) is False
     # Check the mapping has been deleted
     async with sandbox_metadata_db:
-        stmt = sqlalchemy.select(sb_EntityMapping.SBId)
+        stmt = sqlalchemy.select(SBEntityMapping.SBId)
         res = await sandbox_metadata_db.conn.execute(stmt)
     res_sb_id = [row.SBId for row in res]
     assert sb_id_1 not in res_sb_id

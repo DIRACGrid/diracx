@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 
-class DiracHttpResponse(RuntimeError):
+class DiracHttpResponseError(RuntimeError):
     def __init__(self, status_code: int, data):
         self.status_code = status_code
         self.data = data
@@ -30,7 +30,7 @@ class ConfigurationError(DiracError):
     """Used whenever we encounter a problem with the configuration."""
 
 
-class BadConfigurationVersion(ConfigurationError):
+class BadConfigurationVersionError(ConfigurationError):
     """The requested version is not known."""
 
 
@@ -38,7 +38,7 @@ class InvalidQueryError(DiracError):
     """It was not possible to build a valid database query from the given input."""
 
 
-class JobNotFound(Exception):
+class JobNotFoundError(Exception):
     def __init__(self, job_id: int, detail: str | None = None):
         self.job_id: int = job_id
         super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
