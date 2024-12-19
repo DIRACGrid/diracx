@@ -52,6 +52,8 @@ the token endpoint (POST /token).
 * The client can then use the access token to access the DIRAC services.
 """
 
+from __future__ import annotations
+
 from fastapi import (
     HTTPException,
     Request,
