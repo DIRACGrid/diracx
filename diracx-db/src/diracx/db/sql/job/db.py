@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import bindparam, delete, func, insert, select, update, case
+from sqlalchemy import bindparam, case, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 if TYPE_CHECKING:
@@ -224,15 +224,18 @@ class JobDB(BaseSQLDB):
             column: case(
                 *[
                     (Jobs.__table__.c.JobID == job_id, attrs[column])
-                    for job_id, attrs in jobData.items() if column in attrs
+                    for job_id, attrs in jobData.items()
+                    if column in attrs
                 ],
-                else_=getattr(Jobs.__table__.c, column)  # Retain original value
+                else_=getattr(Jobs.__table__.c, column),  # Retain original value
             )
             for column in columns
         }
 
-        stmt = Jobs.__table__.update().values(**case_expressions).where(
-            Jobs.__table__.c.JobID.in_(jobData.keys())
+        stmt = (
+            Jobs.__table__.update()
+            .values(**case_expressions)
+            .where(Jobs.__table__.c.JobID.in_(jobData.keys()))
         )
         await self.conn.execute(stmt)
 
