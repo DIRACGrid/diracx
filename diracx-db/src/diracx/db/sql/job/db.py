@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import bindparam, delete, func, insert, select, update
+from sqlalchemy import bindparam, delete, func, insert, select, update, case
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 if TYPE_CHECKING:
@@ -219,13 +219,22 @@ class JobDB(BaseSQLDB):
                 jobData[job_id].update(
                     {"LastUpdateTime": datetime.now(tz=timezone.utc)}
                 )
+        columns = set(key for attrs in jobData.values() for key in attrs.keys())
+        case_expressions = {
+            column: case(
+                *[
+                    (Jobs.__table__.c.JobID == job_id, attrs[column])
+                    for job_id, attrs in jobData.items() if column in attrs
+                ],
+                else_=getattr(Jobs.__table__.c, column)  # Retain original value
+            )
+            for column in columns
+        }
 
-        await self.conn.execute(
-            Jobs.__table__.update().where(
-                Jobs.__table__.c.JobID == bindparam("b_JobID")
-            ),
-            [{"b_JobID": job_id, **attrs} for job_id, attrs in jobData.items()],
+        stmt = Jobs.__table__.update().values(**case_expressions).where(
+            Jobs.__table__.c.JobID.in_(jobData.keys())
         )
+        await self.conn.execute(stmt)
 
     async def getJobJDL(self, job_id: int, original: bool = False) -> str:
         from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
