@@ -16,6 +16,7 @@ from diracx.core.models import (
 from ..dependencies import (
     Config,
     JobDB,
+    JobLoggingDB,
     JobParametersDB,
 )
 from ..fastapi_classes import DiracxRouter
@@ -143,6 +144,7 @@ async def search(
     config: Config,
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
+    job_logging_db: JobLoggingDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
     response: Response,
@@ -164,6 +166,12 @@ async def search(
 
     if body is None:
         body = JobSearchParams()
+
+    if query_logging_info := ("LoggingInfo" in (body.parameters or [])):
+        if body.parameters:
+            body.parameters.remove("LoggingInfo")
+        body.parameters = ["JobID"] + (body.parameters or [])
+
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
         body.search.append(
@@ -182,6 +190,14 @@ async def search(
         page=page,
         per_page=per_page,
     )
+
+    if query_logging_info:
+        job_logging_info = await job_logging_db.get_records(
+            [job["JobID"] for job in jobs]
+        )
+        for job in jobs:
+            job.update({"LoggingInfo": job_logging_info[job["JobID"]]})
+
     # Set the Content-Range header if needed
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4
 
