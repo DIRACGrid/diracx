@@ -1,5 +1,7 @@
 # The utils class define some boilerplate types that should be used
 # in place of the SQLAlchemy one. Have a look at them
+from __future__ import annotations
+
 from sqlalchemy import ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import declarative_base
 

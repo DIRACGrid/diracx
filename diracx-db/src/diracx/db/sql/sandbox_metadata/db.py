@@ -5,7 +5,7 @@ from typing import Any
 import sqlalchemy
 
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
-from diracx.db.sql.utils import BaseSQLDB, UTCNow
+from diracx.db.sql.utils import BaseSQLDB, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners
@@ -58,8 +58,8 @@ class SandboxMetadataDB(BaseSQLDB):
             SEName=se_name,
             SEPFN=pfn,
             Bytes=size,
-            RegistrationTime=UTCNow(),
-            LastAccessTime=UTCNow(),
+            RegistrationTime=utcnow(),
+            LastAccessTime=utcnow(),
         )
         try:
             result = await self.conn.execute(stmt)
@@ -72,7 +72,7 @@ class SandboxMetadataDB(BaseSQLDB):
         stmt = (
             sqlalchemy.update(SandBoxes)
             .where(SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn)
-            .values(LastAccessTime=UTCNow())
+            .values(LastAccessTime=utcnow())
         )
         result = await self.conn.execute(stmt)
         assert result.rowcount == 1

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from diracx.core.extensions import extensions_by_priority

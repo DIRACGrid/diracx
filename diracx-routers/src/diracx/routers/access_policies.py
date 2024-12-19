@@ -2,7 +2,7 @@
 
 We define a set of Policy classes (WMS, DFC, etc).
 They have a default implementation in diracx.
-If an extension wants to change it, it can be overwriten in the entry point
+If an extension wants to change it, it can be overwritten in the entry point
 diracx.access_policies
 
 Each route should either:
@@ -30,11 +30,13 @@ from diracx.core.extensions import select_from_extension
 from diracx.routers.dependencies import DevelopmentSettings
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
-# FastAPI bug:
-# We normally would use `from __future__ import annotations`
-# but a bug in FastAPI prevents us from doing so
-# https://github.com/tiangolo/fastapi/pull/11355
-# Until it is merged, we can work around it by using strings.
+if "annotations" in globals():
+    raise NotImplementedError(
+        "FastAPI bug: We normally would use `from __future__ import annotations` "
+        "but a bug in FastAPI prevents us from doing so "
+        "https://github.com/tiangolo/fastapi/pull/11355 "
+        "Until it is merged, we can work around it by using strings."
+    )
 
 
 class BaseAccessPolicy(metaclass=ABCMeta):

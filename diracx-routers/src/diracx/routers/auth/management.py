@@ -4,6 +4,8 @@ These endpoints are used to manage the user's authentication tokens and
 to get information about the user's identity.
 """
 
+from __future__ import annotations
+
 from typing import Annotated, Any
 
 from fastapi import (
