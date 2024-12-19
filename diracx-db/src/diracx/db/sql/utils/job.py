@@ -325,11 +325,12 @@ async def reschedule_jobs_bulk(
             "failed": failed,
             "success": {
                 job_id: {
-                    "InputData": job_jdls[job_id],
+                    "InputData": job_jdls.get(job_id, None),
                     **attribute_changes[job_id],
                     **set_status_result.model_dump(),
                 }
                 for job_id, set_status_result in set_job_status_result.success.items()
+                if job_id not in failed
             },
         }
 
