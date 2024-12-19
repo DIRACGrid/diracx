@@ -934,6 +934,80 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     }
 
 
+## test edge case for rescheduling
+
+
+def test_reschedule_job_attr_update(normal_user_client: TestClient):
+    job_definitions = [TEST_JDL] * 15
+
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+
+    submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
+
+    # Test /jobs/reschedule and
+    # test max_reschedule
+
+    max_resched = 3
+
+    fail_resched_ids = submitted_job_ids[0:5]
+    good_resched_ids = list(set(submitted_job_ids) - set(fail_resched_ids))
+
+    for i in range(max_resched):
+        r = normal_user_client.post(
+            "/api/jobs/reschedule",
+            params={"job_ids": fail_resched_ids},
+        )
+        assert r.status_code == 200, r.json()
+        result = r.json()
+        successful_results = result["success"]
+        for jid in fail_resched_ids:
+            assert str(jid) in successful_results, result
+            assert successful_results[str(jid)]["Status"] == JobStatus.RECEIVED
+            assert successful_results[str(jid)]["MinorStatus"] == "Job Rescheduled"
+            assert successful_results[str(jid)]["RescheduleCounter"] == i + 1
+
+    for i in range(max_resched):
+        r = normal_user_client.post(
+            "/api/jobs/reschedule",
+            params={"job_ids": submitted_job_ids},
+        )
+        assert r.status_code == 200, r.json()
+        result = r.json()
+        successful_results = result["success"]
+        failed_results = result["failed"]
+        for jid in good_resched_ids:
+            assert str(jid) in successful_results, result
+            assert successful_results[str(jid)]["Status"] == JobStatus.RECEIVED
+            assert successful_results[str(jid)]["MinorStatus"] == "Job Rescheduled"
+            assert successful_results[str(jid)]["RescheduleCounter"] == i + 1
+        for jid in fail_resched_ids:
+            assert str(jid) in failed_results, result
+            # assert successful_results[jid]["Status"] == JobStatus.RECEIVED
+            # assert successful_results[jid]["MinorStatus"] == "Job Rescheduled"
+            # assert successful_results[jid]["RescheduleCounter"] == i + 1
+
+    r = normal_user_client.post(
+        "/api/jobs/reschedule",
+        params={"job_ids": submitted_job_ids},
+    )
+    assert (
+        r.status_code != 200
+    ), f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
+    assert r.json() == {
+        "detail": {
+            "success": [],
+            "failed": {
+                str(i): {
+                    "detail": f"Maximum number of reschedules exceeded ({max_resched})"
+                }
+                for i in good_resched_ids + fail_resched_ids
+            },
+        }
+    }
+
+
 # Test delete job
 
 
