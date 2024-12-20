@@ -286,7 +286,7 @@ class JobDB(BaseSQLDB):
 
     async def set_job_command_bulk(self, commands):
         """Store a command to be passed to the job together with the next heart beat."""
-        self.conn.execute(
+        await self.conn.execute(
             insert(JobCommands),
             [
                 {
