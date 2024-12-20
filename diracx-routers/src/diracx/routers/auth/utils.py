@@ -262,7 +262,7 @@ async def initiate_authorization_flow_with_iam(
         state | {"vo": vo, "code_verifier": code_verifier}, cipher_suite
     )
 
-    urlParams = [
+    url_params = [
         "response_type=code",
         f"code_challenge={code_challenge}",
         "code_challenge_method=S256",
@@ -271,7 +271,7 @@ async def initiate_authorization_flow_with_iam(
         "scope=openid%20profile",
         f"state={encrypted_state}",
     ]
-    authorization_flow_url = f"{authorization_endpoint}?{'&'.join(urlParams)}"
+    authorization_flow_url = f"{authorization_endpoint}?{'&'.join(url_params)}"
     return authorization_flow_url
 
 

@@ -55,16 +55,21 @@ async def test_get(auth_db: AuthDB):
         )
 
     # Enrich the dict with the generated refresh token attributes
-    refresh_token_details["jti"] = jti
-    refresh_token_details["status"] = RefreshTokenStatus.CREATED
-    refresh_token_details["creation_time"] = creation_time
+    expected_refresh_token = {
+        "Sub": refresh_token_details["sub"],
+        "PreferredUsername": refresh_token_details["preferred_username"],
+        "Scope": refresh_token_details["scope"],
+        "JTI": jti,
+        "Status": RefreshTokenStatus.CREATED,
+        "CreationTime": creation_time,
+    }
 
     # Get refresh token details
     async with auth_db as auth_db:
         result = await auth_db.get_refresh_token(jti)
 
     # Make sure they are identical
-    assert result == refresh_token_details
+    assert result == expected_refresh_token
 
 
 async def test_get_user_refresh_tokens(auth_db: AuthDB):
@@ -96,11 +101,11 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
     # And check that the subject value corresponds to the user's subject
     assert len(refresh_tokens_user1) == 2
     for refresh_token in refresh_tokens_user1:
-        assert refresh_token["sub"] == sub1
+        assert refresh_token["Sub"] == sub1
 
     assert len(refresh_tokens_user2) == 1
     for refresh_token in refresh_tokens_user2:
-        assert refresh_token["sub"] == sub2
+        assert refresh_token["Sub"] == sub2
 
 
 async def test_revoke(auth_db: AuthDB):
@@ -121,7 +126,7 @@ async def test_revoke(auth_db: AuthDB):
     async with auth_db as auth_db:
         refresh_token_details = await auth_db.get_refresh_token(jti)
 
-    assert refresh_token_details["status"] == RefreshTokenStatus.REVOKED
+    assert refresh_token_details["Status"] == RefreshTokenStatus.REVOKED
 
 
 async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
@@ -194,7 +199,7 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
     # And check that the subject value corresponds to the user's subject
     assert len(refresh_tokens_user) == nb_tokens
     for refresh_token in refresh_tokens_user:
-        assert refresh_token["sub"] == sub
+        assert refresh_token["Sub"] == sub
 
     # Revoke one of the tokens
     async with auth_db as auth_db:
@@ -208,8 +213,8 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
     # And check that the subject value corresponds to the user's subject
     assert len(refresh_tokens_user) == nb_tokens - 1
     for refresh_token in refresh_tokens_user:
-        assert refresh_token["sub"] == sub
-        assert refresh_token["jti"] != jtis[0]
+        assert refresh_token["Sub"] == sub
+        assert refresh_token["JTI"] != jtis[0]
 
 
 async def test_get_refresh_tokens(auth_db: AuthDB):

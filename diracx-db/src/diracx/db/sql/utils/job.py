@@ -49,7 +49,7 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
     async with asyncio.TaskGroup() as tg:
         for job in jobs:
             original_jdl = deepcopy(job.jdl)
-            jobManifest = returnValueOrRaise(
+            job_manifest = returnValueOrRaise(
                 checkAndAddOwner(original_jdl, job.owner, job.owner_group)
             )
 
@@ -60,13 +60,13 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
             original_jdls.append(
                 (
                     original_jdl,
-                    jobManifest,
+                    job_manifest,
                     tg.create_task(job_db.create_job(original_jdl)),
                 )
             )
 
     async with asyncio.TaskGroup() as tg:
-        for job, (original_jdl, jobManifest_, job_id_task) in zip(jobs, original_jdls):
+        for job, (original_jdl, job_manifest_, job_id_task) in zip(jobs, original_jdls):
             job_id = job_id_task.result()
             job_attrs = {
                 "JobID": job_id,
@@ -77,16 +77,16 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
                 "VO": job.vo,
             }
 
-            jobManifest_.setOption("JobID", job_id)
+            job_manifest_.setOption("JobID", job_id)
 
             # 2.- Check JDL and Prepare DIRAC JDL
-            jobJDL = jobManifest_.dumpAsJDL()
+            job_jdl = job_manifest_.dumpAsJDL()
 
             # Replace the JobID placeholder if any
-            if jobJDL.find("%j") != -1:
-                jobJDL = jobJDL.replace("%j", str(job_id))
+            if job_jdl.find("%j") != -1:
+                job_jdl = job_jdl.replace("%j", str(job_id))
 
-            class_ad_job = ClassAd(jobJDL)
+            class_ad_job = ClassAd(job_jdl)
 
             class_ad_req = ClassAd("[]")
             if not class_ad_job.isOK():
@@ -99,7 +99,7 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
             # TODO is this even needed?
             class_ad_job.insertAttributeInt("JobID", job_id)
 
-            await job_db.checkAndPrepareJob(
+            await job_db.check_and_prepare_job(
                 job_id,
                 class_ad_job,
                 class_ad_req,
@@ -108,10 +108,10 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
                 job_attrs,
                 job.vo,
             )
-            jobJDL = createJDLWithInitialStatus(
+            job_jdl = createJDLWithInitialStatus(
                 class_ad_job,
                 class_ad_req,
-                job_db.jdl2DBParameters,
+                job_db.jdl_2_db_parameters,
                 job_attrs,
                 job.initial_status,
                 job.initial_minor_status,
@@ -119,11 +119,11 @@ async def submit_jobs_jdl(jobs: list[JobSubmissionSpec], job_db: JobDB):
             )
 
             jobs_to_insert[job_id] = job_attrs
-            jdls_to_update[job_id] = jobJDL
+            jdls_to_update[job_id] = job_jdl
 
             if class_ad_job.lookupAttribute("InputData"):
-                inputData = class_ad_job.getListFromExpression("InputData")
-                inputdata_to_insert[job_id] = [lfn for lfn in inputData if lfn]
+                input_data = class_ad_job.getListFromExpression("InputData")
+                inputdata_to_insert[job_id] = [lfn for lfn in input_data if lfn]
 
         tg.create_task(job_db.update_job_jdls(jdls_to_update))
         tg.create_task(job_db.insert_job_attributes(jobs_to_insert))
@@ -243,7 +243,7 @@ async def reschedule_jobs_bulk(
     job_jdls = {
         jobid: parse_jdl(jobid, jdl)
         for jobid, jdl in (
-            (await job_db.getJobJDLs(surviving_job_ids, original=True)).items()
+            (await job_db.get_job_jdls(surviving_job_ids, original=True)).items()
         )
     }
 
@@ -251,7 +251,7 @@ async def reschedule_jobs_bulk(
         class_ad_job = job_jdls[job_id]
         class_ad_req = ClassAd("[]")
         try:
-            await job_db.checkAndPrepareJob(
+            await job_db.check_and_prepare_job(
                 job_id,
                 class_ad_job,
                 class_ad_req,
@@ -277,11 +277,11 @@ async def reschedule_jobs_bulk(
         else:
             site = site_list[0]
 
-        reqJDL = class_ad_req.asJDL()
-        class_ad_job.insertAttributeInt("JobRequirements", reqJDL)
-        jobJDL = class_ad_job.asJDL()
+        req_jdl = class_ad_req.asJDL()
+        class_ad_job.insertAttributeInt("JobRequirements", req_jdl)
+        job_jdl = class_ad_job.asJDL()
         # Replace the JobID placeholder if any
-        jobJDL = jobJDL.replace("%j", str(job_id))
+        job_jdl = job_jdl.replace("%j", str(job_id))
 
         additional_attrs = {
             "Site": site,
@@ -291,7 +291,7 @@ async def reschedule_jobs_bulk(
         }
 
         # set new JDL
-        jdl_changes[job_id] = jobJDL
+        jdl_changes[job_id] = job_jdl
 
         # set new status
         status_changes[job_id] = {
@@ -319,7 +319,7 @@ async def reschedule_jobs_bulk(
 
         # BULK JDL UPDATE
         # DATABASE OPERATION
-        await job_db.setJobJDLsBulk(jdl_changes)
+        await job_db.set_job_jdl_bulk(jdl_changes)
 
         return {
             "failed": failed,
@@ -412,40 +412,40 @@ async def set_job_status_bulk(
 
     for res in results:
         job_id = int(res["JobID"])
-        currentStatus = res["Status"]
-        startTime = res["StartExecTime"]
-        endTime = res["EndExecTime"]
+        current_status = res["Status"]
+        start_time = res["StartExecTime"]
+        end_time = res["EndExecTime"]
 
         # If the current status is Stalled and we get an update, it should probably be "Running"
-        if currentStatus == JobStatus.STALLED:
-            currentStatus = JobStatus.RUNNING
+        if current_status == JobStatus.STALLED:
+            current_status = JobStatus.RUNNING
 
         #####################################################################################################
-        statusDict = status_dicts[job_id]
-        # This is more precise than "LastTime". timeStamps is a sorted list of tuples...
-        timeStamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
-        lastTime = TimeUtilities.fromEpoch(timeStamps[-1][0]).replace(
+        status_dict = status_dicts[job_id]
+        # This is more precise than "LastTime". time_stamps is a sorted list of tuples...
+        time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
+        last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(
             tzinfo=timezone.utc
         )
 
         # Get chronological order of new updates
-        updateTimes = sorted(statusDict)
+        update_times = sorted(status_dict)
 
-        newStartTime, newEndTime = getStartAndEndTime(
-            startTime, endTime, updateTimes, timeStamps, statusDict
+        new_start_time, new_end_time = getStartAndEndTime(
+            start_time, end_time, update_times, time_stamps, status_dict
         )
 
         job_data: dict[str, str] = {}
         new_status: str | None = None
-        if updateTimes[-1] >= lastTime:
+        if update_times[-1] >= last_time:
             new_status, new_minor, new_application = (
                 returnValueOrRaise(  # TODO: Catch this
                     getNewStatus(
                         job_id,
-                        updateTimes,
-                        lastTime,
-                        statusDict,
-                        currentStatus,
+                        update_times,
+                        last_time,
+                        status_dict,
+                        current_status,
                         force,
                         MagicMock(),  # FIXME
                     )
@@ -467,15 +467,15 @@ async def set_job_status_bulk(
             #     if not result["OK"]:
             #         return result
 
-        for updTime in updateTimes:
-            if statusDict[updTime]["Source"].startswith("Job"):
-                job_data["HeartBeatTime"] = str(updTime)
+        for upd_time in update_times:
+            if status_dict[upd_time]["Source"].startswith("Job"):
+                job_data["HeartBeatTime"] = str(upd_time)
 
-        if not startTime and newStartTime:
-            job_data["StartExecTime"] = newStartTime
+        if not start_time and new_start_time:
+            job_data["StartExecTime"] = new_start_time
 
-        if not endTime and newEndTime:
-            job_data["EndExecTime"] = newEndTime
+        if not end_time and new_end_time:
+            job_data["EndExecTime"] = new_end_time
 
         #####################################################################################################
         # delete or kill job, if we transition to DELETED or KILLED state
@@ -486,20 +486,20 @@ async def set_job_status_bulk(
         if job_data:
             job_attribute_updates[job_id] = job_data
 
-        for updTime in updateTimes:
-            sDict = statusDict[updTime]
+        for upd_time in update_times:
+            s_dict = status_dict[upd_time]
             job_logging_updates.append(
                 JobLoggingRecord(
                     job_id=job_id,
-                    status=sDict.get("Status", "idem"),
-                    minor_status=sDict.get("MinorStatus", "idem"),
-                    application_status=sDict.get("ApplicationStatus", "idem"),
-                    date=updTime,
-                    source=sDict.get("Source", "Unknown"),
+                    status=s_dict.get("Status", "idem"),
+                    minor_status=s_dict.get("MinorStatus", "idem"),
+                    application_status=s_dict.get("ApplicationStatus", "idem"),
+                    date=upd_time,
+                    source=s_dict.get("Source", "Unknown"),
                 )
             )
 
-    await job_db.setJobAttributesBulk(job_attribute_updates)
+    await job_db.set_job_attributes_bulk(job_attribute_updates)
 
     await remove_jobs_from_task_queue(
         list(deletable_killable_jobs), config, task_queue_db, background_task

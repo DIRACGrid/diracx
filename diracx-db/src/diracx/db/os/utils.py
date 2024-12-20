@@ -16,7 +16,7 @@ from opensearchpy import AsyncOpenSearch
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
-from diracx.db.exceptions import DBUnavailable
+from diracx.db.exceptions import DBUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class OpenSearchDBError(Exception):
     pass
 
 
-class OpenSearchDBUnavailable(DBUnavailable, OpenSearchDBError):
+class OpenSearchDBUnavailableError(DBUnavailableError, OpenSearchDBError):
     pass
 
 
@@ -152,7 +152,7 @@ class BaseOSDB(metaclass=ABCMeta):
         be ran at every query.
         """
         if not await self.client.ping():
-            raise OpenSearchDBUnavailable(
+            raise OpenSearchDBUnavailableError(
                 f"Failed to connect to {self.__class__.__qualname__}"
             )
 

@@ -170,11 +170,16 @@ class ClientFactory:
             """Dummy access policy."""
 
             async def policy(
-                policy_name: str, user_info: AuthorizedUserInfo, /, **kwargs
+                policy_name: str,  # noqa: N805
+                user_info: AuthorizedUserInfo,
+                /,
+                **kwargs,
             ):
                 pass
 
-            def enrich_tokens(access_payload: dict, refresh_payload: dict):
+            def enrich_tokens(
+                access_payload: dict, refresh_payload: dict  # noqa: N805
+            ):
 
                 return {"PolicySpecific": "OpenAccessForTest"}, {}
 

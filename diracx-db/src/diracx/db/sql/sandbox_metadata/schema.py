@@ -14,7 +14,7 @@ from diracx.db.sql.utils import Column, DateNowColumn
 Base = declarative_base()
 
 
-class sb_Owners(Base):
+class SBOwners(Base):
     __tablename__ = "sb_Owners"
     OwnerID = Column(Integer, autoincrement=True)
     Owner = Column(String(32))
@@ -23,7 +23,7 @@ class sb_Owners(Base):
     __table_args__ = (PrimaryKeyConstraint("OwnerID"),)
 
 
-class sb_SandBoxes(Base):
+class SandBoxes(Base):
     __tablename__ = "sb_SandBoxes"
     SBId = Column(Integer, autoincrement=True)
     OwnerId = Column(Integer)
@@ -40,7 +40,7 @@ class sb_SandBoxes(Base):
     )
 
 
-class sb_EntityMapping(Base):
+class SBEntityMapping(Base):
     __tablename__ = "sb_EntityMapping"
     SBId = Column(Integer)
     EntityId = Column(String(128))

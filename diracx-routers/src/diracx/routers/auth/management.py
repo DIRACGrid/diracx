@@ -66,7 +66,7 @@ async def revoke_refresh_token(
             detail="JTI provided does not exist",
         )
 
-    if PROXY_MANAGEMENT not in user_info.properties and user_info.sub != res["sub"]:
+    if PROXY_MANAGEMENT not in user_info.properties and user_info.sub != res["Sub"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot revoke a refresh token owned by someone else",
