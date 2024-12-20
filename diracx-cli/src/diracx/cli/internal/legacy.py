@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import hashlib
 import json
@@ -38,17 +40,6 @@ class VOConfig(BaseModel):
 
 class ConversionConfig(BaseModel):
     VOs: dict[str, VOConfig]
-
-
-# def parse_args():
-#     parser = argparse.ArgumentParser("Convert the legacy DIRAC CS to the new format")
-#     parser.add_argument("old_file", type=Path)
-#     parser.add_argument("conversion_config", type=Path)
-#     parser.add_argument("repo", type=Path)
-#     args = parser.parse_args()
-
-
-#     main(args.old_file, args.conversion_config, args.repo / DEFAULT_CONFIG_FILE)
 
 
 @app.command()

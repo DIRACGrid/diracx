@@ -19,7 +19,7 @@ async def test_logout(monkeypatch, capfd, cli_env, with_cli_login):
     assert expected_credentials_path.exists()
 
     # Run the logout command
-    await cli.logout()
+    await cli.auth.logout()
     captured = capfd.readouterr()
     assert "Removed credentials from" in captured.out
     assert "Logout successful!" in captured.out
@@ -29,7 +29,7 @@ async def test_logout(monkeypatch, capfd, cli_env, with_cli_login):
     assert not expected_credentials_path.exists()
 
     # Rerun the logout command, it should not fail
-    await cli.logout()
+    await cli.auth.logout()
     captured = capfd.readouterr()
     assert "Removed credentials from" not in captured.out
     assert "Logout successful!" in captured.out
