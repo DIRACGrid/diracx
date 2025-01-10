@@ -22,6 +22,7 @@ dependencies = [
     "rich",
     "typer",
     "pyyaml",
+    "jsonrpc",
 ]
 dynamic = ["version"]
 
