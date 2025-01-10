@@ -46,6 +46,16 @@ class JobNotFoundError(Exception):
         super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
 
 
+class SandboxNotFoundError(Exception):
+    def __init__(self, pfn: str, se_name: str, detail: str | None = None):
+        self.pfn: str = pfn
+        self.se_name: str = se_name
+        super().__init__(
+            f"Sandbox with {pfn} and {se_name} not found"
+            + (" ({detail})" if detail else "")
+        )
+
+
 class JobError(Exception):
     def __init__(self, job_id, detail: str | None = None):
         self.job_id: int = job_id

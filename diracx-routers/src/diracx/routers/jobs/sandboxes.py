@@ -12,8 +12,8 @@ from fastapi import Body, Depends, HTTPException, Query
 from pydantic import BaseModel, PrivateAttr
 from pydantic_settings import SettingsConfigDict
 from pyparsing import Any
-from sqlalchemy.exc import NoResultFound
 
+from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import (
     SandboxInfo,
     SandboxType,
@@ -125,7 +125,7 @@ async def initiate_sandbox_upload(
         exists_and_assigned = await sandbox_metadata_db.sandbox_is_assigned(
             pfn, settings.se_name
         )
-    except NoResultFound:
+    except SandboxNotFoundError:
         # The sandbox doesn't exist in the database
         pass
     else:

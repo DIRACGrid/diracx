@@ -7,6 +7,7 @@ from datetime import datetime
 import pytest
 import sqlalchemy
 
+from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
@@ -48,7 +49,7 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
     db_contents = await _dump_db(sandbox_metadata_db)
     assert pfn1 not in db_contents
     async with sandbox_metadata_db:
-        with pytest.raises(sqlalchemy.exc.NoResultFound):
+        with pytest.raises(SandboxNotFoundError):
             await sandbox_metadata_db.sandbox_is_assigned(pfn1, "SandboxSE")
 
     # Insert the sandbox
