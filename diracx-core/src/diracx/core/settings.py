@@ -28,7 +28,13 @@ T = TypeVar("T")
 
 class SqlalchemyDsn(AnyUrl):
     _constraints = UrlConstraints(
-        allowed_schemes=["sqlite+aiosqlite", "mysql+aiomysql"]
+        allowed_schemes=[
+            "sqlite+aiosqlite",
+            "mysql+aiomysql",
+            # The real scheme is with an underscore, (oracle+oracledb_async)
+            # but pydantic does not validate it, so we use this hack
+            "oracle+oracledb-async",
+        ]
     )
 
 
