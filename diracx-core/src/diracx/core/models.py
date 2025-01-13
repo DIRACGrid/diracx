@@ -50,7 +50,7 @@ class TokenResponse(BaseModel):
     # Based on RFC 6749
     access_token: str
     expires_in: int
-    token_type: str = "Bearer"
+    token_type: str = "Bearer"  # noqa: S105
     refresh_token: str | None = None
 
 
