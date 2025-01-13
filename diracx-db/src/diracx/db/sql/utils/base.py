@@ -127,6 +127,18 @@ class BaseSQLDB(metaclass=ABCMeta):
                     db_url = os.environ[var_name]
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
+                    # pydantic does not allow for underscore in scheme
+                    # so we do a special case
+                    elif "_" in db_url.split(":")[0]:
+                        # Validate the URL with a fake schema, and then store
+                        # the original one
+                        scheme_id = db_url.find(":")
+                        fake_url = (
+                            db_url[:scheme_id].replace("_", "-") + db_url[scheme_id:]
+                        )
+                        TypeAdapter(SqlalchemyDsn).validate_python(fake_url)
+                        db_urls[db_name] = db_url
+
                     else:
                         db_urls[db_name] = str(
                             TypeAdapter(SqlalchemyDsn).validate_python(db_url)
