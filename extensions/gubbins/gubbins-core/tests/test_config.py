@@ -26,7 +26,7 @@ def github_is_down():
 def test_remote_git_config_source(monkeypatch):
 
     monkeypatch.setattr(
-        "diracx.core.config.DEFAULT_CONFIG_FILE",
+        "diracx.core.config.sources.DEFAULT_CONFIG_FILE",
         "k3s/examples/cs.yaml",
     )
     remote_conf = ConfigSource.create_from_url(backend_url=TEST_REPO)
