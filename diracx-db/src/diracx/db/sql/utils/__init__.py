@@ -264,6 +264,15 @@ class BaseSQLDB(metaclass=ABCMeta):
                     db_url = os.environ[var_name]
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
+                    # pydantic does not allow for underscore in scheme
+                    # so we do a special case
+                    elif db_url.startswith("oracle+oracledb_async"):
+                        # Validate the URL with a fake schema, and then store
+                        # the original one
+                        TypeAdapter(SqlalchemyDsn).validate_python(
+                            db_url.replace("oracle+oracledb_async", "fakeOracleScheme")
+                        )
+                        db_urls[db_name] = db_url
                     else:
                         db_urls[db_name] = str(
                             TypeAdapter(SqlalchemyDsn).validate_python(db_url)
