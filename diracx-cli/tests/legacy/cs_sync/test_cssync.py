@@ -16,7 +16,7 @@ file_path = Path(__file__).parent
 def test_cs_sync(tmp_path, monkeypatch):
     monkeypatch.setenv("DIRAC_COMPAT_ENABLE_CS_CONVERSION", "Yes")
 
-    output_file = tmp_path / "default.yaml"
+    output_file = tmp_path / "default.yml"
 
     result = runner.invoke(
         app,
@@ -40,7 +40,7 @@ def test_disabled_vos_empty(tmp_path, monkeypatch):
     # # DisabledVOs cannot be set if any Legacy clients are enabled
     monkeypatch.setenv("DIRAC_COMPAT_ENABLE_CS_CONVERSION", "Yes")
 
-    output_file = tmp_path / "default.yaml"
+    output_file = tmp_path / "default.yml"
 
     result = runner.invoke(
         app,
