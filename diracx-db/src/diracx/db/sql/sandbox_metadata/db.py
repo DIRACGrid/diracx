@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import sqlalchemy
+from sqlalchemy import Executable, delete, insert, literal, select, update
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 
@@ -17,7 +19,7 @@ class SandboxMetadataDB(BaseSQLDB):
     async def upsert_owner(self, user: UserInfo) -> int:
         """Get the id of the owner from the database."""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
-        stmt = sqlalchemy.select(SBOwners.OwnerID).where(
+        stmt = select(SBOwners.OwnerID).where(
             SBOwners.Owner == user.preferred_username,
             SBOwners.OwnerGroup == user.dirac_group,
             SBOwners.VO == user.vo,
@@ -26,7 +28,7 @@ class SandboxMetadataDB(BaseSQLDB):
         if owner_id := result.scalar_one_or_none():
             return owner_id
 
-        stmt = sqlalchemy.insert(SBOwners).values(
+        stmt = insert(SBOwners).values(
             Owner=user.preferred_username,
             OwnerGroup=user.dirac_group,
             VO=user.vo,
@@ -53,7 +55,7 @@ class SandboxMetadataDB(BaseSQLDB):
         """Add a new sandbox in SandboxMetadataDB."""
         # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         owner_id = await self.upsert_owner(user)
-        stmt = sqlalchemy.insert(SandBoxes).values(
+        stmt = insert(SandBoxes).values(
             OwnerId=owner_id,
             SEName=se_name,
             SEPFN=pfn,
@@ -63,27 +65,31 @@ class SandboxMetadataDB(BaseSQLDB):
         )
         try:
             result = await self.conn.execute(stmt)
-        except sqlalchemy.exc.IntegrityError:
+        except IntegrityError:
             await self.update_sandbox_last_access_time(se_name, pfn)
         else:
             assert result.rowcount == 1
 
     async def update_sandbox_last_access_time(self, se_name: str, pfn: str) -> None:
         stmt = (
-            sqlalchemy.update(SandBoxes)
+            update(SandBoxes)
             .where(SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn)
             .values(LastAccessTime=utcnow())
         )
         result = await self.conn.execute(stmt)
         assert result.rowcount == 1
 
-    async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool:
+    async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
         """Checks if a sandbox exists and has been assigned."""
-        stmt: sqlalchemy.Executable = sqlalchemy.select(SandBoxes.Assigned).where(
+        stmt: Executable = select(SandBoxes.Assigned).where(
             SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn
         )
         result = await self.conn.execute(stmt)
-        is_assigned = result.scalar_one()
+        try:
+            is_assigned = result.scalar_one()
+        except NoResultFound as e:
+            raise SandboxNotFoundError(pfn, se_name) from e
+
         return is_assigned
 
     @staticmethod
@@ -97,7 +103,7 @@ class SandboxMetadataDB(BaseSQLDB):
         """Get the sandbox assign to job."""
         entity_id = self.jobid_to_entity_id(job_id)
         stmt = (
-            sqlalchemy.select(SandBoxes.SEPFN)
+            select(SandBoxes.SEPFN)
             .where(SandBoxes.SBId == SBEntityMapping.SBId)
             .where(
                 SBEntityMapping.EntityId == entity_id,
@@ -118,24 +124,20 @@ class SandboxMetadataDB(BaseSQLDB):
         for job_id in jobs_ids:
             # Define the entity id as 'Entity:entity_id' due to the DB definition:
             entity_id = self.jobid_to_entity_id(job_id)
-            select_sb_id = sqlalchemy.select(
+            select_sb_id = select(
                 SandBoxes.SBId,
-                sqlalchemy.literal(entity_id).label("EntityId"),
-                sqlalchemy.literal(sb_type).label("Type"),
+                literal(entity_id).label("EntityId"),
+                literal(sb_type).label("Type"),
             ).where(
                 SandBoxes.SEName == se_name,
                 SandBoxes.SEPFN == pfn,
             )
-            stmt = sqlalchemy.insert(SBEntityMapping).from_select(
+            stmt = insert(SBEntityMapping).from_select(
                 ["SBId", "EntityId", "Type"], select_sb_id
             )
             await self.conn.execute(stmt)
 
-            stmt = (
-                sqlalchemy.update(SandBoxes)
-                .where(SandBoxes.SEPFN == pfn)
-                .values(Assigned=True)
-            )
+            stmt = update(SandBoxes).where(SandBoxes.SEPFN == pfn).values(Assigned=True)
             result = await self.conn.execute(stmt)
             assert result.rowcount == 1
 
@@ -143,7 +145,7 @@ class SandboxMetadataDB(BaseSQLDB):
         """Delete mapping between jobs and sandboxes."""
         for job_id in jobs_ids:
             entity_id = self.jobid_to_entity_id(job_id)
-            sb_sel_stmt = sqlalchemy.select(SandBoxes.SBId)
+            sb_sel_stmt = select(SandBoxes.SBId)
             sb_sel_stmt = sb_sel_stmt.join(
                 SBEntityMapping, SBEntityMapping.SBId == SandBoxes.SBId
             )
@@ -152,19 +154,19 @@ class SandboxMetadataDB(BaseSQLDB):
             result = await self.conn.execute(sb_sel_stmt)
             sb_ids = [row.SBId for row in result]
 
-            del_stmt = sqlalchemy.delete(SBEntityMapping).where(
+            del_stmt = delete(SBEntityMapping).where(
                 SBEntityMapping.EntityId == entity_id
             )
             await self.conn.execute(del_stmt)
 
-            sb_entity_sel_stmt = sqlalchemy.select(SBEntityMapping.SBId).where(
+            sb_entity_sel_stmt = select(SBEntityMapping.SBId).where(
                 SBEntityMapping.SBId.in_(sb_ids)
             )
             result = await self.conn.execute(sb_entity_sel_stmt)
             remaining_sb_ids = [row.SBId for row in result]
             if not remaining_sb_ids:
                 unassign_stmt = (
-                    sqlalchemy.update(SandBoxes)
+                    update(SandBoxes)
                     .where(SandBoxes.SBId.in_(sb_ids))
                     .values(Assigned=False)
                 )
