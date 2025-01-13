@@ -61,9 +61,9 @@ class AuthSettings(ServiceSettingsBase):
 
     # TODO: this should probably be something mandatory
     # to set by the user
-    token_issuer: str = "http://lhcbdirac.cern.ch/"
+    token_issuer: str = "http://lhcbdirac.cern.ch/"  # noqa: S105
     token_key: TokenSigningKey
-    token_algorithm: str = "RS256"
+    token_algorithm: str = "RS256"  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
 
