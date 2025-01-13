@@ -134,5 +134,5 @@ class SandboxInfo(BaseModel):
 
 
 class SandboxType(StrEnum):
-    Input: str = "Input"
-    Output: str = "Output"
+    Input = "Input"
+    Output = "Output"
