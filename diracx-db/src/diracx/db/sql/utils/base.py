@@ -73,7 +73,7 @@ class BaseSQLDB(metaclass=ABCMeta):
     MyDBClass = BaseSQLDB.available_implementations(db_name)[0]
 
     db = MyDBClass(url)
-    async with db.engine_context:
+    async with db.engine_context():
         async with db:
             # Do something in the first transaction
             # Commit will be called automatically
