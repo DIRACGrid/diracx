@@ -5,8 +5,8 @@ import hashlib
 import random
 import secrets
 
+import httpx
 import pytest
-import requests
 from aiobotocore.session import get_session
 
 from diracx.core.s3 import (
@@ -82,9 +82,13 @@ async def test_presigned_upload_moto(moto_s3):
     )
 
     # Upload the file
-    r = requests.post(
-        upload_info["url"], data=upload_info["fields"], files={"file": file_content}
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            upload_info["url"],
+            data=upload_info["fields"],
+            files={"file": file_content},
+        )
+
     assert r.status_code == 204, r.text
 
     # Make sure the object is actually there
@@ -143,9 +147,11 @@ async def test_presigned_upload_minio(
         minio_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
-    r = requests.post(
-        upload_info["url"], data=upload_info["fields"], files={"file": content}
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            upload_info["url"], data=upload_info["fields"], files={"file": content}
+        )
+
     if expected_error is None:
         assert r.status_code == 204, r.text
         assert await s3_object_exists(minio_client, test_bucket, key)
