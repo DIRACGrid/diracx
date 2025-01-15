@@ -5,8 +5,8 @@ import secrets
 from copy import deepcopy
 from io import BytesIO
 
+import httpx
 import pytest
-import requests
 from fastapi.testclient import TestClient
 
 from diracx.routers.auth.token import create_token
@@ -57,7 +57,7 @@ def test_upload_then_download(
 
     # Actually upload the file
     files = {"file": ("file", BytesIO(data))}
-    r = requests.post(upload_info["url"], data=upload_info["fields"], files=files)
+    r = httpx.post(upload_info["url"], data=upload_info["fields"], files=files)
     assert r.status_code == 204, r.text
 
     # Make sure we can download it and get the same data back
@@ -65,7 +65,7 @@ def test_upload_then_download(
     assert r.status_code == 200, r.text
     download_info = r.json()
     assert download_info["expires_in"] > 5
-    r = requests.get(download_info["url"])
+    r = httpx.get(download_info["url"])
     assert r.status_code == 200, r.text
     assert r.content == data
 
