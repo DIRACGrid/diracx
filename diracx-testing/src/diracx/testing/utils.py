@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, Generator
 from urllib.parse import parse_qs, urljoin, urlparse
 from uuid import uuid4
 
+import httpx
 import pytest
-import requests
 
 if TYPE_CHECKING:
     from diracx.core.settings import DevelopmentSettings
@@ -616,7 +616,7 @@ async def test_login(monkeypatch, capfd, cli_env):
 
     poll_attempts = 0
 
-    def fake_sleep(*args, **kwargs):
+    async def fake_sleep(*args, **kwargs):
         nonlocal poll_attempts
 
         # Keep track of the number of times this is called
@@ -629,13 +629,13 @@ async def test_login(monkeypatch, capfd, cli_env):
             match = re.search(rf"{cli_env['DIRACX_URL']}[^\n]+", captured.out)
             assert match, captured
 
-            do_device_flow_with_dex(match.group(), cli_env["DIRACX_CA_PATH"])
+            await do_device_flow_with_dex(match.group(), cli_env["DIRACX_CA_PATH"])
 
         # Ensure we don't poll forever
         assert poll_attempts <= 100
 
         # Reduce the sleep duration to zero to speed up the test
-        return unpatched_sleep(0)
+        await unpatched_sleep(0)
 
     # We monkeypatch asyncio.sleep to provide a hook to run the actions that
     # would normally be done by a user. This includes capturing the login URL
@@ -664,7 +664,7 @@ async def test_login(monkeypatch, capfd, cli_env):
     return expected_credentials_path.read_text()
 
 
-def do_device_flow_with_dex(url: str, ca_path: str) -> None:
+async def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     """Do the device flow with dex."""
 
     class DexLoginFormParser(HTMLParser):
@@ -672,10 +672,14 @@ def do_device_flow_with_dex(url: str, ca_path: str) -> None:
             nonlocal action_url
             if "form" in str(tag):
                 assert action_url is None
-                action_url = urljoin(login_page_url, dict(attrs)["action"])
+                action_url = urljoin(str(login_page_url), dict(attrs)["action"])
 
+    ssl_context = ssl.create_default_context(cafile=ca_path)
+    client_kwargs = dict(verify=ssl_context, follow_redirects=True)
     # Get the login page
-    r = requests.get(url, verify=ca_path)
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        r = await client.get(url)
+
     r.raise_for_status()
     login_page_url = r.url  # This is not the same as URL as we redirect to dex
     login_page_body = r.text
@@ -686,19 +690,24 @@ def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     assert action_url is not None, login_page_body
 
     # Do the actual login
-    r = requests.post(
-        action_url,
-        data={"login": "admin@example.com", "password": "password"},
-        verify=ca_path,
-    )
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        r = await client.post(
+            action_url,
+            data={"login": "admin@example.com", "password": "password"},
+        )
+
     r.raise_for_status()
     approval_url = r.url  # This is not the same as URL as we redirect to dex
     # Do the actual approval
-    r = requests.post(
-        approval_url,
-        {"approval": "approve", "req": parse_qs(urlparse(r.url).query)["req"][0]},
-        verify=ca_path,
-    )
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        r = await client.post(
+            approval_url,
+            data={
+                "approval": "approve",
+                "req": parse_qs(urlparse(str(r.url)).query)["req"][0],
+            },
+        )
 
     # This should have redirected to the DiracX page that shows the login is complete
     assert "Please close the window" in r.text
