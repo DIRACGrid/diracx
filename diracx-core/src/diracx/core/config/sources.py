@@ -197,7 +197,6 @@ class BaseGitConfigSource(ConfigSource):
 
     def exctract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the base URL without the 'git+' prefix and query parameters."""
-        # TODO: fix typing issue
         parsed_url = urlparse(str(backend_url).replace("git+", ""))
         remote_url = urlunparse(parsed_url._replace(query=""))
         return remote_url
