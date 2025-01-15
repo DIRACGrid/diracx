@@ -124,12 +124,18 @@ async def test_bucket(minio_client):
     "content,checksum,size,expected_error",
     [
         # Make sure a valid request works
-        [*_random_file(128), 128, None],
+        pytest.param(*_random_file(128), 128, None, id="valid"),
         # Check with invalid sizes
-        [*_random_file(128), 127, "exceeds the maximum"],
-        [*_random_file(128), 129, "smaller than the minimum"],
+        pytest.param(*_random_file(128), 127, "exceeds the maximum", id="maximum"),
+        pytest.param(*_random_file(128), 129, "smaller than the minimum", id="minimum"),
         # Check with invalid checksum
-        [_random_file(128)[0], _random_file(128)[1], 128, "ContentChecksumMismatch"],
+        pytest.param(
+            _random_file(128)[0],
+            _random_file(128)[1],
+            128,
+            "ContentChecksumMismatch",
+            id="checksum",
+        ),
     ],
 )
 async def test_presigned_upload_minio(
