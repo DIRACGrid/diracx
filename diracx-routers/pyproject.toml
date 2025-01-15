@@ -43,7 +43,6 @@ types = [
     "types-cachetools",
     "types-python-dateutil",
     "types-PyYAML",
-    "types-requests",
 ]
 
 [project.entry-points."diracx.services"]

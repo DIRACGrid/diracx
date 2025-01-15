@@ -17,7 +17,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 testing = ["diracx-client[testing]", "diracx-testing"]
-types = ["types-requests"]
+types = []
 
 [tool.setuptools.packages.find]
 where = ["src"]
