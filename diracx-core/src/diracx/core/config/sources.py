@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated
-from urllib.parse import parse_qs, urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 import sh
 import yaml
@@ -197,15 +197,14 @@ class BaseGitConfigSource(ConfigSource):
 
     def exctract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the base URL without the 'git+' prefix and query parameters."""
+        # TODO: fix typing issue
         parsed_url = urlparse(str(backend_url).replace("git+", ""))
         remote_url = urlunparse(parsed_url._replace(query=""))
         return remote_url
 
     def get_git_branch_from_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the branch from the query parameters."""
-        parsed_url = urlparse(str(backend_url))
-        branch = parse_qs(parsed_url.query).get("branch", [DEFAULT_GIT_BRANCH])[0]
-        return branch
+        return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
