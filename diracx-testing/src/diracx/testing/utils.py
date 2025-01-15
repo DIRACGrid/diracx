@@ -635,7 +635,7 @@ async def test_login(monkeypatch, capfd, cli_env):
         assert poll_attempts <= 100
 
         # Reduce the sleep duration to zero to speed up the test
-        await unpatched_sleep(0)
+        await unpatched_sleep(0.1)
 
     # We monkeypatch asyncio.sleep to provide a hook to run the actions that
     # would normally be done by a user. This includes capturing the login URL
