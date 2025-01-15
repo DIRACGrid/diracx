@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated
+from urllib.parse import urlparse, urlunparse
 
 import sh
 import yaml
@@ -136,13 +137,15 @@ class BaseGitConfigSource(ConfigSource):
             MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
         )
         self._read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
+        self.remote_url = self.exctract_remote_url(backend_url)
+        self.git_branch = self.get_git_branch_from_url(backend_url)
 
     @cachedmethod(lambda self: self._latest_revision_cache)
     def latest_revision(self) -> tuple[str, datetime]:
         try:
             rev = sh.git(
                 "rev-parse",
-                DEFAULT_GIT_BRANCH,
+                self.git_branch,
                 _cwd=self.repo_location,
                 _tty_out=False,
                 _async=is_running_in_async_context(),
@@ -192,6 +195,16 @@ class BaseGitConfigSource(ConfigSource):
         self._latest_revision_cache.clear()
         self._read_raw_cache.clear()
 
+    def exctract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
+        """Extract the base URL without the 'git+' prefix and query parameters."""
+        parsed_url = urlparse(str(backend_url).replace("git+", ""))
+        remote_url = urlunparse(parsed_url._replace(query=""))
+        return remote_url
+
+    def get_git_branch_from_url(self, backend_url: ConfigSourceUrl) -> str:
+        """Extract the branch from the query parameters."""
+        return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
+
 
 class LocalGitConfigSource(BaseGitConfigSource):
     """The configuration is stored on a local git repository
@@ -219,6 +232,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
             raise ValueError(
                 f"{self.repo_location} is not a valid git repository"
             ) from e
+        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
@@ -234,14 +248,13 @@ class RemoteGitConfigSource(BaseGitConfigSource):
         if not backend_url:
             raise ValueError("No remote url for RemoteGitConfigSource")
 
-        # git does not understand `git+https`, so we remove the `git+` part
-        self.remote_url = str(backend_url).replace("git+", "")
         self._temp_dir = TemporaryDirectory()
         self.repo_location = Path(self._temp_dir.name)
         sh.git.clone(self.remote_url, self.repo_location, _async=False)
         self._pull_cache: Cache = TTLCache(
             MAX_PULL_CACHED_VERSIONS, DEFAULT_PULL_CACHE_TTL
         )
+        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
 
     def clear_caches(self):
         super().clear_caches()
