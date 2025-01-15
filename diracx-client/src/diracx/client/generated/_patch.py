@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 import importlib.util
 import json
 import jwt
-import requests
+import httpx
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
