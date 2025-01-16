@@ -252,6 +252,7 @@ class ClientFactory:
         assert (
             self.app.dependency_overrides == {} and self.app.lifetime_functions == []
         ), "configure cannot be nested"
+
         for k, v in self.all_dependency_overrides.items():
 
             class_name = k.__self__.__name__
@@ -284,17 +285,26 @@ class ClientFactory:
         import sqlalchemy
         from sqlalchemy.util.concurrency import greenlet_spawn
 
+        from diracx.db.os.utils import BaseOSDB
         from diracx.db.sql.utils import BaseSQLDB
+        from diracx.testing.mock_osdb import MockOSDBMixin
 
         for k, v in self.app.dependency_overrides.items():
-            # Ignore dependency overrides which aren't BaseSQLDB.transaction
-            if (
-                isinstance(v, UnavailableDependency)
-                or k.__func__ != BaseSQLDB.transaction.__func__
+            # Ignore dependency overrides which aren't BaseSQLDB.transaction or BaseOSDB.session
+            if isinstance(v, UnavailableDependency) or k.__func__ not in (
+                BaseSQLDB.transaction.__func__,
+                BaseOSDB.session.__func__,
             ):
+
                 continue
+
             # The first argument of the overridden BaseSQLDB.transaction is the DB object
             db = v.args[0]
+            # We expect the OS DB to be mocked with sqlite, so use the
+            # internal DB
+            if isinstance(db, MockOSDBMixin):
+                db = db._sql_db
+
             assert isinstance(db, BaseSQLDB), (k, db)
 
             # set PRAGMA foreign_keys=ON if sqlite
