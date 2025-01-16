@@ -6,7 +6,13 @@ from fastapi.testclient import TestClient
 from diracx.routers.utils.users import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthSettings", "PilotAgentsDB", "PilotLogsDB"]
+    [
+        "AuthSettings",
+        "PilotAgentsDB",
+        "PilotLogsDB",
+        "PilotLogsAccessPolicy",
+        "DevelopmentSettings",
+    ]
 )
 
 
@@ -49,3 +55,9 @@ async def test_send_and_retrieve_logs(
     r = normal_user_client.post("/api/pilots/", json=msg_dict)
 
     assert r.status_code == 200, r.text
+    # it just returns the pilot id corresponding for pilot stamp.
+    assert r.json() == 1
+    # get the message back:
+    r = normal_user_client.get("/api/pilots/logs?pilot_id=1")
+    assert r.status_code == 200, r.text
+    assert [next(iter(d.values())) for d in r.json()] == msg.split("\n")
