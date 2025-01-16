@@ -72,18 +72,22 @@ class MockOSDBMixin:
             yield
 
     async def __aenter__(self):
-        await self._sql_db.__aenter__()
+        """Enter the request context.
+
+        This is a no-op as the real OpenSearch class doesn't use transactions.
+        Instead we enter a transaction in each method that needs it.
+        """
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._sql_db.__aexit__(exc_type, exc_value, traceback)
+        pass
 
     async def create_index_template(self) -> None:
         async with self._sql_db.engine.begin() as conn:
             await conn.run_sync(self._sql_db.metadata.create_all)
 
     async def upsert(self, doc_id, document) -> None:
-        async with self:
+        async with self._sql_db:
             values = {}
             for key, value in document.items():
                 if key in self.fields:
@@ -106,7 +110,7 @@ class MockOSDBMixin:
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        async with self:
+        async with self._sql_db:
             # Apply selection
             if parameters:
                 columns = []
@@ -150,7 +154,8 @@ class MockOSDBMixin:
         return results
 
     async def ping(self):
-        return await self._sql_db.ping()
+        async with self._sql_db:
+            return await self._sql_db.ping()
 
 
 def fake_available_osdb_implementations(name, *, real_available_implementations):
