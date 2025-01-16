@@ -55,7 +55,7 @@ class AuthorizationFlows(Base):
     uuid = Column("UUID", Uuid(as_uuid=False), primary_key=True)
     status = EnumColumn("Status", FlowStatus, server_default=FlowStatus.PENDING.name)
     client_id = Column("ClientID", String(255))
-    creation_time = DateNowColumn("CretionTime")
+    creation_time = DateNowColumn("CreationTime")
     scope = Column("Scope", String(1024))
     code_challenge = Column("CodeChallenge", String(255))
     code_challenge_method = Column("CodeChallengeMethod", String(8))
