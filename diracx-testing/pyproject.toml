@@ -17,6 +17,7 @@ dependencies = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-xdist",
+    "httpx",
 ]
 dynamic = ["version"]
 
