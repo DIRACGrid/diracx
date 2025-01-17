@@ -64,14 +64,6 @@ class JobNotFoundError(Exception):
         super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
 
 
-class PilotNotFoundError(Exception):
-    def __init__(self, pilot_stamp: str, detail: str | None = None):
-        self.pilot_stamp: str = pilot_stamp
-        super().__init__(
-            f"Pilot (stamp) {pilot_stamp} not found" + (" ({detail})" if detail else "")
-        )
-
-
 class SandboxNotFoundError(Exception):
     def __init__(self, pfn: str, se_name: str, detail: str | None = None):
         self.pfn: str = pfn
