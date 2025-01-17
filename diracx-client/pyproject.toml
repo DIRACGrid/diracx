@@ -12,12 +12,12 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = ["azure-core", "diracx-core", "isodate", "requests"]
+dependencies = ["azure-core", "diracx-core", "isodate", "httpx"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 testing = ["diracx-testing"]
-types = ["types-requests"]
+types = []
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -5,8 +5,8 @@ import hashlib
 import random
 import secrets
 
+import httpx
 import pytest
-import requests
 from aiobotocore.session import get_session
 
 from diracx.core.s3 import (
@@ -82,9 +82,13 @@ async def test_presigned_upload_moto(moto_s3):
     )
 
     # Upload the file
-    r = requests.post(
-        upload_info["url"], data=upload_info["fields"], files={"file": file_content}
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            upload_info["url"],
+            data=upload_info["fields"],
+            files={"file": file_content},
+        )
+
     assert r.status_code == 204, r.text
 
     # Make sure the object is actually there
@@ -120,12 +124,18 @@ async def test_bucket(minio_client):
     "content,checksum,size,expected_error",
     [
         # Make sure a valid request works
-        [*_random_file(128), 128, None],
+        pytest.param(*_random_file(128), 128, None, id="valid"),
         # Check with invalid sizes
-        [*_random_file(128), 127, "exceeds the maximum"],
-        [*_random_file(128), 129, "smaller than the minimum"],
+        pytest.param(*_random_file(128), 127, "exceeds the maximum", id="maximum"),
+        pytest.param(*_random_file(128), 129, "smaller than the minimum", id="minimum"),
         # Check with invalid checksum
-        [_random_file(128)[0], _random_file(128)[1], 128, "ContentChecksumMismatch"],
+        pytest.param(
+            _random_file(128)[0],
+            _random_file(128)[1],
+            128,
+            "ContentChecksumMismatch",
+            id="checksum",
+        ),
     ],
 )
 async def test_presigned_upload_minio(
@@ -143,9 +153,11 @@ async def test_presigned_upload_minio(
         minio_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
-    r = requests.post(
-        upload_info["url"], data=upload_info["fields"], files={"file": content}
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            upload_info["url"], data=upload_info["fields"], files={"file": content}
+        )
+
     if expected_error is None:
         assert r.status_code == 204, r.text
         assert await s3_object_exists(minio_client, test_bucket, key)

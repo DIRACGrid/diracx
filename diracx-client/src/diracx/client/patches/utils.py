@@ -7,8 +7,8 @@ import fcntl
 import json
 import os
 from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
+import httpx
 import jwt
-import requests
 
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, distribution
@@ -43,11 +43,11 @@ def get_openid_configuration(
     endpoint: str, *, verify: bool | str = True
 ) -> Dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
-    response = requests.get(
+    response = httpx.get(
         url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
         verify=verify,
     )
-    if not response.ok:
+    if not response.is_success:
         raise RuntimeError("Cannot fetch any information from the .well-known endpoint")
     return response.json()
 
@@ -123,7 +123,7 @@ def refresh_token(
     verify: bool | str = True,
 ) -> TokenResponse:
     """Refresh the access token using the refresh_token flow."""
-    response = requests.post(
+    response = httpx.post(
         url=token_endpoint,
         data={
             "client_id": client_id,
