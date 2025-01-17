@@ -635,7 +635,7 @@ async def test_login(monkeypatch, capfd, cli_env):
         assert poll_attempts <= 100
 
         # Reduce the sleep duration to zero to speed up the test
-        await unpatched_sleep(0.1)
+        await unpatched_sleep(0.0)
 
     # We monkeypatch asyncio.sleep to provide a hook to run the actions that
     # would normally be done by a user. This includes capturing the login URL
@@ -650,7 +650,7 @@ async def test_login(monkeypatch, capfd, cli_env):
 
     # Run the login command
     with monkeypatch.context() as m:
-        m.setattr("asyncio.sleep", fake_sleep)
+        m.setattr("diracx.cli.auth.sleep", fake_sleep)
         await cli.auth.login(vo="diracAdmin", group=None, property=None)
     captured = capfd.readouterr()
     assert "Login successful!" in captured.out

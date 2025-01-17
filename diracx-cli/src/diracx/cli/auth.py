@@ -5,6 +5,7 @@ __all__ = ("app",)
 import asyncio
 import json
 import os
+from asyncio import sleep
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
@@ -92,7 +93,7 @@ async def login(
                 if response.error == "authorization_pending":
                     # TODO: Setting more than 5 seconds results in an error
                     # Related to keep-alive disconnects from uvicon (--timeout-keep-alive)
-                    await asyncio.sleep(2)
+                    await sleep(2)
                     continue
                 raise RuntimeError(f"Device flow failed with {response}")
             break
