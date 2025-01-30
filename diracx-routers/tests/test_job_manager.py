@@ -71,6 +71,12 @@ TEST_LARGE_PARAMETRIC_JDL = """
     ParameterStart = 1;
 """
 
+TEST_MALFORMED_JDL = """
+[
+    'Executable = "echo";'
+]
+"""
+
 pytestmark = pytest.mark.enabled_dependencies(
     [
         "AuthSettings",
@@ -241,6 +247,12 @@ def test_insert_and_search(normal_user_client):
     )
     assert r.status_code == 200, r.json()
     assert r.json() == []
+
+
+def test_insert_malformed_jdl(normal_user_client):
+    job_definitions = [TEST_MALFORMED_JDL]
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
+    assert r.status_code == 400, r.json()
 
 
 def test_search_distinct(normal_user_client):

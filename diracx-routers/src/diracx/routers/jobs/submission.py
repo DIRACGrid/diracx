@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, Depends, HTTPException
+from fastapi import Body, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
@@ -148,20 +148,26 @@ async def submit_bulk_jdl_jobs(
         initial_status = JobStatus.RECEIVED
         initial_minor_status = "Job accepted"
 
-    submitted_job_ids = await submit_jobs_jdl(
-        [
-            JobSubmissionSpec(
-                jdl=jdl,
-                owner=user_info.preferred_username,
-                owner_group=user_info.dirac_group,
-                initial_status=initial_status,
-                initial_minor_status=initial_minor_status,
-                vo=user_info.vo,
-            )
-            for jdl in job_desc_list
-        ],
-        job_db=job_db,
-    )
+    try:
+        submitted_job_ids = await submit_jobs_jdl(
+            [
+                JobSubmissionSpec(
+                    jdl=jdl,
+                    owner=user_info.preferred_username,
+                    owner_group=user_info.dirac_group,
+                    initial_status=initial_status,
+                    initial_minor_status=initial_minor_status,
+                    vo=user_info.vo,
+                )
+                for jdl in job_desc_list
+            ],
+            job_db=job_db,
+        )
+    except ExceptionGroup as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="JDL syntax error",
+        ) from e
 
     logging.debug(
         f'Jobs added to the JobDB", "{submitted_job_ids} for {user_info.preferred_username}/{user_info.dirac_group}'
