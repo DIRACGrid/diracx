@@ -239,13 +239,19 @@ def generate_helm_values(
     default_db_user = cfg["Systems"].get("Databases", {}).get("User")
     default_db_password = cfg["Systems"].get("Databases", {}).get("Password")
 
-    default_setup = cfg["DIRAC"]["Setup"]
-
     all_db_configs = {}
-    for system, system_config in cfg["Systems"].items():
-        system_setup = cfg["DIRAC"]["Setups"][default_setup].get(system, None)
-        if system_setup:
-            all_db_configs.update(system_config[system_setup].get("Databases", {}))
+    if cfg["DIRAC"].get("NoSetup") == "True":
+        for system_config in cfg["Systems"].values():
+            all_db_configs.update(system_config.get("Databases", {}))
+    else:
+        default_setup = cfg["DIRAC"].get("Setup")
+        if default_setup:
+            for system, system_config in cfg["Systems"].items():
+                system_setup = cfg["DIRAC"]["Setups"].get(default_setup, {}).get(system)
+                if system_setup:
+                    all_db_configs.update(
+                        system_config.get(system_setup, {}).get("Databases", {})
+                    )
 
     from diracx.core.extensions import select_from_extension
 
