@@ -5,7 +5,7 @@ from typing import Any
 from sqlalchemy import Executable, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from diracx.core.exceptions import SandboxNotFoundError
+from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 
@@ -135,10 +135,18 @@ class SandboxMetadataDB(BaseSQLDB):
             stmt = insert(SBEntityMapping).from_select(
                 ["SBId", "EntityId", "Type"], select_sb_id
             )
-            await self.conn.execute(stmt)
+            try:
+                await self.conn.execute(stmt)
+            except IntegrityError as e:
+                raise SandboxAlreadyAssignedError(pfn, se_name) from e
 
             stmt = update(SandBoxes).where(SandBoxes.SEPFN == pfn).values(Assigned=True)
             result = await self.conn.execute(stmt)
+            if result.rowcount == 0:
+                # If the update didn't affect any row, the sandbox doesn't exist
+                # It means the previous insert didn't have any effect
+                raise SandboxNotFoundError(pfn, se_name)
+
             assert result.rowcount == 1
 
     async def unassign_sandboxes_to_jobs(self, jobs_ids: list[int]) -> None:
