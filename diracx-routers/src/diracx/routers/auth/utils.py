@@ -51,7 +51,7 @@ def has_properties(expression: UnevaluatedProperty | SecurityProperty):
     )
 
     async def require_property(
-        user: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]
+        user: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     ):
         if not evaluator(user.properties):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
