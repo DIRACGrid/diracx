@@ -79,7 +79,7 @@ async def revoke_refresh_token(
 
 @router.get("/userinfo")
 async def userinfo(
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> UserInfoResponse:
     """Get information about the user's identity."""
     return {
