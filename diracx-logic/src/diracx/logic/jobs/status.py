@@ -28,12 +28,15 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
+from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
+from diracx.db.sql.job.db import _get_columns
+from diracx.db.sql.job.schema import Jobs
 
 logger = logging.getLogger(__name__)
 
@@ -474,3 +477,48 @@ async def remove_jobs_from_task_queue(
         await recalculate_tq_shares_for_entity(
             owner, owner_group, vo, config, task_queue_db
         )
+
+
+async def set_job_parameters_or_attributes(
+    updates: dict[int, dict[str, Any]],
+    job_db: JobDB,
+    job_parameters_db: JobParametersDB,
+):
+    """Set job parameters or attributes for a list of jobs."""
+    possible_attribute_columns = [
+        name.lower() for name in _get_columns(Jobs.__table__, None)
+    ]
+
+    attr_updates = {}
+    param_updates = {}
+
+    for job_id, metadata in updates.items():
+        # check if this is setting an attribute in the JobDB
+        attr_updates[job_id] = {
+            pname: pvalue
+            for pname, pvalue in metadata.items()
+            if pname.lower() in possible_attribute_columns
+        }
+        # else set elastic parameters DB
+        param_updates[job_id] = [
+            (pname, pvalue)
+            for pname, pvalue in metadata.items()
+            if pname.lower() not in possible_attribute_columns
+        ]
+    # bulk set job attributes
+    await job_db.set_job_attributes(attr_updates)
+
+    # TODO: can we upsert to multiple documents?
+    for job_id, p_updates_ in param_updates.items():
+        await job_parameters_db.upsert(
+            int(job_id),
+            p_updates_,
+        )
+
+    return {
+        job_id: {
+            "attributes": attr_updates[job_id],
+            "parameters": param_updates[job_id],
+        }
+        for job_id in updates.keys()
+    }

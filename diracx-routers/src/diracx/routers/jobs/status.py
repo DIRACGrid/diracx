@@ -13,11 +13,13 @@ from diracx.core.models import (
 from diracx.logic.jobs.status import remove_jobs as remove_jobs_bl
 from diracx.logic.jobs.status import reschedule_jobs as reschedule_jobs_bl
 from diracx.logic.jobs.status import set_job_statuses as set_job_statuses_bl
+from diracx.logic.jobs.status import set_job_parameters_or_attributes as set_job_parameters_or_attributes_bl
 
 from ..dependencies import (
     Config,
     JobDB,
     JobLoggingDB,
+    JobParametersDB,
     SandboxMetadataDB,
     TaskQueueDB,
 )
@@ -124,3 +126,16 @@ async def reschedule_jobs(
     #  self.__sendJobsToOptimizationMind(validJobList)
 
     return resched_jobs
+
+
+@router.patch("/metadata")
+async def set_job_parameters_or_attributes(
+    updates: dict[int, dict[str, Any]],
+    job_db: JobDB,
+    job_parameters_db: JobParametersDB,
+    check_permissions: CheckWMSPolicyCallable,
+):
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
+    return await set_job_parameters_or_attributes_bl(
+        updates, job_db, job_parameters_db
+    )
