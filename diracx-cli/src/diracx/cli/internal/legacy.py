@@ -240,14 +240,14 @@ def generate_helm_values(
     default_db_password = cfg["Systems"].get("Databases", {}).get("Password")
 
     all_db_configs = {}
-    if cfg["DIRAC"].get("NoSetup") == "True":
+    if cfg["DIRAC"].get("NoSetup") in ("True", "true"):
         for system_config in cfg["Systems"].values():
             all_db_configs.update(system_config.get("Databases", {}))
     else:
-        default_setup = cfg["DIRAC"].get("Setup")
+        default_setup = cfg["DIRAC"].get("DefaultSetup")
         if default_setup:
             for system, system_config in cfg["Systems"].items():
-                system_setup = cfg["DIRAC"]["Setups"].get(default_setup, {}).get(system)
+                system_setup = cfg["DIRAC"]["Setups"][default_setup].get(system)
                 if system_setup:
                     all_db_configs.update(
                         system_config.get(system_setup, {}).get("Databases", {})
