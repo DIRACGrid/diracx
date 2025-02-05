@@ -141,11 +141,13 @@ async def reschedule_bulk_jobs(
 
 
 @router.patch("/metadata")
-def set_job_parameters_or_attributes(
+async def set_job_parameters_or_attributes(
     updates: dict[str, dict[str, Any]],
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
+    check_permissions: CheckWMSPolicyCallable,
 ):
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
     possible_attribute_columns = [
         name.lower() for name in _get_columns(Jobs.__table__, None)
     ]
@@ -160,17 +162,15 @@ def set_job_parameters_or_attributes(
             for pname, pvalue in metadata.items()
             if pname.lower() in possible_attribute_columns
         }
-
         # else set elastic parameters DB
         param_updates[job_id] = [
             (pname, pvalue)
             for pname, pvalue in metadata.items()
             if pname.lower() not in possible_attribute_columns
         ]
-
     job_db.set_job_attributes_bulk(attr_updates)
 
-    # TODO: can we upsert multiple documents?
+    # TODO: can we upsert to multiple documents?
     for job_id, updates in param_updates.items():
         job_parameters_db.upsert(
             int(job_id),
