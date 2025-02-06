@@ -13,7 +13,7 @@ from pydantic import BaseModel, PrivateAttr
 from pydantic_settings import SettingsConfigDict
 from pyparsing import Any
 
-from diracx.core.exceptions import SandboxNotFoundError
+from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
 from diracx.core.models import (
     SandboxInfo,
     SandboxType,
@@ -267,12 +267,21 @@ async def assign_sandbox_to_job(
     """Map the pfn as output sandbox to job."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     short_pfn = pfn.split("|", 1)[-1]
-    await sandbox_metadata_db.assign_sandbox_to_jobs(
-        jobs_ids=[job_id],
-        pfn=short_pfn,
-        sb_type=SandboxType.Output,
-        se_name=settings.se_name,
-    )
+    try:
+        await sandbox_metadata_db.assign_sandbox_to_jobs(
+            jobs_ids=[job_id],
+            pfn=short_pfn,
+            sb_type=SandboxType.Output,
+            se_name=settings.se_name,
+        )
+    except SandboxNotFoundError as e:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail="Sandbox not found"
+        ) from e
+    except (SandboxAlreadyAssignedError, AssertionError) as e:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail="Sandbox already assigned"
+        ) from e
 
 
 @router.delete("/{job_id}/sandbox")
