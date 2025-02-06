@@ -6,6 +6,10 @@ global:
   imagePullPolicy: IfNotPresent
   images:
     services: gubbins/services
+
+developer:
+  enabled: true
+
 diracx:
   sqlDbs:
     dbs:

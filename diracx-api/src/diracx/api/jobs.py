@@ -8,6 +8,7 @@ import os
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 import httpx
 
@@ -19,7 +20,8 @@ from .utils import with_client
 logger = logging.getLogger(__name__)
 
 SANDBOX_CHECKSUM_ALGORITHM = "sha256"
-SANDBOX_COMPRESSION = "bz2"
+SANDBOX_COMPRESSION: Literal["bz2"] = "bz2"
+SANDBOX_OPEN_MODE: Literal["w|bz2"] = "w|bz2"
 
 
 @with_client
@@ -31,7 +33,7 @@ async def create_sandbox(paths: list[Path], *, client: DiracClient) -> str:
     be used to submit jobs.
     """
     with tempfile.TemporaryFile(mode="w+b") as tar_fh:
-        with tarfile.open(fileobj=tar_fh, mode=f"w|{SANDBOX_COMPRESSION}") as tf:
+        with tarfile.open(fileobj=tar_fh, mode=SANDBOX_OPEN_MODE) as tf:
             for path in paths:
                 logger.debug("Adding %s to sandbox as %s", path.resolve(), path.name)
                 tf.add(path.resolve(), path.name, recursive=True)

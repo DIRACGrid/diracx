@@ -109,7 +109,17 @@ The requirements are the following:
 
 To create a client extension:
 * mirror the structure of the `diracx-client`
-* Generate a client in `generated` using `Autorest`
+* Generate a client in `generated` using `Autorest` For this the best is to have a temporary router test writing the `openapi.json` somewhere
+```python
+r = normal_user_client.get("/api/openapi.json")
+with open('/tmp/openapi.json', 'wt') as f:
+    json.dump(r.json(), f, indent=2)
+```
+* The autorest command then looks something like
+```bash
+autorest --python --input-file=/tmp/openapi.json --models-mode=msrest --namespace=generated --output-folder=gubbins-client/src/gubbins/
+```
+
 * Create the `patches` directory, simply exporting the generated `clients`(both [sync](gubbins/gubbins-client/src/gubbins/client/patches/__init__.py) and [async](gubbins/gubbins-client/src/gubbins/client/patches/aio/__init__.py))
 * Define the base modules to export what is needed
 * The [top init](gubbins/gubbins-client/src/gubbins/client/__init__.py) MUST have

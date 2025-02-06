@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
@@ -24,6 +25,12 @@ from diracx.core.config.schema import Field, SupportInfo
 from ..utils import AsyncTyper
 
 app = AsyncTyper()
+
+
+BASE_64_URL_SAFE_PATTERN = (
+    r"(?:[A-Za-z0-9\-_]{4})*(?:[A-Za-z0-9\-_]{2}==|[A-Za-z0-9\-_]{3}=)?"
+)
+LEGACY_EXCHANGE_PATTERN = rf"diracx:legacy:({BASE_64_URL_SAFE_PATTERN})"
 
 
 class IdPConfig(BaseModel):
@@ -182,12 +189,13 @@ def generate_helm_values(
         "developer": {"enabled": False},
         "initCs": {"enabled": True},
         "initSecrets": {"enabled": True},
-        "initSql": {"enabled": False, "env": {}},
+        "initSql": {"enabled": False},
         "cert-manager": {"enabled": False},
         "cert-manager-issuer": {"enabled": False},
         "minio": {"enabled": False},
         "dex": {"enabled": False},
         "opensearch": {"enabled": False},
+        # This is Openshift specific, change it maybe
         "ingress": {
             "enabled": True,
             "className": None,
@@ -199,12 +207,7 @@ def generate_helm_values(
         },
         "rabbitmq": {"enabled": False},
         "mysql": {"enabled": False},
-        "diracx": {
-            "manageOSIndices": False,
-            "mysqlDatabases": [],
-            "osDatabases": [],
-            "settings": {},
-        },
+        "global": {"images": {"services": "FILL ME"}, "storageClassName": "FILL ME"},
     }
 
     cfg = diraccfg.CFG().loadFromBuffer(public_cfg.read_text())
@@ -216,15 +219,13 @@ def generate_helm_values(
 
     diracx_url = cfg["DiracX"]["URL"]
     diracx_hostname = urlparse(diracx_url).netloc.split(":", 1)[0]
-    # Remove the port
-    diracx_config = {
-        "manageOSIndices": False,
-        "mysqlDatabases": [],
-        "osDatabases": [],
-        "settings": {},
+
+    diracx_config: dict = {
+        "sqlDbs": {},
+        "osDbs": {},
     }
 
-    diracx_settings: dict[str, str] = {}
+    diracx_settings: dict[str, str] = {"DIRACX_CONFIG_BACKEND_URL": "FILL ME"}
     diracx_config["settings"] = diracx_settings
     helm_values["diracx"] = diracx_config
     diracx_config["hostname"] = diracx_hostname
@@ -236,47 +237,122 @@ def generate_helm_values(
         ]
     )
 
+    ### SQL DBs
+
     default_db_user = cfg["Systems"].get("Databases", {}).get("User")
     default_db_password = cfg["Systems"].get("Databases", {}).get("Password")
-
-    default_setup = cfg["DIRAC"]["Setup"]
+    default_db_host = cfg["Systems"].get("Databases", {}).get("Host", "FILL ME")
+    default_db_port = cfg["Systems"].get("Databases", {}).get("Port", "FILL ME")
 
     all_db_configs = {}
-    for system, system_config in cfg["Systems"].items():
-        system_setup = cfg["DIRAC"]["Setups"][default_setup].get(system, None)
-        if system_setup:
-            all_db_configs.update(system_config[system_setup].get("Databases", {}))
+    sql_dbs = {
+        "dbs": {},
+        "default": {
+            "host": f"{default_db_host}:{default_db_port}",
+            "password": default_db_password,
+            "rootPassword": "FILL ME",
+            "rootUser": "FILL ME",
+            "user": default_db_user,
+        },
+    }
+    for _system, system_config in cfg["Systems"].items():
+        all_db_configs.update(system_config.get("Databases", {}))
 
     from diracx.core.extensions import select_from_extension
 
     for entry_point in select_from_extension(group="diracx.db.sql"):
+
         db_name = entry_point.name
+        db_config = all_db_configs.get(db_name, {})
+
+        sql_dbs["dbs"][db_name] = {}
         # There is a DIRAC AuthDB, but it is not the same
         # as the DiracX one
         if db_name == "AuthDB":
-            url_name = "DIRACX_DB_URL_AUTHDB"
-            connection_string = "FILL ME: I am a new DB, create me"
-        else:
-            db_config = all_db_configs[db_name]
-            url_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
-            db_user = db_config.get("User", default_db_user)
-            db_password = db_config.get("Password", default_db_password)
-            db_host = db_config["Host"]
-            db_port = db_config["Port"]
-            indb_name = db_config["DBName"]
+            sql_dbs["dbs"]["AuthDB"] = {"internalName": "DiracXAuthDB"}
 
-            connection_string = f"mysql+aiomysql://{db_user}:{db_password}@{db_host}:{db_port}/{indb_name}"
-        diracx_settings[url_name] = connection_string
+        if "DBName" in db_config:
+            indb_name = db_config["DBName"]
+            if indb_name != db_name:
+                sql_dbs["dbs"]["internalName"] = indb_name
+        if "User" in db_config:
+            sql_dbs["dbs"][db_name]["user"] = db_config.get("User")
+        if "Password" in db_config:
+            sql_dbs["dbs"][db_name]["password"] = db_config.get("Password")
+        if "Host" in db_config or "Port" in db_config:
+            sql_dbs["dbs"][db_name][
+                "host"
+            ] = f"{db_config.get('Host', default_db_host)}:{db_config.get('Port', default_db_port)}"
+        if not sql_dbs["dbs"][db_name]:
+            sql_dbs["dbs"][db_name] = None
+
+    diracx_config["sqlDbs"] = sql_dbs
+
+    #### END SQL DB
+
+    # #### OS DBs
+
+    default_os_db_user = cfg["Systems"].get("NoSQLDatabases", {}).get("User")
+    default_os_db_password = cfg["Systems"].get("NoSQLDatabases", {}).get("Password")
+    default_os_db_host = cfg["Systems"].get("NoSQLDatabases", {}).get("Host", "FILL ME")
+
+    os_dbs = {
+        "dbs": {},
+        "default": {
+            "host": f"{default_os_db_host}",
+            "password": default_os_db_password,
+            "rootPassword": "FILL ME",
+            "rootUser": "FILL ME",
+            "user": default_os_db_user,
+        },
+    }
+
+    for entry_point in select_from_extension(group="diracx.db.os"):
+        db_name = entry_point.name
+        db_config = all_db_configs.get(db_name, {})
+
+        os_dbs["dbs"][db_name] = {}
+        # There is a DIRAC AuthDB, but it is not the same
+        # as the DiracX one
+
+        if "DBName" in db_config:
+            indb_name = db_config["DBName"]
+            if indb_name != db_name:
+                os_dbs["dbs"]["internalName"] = indb_name
+        if "User" in db_config:
+            os_dbs["dbs"][db_name]["user"] = db_config["User"]
+        if "Password" in db_config:
+            os_dbs["dbs"][db_name]["password"] = db_config["Password"]
+        if "Host" in db_config:
+            os_dbs["dbs"][db_name]["host"] = db_config["Host"]
+
+        if not os_dbs["dbs"][db_name]:
+            os_dbs["dbs"][db_name] = None
+
+    diracx_config["osDbs"] = os_dbs
+
+    #### End OS DBs
 
     # Settings for the legacy
     try:
+        if match := re.fullmatch(
+            LEGACY_EXCHANGE_PATTERN, cfg["DiracX"]["LegacyExchangeApiKey"]
+        ):
+            raw_token = base64.urlsafe_b64decode(match.group(1))
+        else:
+            raise ValueError(
+                "Invalid authorization header",
+            )
+
         diracx_settings["DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY"] = hashlib.sha256(
-            base64.urlsafe_b64decode(cfg["DiracX"]["LegacyExchangeApiKey"])
+            raw_token
         ).hexdigest()
     except KeyError:
-        typer.echo(
-            "ERROR: you must have '/DiracX/LegacyExchangeApiKey' already set", err=True
-        )
+        error_msg = """
+            ERROR: you must have '/DiracX/LegacyExchangeApiKey' already set.
+            See the `legacy_exchange` function definition for how to generate it in python
+        """
+        typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
     # Sandboxstore settings
     # TODO: Integrate minio for production use (ingress, etc)
@@ -295,3 +371,6 @@ def generate_helm_values(
     diracx_settings["DIRACX_SERVICE_JOBS_ENABLED"] = "true"
     diracx_settings["DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET"] = "true"
     output_file.write_text(yaml.safe_dump(helm_values))
+    typer.echo(
+        "The file is incomplete and needs manual editing (grep for 'FILL ME')", err=True
+    )
