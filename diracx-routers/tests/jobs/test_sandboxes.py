@@ -26,12 +26,6 @@ pytestmark = pytest.mark.enabled_dependencies(
 )
 
 
-@pytest.fixture
-def normal_user_client(client_factory):
-    with client_factory.normal_user() as client:
-        yield client
-
-
 def test_upload_then_download(
     normal_user_client: TestClient, test_auth_settings: AuthSettings
 ):
