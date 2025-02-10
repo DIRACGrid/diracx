@@ -128,14 +128,14 @@ async def reschedule_jobs(
     return resched_jobs
 
 
-@router.patch("/metadata")
-async def set_job_parameters_or_attributes(
+@router.patch("/metadata", status_code=HTTPStatus.NO_CONTENT)
+async def patch_metadata(
     updates: dict[int, dict[str, Any]],
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
-    return await set_job_parameters_or_attributes_bl(
+    await set_job_parameters_or_attributes_bl(
         updates, job_db, job_parameters_db
     )

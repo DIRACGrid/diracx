@@ -486,7 +486,7 @@ async def set_job_parameters_or_attributes(
 ):
     """Set job parameters or attributes for a list of jobs."""
     possible_attribute_columns = [
-        name.lower() for name in _get_columns(Jobs.__table__, None)
+        col.name.lower() for col in _get_columns(Jobs.__table__, None)
     ]
 
     attr_updates = {}
@@ -500,25 +500,18 @@ async def set_job_parameters_or_attributes(
             if pname.lower() in possible_attribute_columns
         }
         # else set elastic parameters DB
-        param_updates[job_id] = [
-            (pname, pvalue)
+        param_updates[job_id] = {
+            pname: pvalue
             for pname, pvalue in metadata.items()
             if pname.lower() not in possible_attribute_columns
-        ]
+        }
     # bulk set job attributes
-    await job_db.set_job_attributes(attr_updates)
+    await job_db.set_job_attributes_bulk(attr_updates)
 
     # TODO: can we upsert to multiple documents?
     for job_id, p_updates_ in param_updates.items():
-        await job_parameters_db.upsert(
-            int(job_id),
-            p_updates_,
-        )
-
-    return {
-        job_id: {
-            "attributes": attr_updates[job_id],
-            "parameters": param_updates[job_id],
-        }
-        for job_id in updates.keys()
-    }
+        if p_updates_:
+            await job_parameters_db.upsert(
+                int(job_id),
+                p_updates_,
+            )
