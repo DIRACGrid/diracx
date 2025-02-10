@@ -29,14 +29,13 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.os.job_parameters import JobParametersDB
-from diracx.db.sql.job.db import JobDB
+from diracx.db.sql.job.db import JobDB, _get_columns
+from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
-from diracx.db.sql.job.db import _get_columns
-from diracx.db.sql.job.schema import Jobs
 
 logger = logging.getLogger(__name__)
 
@@ -506,7 +505,7 @@ async def set_job_parameters_or_attributes(
             if pname.lower() not in possible_attribute_columns
         }
     # bulk set job attributes
-    await job_db.set_job_attributes_bulk(attr_updates)
+    await job_db.set_job_attributes(attr_updates)
 
     # TODO: can we upsert to multiple documents?
     for job_id, p_updates_ in param_updates.items():

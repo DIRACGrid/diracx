@@ -941,3 +941,67 @@ def test_remove_jobs_valid_job_ids(
 #     for job_id in valid_job_ids:
 #         r = normal_user_client.get(f"/api/jobs/{job_id}/status")
 #         assert r.status_code == HTTPStatus.NOT_FOUND, r.json()
+
+
+def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
+    # Arrange
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ],
+            "parameters": ["LoggingInfo"],
+        },
+    )
+
+    assert r.status_code == 200, r.json()
+    for j in r.json():
+        assert j["JobID"] == valid_job_id
+        assert j["Status"] == JobStatus.RECEIVED.value
+        assert j["MinorStatus"] == "Job accepted"
+        assert j["ApplicationStatus"] == "Unknown"
+
+    # Act
+    hbt = str(datetime.now(timezone.utc))
+    r = normal_user_client.patch(
+        "/api/jobs/metadata",
+        json={
+            valid_job_id: {
+                "UserPriority": 2,
+                "HeartBeatTime": hbt,
+                # set a parameter
+                "JobType": "VerySpecialIndeed",
+            }
+        },
+    )
+
+    # Assert
+    assert (
+        r.status_code == 204
+    ), "PATCH metadata should return 204 No Content on success"
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ],
+            "parameters": ["LoggingInfo"],
+        },
+    )
+    assert r.status_code == 200, r.json()
+
+    assert r.json()[0]["JobID"] == valid_job_id
+    assert r.json()[0]["JobType"] == "VerySpecialIndeed"
+    assert datetime.fromisoformat(
+        r.json()[0]["HeartBeatTime"]
+    ) == datetime.fromisoformat(hbt)
+    assert r.json()[0]["UserPriority"] == 2
