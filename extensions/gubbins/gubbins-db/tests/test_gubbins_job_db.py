@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import AsyncGenerator
 
 import pytest
-from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 from gubbins.db.sql import GubbinsJobDB
 
@@ -20,6 +19,13 @@ async def gubbins_db() -> AsyncGenerator[GubbinsJobDB, None]:
         yield gubbins_db
 
 
+@pytest.fixture
+async def populated_job_db(job_db):
+    """Populate the in-memory JobDB with 100 jobs using DAL calls."""
+
+    yield job_db
+
+
 async def test_gubbins_info(gubbins_db):
     """
     This test makes sure that we can:
@@ -28,25 +34,24 @@ async def test_gubbins_info(gubbins_db):
     * use a method modified in the child db (getJobJDL)
     """
     async with gubbins_db as gubbins_db:
-        job_ids = await submit_jobs_jdl(
-            [
-                JobSubmissionSpec(
-                    jdl="JDL",
-                    owner="owner_toto",
-                    owner_group="owner_group1",
-                    initial_status="New",
-                    initial_minor_status="dfdfds",
-                    vo="lhcb",
-                )
-            ],
-            gubbins_db,
-        )
-        await gubbins_db.insert_gubbins_info(job_ids[0], "info")
+        compressed_jdl = "CompressedJDL"
+        job_id = await gubbins_db.create_job(compressed_jdl)
+        job_attr = {
+            "JobID": job_id,
+            "Status": "New",
+            "MinorStatus": "dfdfds",
+            "Owner": "owner_toto",
+            "OwnerGroup": "owner_group1",
+            "VO": "lhcb",
+        }
+        await gubbins_db.insert_job_attributes({job_id: job_attr})
 
-        result = await gubbins_db.get_job_jdls(job_ids, original=True)
-        assert result == {1: "[JDL]"}
+        await gubbins_db.insert_gubbins_info(job_id, "info")
 
-        result = await gubbins_db.get_job_jdls(job_ids, with_info=True)
+        result = await gubbins_db.get_job_jdls([job_id], original=True)
+        assert result == {1: "CompressedJDL"}
+
+        result = await gubbins_db.get_job_jdls([job_id], original=True, with_info=True)
         assert len(result) == 1
         assert result[1].get("JDL")
         assert result[1].get("Info") == "info"

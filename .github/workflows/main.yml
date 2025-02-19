@@ -29,7 +29,6 @@ jobs:
       run: |
         find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
 
-
   unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
@@ -41,8 +40,10 @@ jobs:
             dependencies: "./diracx-testing"
           - package: "./diracx-db"
             dependencies: "./diracx-testing ./diracx-core"
+          - package: "./diracx-logic"
+            dependencies: "./diracx-core ./diracx-db"
           - package: "./diracx-routers"
-            dependencies: "./diracx-testing ./diracx-core ./diracx-db"
+            dependencies: "./diracx-testing ./diracx-core ./diracx-db ./diracx-logic"
           - package: "./diracx-client"
             dependencies: "./diracx-testing ./diracx-core"
           - package: "./diracx-api"
@@ -68,6 +69,7 @@ jobs:
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
           pip install ${{ matrix.dependencies }}
       - name: Run pytest
+        if: ${{ matrix.package != './diracx-logic' }}
         run: |
           cd ${{ matrix.package }}
           pip install .[testing]
@@ -93,7 +95,7 @@ jobs:
         run: |
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/[testing] ./diracx-testing/
+          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
@@ -162,7 +164,7 @@ jobs:
         run: |
           micromamba install -c conda-forge nodejs pre-commit
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ -e ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/ ./diracx-testing/
+          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ -e ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/ ./diracx-testing/
           npm install -g autorest
       - name: Run autorest
         run: |

@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import hashlib
 import secrets
-from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
     AuthorizationError,
-    ExpiredFlowError,
-    PendingAuthorizationError,
+    TokenNotFoundError,
 )
-from diracx.db.sql.utils import BaseSQLDB, substract_date
+from diracx.db.sql.utils import BaseSQLDB, hash, substract_date
 
 from .schema import (
     AuthorizationFlows,
@@ -50,44 +47,25 @@ class AuthDB(BaseSQLDB):
 
         return (await self.conn.execute(stmt)).scalar_one()
 
-    async def get_device_flow(self, device_code: str, max_validity: int):
+    async def get_device_flow(self, device_code: str):
         """:raises: NoResultFound"""
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
-        stmt = select(
-            DeviceFlows,
-            (DeviceFlows.creation_time < substract_date(seconds=max_validity)).label(
-                "IsExpired"
-            ),
-        ).with_for_update()
+        stmt = select(DeviceFlows).with_for_update()
         stmt = stmt.where(
-            DeviceFlows.device_code == hashlib.sha256(device_code.encode()).hexdigest(),
+            DeviceFlows.device_code == hash(device_code),
         )
-        res = dict((await self.conn.execute(stmt)).one()._mapping)
+        return dict((await self.conn.execute(stmt)).one()._mapping)
 
-        if res["IsExpired"]:
-            raise ExpiredFlowError()
-
-        if res["Status"] == FlowStatus.READY:
-            # Update the status to Done before returning
-            await self.conn.execute(
-                update(DeviceFlows)
-                .where(
-                    DeviceFlows.device_code
-                    == hashlib.sha256(device_code.encode()).hexdigest()
-                )
-                .values(status=FlowStatus.DONE)
-            )
-            return res
-
-        if res["Status"] == FlowStatus.DONE:
-            raise AuthorizationError("Code was already used")
-
-        if res["Status"] == FlowStatus.PENDING:
-            raise PendingAuthorizationError()
-
-        raise AuthorizationError("Bad state in device flow")
+    async def update_device_flow_status(
+        self, device_code: str, status: FlowStatus
+    ) -> None:
+        stmt = update(DeviceFlows).where(
+            DeviceFlows.device_code == hash(device_code),
+        )
+        stmt = stmt.values(status=status)
+        await self.conn.execute(stmt)
 
     async def device_flow_insert_id_token(
         self, user_code: str, id_token: dict[str, str], max_validity: int
@@ -121,7 +99,7 @@ class AuthDB(BaseSQLDB):
             device_code = secrets.token_urlsafe()
 
             # Hash the the device_code to avoid leaking information
-            hashed_device_code = hashlib.sha256(device_code.encode()).hexdigest()
+            hashed_device_code = hash(device_code)
 
             stmt = insert(DeviceFlows).values(
                 client_id=client_id,
@@ -171,7 +149,7 @@ class AuthDB(BaseSQLDB):
         """
         # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()
-        hashed_code = hashlib.sha256(code.encode()).hexdigest()
+        hashed_code = hash(code)
 
         stmt = update(AuthorizationFlows)
 
@@ -193,7 +171,8 @@ class AuthDB(BaseSQLDB):
         return code, row.RedirectURI
 
     async def get_authorization_flow(self, code: str, max_validity: int):
-        hashed_code = hashlib.sha256(code.encode()).hexdigest()
+        """Get the authorization flow details based on the code."""
+        hashed_code = hash(code)
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -203,54 +182,41 @@ class AuthDB(BaseSQLDB):
             AuthorizationFlows.creation_time > substract_date(seconds=max_validity),
         )
 
-        res = dict((await self.conn.execute(stmt)).one()._mapping)
+        return dict((await self.conn.execute(stmt)).one()._mapping)
 
-        if res["Status"] == FlowStatus.READY:
-            # Update the status to Done before returning
-            await self.conn.execute(
-                update(AuthorizationFlows)
-                .where(AuthorizationFlows.code == hashed_code)
-                .values(status=FlowStatus.DONE)
-            )
-
-            return res
-
-        if res["Status"] == FlowStatus.DONE:
-            raise AuthorizationError("Code was already used")
-
-        raise AuthorizationError("Bad state in authorization flow")
+    async def update_authorization_flow_status(
+        self, code: str, status: FlowStatus
+    ) -> None:
+        """Update the status of an authorization flow based on the code."""
+        hashed_code = hash(code)
+        await self.conn.execute(
+            update(AuthorizationFlows)
+            .where(AuthorizationFlows.code == hashed_code)
+            .values(status=status)
+        )
 
     async def insert_refresh_token(
         self,
+        jti: UUID,
         subject: str,
         preferred_username: str,
         scope: str,
-    ) -> tuple[str, datetime]:
+    ) -> None:
         """Insert a refresh token in the DB as well as user attributes
         required to generate access tokens.
         """
-        # Generate a JWT ID
-        jti = str(uuid4())
-
         # Insert values into the DB
         stmt = insert(RefreshTokens).values(
-            jti=jti,
+            jti=str(jti),
             sub=subject,
             preferred_username=preferred_username,
             scope=scope,
         )
         await self.conn.execute(stmt)
 
-        # Get the creation time of the new tuple: generated by the insert operation
-        stmt = select(RefreshTokens.creation_time)
-        stmt = stmt.where(RefreshTokens.jti == jti)
-        row = (await self.conn.execute(stmt)).one()
-
-        # Return the JWT ID and the creation time
-        return jti, row.CreationTime
-
-    async def get_refresh_token(self, jti: str) -> dict:
+    async def get_refresh_token(self, jti: UUID) -> dict:
         """Get refresh token details bound to a given JWT ID."""
+        jti = str(jti)
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -260,8 +226,8 @@ class AuthDB(BaseSQLDB):
         )
         try:
             res = dict((await self.conn.execute(stmt)).one()._mapping)
-        except NoResultFound:
-            return {}
+        except NoResultFound as e:
+            raise TokenNotFoundError(jti) from e
 
         return res
 
@@ -285,11 +251,11 @@ class AuthDB(BaseSQLDB):
 
         return refresh_tokens
 
-    async def revoke_refresh_token(self, jti: str):
+    async def revoke_refresh_token(self, jti: UUID):
         """Revoke a token given by its JWT ID."""
         await self.conn.execute(
             update(RefreshTokens)
-            .where(RefreshTokens.jti == jti)
+            .where(RefreshTokens.jti == str(jti))
             .values(status=RefreshTokenStatus.REVOKED)
         )
 

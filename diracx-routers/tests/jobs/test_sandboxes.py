@@ -9,8 +9,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from diracx.core.settings import AuthSettings
 from diracx.routers.auth.token import create_token
-from diracx.routers.utils.users import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
     [

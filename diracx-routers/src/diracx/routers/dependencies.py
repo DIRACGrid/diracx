@@ -19,7 +19,9 @@ from fastapi import Depends
 from diracx.core.config import Config as _Config
 from diracx.core.config import ConfigSource
 from diracx.core.properties import SecurityProperty
+from diracx.core.settings import AuthSettings as _AuthSettings
 from diracx.core.settings import DevelopmentSettings as _DevelopmentSettings
+from diracx.core.settings import SandboxStoreSettings as _SandboxStoreSettings
 from diracx.db.os import JobParametersDB as _JobParametersDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
@@ -56,6 +58,10 @@ AvailableSecurityProperties = Annotated[
     set[SecurityProperty], Depends(SecurityProperty.available_properties)
 ]
 
+AuthSettings = Annotated[_AuthSettings, Depends(_AuthSettings.create)]
 DevelopmentSettings = Annotated[
     _DevelopmentSettings, Depends(_DevelopmentSettings.create)
+]
+SandboxStoreSettings = Annotated[
+    _SandboxStoreSettings, Depends(_SandboxStoreSettings.create)
 ]

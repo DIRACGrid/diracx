@@ -12,7 +12,12 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = ["diracx-api", "diracx-cli", "diracx-client", "diracx-core"]
+dependencies = [
+    "diracx-api",
+    "diracx-cli",
+    "diracx-client",
+    "diracx-core",
+]
 dynamic = ["version"]
 
 [project.optional-dependencies]
@@ -102,6 +107,7 @@ files = [
     "diracx-client/src/**/_patch.py",
     "diracx-core/src/**/*.py",
     "diracx-db/src/**/*.py",
+    "diracx-logic/src/**/*.py",
     "diracx-routers/src/**/*.py",
 ]
 mypy_path = [
@@ -110,6 +116,7 @@ mypy_path = [
     "$MYPY_CONFIG_FILE_DIR/diracx-client/src",
     "$MYPY_CONFIG_FILE_DIR/diracx-core/src",
     "$MYPY_CONFIG_FILE_DIR/diracx-db/src",
+    "$MYPY_CONFIG_FILE_DIR/diracx-logic/src",
     "$MYPY_CONFIG_FILE_DIR/diracx-routers/src",
 ]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
