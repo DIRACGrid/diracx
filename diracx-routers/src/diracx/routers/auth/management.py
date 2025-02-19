@@ -7,6 +7,7 @@ to get information about the user's identity.
 from __future__ import annotations
 
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import (
     Depends,
@@ -15,7 +16,14 @@ from fastapi import (
 )
 from typing_extensions import TypedDict
 
+from diracx.core.exceptions import TokenNotFoundError
 from diracx.core.properties import PROXY_MANAGEMENT, SecurityProperty
+from diracx.logic.auth.management import (
+    get_refresh_tokens as get_refresh_tokens_bl,
+)
+from diracx.logic.auth.management import (
+    revoke_refresh_token as revoke_refresh_token_bl,
+)
 
 from ..dependencies import (
     AuthDB,
@@ -49,7 +57,7 @@ async def get_refresh_tokens(
     if PROXY_MANAGEMENT in user_info.properties:
         subject = None
 
-    return await auth_db.get_user_refresh_tokens(subject)
+    return await get_refresh_tokens_bl(auth_db, subject)
 
 
 @router.delete("/refresh-tokens/{jti}")
@@ -61,19 +69,27 @@ async def revoke_refresh_token(
     """Revoke a refresh token. If the user has the `proxy_management` property, then
     the subject is not used to filter the refresh tokens.
     """
-    res = await auth_db.get_refresh_token(jti)
-    if not res:
+    subject: str | None = user_info.sub
+    if PROXY_MANAGEMENT in user_info.properties:
+        subject = None
+
+    try:
+        await revoke_refresh_token_bl(auth_db, subject, UUID(jti, version=4))
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="JTI provided does not exist",
-        )
-
-    if PROXY_MANAGEMENT not in user_info.properties and user_info.sub != res["Sub"]:
+            detail=str(e),
+        ) from e
+    except PermissionError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot revoke a refresh token owned by someone else",
-        )
-    await auth_db.revoke_refresh_token(jti)
+            detail=str(e),
+        ) from e
+    except TokenNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
     return f"Refresh token {jti} revoked"
 
 

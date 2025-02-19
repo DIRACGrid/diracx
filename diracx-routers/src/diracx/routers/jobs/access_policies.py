@@ -7,10 +7,9 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB, SandboxMetadataDB
+from diracx.db.sql import JobDB
 from diracx.routers.access_policies import BaseAccessPolicy
-
-from ..utils.users import AuthorizedUserInfo
+from diracx.routers.utils.users import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):
@@ -109,13 +108,10 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
-        sandbox_metadata_db: SandboxMetadataDB | None = None,
         pfns: list[str] | None = None,
         required_prefix: str | None = None,
     ):
         assert action, "action is a mandatory parameter"
-        assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
-        assert pfns, "pfns is a mandatory parameter"
 
         if action == ActionType.CREATE:
 
@@ -130,14 +126,17 @@ class SandboxAccessPolicy(BaseAccessPolicy):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
         # Getting a sandbox or modifying it
-        if required_prefix is None:
-            raise NotImplementedError("required_prefix is None. his shouldn't happen")
-        for pfn in pfns:
-            if not pfn.startswith(required_prefix):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Invalid PFN. PFN must start with {required_prefix}",
+        if pfns:
+            if required_prefix is None:
+                raise NotImplementedError(
+                    "required_prefix is None. This shouldn't happen"
                 )
+            for pfn in pfns:
+                if not pfn.startswith(required_prefix):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Invalid PFN. PFN must start with {required_prefix}",
+                    )
 
 
 CheckSandboxPolicyCallable = Annotated[Callable, Depends(SandboxAccessPolicy.check)]

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
-from diracx.core.exceptions import InvalidQueryError, JobNotFoundError
+from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import (
     ScalarSearchOperator,
     ScalarSearchSpec,
@@ -12,7 +13,6 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.sql.job.db import JobDB
-from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 
 @pytest.fixture
@@ -27,29 +27,29 @@ async def job_db(tmp_path):
         yield job_db
 
 
-async def test_search_parameters(job_db):
+@pytest.fixture
+async def populated_job_db(job_db):
+    """Populate the in-memory JobDB with 100 jobs using DAL calls."""
+    async with job_db as db:
+        jobs_to_insert = {}
+        # Insert 100 jobs directly via the DAL.
+        for i in range(100):
+            compressed_jdl = f"CompressedJDL{i}"
+            job_id = await db.create_job(compressed_jdl)
+            jobs_to_insert[job_id] = {
+                "JobID": job_id,
+                "Status": "New",
+                "Owner": f"owner{i}",
+                "OwnerGroup": "owner_group1" if i < 50 else "owner_group2",
+                "VO": "lhcb",
+            }
+        await db.insert_job_attributes(jobs_to_insert)
+    yield job_db
+
+
+async def test_search_parameters(populated_job_db):
     """Test that we can search specific parameters for jobs in the database."""
-    async with job_db as job_db:
-        total, result = await job_db.search(["JobID"], [], [])
-        assert total == 0
-        assert not result
-
-        result = await submit_jobs_jdl(
-            [
-                JobSubmissionSpec(
-                    jdl=f"JDL{i}",
-                    owner="owner",
-                    owner_group="owner_group",
-                    initial_status="New",
-                    initial_minor_status="dfdfds",
-                    vo="lhcb",
-                )
-                for i in range(100)
-            ],
-            job_db,
-        )
-
-    async with job_db as job_db:
+    async with populated_job_db as job_db:
         # Search a specific parameter: JobID
         total, result = await job_db.search(["JobID"], [], [])
         assert total == 100
@@ -81,25 +81,9 @@ async def test_search_parameters(job_db):
             total, result = await job_db.search(["Dummy"], [], [])
 
 
-async def test_search_conditions(job_db):
+async def test_search_conditions(populated_job_db):
     """Test that we can search for specific jobs in the database."""
-    async with job_db as job_db:
-        result = await submit_jobs_jdl(
-            [
-                JobSubmissionSpec(
-                    jdl=f"JDL{i}",
-                    owner=f"owner{i}",
-                    owner_group="owner_group",
-                    initial_status="New",
-                    initial_minor_status="dfdfds",
-                    vo="lhcb",
-                )
-                for i in range(100)
-            ],
-            job_db,
-        )
-
-    async with job_db as job_db:
+    async with populated_job_db as job_db:
         # Search a specific scalar condition: JobID eq 3
         condition = ScalarSearchSpec(
             parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=3
@@ -204,25 +188,9 @@ async def test_search_conditions(job_db):
         assert not result
 
 
-async def test_search_sorts(job_db):
+async def test_search_sorts(populated_job_db):
     """Test that we can search for jobs in the database and sort the results."""
-    async with job_db as job_db:
-        result = await submit_jobs_jdl(
-            [
-                JobSubmissionSpec(
-                    jdl=f"JDL{i}",
-                    owner=f"owner{i}",
-                    owner_group="owner_group1" if i < 50 else "owner_group2",
-                    initial_status="New",
-                    initial_minor_status="dfdfds",
-                    vo="lhcb",
-                )
-                for i in range(100)
-            ],
-            job_db,
-        )
-
-    async with job_db as job_db:
+    async with populated_job_db as job_db:
         # Search and sort by JobID in ascending order
         sort = SortSpec(parameter="JobID", direction=SortDirection.ASC)
         total, result = await job_db.search([], [], [sort])
@@ -269,25 +237,9 @@ async def test_search_sorts(job_db):
         assert result[99]["JobID"] == 51
 
 
-async def test_search_pagination(job_db):
+async def test_search_pagination(populated_job_db):
     """Test that we can search for jobs in the database."""
-    async with job_db as job_db:
-        result = await submit_jobs_jdl(
-            [
-                JobSubmissionSpec(
-                    jdl=f"JDL{i}",
-                    owner="owner",
-                    owner_group="owner_group",
-                    initial_status="New",
-                    initial_minor_status="dfdfds",
-                    vo="lhcb",
-                )
-                for i in range(100)
-            ],
-            job_db,
-        )
-
-    async with job_db as job_db:
+    async with populated_job_db as job_db:
         # Search for the first 10 jobs
         total, result = await job_db.search([], [], [], per_page=10, page=1)
         assert total == 100
@@ -330,8 +282,8 @@ async def test_search_pagination(job_db):
             result = await job_db.search([], [], [], per_page=0, page=1)
 
 
-async def test_set_job_command_invalid_job_id(job_db: JobDB):
+async def test_set_job_commands_invalid_job_id(job_db: JobDB):
     """Test that setting a command for a non-existent job raises JobNotFound."""
     async with job_db as job_db:
-        with pytest.raises(JobNotFoundError):
-            await job_db.set_job_command(123456, "test_command")
+        with pytest.raises(IntegrityError):
+            await job_db.set_job_commands([(123456, "test_command", "")])

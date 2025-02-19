@@ -6,7 +6,7 @@ from .base import (
     apply_search_filters,
     apply_sort_constraints,
 )
-from .functions import substract_date, utcnow
+from .functions import hash, substract_date, utcnow
 from .types import Column, DateNowColumn, EnumBackedBool, EnumColumn, NullColumn
 
 __all__ = (
@@ -20,5 +20,6 @@ __all__ = (
     "apply_search_filters",
     "apply_sort_constraints",
     "substract_date",
+    "hash",
     "SQLDBUnavailableError",
 )

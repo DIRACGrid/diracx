@@ -62,34 +62,26 @@ from fastapi import (
     status,
 )
 from fastapi.responses import RedirectResponse
-from typing_extensions import TypedDict
+
+from diracx.core.exceptions import IAMClientError, IAMServerError
+from diracx.core.models import InitiateDeviceFlowResponse
+from diracx.logic.auth.device_flow import do_device_flow as do_device_flow_bl
+from diracx.logic.auth.device_flow import (
+    finish_device_flow as finish_device_flow_bl,
+)
+from diracx.logic.auth.device_flow import (
+    initiate_device_flow as initiate_device_flow_bl,
+)
 
 from ..dependencies import (
     AuthDB,
+    AuthSettings,
     AvailableSecurityProperties,
     Config,
 )
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthSettings
-from .utils import (
-    GrantType,
-    decrypt_state,
-    get_token_from_iam,
-    initiate_authorization_flow_with_iam,
-    parse_and_validate_scope,
-)
 
 router = DiracxRouter(require_auth=False)
-
-
-class InitiateDeviceFlowResponse(TypedDict):
-    """Response for the device flow initiation."""
-
-    user_code: str
-    device_code: str
-    verification_uri_complete: str
-    verification_uri: str
-    expires_in: int
 
 
 @router.post("/device")
@@ -118,35 +110,23 @@ async def initiate_device_flow(
     Offers the user to go with the browser to
     `auth/<vo>/device?user_code=XYZ`
     """
-    if settings.dirac_client_id != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
-        )
-
     try:
-        parse_and_validate_scope(scope, config, available_properties)
+        device_flow_response = await initiate_device_flow_bl(
+            client_id=client_id,
+            scope=scope,
+            verification_uri=str(request.url.replace(query={})),
+            auth_db=auth_db,
+            config=config,
+            available_properties=available_properties,
+            settings=settings,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.args[0],
         ) from e
-    except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=e.args[0],
-        ) from e
 
-    user_code, device_code = await auth_db.insert_device_flow(client_id, scope)
-
-    verification_uri = str(request.url.replace(query={}))
-
-    return {
-        "user_code": user_code,
-        "device_code": device_code,
-        "verification_uri_complete": f"{verification_uri}?user_code={user_code}",
-        "verification_uri": str(request.url.replace(query={})),
-        "expires_in": settings.device_flow_expiration_seconds,
-    }
+    return device_flow_response
 
 
 @router.get("/device")
@@ -167,25 +147,13 @@ async def do_device_flow(
     device flow.
     (note: it can't be put as parameter or in the URL)
     """
-    # Here we make sure the user_code actually exists
-    scope = await auth_db.device_flow_validate_user_code(
-        user_code, settings.device_flow_expiration_seconds
-    )
-    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
-
-    redirect_uri = f"{request.url.replace(query='')}/complete"
-
-    state_for_iam = {
-        "grant_type": GrantType.device_code.value,
-        "user_code": user_code,
-    }
-
-    authorization_flow_url = await initiate_authorization_flow_with_iam(
-        config,
-        parsed_scope["vo"],
-        redirect_uri,
-        state_for_iam,
-        settings.state_key.fernet,
+    authorization_flow_url = await do_device_flow_bl(
+        request_url=str(request.url.replace(query="")),
+        auth_db=auth_db,
+        user_code=user_code,
+        config=config,
+        available_properties=available_properties,
+        settings=settings,
     )
     return RedirectResponse(authorization_flow_url)
 
@@ -198,28 +166,36 @@ async def finish_device_flow(
     auth_db: AuthDB,
     config: Config,
     settings: AuthSettings,
-):
+) -> RedirectResponse:
     """This the url callbacked by IAM/Checkin after the authorization
     flow was granted.
     It gets us the code we need for the authorization flow, and we
     can map it to the corresponding device flow using the user_code
     in the cookie/session.
     """
-    decrypted_state = decrypt_state(state, settings.state_key.fernet)
-    assert decrypted_state["grant_type"] == GrantType.device_code
+    request_url = str(request.url.replace(query={}))
 
-    id_token = await get_token_from_iam(
-        config,
-        decrypted_state["vo"],
-        code,
-        decrypted_state,
-        str(request.url.replace(query="")),
-    )
-    await auth_db.device_flow_insert_id_token(
-        decrypted_state["user_code"], id_token, settings.device_flow_expiration_seconds
-    )
+    try:
+        await finish_device_flow_bl(
+            request_url,
+            code,
+            state,
+            auth_db,
+            config,
+            settings,
+        )
+    except IAMServerError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=e.args[0],
+        ) from e
+    except IAMClientError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.args[0],
+        ) from e
 
-    return responses.RedirectResponse(f"{request.url.replace(query='')}/finished")
+    return responses.RedirectResponse(f"{request_url}/finished")
 
 
 @router.get("/device/complete/finished")

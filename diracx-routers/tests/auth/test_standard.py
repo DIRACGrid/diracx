@@ -13,21 +13,21 @@ import pytest
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from fastapi import HTTPException
 from pytest_httpx import HTTPXMock
 
 from diracx.core.config import Config
+from diracx.core.exceptions import AuthorizationError
+from diracx.core.models import GrantType
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
-from diracx.routers.auth.token import create_token
-from diracx.routers.auth.utils import (
-    GrantType,
+from diracx.core.settings import AuthSettings
+from diracx.logic.auth.token import create_token
+from diracx.logic.auth.utils import (
     _server_metadata_cache,
     decrypt_state,
     encrypt_state,
     get_server_metadata,
     parse_and_validate_scope,
 )
-from diracx.routers.utils.users import AuthSettings
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 pytestmark = pytest.mark.enabled_dependencies(
@@ -70,7 +70,7 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
 
     httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
-    monkeypatch.setattr("diracx.routers.auth.utils.parse_id_token", fake_parse_id_token)
+    monkeypatch.setattr("diracx.logic.auth.utils.parse_id_token", fake_parse_id_token)
 
     yield httpx_mock
 
@@ -1039,7 +1039,6 @@ def test_encrypt_decrypt_state_invalid_state(fernet_key):
     """Test that decrypt_state raises an error when the state is invalid."""
     state = "invalid_state"  # Invalid state string
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AuthorizationError) as exc_info:
         decrypt_state(state, fernet_key)
-    assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "Invalid state"

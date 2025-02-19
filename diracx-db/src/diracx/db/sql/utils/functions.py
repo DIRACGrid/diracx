@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -104,3 +105,7 @@ def sqlite_date_trunc(element, compiler, **kw):
 
 def substract_date(**kwargs: float) -> datetime:
     return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
+
+
+def hash(code: str):
+    return hashlib.sha256(code.encode()).hexdigest()

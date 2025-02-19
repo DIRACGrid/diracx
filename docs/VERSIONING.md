@@ -15,8 +15,9 @@ DiracX is a comprehensive Python package, composed of several interconnected sub
 DiracX is structured into various modules, each serving a distinct purpose:
 
 - **`diracx-core`**: The foundational code base, utilized by all other DiracX modules.
-- **`diracx-db`**: Focuses on database functionalities.
-- **`diracx-routers`**: Implements a FastAPI application.
+- **`diracx-db`**: Data Access Layer, focuses on database functionalities.
+- **`diracx-logic`**: Business Logic Layer, comprises Dirac logic.
+- **`diracx-routers`**: Presentation Layer, handles user interactions through HTTP using a FastAPI application.
 - **`diracx-client`**: A client auto-generated from the OpenAPI specification in `diracx-routers`.
 - **`diracx-api`**: Provides higher-level operations building on `diracx-client`.
 - **`diracx-cli`**: The command line interface (`dirac`).
@@ -26,19 +27,47 @@ These modules are each implemented as a [native Python namespace package](https:
 
 The direct dependencies between the submodules are as follows:
 
-```
-             ┌──────┐
-      ┌──────┤ core ├─────────┐
-      │      └──────┘         │
-   ┌──▼─┐                ┌────▼───┐
-   │ db ├─────┐          │ client │
-   └─┬──┘     │          └────┬───┘
-┌────▼────┐   │            ┌──▼──┐
-│ routers │   │   ┌────────┤ api │
-└─────────┘   │   │        └──┬──┘
-            ┌─▼───▼─┐      ┌──▼──┐
-            │ tasks │      │ cli │
-            └───────┘      └─────┘
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart BT
+ subgraph frontend["Frontend"]
+        client["diracx-client (autorest)"]
+        api["diracx-api"]
+        cli["diracx-cli (typer)"]
+  end
+ subgraph backend["Backend"]
+        dbs["diracx-db (sqlalchemy/os)"]
+        logic["diracx-logic (Dirac)"]
+        routers["diracx-routers (FastAPI)"]
+  end
+    dbs -. uses .-> core["diracx-core (domain)"]
+    logic -. uses .-> core
+    routers -. uses .-> core
+    tasks["diracx-tasks (celery?)"] -. uses .-> core
+    client -. uses .-> core
+    api -. uses .-> core
+    cli -. uses .-> core
+    logic -- calls --> dbs
+    routers -- calls --> logic
+    tasks -- calls --> logic & api
+    client -- calls through OpenAPI --> routers
+    api -- calls --> client
+    cli -- calls --> api & client
+     client:::Sky
+     api:::Sky
+     cli:::Sky
+     dbs:::Pine
+     logic:::Pine
+     routers:::Pine
+     tasks:::Aqua
+    classDef Rose stroke-width:1px, stroke-dasharray:none, stroke:#FF5978, fill:#FFDFE5, color:#8E2236
+    classDef Sky stroke-width:1px, stroke-dasharray:none, stroke:#374D7C, fill:#E2EBFF, color:#374D7C
+    classDef Pine stroke-width:1px, stroke-dasharray:none, stroke:#254336, fill:#27654A, color:#FFFFFF
+    classDef Aqua stroke-width:1px, stroke-dasharray:none, stroke:#46EDC8, fill:#DEFFF8, color:#378E7A
+
 ```
 
 

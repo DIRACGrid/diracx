@@ -82,6 +82,7 @@ files = [
     "gubbins-client/src/gubbins/client/patches/**/*.py",
 #    "gubbins-core/src/**/*.py",
     "gubbins-db/src/**/*.py",
+    "gubbins-logic/src/**/*.py",
     "gubbins-routers/src/**/*.py",
 ]
 mypy_path = [
@@ -90,6 +91,7 @@ mypy_path = [
     "$MYPY_CONFIG_FILE_DIR/gubbins-client/src",
 #    "$MYPY_CONFIG_FILE_DIR/gubbins-core/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-db/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-logic/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-routers/src",
 ]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]

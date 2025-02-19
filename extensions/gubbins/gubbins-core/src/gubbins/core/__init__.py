@@ -1,1 +1,1 @@
-__all__ = ("config", "properties")
+__all__ = ("config", "properties", "models")
