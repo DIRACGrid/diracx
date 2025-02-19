@@ -19,9 +19,8 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql.job_logging.db import JobLoggingRecord
-
-from .. import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
+from diracx.dal.sql import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
+from diracx.dal.sql.job_logging.db import JobLoggingRecord
 
 
 class JobSubmissionSpec(BaseModel):
