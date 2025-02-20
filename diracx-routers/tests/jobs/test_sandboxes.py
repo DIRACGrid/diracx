@@ -249,3 +249,64 @@ def test_get_empty_job_sandboxes(normal_user_client: TestClient):
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
     assert r.status_code == 200
     assert r.json() == {"Input": [None], "Output": [None]}
+
+
+def test_assign_nonexisting_sb_to_job(normal_user_client: TestClient):
+    """Test that we cannot assign a non-existing sandbox to a job."""
+    # Submit a job:
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+    job_id = r.json()[0]["JobID"]
+
+    # Malformed request:
+    r = normal_user_client.patch(
+        f"/api/jobs/{job_id}/sandbox/output",
+        json="/S3/pathto/vo/vo_group/user/sha256:55967b0c430058c3105472b1edae6c8987c65bcf01ef58f10a3f5e93948782d8.tar.bz2",
+    )
+    assert r.status_code == 400
+
+
+def test_assign_sb_to_job_twice(normal_user_client: TestClient):
+    """Test that we cannot assign a sandbox to a job twice."""
+    data = secrets.token_bytes(512)
+    checksum = hashlib.sha256(data).hexdigest()
+
+    # Upload Sandbox:
+    r = normal_user_client.post(
+        "/api/jobs/sandbox",
+        json={
+            "checksum_algorithm": "sha256",
+            "checksum": checksum,
+            "size": len(data),
+            "format": "tar.bz2",
+        },
+    )
+
+    assert r.status_code == 200, r.text
+    upload_info = r.json()
+    assert upload_info["url"]
+    sandbox_pfn = upload_info["pfn"]
+    assert sandbox_pfn.startswith("SB:SandboxSE|/S3/")
+
+    # Submit a job:
+    job_definitions = [TEST_JDL]
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+    job_id = r.json()[0]["JobID"]
+
+    # Assign sandbox to the job: first attempt should be successful
+    r = normal_user_client.patch(
+        f"/api/jobs/{job_id}/sandbox/output",
+        json=sandbox_pfn,
+    )
+    assert r.status_code == 200
+
+    # Assign sandbox to the job: second attempt should fail
+    r = normal_user_client.patch(
+        f"/api/jobs/{job_id}/sandbox/output",
+        json=sandbox_pfn,
+    )
+    assert r.status_code == 400
