@@ -24,6 +24,7 @@ pytestmark = pytest.mark.enabled_dependencies(
     ]
 )
 
+
 def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
     # Arrange
     r = normal_user_client.post(
