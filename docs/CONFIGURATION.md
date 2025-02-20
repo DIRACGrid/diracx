@@ -14,7 +14,7 @@ We recommend that this is stored within a Git repository, and DiracX provides tw
 ## Structure of the CS
 
 The canonical way of accessing the DiracX configuration from within code is via the corresponding pydantic model.
-This provides strong typing of all values in the CS and enables the schema of the `default.yaml` file to be validated.
+This provides strong typing of all values in the CS and enables the schema of the `default.yml` file to be validated.
 The pydantic model is defined in `diracx.core.config`.
 
 ## Client access
@@ -28,11 +28,39 @@ These headers can be used to efficiently check for updates without needing to do
 Currently the canonical source of configuration is from the legacy DIRAC Configuration Service.
 We forsee this will continue to be the case until the migration from DIRAC -> DiracX is complete.
 During this time, the DiracX configuration is not intended to be edited directly.
-The DiracX `default.yaml` file differs in structure and contents from the legacy DIRAC Configuration Service.
+The DiracX `default.yml` file differs in structure and contents from the legacy DIRAC Configuration Service.
 The legacy DIRAC CFG file can be converted into the new YAML format with:
 
 ```bash
-DIRAC_COMPAT_ENABLE_CS_CONVERSION=true dirac internal legacy cs-sync dirac-cs.cfg diracx-config/default.yaml
+DIRAC_COMPAT_ENABLE_CS_CONVERSION=true dirac internal legacy cs-sync dirac-cs.cfg diracx-config/default.yml
+```
+
+The following can be run on any client with a proxy
+
+```python
+#!/usr/bin/env python
+import subprocess
+import os
+import tempfile
+import zlib
+from pathlib import Path
+
+import DIRAC
+DIRAC.initialize()
+from DIRAC import gConfig
+from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
+from DIRAC.ConfigurationSystem.Client.ConfigurationClient import ConfigurationClient
+
+client = ConfigurationClient(url=gConfig.getValue("/DIRAC/Configuration/MasterServer", ""))
+data = returnValueOrRaise(client.getCompressedData())
+data = zlib.decompress(data)
+with tempfile.NamedTemporaryFile() as tmp:
+    tmp.write(data)
+    tmp.flush()
+    cmd = ["dirac", "internal", "legacy", "cs-sync", tmp.name, "default.yml"]
+    subprocess.run(cmd, env=os.environ | {"DIRAC_COMPAT_ENABLE_CS_CONVERSION": "yes"}, check=True)
+
+print("Synced CS to default.yml, now you can review the changes and commit/push them")
 ```
 
 TODO: Document how we will actually do the sync for production deployments...
