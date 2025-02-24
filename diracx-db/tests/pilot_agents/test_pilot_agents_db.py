@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from diracx.db.sql.pilot_agents.db import PilotAgentsDB
+from diracx.backend.dal.sql.pilot_agents.db import PilotAgentsDB
 
 
 @pytest.fixture

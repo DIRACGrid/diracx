@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.sql.utils import Column, DateNowColumn
+from diracx.backend.dal.sql.utils import Column, DateNowColumn
 
 Base = declarative_base()
 

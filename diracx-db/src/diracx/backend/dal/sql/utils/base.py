@@ -15,11 +15,11 @@ from sqlalchemy import DateTime, MetaData, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
+from diracx.backend.dal.exceptions import DBUnavailableError
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
 from diracx.core.models import SortDirection
 from diracx.core.settings import SqlalchemyDsn
-from diracx.db.exceptions import DBUnavailableError
 
 from .functions import date_trunc
 
@@ -104,7 +104,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.db.sql", name=db_name
+                group="diracx.dbs.sql", name=db_name
             )
         ]
         if not db_classes:
@@ -119,7 +119,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select_from_extension(group="diracx.db.sql"):
+        for entry_point in select_from_extension(group="diracx.dbs.sql"):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:

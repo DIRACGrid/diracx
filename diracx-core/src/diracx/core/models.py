@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
+
+from diracx.core.properties import SecurityProperty
+from diracx.core.settings import DevelopmentSettings
 
 
 class ScalarSearchOperator(StrEnum):
@@ -118,6 +123,24 @@ class UserInfo(BaseModel):
     vo: str
 
 
+class AuthInfo(BaseModel):
+    # raw token for propagation
+    bearer_token: str
+
+    # token ID in the DB for Component
+    # unique jwt identifier for user
+    token_id: UUID
+
+    # list of DIRAC properties
+    properties: list[SecurityProperty]
+
+    policies: dict[str, Any] = {}
+
+
+class AuthorizedUserInfo(AuthInfo, UserInfo):
+    pass
+
+
 class ChecksumAlgorithm(StrEnum):
     SHA256 = "sha256"
 
@@ -136,3 +159,38 @@ class SandboxInfo(BaseModel):
 class SandboxType(StrEnum):
     Input = "Input"
     Output = "Output"
+
+
+class OpenIDConfiguration(TypedDict):
+    issuer: str
+    token_endpoint: str
+    userinfo_endpoint: str
+    authorization_endpoint: str
+    device_authorization_endpoint: str
+    grant_types_supported: list[str]
+    scopes_supported: list[str]
+    response_types_supported: list[str]
+    token_endpoint_auth_signing_alg_values_supported: list[str]
+    token_endpoint_auth_methods_supported: list[str]
+    code_challenge_methods_supported: list[str]
+
+
+class SupportInfo(TypedDict):
+    message: str
+    webpage: str | None
+    email: str | None
+
+
+class GroupInfo(TypedDict):
+    properties: list[str]
+
+
+class VOInfo(TypedDict):
+    groups: dict[str, GroupInfo]
+    support: SupportInfo
+    default_group: str
+
+
+class Metadata(TypedDict):
+    virtual_organizations: dict[str, VOInfo]
+    development_settings: DevelopmentSettings

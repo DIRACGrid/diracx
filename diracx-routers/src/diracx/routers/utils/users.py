@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Annotated, Any
-from uuid import UUID
+from typing import Annotated
 
 from authlib.jose import JoseError, JsonWebToken
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
-from pydantic import BaseModel, Field
-from pydantic_settings import SettingsConfigDict
 
-from diracx.core.models import UserInfo
-from diracx.core.properties import SecurityProperty
-from diracx.core.settings import FernetKey, ServiceSettingsBase, TokenSigningKey
-from diracx.routers.dependencies import Config, add_settings_annotation
+from diracx.core.models import AuthorizedUserInfo
+from diracx.routers.dependencies import AuthSettings
 
 # auto_error=False is used to avoid raising the wrong exception when the token is missing
 # The error is handled in the verify_dirac_access_token function
@@ -23,53 +18,6 @@ from diracx.routers.dependencies import Config, add_settings_annotation
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="/.well-known/openid-configuration", auto_error=False
 )
-
-
-class AuthInfo(BaseModel):
-    # raw token for propagation
-    bearer_token: str
-
-    # token ID in the DB for Component
-    # unique jwt identifier for user
-    token_id: UUID
-
-    # list of DIRAC properties
-    properties: list[SecurityProperty]
-
-    policies: dict[str, Any] = {}
-
-
-class AuthorizedUserInfo(AuthInfo, UserInfo):
-    pass
-
-
-@add_settings_annotation
-class AuthSettings(ServiceSettingsBase):
-    """Settings for the authentication service."""
-
-    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
-
-    dirac_client_id: str = "myDIRACClientID"
-    # TODO: This should be taken dynamically
-    # ["http://pclhcb211:8000/docs/oauth2-redirect"]
-    allowed_redirects: list[str] = []
-    device_flow_expiration_seconds: int = 600
-    authorization_flow_expiration_seconds: int = 300
-
-    # State key is used to encrypt/decrypt the state dict passed to the IAM
-    state_key: FernetKey
-
-    # TODO: this should probably be something mandatory
-    # to set by the user
-    token_issuer: str = "http://lhcbdirac.cern.ch/"  # noqa: S105
-    token_key: TokenSigningKey
-    token_algorithm: str = "RS256"  # noqa: S105
-    access_token_expire_minutes: int = 20
-    refresh_token_expire_minutes: int = 60
-
-    available_properties: set[SecurityProperty] = Field(
-        default_factory=SecurityProperty.available_properties
-    )
 
 
 async def verify_dirac_access_token(
@@ -119,12 +67,3 @@ async def verify_dirac_access_token(
         vo=token["vo"],
         policies=token.get("dirac_policies", {}),
     )
-
-
-def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:
-    """Retrieve all properties of groups a user is registered in."""
-    allowed_user_properties = set()
-    for group in config.Registry[vo].Groups:
-        if sub in config.Registry[vo].Groups[group].Users:
-            allowed_user_properties.update(config.Registry[vo].Groups[group].Properties)
-    return allowed_user_properties

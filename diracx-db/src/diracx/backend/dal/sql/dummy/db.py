@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import func, insert, select
 
-from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
+from diracx.backend.dal.sql.utils import BaseSQLDB, apply_search_filters
 
 from .schema import Base as DummyDBBase
 from .schema import Cars, Owners

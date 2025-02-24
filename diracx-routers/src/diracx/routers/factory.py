@@ -28,14 +28,14 @@ from pydantic import TypeAdapter
 from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
+from diracx.backend.dal.exceptions import DBUnavailableError
+from diracx.backend.dal.os.utils import BaseOSDB
+from diracx.backend.dal.sql.utils import BaseSQLDB
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponseError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
-from diracx.db.exceptions import DBUnavailableError
-from diracx.db.os.utils import BaseOSDB
-from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
 
 from .fastapi_classes import DiracFastAPI, DiracxRouter
@@ -186,7 +186,6 @@ def create_app_inner(
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
 
     for db_name, db_url in database_urls.items():
-
         try:
             sql_db_classes = BaseSQLDB.available_implementations(db_name)
 

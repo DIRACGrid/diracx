@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 
-from diracx.db.os.utils import BaseOSDB
+from diracx.backend.dal.os.utils import BaseOSDB
 
 
 class DummyOSDB(BaseOSDB):

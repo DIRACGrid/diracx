@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from diracx.backend.bl.jobs.job import JobSubmissionSpec, submit_jobs_jdl
+from diracx.backend.dal.sql.job.db import JobDB
 from diracx.core.exceptions import InvalidQueryError, JobNotFoundError
 from diracx.core.models import (
     ScalarSearchOperator,
@@ -11,8 +13,6 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql.job.db import JobDB
-from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 
 @pytest.fixture

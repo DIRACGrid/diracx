@@ -27,8 +27,9 @@ from typing import Annotated, Self
 from fastapi import Depends
 
 from diracx.core.extensions import select_from_extension
+from diracx.core.models import AuthorizedUserInfo
 from diracx.routers.dependencies import DevelopmentSettings
-from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from diracx.routers.utils.users import verify_dirac_access_token
 
 if "annotations" in globals():
     raise NotImplementedError(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from diracx.core.properties import SecurityProperty
+
 __all__ = (
     "SqlalchemyDsn",
     "LocalFileUrl",
@@ -16,6 +18,7 @@ from cryptography.fernet import Fernet
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    Field,
     FileUrl,
     SecretStr,
     TypeAdapter,
@@ -102,3 +105,31 @@ class DevelopmentSettings(ServiceSettingsBase):
     # When then to true (only for demo/CI), crash if an access policy isn't
     # called
     crash_on_missed_access_policy: bool = False
+
+
+class AuthSettings(ServiceSettingsBase):
+    """Settings for the authentication service."""
+
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
+
+    dirac_client_id: str = "myDIRACClientID"
+    # TODO: This should be taken dynamically
+    # ["http://pclhcb211:8000/docs/oauth2-redirect"]
+    allowed_redirects: list[str] = []
+    device_flow_expiration_seconds: int = 600
+    authorization_flow_expiration_seconds: int = 300
+
+    # State key is used to encrypt/decrypt the state dict passed to the IAM
+    state_key: FernetKey
+
+    # TODO: this should probably be something mandatory
+    # to set by the user
+    token_issuer: str = "http://lhcbdirac.cern.ch/"  # noqa: S105
+    token_key: TokenSigningKey
+    token_algorithm: str = "RS256"  # noqa: S105
+    access_token_expire_minutes: int = 20
+    refresh_token_expire_minutes: int = 60
+
+    available_properties: set[SecurityProperty] = Field(
+        default_factory=SecurityProperty.available_properties
+    )

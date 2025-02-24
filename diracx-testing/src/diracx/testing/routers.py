@@ -8,7 +8,7 @@ from diracx.testing.mock_osdb import fake_available_osdb_implementations
 
 @asynccontextmanager
 async def ensure_dbs_exist():
-    from diracx.db.__main__ import init_os, init_sql
+    from diracx.backend.dal.__main__ import init_os, init_sql
 
     await init_sql()
     await init_os()
@@ -22,7 +22,7 @@ def create_app():
      * adds a lifetime function to ensure the DB schemas are initialized
      * replaces the parameter DBs with sqlite-backed versions
     """
-    from diracx.db.os.utils import BaseOSDB
+    from diracx.backend.dal.os.utils import BaseOSDB
     from diracx.routers import create_app
 
     BaseOSDB.available_implementations = partial(

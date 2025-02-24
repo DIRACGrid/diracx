@@ -22,9 +22,10 @@ import httpx
 import pytest
 
 if TYPE_CHECKING:
+    from diracx.core.models import AuthorizedUserInfo
     from diracx.core.settings import DevelopmentSettings
+    from diracx.routers.dependencies import AuthSettings
     from diracx.routers.jobs.sandboxes import SandboxStoreSettings
-    from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
 
 
 # to get a string like this run:
@@ -157,11 +158,11 @@ class ClientFactory:
         test_sandbox_settings,
         test_dev_settings,
     ):
+        from diracx.backend.dal.os.utils import BaseOSDB
+        from diracx.backend.dal.sql.utils import BaseSQLDB
         from diracx.core.config import ConfigSource
         from diracx.core.extensions import select_from_extension
         from diracx.core.settings import ServiceSettingsBase
-        from diracx.db.os.utils import BaseOSDB
-        from diracx.db.sql.utils import BaseSQLDB
         from diracx.routers import create_app_inner
         from diracx.routers.access_policies import BaseAccessPolicy
 
@@ -186,13 +187,13 @@ class ClientFactory:
         }
         database_urls = {
             e.name: "sqlite+aiosqlite:///:memory:"
-            for e in select_from_extension(group="diracx.db.sql")
+            for e in select_from_extension(group="diracx.dbs.sql")
         }
         # TODO: Monkeypatch this in a less stupid way
         # TODO: Only use this if opensearch isn't available
         os_database_conn_kwargs = {
             e.name: {"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
-            for e in select_from_extension(group="diracx.db.os")
+            for e in select_from_extension(group="diracx.dbs.os")
         }
         BaseOSDB.available_implementations = partial(
             fake_available_osdb_implementations,
@@ -285,8 +286,8 @@ class ClientFactory:
         import sqlalchemy
         from sqlalchemy.util.concurrency import greenlet_spawn
 
-        from diracx.db.os.utils import BaseOSDB
-        from diracx.db.sql.utils import BaseSQLDB
+        from diracx.backend.dal.os.utils import BaseOSDB
+        from diracx.backend.dal.sql.utils import BaseSQLDB
         from diracx.testing.mock_osdb import MockOSDBMixin
 
         for k, v in self.app.dependency_overrides.items():

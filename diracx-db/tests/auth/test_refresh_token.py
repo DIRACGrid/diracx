@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from diracx.db.sql.auth.db import AuthDB
-from diracx.db.sql.auth.schema import RefreshTokenStatus
+from diracx.backend.dal.sql.auth.db import AuthDB
+from diracx.backend.dal.sql.auth.schema import RefreshTokenStatus
 
 
 @pytest.fixture

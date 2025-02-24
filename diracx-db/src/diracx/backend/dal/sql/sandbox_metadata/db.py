@@ -5,9 +5,9 @@ from typing import Any
 from sqlalchemy import Executable, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from diracx.backend.dal.sql.utils import BaseSQLDB, utcnow
 from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
-from diracx.db.sql.utils import BaseSQLDB, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners

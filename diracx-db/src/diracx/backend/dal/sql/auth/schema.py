@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.sql.utils import Column, DateNowColumn, EnumColumn, NullColumn
+from diracx.backend.dal.sql.utils import Column, DateNowColumn, EnumColumn, NullColumn
 
 USER_CODE_LENGTH = 8
 

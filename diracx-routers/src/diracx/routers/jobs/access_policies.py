@@ -6,11 +6,10 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
+from diracx.backend.dal.sql import JobDB, SandboxMetadataDB
+from diracx.core.models import AuthorizedUserInfo
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
-
-from ..utils.users import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):

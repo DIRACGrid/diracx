@@ -12,7 +12,13 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = ["diracx-api", "diracx-cli", "diracx-client", "diracx-core"]
+dependencies = [
+    "diracx-api",
+ "diracx-cli",
+ "diracx-client",
+ "diracx-core",
+ "ipython>=8.32.0",
+]
 dynamic = ["version"]
 
 [project.optional-dependencies]

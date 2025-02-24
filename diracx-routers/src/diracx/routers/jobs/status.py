@@ -7,14 +7,14 @@ from typing import Annotated
 
 from fastapi import BackgroundTasks, HTTPException, Query
 
-from diracx.core.models import (
-    JobStatusUpdate,
-    SetJobStatusReturn,
-)
-from diracx.db.sql.utils.job import (
+from diracx.backend.bl.jobs.job import (
     remove_jobs,
     reschedule_jobs_bulk,
     set_job_status_bulk,
+)
+from diracx.core.models import (
+    JobStatusUpdate,
+    SetJobStatusReturn,
 )
 
 from ..dependencies import (

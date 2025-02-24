@@ -10,8 +10,8 @@ from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import Annotated
 
+from diracx.core.models import AuthorizedUserInfo
 from diracx.routers.access_policies import BaseAccessPolicy
-from diracx.routers.utils.users import AuthorizedUserInfo
 from fastapi import Depends, HTTPException, status
 
 from gubbins.core.properties import GUBBINS_SENSEI

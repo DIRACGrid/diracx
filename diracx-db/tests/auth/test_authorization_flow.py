@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import NoResultFound
 
+from diracx.backend.dal.sql.auth.db import AuthDB
 from diracx.core.exceptions import AuthorizationError
-from diracx.db.sql.auth.db import AuthDB
 
 MAX_VALIDITY = 2
 EXPIRED = 0

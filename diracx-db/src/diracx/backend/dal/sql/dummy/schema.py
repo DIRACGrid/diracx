@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.sql.utils import Column, DateNowColumn
+from diracx.backend.dal.sql.utils import Column, DateNowColumn
 
 Base = declarative_base()
 

@@ -17,7 +17,6 @@ dependencies = [
     "authlib",
     "botocore>=1.35",
     "cachetools",
-    "dirac",
     "diracx-core",
     "diracx-db",
     "python-dotenv",    # TODO: We might not need this

@@ -13,8 +13,8 @@ from typing import Any, AsyncIterator
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from diracx.backend.dal.sql import utils as sql_utils
 from diracx.core.models import SearchSpec, SortSpec
-from diracx.db.sql import utils as sql_utils
 
 
 class MockOSDBMixin:
@@ -39,7 +39,7 @@ class MockOSDBMixin:
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
         from sqlalchemy import JSON, Column, Integer, MetaData, String, Table
 
-        from diracx.db.sql.utils import DateNowColumn
+        from diracx.backend.dal.sql.utils import DateNowColumn
 
         # Dynamically create a subclass of BaseSQLDB so we get clearer errors
         mocked_db = type(f"Mocked{self.__class__.__name__}", (sql_utils.BaseSQLDB,), {})

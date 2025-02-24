@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from diracx.db.os.utils import OpenSearchDBUnavailableError
+from diracx.backend.dal.os.utils import OpenSearchDBUnavailableError
 from diracx.testing.osdb import OPENSEARCH_PORT, DummyOSDB, require_port_availability
 
 

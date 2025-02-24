@@ -9,18 +9,19 @@ from fastapi import Body, Depends, HTTPException
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
+from diracx.backend.bl.jobs.job import JobSubmissionSpec, submit_jobs_jdl
+from diracx.backend.dal.sql.job_logging.db import JobLoggingRecord
 from diracx.core.models import (
+    AuthorizedUserInfo,
     JobStatus,
 )
-from diracx.db.sql.job_logging.db import JobLoggingRecord
-from diracx.db.sql.utils.job import JobSubmissionSpec, submit_jobs_jdl
 
 from ..dependencies import (
     JobDB,
     JobLoggingDB,
 )
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils.users import verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 logger = logging.getLogger(__name__)

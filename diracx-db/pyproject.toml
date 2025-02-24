@@ -27,16 +27,16 @@ testing = [
     "diracx-testing",
 ]
 
-[project.entry-points."diracx.db.sql"]
-AuthDB = "diracx.db.sql:AuthDB"
-JobDB = "diracx.db.sql:JobDB"
-JobLoggingDB = "diracx.db.sql:JobLoggingDB"
-PilotAgentsDB = "diracx.db.sql:PilotAgentsDB"
-SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
-TaskQueueDB = "diracx.db.sql:TaskQueueDB"
+[project.entry-points."diracx.dbs.sql"]
+AuthDB = "diracx.backend.dal.sql:AuthDB"
+JobDB = "diracx.backend.dal.sql:JobDB"
+JobLoggingDB = "diracx.backend.dal.sql:JobLoggingDB"
+PilotAgentsDB = "diracx.backend.dal.sql:PilotAgentsDB"
+SandboxMetadataDB = "diracx.backend.dal.sql:SandboxMetadataDB"
+TaskQueueDB = "diracx.backend.dal.sql:TaskQueueDB"
 
-[project.entry-points."diracx.db.os"]
-JobParametersDB = "diracx.db.os:JobParametersDB"
+[project.entry-points."diracx.dbs.os"]
+JobParametersDB = "diracx.backend.dal.os:JobParametersDB"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -53,7 +53,7 @@ root = ".."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.db", "--cov-report=term-missing",
+    "--cov=diracx.backend.dal", "--cov-report=term-missing",
     "-pdiracx.testing", "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]

@@ -28,6 +28,18 @@ class ExpiredFlowError(AuthorizationError):
     """Used only for the Device Flow when the polling is expired."""
 
 
+class IAMServerError(DiracError):
+    """Used whenever we encounter a server problem with the IAM server."""
+
+
+class IAMClientError(DiracError):
+    """Used whenever we encounter a client problem with the IAM server."""
+
+
+class InvalidCredentialsError(DiracError):
+    """Used whenever the credentials are invalid."""
+
+
 class ConfigurationError(DiracError):
     """Used whenever we encounter a problem with the configuration."""
 
@@ -38,6 +50,12 @@ class BadConfigurationVersionError(ConfigurationError):
 
 class InvalidQueryError(DiracError):
     """It was not possible to build a valid database query from the given input."""
+
+
+class TokenNotFoundError(Exception):
+    def __init__(self, jti: str, detail: str | None = None):
+        self.jti: str = jti
+        super().__init__(f"Token {jti} not found" + (" ({detail})" if detail else ""))
 
 
 class JobNotFoundError(Exception):

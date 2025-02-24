@@ -5,9 +5,9 @@ from uuid import uuid4
 
 import pytest
 
+from diracx.backend.dal.sql.dummy.db import DummyDB
+from diracx.backend.dal.sql.utils import SQLDBUnavailableError
 from diracx.core.exceptions import InvalidQueryError
-from diracx.db.sql.dummy.db import DummyDB
-from diracx.db.sql.utils import SQLDBUnavailableError
 
 # Each DB test class must defined a fixture looking like this one
 # It allows to get an instance of an in memory DB,

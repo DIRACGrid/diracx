@@ -7,10 +7,10 @@ from datetime import datetime
 import pytest
 import sqlalchemy
 
+from diracx.backend.dal.sql.sandbox_metadata.db import SandboxMetadataDB
+from diracx.backend.dal.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
 from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import SandboxInfo, UserInfo
-from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
-from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
 
 
 @pytest.fixture

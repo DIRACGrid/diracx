@@ -10,6 +10,8 @@ from unittest.mock import MagicMock
 from fastapi import BackgroundTasks
 from pydantic import BaseModel
 
+from diracx.backend.dal.sql import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
+from diracx.backend.dal.sql.job_logging.db import JobLoggingRecord
 from diracx.core.config.schema import Config
 from diracx.core.models import (
     JobMinorStatus,
@@ -19,8 +21,6 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.dal.sql import JobDB, JobLoggingDB, SandboxMetadataDB, TaskQueueDB
-from diracx.dal.sql.job_logging.db import JobLoggingRecord
 
 
 class JobSubmissionSpec(BaseModel):

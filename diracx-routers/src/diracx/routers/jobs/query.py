@@ -8,6 +8,7 @@ from fastapi import Body, Depends, Response
 from pydantic import BaseModel
 
 from diracx.core.models import (
+    AuthorizedUserInfo,
     ScalarSearchOperator,
     SearchSpec,
     SortSpec,
@@ -20,7 +21,7 @@ from ..dependencies import (
     JobParametersDB,
 )
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils.users import verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 logger = logging.getLogger(__name__)

@@ -15,6 +15,7 @@ from pyparsing import Any
 
 from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import (
+    AuthorizedUserInfo,
     SandboxInfo,
     SandboxType,
 )
@@ -25,7 +26,7 @@ from diracx.core.s3 import (
 )
 from diracx.core.settings import ServiceSettingsBase
 
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils.users import verify_dirac_access_token
 from .access_policies import (
     ActionType,
     CheckSandboxPolicyCallable,

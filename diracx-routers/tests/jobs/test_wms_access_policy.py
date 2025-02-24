@@ -5,13 +5,13 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 
+from diracx.core.models import AuthorizedUserInfo
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers.jobs.access_policies import (
     ActionType,
     SandboxAccessPolicy,
     WMSAccessPolicy,
 )
-from diracx.routers.utils.users import AuthorizedUserInfo
 
 base_payload = {
     "sub": "testingVO:yellow-sub",

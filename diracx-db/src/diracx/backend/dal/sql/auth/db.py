@@ -3,17 +3,18 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from diracx.backend.dal.sql.utils import BaseSQLDB, substract_date
 from diracx.core.exceptions import (
     AuthorizationError,
     ExpiredFlowError,
     PendingAuthorizationError,
+    TokenNotFoundError,
 )
-from diracx.db.sql.utils import BaseSQLDB, substract_date
 
 from .schema import (
     AuthorizationFlows,
@@ -249,8 +250,9 @@ class AuthDB(BaseSQLDB):
         # Return the JWT ID and the creation time
         return jti, row.CreationTime
 
-    async def get_refresh_token(self, jti: str) -> dict:
+    async def get_refresh_token(self, jti: UUID) -> dict:
         """Get refresh token details bound to a given JWT ID."""
+        jti = str(jti)
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -260,8 +262,8 @@ class AuthDB(BaseSQLDB):
         )
         try:
             res = dict((await self.conn.execute(stmt)).one()._mapping)
-        except NoResultFound:
-            return {}
+        except NoResultFound as e:
+            raise TokenNotFoundError(jti) from e
 
         return res
 
@@ -285,11 +287,11 @@ class AuthDB(BaseSQLDB):
 
         return refresh_tokens
 
-    async def revoke_refresh_token(self, jti: str):
+    async def revoke_refresh_token(self, jti: UUID):
         """Revoke a token given by its JWT ID."""
         await self.conn.execute(
             update(RefreshTokens)
-            .where(RefreshTokens.jti == jti)
+            .where(RefreshTokens.jti == str(jti))
             .values(status=RefreshTokenStatus.REVOKED)
         )
 
