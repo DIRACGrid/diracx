@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from diracx.core.models import JobStatus
+from diracx.core.models import JobLoggingRecord, JobStatus
 from diracx.db.sql import JobLoggingDB
 
 
@@ -23,31 +23,39 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
         date = datetime.now(timezone.utc)
 
         # Act
+        records = []
         for i in range(50):
-            await job_logging_db.insert_record(
-                i,
-                status=JobStatus.RECEIVED,
-                minor_status="received_minor_status",
-                application_status="application_status",
-                date=date,
-                source="pytest",
+            records.append(
+                JobLoggingRecord(
+                    job_id=i,
+                    status=JobStatus.RECEIVED,
+                    minor_status="received_minor_status",
+                    application_status="application_status",
+                    date=date,
+                    source="pytest",
+                )
             )
-            await job_logging_db.insert_record(
-                i,
-                status=JobStatus.SUBMITTING,
-                minor_status="submitted_minor_status",
-                application_status="application_status",
-                date=date,
-                source="pytest",
+            records.append(
+                JobLoggingRecord(
+                    job_id=i,
+                    status=JobStatus.SUBMITTING,
+                    minor_status="submitted_minor_status",
+                    application_status="application_status",
+                    date=date,
+                    source="pytest",
+                )
             )
-            await job_logging_db.insert_record(
-                i,
-                status=JobStatus.RUNNING,
-                minor_status="running_minor_status",
-                application_status="application_status",
-                date=date,
-                source="pytest",
+            records.append(
+                JobLoggingRecord(
+                    job_id=i,
+                    status=JobStatus.RUNNING,
+                    minor_status="running_minor_status",
+                    application_status="application_status",
+                    date=date,
+                    source="pytest",
+                )
             )
+        await job_logging_db.insert_records(records)
 
         # Assert
         res = await job_logging_db.get_records([i for i in range(50)])

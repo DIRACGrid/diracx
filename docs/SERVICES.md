@@ -61,7 +61,7 @@ Usage example:
 
 ```python
 @router.get("/openid-configuration")
-async def openid_configuration(settings: AuthSettings):
+async def get_openid_configuration(settings: AuthSettings):
     ...
 ```
 

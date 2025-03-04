@@ -43,26 +43,27 @@ from fastapi import (
     status,
 )
 
+from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
+from diracx.logic.auth.authorize_code_flow import (
+    complete_authorization_flow as complete_authorization_flow_bl,
+)
+from diracx.logic.auth.authorize_code_flow import (
+    initiate_authorization_flow as initiate_authorization_flow_bl,
+)
+
 from ..dependencies import (
     AuthDB,
+    AuthSettings,
     AvailableSecurityProperties,
     Config,
 )
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthSettings
-from .utils import (
-    GrantType,
-    decrypt_state,
-    get_token_from_iam,
-    initiate_authorization_flow_with_iam,
-    parse_and_validate_scope,
-)
 
 router = DiracxRouter(require_auth=False)
 
 
 @router.get("/authorize")
-async def authorization_flow(
+async def initiate_authorization_flow(
     request: Request,
     response_type: Literal["code"],
     code_challenge: str,
@@ -75,7 +76,7 @@ async def authorization_flow(
     config: Config,
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
-):
+) -> responses.RedirectResponse:
     """Initiate the authorization flow.
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
@@ -95,90 +96,64 @@ async def authorization_flow(
     to be able to map the authorization flow with the corresponding
     user authorize flow.
     """
-    if settings.dirac_client_id != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised client ID"
-        )
-    if redirect_uri not in settings.allowed_redirects:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Unrecognised redirect_uri"
-        )
-
     try:
-        parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+        redirect_uri = await initiate_authorization_flow_bl(
+            request_url=f"{request.url.replace(query='')}",
+            code_challenge=code_challenge,
+            code_challenge_method=code_challenge_method,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            scope=scope,
+            state=state,
+            auth_db=auth_db,
+            config=config,
+            settings=settings,
+            available_properties=available_properties,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=e.args[0],
-        ) from e
-    except PermissionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
 
-    # Store the authorization flow details
-    uuid = await auth_db.insert_authorization_flow(
-        client_id,
-        scope,
-        code_challenge,
-        code_challenge_method,
-        redirect_uri,
-    )
-
-    # Initiate the authorization flow with the IAM
-    state_for_iam = {
-        "external_state": state,
-        "uuid": uuid,
-        "grant_type": GrantType.authorization_code.value,
-    }
-
-    authorization_flow_url = await initiate_authorization_flow_with_iam(
-        config,
-        parsed_scope["vo"],
-        f"{request.url.replace(query='')}/complete",
-        state_for_iam,
-        settings.state_key.fernet,
-    )
-
-    return responses.RedirectResponse(authorization_flow_url)
+    return responses.RedirectResponse(redirect_uri)
 
 
 @router.get("/authorize/complete")
-async def authorization_flow_complete(
+async def complete_authorization_flow(
     code: str,
     state: str,
     request: Request,
     auth_db: AuthDB,
     config: Config,
     settings: AuthSettings,
-):
+) -> responses.RedirectResponse:
     """Complete the authorization flow.
 
     The user is redirected back to the DIRAC auth service after completing the IAM's authorization flow.
     We retrieve the original flow details from the decrypted state and store the ID token requested from the IAM.
     The user is then redirected to the client's redirect URI.
     """
-    # Decrypt the state to access user details
-    decrypted_state = decrypt_state(state, settings.state_key.fernet)
-    assert decrypted_state["grant_type"] == GrantType.authorization_code
-
-    # Get the ID token from the IAM
-    id_token = await get_token_from_iam(
-        config,
-        decrypted_state["vo"],
-        code,
-        decrypted_state,
-        str(request.url.replace(query="")),
-    )
-
-    # Store the ID token and redirect the user to the client's redirect URI
-    code, redirect_uri = await auth_db.authorization_flow_insert_id_token(
-        decrypted_state["uuid"],
-        id_token,
-        settings.authorization_flow_expiration_seconds,
-    )
-
-    return responses.RedirectResponse(
-        f"{redirect_uri}?code={code}&state={decrypted_state['external_state']}"
-    )
+    try:
+        redirect_uri = await complete_authorization_flow_bl(
+            code=code,
+            state=state,
+            request_url=str(request.url.replace(query="")),
+            auth_db=auth_db,
+            config=config,
+            settings=settings,
+        )
+    except AuthorizationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
+        ) from e
+    except IAMServerError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to contact IAM server",
+        ) from e
+    except IAMClientError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid code"
+        ) from e
+    return responses.RedirectResponse(redirect_uri)

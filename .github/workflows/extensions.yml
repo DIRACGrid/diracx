@@ -27,11 +27,13 @@ jobs:
           - package: "./extensions/gubbins/gubbins-core"
             dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./diracx-core"
           - package: "./extensions/gubbins/gubbins-db"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-core "
+            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-core"
+          - package: "./extensions/gubbins/gubbins-logic"
+            dependencies: "./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-core ./diracx-db ./diracx-core ./diracx-logic"
           - package: "./extensions/gubbins/gubbins-routers"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-core ./diracx-routers"
+            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-logic ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-logic ./diracx-core ./diracx-routers"
           - package: "./extensions/gubbins/gubbins-client"
-            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./extensions/gubbins/gubbins-client ./extensions/gubbins/gubbins-core ./diracx-client ./diracx-core "
+            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./extensions/gubbins/gubbins-client ./extensions/gubbins/gubbins-core ./diracx-client ./diracx-core"
           - package: "./extensions/gubbins/gubbins-cli"
             dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-client ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-cli ./diracx-client ./diracx-core ./diracx-api"
     steps:
@@ -58,6 +60,7 @@ jobs:
         run: |
           mypy ${{ matrix.package }}/src
       - name: Run pytest
+        if: ${{ matrix.package != './extensions/gubbins/gubbins-logic' }}
         run: |
           cd ${{ matrix.package }}
           pip install .[testing]
@@ -147,7 +150,7 @@ jobs:
           outputs: type=docker,dest=/tmp/gubbins_services_image.tar
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
-            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
+            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_logic*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
       - name: Build and export client
         uses: docker/build-push-action@v6
         with:
@@ -185,7 +188,7 @@ jobs:
         run: |
           pip install pytest-github-actions-annotate-failures
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-cli/[testing] ./extensions/gubbins/gubbins-core/[testing]
+          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-logic/[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-cli/[testing] ./extensions/gubbins/gubbins-core/[testing]
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
@@ -274,7 +277,7 @@ jobs:
         run: |
           micromamba install -c conda-forge nodejs pre-commit
           pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-testing/[testing] -e ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-core/[testing]
+          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-logic[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-testing/[testing] -e ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-core/[testing]
           npm install -g autorest
       - name: Run autorest
         run: |

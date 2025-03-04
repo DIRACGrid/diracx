@@ -13,9 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "dirac",
     "diracx-core",
-    "fastapi",
     "opensearch-py[async]",
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
@@ -27,7 +25,7 @@ testing = [
     "diracx-testing",
 ]
 
-[project.entry-points."diracx.db.sql"]
+[project.entry-points."diracx.dbs.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
 JobDB = "diracx.db.sql:JobDB"
 JobLoggingDB = "diracx.db.sql:JobLoggingDB"
@@ -35,7 +33,7 @@ PilotAgentsDB = "diracx.db.sql:PilotAgentsDB"
 SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 
-[project.entry-points."diracx.db.os"]
+[project.entry-points."diracx.dbs.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
 
 [tool.setuptools.packages.find]

@@ -33,6 +33,7 @@ testing = [
 ]
 types = [
     "botocore-stubs",
+    "types-aiobotocore[essential]",
     "types-aiobotocore-s3",
     "types-cachetools",
     "types-PyYAML",

@@ -104,7 +104,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.db.sql", name=db_name
+                group="diracx.dbs.sql", name=db_name
             )
         ]
         if not db_classes:
@@ -119,7 +119,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select_from_extension(group="diracx.db.sql"):
+        for entry_point in select_from_extension(group="diracx.dbs.sql"):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:

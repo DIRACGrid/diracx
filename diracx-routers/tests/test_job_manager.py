@@ -1679,7 +1679,7 @@ def test_remove_job_invalid_job_id(normal_user_client: TestClient, invalid_job_i
     assert r.status_code == 200, r.json()
 
 
-def test_remove_bulk_jobs_valid_job_ids(
+def test_remove_jobs_valid_job_ids(
     normal_user_client: TestClient, valid_job_ids: list[int]
 ):
     # Act
@@ -1786,7 +1786,7 @@ def test_set_single_job_properties_non_existing_job(
     assert res.status_code == HTTPStatus.NOT_FOUND, res.json()
 
 
-# def test_remove_bulk_jobs_invalid_job_ids(
+# def test_remove_jobs_invalid_job_ids(
 #     normal_user_client: TestClient, invalid_job_ids: list[int]
 # ):
 #     # Act
@@ -1805,7 +1805,7 @@ def test_set_single_job_properties_non_existing_job(
 #     }
 
 
-# def test_remove_bulk_jobs_mix_of_valid_and_invalid_job_ids(
+# def test_remove_jobs_mix_of_valid_and_invalid_job_ids(
 #     normal_user_client: TestClient, valid_job_ids: list[int], invalid_job_ids: list[int]
 # ):
 #     # Arrange

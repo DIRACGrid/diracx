@@ -22,7 +22,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 testing = ["gubbins-testing", "diracx-testing"]
 
-[project.entry-points."diracx.db.sql"]
+[project.entry-points."diracx.dbs.sql"]
 LollygagDB = "gubbins.db.sql:LollygagDB"
 JobDB = "gubbins.db.sql:GubbinsJobDB"
 

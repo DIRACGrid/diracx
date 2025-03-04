@@ -32,11 +32,6 @@ def job_db():
     yield FakeDB()
 
 
-@pytest.fixture
-def sandbox_db():
-    yield FakeDB()
-
-
 WMS_POLICY_NAME = "WMSAccessPolicy_AlthoughItDoesNotMatter"
 SANDBOX_POLICY_NAME = "SandboxAccessPolicy_AlthoughItDoesNotMatter"
 
@@ -225,25 +220,16 @@ OTHER_USER_SANDBOX_PFN = (
 )
 
 
-async def test_sandbox_access_policy_create(sandbox_db):
+async def test_sandbox_access_policy_create():
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
 
-    # sandbox_metadata_db and pfns are mandatory parameters
+    # action is a mandatory parameter
     with pytest.raises(AssertionError):
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
             normal_user,
-            action=ActionType.CREATE,
-            sandbox_metadata_db=sandbox_db,
-        )
-    with pytest.raises(AssertionError):
-        await SandboxAccessPolicy.policy(
-            SANDBOX_POLICY_NAME,
-            normal_user,
-            action=ActionType.CREATE,
-            pfns=[USER_SANDBOX_PFN],
         )
 
     # An admin cannot create any resource
@@ -252,7 +238,6 @@ async def test_sandbox_access_policy_create(sandbox_db):
             SANDBOX_POLICY_NAME,
             admin_user,
             action=ActionType.CREATE,
-            sandbox_metadata_db=sandbox_db,
             pfns=[USER_SANDBOX_PFN],
         )
 
@@ -261,14 +246,13 @@ async def test_sandbox_access_policy_create(sandbox_db):
         SANDBOX_POLICY_NAME,
         normal_user,
         action=ActionType.CREATE,
-        sandbox_metadata_db=sandbox_db,
         pfns=[USER_SANDBOX_PFN],
     )
 
     ##############
 
 
-async def test_sandbox_access_policy_read(sandbox_db):
+async def test_sandbox_access_policy_read():
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
@@ -277,7 +261,6 @@ async def test_sandbox_access_policy_read(sandbox_db):
         SANDBOX_POLICY_NAME,
         admin_user,
         action=ActionType.READ,
-        sandbox_metadata_db=sandbox_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
@@ -286,7 +269,6 @@ async def test_sandbox_access_policy_read(sandbox_db):
         SANDBOX_POLICY_NAME,
         admin_user,
         action=ActionType.READ,
-        sandbox_metadata_db=sandbox_db,
         pfns=[OTHER_USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
@@ -297,7 +279,6 @@ async def test_sandbox_access_policy_read(sandbox_db):
             SANDBOX_POLICY_NAME,
             normal_user,
             action=ActionType.READ,
-            sandbox_metadata_db=sandbox_db,
             pfns=[USER_SANDBOX_PFN],
         )
 
@@ -306,7 +287,6 @@ async def test_sandbox_access_policy_read(sandbox_db):
         SANDBOX_POLICY_NAME,
         normal_user,
         action=ActionType.READ,
-        sandbox_metadata_db=sandbox_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
@@ -317,7 +297,6 @@ async def test_sandbox_access_policy_read(sandbox_db):
             SANDBOX_POLICY_NAME,
             normal_user,
             action=ActionType.READ,
-            sandbox_metadata_db=sandbox_db,
             pfns=[OTHER_USER_SANDBOX_PFN],
             required_prefix=SANDBOX_PREFIX,
         )

@@ -7,7 +7,7 @@ from datetime import datetime
 import pytest
 import sqlalchemy
 
-from diracx.core.exceptions import SandboxNotFoundError
+from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
@@ -40,6 +40,7 @@ def test_get_pfn(sandbox_metadata_db: SandboxMetadataDB):
 
 
 async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
+    # TODO: DAL tests should be very simple, such complex tests should be handled in diracx-routers
     user_info = UserInfo(
         sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
     )
@@ -52,16 +53,24 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
         with pytest.raises(SandboxNotFoundError):
             await sandbox_metadata_db.sandbox_is_assigned(pfn1, "SandboxSE")
 
+    # Insert owner
+    async with sandbox_metadata_db:
+        owner_id = await sandbox_metadata_db.insert_owner(user_info)
+    assert owner_id == 1
+
     # Insert the sandbox
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.insert_sandbox("SandboxSE", user_info, pfn1, 100)
+        await sandbox_metadata_db.insert_sandbox(owner_id, "SandboxSE", pfn1, 100)
     db_contents = await _dump_db(sandbox_metadata_db)
     owner_id1, last_access_time1 = db_contents[pfn1]
 
-    # Inserting again should update the last access time
     await asyncio.sleep(1)  # The timestamp only has second precision
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.insert_sandbox("SandboxSE", user_info, pfn1, 100)
+        with pytest.raises(SandboxAlreadyInsertedError):
+            await sandbox_metadata_db.insert_sandbox(owner_id, "SandboxSE", pfn1, 100)
+
+        await sandbox_metadata_db.update_sandbox_last_access_time("SandboxSE", pfn1)
+
     db_contents = await _dump_db(sandbox_metadata_db)
     owner_id2, last_access_time2 = db_contents[pfn1]
     assert owner_id1 == owner_id2
@@ -99,6 +108,7 @@ async def _dump_db(
 async def test_assign_and_unsassign_sandbox_to_jobs(
     sandbox_metadata_db: SandboxMetadataDB,
 ):
+    # TODO: DAL tests should be very simple, such complex tests should be handled in diracx-routers
     pfn = secrets.token_hex()
     user_info = UserInfo(
         sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
@@ -107,7 +117,8 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
     sandbox_se = "SandboxSE"
     # Insert the sandbox
     async with sandbox_metadata_db:
-        await sandbox_metadata_db.insert_sandbox(sandbox_se, user_info, pfn, 100)
+        owner_id = await sandbox_metadata_db.insert_owner(user_info)
+        await sandbox_metadata_db.insert_sandbox(owner_id, sandbox_se, pfn, 100)
 
     async with sandbox_metadata_db:
         stmt = sqlalchemy.select(SandBoxes.SBId, SandBoxes.SEPFN)

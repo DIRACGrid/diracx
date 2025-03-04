@@ -7,8 +7,6 @@ from sqlalchemy import delete, func, select, update
 if TYPE_CHECKING:
     pass
 
-from diracx.core.properties import JOB_SHARING, SecurityProperty
-
 from ..utils import BaseSQLDB
 from .schema import (
     BannedSitesQueue,
@@ -49,126 +47,23 @@ class TaskQueueDB(BaseSQLDB):
         )
         return dict((await self.conn.execute(stmt)).one()._mapping)
 
-    async def remove_job(self, job_id: int):
-        """Remove a job from the task queues."""
-        stmt = delete(JobsQueue).where(JobsQueue.JobId == job_id)
-        await self.conn.execute(stmt)
-
-    async def remove_jobs(self, job_ids: list[int]):
-        """Remove jobs from the task queues."""
-        stmt = delete(JobsQueue).where(JobsQueue.JobId.in_(job_ids))
-        await self.conn.execute(stmt)
-
-    async def delete_task_queue_if_empty(
-        self,
-        tq_id: int,
-        tq_owner: str,
-        tq_group: str,
-        job_share: int,
-        group_properties: set[SecurityProperty],
-        enable_shares_correction: bool,
-        allow_background_tqs: bool,
-    ):
-        """Try to delete a task queue if it's empty."""
-        # Check if the task queue is empty
-        stmt = (
-            select(TaskQueues.TQId)
-            .where(TaskQueues.Enabled >= 1)
-            .where(TaskQueues.TQId == tq_id)
-            .where(~TaskQueues.TQId.in_(select(JobsQueue.TQId)))
-        )
-        rows = await self.conn.execute(stmt)
-        if not rows.rowcount:
-            return
-
-        # Deleting the task queue (the other tables will be deleted in cascade)
-        stmt = delete(TaskQueues).where(TaskQueues.TQId == tq_id)
-        await self.conn.execute(stmt)
-
-        await self.recalculate_tq_shares_for_entity(
-            tq_owner,
-            tq_group,
-            job_share,
-            group_properties,
-            enable_shares_correction,
-            allow_background_tqs,
-        )
-
-    async def recalculate_tq_shares_for_entity(
-        self,
-        owner: str,
-        group: str,
-        job_share: int,
-        group_properties: set[SecurityProperty],
-        enable_shares_correction: bool,
-        allow_background_tqs: bool,
-    ):
-        """Recalculate the shares for a user/userGroup combo."""
-        if JOB_SHARING in group_properties:
-            # If group has JobSharing just set prio for that entry, user is irrelevant
-            return await self.__set_priorities_for_entity(
-                owner, group, job_share, group_properties, allow_background_tqs
-            )
-
+    async def get_task_queue_owners_by_group(self, group: str) -> dict[str, int]:
+        """Get the owners for a task queue and group."""
         stmt = (
             select(TaskQueues.Owner, func.count(TaskQueues.Owner))
             .where(TaskQueues.OwnerGroup == group)
             .group_by(TaskQueues.Owner)
         )
         rows = await self.conn.execute(stmt)
-        # make the rows a list of tuples
         # Get owners in this group and the amount of times they appear
         # TODO: I guess the rows are already a list of tupes
         # maybe refactor
-        data = [(r[0], r[1]) for r in rows if r]
-        num_owners = len(data)
-        # If there are no owners do now
-        if num_owners == 0:
-            return
-        # Split the share amongst the number of owners
-        entities_shares = {row[0]: job_share / num_owners for row in data}
+        return {r[0]: r[1] for r in rows if r}
 
-        # TODO: implement the following
-        # If corrector is enabled let it work it's magic
-        # if enable_shares_correction:
-        #     entities_shares = await self.__shares_corrector.correct_shares(
-        #         entitiesShares, group=group
-        #     )
-
-        # Keep updating
-        owners = dict(data)
-        # IF the user is already known and has more than 1 tq, the rest of the users don't need to be modified
-        # (The number of owners didn't change)
-        if owner in owners and owners[owner] > 1:
-            await self.__set_priorities_for_entity(
-                owner,
-                group,
-                entities_shares[owner],
-                group_properties,
-                allow_background_tqs,
-            )
-            return
-        # Oops the number of owners may have changed so we recalculate the prio for all owners in the group
-        for owner in owners:
-            await self.__set_priorities_for_entity(
-                owner,
-                group,
-                entities_shares[owner],
-                group_properties,
-                allow_background_tqs,
-            )
-
-    async def __set_priorities_for_entity(
-        self,
-        owner: str,
-        group: str,
-        share,
-        properties: set[SecurityProperty],
-        allow_background_tqs: bool,
-    ):
-        """Set the priority for a user/userGroup combo given a splitted share."""
-        from DIRAC.WorkloadManagementSystem.DB.TaskQueueDB import calculate_priority
-
+    async def get_task_queue_priorities(
+        self, group: str, owner: str | None = None
+    ) -> dict[int, float]:
+        """Get the priorities for a list of task queues."""
         stmt = (
             select(
                 TaskQueues.TQId,
@@ -178,24 +73,48 @@ class TaskQueueDB(BaseSQLDB):
             .where(TaskQueues.OwnerGroup == group)
             .group_by(TaskQueues.TQId)
         )
-        if JOB_SHARING not in properties:
+        if owner:
             stmt = stmt.where(TaskQueues.Owner == owner)
         rows = await self.conn.execute(stmt)
-        tq_dict: dict[int, float] = {tq_id: priority for tq_id, priority in rows}
+        return {tq_id: priority for tq_id, priority in rows}
 
-        if not tq_dict:
-            return
+    async def remove_jobs(self, job_ids: list[int]):
+        """Remove jobs from the task queues."""
+        stmt = delete(JobsQueue).where(JobsQueue.JobId.in_(job_ids))
+        await self.conn.execute(stmt)
 
-        rows = await self.retrieve_task_queues(list(tq_dict))
+    async def is_task_queue_empty(self, tq_id: int) -> bool:
+        """Check if a task queue is empty."""
+        stmt = (
+            select(TaskQueues.TQId)
+            .where(TaskQueues.Enabled >= 1)
+            .where(TaskQueues.TQId == tq_id)
+            .where(~TaskQueues.TQId.in_(select(JobsQueue.TQId)))
+        )
+        rows = await self.conn.execute(stmt)
+        return not rows.rowcount
 
-        prio_dict = calculate_priority(tq_dict, rows, share, allow_background_tqs)
+    async def delete_task_queue(
+        self,
+        tq_id: int,
+    ):
+        """Delete a task queue."""
+        # Deleting the task queue (the other tables will be deleted in cascade)
+        stmt = delete(TaskQueues).where(TaskQueues.TQId == tq_id)
+        await self.conn.execute(stmt)
 
-        # Execute updates
-        for prio, tqs in prio_dict.items():
-            update_stmt = (
-                update(TaskQueues).where(TaskQueues.TQId.in_(tqs)).values(Priority=prio)
-            )
-            await self.conn.execute(update_stmt)
+    async def set_priorities_for_entity(
+        self,
+        tq_ids: list[int],
+        priority: float,
+    ):
+        """Set the priority for a user/userGroup combo given a splitted share."""
+        update_stmt = (
+            update(TaskQueues)
+            .where(TaskQueues.TQId.in_(tq_ids))
+            .values(Priority=priority)
+        )
+        await self.conn.execute(update_stmt)
 
     async def retrieve_task_queues(self, tq_id_list=None):
         """Get all the task queues."""
