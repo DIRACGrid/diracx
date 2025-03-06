@@ -230,6 +230,7 @@ def generate_helm_values(
     helm_values["diracx"] = diracx_config
     diracx_config["hostname"] = diracx_hostname
 
+    diracx_settings["DIRACX_SERVICE_AUTH_TOKEN_ISSUER"] = diracx_url
     diracx_settings["DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS"] = json.dumps(
         [
             urljoin(diracx_url, "api/docs/oauth2-redirect"),

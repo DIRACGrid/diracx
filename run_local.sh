@@ -38,6 +38,7 @@ export DIRACX_OS_DB_JOBPARAMETERSDB='{"sqlalchemy_dsn": "sqlite+aiosqlite:///'${
 export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
 export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
 hostname_lower=$(hostname | tr -s '[:upper:]' '[:lower:]')
+export DIRACX_SERVICE_AUTH_TOKEN_ISSUER="http://${hostname_lower}:8000"
 export DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["http://'"$hostname_lower"':8000/docs/oauth2-redirect"]'
 export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true

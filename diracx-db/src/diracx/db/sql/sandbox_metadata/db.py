@@ -23,7 +23,6 @@ class SandboxMetadataDB(BaseSQLDB):
 
     async def get_owner_id(self, user: UserInfo) -> int | None:
         """Get the id of the owner from the database."""
-        # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         stmt = select(SBOwners.OwnerID).where(
             SBOwners.Owner == user.preferred_username,
             SBOwners.OwnerGroup == user.dirac_group,

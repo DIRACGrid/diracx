@@ -613,6 +613,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     ).decode()
 
     new_auth_settings = AuthSettings(
+        token_issuer="https://iam-auth.web.cern.ch/",
         token_algorithm="EdDSA",
         token_key=pem,
         state_key=Fernet.generate_key(),

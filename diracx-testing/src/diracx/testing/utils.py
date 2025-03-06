@@ -100,6 +100,7 @@ def test_auth_settings(
     from diracx.core.settings import AuthSettings
 
     yield AuthSettings(
+        token_issuer=ISSUER,
         token_algorithm="EdDSA",
         token_key=private_key_pem,
         state_key=fernet_key,

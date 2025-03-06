@@ -273,9 +273,6 @@ async def exchange_token(
             "Dynamic registration of users is not yet implemented"
         )
 
-    # Extract attributes from the settings and configuration
-    issuer = settings.token_issuer
-
     # Check that the subject is part of the dirac users
     if sub not in config.Registry[vo].Groups[dirac_group].Users:
         raise PermissionError(
@@ -320,7 +317,7 @@ async def exchange_token(
     access_payload: AccessTokenPayload = {
         "sub": sub,
         "vo": vo,
-        "iss": issuer,
+        "iss": settings.token_issuer,
         "dirac_properties": list(properties),
         "jti": str(uuid4()),
         "preferred_username": preferred_username,

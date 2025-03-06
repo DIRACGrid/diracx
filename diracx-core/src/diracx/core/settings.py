@@ -134,9 +134,7 @@ class AuthSettings(ServiceSettingsBase):
     # State key is used to encrypt/decrypt the state dict passed to the IAM
     state_key: FernetKey
 
-    # TODO: this should probably be something mandatory
-    # to set by the user
-    token_issuer: str = "http://lhcbdirac.cern.ch/"  # noqa: S105
+    token_issuer: str
     token_key: TokenSigningKey
     token_algorithm: str = "RS256"  # noqa: S105
     access_token_expire_minutes: int = 20
