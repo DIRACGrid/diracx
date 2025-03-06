@@ -2,8 +2,6 @@
 # from __future__ import annotations
 from __future__ import annotations
 
-__all__ = ("dump",)
-
 import json
 
 from rich import print_json

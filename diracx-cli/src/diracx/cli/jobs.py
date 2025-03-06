@@ -2,8 +2,6 @@
 # from __future__ import annotations
 from __future__ import annotations
 
-__all__ = ("app",)
-
 import json
 import re
 from typing import Annotated, cast

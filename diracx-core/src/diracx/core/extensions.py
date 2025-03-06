@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("select_from_extension",)
-
 import os
 from collections import defaultdict
 from importlib.metadata import EntryPoint, entry_points

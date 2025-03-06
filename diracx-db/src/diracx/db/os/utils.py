@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("BaseOSDB",)
-
 import contextlib
 import json
 import logging
