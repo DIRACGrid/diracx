@@ -1,3 +1,5 @@
+"""Settings for the core services."""
+
 from __future__ import annotations
 
 from diracx.core.properties import SecurityProperty
