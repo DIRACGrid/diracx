@@ -5,9 +5,14 @@ from typing import Any
 from sqlalchemy import Executable, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
+from diracx.core.exceptions import (
+    SandboxAlreadyAssignedError,
+    SandboxAlreadyInsertedError,
+    SandboxNotFoundError,
+)
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
-from diracx.db.sql.utils import BaseSQLDB, utcnow
+from diracx.db.sql.utils.base import BaseSQLDB
+from diracx.db.sql.utils.functions import utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners
@@ -16,18 +21,16 @@ from .schema import SandBoxes, SBEntityMapping, SBOwners
 class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
 
-    async def upsert_owner(self, user: UserInfo) -> int:
+    async def get_owner_id(self, user: UserInfo) -> int | None:
         """Get the id of the owner from the database."""
-        # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
         stmt = select(SBOwners.OwnerID).where(
             SBOwners.Owner == user.preferred_username,
             SBOwners.OwnerGroup == user.dirac_group,
             SBOwners.VO == user.vo,
         )
-        result = await self.conn.execute(stmt)
-        if owner_id := result.scalar_one_or_none():
-            return owner_id
+        return (await self.conn.execute(stmt)).scalar_one_or_none()
 
+    async def insert_owner(self, user: UserInfo) -> int:
         stmt = insert(SBOwners).values(
             Owner=user.preferred_username,
             OwnerGroup=user.dirac_group,
@@ -50,11 +53,9 @@ class SandboxMetadataDB(BaseSQLDB):
         return "/" + "/".join(parts)
 
     async def insert_sandbox(
-        self, se_name: str, user: UserInfo, pfn: str, size: int
+        self, owner_id: int, se_name: str, pfn: str, size: int
     ) -> None:
         """Add a new sandbox in SandboxMetadataDB."""
-        # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
-        owner_id = await self.upsert_owner(user)
         stmt = insert(SandBoxes).values(
             OwnerId=owner_id,
             SEName=se_name,
@@ -64,11 +65,9 @@ class SandboxMetadataDB(BaseSQLDB):
             LastAccessTime=utcnow(),
         )
         try:
-            result = await self.conn.execute(stmt)
-        except IntegrityError:
-            await self.update_sandbox_last_access_time(se_name, pfn)
-        else:
-            assert result.rowcount == 1
+            await self.conn.execute(stmt)
+        except IntegrityError as e:
+            raise SandboxAlreadyInsertedError(pfn, se_name) from e
 
     async def update_sandbox_last_access_time(self, se_name: str, pfn: str) -> None:
         stmt = (

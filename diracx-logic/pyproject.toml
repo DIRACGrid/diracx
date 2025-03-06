@@ -1,0 +1,40 @@
+[project]
+name = "diracx-logic"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "cachetools",
+    "dirac",
+    "diracx-core",
+    "pydantic >=2.10",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+types = [
+    "types-cachetools",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = ".."
+
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -47,7 +47,7 @@ class GubbinsJobDB(JobDB):
             result[job_id] = {"JDL": jdl_details, "Info": info.get(job_id, "")}
         return result
 
-    async def set_job_attributes_bulk(self, job_data):
+    async def set_job_attributes(self, job_data):
         """
         This method modified the one in the parent class,
         without changing the argument nor the return type

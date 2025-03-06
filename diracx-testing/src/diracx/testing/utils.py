@@ -21,10 +21,15 @@ from uuid import uuid4
 import httpx
 import pytest
 
+from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
+
 if TYPE_CHECKING:
-    from diracx.core.settings import DevelopmentSettings
-    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
-    from diracx.routers.utils.users import AuthorizedUserInfo, AuthSettings
+    from diracx.core.settings import (
+        AuthSettings,
+        DevelopmentSettings,
+        SandboxStoreSettings,
+    )
+    from diracx.routers.utils.users import AuthorizedUserInfo
 
 
 # to get a string like this run:
@@ -92,9 +97,10 @@ def test_dev_settings() -> Generator[DevelopmentSettings, None, None]:
 def test_auth_settings(
     private_key_pem, fernet_key
 ) -> Generator[AuthSettings, None, None]:
-    from diracx.routers.utils.users import AuthSettings
+    from diracx.core.settings import AuthSettings
 
     yield AuthSettings(
+        token_issuer=ISSUER,
         token_algorithm="EdDSA",
         token_key=private_key_pem,
         state_key=fernet_key,
@@ -128,7 +134,7 @@ def aio_moto(worker_id):
 
 @pytest.fixture(scope="session")
 def test_sandbox_settings(aio_moto) -> SandboxStoreSettings:
-    from diracx.routers.jobs.sandboxes import SandboxStoreSettings
+    from diracx.core.settings import SandboxStoreSettings
 
     yield SandboxStoreSettings(
         bucket_name="sandboxes",
@@ -177,7 +183,9 @@ class ClientFactory:
                 pass
 
             @staticmethod
-            def enrich_tokens(access_payload: dict, refresh_payload: dict):
+            def enrich_tokens(
+                access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload
+            ):
 
                 return {"PolicySpecific": "OpenAccessForTest"}, {}
 
@@ -186,13 +194,13 @@ class ClientFactory:
         }
         database_urls = {
             e.name: "sqlite+aiosqlite:///:memory:"
-            for e in select_from_extension(group="diracx.db.sql")
+            for e in select_from_extension(group="diracx.dbs.sql")
         }
         # TODO: Monkeypatch this in a less stupid way
         # TODO: Only use this if opensearch isn't available
         os_database_conn_kwargs = {
             e.name: {"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
-            for e in select_from_extension(group="diracx.db.os")
+            for e in select_from_extension(group="diracx.dbs.os")
         }
         BaseOSDB.available_implementations = partial(
             fake_available_osdb_implementations,

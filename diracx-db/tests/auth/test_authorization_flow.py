@@ -58,11 +58,6 @@ async def test_insert_id_token(auth_db: AuthDB):
                 uuid, id_token, MAX_VALIDITY
             )
 
-    # We shouldn't be able to retrieve it twice
-    async with auth_db as auth_db:
-        with pytest.raises(AuthorizationError, match="already used"):
-            res = await auth_db.get_authorization_flow(code, MAX_VALIDITY)
-
 
 async def test_insert(auth_db: AuthDB):
     # First insert

@@ -27,6 +27,10 @@ from typing import Annotated, Self
 from fastapi import Depends
 
 from diracx.core.extensions import select_from_extension
+from diracx.core.models import (
+    AccessTokenPayload,
+    RefreshTokenPayload,
+)
 from diracx.routers.dependencies import DevelopmentSettings
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
@@ -88,7 +92,9 @@ class BaseAccessPolicy(metaclass=ABCMeta):
         return
 
     @staticmethod
-    def enrich_tokens(access_payload: dict, refresh_payload: dict) -> tuple[dict, dict]:
+    def enrich_tokens(
+        access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload
+    ) -> tuple[dict, dict]:
         """This method is called when issuing a token, and can add whatever
         content it wants inside the access or refresh payload.
 
