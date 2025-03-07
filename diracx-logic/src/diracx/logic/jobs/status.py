@@ -484,26 +484,33 @@ async def set_job_parameters_or_attributes(
     job_parameters_db: JobParametersDB,
 ):
     """Set job parameters or attributes for a list of jobs."""
-    possible_attribute_columns = [
-        col.name.lower() for col in _get_columns(Jobs.__table__, None)
+    attribute_columns: list[str] = [
+        col.name for col in _get_columns(Jobs.__table__, None)
     ]
+    attribute_columns_lower: list[str] = [col.lower() for col in attribute_columns]
 
-    attr_updates = {}
-    param_updates = {}
+    attr_updates: dict[int, dict[str, Any]] = {}
+    param_updates: dict[int, dict[str, Any]] = {}
 
     for job_id, metadata in updates.items():
-        # check if this is setting an attribute in the JobDB
-        attr_updates[job_id] = {
-            pname: pvalue
-            for pname, pvalue in metadata.items()
-            if pname.lower() in possible_attribute_columns
-        }
-        # else set elastic parameters DB
-        param_updates[job_id] = {
-            pname: pvalue
-            for pname, pvalue in metadata.items()
-            if pname.lower() not in possible_attribute_columns
-        }
+        attr_updates[job_id] = {}
+        param_updates[job_id] = {}
+        for pname, pvalue in metadata.items():
+            # If the attribute exactly matches one of the allowed columns, treat it as an attribute.
+            if pname in attribute_columns:
+                attr_updates[job_id][pname] = pvalue
+            # Otherwise, if the lower-case version is valid, the user likely mis-cased the key.
+            elif pname.lower() in attribute_columns_lower:
+                correct_name = attribute_columns[
+                    attribute_columns_lower.index(pname.lower())
+                ]
+                raise ValueError(
+                    f"Attribute column '{pname}' is mis-cased. Did you mean '{correct_name}'?"
+                )
+            # Otherwise, assume it should be routed to the parameters DB.
+            else:
+                param_updates[job_id][pname] = pvalue
+
     # bulk set job attributes
     await job_db.set_job_attributes(attr_updates)
 

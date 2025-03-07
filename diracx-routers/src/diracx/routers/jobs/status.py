@@ -138,4 +138,10 @@ async def patch_metadata(
     check_permissions: CheckWMSPolicyCallable,
 ):
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
-    await set_job_parameters_or_attributes_bl(updates, job_db, job_parameters_db)
+    try:
+        await set_job_parameters_or_attributes_bl(updates, job_db, job_parameters_db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=str(e),
+        ) from e
