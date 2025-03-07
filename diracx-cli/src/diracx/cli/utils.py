@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("AsyncTyper",)
-
 from asyncio import run
 from functools import wraps
 

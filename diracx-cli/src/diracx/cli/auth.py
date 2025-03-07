@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("app",)
-
 import asyncio
 import json
 import os
