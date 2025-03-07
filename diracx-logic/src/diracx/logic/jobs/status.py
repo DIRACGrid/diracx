@@ -29,7 +29,7 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.os.job_parameters import JobParametersDB
-from diracx.db.sql.job.db import JobDB, _get_columns
+from diracx.db.sql.job.db import JobDB, get_columns
 from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
@@ -485,7 +485,7 @@ async def set_job_parameters_or_attributes(
 ):
     """Set job parameters or attributes for a list of jobs."""
     attribute_columns: list[str] = [
-        col.name for col in _get_columns(Jobs.__table__, None)
+        col.name for col in get_columns(Jobs.__table__, None)
     ]
     attribute_columns_lower: list[str] = [col.lower() for col in attribute_columns]
 
