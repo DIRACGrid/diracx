@@ -45,7 +45,7 @@ class JobDB(BaseSQLDB):
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         """Get a summary of the jobs."""
-        columns = _get_columns(Jobs.__table__, group_by)
+        columns = get_columns(Jobs.__table__, group_by)
 
         stmt = select(*columns, func.count(Jobs.job_id).label("count"))
         stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
