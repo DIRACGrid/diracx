@@ -40,7 +40,10 @@ async def search(
     if query_logging_info := ("LoggingInfo" in (body.parameters or [])):
         if body.parameters:
             body.parameters.remove("LoggingInfo")
-        body.parameters = ["JobID"] + (body.parameters or [])
+            if not body.parameters:
+                body.parameters = None
+            else:
+                body.parameters = ["JobID"] + (body.parameters or [])
 
     # TODO: Apply all the job policy stuff properly using user_info
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
