@@ -138,5 +138,19 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                         detail=f"Invalid PFN. PFN must start with {required_prefix}",
                     )
 
+            if action in [ActionType.READ, ActionType.QUERY]:
+                # We are reading or querying
+                # Checking if the user owns the sandbox
+                sb_owner_info = await sandbox_metadata_db.get_sandbox_owner_info(pfn)
+                if (
+                    sb_owner_info.Owner != user_info.preferred_username
+                    or sb_owner_info.VO != user_info.vo
+                    or sb_owner_info.OwnerGroup != user_info.dirac_group
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="You are not the owner of the sandbox",
+                    )
+
 
 CheckSandboxPolicyCallable = Annotated[Callable, Depends(SandboxAccessPolicy.check)]
