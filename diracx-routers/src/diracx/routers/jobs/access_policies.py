@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB
+from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -108,6 +108,7 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
+        sandbox_metadata_db: SandboxMetadataDB | None = None,
         pfns: list[str] | None = None,
         required_prefix: str | None = None,
     ):
