@@ -52,6 +52,12 @@ class SandboxMetadataDB(BaseSQLDB):
         ]
         return "/" + "/".join(parts)
 
+    async def get_sandbox_owner_info(self, pfn: str):
+        """Get the owner of a sandbox."""
+        stmt = select(SBOwners).where(SandBoxes.SEPFN == pfn)
+        result = await self.conn.execute(stmt)
+        return result.fetchone()
+
     async def insert_sandbox(
         self, owner_id: int, se_name: str, pfn: str, size: int
     ) -> None:
