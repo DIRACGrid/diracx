@@ -253,3 +253,14 @@ class VOInfo(TypedDict):
 
 class Metadata(TypedDict):
     virtual_organizations: dict[str, VOInfo]
+
+
+class LogLine(BaseModel):
+    line_no: int
+    line: str
+
+
+class LogMessage(BaseModel):
+    pilot_stamp: str
+    lines: list[LogLine]
+    vo: str
