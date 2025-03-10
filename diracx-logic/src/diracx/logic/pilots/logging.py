@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from diracx.core.models import LogMessage, ScalarSearchOperator, ScalarSearchSpec
-from diracx.db.os.pilot_logs import PilotLogsDB, bulk_insert, search_message
+from diracx.db.os.pilot_logs import PilotLogsDB, search_message
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,8 @@ async def send_message(
             }
         )
     # bulk insert pilot logs to OpenSearch DB:
-    await bulk_insert(pilot_logs_db, docs, pilot_id)
+    await pilot_logs_db.bulk_insert(pilot_logs_db.index_name(pilot_id), docs)
+    # await bulk_insert(pilot_logs_db, docs, pilot_id)
     return pilot_id
 
 
