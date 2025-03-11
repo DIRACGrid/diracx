@@ -30,6 +30,14 @@ class SandboxMetadataDB(BaseSQLDB):
         )
         return (await self.conn.execute(stmt)).scalar_one_or_none()
 
+    async def get_sandbox_owner_id(self, pfn: str) -> int | None:
+        """Get the id of the owner of a sandbox."""
+        stmt = select(SBOwners.OwnerID).where(
+            SBOwners.OwnerID == SandBoxes.OwnerId,
+            SandBoxes.SEPFN == pfn,
+        )
+        return (await self.conn.execute(stmt)).scalar_one_or_none()
+
     async def insert_owner(self, user: UserInfo) -> int:
         stmt = insert(SBOwners).values(
             Owner=user.preferred_username,
