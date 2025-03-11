@@ -52,7 +52,6 @@ async def send_message(
         )
     # bulk insert pilot logs to OpenSearch DB:
     await pilot_logs_db.bulk_insert(pilot_logs_db.index_name(pilot_id), docs)
-    # await bulk_insert(pilot_logs_db, docs, pilot_id)
     return pilot_id
 
 

@@ -28,8 +28,3 @@ async def search_message(db: PilotLogsDB, search_params: list[dict]):
         search_params,
         [{"parameter": "LineNumber", "direction": "asc"}],
     )
-
-
-async def bulk_insert(db: PilotLogsDB, docs: list[dict], pilot_id: int):
-
-    await db.bulk_insert(db.index_name(pilot_id), docs)
