@@ -265,7 +265,7 @@ async def test_sandbox_access_policy_create(sandbox_metadata_db):
     ##############
 
 
-async def test_sandbox_access_policy_read(sandbox_metadata_db):
+async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
@@ -299,6 +299,17 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db):
         )
 
     # User can act on his own sandbox
+    async def get_owner_id(*args):
+        return 1
+
+    async def get_sandbox_owner_id(*args):
+        return 1
+
+    monkeypatch.setattr(sandbox_metadata_db, "get_owner_id", get_owner_id)
+    monkeypatch.setattr(
+        sandbox_metadata_db, "get_sandbox_owner_id", get_sandbox_owner_id
+    )
+
     await SandboxAccessPolicy.policy(
         SANDBOX_POLICY_NAME,
         normal_user,
@@ -309,6 +320,11 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db):
     )
 
     # User cannot act on others
+    async def get_owner_id(*args):
+        return 2
+
+    monkeypatch.setattr(sandbox_metadata_db, "get_owner_id", get_owner_id)
+
     with pytest.raises(HTTPException):
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
