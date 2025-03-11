@@ -113,6 +113,7 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         required_prefix: str | None = None,
     ):
         assert action, "action is a mandatory parameter"
+        assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
 
         if action == ActionType.CREATE:
 
@@ -132,25 +133,20 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                 raise NotImplementedError(
                     "required_prefix is None. This shouldn't happen"
                 )
-            assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
             for pfn in pfns:
                 if not pfn.startswith(required_prefix):
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"Invalid PFN. PFN must start with {required_prefix}",
                     )
-                if action in [ActionType.READ, ActionType.QUERY]:
-                    # We are reading or querying
-                    # Checking if the user owns the sandbox
-                    owner_id = await sandbox_metadata_db.get_owner_id(user_info)
-                    sandbox_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(
-                        pfn
+                # Checking if the user owns the sandbox
+                owner_id = await sandbox_metadata_db.get_owner_id(user_info)
+                sandbox_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn)
+                if not owner_id or owner_id != sandbox_owner_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"{user_info.preferred_username} is not the owner of the sandbox",
                     )
-                    if not owner_id or owner_id != sandbox_owner_id:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=f"{user_info.preferred_username} is not the owner of the sandbox",
-                        )
 
 
 CheckSandboxPolicyCallable = Annotated[Callable, Depends(SandboxAccessPolicy.check)]
