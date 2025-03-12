@@ -120,7 +120,7 @@ The following structures principles may also be followed:
 
 ## Architecture
 
-To make sure that each part of DiracX is doing only what it is supposed to do, you also need to follow these instructions:
+DiracX is adhering to the layered architecture pattern. To make sure that each part of DiracX is doing only what it is supposed to do, you also need to follow these instructions:
 
 - `diracx-routers` should deal with user interactions through HTTPs. It is expected to deal with permissions and should call `diracx-logic`. Results returned should be translated into HTTP responses.
 - `diracx-logic` should embed Dirac specificities. It should encapsulate the logic of the services and should call `diracx-db` to interact with databases.
