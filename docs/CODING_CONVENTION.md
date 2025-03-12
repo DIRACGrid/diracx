@@ -116,7 +116,6 @@ The following structures principles may also be followed:
 - At a package level (router for example) we have one file per system (configuration.py for example)
 - If we need more files (think of jobs, which have the sandbox, the joblogging, etc), we put them in a sub module (e.g routers.job). The code goes in a specific file (job.py, joblogging.py) but we use the the __init__.py to expose the specific file
 
-See [this issue](https://github.com/DIRACGrid/diracx/issues/268).
 
 
 ## Architecture
