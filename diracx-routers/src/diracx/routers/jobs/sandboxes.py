@@ -73,6 +73,7 @@ async def initiate_sandbox_upload(
 async def get_sandbox_file(
     pfn: Annotated[str, Query(max_length=256, pattern=SANDBOX_PFN_REGEX)],
     settings: SandboxStoreSettings,
+    sandbox_metadata_db: SandboxMetadataDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxDownloadResponse:
@@ -92,6 +93,7 @@ async def get_sandbox_file(
     )
     await check_permissions(
         action=ActionType.READ,
+        sandbox_metadata_db=sandbox_metadata_db,
         pfns=[short_pfn],
         required_prefix=required_prefix,
     )

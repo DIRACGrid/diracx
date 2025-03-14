@@ -186,3 +186,25 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
         res = await sandbox_metadata_db.conn.execute(stmt)
     res_sb_id = [row.SBId for row in res]
     assert sb_id_1 not in res_sb_id
+
+
+async def test_get_sandbox_owner_id(sandbox_metadata_db: SandboxMetadataDB):
+    user_info = UserInfo(
+        sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
+    )
+    pfn = secrets.token_hex()
+    sandbox_se = "SandboxSE"
+    # Insert the sandbox
+    async with sandbox_metadata_db:
+        owner_id = await sandbox_metadata_db.insert_owner(user_info)
+        await sandbox_metadata_db.insert_sandbox(owner_id, sandbox_se, pfn, 100)
+
+    async with sandbox_metadata_db:
+        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn)
+
+    assert owner_id == 1
+    assert sb_owner_id == owner_id
+
+    async with sandbox_metadata_db:
+        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id("not_found")
+    assert sb_owner_id is None
