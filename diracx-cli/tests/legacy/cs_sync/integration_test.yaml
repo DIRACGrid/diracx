@@ -177,7 +177,7 @@ Resources:
       DIP:
         Access: remote
         Host: localhost
-        Path: dirac-JenkinsSetup/sandboxes
+        Path: sandboxes
         Port: '9196'
         Protocol: dips
         ProtocolName: DIP
@@ -817,7 +817,7 @@ Systems:
             Default: authenticated
           Port: '9171'
         SandboxStore:
-          BasePath: dirac-JenkinsSetup/sandboxes
+          BasePath: sandboxes
           LogLevel: DEBUG
         TornadoJobManager:
           Authorization:
@@ -844,7 +844,7 @@ Systems:
             FileTransfer:
               Default: authenticated
           Backend: local
-          BasePath: dirac-JenkinsSetup/sandboxes
+          BasePath: sandboxes
           DelayedExternalDeletion: 'True'
           LocalSE: ProductionSandboxSE
           LogLevel: DEBUG
