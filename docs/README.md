@@ -87,9 +87,10 @@ This only runs the diracx server, not any dependency like external IdP.
 
 ## Add a DB
 
-Database classes live in `src/diracx/db/<dbname>`. Have a look at the `src/diracx/db/dummy/` to see how to implement your own DB
+Database classes live in `src/diracx/db/sql/<dbname>`. Have a look at the `src/diracx/db/sql/dummy/` to see how to implement your own DB.
 
-* We do not want to use the `ORM` part of `SQLAlchemy` (only the `core`) for performance reasons
+> [!NOTE]
+> We do not want to use the `ORM` part of `SQLAlchemy` (only the `core`) for performance reasons
 
 
 ## Dependency injection
@@ -168,15 +169,4 @@ This will prefix the routes with `/parking/` and mark them with the `"parking"` 
 
 ### Coding style
 
-Most style are enforced with the pre-commit hooks which automatically reformat the code and sort the imports.
-Code should follow PEP-8, particularly for [naming conventions](https://peps.python.org/pep-0008/#prescriptive-naming-conventions) as these aren't modified by the pre-commit hooks.
-
-#### Import style
-
-In addition to the automatic sorting
-
-```python
-from datetime import datetime, timedelta, timezone
-
-import pytest
-```
+The coding style used and followed by DiracX is situated in it own page at [coding_convention.md](CODING_CONVENTION.md), and is mostly inspired by the PEP-8 convention.
