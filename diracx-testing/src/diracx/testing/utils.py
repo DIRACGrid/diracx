@@ -483,44 +483,42 @@ def with_config_repo(tmp_path_factory):
             "Operations": {"Defaults": {}},
             "Systems": {
                 "WorkloadManagement": {
-                    "Production": {
-                        "Databases": {
-                            "JobDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                                "MaxRescheduling": 3,
-                            },
-                            "JobLoggingDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
-                            "PilotAgentsDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
-                            "SandboxMetadataDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
-                            "TaskQueueDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
-                            "ElasticJobParametersDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
-                            "VirtualMachineDB": {
-                                "DBName": "xyz",
-                                "Host": "xyz",
-                                "Port": 9999,
-                            },
+                    "Databases": {
+                        "JobDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                            "MaxRescheduling": 3,
+                        },
+                        "JobLoggingDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                        },
+                        "PilotAgentsDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                        },
+                        "SandboxMetadataDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                        },
+                        "TaskQueueDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                        },
+                        "ElasticJobParametersDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
+                        },
+                        "VirtualMachineDB": {
+                            "DBName": "xyz",
+                            "Host": "xyz",
+                            "Port": 9999,
                         },
                     },
                 },
