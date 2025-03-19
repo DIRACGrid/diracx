@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ("with_client",)
-
 from functools import wraps
 
 from diracx.client.aio import DiracClient
