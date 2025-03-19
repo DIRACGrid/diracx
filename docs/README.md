@@ -89,7 +89,7 @@ This only runs the diracx server, not any dependency like external IdP.
 
 Database classes live in `src/diracx/db/sql/<dbname>`. Have a look at the `src/diracx/db/sql/dummy/` to see how to implement your own DB.
 
-> [!NOTE]  
+> [!NOTE]
 > We do not want to use the `ORM` part of `SQLAlchemy` (only the `core`) for performance reasons
 
 

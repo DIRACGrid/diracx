@@ -82,9 +82,9 @@ delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 ```python
 class Owners(Base):
     __tablename__ = "Owners"
-    owner_id = Column("OwnerID", 
-        Integer, 
-        primary_key=True, 
+    owner_id = Column("OwnerID",
+        Integer,
+        primary_key=True,
         autoincrement=True)
     creation_time = DateNowColumn("CreationTime")
     name = Column("Name", String(255))
@@ -96,8 +96,8 @@ class Owners(Base):
 ```python
 class Owners(Base):
     __tablename__ = "Owners"
-    OwnerID = Column(Integer, 
-        primary_key=True, 
+    OwnerID = Column(Integer,
+        primary_key=True,
         autoincrement=True)
     CreationTime = DateNowColumn()
     Name = Column(String(255))
