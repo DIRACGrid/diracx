@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB
+from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -108,10 +108,12 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
+        sandbox_metadata_db: SandboxMetadataDB | None = None,
         pfns: list[str] | None = None,
         required_prefix: str | None = None,
     ):
         assert action, "action is a mandatory parameter"
+        assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
 
         if action == ActionType.CREATE:
 
@@ -136,6 +138,14 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"Invalid PFN. PFN must start with {required_prefix}",
+                    )
+                # Checking if the user owns the sandbox
+                owner_id = await sandbox_metadata_db.get_owner_id(user_info)
+                sandbox_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn)
+                if not owner_id or owner_id != sandbox_owner_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"{user_info.preferred_username} is not the owner of the sandbox",
                     )
 
 
