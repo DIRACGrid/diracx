@@ -55,7 +55,9 @@ async def initiate_sandbox_upload(
     If the sandbox does not exist in the database then the "url" and "fields"
     should be used to upload the sandbox to the storage backend.
     """
-    await check_permissions(action=ActionType.CREATE)
+    await check_permissions(
+        action=ActionType.CREATE, sandbox_metadata_db=sandbox_metadata_db
+    )
 
     try:
         sandbox_upload_response = await initiate_sandbox_upload_bl(
