@@ -14,7 +14,7 @@ from diracx.core.models import (
     SortSpec,
 )
 
-from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints
+from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints, get_columns
 from .schema import (
     InputData,
     JobCommands,
@@ -22,17 +22,6 @@ from .schema import (
     JobJDLs,
     Jobs,
 )
-
-
-def _get_columns(table, parameters):
-    columns = [x for x in table.columns]
-    if parameters:
-        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
-            raise InvalidQueryError(
-                f"Unrecognised parameters requested {unrecognised_parameters}"
-            )
-        columns = [c for c in columns if c.name in parameters]
-    return columns
 
 
 class JobDB(BaseSQLDB):
@@ -45,7 +34,7 @@ class JobDB(BaseSQLDB):
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         """Get a summary of the jobs."""
-        columns = _get_columns(Jobs.__table__, group_by)
+        columns = get_columns(Jobs.__table__, group_by)
 
         stmt = select(*columns, func.count(Jobs.job_id).label("count"))
         stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
@@ -70,7 +59,7 @@ class JobDB(BaseSQLDB):
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for jobs in the database."""
         # Find which columns to select
-        columns = _get_columns(Jobs.__table__, parameters)
+        columns = get_columns(Jobs.__table__, parameters)
 
         stmt = select(*columns)
 
@@ -235,7 +224,7 @@ class JobDB(BaseSQLDB):
         required_parameters = list(required_parameters_set)[0]
         update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
 
-        columns = _get_columns(Jobs.__table__, required_parameters)
+        columns = get_columns(Jobs.__table__, required_parameters)
         values: dict[str, BindParameter[Any] | datetime] = {
             c.name: bindparam(c.name) for c in columns
         }
