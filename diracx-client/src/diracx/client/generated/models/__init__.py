@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 from ._models import (  # type: ignore
+    AuthorizedUserInfo,
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
     GroupInfo,
@@ -57,6 +58,7 @@ from ._patch import *
 from ._patch import patch_sdk as _patch_sdk
 
 __all__ = [
+    "AuthorizedUserInfo",
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
     "GroupInfo",
