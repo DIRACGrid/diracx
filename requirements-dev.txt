@@ -6,3 +6,4 @@
 -e ./diracx-routers/[testing]
 -e ./diracx-db/[testing]
 -e ./diracx-testing/[testing]
+-e ./diracx-logic/[testing]
