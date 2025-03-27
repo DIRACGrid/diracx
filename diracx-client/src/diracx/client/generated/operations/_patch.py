@@ -56,7 +56,7 @@ def build_token_request(vo: str, **kwargs: Any) -> HttpRequest:
 
 class AuthOperations(AuthOperationsGenerated):
     @distributed_trace
-    async def token(
+    async def get_oidc_token(
         self, vo: str, device_code: str, client_id: str, **kwargs
     ) -> _models.TokenResponse | _models.DeviceFlowErrorResponse:
         request = build_token_request(
