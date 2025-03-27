@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -97,7 +98,7 @@ class JobMinorStatus(StrEnum):
 
 class JobLoggingRecord(BaseModel):
     job_id: int
-    status: JobStatus
+    status: JobStatus | Literal["idem"]
     minor_status: str
     application_status: str
     date: datetime

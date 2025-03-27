@@ -88,7 +88,7 @@ async def login(
         )
         while expires > datetime.now(tz=timezone.utc):
             print(".", end="", flush=True)
-            response = await api.auth.token(device_code=data.device_code, client_id=api.client_id)  # type: ignore
+            response = await api.auth.get_oidc_token(device_code=data.device_code, client_id=api.client_id)  # type: ignore
             if isinstance(response, DeviceFlowErrorResponse):
                 if response.error == "authorization_pending":
                     # TODO: Setting more than 5 seconds results in an error

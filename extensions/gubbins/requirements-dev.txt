@@ -4,3 +4,4 @@
 -e ./gubbins-client/[testing]
 -e ./gubbins-cli/[testing]
 -e ./gubbins-core/[testing]
+-e ./gubbins-logic/[testing]
