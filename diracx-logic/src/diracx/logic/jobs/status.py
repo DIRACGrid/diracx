@@ -511,8 +511,10 @@ async def set_job_parameters_or_attributes(
             else:
                 param_updates[job_id][pname] = pvalue
 
-    # bulk set job attributes
-    await job_db.set_job_attributes(attr_updates)
+    # Bulk set job attributes if required
+    attr_updates = {k: v for k, v in attr_updates.items() if v}
+    if attr_updates:
+        await job_db.set_job_attributes(attr_updates)
 
     # TODO: can we upsert to multiple documents?
     for job_id, p_updates_ in param_updates.items():
