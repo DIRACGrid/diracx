@@ -48,16 +48,16 @@ def test_regenerate_client(test_client, tmp_path):
     assert (repo_root / ".git").is_dir()
 
     repo = git.Repo(repo_root)
-
-    if repo.is_dirty(
-        path=repo_root
+    client_src = (
+        repo_root
         / "extensions"
         / "gubbins"
         / "gubbins-client"
         / "src"
         / "gubbins"
         / "client"
-    ):
+    )
+    if repo.is_dirty(path=client_src):
         raise AssertionError(
             "Client is currently in a modified state, skipping regeneration"
         )
@@ -82,7 +82,7 @@ def test_regenerate_client(test_client, tmp_path):
     subprocess.run(cmd, check=False, cwd=repo_root)  # noqa
     print("Re-running pre-commit...")
     subprocess.run(cmd, check=True, cwd=repo_root)  # noqa
-    if repo.is_dirty(path=repo_root / "src" / "gubbins" / "client"):
+    if repo.is_dirty(path=client_src):
         raise AssertionError("Client was regenerated with changes")
 
 
