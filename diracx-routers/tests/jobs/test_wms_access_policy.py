@@ -23,13 +23,23 @@ base_payload = {
 }
 
 
-class FakeDB:
+class FakeJobDB:
     async def summary(self, *args): ...
+
+
+class FakeSBMetadataDB:
+    async def get_owner_id(self, *args): ...
+    async def get_sandbox_owner_id(self, *args): ...
 
 
 @pytest.fixture
 def job_db():
-    yield FakeDB()
+    yield FakeJobDB()
+
+
+@pytest.fixture
+def sandbox_metadata_db():
+    yield FakeSBMetadataDB()
 
 
 WMS_POLICY_NAME = "WMSAccessPolicy_AlthoughItDoesNotMatter"
@@ -220,7 +230,7 @@ OTHER_USER_SANDBOX_PFN = (
 )
 
 
-async def test_sandbox_access_policy_create():
+async def test_sandbox_access_policy_create(sandbox_metadata_db):
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
@@ -230,6 +240,7 @@ async def test_sandbox_access_policy_create():
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
             normal_user,
+            sandbox_metadata_db=sandbox_metadata_db,
         )
 
     # An admin cannot create any resource
@@ -238,6 +249,7 @@ async def test_sandbox_access_policy_create():
             SANDBOX_POLICY_NAME,
             admin_user,
             action=ActionType.CREATE,
+            sandbox_metadata_db=sandbox_metadata_db,
             pfns=[USER_SANDBOX_PFN],
         )
 
@@ -246,13 +258,14 @@ async def test_sandbox_access_policy_create():
         SANDBOX_POLICY_NAME,
         normal_user,
         action=ActionType.CREATE,
+        sandbox_metadata_db=sandbox_metadata_db,
         pfns=[USER_SANDBOX_PFN],
     )
 
     ##############
 
 
-async def test_sandbox_access_policy_read():
+async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
 
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
@@ -261,6 +274,7 @@ async def test_sandbox_access_policy_read():
         SANDBOX_POLICY_NAME,
         admin_user,
         action=ActionType.READ,
+        sandbox_metadata_db=sandbox_metadata_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
@@ -269,6 +283,7 @@ async def test_sandbox_access_policy_read():
         SANDBOX_POLICY_NAME,
         admin_user,
         action=ActionType.READ,
+        sandbox_metadata_db=sandbox_metadata_db,
         pfns=[OTHER_USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
@@ -279,24 +294,43 @@ async def test_sandbox_access_policy_read():
             SANDBOX_POLICY_NAME,
             normal_user,
             action=ActionType.READ,
+            sandbox_metadata_db=sandbox_metadata_db,
             pfns=[USER_SANDBOX_PFN],
         )
 
     # User can act on his own sandbox
+    async def get_owner_id(*args):
+        return 1
+
+    async def get_sandbox_owner_id(*args):
+        return 1
+
+    monkeypatch.setattr(sandbox_metadata_db, "get_owner_id", get_owner_id)
+    monkeypatch.setattr(
+        sandbox_metadata_db, "get_sandbox_owner_id", get_sandbox_owner_id
+    )
+
     await SandboxAccessPolicy.policy(
         SANDBOX_POLICY_NAME,
         normal_user,
         action=ActionType.READ,
+        sandbox_metadata_db=sandbox_metadata_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
     )
 
     # User cannot act on others
+    async def get_owner_id(*args):
+        return 2
+
+    monkeypatch.setattr(sandbox_metadata_db, "get_owner_id", get_owner_id)
+
     with pytest.raises(HTTPException):
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
             normal_user,
             action=ActionType.READ,
+            sandbox_metadata_db=sandbox_metadata_db,
             pfns=[OTHER_USER_SANDBOX_PFN],
             required_prefix=SANDBOX_PREFIX,
         )
