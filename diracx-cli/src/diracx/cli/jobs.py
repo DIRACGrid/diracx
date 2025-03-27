@@ -152,8 +152,7 @@ def display_rich(data, content_range: ContentRange) -> None:
 @app.async_command()
 async def submit(jdl: list[FileText]):
     async with DiracClient() as api:
-        # api.valid(enforce_https=False)
-        jobs = await api.jobs.submit_bulk_jdl_jobs([x.read() for x in jdl])
+        jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )
