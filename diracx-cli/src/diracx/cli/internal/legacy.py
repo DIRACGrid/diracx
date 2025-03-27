@@ -21,6 +21,7 @@ from typer import Option
 
 from diracx.core.config import Config
 from diracx.core.config.schema import Field, SupportInfo
+from diracx.core.extensions import select_from_extension
 
 from ..utils import AsyncTyper
 
@@ -76,8 +77,10 @@ def cs_sync(old_file: Path, new_file: Path):
         )
 
     _apply_fixes(raw)
-
-    config = Config.model_validate(raw)
+    config_class: Config = select_from_extension(group="diracx", name="config")[
+        0
+    ].load()
+    config = config_class.model_validate(raw)
     new_file.write_text(
         yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))
     )
