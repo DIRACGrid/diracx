@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from .utils import DiracClientMixin
 
+if TYPE_CHECKING:
+    from diracx.client.generated.aio._client import Dirac
 
 from diracx.core.extensions import select_from_extension
 
 real_client = select_from_extension(group="diracx", name="aio_client_class")[0].load()
-DiracGenerated = real_client
+DiracGenerated: type[Dirac] = real_client
 
 __all__: List[str] = [
     "DiracClient",
