@@ -21,6 +21,92 @@ if TYPE_CHECKING:
 JSON = MutableMapping[str, Any]  # pylint: disable=unsubscriptable-object
 
 
+class AuthorizedUserInfo(_serialization.Model):
+    """AuthorizedUserInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar sub: Sub. Required.
+    :vartype sub: str
+    :ivar preferred_username: Preferred Username. Required.
+    :vartype preferred_username: str
+    :ivar dirac_group: Dirac Group. Required.
+    :vartype dirac_group: str
+    :ivar vo: Vo. Required.
+    :vartype vo: str
+    :ivar bearer_token: Bearer Token. Required.
+    :vartype bearer_token: str
+    :ivar token_id: Token Id. Required.
+    :vartype token_id: str
+    :ivar properties: Properties. Required.
+    :vartype properties: list[str]
+    :ivar policies: Policies.
+    :vartype policies: JSON
+    """
+
+    _validation = {
+        "sub": {"required": True},
+        "preferred_username": {"required": True},
+        "dirac_group": {"required": True},
+        "vo": {"required": True},
+        "bearer_token": {"required": True},
+        "token_id": {"required": True},
+        "properties": {"required": True},
+    }
+
+    _attribute_map = {
+        "sub": {"key": "sub", "type": "str"},
+        "preferred_username": {"key": "preferred_username", "type": "str"},
+        "dirac_group": {"key": "dirac_group", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "bearer_token": {"key": "bearer_token", "type": "str"},
+        "token_id": {"key": "token_id", "type": "str"},
+        "properties": {"key": "properties", "type": "[str]"},
+        "policies": {"key": "policies", "type": "object"},
+    }
+
+    def __init__(
+        self,
+        *,
+        sub: str,
+        preferred_username: str,
+        dirac_group: str,
+        vo: str,
+        bearer_token: str,
+        token_id: str,
+        properties: List[str],
+        policies: Optional[JSON] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword sub: Sub. Required.
+        :paramtype sub: str
+        :keyword preferred_username: Preferred Username. Required.
+        :paramtype preferred_username: str
+        :keyword dirac_group: Dirac Group. Required.
+        :paramtype dirac_group: str
+        :keyword vo: Vo. Required.
+        :paramtype vo: str
+        :keyword bearer_token: Bearer Token. Required.
+        :paramtype bearer_token: str
+        :keyword token_id: Token Id. Required.
+        :paramtype token_id: str
+        :keyword properties: Properties. Required.
+        :paramtype properties: list[str]
+        :keyword policies: Policies.
+        :paramtype policies: JSON
+        """
+        super().__init__(**kwargs)
+        self.sub = sub
+        self.preferred_username = preferred_username
+        self.dirac_group = dirac_group
+        self.vo = vo
+        self.bearer_token = bearer_token
+        self.token_id = token_id
+        self.properties = properties
+        self.policies = policies
+
+
 class BodyAuthGetOidcToken(_serialization.Model):
     """Body_auth_get_oidc_token.
 

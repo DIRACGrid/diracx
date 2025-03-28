@@ -1,0 +1,112 @@
+from __future__ import annotations
+
+import pytest
+
+from diracx.db.sql.pilot_agents.db import PilotAgentsDB
+
+pytestmark = pytest.mark.enabled_dependencies(
+    [
+        "DevelopmentSettings",
+        "AuthDB",
+        "AuthSettings",
+        "ConfigSource",
+        "BaseAccessPolicy",
+        "PilotAgentsDB",
+        "RegisteredPilotAccessPolicy",
+    ]
+)
+
+
+@pytest.fixture
+def test_client(client_factory):
+    with client_factory.unauthenticated() as client:
+        yield client
+
+
+@pytest.fixture
+def non_mocked_hosts(test_client) -> list[str]:
+    return [test_client.base_url.host]
+
+
+async def test_create_pilot_and_verify_secret(test_client):
+
+    # see https://github.com/DIRACGrid/diracx/blob/78e00aa57f4191034dbf643c7ed2857a93b53f60/diracx-routers/tests/pilots/test_pilot_logger.py#L37
+    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+
+    # Add a pilot vo
+    pilot_vo = "lhcb"
+    # Add a pilot reference
+    pilot_ref = "pilot-ref"
+
+    async with db as pilot_agents_db:
+        # Register a pilot
+        pilot_id = await pilot_agents_db.register_new_pilot(
+            vo=pilot_vo, pilot_job_reference=pilot_ref
+        )
+
+        # Add credentials to this pilot
+        secret = await pilot_agents_db.add_pilot_credentials(pilot_id=pilot_id)
+
+    assert secret is not None
+
+    request_data = {"pilot_id": pilot_id, "pilot_secret": secret}
+
+    r = test_client.post(
+        "/api/auth/pilot-login",
+        params=request_data,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 200
+
+    access_token = r.json()["access_token"]
+    refresh_token = r.json()["refresh_token"]
+
+    assert access_token is not None
+    assert refresh_token is not None
+
+    # -----------------  Get pilot info without permissions -----------------
+    r = test_client.get(
+        "/api/pilots/info",
+    )
+
+    assert r.status_code == 401
+
+    # -----------------  Get pilot info with access_token  -----------------
+    r = test_client.get(
+        "/api/pilots/info", headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    assert r.status_code == 200
+
+    # -----------------  Get pilot info with wrong access_token  -----------------
+    r = test_client.get(
+        "/api/pilots/info", headers={"Authorization": "Bearer 4dm1n B34r3r"}
+    )
+
+    assert r.status_code == 401, r.json()
+    assert r.json()["detail"] == "Invalid JWT"
+
+    # -----------------  Wrong password  -----------------
+    request_data = {"pilot_id": pilot_id, "pilot_secret": "My 1ncr3d1bl3 t0k3n"}
+
+    r = test_client.post(
+        "/api/auth/pilot-login",
+        params=request_data,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 401, r.json()
+    assert r.json()["detail"] == "bad pilot_id / pilot_secret"
+
+    # -----------------  Wrong ID  -----------------
+    request_data = {"pilot_id": 63000, "pilot_secret": secret}
+
+    r = test_client.post(
+        "/api/auth/pilot-login",
+        params=request_data,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 401
+    assert r.json()["detail"] == "bad pilot_id / pilot_secret"
