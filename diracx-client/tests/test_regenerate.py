@@ -70,9 +70,14 @@ def test_regenerate_client(test_client, tmp_path):
     print("Running pre-commit...")
     subprocess.run(cmd, check=False, cwd=repo_root)
     print("Re-running pre-commit...")
-    subprocess.run(cmd, check=True, cwd=repo_root)
-    if repo.is_dirty(path=client_src):
-        raise AssertionError("Client was regenerated with changes")
+    proc = subprocess.run(cmd, check=False, cwd=repo_root)
+    if proc.returncode == 0 and not repo.is_dirty(path=client_src):
+        return
+    # Show the diff to aid debugging
+    print(repo.git.diff(client_src))
+    if proc.returncode != 0:
+        raise AssertionError("Pre-commit failed")
+    raise AssertionError("Client was regenerated with changes")
 
 
 if __name__ == "__main__":
