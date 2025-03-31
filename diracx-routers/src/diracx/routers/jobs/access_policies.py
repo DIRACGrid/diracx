@@ -13,15 +13,17 @@ from diracx.routers.utils.users import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):
-    #: Create a job or a sandbox
+    # Create a job or a sandbox
     CREATE = auto()
-    #: Check job status, download a sandbox
+    # Check job status, download a sandbox
     READ = auto()
-    #: delete, kill, remove, set status, etc of a job
-    #: delete or assign a sandbox
+    # Delete, kill, remove, set status, etc of a job
+    # Delete or assign a sandbox
     MANAGE = auto()
-    #: Search
+    # Search
     QUERY = auto()
+    # Actions from a pilot (e.g. heartbeat)
+    PILOT = auto()
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
@@ -44,6 +46,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
     ):
         assert action, "action is a mandatory parameter"
         assert job_db, "job_db is a mandatory parameter"
+
+        if action == ActionType.PILOT:
+            # TODO: For now we map this to MANAGE but it should be changed once
+            # we have pilot credentials
+            action = ActionType.MANAGE
 
         if action == ActionType.CREATE:
             if job_ids is not None:
