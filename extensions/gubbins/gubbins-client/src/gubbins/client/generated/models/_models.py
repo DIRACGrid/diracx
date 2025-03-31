@@ -6,19 +6,12 @@
 # --------------------------------------------------------------------------
 
 import datetime
-import sys
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
 from .. import _serialization
 
-if sys.version_info >= (3, 9):
-    from collections.abc import MutableMapping
-else:
-    from typing import MutableMapping  # type: ignore
-
 if TYPE_CHECKING:
     from .. import models as _models
-JSON = MutableMapping[str, Any]  # pylint: disable=unsubscriptable-object
 
 
 class BodyAuthGetOidcToken(_serialization.Model):
@@ -1034,7 +1027,7 @@ class UserInfoResponse(_serialization.Model):
     :ivar dirac_group: Dirac Group. Required.
     :vartype dirac_group: str
     :ivar policies: Policies. Required.
-    :vartype policies: JSON
+    :vartype policies: dict[str, any]
     :ivar properties: Properties. Required.
     :vartype properties: list[str]
     :ivar preferred_username: Preferred Username. Required.
@@ -1054,7 +1047,7 @@ class UserInfoResponse(_serialization.Model):
         "sub": {"key": "sub", "type": "str"},
         "vo": {"key": "vo", "type": "str"},
         "dirac_group": {"key": "dirac_group", "type": "str"},
-        "policies": {"key": "policies", "type": "object"},
+        "policies": {"key": "policies", "type": "{object}"},
         "properties": {"key": "properties", "type": "[str]"},
         "preferred_username": {"key": "preferred_username", "type": "str"},
     }
@@ -1065,7 +1058,7 @@ class UserInfoResponse(_serialization.Model):
         sub: str,
         vo: str,
         dirac_group: str,
-        policies: JSON,
+        policies: Dict[str, Any],
         properties: List[str],
         preferred_username: str,
         **kwargs: Any,
@@ -1078,7 +1071,7 @@ class UserInfoResponse(_serialization.Model):
         :keyword dirac_group: Dirac Group. Required.
         :paramtype dirac_group: str
         :keyword policies: Policies. Required.
-        :paramtype policies: JSON
+        :paramtype policies: dict[str, any]
         :keyword properties: Properties. Required.
         :paramtype properties: list[str]
         :keyword preferred_username: Preferred Username. Required.
