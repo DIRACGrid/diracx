@@ -36,6 +36,7 @@ from ...operations._operations import (
     build_auth_revoke_refresh_token_request,
     build_auth_userinfo_request,
     build_config_serve_config_request,
+    build_jobs_add_heartbeat_request,
     build_jobs_assign_sandbox_to_job_request,
     build_jobs_get_job_sandbox_request,
     build_jobs_get_job_sandboxes_request,
@@ -1619,6 +1620,135 @@ class JobsOperations:
 
         deserialized = self._deserialize(
             "SetJobStatusReturn", pipeline_response.http_response
+        )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    async def add_heartbeat(
+        self,
+        body: Dict[str, _models.HeartbeatData],
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> List[_models.JobCommand]:
+        """Add Heartbeat.
+
+        Register a heartbeat from the job.
+
+        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
+        receive job commands from the WMS. It also results in stalled jobs being
+        restored to the RUNNING status.
+
+        The ``data`` parameter and return value are mappings keyed by job ID.
+
+        :param body: Required.
+        :type body: dict[str, ~_generated.models.HeartbeatData]
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JobCommand
+        :rtype: list[~_generated.models.JobCommand]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def add_heartbeat(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> List[_models.JobCommand]:
+        """Add Heartbeat.
+
+        Register a heartbeat from the job.
+
+        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
+        receive job commands from the WMS. It also results in stalled jobs being
+        restored to the RUNNING status.
+
+        The ``data`` parameter and return value are mappings keyed by job ID.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of JobCommand
+        :rtype: list[~_generated.models.JobCommand]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def add_heartbeat(
+        self, body: Union[Dict[str, _models.HeartbeatData], IO[bytes]], **kwargs: Any
+    ) -> List[_models.JobCommand]:
+        """Add Heartbeat.
+
+        Register a heartbeat from the job.
+
+        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
+        receive job commands from the WMS. It also results in stalled jobs being
+        restored to the RUNNING status.
+
+        The ``data`` parameter and return value are mappings keyed by job ID.
+
+        :param body: Is either a {str: HeartbeatData} type or a IO[bytes] type. Required.
+        :type body: dict[str, ~_generated.models.HeartbeatData] or IO[bytes]
+        :return: list of JobCommand
+        :rtype: list[~_generated.models.JobCommand]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[List[_models.JobCommand]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{HeartbeatData}")
+
+        _request = build_jobs_add_heartbeat_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "[JobCommand]", pipeline_response.http_response
         )
 
         if cls:
