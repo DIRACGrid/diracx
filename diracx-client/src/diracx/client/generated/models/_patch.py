@@ -11,9 +11,6 @@ from typing import Any, List
 # Add all objects you want publicly available to users at this package level
 __all__: List[str] = ["DeviceFlowErrorResponse"]
 
-from .. import _serialization
-from . import _models
-
 
 def patch_sdk():
     """Do not remove from this file.
@@ -24,31 +21,4 @@ def patch_sdk():
     """
 
 
-class DeviceFlowErrorResponse(_serialization.Model):
-    """TokenResponse.
-
-    All required parameters must be populated in order to send to Azure.
-
-    :ivar access_token: Access Token. Required.
-    :vartype access_token: str
-    :ivar expires_in: Expires In. Required.
-    :vartype expires_in: int
-    :ivar state: State. Required.
-    :vartype state: str
-    """
-
-    _validation = {
-        "error": {"required": True},
-    }
-
-    _attribute_map = {
-        "error": {"key": "error", "type": "str"},
-    }
-
-    def __init__(self, *, error: str, **kwargs: Any) -> None:
-        """
-        :keyword error: Access Token. Required.
-        :paramtype error: str
-        """
-        super().__init__(**kwargs)
-        self.error = error
+from diracx.client.patches import DeviceFlowErrorResponse
