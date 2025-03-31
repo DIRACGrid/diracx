@@ -9,7 +9,7 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 
 import io
 import json
-from typing import Any, List, Union
+from typing import Any, Dict, List
 
 from azure.core.rest import HttpRequest
 from azure.core.exceptions import map_error, HttpResponseError
@@ -22,7 +22,6 @@ from .. import models as _models
 from ._operations import (
     AuthOperations as AuthOperationsGenerated,
     JobsOperations as JobsOperationsGenerated,
-    JSON,
     _SERIALIZER,
 )
 
@@ -96,7 +95,7 @@ class JobsOperations(JobsOperationsGenerated):
         search: list[str] | None = None,
         sort: list[str] | None = None,
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> List[Dict[str, Any]]:
         """TODO"""
         body = {}
         if parameters is not None:
@@ -117,7 +116,7 @@ class JobsOperations(JobsOperationsGenerated):
         grouping: list[str] | None = None,
         search: list[str] | None = None,
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> List[Dict[str, Any]]:
         """TODO"""
         body = {}
         if grouping is not None:

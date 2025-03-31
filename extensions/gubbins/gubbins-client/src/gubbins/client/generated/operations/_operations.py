@@ -36,7 +36,6 @@ T = TypeVar("T")
 ClsType = Optional[
     Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]
 ]
-JSON = MutableMapping[str, Any]  # pylint: disable=unsubscriptable-object
 
 _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
@@ -2237,7 +2236,7 @@ class JobsOperations:
     @distributed_trace
     def reschedule_jobs(
         self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
-    ) -> JSON:
+    ) -> Dict[str, Any]:
         """Reschedule Jobs.
 
         Reschedule Jobs.
@@ -2246,8 +2245,8 @@ class JobsOperations:
         :paramtype job_ids: list[int]
         :keyword reset_jobs: Default value is False.
         :paramtype reset_jobs: bool
-        :return: JSON
-        :rtype: JSON
+        :return: dict mapping str to any
+        :rtype: dict[str, any]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2261,7 +2260,7 @@ class JobsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[JSON] = kwargs.pop("cls", None)
+        cls: ClsType[Dict[str, Any]] = kwargs.pop("cls", None)
 
         _request = build_jobs_reschedule_jobs_request(
             job_ids=job_ids,
@@ -2286,7 +2285,7 @@ class JobsOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response.http_response)
+        deserialized = self._deserialize("{object}", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -2296,7 +2295,7 @@ class JobsOperations:
     @overload
     def patch_metadata(
         self,
-        body: Dict[str, JSON],
+        body: Dict[str, Dict[str, Any]],
         *,
         content_type: str = "application/json",
         **kwargs: Any,
@@ -2306,7 +2305,7 @@ class JobsOperations:
         Patch Metadata.
 
         :param body: Required.
-        :type body: dict[str, JSON]
+        :type body: dict[str, dict[str, any]]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -2335,14 +2334,14 @@ class JobsOperations:
 
     @distributed_trace
     def patch_metadata(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[Dict[str, JSON], IO[bytes]], **kwargs: Any
+        self, body: Union[Dict[str, Dict[str, Any]], IO[bytes]], **kwargs: Any
     ) -> None:
         """Patch Metadata.
 
         Patch Metadata.
 
-        :param body: Is either a {str: JSON} type or a IO[bytes] type. Required.
-        :type body: dict[str, JSON] or IO[bytes]
+        :param body: Is either a {str: {str: Any}} type or a IO[bytes] type. Required.
+        :type body: dict[str, dict[str, any]] or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2369,7 +2368,7 @@ class JobsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "{object}")
+            _json = self._serialize.body(body, "{{object}}")
 
         _request = build_jobs_patch_metadata_request(
             content_type=content_type,
@@ -2407,7 +2406,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Retrieve information about jobs.
@@ -2423,8 +2422,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2437,7 +2436,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Retrieve information about jobs.
@@ -2453,8 +2452,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2466,7 +2465,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         **kwargs: Any,
-    ) -> List[JSON]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Retrieve information about jobs.
@@ -2479,8 +2478,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :return: list of JSON
-        :rtype: list[JSON]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2497,7 +2496,7 @@ class JobsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[List[JSON]] = kwargs.pop("cls", None)
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -2542,7 +2541,7 @@ class JobsOperations:
                 "str", response.headers.get("Content-Range")
             )
 
-        deserialized = self._deserialize("[object]", pipeline_response.http_response)
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, response_headers)  # type: ignore

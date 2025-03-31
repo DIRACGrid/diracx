@@ -8,27 +8,7 @@ Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python
 """
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
-import importlib.util
-import json
-import jwt
-import httpx
-
-from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
-from urllib import parse
-from azure.core.credentials import AccessToken
-from azure.core.credentials import TokenCredential
-from azure.core.pipeline import PipelineRequest
-from azure.core.pipeline.policies import BearerTokenCredentialPolicy
-
-from diracx.core.preferences import DiracxPreferences, get_diracx_preferences
-
-
-import sys
-import importlib
-from importlib.abc import MetaPathFinder, Loader
+from typing import List
 
 __all__: List[str] = [
     "DiracClient",
