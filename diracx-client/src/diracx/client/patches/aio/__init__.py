@@ -1,20 +1,24 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from diracx.core.extensions import select_from_extension
 
 from .utils import DiracClientMixin
 
+
+# If we're doing static analysis assume that the client class is the one from
+# the current Python module.
 if TYPE_CHECKING:
-    from diracx.client.generated.aio._client import Dirac
+    from diracx.client.generated.aio._client import Dirac as DiracGenerated
+else:
+    DiracGenerated = select_from_extension(group="diracx", name="aio_client_class")[
+        0
+    ].load()
 
-from diracx.core.extensions import select_from_extension
 
-real_client = select_from_extension(group="diracx", name="aio_client_class")[0].load()
-DiracGenerated: type[Dirac] = real_client
-
-__all__: List[str] = [
+__all__: list[str] = [
     "DiracClient",
 ]  # Add all objects you want publicly available to users at this package level
 
 
-class DiracClient(DiracClientMixin, DiracGenerated): ...  # type: ignore
+class DiracClient(DiracClientMixin, DiracGenerated): ...

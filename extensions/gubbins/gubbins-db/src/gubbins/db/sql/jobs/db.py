@@ -22,7 +22,7 @@ class GubbinsJobDB(JobDB):
 
     async def get_job_jdls(  # type: ignore[override]
         self, job_ids, original: bool = False, with_info=False
-    ) -> dict:
+    ) -> dict[int, str] | dict[int, dict[str, str]]:
         """
         This method modifes the one in the parent class:
         * adds an extra argument
