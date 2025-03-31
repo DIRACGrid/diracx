@@ -6,10 +6,11 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
-from typing import Any, List
+from typing import List
 
-# Add all objects you want publicly available to users at this package level
-__all__: List[str] = ["DeviceFlowErrorResponse"]
+__all__: List[str] = (
+    []
+)  # Add all objects you want publicly available to users at this package level
 
 
 def patch_sdk():
@@ -19,6 +20,3 @@ def patch_sdk():
     you can't accomplish using the techniques described in
     https://aka.ms/azsdk/python/dpcodegen/python/customize
     """
-
-
-from diracx.client.patches import DeviceFlowErrorResponse
