@@ -66,7 +66,7 @@ def test_regenerate_client(test_client, tmp_path):
         "--python",
         f"--input-file={openapi_spec}",
         "--models-mode=msrest",
-        "--namespace=generated",
+        "--namespace=_generated",
         f"--output-folder={output_folder}",
     ]
 
