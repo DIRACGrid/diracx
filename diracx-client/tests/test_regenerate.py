@@ -38,8 +38,12 @@ def test_regenerate_client(test_client, tmp_path):
     openapi_spec.write_text(r.text)
 
     spec = importlib.util.find_spec("diracx.client")
-    if spec is None or spec.origin is None:
-        raise ImportError("Cannot locate diracx.client package")
+    if spec is None:
+        raise ImportError("Cannot locate gubbins.client package")
+    if spec.origin is None:
+        raise ImportError(
+            "Cannot locate gubbins.client package, did you forget the __init__.py?"
+        )
     output_folder = Path(spec.origin).parent
 
     regenerate_client(openapi_spec, output_folder)

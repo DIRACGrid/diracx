@@ -158,7 +158,7 @@ def regenerate_client(openapi_spec: Path, client_root: Path):
     if extension_name == "gubbins":
         # Gubbins is special because it has a different structure due to being
         # in a subdirectory of diracx
-        repo_root = repo_root[2]
+        repo_root = repo_root.parents[1]
     assert (repo_root / ".git").is_dir()
     repo = git.Repo(repo_root)
     generated_dir = client_root / "_generated"
