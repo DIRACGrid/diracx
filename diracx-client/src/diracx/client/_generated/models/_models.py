@@ -20,7 +20,7 @@ class BodyAuthGetOidcToken(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar grant_type: OAuth2 Grant type. Required.
-    :vartype grant_type: ~generated.models.BodyAuthGetOidcTokenGrantType
+    :vartype grant_type: ~_generated.models.BodyAuthGetOidcTokenGrantType
     :ivar client_id: OAuth2 client id. Required.
     :vartype client_id: str
     :ivar device_code: device code for OAuth2 device flow.
@@ -65,7 +65,7 @@ class BodyAuthGetOidcToken(_serialization.Model):
     ) -> None:
         """
         :keyword grant_type: OAuth2 Grant type. Required.
-        :paramtype grant_type: ~generated.models.BodyAuthGetOidcTokenGrantType
+        :paramtype grant_type: ~_generated.models.BodyAuthGetOidcTokenGrantType
         :keyword client_id: OAuth2 client id. Required.
         :paramtype client_id: str
         :keyword device_code: device code for OAuth2 device flow.
@@ -124,7 +124,7 @@ class HTTPValidationError(_serialization.Model):
     """HTTPValidationError.
 
     :ivar detail: Detail.
-    :vartype detail: list[~generated.models.ValidationError]
+    :vartype detail: list[~_generated.models.ValidationError]
     """
 
     _attribute_map = {
@@ -136,7 +136,7 @@ class HTTPValidationError(_serialization.Model):
     ) -> None:
         """
         :keyword detail: Detail.
-        :paramtype detail: list[~generated.models.ValidationError]
+        :paramtype detail: list[~_generated.models.ValidationError]
         """
         super().__init__(**kwargs)
         self.detail = detail
@@ -269,9 +269,9 @@ class JobSearchParams(_serialization.Model):
     :ivar parameters: Parameters.
     :vartype parameters: list[str]
     :ivar search: Search.
-    :vartype search: list[~generated.models.JobSearchParamsSearchItem]
+    :vartype search: list[~_generated.models.JobSearchParamsSearchItem]
     :ivar sort: Sort.
-    :vartype sort: list[~generated.models.SortSpec]
+    :vartype sort: list[~_generated.models.SortSpec]
     :ivar distinct: Distinct.
     :vartype distinct: bool
     """
@@ -296,9 +296,9 @@ class JobSearchParams(_serialization.Model):
         :keyword parameters: Parameters.
         :paramtype parameters: list[str]
         :keyword search: Search.
-        :paramtype search: list[~generated.models.JobSearchParamsSearchItem]
+        :paramtype search: list[~_generated.models.JobSearchParamsSearchItem]
         :keyword sort: Sort.
-        :paramtype sort: list[~generated.models.SortSpec]
+        :paramtype sort: list[~_generated.models.SortSpec]
         :keyword distinct: Distinct.
         :paramtype distinct: bool
         """
@@ -319,7 +319,7 @@ class JobStatusUpdate(_serialization.Model):
     :ivar status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
      "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
      "Deleted", "Killed", and "Rescheduled".
-    :vartype status: str or ~generated.models.JobStatus
+    :vartype status: str or ~_generated.models.JobStatus
     :ivar minor_status: Minorstatus.
     :vartype minor_status: str
     :ivar application_status: Applicationstatus.
@@ -348,7 +348,7 @@ class JobStatusUpdate(_serialization.Model):
         :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
          "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
          "Deleted", "Killed", and "Rescheduled".
-        :paramtype status: str or ~generated.models.JobStatus
+        :paramtype status: str or ~_generated.models.JobStatus
         :keyword minor_status: Minorstatus.
         :paramtype minor_status: str
         :keyword application_status: Applicationstatus.
@@ -371,7 +371,7 @@ class JobSummaryParams(_serialization.Model):
     :ivar grouping: Grouping. Required.
     :vartype grouping: list[str]
     :ivar search: Search.
-    :vartype search: list[~generated.models.JobSummaryParamsSearchItem]
+    :vartype search: list[~_generated.models.JobSummaryParamsSearchItem]
     """
 
     _validation = {
@@ -394,7 +394,7 @@ class JobSummaryParams(_serialization.Model):
         :keyword grouping: Grouping. Required.
         :paramtype grouping: list[str]
         :keyword search: Search.
-        :paramtype search: list[~generated.models.JobSummaryParamsSearchItem]
+        :paramtype search: list[~_generated.models.JobSummaryParamsSearchItem]
         """
         super().__init__(**kwargs)
         self.grouping = grouping
@@ -411,7 +411,7 @@ class Metadata(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar virtual_organizations: Virtual Organizations. Required.
-    :vartype virtual_organizations: dict[str, ~generated.models.VOInfo]
+    :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
     """
 
     _validation = {
@@ -427,7 +427,7 @@ class Metadata(_serialization.Model):
     ) -> None:
         """
         :keyword virtual_organizations: Virtual Organizations. Required.
-        :paramtype virtual_organizations: dict[str, ~generated.models.VOInfo]
+        :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
         """
         super().__init__(**kwargs)
         self.virtual_organizations = virtual_organizations
@@ -605,13 +605,13 @@ class SandboxInfo(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar checksum_algorithm: ChecksumAlgorithm. Required. "sha256"
-    :vartype checksum_algorithm: str or ~generated.models.ChecksumAlgorithm
+    :vartype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
     :ivar checksum: Checksum. Required.
     :vartype checksum: str
     :ivar size: Size. Required.
     :vartype size: int
     :ivar format: SandboxFormat. Required. "tar.bz2"
-    :vartype format: str or ~generated.models.SandboxFormat
+    :vartype format: str or ~_generated.models.SandboxFormat
     """
 
     _validation = {
@@ -639,13 +639,13 @@ class SandboxInfo(_serialization.Model):
     ) -> None:
         """
         :keyword checksum_algorithm: ChecksumAlgorithm. Required. "sha256"
-        :paramtype checksum_algorithm: str or ~generated.models.ChecksumAlgorithm
+        :paramtype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
         :keyword checksum: Checksum. Required.
         :paramtype checksum: str
         :keyword size: Size. Required.
         :paramtype size: int
         :keyword format: SandboxFormat. Required. "tar.bz2"
-        :paramtype format: str or ~generated.models.SandboxFormat
+        :paramtype format: str or ~_generated.models.SandboxFormat
         """
         super().__init__(**kwargs)
         self.checksum_algorithm = checksum_algorithm
@@ -708,9 +708,9 @@ class ScalarSearchSpec(_serialization.Model):
     :vartype parameter: str
     :ivar operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt", and
      "like".
-    :vartype operator: str or ~generated.models.ScalarSearchOperator
+    :vartype operator: str or ~_generated.models.ScalarSearchOperator
     :ivar value: Value. Required.
-    :vartype value: ~generated.models.ScalarSearchSpecValue
+    :vartype value: ~_generated.models.ScalarSearchSpecValue
     """
 
     _validation = {
@@ -738,9 +738,9 @@ class ScalarSearchSpec(_serialization.Model):
         :paramtype parameter: str
         :keyword operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt",
          and "like".
-        :paramtype operator: str or ~generated.models.ScalarSearchOperator
+        :paramtype operator: str or ~_generated.models.ScalarSearchOperator
         :keyword value: Value. Required.
-        :paramtype value: ~generated.models.ScalarSearchSpecValue
+        :paramtype value: ~_generated.models.ScalarSearchSpecValue
         """
         super().__init__(**kwargs)
         self.parameter = parameter
@@ -758,7 +758,7 @@ class SetJobStatusReturn(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar success: Success. Required.
-    :vartype success: dict[str, ~generated.models.SetJobStatusReturnSuccess]
+    :vartype success: dict[str, ~_generated.models.SetJobStatusReturnSuccess]
     :ivar failed: Failed. Required.
     :vartype failed: dict[str, dict[str, str]]
     """
@@ -782,7 +782,7 @@ class SetJobStatusReturn(_serialization.Model):
     ) -> None:
         """
         :keyword success: Success. Required.
-        :paramtype success: dict[str, ~generated.models.SetJobStatusReturnSuccess]
+        :paramtype success: dict[str, ~_generated.models.SetJobStatusReturnSuccess]
         :keyword failed: Failed. Required.
         :paramtype failed: dict[str, dict[str, str]]
         """
@@ -797,7 +797,7 @@ class SetJobStatusReturnSuccess(_serialization.Model):
     :ivar status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
      "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
      "Deleted", "Killed", and "Rescheduled".
-    :vartype status: str or ~generated.models.JobStatus
+    :vartype status: str or ~_generated.models.JobStatus
     :ivar minor_status: Minorstatus.
     :vartype minor_status: str
     :ivar application_status: Applicationstatus.
@@ -838,7 +838,7 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
          "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
          "Deleted", "Killed", and "Rescheduled".
-        :paramtype status: str or ~generated.models.JobStatus
+        :paramtype status: str or ~_generated.models.JobStatus
         :keyword minor_status: Minorstatus.
         :paramtype minor_status: str
         :keyword application_status: Applicationstatus.
@@ -870,7 +870,7 @@ class SortSpec(_serialization.Model):
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
     :ivar direction: SortDirection. Required. Known values are: "asc" and "desc".
-    :vartype direction: str or ~generated.models.SortDirection
+    :vartype direction: str or ~_generated.models.SortDirection
     """
 
     _validation = {
@@ -894,7 +894,7 @@ class SortSpec(_serialization.Model):
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
         :keyword direction: SortDirection. Required. Known values are: "asc" and "desc".
-        :paramtype direction: str or ~generated.models.SortDirection
+        :paramtype direction: str or ~_generated.models.SortDirection
         """
         super().__init__(**kwargs)
         self.parameter = parameter
@@ -1073,7 +1073,7 @@ class ValidationError(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar loc: Location. Required.
-    :vartype loc: list[~generated.models.ValidationErrorLocItem]
+    :vartype loc: list[~_generated.models.ValidationErrorLocItem]
     :ivar msg: Message. Required.
     :vartype msg: str
     :ivar type: Error Type. Required.
@@ -1102,7 +1102,7 @@ class ValidationError(_serialization.Model):
     ) -> None:
         """
         :keyword loc: Location. Required.
-        :paramtype loc: list[~generated.models.ValidationErrorLocItem]
+        :paramtype loc: list[~_generated.models.ValidationErrorLocItem]
         :keyword msg: Message. Required.
         :paramtype msg: str
         :keyword type: Error Type. Required.
@@ -1126,9 +1126,9 @@ class VectorSearchSpec(_serialization.Model):
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
     :ivar operator: VectorSearchOperator. Required. Known values are: "in" and "not in".
-    :vartype operator: str or ~generated.models.VectorSearchOperator
+    :vartype operator: str or ~_generated.models.VectorSearchOperator
     :ivar values: Values. Required.
-    :vartype values: ~generated.models.VectorSearchSpecValues
+    :vartype values: ~_generated.models.VectorSearchSpecValues
     """
 
     _validation = {
@@ -1155,9 +1155,9 @@ class VectorSearchSpec(_serialization.Model):
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
         :keyword operator: VectorSearchOperator. Required. Known values are: "in" and "not in".
-        :paramtype operator: str or ~generated.models.VectorSearchOperator
+        :paramtype operator: str or ~_generated.models.VectorSearchOperator
         :keyword values: Values. Required.
-        :paramtype values: ~generated.models.VectorSearchSpecValues
+        :paramtype values: ~_generated.models.VectorSearchSpecValues
         """
         super().__init__(**kwargs)
         self.parameter = parameter
@@ -1175,9 +1175,9 @@ class VOInfo(_serialization.Model):
     All required parameters must be populated in order to send to server.
 
     :ivar groups: Groups. Required.
-    :vartype groups: dict[str, ~generated.models.GroupInfo]
+    :vartype groups: dict[str, ~_generated.models.GroupInfo]
     :ivar support: SupportInfo. Required.
-    :vartype support: ~generated.models.SupportInfo
+    :vartype support: ~_generated.models.SupportInfo
     :ivar default_group: Default Group. Required.
     :vartype default_group: str
     """
@@ -1204,9 +1204,9 @@ class VOInfo(_serialization.Model):
     ) -> None:
         """
         :keyword groups: Groups. Required.
-        :paramtype groups: dict[str, ~generated.models.GroupInfo]
+        :paramtype groups: dict[str, ~_generated.models.GroupInfo]
         :keyword support: SupportInfo. Required.
-        :paramtype support: ~generated.models.SupportInfo
+        :paramtype support: ~_generated.models.SupportInfo
         :keyword default_group: Default Group. Required.
         :paramtype default_group: str
         """

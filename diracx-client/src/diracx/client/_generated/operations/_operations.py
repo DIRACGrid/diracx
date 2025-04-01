@@ -630,7 +630,7 @@ class WellKnownOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~generated.Dirac`'s
+        :class:`~_generated.Dirac`'s
         :attr:`well_known` attribute.
     """
 
@@ -658,7 +658,7 @@ class WellKnownOperations:
         OpenID Connect discovery endpoint.
 
         :return: OpenIDConfiguration
-        :rtype: ~generated.models.OpenIDConfiguration
+        :rtype: ~_generated.models.OpenIDConfiguration
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -711,7 +711,7 @@ class WellKnownOperations:
         Get metadata about the dirac installation.
 
         :return: Metadata
-        :rtype: ~generated.models.Metadata
+        :rtype: ~_generated.models.Metadata
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -762,7 +762,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~generated.Dirac`'s
+        :class:`~_generated.Dirac`'s
         :attr:`auth` attribute.
     """
 
@@ -825,7 +825,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         :keyword scope: Required.
         :paramtype scope: str
         :return: InitiateDeviceFlowResponse
-        :rtype: ~generated.models.InitiateDeviceFlowResponse
+        :rtype: ~_generated.models.InitiateDeviceFlowResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1160,7 +1160,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         Get information about the user's identity.
 
         :return: UserInfoResponse
-        :rtype: ~generated.models.UserInfoResponse
+        :rtype: ~_generated.models.UserInfoResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1386,7 +1386,7 @@ class ConfigOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~generated.Dirac`'s
+        :class:`~_generated.Dirac`'s
         :attr:`config` attribute.
     """
 
@@ -1493,7 +1493,7 @@ class JobsOperations:
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
-        :class:`~generated.Dirac`'s
+        :class:`~_generated.Dirac`'s
         :attr:`jobs` attribute.
     """
 
@@ -1533,12 +1533,12 @@ class JobsOperations:
         should be used to upload the sandbox to the storage backend.
 
         :param body: Required.
-        :type body: ~generated.models.SandboxInfo
+        :type body: ~_generated.models.SandboxInfo
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
         :return: SandboxUploadResponse
-        :rtype: ~generated.models.SandboxUploadResponse
+        :rtype: ~_generated.models.SandboxUploadResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1562,7 +1562,7 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: SandboxUploadResponse
-        :rtype: ~generated.models.SandboxUploadResponse
+        :rtype: ~_generated.models.SandboxUploadResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1581,9 +1581,9 @@ class JobsOperations:
         should be used to upload the sandbox to the storage backend.
 
         :param body: Is either a SandboxInfo type or a IO[bytes] type. Required.
-        :type body: ~generated.models.SandboxInfo or IO[bytes]
+        :type body: ~_generated.models.SandboxInfo or IO[bytes]
         :return: SandboxUploadResponse
-        :rtype: ~generated.models.SandboxUploadResponse
+        :rtype: ~_generated.models.SandboxUploadResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1660,7 +1660,7 @@ class JobsOperations:
         :keyword pfn: Required.
         :paramtype pfn: str
         :return: SandboxDownloadResponse
-        :rtype: ~generated.models.SandboxDownloadResponse
+        :rtype: ~_generated.models.SandboxDownloadResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1882,7 +1882,7 @@ class JobsOperations:
         :param job_id: Required.
         :type job_id: int
         :param sandbox_type: Known values are: "input" and "output". Required.
-        :type sandbox_type: str or ~generated.models.SandboxType
+        :type sandbox_type: str or ~_generated.models.SandboxType
         :return: list of any
         :rtype: list[any]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2066,14 +2066,14 @@ class JobsOperations:
         Set Job Statuses.
 
         :param body: Required.
-        :type body: dict[str, dict[str, ~generated.models.JobStatusUpdate]]
+        :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
         :keyword force: Default value is False.
         :paramtype force: bool
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
         :return: SetJobStatusReturn
-        :rtype: ~generated.models.SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2098,7 +2098,7 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: SetJobStatusReturn
-        :rtype: ~generated.models.SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2115,11 +2115,11 @@ class JobsOperations:
         Set Job Statuses.
 
         :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
-        :type body: dict[str, dict[str, ~generated.models.JobStatusUpdate]] or IO[bytes]
+        :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
         :keyword force: Default value is False.
         :paramtype force: bool
         :return: SetJobStatusReturn
-        :rtype: ~generated.models.SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2361,7 +2361,7 @@ class JobsOperations:
         **TODO: Add more docs**.
 
         :param body: Default value is None.
-        :type body: ~generated.models.JobSearchParams
+        :type body: ~_generated.models.JobSearchParams
         :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
@@ -2420,7 +2420,7 @@ class JobsOperations:
         **TODO: Add more docs**.
 
         :param body: Is either a JobSearchParams type or a IO[bytes] type. Default value is None.
-        :type body: ~generated.models.JobSearchParams or IO[bytes]
+        :type body: ~_generated.models.JobSearchParams or IO[bytes]
         :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
@@ -2508,7 +2508,7 @@ class JobsOperations:
         Show information suitable for plotting.
 
         :param body: Required.
-        :type body: ~generated.models.JobSummaryParams
+        :type body: ~_generated.models.JobSummaryParams
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -2544,7 +2544,7 @@ class JobsOperations:
         Show information suitable for plotting.
 
         :param body: Is either a JobSummaryParams type or a IO[bytes] type. Required.
-        :type body: ~generated.models.JobSummaryParams or IO[bytes]
+        :type body: ~_generated.models.JobSummaryParams or IO[bytes]
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2618,7 +2618,7 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: list of InsertedJob
-        :rtype: list[~generated.models.InsertedJob]
+        :rtype: list[~_generated.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2636,7 +2636,7 @@ class JobsOperations:
          Default value is "application/json".
         :paramtype content_type: str
         :return: list of InsertedJob
-        :rtype: list[~generated.models.InsertedJob]
+        :rtype: list[~_generated.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2651,7 +2651,7 @@ class JobsOperations:
         :param body: Is either a [str] type or a IO[bytes] type. Required.
         :type body: list[str] or IO[bytes]
         :return: list of InsertedJob
-        :rtype: list[~generated.models.InsertedJob]
+        :rtype: list[~_generated.models.InsertedJob]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
