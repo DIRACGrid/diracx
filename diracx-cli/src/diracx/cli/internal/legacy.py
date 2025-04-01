@@ -364,6 +364,13 @@ def generate_helm_values(
     diracx_settings["DIRACX_SANDBOX_STORE_BUCKET_NAME"] = (
         f"{diracx_hostname.split('.')[0]}-sandboxes"
     )
+    try:
+        diracx_settings["DIRACX_SANDBOX_STORE_SE_NAME"] = cfg["Systems"][
+            "WorkloadManagement"
+        ]["Services"]["SandboxStore"]["LocalSE"]
+    except KeyError:
+        pass
+
     diracx_settings["DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS"] = json.dumps(
         {
             "endpoint_url": "FILL ME",
