@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - janusz_main_repo_test
   pull_request:
     branches:
       - main
