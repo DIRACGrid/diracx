@@ -298,6 +298,7 @@ def create_app_inner(
     # diracx and diracx-web under the same origin
     origins = [
         "http://localhost:8000",
+        "http://localhost:3000",
     ]
 
     app.add_middleware(ClientMinVersionCheckMiddleware)
