@@ -20,6 +20,7 @@ from .operations import (
     ConfigOperations,
     JobsOperations,
     LollygagOperations,
+    PilotsOperations,
     WellKnownOperations,
 )
 
@@ -37,6 +38,8 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype jobs: generated.aio.operations.JobsOperations
     :ivar lollygag: LollygagOperations operations
     :vartype lollygag: generated.aio.operations.LollygagOperations
+    :ivar pilots: PilotsOperations operations
+    :vartype pilots: generated.aio.operations.PilotsOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -89,6 +92,9 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
             self._client, self._config, self._serialize, self._deserialize
         )
         self.lollygag = LollygagOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.pilots = PilotsOperations(
             self._client, self._config, self._serialize, self._deserialize
         )
 

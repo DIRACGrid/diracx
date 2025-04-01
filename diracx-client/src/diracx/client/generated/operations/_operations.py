@@ -264,7 +264,7 @@ def build_auth_complete_authorization_flow_request(  # pylint: disable=name-too-
 
 
 def build_auth_pilot_login_request(
-    *, pilot_id: int, pilot_secret: str, **kwargs: Any
+    *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -275,7 +275,9 @@ def build_auth_pilot_login_request(
     _url = "/api/auth/pilot-login"
 
     # Construct parameters
-    _params["pilot_id"] = _SERIALIZER.query("pilot_id", pilot_id, "int")
+    _params["pilot_job_reference"] = _SERIALIZER.query(
+        "pilot_job_reference", pilot_job_reference, "str"
+    )
     _params["pilot_secret"] = _SERIALIZER.query("pilot_secret", pilot_secret, "str")
 
     # Construct headers
@@ -1417,13 +1419,15 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace
-    def pilot_login(self, *, pilot_id: int, pilot_secret: str, **kwargs: Any) -> Any:
+    def pilot_login(
+        self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
+    ) -> Any:
         """Pilot Login.
 
         Endpoint without policy, the pilot uses only its secret.
 
-        :keyword pilot_id: Required.
-        :paramtype pilot_id: int
+        :keyword pilot_job_reference: Required.
+        :paramtype pilot_job_reference: str
         :keyword pilot_secret: Required.
         :paramtype pilot_secret: str
         :return: any
@@ -1444,7 +1448,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         _request = build_auth_pilot_login_request(
-            pilot_id=pilot_id,
+            pilot_job_reference=pilot_job_reference,
             pilot_secret=pilot_secret,
             headers=_headers,
             params=_params,

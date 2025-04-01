@@ -827,14 +827,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     @distributed_trace_async
     async def pilot_login(
-        self, *, pilot_id: int, pilot_secret: str, **kwargs: Any
+        self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
     ) -> Any:
         """Pilot Login.
 
         Endpoint without policy, the pilot uses only its secret.
 
-        :keyword pilot_id: Required.
-        :paramtype pilot_id: int
+        :keyword pilot_job_reference: Required.
+        :paramtype pilot_job_reference: str
         :keyword pilot_secret: Required.
         :paramtype pilot_secret: str
         :return: any
@@ -855,7 +855,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         _request = build_auth_pilot_login_request(
-            pilot_id=pilot_id,
+            pilot_job_reference=pilot_job_reference,
             pilot_secret=pilot_secret,
             headers=_headers,
             params=_params,

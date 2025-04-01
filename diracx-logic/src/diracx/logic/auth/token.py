@@ -25,9 +25,11 @@ from diracx.core.models import (
 )
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
-from diracx.db.sql import AuthDB
+from diracx.db.sql import AuthDB, PilotAgentsDB
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 from diracx.db.sql.utils.functions import substract_date
+from diracx.logic.auth.pilot import generate_pilot_scope
+from diracx.logic.pilots.utils import get_pilot_informations_by_reference
 
 from .utils import (
     get_allowed_user_properties,
@@ -350,6 +352,37 @@ async def exchange_token(
     }
 
     return access_payload, refresh_payload
+
+
+async def generate_pilot_tokens(
+    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
+    pilot_job_reference: str,
+    config: Config,
+    settings: AuthSettings,
+    available_properties: set[SecurityProperty],
+) -> tuple[AccessTokenPayload, RefreshTokenPayload]:
+
+    pilot = await get_pilot_informations_by_reference(
+        pilot_db=pilot_db, pilot_job_reference=pilot_job_reference
+    )
+
+    pilot_info = {
+        "pilot_reference": pilot["PilotJobReference"],
+        "sub": pilot["PilotJobReference"],
+    }
+
+    access_token, refresh_token = await exchange_token(
+        auth_db=auth_db,
+        scope=generate_pilot_scope(pilot),
+        oidc_token_info=pilot_info,
+        config=config,
+        settings=settings,
+        available_properties=available_properties,
+        pilot_exchange=True,
+    )
+
+    return access_token, refresh_token
 
 
 def create_token(payload: TokenPayload, settings: AuthSettings) -> str:

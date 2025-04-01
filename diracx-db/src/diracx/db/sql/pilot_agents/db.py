@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from os import urandom
 
 from sqlalchemy import DateTime, insert, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
     AuthorizationError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
 )
-from diracx.db.sql.utils.functions import hash
 
 from ..utils import BaseSQLDB
 from .schema import PilotAgents, PilotAgentsDBBase, PilotRegistrations
@@ -74,12 +72,20 @@ class PilotAgentsDB(BaseSQLDB):
         if res.rowcount == 0:
             raise PilotNotFoundError(pilot_id=pilot_id)
 
-    async def verify_pilot_secret(self, pilot_id: int, pilot_secret: str) -> None:
-        hashed_secret = hash(pilot_secret)
+    async def verify_pilot_secret(
+        self, pilot_job_reference: str, pilot_hashed_secret: str
+    ) -> None:
+
+        try:
+            pilot = await self.get_pilot_by_reference(pilot_job_reference)
+        except NoResultFound as e:
+            raise PilotNotFoundError(pilot_ref=pilot_job_reference) from e
+
+        pilot_id = pilot["PilotID"]
 
         stmt = (
             select(PilotRegistrations)
-            .where(PilotRegistrations.pilot_hashed_secret == hashed_secret)
+            .where(PilotRegistrations.pilot_hashed_secret == pilot_hashed_secret)
             .where(PilotRegistrations.pilot_id == pilot_id)
         )
 
@@ -97,6 +103,7 @@ class PilotAgentsDB(BaseSQLDB):
     async def register_new_pilot(
         self,
         vo: str,
+        pilot_job_reference: str,
         submission_time: DateTime | None = None,  # ?
         last_update_time: DateTime | None = None,  # = now?
     ) -> int | None:
@@ -104,6 +111,7 @@ class PilotAgentsDB(BaseSQLDB):
             vo=vo,
             submission_time=submission_time,
             last_update_time=last_update_time,
+            pilot_job_reference=pilot_job_reference,
         )
 
         # Execute the request
@@ -114,16 +122,10 @@ class PilotAgentsDB(BaseSQLDB):
         # Returns the new pilot ID
         return int(new_pilot_id[0]) if new_pilot_id else None
 
-    async def add_pilot_credentials(self, pilot_id: int) -> str:
-
-        # Get a random string
-        # Can be customized
-        random_secret = urandom(30).hex()
-
-        hashed_random_secret = hash(random_secret)
+    async def add_pilot_credentials(self, pilot_id: int, pilot_hashed_secret: str):
 
         stmt = insert(PilotRegistrations).values(
-            pilot_id=pilot_id, pilot_hashed_secret=hashed_random_secret
+            pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
         )
 
         try:
@@ -136,8 +138,6 @@ class PilotAgentsDB(BaseSQLDB):
                     pilot_id=pilot_id, detail="this pilot has already credentials"
                 ) from e
 
-        return random_secret
-
     async def fetch_all_pilots(self):
         stmt = select(PilotRegistrations).with_for_update()
         result = await self.conn.execute(stmt)
@@ -147,11 +147,12 @@ class PilotAgentsDB(BaseSQLDB):
 
         return pilots
 
-    async def get_pilot_by_id(self, pilot_id: int):
+    async def get_pilot_by_reference(self, pilot_ref: str):
         stmt = (
             select(PilotAgents)
             .with_for_update()
-            .where(PilotAgents.pilot_id == pilot_id)
+            .where(PilotAgents.pilot_job_reference == pilot_ref)
         )
 
+        # We assume it is unique...
         return dict((await self.conn.execute(stmt)).one()._mapping)

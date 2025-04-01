@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
+from diracx.db.sql.utils import hash
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -35,17 +36,23 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     # Add a pilot vo
     pilot_vo = "lhcb"
+    pilot_reference = "pilot-test-ref"
+
+    secret = "AW0nd3rfulS3cr3t"
+    pilot_hashed_secret = hash(secret)
 
     async with db as pilot_agents_db:
         # Register a pilot
-        pilot_id = await pilot_agents_db.register_new_pilot(vo=pilot_vo)
+        pilot_id = await pilot_agents_db.register_new_pilot(
+            vo=pilot_vo, pilot_job_reference=pilot_reference
+        )
 
         # Add credentials to this pilot
-        secret = await pilot_agents_db.add_pilot_credentials(pilot_id=pilot_id)
+        await pilot_agents_db.add_pilot_credentials(
+            pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
+        )
 
-    assert secret is not None
-
-    request_data = {"pilot_id": pilot_id, "pilot_secret": secret}
+    request_data = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
 
     r = test_client.post(
         "/api/auth/pilot-login",
@@ -84,7 +91,10 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.json()["detail"] == "Invalid JWT"
 
     # -----------------  Wrong password  -----------------
-    request_data = {"pilot_id": pilot_id, "pilot_secret": "My 1ncr3d1bl3 t0k3n"}
+    request_data = {
+        "pilot_job_reference": pilot_reference,
+        "pilot_secret": "My 1ncr3d1bl3 t0k3n",
+    }
 
     r = test_client.post(
         "/api/auth/pilot-login",
@@ -96,7 +106,7 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.json()["detail"] == "bad pilot_id / pilot_secret"
 
     # -----------------  Wrong ID  -----------------
-    request_data = {"pilot_id": 63000, "pilot_secret": secret}
+    request_data = {"pilot_job_reference": "It is a reference", "pilot_secret": secret}
 
     r = test_client.post(
         "/api/auth/pilot-login",
