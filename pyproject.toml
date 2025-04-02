@@ -140,6 +140,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8"
+log_cli_level = "INFO"
 testpaths = [
     "diracx-api/tests",
     "diracx-cli/tests",
@@ -155,7 +156,9 @@ addopts = [
     "-pdiracx.testing",
     "-pdiracx.testing.osdb",
     "--import-mode=importlib",
+    "-ra", "--strict-config", "--strict-markers"
 ]
+filterwarnings = ["default"]
 asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
