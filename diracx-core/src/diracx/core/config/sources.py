@@ -137,7 +137,7 @@ class BaseGitConfigSource(ConfigSource):
             MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
         )
         self._read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
-        self.remote_url = self.exctract_remote_url(backend_url)
+        self.remote_url = self.extract_remote_url(backend_url)
         self.git_branch = self.get_git_branch_from_url(backend_url)
 
     @cachedmethod(lambda self: self._latest_revision_cache)
@@ -195,7 +195,7 @@ class BaseGitConfigSource(ConfigSource):
         self._latest_revision_cache.clear()
         self._read_raw_cache.clear()
 
-    def exctract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
+    def extract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the base URL without the 'git+' prefix and query parameters."""
         parsed_url = urlparse(str(backend_url).replace("git+", ""))
         remote_url = urlunparse(parsed_url._replace(query=""))
@@ -250,11 +250,12 @@ class RemoteGitConfigSource(BaseGitConfigSource):
 
         self._temp_dir = TemporaryDirectory()
         self.repo_location = Path(self._temp_dir.name)
-        sh.git.clone(self.remote_url, self.repo_location, _async=False)
+        sh.git.clone(
+            self.remote_url, self.repo_location, branch=self.git_branch, _async=False
+        )
         self._pull_cache: Cache = TTLCache(
             MAX_PULL_CACHED_VERSIONS, DEFAULT_PULL_CACHE_TTL
         )
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
 
     def clear_caches(self):
         super().clear_caches()
@@ -266,7 +267,10 @@ class RemoteGitConfigSource(BaseGitConfigSource):
     @cachedmethod(lambda self: self._pull_cache)
     def _pull(self):
         """Git pull from remote repo."""
-        sh.git.pull(_cwd=self.repo_location, _async=False)
+        try:
+            sh.git.pull(_cwd=self.repo_location, _async=False)
+        except sh.ErrorReturnCode as err:
+            logger.exception(err)
 
     def latest_revision(self) -> tuple[str, datetime]:
         self._pull()
