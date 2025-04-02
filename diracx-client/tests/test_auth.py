@@ -8,7 +8,7 @@ import jwt
 import pytest
 from azure.core.credentials import AccessToken
 
-from diracx.client._patches.utils import get_token
+from diracx.client.patches.utils import get_token
 from diracx.core.models import TokenResponse
 from diracx.core.utils import serialize_credentials
 

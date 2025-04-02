@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from diracx.api.utils import with_client
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 
 
 async def test_with_client_default(with_cli_login):
-    """Ensure that the with_client decorator provides a DiracClient."""
+    """Ensure that the with_client decorator provides a AsyncDiracClient."""
 
     @with_client
     async def test_func(*, client):
-        assert isinstance(client, DiracClient)
+        assert isinstance(client, AsyncDiracClient)
 
     await test_func()
 

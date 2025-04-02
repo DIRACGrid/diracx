@@ -1,24 +1,22 @@
-from __future__ import annotations
+# ------------------------------------
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# ------------------------------------
+"""Customize generated code here.
 
+Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
+"""
 __all__ = [
-    "Dirac",
-]
+    "Dirac"
+]  # Add all objects you want publicly available to users at this package level
 
-from diracx.client._generated.aio._client import Dirac as _Dirac
-
-try:
-    from diracx.client._patches.aio import (  # type: ignore[attr-defined]
-        Dirac as _DiracPatch,
-    )
-except ImportError:
-
-    class _DiracPatch:  # type: ignore[no-redef]
-        pass
-
-
-class Dirac(_DiracPatch, _Dirac):
-    pass
+from ...patches.client.aio import Dirac
 
 
 def patch_sdk():
-    pass
+    """Do not remove from this file.
+
+    `patch_sdk` is a last resort escape hatch that allows you to do customizations
+    you can't accomplish using the techniques described in
+    https://aka.ms/azsdk/python/dpcodegen/python/customize
+    """

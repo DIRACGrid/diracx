@@ -25,7 +25,7 @@ The `diracx-client` consists of three parts:
 * customization, in the `patches` folder, which mirror the structure of the generated client.
 * the base modules (`aio`, `extensions`, `models`) just exporting what we want to be exporting
 
-`diracx-client` also defines a `DiracClient` class which exposes all these low level calls, and handles the authentication/authorisation aspects, as well as the interactions with extensions.
+`diracx-client` also defines a `AsyncDiracClient` class which exposes all these low level calls, and handles the authentication/authorisation aspects, as well as the interactions with extensions.
 
 ### Generating a Client
 
@@ -57,12 +57,12 @@ Note: any modification in the synchronous client should also be performed in the
 
 #### Example Usage
 
-Operations are accessible via the `DiracClient`, which manages token refreshment:
+Operations are accessible via the `AsyncDiracClient`, which manages token refreshment:
 
 ```python
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 
-async with DiracClient() as client:
+async with AsyncDiracClient() as client:
     jobs = await client.jobs.submit_jobs([x.read() for x in jdl])
 ```
 
@@ -106,18 +106,18 @@ The `diracx-api` provides a Python API for interacting with services, leveraging
 
 API methods are located in `diracx-api/src/diracx/api/`. To create an API method:
 
-1. Import `DiracClient`.
+1. Import `AsyncDiracClient`.
 2. Decorate the method with `@with_client` to handle client configuration.
 3. Pass the `client` as a keyword argument.
 
 #### Example
 
 ```python
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 from .utils import with_client
 
 @with_client
-async def create_sandbox(paths: list[Path], *, client: DiracClient) -> str:
+async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
     ...
 ```
 
@@ -129,7 +129,7 @@ In this example, `paths` are the parameters of the API. The `@with_client` decor
 result = await create_sandbox(paths)
 
 # For optimised performance with multiple service interactions
-async with DiracClient() as client:
+async with AsyncDiracClient() as client:
     result = await create_sandbox(paths, client)
 ```
 
@@ -141,7 +141,7 @@ The `diracx-cli` is a command-line interface built on `diracx-client` and `dirac
 
 CLI commands are located in `diracx-cli/src/diracx/cli/`. To create a CLI command:
 
-1. Import `DiracClient` and/or the diracx API.
+1. Import `AsyncDiracClient` and/or the diracx API.
 2. Import `utils.AsyncTyper`.
 3. Use the `@app.async_command` decorator to define commands.
 
@@ -160,13 +160,13 @@ internal = "diracx.cli.internal:app"
 
 ```python
 from .utils import AsyncTyper
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 
 app = AsyncTyper()
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
-    async with DiracClient() as client:
+    async with AsyncDiracClient() as client:
         ...
 ```
 

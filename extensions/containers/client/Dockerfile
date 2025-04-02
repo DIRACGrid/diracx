@@ -1,7 +1,6 @@
 FROM ghcr.io/diracgrid/diracx/client:dev
 
 #Extension
-ENV DIRACX_EXTENSIONS="gubbins,diracx"
 ENV GUBBINS_IMAGE_PACKAGES=core,client,api,cli,.
 
 RUN --mount=type=bind,source=.,target=/bindmount GUBBINS_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -exc "ls /bindmount && echo 'Running pip check' && pip check"

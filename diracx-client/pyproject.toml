@@ -19,20 +19,25 @@ dynamic = ["version"]
 testing = ["diracx-testing"]
 types = []
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
-
 [project.entry-points."diracx"]
 client_class = "diracx.client.generated._client:Dirac"
 aio_client_class = "diracx.client.generated.aio._client:Dirac"
 
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
 root = ".."
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/diracx"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/_diracx_client_importer.pth" = "_diracx_client_importer.pth"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

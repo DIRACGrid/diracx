@@ -1,158 +1,50 @@
-from __future__ import annotations
+# pylint: disable=line-too-long,useless-suppression
+# ------------------------------------
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# ------------------------------------
+"""Customize generated code here.
 
-__all__ = [
-    "WellKnownOperations",
-    "AuthOperations",
-    "ConfigOperations",
-    "JobsOperations",
-    "LollygagOperations",
-]
+Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
+"""
+# bak = gubbins.client._generated.aio.operations._operations.WellKnownOperations
+# gubbins.client._generated.aio.operations._operations.WellKnownOperations = gubbins.client._generated.aio.operations.WellKnownOperations
+# # ------------------------------------
 
-from gubbins.client._generated.aio.operations._operations import (
-    WellKnownOperations as _WellKnownOperations,
-)
+from typing import List
 
-try:
-    from diracx.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        WellKnownOperations as _WellKnownOperationsPatch,
-    )
-except ImportError:
+from ._operations import WellKnownOperations as _WellKnownOperations
 
-    class _WellKnownOperationsPatch:  # type: ignore[no-redef]
-        pass
+# from diracx.client._generated.aio.operations._patch import *
+# from diracx.client._generated.aio.operations._patch import __all__ as _patch_all
 
 
-try:
-    from gubbins.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        WellKnownOperations as _WellKnownOperationsPatchExt,
-    )
-except ImportError:
-
-    class _WellKnownOperationsPatchExt:  # type: ignore[no-redef]
-        pass
+class WellKnownOperations(_WellKnownOperations):
+    def my_method(self): ...
 
 
-from gubbins.client._generated.aio.operations._operations import (
-    AuthOperations as _AuthOperations,
-)
-
-try:
-    from diracx.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        AuthOperations as _AuthOperationsPatch,
-    )
-except ImportError:
-
-    class _AuthOperationsPatch:  # type: ignore[no-redef]
-        pass
-
-
-try:
-    from gubbins.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        AuthOperations as _AuthOperationsPatchExt,
-    )
-except ImportError:
-
-    class _AuthOperationsPatchExt:  # type: ignore[no-redef]
-        pass
-
-
-from gubbins.client._generated.aio.operations._operations import (
-    ConfigOperations as _ConfigOperations,
-)
-
-try:
-    from diracx.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        ConfigOperations as _ConfigOperationsPatch,
-    )
-except ImportError:
-
-    class _ConfigOperationsPatch:  # type: ignore[no-redef]
-        pass
-
-
-try:
-    from gubbins.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        ConfigOperations as _ConfigOperationsPatchExt,
-    )
-except ImportError:
-
-    class _ConfigOperationsPatchExt:  # type: ignore[no-redef]
-        pass
-
-
-from gubbins.client._generated.aio.operations._operations import (
-    JobsOperations as _JobsOperations,
-)
-
-try:
-    from diracx.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        JobsOperations as _JobsOperationsPatch,
-    )
-except ImportError:
-
-    class _JobsOperationsPatch:  # type: ignore[no-redef]
-        pass
-
-
-try:
-    from gubbins.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        JobsOperations as _JobsOperationsPatchExt,
-    )
-except ImportError:
-
-    class _JobsOperationsPatchExt:  # type: ignore[no-redef]
-        pass
-
-
-from gubbins.client._generated.aio.operations._operations import (
-    LollygagOperations as _LollygagOperations,
-)
-
-try:
-    from diracx.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        LollygagOperations as _LollygagOperationsPatch,
-    )
-except ImportError:
-
-    class _LollygagOperationsPatch:  # type: ignore[no-redef]
-        pass
-
-
-try:
-    from gubbins.client._patches.aio.operations import (  # type: ignore[attr-defined]
-        LollygagOperations as _LollygagOperationsPatchExt,
-    )
-except ImportError:
-
-    class _LollygagOperationsPatchExt:  # type: ignore[no-redef]
-        pass
-
-
-class WellKnownOperations(
-    _WellKnownOperationsPatchExt, _WellKnownOperationsPatch, _WellKnownOperations
-):
-    pass
-
-
-class AuthOperations(_AuthOperationsPatchExt, _AuthOperationsPatch, _AuthOperations):
-    pass
-
-
-class ConfigOperations(
-    _ConfigOperationsPatchExt, _ConfigOperationsPatch, _ConfigOperations
-):
-    pass
-
-
-class JobsOperations(_JobsOperationsPatchExt, _JobsOperationsPatch, _JobsOperations):
-    pass
-
-
-class LollygagOperations(
-    _LollygagOperationsPatchExt, _LollygagOperationsPatch, _LollygagOperations
-):
-    pass
+__all__ = ["WellKnownOperations"]
+# __all__ += [x for x in _patch_all if x not in __all__]
 
 
 def patch_sdk():
-    pass
+    """Do not remove from this file.
+
+    `patch_sdk` is a last resort escape hatch that allows you to do customizations
+    you can't accomplish using the techniques described in
+    https://aka.ms/azsdk/python/dpcodegen/python/customize
+    """
+
+
+# # ------------------------------------
+# gubbins.client._generated.aio.operations._operations.WellKnownOperations = bak
+# apply_patches_from_above()
+
+
+# WellKnownOperations -> gubbins.client..._patch -> diracx.client..._patch -> gubbins.client..._operations -> object
+
+
+# gubbins.client...__init__
+#  * gubbins.client..._operations
+#  * diracx.client..._patch (asked for gubbins.client..._patch but metapathfinder changed it)
+#  *

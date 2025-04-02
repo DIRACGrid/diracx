@@ -64,7 +64,6 @@ jobs:
         run: |
           cd ${{ matrix.package }}
           pip install .[testing]
-          export DIRACX_EXTENSIONS=gubbins,diracx
           pytest --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.0
@@ -222,7 +221,6 @@ jobs:
       - name: Run pytest
         run: |
           cd extensions/gubbins
-          export DIRACX_EXTENSIONS=gubbins,diracx
           pytest --demo-dir=../../../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
@@ -283,5 +281,4 @@ jobs:
         run: |
           autorest --python --help
           $HOME/.autorest/\@autorest_python\@*/node_modules/\@autorest/python/venv/bin/python -m pip install --upgrade setuptools
-          export DIRACX_EXTENSIONS=gubbins,diracx
           pytest --no-cov --regenerate-client extensions/gubbins/gubbins-client/tests/test_regenerate.py

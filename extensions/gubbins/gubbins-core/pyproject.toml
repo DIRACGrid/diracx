@@ -26,6 +26,7 @@ types = [
 [project.entry-points."diracx"]
 properties_module = "gubbins.core.properties"
 config = "gubbins.core.config.schema:Config"
+extension = "gubbins"
 
 [tool.setuptools.packages.find]
 where = ["src"]

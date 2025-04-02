@@ -35,106 +35,32 @@ def extract_static_all(path):
     raise NotImplementedError("__all__ not found")
 
 
-def make_patch(patch_path, parts, object_names, extension_name):
-    patch_module = ".".join(["client", "_patches"] + list(parts))
+def fixup_models_init(generated_dir, extension_name):
+    """Workaround for https://github.com/python/mypy/issues/15300."""
+    models_init_path = generated_dir / "models" / "__init__.py"
+    # Enums cannot be extended, so we don't need to patch them
+    object_names = {
+        name
+        for name, module in extract_static_all(models_init_path).items()
+        if module != "_enums"
+    }
 
-    lines = ["from __future__ import annotations", "", "__all__ = ["]
-    lines += [f'    "{name}",' for name in object_names]
-    lines += ["]", ""]
-    for name, module in object_names.items():
-        gen_module = ".".join([extension_name, "client", "_generated"] + list(parts))
-        if module:
-            gen_module += "." + module
-        lines += [
-            f"from {gen_module} import (",
-            f"    {name} as _{name}",
-            ")",
-        ]
-        lines += [
-            "try:",
-            f"    from diracx.{patch_module} import (  # type: ignore[attr-defined]",
-            f"        {name} as _{name}Patch",
-            "    )",
-            "except ImportError:",
-            "",
-            f"    class _{name}Patch:  # type: ignore[no-redef]",
-            "        pass",
-            "",
-        ]
-        if extension_name != "diracx":
-            lines += [
-                "try:",
-                f"    from {extension_name}.{patch_module} import (  # type: ignore[attr-defined]",
-                f"        {name} as _{name}PatchExt",
-                "    )",
-                "except ImportError:",
-                "",
-                f"    class _{name}PatchExt:  # type: ignore[no-redef]",
-                "        pass",
-                "",
-            ]
+    patch_module = "diracx.client._generated.models._patch"
+    spec = importlib.util.find_spec(patch_module)
+    if spec is None or spec.origin is None:
+        raise ImportError(f"Cannot locate {patch_module} package")
+    missing = set(extract_static_all(Path(spec.origin))) - set(object_names)
+    missing_formatted = "\n".join(f'            "{name}",' for name in missing)
 
-    lines += [""]
-    for name in object_names:
-        subclasses = [f"_{name}Patch", f"_{name}"]
-        if extension_name != "diracx":
-            subclasses = [f"_{name}PatchExt"] + subclasses
-        lines += [
-            f"class {name}({', '.join(subclasses)}):",
-            "    pass",
-            "",
-        ]
-    lines += [
-        "",
-        "def patch_sdk():",
-        "    pass",
-    ]
-    if parts == ("models",):
-        spec = importlib.util.find_spec(f"diracx.{patch_module}")
-        if spec is None or spec.origin is None:
-            raise ImportError(f"Cannot locate diracx.{patch_module} package")
-        missing = set(extract_static_all(Path(spec.origin))) - set(object_names)
-        missing_formatted = "\n".join(f'            "{name}",' for name in missing)
-
-        # Add any extra models which are not in the generated code and therefore
-        # evaded the patching process
-        # TODO: Does this need to also support extensions?
-        lines += [
-            "",
-            "from typing import TYPE_CHECKING",
-            "from diracx.client._patches.models import (",
-        ]
-        lines += [f"    {name}," for name in missing]
-        lines += [
-            ")",
-            "",
-        ]
-
-        # Workaround for https://github.com/python/mypy/issues/15300
-        init_path = patch_path.parent / "__init__.py"
-        with init_path.open("a") as fh:
-            fh.write(
-                "if TYPE_CHECKING:\n"
-                "    __all__.extend(\n"
-                "        [\n"
-                f"{missing_formatted}"
-                "        ]\n"
-                "    )\n"
-            )
-        lines += [
-            "if TYPE_CHECKING:",
+    with models_init_path.open("a") as fh:
+        fh.write(
+            "if TYPE_CHECKING:\n"
             "    __all__.extend(\n"
             "        [\n"
             f"{missing_formatted}"
             "        ]\n"
             "    )\n"
-            "else:",
-            "    from diracx.client._patches.models import __all__ as _patch_all",
-            "",
-            "    __all__.extend(_patch_all)",
-            "    __all__ = sorted(set(__all__))",
-        ]
-    patch_path.write_text("\n".join(lines) + "\n")
+        )
 
 
 def regenerate_client(openapi_spec: Path, client_root: Path):
@@ -184,14 +110,21 @@ def regenerate_client(openapi_spec: Path, client_root: Path):
     # ruff: disable=S603
     subprocess.run(cmd, check=True)
 
-    for path in generated_dir.rglob("__init__.py"):
-        objects = extract_static_all(path)
-        # Enums cannot be extended, so we don't need to patch them
-        objects = {
-            name: module for name, module in objects.items() if module != "_enums"
-        }
-        parts = path.parent.relative_to(generated_dir).parts
-        make_patch(path.parent / "_patch.py", parts, objects, extension_name)
+    if extension_name != "diracx":
+        # For now we don't support extending the models in extensions. To make
+        # this clear manually remove the automatically generated _patch.py file
+        # and fixup the __init__.py file to use the diracx one.
+        (generated_dir / "models" / "_patch.py").unlink()
+        models_init_path = generated_dir / "models" / "__init__.py"
+        models_init = models_init_path.read_text()
+        assert models_init.count("from ._patch import") == 4
+        models_init = models_init.replace(
+            "from ._patch import",
+            "from diracx.client._generated.models._patch import",
+        )
+        models_init_path.write_text(models_init)
+
+    fixup_models_init(generated_dir, extension_name)
 
     cmd = ["pre-commit", "run", "--all-files"]
     print("Running pre-commit...")

@@ -10,7 +10,6 @@ If you write your own extension, just replace `gubbins` with whatever name you c
 The structure of the repo, the content of the `pyproject.toml` files, the `__init__` of the modules... are all skeletons that you must reproduce.
 
 Extensions are controled via:
-* the `DIRACX_EXTENSIONS` environment variable. It should be set to `gubbins,diracx`
 * the entrypoints found in the various `pyproject.toml`
 
 This here is the exhaustive list of what is supported and tested for extensions. Any usecase not listed here is not supported.
@@ -22,9 +21,6 @@ What to do with the `environment.yaml` ? should we replicate wht's in diracx ?
 
 
 ## General statements
-
-When working with the extension, you MUST always (server, client, testing) have exported the environment variable ``DIRACX_EXTENSIONS=gubbins,diracx``. The [``pytest fixture``](extensions/gubbins/gubbins-testing/src/gubbins/testing/__init__.py)
-
 
 The fact of having `gubbins` as a subfolder has a few downside which you will not suffer if having your extension in a separate repository:
 * the `root` of `setuptools_scm` in the various `pyproject.toml` will only be `..` for your extension
@@ -201,7 +197,7 @@ properties_module = "gubbins.core.properties"
 
 ## Writing tests
 
-`diracx-testing` package contains a lot of useful tools for testing `diracx` and its extensions. It is recommended to have a `testing` package for your extension which contains at least a check that your `DIRACX_EXTENSIONS` environment variable is set (see [example](gubbins/gubbins-testing/src/gubbins/testing/__init__.py))
+`diracx-testing` package contains a lot of useful tools for testing `diracx` and its extensions.
 
 Note that even if you have your own `testing` package depending on `diracx-testing`, you should specify it when calling `pytest` (see various `pyprojects.toml`)
 
