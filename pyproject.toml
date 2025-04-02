@@ -27,7 +27,7 @@ testing = ["diracx-testing"]
 packages = []
 
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+requires = ["setuptools>=61", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
@@ -139,6 +139,7 @@ module = 'sh.*'
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+minversion = "8"
 testpaths = [
     "diracx-api/tests",
     "diracx-cli/tests",
