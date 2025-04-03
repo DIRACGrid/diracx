@@ -44,7 +44,7 @@ async def test_create_pilot_and_verify_secret(test_client):
     async with db as pilot_agents_db:
         # Register a pilot
         pilot_id = await pilot_agents_db.register_new_pilot(
-            vo=pilot_vo, pilot_job_reference=pilot_reference
+            vo=pilot_vo, pilot_job_reference=pilot_reference, pilot_stamp="pilot-stamp"
         )
 
         # Add credentials to this pilot

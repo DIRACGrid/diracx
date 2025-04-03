@@ -66,7 +66,9 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
     async with pilot_agents_db as pilot_agents_db:
         pilot_reference = "pilot-reference-test"
         pilot_id = await pilot_agents_db.register_new_pilot(
-            vo="pilot-vo", pilot_job_reference=pilot_reference
+            vo="pilot-vo",
+            pilot_job_reference=pilot_reference,
+            pilot_stamp="pilot-stamp",
         )
 
         secret = "AW0nd3rfulS3cr3t"
