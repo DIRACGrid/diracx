@@ -104,6 +104,8 @@ class PilotAgentsDB(BaseSQLDB):
         self,
         vo: str,
         pilot_job_reference: str,
+        pilot_stamp: str,
+        grid_type: str = "DIRAC",
         submission_time: DateTime | None = None,  # ?
         last_update_time: DateTime | None = None,  # = now?
     ) -> int | None:
@@ -112,6 +114,8 @@ class PilotAgentsDB(BaseSQLDB):
             submission_time=submission_time,
             last_update_time=last_update_time,
             pilot_job_reference=pilot_job_reference,
+            grid_type=grid_type,
+            pilot_stamp=pilot_stamp,
         )
 
         # Execute the request

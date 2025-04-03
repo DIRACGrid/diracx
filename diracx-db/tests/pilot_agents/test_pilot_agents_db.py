@@ -39,7 +39,10 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
     async with pilot_agents_db as pilot_agents_db:
         pilot_reference = "pilot-reference-test"
         await pilot_agents_db.register_new_pilot(
-            vo="pilot-vo", pilot_job_reference=pilot_reference
+            vo="pilot-vo",
+            pilot_job_reference=pilot_reference,
+            pilot_stamp="pilot-stamp",
+            grid_type="grid-type",
         )
 
         res = await pilot_agents_db.get_pilot_by_reference(pilot_ref=pilot_reference)
@@ -50,9 +53,10 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
         # Set values
         assert res["VO"] == "pilot-vo"
         assert res["PilotJobReference"] == pilot_reference
+        assert res["PilotStamp"] == "pilot-stamp"
+        assert res["GridType"] == "grid-type"
 
         # Default values
-        assert res["PilotStamp"] == ""
         assert res["BenchMark"] == 0.0
         assert res["Status"] == "Unknown"
 
