@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Optional
 
 from fastapi import FastAPI
 
@@ -35,6 +36,9 @@ class OTELSettings(ServiceSettingsBase):
     application_name: str = "diracx"
     grpc_endpoint: str = ""
     grpc_insecure: bool = True
+    # headers to pass to the OTEL Collector
+    # e.g. {"tenant_id": "lhcbdiracx-cert"}
+    headers: Optional[dict[str, str]] = None
 
 
 def instrument_otel(app: FastAPI) -> None:
@@ -72,16 +76,18 @@ def instrument_otel(app: FastAPI) -> None:
             OTLPSpanExporter(
                 endpoint=otel_settings.grpc_endpoint,
                 insecure=otel_settings.grpc_insecure,
+                headers=otel_settings.headers,
             )
         )
     )
     trace.set_tracer_provider(tracer_provider)
-
+    # http_exporter = httpOTPLMetricExporter()
     # metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(),export_interval_millis=1000)
     metric_reader = PeriodicExportingMetricReader(
         OTLPMetricExporter(
             endpoint=otel_settings.grpc_endpoint,
             insecure=otel_settings.grpc_insecure,
+            headers=otel_settings.headers,
         ),
         export_interval_millis=3000,
     )
@@ -101,6 +107,7 @@ def instrument_otel(app: FastAPI) -> None:
     otlp_exporter = OTLPLogExporter(
         endpoint=otel_settings.grpc_endpoint,
         insecure=otel_settings.grpc_insecure,
+        headers=otel_settings.headers,
     )
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
