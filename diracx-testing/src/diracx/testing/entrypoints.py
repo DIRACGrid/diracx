@@ -57,11 +57,13 @@ def verify_entry_points(request, pytestconfig):
     else:
         return
 
-    installed_eps = get_installed_entry_points()
-    current_eps = get_current_entry_points(repo_base)
+    installed_eps = set(get_installed_entry_points())
+    current_eps = set(get_current_entry_points(repo_base))
 
     if installed_eps != current_eps:
         pytest.fail(
             "Project and installed entry-points are not consistent. "
-            "You should run `pip install -r requirements-dev.txt`",
+            "You should run `pip install -r requirements-dev.txt`"
+            f"{installed_eps-current_eps=}",
+            f"{current_eps-installed_eps=}",
         )
