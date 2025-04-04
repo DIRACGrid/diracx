@@ -142,11 +142,7 @@ class Dirac(_Dirac):
             "DiracX-Client-Version"
         ] = self.client_version
 
-        # Initialize Dirac with a Dirac-specific token credential policy
-        # We need to ignore types here because mypy complains that we give
-        # too many arguments to "object" constructor as this is a mixin
-
-        super().__init__(  # type: ignore
+        super().__init__(
             endpoint=self._endpoint,
             authentication_policy=AsyncDiracBearerTokenCredentialPolicy(
                 AsyncDiracTokenCredential(

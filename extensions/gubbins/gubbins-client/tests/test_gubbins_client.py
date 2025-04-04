@@ -69,13 +69,12 @@ async def main():
     print(f"{{TestClass.__mro__=}}")
     print(f"{{mro=}}")
 
+    a = 'gubbins.client._generated{'.aio' if is_async else ''}._patch'
+    b = 'diracx.client.patches.client.{aio_or_sync}'
+    c = 'gubbins.client._generated{'.aio' if is_async else ''}._client'
+    d = 'builtins'
+
     assert mro[0] == "gubbins.client.{aio_or_sync}", mro
-
-    a = "gubbins.client._generated{'.aio' if is_async else ''}._patch"
-    b = "diracx.client.patches.client.{aio_or_sync}"
-    c = "diracx.client.patches.client.common"
-    d = "gubbins.client._generated{'.aio' if is_async else ''}._client"
-
     assert mro.index(a) < mro.index(b)
     assert mro.index(b) < mro.index(c)
     assert mro.index(c) < mro.index(d)

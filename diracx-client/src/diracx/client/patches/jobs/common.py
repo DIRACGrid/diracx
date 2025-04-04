@@ -51,7 +51,7 @@ def make_search_body(**kwargs: Unpack[SearchKwargs]) -> UnderlyingSearchArgs:
         key = cast(Literal["parameters", "search", "sort"], key)
         value = kwargs.pop(key)
         if value is not None:
-            body[key] = kwargs[key]
+            body[key] = value
     result: UnderlyingSearchArgs = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
     result.update(cast(SearchExtra, kwargs))
     return result
@@ -79,7 +79,7 @@ def make_summary_body(**kwargs: Unpack[SummaryKwargs]) -> UnderlyingSummaryArgs:
         key = cast(Literal["grouping", "search"], key)
         value = kwargs.pop(key)
         if value is not None:
-            body[key] = kwargs.pop(key)
+            body[key] = value
     result: UnderlyingSummaryArgs = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
     result.update(cast(ResponseExtra, kwargs))
     return result
