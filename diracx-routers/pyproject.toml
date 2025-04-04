@@ -44,11 +44,13 @@ types = [
 jobs = "diracx.routers.jobs:router"
 config = "diracx.routers.configuration:router"
 auth = "diracx.routers.auth:router"
+pilots = "diracx.routers.pilots:router"
 ".well-known" = "diracx.routers.auth.well_known:router"
 
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
+RegisteredPilotAccessPolicy = "diracx.routers.pilots.access_policies:RegisteredPilotAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
