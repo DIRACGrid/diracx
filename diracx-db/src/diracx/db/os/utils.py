@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any, Self
 
 from opensearchpy import AsyncOpenSearch
+from opensearchpy.helpers import async_bulk
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
@@ -192,6 +193,13 @@ class BaseOSDB(metaclass=ABCMeta):
         )
         print(f"{response=}")
 
+    async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
+        """Bulk inserting to database."""
+        n_inserted = await async_bulk(
+            self.client, actions=[doc | {"_index": index_name} for doc in docs]
+        )
+        logger.info("Inserted %d documents to %r", n_inserted, index_name)
+
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
     ) -> list[dict[str, Any]]:
@@ -232,6 +240,17 @@ class BaseOSDB(metaclass=ABCMeta):
                     )
 
         return hits
+
+    async def delete(self, query: list[dict[str, Any]]) -> dict:
+        """Delete multiple documents by query."""
+        body = {}
+        res = {}
+        if query:
+            body["query"] = apply_search_filters(self.fields, query)
+            res = await self.client.delete_by_query(
+                body=body, index=f"{self.index_prefix}*"
+            )
+        return res
 
 
 def require_type(operator, field_name, field_type, allowed_types):
