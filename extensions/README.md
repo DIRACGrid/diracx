@@ -20,7 +20,7 @@ We recommend putting this in `myextension-core` however it is possible to includ
 It is also acceptably to include it in multiple packages.
 
 This here is the exhaustive list of what is supported and tested for extensions.
-Any use cases not listed here are not supported, if you thing you need additional functionality please open an issue to discuss so it can be added here to assist with long term stability.
+Any use cases not listed here are not supported, if you think you need additional functionality please open an issue to discuss so it can be added here to assist with long term stability.
 
 NOTE: This documentation is still a work in progress!!!
 

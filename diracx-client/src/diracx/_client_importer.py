@@ -3,7 +3,7 @@
 This file is intended to be used with _diracx_client_importer.pth which causes
 it to be registered as part of Python's startup process. This is needed as we
 don't know if diracx.client or yourextenstion.client will be imported first and
-resolving this abiguity results in circular imports if this is handled within
+resolving this ambiguity results in circular imports if this is handled within
 the diracx.client module itself.
 """
 
@@ -104,7 +104,7 @@ class DiracXPathFinder(importlib.abc.MetaPathFinder):
         spec = find_spec_ignoring_meta_path_finder(new_name)
         spec.name = fullname
         if fullname in cls.patched_modules and installed_extension != "diracx":
-            # Find the ModuleSpec for the extension's corrosponding _patch.py
+            # Find the ModuleSpec for the extension's corresponding _patch.py
             patch_name = f"{new_name}._patch"
             try:
                 patch_spec = find_spec_ignoring_meta_path_finder(patch_name)
