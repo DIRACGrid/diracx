@@ -263,7 +263,7 @@ async def reschedule_jobs(
     failed = {}
     reschedule_max = config.Operations[
         "Defaults"
-    ].Services.JobScheduling.MaxRescheduling  # type: ignore
+    ].Services.JobScheduling.MaxRescheduling
 
     status_changes = {}
     attribute_changes: dict[int, dict[str, str]] = defaultdict(dict)

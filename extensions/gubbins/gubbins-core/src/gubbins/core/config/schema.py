@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# mypy: disable-error-code="assignment"
 from typing import MutableMapping
 
 from diracx.core.config.schema import (
@@ -23,8 +24,8 @@ class UserConfig(_UserConfig):
 
 
 class RegistryConfig(_RegistryConfig):
-    Users: MutableMapping[str, UserConfig]  # type: ignore[assignment]
+    Users: MutableMapping[str, UserConfig]
 
 
 class Config(_Config):
-    Registry: MutableMapping[str, RegistryConfig]  # type: ignore[assignment]
+    Registry: MutableMapping[str, RegistryConfig]
