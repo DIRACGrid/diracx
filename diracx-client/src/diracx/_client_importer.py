@@ -49,6 +49,8 @@ class DiracXPathFinder(importlib.abc.MetaPathFinder):
     def _build_cache(cls):
         if not hasattr(cls, "_extension_name_cache"):
             installed_extension = get_extension_name()
+            # If we have an extension, we need to update the module names to
+            # include the extension's modules.
             if installed_extension not in [None, "diracx"]:
                 cls.patched_modules += [
                     f"{installed_extension}.{module.split('.', 1)[1]}"
@@ -343,11 +345,29 @@ def get_extension_name() -> str | None:
     extensions = set()
     for entry_point in selected.select(name="extension"):
         extensions.add(entry_point.module)
+    if len(extensions) == 0:
+        return None
+    if len(extensions) == 1:
+        return extensions.pop()
     if len(extensions) > 2:
         raise NotImplementedError(
             f"Expect to find either diracx or diracx + 1 extension: {extensions=}"
         )
-    return (sorted(extensions, key=lambda x: x == "diracx") + [None])[0]
+    installed_extension = min(extensions, key=lambda x: x == "diracx")
+    # We need to check if the extension provides a .client module, ignoring
+    # the DiracXPathFinder to avoid infinite recursion
+    parent_spec = importlib.util.find_spec(installed_extension)
+    if parent_spec is None:
+        raise ClientDefinitionError(f"Failed to find spec for {installed_extension}!")
+    client_name = f"{installed_extension}.client"
+    for finder in sys.meta_path:
+        if isinstance(finder, DiracXPathFinder):
+            continue
+        spec = finder.find_spec(client_name, parent_spec.submodule_search_locations)
+        if spec is not None:
+            return installed_extension
+    # We didn't find a client module, so fall back to the default client
+    return "diracx"
 
 
 sys.meta_path.insert(0, DiracXPathFinder())
