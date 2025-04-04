@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+__all__ = [
+    "regenerate_client",
+    "AUTOREST_VERSION",
+]
+
 import ast
 import importlib.util
 import subprocess
 from pathlib import Path
 
 import git
+
+AUTOREST_VERSION = "6.13.7"
 
 
 def extract_static_all(path):
@@ -63,7 +70,7 @@ def fixup_models_init(generated_dir, extension_name):
         )
 
 
-def regenerate_client(openapi_spec: Path, client_root: Path):
+def regenerate_client(openapi_spec: Path, client_module: str):
     """Regenerate the AutoREST client and run pre-commit checks on it.
 
     This test is skipped by default, and can be enabled by passing
@@ -75,6 +82,15 @@ def regenerate_client(openapi_spec: Path, client_root: Path):
 
     WARNING: This test will modify the source code of the client!
     """
+    spec = importlib.util.find_spec(client_module)
+    if spec is None:
+        raise ImportError("Cannot locate client_module package")
+    if spec.origin is None:
+        raise ImportError(
+            "Cannot locate client_module package, did you forget the __init__.py?"
+        )
+    client_root = Path(spec.origin).parent
+
     assert client_root.is_dir()
     assert client_root.name == "client"
     assert (client_root / "_generated").is_dir()
