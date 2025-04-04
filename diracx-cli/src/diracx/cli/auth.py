@@ -23,7 +23,7 @@ app = AsyncTyper()
 
 async def installation_metadata():
     async with DiracClient() as api:
-        return await api.well_known.installation_metadata()
+        return await api.well_known.get_installation_metadata()
 
 
 def vo_callback(vo: str | None) -> str:
