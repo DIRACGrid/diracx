@@ -6,6 +6,4 @@ __all__ = [
     "sync",
 ]
 
-# import diracx.client
-
 from . import aio, models, sync

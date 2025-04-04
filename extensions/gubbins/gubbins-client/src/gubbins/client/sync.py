@@ -14,5 +14,3 @@ class SyncGubbinsClient(Dirac):
 
 
 SyncDiracClient = SyncGubbinsClient
-# HACK: This exists for backwards compatibility
-DiracClient = SyncGubbinsClient

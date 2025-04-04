@@ -11,7 +11,3 @@ from ._generated import operations as sync_operations
 
 class SyncDiracClient(Dirac):
     pass
-
-
-# HACK: This exists for backwards compatibility
-DiracClient = SyncDiracClient
