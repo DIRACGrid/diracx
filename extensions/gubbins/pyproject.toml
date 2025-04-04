@@ -36,7 +36,7 @@ root = "../.."
 [tool.ruff]
 line-length = 120
 src = ["gubbins-*/src", "gubbins-*/tests"]
-exclude = ["gubbins-client/src/gubbins/client/generated"]
+exclude = ["gubbins-client/src/gubbins/client/_generated"]
 
 [tool.isort]
 profile = "black"

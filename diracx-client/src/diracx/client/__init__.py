@@ -1,7 +1,15 @@
-from .extensions import initialize_client
+from __future__ import absolute_import
 
-initialize_client()
+__all__ = [
+    "aio",
+    "models",
+    "sync",
+]
+
+from typing import TYPE_CHECKING
 
 
-from .generated import *  # pylint: disable=unused-wildcard-import
-from .patches import DiracClient
+if TYPE_CHECKING:
+    from . import aio
+    from . import models
+    from . import sync

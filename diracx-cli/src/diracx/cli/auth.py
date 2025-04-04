@@ -11,7 +11,7 @@ from typing import Annotated, Optional
 
 import typer
 
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import DeviceFlowErrorResponse
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.utils import read_credentials, write_credentials
@@ -22,7 +22,7 @@ app = AsyncTyper()
 
 
 async def installation_metadata():
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         return await api.well_known.get_installation_metadata()
 
 
@@ -77,7 +77,7 @@ async def login(
         scopes += [f"property:{p}" for p in property]
 
     print(f"Logging in with scopes: {scopes}")
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         data = await api.auth.initiate_device_flow(
             client_id=api.client_id,
             scope=" ".join(scopes),
@@ -109,7 +109,7 @@ async def login(
 
 @app.async_command()
 async def whoami():
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         user_info = await api.auth.userinfo()
         # TODO: Add a RICH output format
         print(json.dumps(user_info.as_dict(), indent=2))
@@ -117,7 +117,7 @@ async def whoami():
 
 @app.async_command()
 async def logout():
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         credentials_path = get_diracx_preferences().credentials_path
         if credentials_path.exists():
             credentials = read_credentials(credentials_path)

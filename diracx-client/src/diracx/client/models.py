@@ -1,7 +1,4 @@
-from .generated.models import *  # pylint: disable=unused-wildcard-import
+from __future__ import absolute_import
 
-
-# TODO: replace with postprocess
-from .generated.models import DeviceFlowErrorResponse
-
-__all__ = ("DeviceFlowErrorResponse",)
+from ._generated.models import *
+from ._generated.models import __all__

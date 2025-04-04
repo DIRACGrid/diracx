@@ -1,7 +1,6 @@
 FROM ghcr.io/diracgrid/diracx/services:dev
 
 #Extension
-ENV DIRACX_EXTENSIONS="gubbins,diracx"
 ENV GUBBINS_IMAGE_PACKAGES=core,db,routers,client
 
 ARG EXTRA_PACKAGES_TO_INSTALL

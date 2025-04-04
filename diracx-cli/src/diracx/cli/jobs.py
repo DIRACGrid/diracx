@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from typer import FileText, Option
 
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
 from diracx.core.preferences import OutputFormats, get_diracx_preferences
 
@@ -66,7 +66,7 @@ async def search(
     per_page: int = 10,
 ):
     search_specs = [parse_condition(cond) for cond in condition]
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         jobs, content_range = await api.jobs.search(
             parameters=None if all else parameter,
             search=search_specs if search_specs else None,
@@ -151,7 +151,7 @@ def display_rich(data, content_range: ContentRange) -> None:
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
-    async with DiracClient() as api:
+    async with AsyncDiracClient() as api:
         jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"

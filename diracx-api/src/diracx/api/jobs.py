@@ -12,7 +12,7 @@ from typing import Literal
 
 import httpx
 
-from diracx.client.aio import DiracClient
+from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import SandboxInfo
 
 from .utils import with_client
@@ -25,7 +25,7 @@ SANDBOX_OPEN_MODE: Literal["w|bz2"] = "w|bz2"
 
 
 @with_client
-async def create_sandbox(paths: list[Path], *, client: DiracClient) -> str:
+async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
     """Create a sandbox from the given paths and upload it to the storage backend.
 
     Any paths that are directories will be added recursively.
@@ -75,7 +75,7 @@ async def create_sandbox(paths: list[Path], *, client: DiracClient) -> str:
 
 
 @with_client
-async def download_sandbox(pfn: str, destination: Path, *, client: DiracClient):
+async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracClient):
     """Download a sandbox from the storage backend to the given destination."""
     res = await client.jobs.get_sandbox_file(pfn=pfn)
     logger.debug("Downloading sandbox for %s", pfn)

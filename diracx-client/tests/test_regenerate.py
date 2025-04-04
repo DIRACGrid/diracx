@@ -1,18 +1,10 @@
 from __future__ import annotations
 
-import subprocess
-from pathlib import Path
-
-import git
 import pytest
 
-import diracx.client.generated
+from diracx.testing.client_generation import AUTOREST_VERSION, regenerate_client
 
 pytestmark = pytest.mark.enabled_dependencies([])
-# pytestmark = pytest.mark.enabled_dependencies(["ConfigSource", "AuthSettings"])
-
-
-AUTOREST_VERSION = "6.13.7"
 
 
 @pytest.fixture
@@ -35,49 +27,10 @@ def test_regenerate_client(test_client, tmp_path):
     """
     r = test_client.get("/api/openapi.json")
     r.raise_for_status()
-
     openapi_spec = tmp_path / "openapi.json"
     openapi_spec.write_text(r.text)
-    output_folder = Path(diracx.client.generated.__file__).parent
-    assert (output_folder).is_dir()
-    repo_root = output_folder.parents[4]
-    assert (repo_root / "diracx-client" / "src").is_dir()
-    assert (repo_root / ".git").is_dir()
-    repo = git.Repo(repo_root)
-    client_src = repo_root / "diracx-client" / "src" / "diracx" / "client"
-    if repo.is_dirty(path=client_src):
-        raise AssertionError(
-            "Client is currently in a modified state, skipping regeneration"
-        )
 
-    cmd = [
-        "autorest",
-        "--python",
-        f"--input-file={openapi_spec}",
-        "--models-mode=msrest",
-        "--namespace=generated",
-        f"--output-folder={output_folder.parent}",
-    ]
-
-    # This is required to be able to work offline
-    # TODO: if offline, find the version already installed
-    # and use it
-    # cmd += [f"--use=@autorest/python@{AUTOREST_VERSION}"]
-
-    subprocess.run(cmd, check=True)
-
-    cmd = ["pre-commit", "run", "--all-files"]
-    print("Running pre-commit...")
-    subprocess.run(cmd, check=False, cwd=repo_root)
-    print("Re-running pre-commit...")
-    proc = subprocess.run(cmd, check=False, cwd=repo_root)
-    if proc.returncode == 0 and not repo.is_dirty(path=client_src):
-        return
-    # Show the diff to aid debugging
-    print(repo.git.diff(client_src))
-    if proc.returncode != 0:
-        raise AssertionError("Pre-commit failed")
-    raise AssertionError("Client was regenerated with changes")
+    regenerate_client(openapi_spec, "diracx.client")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
-"""
-This init file exposes what we want exported, as well as initializate the client extension magic
-"""
+from __future__ import absolute_import
 
-# This must be here in order to initialize the MetaPathFinder
-import diracx.client  # noqa
+__all__ = [
+    "aio",
+    "models",
+    "sync",
+]
 
-from .generated import *  # pylint: disable=unused-wildcard-import # noqa
-from .patches import GubbinsClient  # noqa
+from . import aio, models, sync

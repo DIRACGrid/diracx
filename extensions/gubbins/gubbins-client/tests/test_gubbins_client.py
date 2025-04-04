@@ -3,10 +3,10 @@ These tests make sure that we can access all the original client as well as the 
 We do it in subprocesses to avoid conflict between the MetaPathFinder and pytest test discovery
 """
 
-import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -38,141 +38,65 @@ def fake_cli_env(monkeypatch, tmp_path):
     get_diracx_preferences.cache_clear()
 
 
-def test_client_extension(fake_cli_env, tmp_path):
+@pytest.mark.parametrize(
+    "import_name,object_name",
+    [
+        ("diracx.client.aio", "AsyncDiracClient"),
+        ("diracx.client.sync", "SyncDiracClient"),
+        ("gubbins.client.aio", "AsyncGubbinsClient"),
+        ("gubbins.client.sync", "SyncGubbinsClient"),
+    ],
+)
+def test_client_extension(fake_cli_env, tmp_path, import_name, object_name):
     """
     Make sure that the DiracClient can call gubbins routes
 
     We run the test as a separate python script to make sure that MetaPathFinder
     behaves as expected in a normal python code, and not inside pytest
     """
-    test_code = """
-from diracx.client import DiracClient
-with DiracClient() as api:
-    print(f"{api.jobs=}")
-    assert "diracx.client.generated.operations._patch.JobsOperations" in str(api.jobs)
-    print(f"{api.lollygag=}")
-    assert "gubbins.client.generated.operations._operations.LollygagOperations" in str(api.lollygag)
-
-"""
-    with open(tmp_path / "test_client_ext.py", "wt") as f:
-        f.write(test_code)
-    try:
-        with open(tmp_path / "std.out", "wt") as f:
-
-            subprocess.run(  # noqa
-                [shutil.which("python"), tmp_path / "test_client_ext.py"],
-                env=os.environ,
-                text=True,
-                stdout=f,
-                stderr=f,
-                check=True,
-            )
-    except subprocess.CalledProcessError as e:
-        raise AssertionError(Path(tmp_path / "std.out").read_text()) from e
-
-
-def test_gubbins_client(fake_cli_env, tmp_path):
-    """Make sure that we can use the GubbinsClient directly
-
-    We run the test as a separate python script to make sure that MetaPathFinder
-    behaves as expected in a normal python code, and not inside pytest
-    """
-
-    test_code = """
-from gubbins.client import GubbinsClient
-with GubbinsClient() as api:
-    print(f"{api.jobs=}")
-    assert "diracx.client.generated.operations._patch.JobsOperations" in str(api.jobs)
-    print(f"{api.lollygag=}")
-    assert "gubbins.client.generated.operations._operations.LollygagOperations" in str(api.lollygag)
-
-"""
-    with open(tmp_path / "test_client_ext.py", "wt") as f:
-        f.write(test_code)
-    try:
-        with open(tmp_path / "std.out", "wt") as f:
-            subprocess.run(  # noqa
-                [shutil.which("python"), tmp_path / "test_client_ext.py"],
-                env=os.environ,
-                text=True,
-                stdout=f,
-                stderr=f,
-                check=True,
-            )
-    except subprocess.CalledProcessError as e:
-        raise AssertionError(Path(tmp_path / "std.out").read_text()) from e
-
-
-def test_async_client_extension(fake_cli_env, tmp_path):
-    """
-    Make sure that the DiracClient can call gubbins routes
-
-    We run the test as a separate python script to make sure that MetaPathFinder
-    behaves as expected in a normal python code, and not inside pytest
-    """
-    test_code = """
-
+    is_async = object_name.startswith("Async")
+    real_object_name = object_name.replace("Dirac", "Gubbins")
+    aio_or_sync = "aio" if is_async else "sync"
+    test_code = f"""
 import asyncio
+from {import_name} import {object_name} as TestClass
 
 async def main():
-    from diracx.client.aio import DiracClient
-    async with DiracClient() as api:
-        print(f"{api.jobs=}")
-        assert "diracx.client.generated.aio.operations._patch.JobsOperations" in str(api.jobs)
-        print(f"{api.lollygag=}")
-        assert "gubbins.client.generated.aio.operations._operations.LollygagOperations" in str(api.lollygag)
-asyncio.run(main())
+    if TestClass.__name__ != {real_object_name!r}:
+        raise ValueError(f"Expected {real_object_name} but got {{api.__class__.__name__}}")
 
+    mro = [x.__module__ for x in TestClass.__mro__]
+    print(f"{{TestClass.__mro__=}}")
+    print(f"{{mro=}}")
+
+    a = 'gubbins.client._generated{'.aio' if is_async else ''}._patch'
+    b = 'diracx.client.patches.client.{aio_or_sync}'
+    c = 'gubbins.client._generated{'.aio' if is_async else ''}._client'
+    d = 'builtins'
+
+    assert mro[0] == "gubbins.client.{aio_or_sync}", mro
+    assert mro.index(a) < mro.index(b)
+    assert mro.index(b) < mro.index(c)
+    assert mro.index(c) < mro.index(d)
+
+    {'async ' if is_async else ''}with TestClass() as api:
+        print(f"{{api.jobs=}}")
+        print(f"{{api.lollygag=}}")
+
+    # Do the print without spaces to make it unabiguous to read in the output
+    print("All", "is", "okay")
+
+if __name__ == "__main__":
+    asyncio.run(main())
 """
-    with open(tmp_path / "test_client_ext.py", "wt") as f:
-        f.write(test_code)
-    try:
-        with open(tmp_path / "std.out", "wt") as f:
 
-            subprocess.run(  # noqa
-                [shutil.which("python"), tmp_path / "test_client_ext.py"],
-                env=os.environ,
-                text=True,
-                stdout=f,
-                stderr=f,
-                check=True,
-            )
-    except subprocess.CalledProcessError as e:
-        raise AssertionError(Path(tmp_path / "std.out").read_text()) from e
-
-
-def test_async_gubbins_client(fake_cli_env, tmp_path):
-    """Make sure that we can use the GubbinsClient directly
-
-    We run the test as a separate python script to make sure that MetaPathFinder
-    behaves as expected in a normal python code, and not inside pytest
-    """
-
-    test_code = """
-
-import asyncio
-
-async def main():
-    from gubbins.client.aio import GubbinsClient
-    async with GubbinsClient() as api:
-        print(f"{api.jobs=}")
-        assert "diracx.client.generated.aio.operations._patch.JobsOperations" in str(api.jobs)
-        print(f"{api.lollygag=}")
-        assert "gubbins.client.generated.aio.operations._operations.LollygagOperations" in str(api.lollygag)
-asyncio.run(main())
-
-"""
-    with open(tmp_path / "test_client_ext.py", "wt") as f:
-        f.write(test_code)
-    try:
-        with open(tmp_path / "std.out", "wt") as f:
-            subprocess.run(  # noqa
-                [shutil.which("python"), tmp_path / "test_client_ext.py"],
-                env=os.environ,
-                text=True,
-                stdout=f,
-                stderr=f,
-                check=True,
-            )
-    except subprocess.CalledProcessError as e:
-        raise AssertionError(Path(tmp_path / "std.out").read_text()) from e
+    script_path = tmp_path / "test_client_ext.py"
+    script_path.write_text(test_code)
+    proc = subprocess.run(  # noqa: S603
+        [sys.executable, script_path], text=True, check=False, capture_output=True
+    )
+    if proc.returncode != 0:
+        print(proc.stdout)
+        print(proc.stderr)
+    assert proc.returncode == 0
+    assert "All is okay" in proc.stdout
