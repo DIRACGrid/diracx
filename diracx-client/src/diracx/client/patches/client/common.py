@@ -9,23 +9,18 @@ __all__ = [
 import fcntl
 import json
 import os
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
 from enum import Enum
-from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TextIO
 from urllib import parse
 
 import httpx
 import jwt
 from azure.core.credentials import AccessToken
-from azure.core.credentials import TokenCredential
-from azure.core.pipeline import PipelineRequest
-from azure.core.pipeline.policies import BearerTokenCredentialPolicy
-from diracx.core.models import TokenResponse
-from diracx.core.preferences import DiracxPreferences, get_diracx_preferences
 from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
+from diracx.core.models import TokenResponse
 
 
 class TokenStatus(Enum):
@@ -39,6 +34,19 @@ class TokenResult:
     status: TokenStatus
     access_token: AccessToken | None = None
     refresh_token: str | None = None
+
+
+def get_openid_configuration(
+    endpoint: str, *, verify: bool | str = True
+) -> dict[str, str]:
+    """Get the openid configuration from the .well-known endpoint"""
+    response = httpx.get(
+        url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
+        verify=verify,
+    )
+    if not response.is_success:
+        raise RuntimeError("Cannot fetch any information from the .well-known endpoint")
+    return response.json()
 
 
 def get_token(
@@ -136,6 +144,14 @@ def refresh_token(
     )
 
 
+def is_token_valid(token: AccessToken) -> bool:
+    """Condition to get a new token"""
+    return (
+        datetime.fromtimestamp(token.expires_on, tz=timezone.utc)
+        - datetime.now(tz=timezone.utc)
+    ).total_seconds() > 300
+
+
 def extract_token_from_credentials(
     token_file_descriptor: TextIO, token: AccessToken | None
 ) -> TokenResult:
@@ -178,145 +194,3 @@ def is_refresh_token_valid(refresh_token: str | None) -> bool:
 
     # Check the expiration time
     return refresh_payload["exp"] > datetime.now(tz=timezone.utc).timestamp()
-
-
-def is_token_valid(token: AccessToken) -> bool:
-    """Condition to get a new token"""
-    return (
-        datetime.fromtimestamp(token.expires_on, tz=timezone.utc)
-        - datetime.now(tz=timezone.utc)
-    ).total_seconds() > 300
-
-
-class DiracTokenCredential(TokenCredential):
-    """Tailor get_token() for our context"""
-
-    def __init__(
-        self,
-        location: Path,
-        token_endpoint: str,
-        client_id: str,
-        *,
-        verify: bool | str = True,
-    ) -> None:
-        self.location = location
-        self.verify = verify
-        self.token_endpoint = token_endpoint
-        self.client_id = client_id
-
-    def get_token(
-        self,
-        *scopes: str,
-        claims: str | None = None,
-        tenant_id: str | None = None,
-        **kwargs: Any,
-    ) -> AccessToken:
-        return get_token(
-            self.location,
-            kwargs.get("token"),
-            self.token_endpoint,
-            self.client_id,
-            self.verify,
-        )
-
-
-class DiracBearerTokenCredentialPolicy(BearerTokenCredentialPolicy):
-    """Custom BearerTokenCredentialPolicy tailored for our use case.
-
-    * It does not ensure the connection is done through https.
-    * It does not ensure that an access token is available.
-    """
-
-    _token: AccessToken | None = None
-
-    def __init__(
-        self, credential: DiracTokenCredential, *scopes: str, **kwargs: Any
-    ) -> None:
-        super().__init__(credential, *scopes, **kwargs)
-
-    def on_request(self, request: PipelineRequest) -> None:
-        """Authorization Bearer is optional here.
-        :param request: The pipeline request object to be modified.
-        :type request: ~azure.core.pipeline.PipelineRequest
-        :raises: :class:`~azure.core.exceptions.ServiceRequestError`
-        """
-        if not isinstance(self._credential, TokenCredential):
-            raise NotImplementedError("Credential is not a TokenCredential!")
-
-        self._token = self._credential.get_token("", token=self._token)
-        if not self._token.token:
-            # If we are here, it means the token is not available
-            # we suppose it is not needed to perform the request
-            return
-
-        self._update_headers(request.http_request.headers, self._token.token)
-
-
-def get_openid_configuration(
-    endpoint: str, *, verify: bool | str = True
-) -> dict[str, str]:
-    """Get the openid configuration from the .well-known endpoint"""
-    response = httpx.get(
-        url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
-        verify=verify,
-    )
-    if not response.is_success:
-        raise RuntimeError("Cannot fetch any information from the .well-known endpoint")
-    return response.json()
-
-
-class DiracAuthMixin:
-    def __init__(
-        self,
-        *,
-        endpoint: str | None = None,
-        client_id: str | None = None,
-        diracx_preferences: DiracxPreferences | None = None,
-        verify: bool | str = True,
-        **kwargs: Any,
-    ) -> None:
-        diracx_preferences = diracx_preferences or get_diracx_preferences()
-        self._endpoint = str(endpoint or diracx_preferences.url)
-        if verify is True and diracx_preferences.ca_path:
-            verify = str(diracx_preferences.ca_path)
-        kwargs["connection_verify"] = verify
-        self._client_id = client_id or "myDIRACClientID"
-
-        # Get .well-known configuration
-        openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
-
-        try:
-            self.client_version = distribution("diracx").version
-        except PackageNotFoundError:
-            try:
-                self.client_version = distribution("diracx-client").version
-            except PackageNotFoundError:
-                print("Error while getting client version")
-                self.client_version = "Unknown"
-
-        # Setting default headers
-        kwargs.setdefault("base_headers", {})[
-            "DiracX-Client-Version"
-        ] = self.client_version
-
-        # Initialize Dirac with a Dirac-specific token credential policy
-        authentication_policy = DiracBearerTokenCredentialPolicy(
-            DiracTokenCredential(
-                location=diracx_preferences.credentials_path,
-                token_endpoint=openid_configuration["token_endpoint"],
-                client_id=self._client_id,
-                verify=verify,
-            ),
-        )
-
-        # Need to use type: ignore[call-arg] as this class is a mixin and mypy
-        # is unaware of the behavior of the super class
-        super().__init__(  # type: ignore[call-arg]
-            endpoint=self._endpoint,
-            authentication_policy=authentication_policy,
-            **kwargs,
-        )
-
-    @property
-    def client_id(self):
-        return self._client_id
