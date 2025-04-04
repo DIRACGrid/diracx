@@ -46,9 +46,12 @@ class DiracXPathFinder(importlib.abc.MetaPathFinder):
     client_modules = ("diracx.client",)
 
     @classmethod
-    def _build_cache(cls):
+    def _build_cache(cls, fullname):
         if not hasattr(cls, "_extension_name_cache"):
-            installed_extension = get_extension_name()
+            try:
+                installed_extension = get_extension_name(fullname)
+            except RetryableError:
+                return None
             # If we have an extension, we need to update the module names to
             # include the extension's modules.
             if installed_extension not in [None, "diracx"]:
@@ -70,7 +73,7 @@ class DiracXPathFinder(importlib.abc.MetaPathFinder):
         # cache until we're confident we need it.
         if not (".client." in fullname or fullname.endswith(".client")):
             return None
-        installed_extension = cls._build_cache()
+        installed_extension = cls._build_cache(fullname)
         if not fullname.startswith(cls.client_modules):
             return None
         if not installed_extension:
@@ -294,7 +297,9 @@ class DiracXPatchLoader(DiracXAliasLoader):
 class ClientDefinitionError(Exception):
     """Raised when a diracx.client or a extension thereof is malformed."""
 
-    pass
+
+class RetryableError(Exception):
+    """Raised when we're in an invalid state but we shouldn't fail catastrophically."""
 
 
 def find_spec_ignoring_meta_path_finder(name, target=None):
@@ -330,7 +335,7 @@ def find_spec_ignoring_meta_path_finder(name, target=None):
     raise ClientDefinitionError(f"Could not find {name}")
 
 
-def get_extension_name() -> str | None:
+def get_extension_name(fullname: str) -> str | None:
     """Yield extension module names in order of priority.
 
     NOTE: This function is duplicated in diracx._client_importer to avoid
@@ -350,9 +355,15 @@ def get_extension_name() -> str | None:
     if len(extensions) == 1:
         return extensions.pop()
     if len(extensions) > 2:
-        raise NotImplementedError(
-            f"Expect to find either diracx or diracx + 1 extension: {extensions=}"
-        )
+        if fullname.startswith(tuple(extensions)):
+            raise NotImplementedError(
+                f"Expect to find either diracx or diracx + 1 extension: {extensions=}"
+            )
+        else:
+            # We're in an invalid state however the user hasn't yet tried to use
+            # DiracX so raise a RetryableError to avoid completely breaking
+            # the current Python installation.
+            raise RetryableError()
     installed_extension = min(extensions, key=lambda x: x == "diracx")
     # We need to check if the extension provides a .client module, ignoring
     # the DiracXPathFinder to avoid infinite recursion
