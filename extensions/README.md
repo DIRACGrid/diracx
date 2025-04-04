@@ -4,15 +4,25 @@
 `gubbins` is a `diracx` extension. It is a show-case for everything which is possible to extend.
 
 It should also serve as a reference doc on how to write your own extension. Everything in the `diracx` dev documentation applies here too.
-
 If you write your own extension, just replace `gubbins` with whatever name you chose (e.g. `lhcbdiracx`, `belle2diracx`, `donotforgetgriddpp`).
-
 The structure of the repo, the content of the `pyproject.toml` files, the `__init__` of the modules... are all skeletons that you must reproduce.
+It is not required to reproduce all submodules (e.g. you can have `myextension-cli` without having any other components).
 
-Extensions are controled via:
-* the entrypoints found in the various `pyproject.toml`
+Most functionality is managed via entrypoints in the various `pyproject.toml` files.
+The only essential one to have is:
 
-This here is the exhaustive list of what is supported and tested for extensions. Any usecase not listed here is not supported.
+```toml
+[project.entry-points."diracx"]
+extension = "myextension"
+```
+
+We recommend putting this in `myextension-core` however it is possible to include it any of your packages.
+It is also acceptably to include it in multiple packages.
+
+This here is the exhaustive list of what is supported and tested for extensions.
+Any use cases not listed here are not supported, if you thing you need additional functionality please open an issue to discuss so it can be added here to assist with long term stability.
+
+NOTE: This documentation is still a work in progress!!!
 
 
 ## QUESTIONS
@@ -121,13 +131,6 @@ autorest --python --input-file=/tmp/openapi.json --models-mode=msrest --namespac
 * The [top init](gubbins/gubbins-client/src/gubbins/client/__init__.py) MUST have
 ```python
 import diracx.client
-```
-* Redefine the entrypoint
-
-```toml
-[project.entry-points."diracx"]
-client_class = "gubbins.client.generated._client:Dirac"
-aio_client_class = "gubbins.client.generated.aio._client:Dirac"
 ```
 
 * Generate the autorest client (see CI `regenerate_client`)

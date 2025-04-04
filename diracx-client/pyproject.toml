@@ -19,10 +19,6 @@ dynamic = ["version"]
 testing = ["diracx-testing"]
 types = []
 
-[project.entry-points."diracx"]
-client_class = "diracx.client.generated._client:Dirac"
-aio_client_class = "diracx.client.generated.aio._client:Dirac"
-
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
