@@ -569,7 +569,7 @@ async def add_heartbeat(
             )
         }
         for result in results
-        if result["Status"] in [JobStatus.RUNNING, JobStatus.STALLED]
+        if result["Status"] in [JobStatus.MATCHED, JobStatus.STALLED]
     }
 
     async with TaskGroup() as tg:
@@ -588,9 +588,7 @@ async def add_heartbeat(
         for job_id, job_data in data.items():
             sql_data = {}
             os_data = {}
-            for key, value in job_data.model_dump().items():
-                if value is None:
-                    continue
+            for key, value in job_data.model_dump(exclude_defaults=True).items():
                 if key in job_db.heartbeat_fields:
                     sql_data[key] = value
                 else:
