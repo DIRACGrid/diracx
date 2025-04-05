@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+__all__ = [
+    "remove_jobs",
+    "set_job_statuses",
+    "reschedule_jobs",
+    "remove_jobs_from_task_queue",
+    "set_job_parameters_or_attributes",
+    "add_heartbeat",
+    "get_job_commands",
+]
+
 import logging
+from asyncio import TaskGroup
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Iterable
 from unittest.mock import MagicMock
 
 from DIRAC.Core.Utilities import TimeUtilities
@@ -20,6 +31,8 @@ from DIRAC.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 
 from diracx.core.config.schema import Config
 from diracx.core.models import (
+    HeartbeatData,
+    JobCommand,
     JobLoggingRecord,
     JobMinorStatus,
     JobStatus,
@@ -75,6 +88,7 @@ async def set_job_statuses(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
+    job_parameters_db: JobParametersDB,
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
@@ -257,16 +271,17 @@ async def reschedule_jobs(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
+    job_parameters_db: JobParametersDB,
     reset_jobs: bool = False,
 ):
     """Reschedule given job."""
     failed = {}
     reschedule_max = config.Operations[
         "Defaults"
-    ].Services.JobScheduling.MaxRescheduling  # type: ignore
+    ].Services.JobScheduling.MaxRescheduling
 
     status_changes = {}
-    attribute_changes: dict[int, dict[str, str]] = defaultdict(dict)
+    attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
     jdl_changes = {}
 
     _, results = await job_db.search(
@@ -423,6 +438,7 @@ async def reschedule_jobs(
             job_db=job_db,
             job_logging_db=job_logging_db,
             task_queue_db=task_queue_db,
+            job_parameters_db=job_parameters_db,
             additional_attributes=attribute_changes,
         )
 
@@ -523,3 +539,73 @@ async def set_job_parameters_or_attributes(
                 int(job_id),
                 p_updates_,
             )
+
+
+async def add_heartbeat(
+    data: dict[int, HeartbeatData],
+    config: Config,
+    job_db: JobDB,
+    job_logging_db: JobLoggingDB,
+    task_queue_db: TaskQueueDB,
+    job_parameters_db: JobParametersDB,
+) -> None:
+    """Send a heart beat sign of life for a job jobID."""
+    # Find the current status of the jobs
+    search_query: VectorSearchSpec = {
+        "parameter": "JobID",
+        "operator": VectorSearchOperator.IN,
+        "values": list(data),
+    }
+    _, results = await job_db.search(
+        parameters=["Status", "JobID"], search=[search_query], sorts=[]
+    )
+    if len(results) != len(data):
+        raise ValueError(f"Failed to lookup job IDs: {data.keys()=} {results=}")
+    status_changes = {
+        int(result["JobID"]): {
+            datetime.now(timezone.utc): JobStatusUpdate(
+                Status=JobStatus.RUNNING,
+                Source="Heartbeat",
+            )
+        }
+        for result in results
+        if result["Status"] in [JobStatus.RUNNING, JobStatus.STALLED]
+    }
+
+    async with TaskGroup() as tg:
+        if status_changes:
+            tg.create_task(
+                set_job_statuses(
+                    status_changes=status_changes,
+                    config=config,
+                    job_db=job_db,
+                    job_logging_db=job_logging_db,
+                    task_queue_db=task_queue_db,
+                    job_parameters_db=job_parameters_db,
+                )
+            )
+
+        for job_id, job_data in data.items():
+            sql_data = {}
+            os_data = {}
+            for key, value in job_data.model_dump().items():
+                if value is None:
+                    continue
+                if key in job_db.heartbeat_fields:
+                    sql_data[key] = value
+                else:
+                    os_data[key] = value
+
+            if sql_data:
+                tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
+
+            for key, value in os_data.items():
+                tg.create_task(job_parameters_db.upsert(job_id, {key: value}))
+
+
+async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:
+    """Get the pending job commands for a list of job IDs.
+
+    This function automatically marks the commands as "Sent" in the database.
+    """
+    return await job_db.get_job_commands(job_ids)

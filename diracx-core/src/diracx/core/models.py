@@ -254,3 +254,19 @@ class VOInfo(TypedDict):
 
 class Metadata(TypedDict):
     virtual_organizations: dict[str, VOInfo]
+
+
+class HeartbeatData(BaseModel):
+    load_average: float | None = None
+    memory_used: float | None = None
+    vsize: float | None = None
+    available_disk_space: float | None = None
+    cpu_consumed: float | None = None
+    wall_clock_time: float | None = None
+    standard_output: str | None = None
+
+
+class JobCommand(BaseModel):
+    job_id: int
+    command: Literal["Kill"]
+    arguments: str | None = None

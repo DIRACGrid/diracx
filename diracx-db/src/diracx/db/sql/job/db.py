@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+__all__ = ["JobDB"]
+
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterable
 
 from sqlalchemy import bindparam, case, delete, func, insert, select, update
 
@@ -9,13 +11,12 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import (
-    SearchSpec,
-    SortSpec,
-)
+from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
 from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints
+from ..utils.functions import utcnow
 from .schema import (
+    HeartBeatLoggingInfo,
     InputData,
     JobCommands,
     JobDBBase,
@@ -37,6 +38,16 @@ def _get_columns(table, parameters):
 
 class JobDB(BaseSQLDB):
     metadata = JobDBBase.metadata
+
+    # Field names which should be stored in the HeartBeatLoggingInfo table
+    heartbeat_fields = {
+        "LoadAverage",
+        "MemoryUsed",
+        "Vsize",
+        "AvailableDiskSpace",
+        "CPUConsumed",
+        "WallClockTime",
+    }
 
     # TODO: this is copied from the DIRAC JobDB
     # but is overwriten in LHCbDIRAC, so we need
@@ -197,7 +208,7 @@ class JobDB(BaseSQLDB):
 
         return {jobid: jdl for jobid, jdl in (await self.conn.execute(stmt)) if jdl}
 
-    async def set_job_commands(self, commands: list[tuple[int, str, str]]):
+    async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
         """Store a command to be passed to the job together with the next heart beat."""
         await self.conn.execute(
             insert(JobCommands),
@@ -246,3 +257,58 @@ class JobDB(BaseSQLDB):
         rows = await self.conn.execute(stmt, update_parameters)
 
         return rows.rowcount
+
+    async def add_heartbeat_data(
+        self, job_id: int, dynamic_data: dict[str, str]
+    ) -> None:
+        """Add the job's heartbeat data to the database.
+
+        NOTE: This does not update the HeartBeatTime column in the Jobs table.
+        This is instead handled by the `diracx.logic.jobs.status.set_job_statuses`
+        as it involves updating multiple databases.
+
+        :param job_id: the job id
+        :param dynamic_data: mapping of the dynamic data to store,
+            e.g. {"AvailableDiskSpace": 123}
+        """
+        if extra_fields := set(dynamic_data) - self.heartbeat_fields:
+            raise InvalidQueryError(
+                f"Not allowed to store heartbeat data for: {extra_fields}. "
+                f"Allowed keys are: {self.heartbeat_fields}"
+            )
+        values = [
+            {
+                "JobID": job_id,
+                "Name": key,
+                "Value": value,
+                "HeartBeatTime": utcnow(),
+            }
+            for key, value in dynamic_data.items()
+        ]
+        await self.conn.execute(HeartBeatLoggingInfo.__table__.insert().values(values))
+
+    async def get_job_commands(self, job_ids: Iterable[int]) -> list[JobCommand]:
+        """Get a command to be passed to the job together with the next heartbeat.
+
+        :param job_ids: the job ids
+        :return: mapping of job id to list of commands
+        """
+        # Get the commands
+        stmt = (
+            select(JobCommands.job_id, JobCommands.command, JobCommands.arguments)
+            .where(JobCommands.job_id.in_(job_ids), JobCommands.status == "Received")
+            .order_by(JobCommands.job_id)
+        )
+        commands = await self.conn.execute(stmt)
+        # Update the status of the commands
+        stmt = (
+            update(JobCommands)
+            .where(JobCommands.job_id.in_(job_ids))
+            .values(Status="Sent")
+        )
+        await self.conn.execute(stmt)
+        # Return the commands grouped by job id
+        return [
+            JobCommand(job_id=cmd.job_id, command=cmd.command, arguments=cmd.arguments)
+            for cmd in commands
+        ]
