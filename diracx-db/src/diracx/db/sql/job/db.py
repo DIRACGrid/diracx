@@ -309,6 +309,6 @@ class JobDB(BaseSQLDB):
         await self.conn.execute(stmt)
         # Return the commands grouped by job id
         return [
-            JobCommand(job_id=cmd.job_id, command=cmd.command, arguments=cmd.arguments)
+            JobCommand(job_id=cmd.JobID, command=cmd.Command, arguments=cmd.Arguments)
             for cmd in commands
         ]
