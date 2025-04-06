@@ -32,7 +32,7 @@ async def dummy_opensearch_db_without_template(dummy_opensearch_db: DummyOSDB):
 
 async def _get_test_index_mappings(dummy_opensearch_db: DummyOSDB):
     document_id = 1
-    index_name = dummy_opensearch_db.index_name(document_id)
+    index_name = dummy_opensearch_db.index_name("dummyvo", document_id)
 
     # At this point the index should not exist yet
     with pytest.raises(opensearchpy.exceptions.NotFoundError):

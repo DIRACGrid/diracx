@@ -18,8 +18,9 @@ class JobParametersDB(BaseOSDB):
         "Status": {"type": "keyword"},
         "JobType": {"type": "keyword"},
     }
-    index_prefix = "mysetup_elasticjobparameters_index_"
+    # TODO: Does this need to be configurable?
+    index_prefix = "job_parameters"
 
-    def index_name(self, doc_id: int) -> str:
-        # TODO: Remove setup and replace "123.0m" with "120m"?
-        return f"{self.index_prefix}_{doc_id // 1e6:.1f}m"
+    def index_name(self, vo, doc_id: int) -> str:
+        split = int(int(doc_id) // 1e6)
+        return f"{self.index_prefix}_{vo}_{split}m"
