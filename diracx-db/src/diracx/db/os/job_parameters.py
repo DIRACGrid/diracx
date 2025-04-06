@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from DIRAC.Core.Utilities import TimeUtilities
+
 from diracx.db.os.utils import BaseOSDB
 
 
@@ -24,3 +26,11 @@ class JobParametersDB(BaseOSDB):
     def index_name(self, vo, doc_id: int) -> str:
         split = int(int(doc_id) // 1e6)
         return f"{self.index_prefix}_{vo}_{split}m"
+
+    def upsert(self, vo, doc_id, document):
+        document = {
+            "JobID": doc_id,
+            "timestamp": TimeUtilities.toEpochMilliSeconds(),
+            **document,
+        }
+        return super().upsert(vo, doc_id, document)
