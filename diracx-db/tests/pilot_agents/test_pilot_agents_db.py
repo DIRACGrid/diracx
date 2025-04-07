@@ -38,10 +38,9 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
         pilot_reference = "pilot-reference-test"
-        await pilot_agents_db.register_new_pilot(
-            vo="pilot-vo",
-            pilot_job_reference=pilot_reference,
-            pilot_stamp="pilot-stamp",
+        await pilot_agents_db.add_pilot_references(
+            vo="lhcb",
+            pilot_ref=[pilot_reference],
             grid_type="grid-type",
         )
 
@@ -51,25 +50,25 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
             await pilot_agents_db.get_pilot_by_reference("I am a fake ref")
 
         # Set values
-        assert res["VO"] == "pilot-vo"
+        assert res["VO"] == "lhcb"
         assert res["PilotJobReference"] == pilot_reference
-        assert res["PilotStamp"] == "pilot-stamp"
         assert res["GridType"] == "grid-type"
-
-        # Default values
-        assert res["BenchMark"] == 0.0
-        assert res["Status"] == "Unknown"
 
 
 async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
         pilot_reference = "pilot-reference-test"
-        pilot_id = await pilot_agents_db.register_new_pilot(
-            vo="pilot-vo",
-            pilot_job_reference=pilot_reference,
-            pilot_stamp="pilot-stamp",
+        pilot_ids = await pilot_agents_db.add_pilot_references(
+            vo="lhcb",
+            pilot_ref=[pilot_reference],
+            grid_type="grid-type",
         )
+
+        assert len(pilot_ids) == 1
+
+        # Only one element
+        pilot_id = pilot_ids[0]
 
         secret = "AW0nd3rfulS3cr3t"
         pilot_hashed_secret = hash(secret)

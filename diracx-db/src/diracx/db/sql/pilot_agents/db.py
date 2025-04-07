@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Sequence
 
-from sqlalchemy import DateTime, insert, select, update
+from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
@@ -26,7 +27,7 @@ class PilotAgentsDB(BaseSQLDB):
         vo: str,
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
-    ) -> None:
+    ) -> Sequence:  # Return a list of primary keys
 
         if pilot_stamps is None:
             pilot_stamps = {}
@@ -47,10 +48,18 @@ class PilotAgentsDB(BaseSQLDB):
             for ref in pilot_ref
         ]
 
-        # Insert multiple rows in a single execute call
-        stmt = insert(PilotAgents).values(values)
-        await self.conn.execute(stmt)
-        return
+        # Insert multiple rows in a single execute call and use 'returning' to get primary keys
+        stmt = (
+            insert(PilotAgents).values(values).returning(PilotAgents.pilot_id)
+        )  # Assuming 'id' is the primary key
+        result = await self.conn.execute(stmt)
+
+        # Use .scalars() and .all() to get the primary keys directly in a list
+        primary_keys = (
+            result.scalars().all()
+        )  # This returns a flat list of primary keys
+
+        return primary_keys
 
     async def increment_pilot_secret_use(
         self,
@@ -99,32 +108,6 @@ class PilotAgentsDB(BaseSQLDB):
 
         # Increment the count
         await self.increment_pilot_secret_use(pilot_id=pilot_id)
-
-    async def register_new_pilot(
-        self,
-        vo: str,
-        pilot_job_reference: str,
-        pilot_stamp: str,
-        grid_type: str = "DIRAC",
-        submission_time: DateTime | None = None,  # ?
-        last_update_time: DateTime | None = None,  # = now?
-    ) -> int | None:
-        stmt = insert(PilotAgents).values(
-            vo=vo,
-            submission_time=submission_time,
-            last_update_time=last_update_time,
-            pilot_job_reference=pilot_job_reference,
-            grid_type=grid_type,
-            pilot_stamp=pilot_stamp,
-        )
-
-        # Execute the request
-        res = await self.conn.execute(stmt)
-
-        new_pilot_id = res.inserted_primary_key
-
-        # Returns the new pilot ID
-        return int(new_pilot_id[0]) if new_pilot_id else None
 
     async def add_pilot_credentials(self, pilot_id: int, pilot_hashed_secret: str):
 
