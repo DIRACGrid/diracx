@@ -256,14 +256,14 @@ class Metadata(TypedDict):
     virtual_organizations: dict[str, VOInfo]
 
 
-class HeartbeatData(BaseModel):
-    load_average: float | None = None
-    memory_used: float | None = None
-    vsize: float | None = None
-    available_disk_space: float | None = None
-    cpu_consumed: float | None = None
-    wall_clock_time: float | None = None
-    standard_output: str | None = None
+class HeartbeatData(BaseModel, extra="forbid"):
+    LoadAverage: float | None = None
+    MemoryUsed: float | None = None
+    Vsize: float | None = None
+    AvailableDiskSpace: float | None = None
+    CPUConsumed: float | None = None
+    WallClockTime: float | None = None
+    StandardOutput: str | None = None
 
 
 class JobCommand(BaseModel):

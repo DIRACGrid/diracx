@@ -532,13 +532,8 @@ async def set_job_parameters_or_attributes(
     if attr_updates:
         await job_db.set_job_attributes(attr_updates)
 
-    # TODO: can we upsert to multiple documents?
-    for job_id, p_updates_ in param_updates.items():
-        if p_updates_:
-            await job_parameters_db.upsert(
-                int(job_id),
-                p_updates_,
-            )
+    # Bulk set job parameters if required
+    await _insert_parameters(param_updates, job_parameters_db, job_db)
 
 
 async def add_heartbeat(
@@ -569,7 +564,7 @@ async def add_heartbeat(
             )
         }
         for result in results
-        if result["Status"] in [JobStatus.RUNNING, JobStatus.STALLED]
+        if result["Status"] in [JobStatus.MATCHED, JobStatus.STALLED]
     }
 
     async with TaskGroup() as tg:
@@ -585,22 +580,47 @@ async def add_heartbeat(
                 )
             )
 
+        os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
         for job_id, job_data in data.items():
             sql_data = {}
-            os_data = {}
-            for key, value in job_data.model_dump().items():
-                if value is None:
-                    continue
+            for key, value in job_data.model_dump(exclude_defaults=True).items():
                 if key in job_db.heartbeat_fields:
                     sql_data[key] = value
                 else:
-                    os_data[key] = value
+                    os_data_by_job_id[job_id][key] = value
 
             if sql_data:
                 tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
 
-            for key, value in os_data.items():
-                tg.create_task(job_parameters_db.upsert(job_id, {key: value}))
+        await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
+
+
+async def _insert_parameters(
+    updates: dict[int, dict[str, Any]],
+    job_parameters_db: JobParametersDB,
+    job_db: JobDB,
+) -> None:
+    """Upsert job parameters (if any) into the JobParametersDB.
+
+    This function takes a mapping of job_id -> parameters. If the parameters
+    dict is empty this is a no-op.
+    """
+    updates = {job_id: params for job_id, params in updates.items() if params}
+    if not updates:
+        return
+    # Get the VOs for the job IDs (required for the index template)
+    job_vos = await job_db.summary(
+        ["JobID", "VO"],
+        [{"parameter": "JobID", "operator": "in", "values": list(updates)}],
+    )
+    job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
+    # Upsert the parameters into the JobParametersDB
+    # TODO: can we do a bulk upsert instead
+    async with TaskGroup() as tg:
+        for job_id, job_params in updates.items():
+            tg.create_task(
+                job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
+            )
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:

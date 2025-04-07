@@ -123,30 +123,30 @@ class GroupInfo(_serialization.Model):
 class HeartbeatData(_serialization.Model):
     """HeartbeatData.
 
-    :ivar load_average: Load Average.
+    :ivar load_average: Loadaverage.
     :vartype load_average: float
-    :ivar memory_used: Memory Used.
+    :ivar memory_used: Memoryused.
     :vartype memory_used: float
     :ivar vsize: Vsize.
     :vartype vsize: float
-    :ivar available_disk_space: Available Disk Space.
+    :ivar available_disk_space: Availablediskspace.
     :vartype available_disk_space: float
-    :ivar cpu_consumed: Cpu Consumed.
+    :ivar cpu_consumed: Cpuconsumed.
     :vartype cpu_consumed: float
-    :ivar wall_clock_time: Wall Clock Time.
+    :ivar wall_clock_time: Wallclocktime.
     :vartype wall_clock_time: float
-    :ivar standard_output: Standard Output.
+    :ivar standard_output: Standardoutput.
     :vartype standard_output: str
     """
 
     _attribute_map = {
-        "load_average": {"key": "load_average", "type": "float"},
-        "memory_used": {"key": "memory_used", "type": "float"},
-        "vsize": {"key": "vsize", "type": "float"},
-        "available_disk_space": {"key": "available_disk_space", "type": "float"},
-        "cpu_consumed": {"key": "cpu_consumed", "type": "float"},
-        "wall_clock_time": {"key": "wall_clock_time", "type": "float"},
-        "standard_output": {"key": "standard_output", "type": "str"},
+        "load_average": {"key": "LoadAverage", "type": "float"},
+        "memory_used": {"key": "MemoryUsed", "type": "float"},
+        "vsize": {"key": "Vsize", "type": "float"},
+        "available_disk_space": {"key": "AvailableDiskSpace", "type": "float"},
+        "cpu_consumed": {"key": "CPUConsumed", "type": "float"},
+        "wall_clock_time": {"key": "WallClockTime", "type": "float"},
+        "standard_output": {"key": "StandardOutput", "type": "str"},
     }
 
     def __init__(
@@ -162,19 +162,19 @@ class HeartbeatData(_serialization.Model):
         **kwargs: Any,
     ) -> None:
         """
-        :keyword load_average: Load Average.
+        :keyword load_average: Loadaverage.
         :paramtype load_average: float
-        :keyword memory_used: Memory Used.
+        :keyword memory_used: Memoryused.
         :paramtype memory_used: float
         :keyword vsize: Vsize.
         :paramtype vsize: float
-        :keyword available_disk_space: Available Disk Space.
+        :keyword available_disk_space: Availablediskspace.
         :paramtype available_disk_space: float
-        :keyword cpu_consumed: Cpu Consumed.
+        :keyword cpu_consumed: Cpuconsumed.
         :paramtype cpu_consumed: float
-        :keyword wall_clock_time: Wall Clock Time.
+        :keyword wall_clock_time: Wallclocktime.
         :paramtype wall_clock_time: float
-        :keyword standard_output: Standard Output.
+        :keyword standard_output: Standardoutput.
         :paramtype standard_output: str
         """
         super().__init__(**kwargs)

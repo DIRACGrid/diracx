@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sqlalchemy.types as types
 from sqlalchemy import (
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -14,6 +14,36 @@ from sqlalchemy.orm import declarative_base
 from ..utils import Column, EnumBackedBool, NullColumn
 
 JobDBBase = declarative_base()
+
+
+class AccountedFlagEnum(types.TypeDecorator):
+    """Maps a ``AccountedFlagEnum()`` column to True/False in Python."""
+
+    impl = types.Enum
+    cache_ok: bool = True
+
+    def __init__(self) -> None:
+        super().__init__("True", "False", "Failed")
+
+    def process_bind_param(self, value, dialect) -> str:
+        if value is True:
+            return "True"
+        elif value is False:
+            return "False"
+        elif value == "Failed":
+            return "Failed"
+        else:
+            raise NotImplementedError(value, dialect)
+
+    def process_result_value(self, value, dialect) -> bool | str:
+        if value == "True":
+            return True
+        elif value == "False":
+            return False
+        elif value == "Failed":
+            return "Failed"
+        else:
+            raise NotImplementedError(f"Unknown {value=}")
 
 
 class Jobs(JobDBBase):
@@ -45,10 +75,7 @@ class Jobs(JobDBBase):
     user_priority = Column("UserPriority", Integer, default=0)
     reschedule_counter = Column("RescheduleCounter", Integer, default=0)
     verified_flag = Column("VerifiedFlag", EnumBackedBool(), default=False)
-    # TODO: Should this be True/False/"Failed"? Or True/False/Null?
-    accounted_flag = Column(
-        "AccountedFlag", Enum("True", "False", "Failed"), default="False"
-    )
+    accounted_flag = Column("AccountedFlag", AccountedFlagEnum(), default=False)
 
     __table_args__ = (
         Index("JobType", "JobType"),

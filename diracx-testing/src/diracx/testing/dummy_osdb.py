@@ -26,5 +26,5 @@ class DummyOSDB(BaseOSDB):
         self.index_prefix = f"dummy_{secrets.token_hex(8)}"
         super().__init__(*args, **kwargs)
 
-    def index_name(self, doc_id: int) -> str:
+    def index_name(self, vo: str, doc_id: int) -> str:
         return f"{self.index_prefix}-{doc_id // 1e6:.0f}m"

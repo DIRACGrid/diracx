@@ -77,7 +77,7 @@ class BaseOSDB(metaclass=ABCMeta):
     index_prefix: str
 
     @abstractmethod
-    def index_name(self, doc_id: int) -> str: ...
+    def index_name(self, vo: str, doc_id: int) -> str: ...
 
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
         self._client: AsyncOpenSearch | None = None
@@ -182,15 +182,20 @@ class BaseOSDB(metaclass=ABCMeta):
         )
         assert result["acknowledged"]
 
-    async def upsert(self, doc_id, document) -> None:
-        # TODO: Implement properly
+    async def upsert(self, vo: str, doc_id: int, document: Any) -> None:
+        index_name = self.index_name(vo, doc_id)
         response = await self.client.update(
-            index=self.index_name(doc_id),
+            index=index_name,
             id=doc_id,
             body={"doc": document, "doc_as_upsert": True},
             params=dict(retry_on_conflict=10),
         )
-        print(f"{response=}")
+        logger.debug(
+            "Upserted document %s in index %s with response: %s",
+            doc_id,
+            index_name,
+            response,
+        )
 
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None

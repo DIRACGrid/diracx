@@ -37,7 +37,7 @@ lollygag = "gubbins.routers.lollygag:router"
 ".well-known" = "gubbins.routers.well_known:router"
 
 [project.entry-points."diracx.access_policies"]
-lollygagAccessPolicy = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
+LollygagAccessPolicy = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
 
 
 [tool.setuptools.packages.find]
