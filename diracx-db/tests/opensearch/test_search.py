@@ -104,9 +104,9 @@ async def prefilled_db(request):
     """Fill the database with dummy records for testing."""
     impl = request.param
     async with resolve_fixtures_hack(request, impl) as dummy_opensearch_db:
-        await dummy_opensearch_db.upsert(798811211, DOC1)
-        await dummy_opensearch_db.upsert(998811211, DOC2)
-        await dummy_opensearch_db.upsert(798811212, DOC3)
+        await dummy_opensearch_db.upsert("dummyvo", 798811211, DOC1)
+        await dummy_opensearch_db.upsert("dummyvo", 998811211, DOC2)
+        await dummy_opensearch_db.upsert("dummyvo", 798811212, DOC3)
 
         # Force a refresh to make sure the documents are available
         if not impl == "sql_opensearch_db":

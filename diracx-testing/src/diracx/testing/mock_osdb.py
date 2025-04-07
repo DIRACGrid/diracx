@@ -86,7 +86,7 @@ class MockOSDBMixin:
         async with self._sql_db.engine.begin() as conn:
             await conn.run_sync(self._sql_db.metadata.create_all)
 
-    async def upsert(self, doc_id, document) -> None:
+    async def upsert(self, vo, doc_id, document) -> None:
         async with self._sql_db:
             values = {}
             for key, value in document.items():
