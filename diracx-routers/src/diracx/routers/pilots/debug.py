@@ -16,8 +16,8 @@ router = DiracxRouter(require_auth=False)
 @router.get("/info")
 async def get_pilot_info(
     check_permissions: RegisteredPilotAccessPolicyCallable,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    pilot_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
     await check_permissions()
 
-    return user_info
+    return pilot_info
