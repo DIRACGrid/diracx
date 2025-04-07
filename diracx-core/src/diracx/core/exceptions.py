@@ -104,3 +104,41 @@ class JobError(DiracError):
 
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
+
+
+class PilotNotFoundError(Exception):
+    def __init__(
+        self,
+        pilot_ref: str | None = None,
+        pilot_id: int | None = None,
+        detail: str | None = None,
+    ):
+        self.pilot_ref = pilot_ref
+        self.pilot_id = pilot_id
+        self.detail = detail
+        super().__init__(
+            "Pilot "
+            + (f"(Ref: {pilot_ref})" if pilot_ref else "")
+            + (f" (ID: {str(pilot_id)})" if pilot_id is not None else "")
+            + " not found"
+            + (f": {detail}" if detail else "")
+        )
+
+
+class PilotAlreadyExistsError(Exception):
+    def __init__(
+        self,
+        pilot_ref: str | None = None,  # Changed to str based on the format
+        pilot_id: int | None = None,
+        detail: str | None = None,
+    ):
+        self.pilot_ref = pilot_ref
+        self.pilot_id = pilot_id
+        self.detail = detail
+        super().__init__(
+            "Pilot "
+            + (f"(Ref: {pilot_ref})" if pilot_ref else "")
+            + (f" (ID: {str(pilot_id)})" if pilot_id is not None else "")
+            + " already exists"
+            + (f": {detail}" if detail else "")
+        )
