@@ -284,6 +284,28 @@ def build_auth_pilot_login_request(
     )
 
 
+def build_auth_refresh_pilot_tokens_request(
+    *, refresh_token: str, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/auth/pilot-refresh-token"
+
+    # Construct parameters
+    _params["refresh_token"] = _SERIALIZER.query("refresh_token", refresh_token, "str")
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
 def build_config_serve_config_request(
     *,
     if_modified_since: Optional[str] = None,
@@ -1520,6 +1542,60 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request = build_auth_pilot_login_request(
             pilot_job_reference=pilot_job_reference,
             pilot_secret=pilot_secret,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace
+    def refresh_pilot_tokens(self, *, refresh_token: str, **kwargs: Any) -> Any:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token against a token.
+
+        :keyword refresh_token: Required.
+        :paramtype refresh_token: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_auth_refresh_pilot_tokens_request(
+            refresh_token=refresh_token,
             headers=_headers,
             params=_params,
         )
