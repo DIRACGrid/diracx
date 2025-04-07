@@ -717,6 +717,54 @@ def build_lollygag_get_gubbins_secrets_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
+def build_pilot_set_job_statuses_request(
+    *, force: bool = False, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilot/status"
+
+    # Construct parameters
+    if force is not None:
+        _params["force"] = _SERIALIZER.query("force", force, "bool")
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="PATCH", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_pilot_patch_metadata_request(**kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    # Construct URL
+    _url = "/api/pilot/metadata"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+
+    return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
+
+
 class WellKnownOperations:
     """
     .. warning::
@@ -3177,3 +3225,264 @@ class LollygagOperations:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
+
+
+class PilotOperations:
+    """
+    .. warning::
+        **DO NOT** instantiate this class directly.
+
+        Instead, you should access the following operations through
+        :class:`~_generated.Dirac`'s
+        :attr:`pilot` attribute.
+    """
+
+    models = _models
+
+    def __init__(self, *args, **kwargs):
+        input_args = list(args)
+        self._client: PipelineClient = (
+            input_args.pop(0) if input_args else kwargs.pop("client")
+        )
+        self._config: DiracConfiguration = (
+            input_args.pop(0) if input_args else kwargs.pop("config")
+        )
+        self._serialize: Serializer = (
+            input_args.pop(0) if input_args else kwargs.pop("serializer")
+        )
+        self._deserialize: Deserializer = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
+        )
+
+    @overload
+    def set_job_statuses(
+        self,
+        body: Dict[str, Dict[str, _models.JobStatusUpdate]],
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.SetJobStatusReturn:
+        """Set Job Statuses.
+
+        Set Job Statuses.
+
+        :param body: Required.
+        :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def set_job_statuses(
+        self,
+        body: IO[bytes],
+        *,
+        force: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.SetJobStatusReturn:
+        """Set Job Statuses.
+
+        Set Job Statuses.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def set_job_statuses(
+        self,
+        body: Union[Dict[str, Dict[str, _models.JobStatusUpdate]], IO[bytes]],
+        *,
+        force: bool = False,
+        **kwargs: Any,
+    ) -> _models.SetJobStatusReturn:
+        """Set Job Statuses.
+
+        Set Job Statuses.
+
+        :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
+        :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
+        :keyword force: Default value is False.
+        :paramtype force: bool
+        :return: SetJobStatusReturn
+        :rtype: ~_generated.models.SetJobStatusReturn
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.SetJobStatusReturn] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{{JobStatusUpdate}}")
+
+        _request = build_pilot_set_job_statuses_request(
+            force=force,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "SetJobStatusReturn", pipeline_response.http_response
+        )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    def patch_metadata(
+        self,
+        body: Dict[str, Dict[str, Any]],
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> None:
+        """Patch Metadata.
+
+        Patch Metadata.
+
+        :param body: Required.
+        :type body: dict[str, dict[str, any]]
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def patch_metadata(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Patch Metadata.
+
+        Patch Metadata.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def patch_metadata(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[Dict[str, Dict[str, Any]], IO[bytes]], **kwargs: Any
+    ) -> None:
+        """Patch Metadata.
+
+        Patch Metadata.
+
+        :param body: Is either a {str: {str: Any}} type or a IO[bytes] type. Required.
+        :type body: dict[str, dict[str, any]] or IO[bytes]
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[None] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{{object}}")
+
+        _request = build_pilot_patch_metadata_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore

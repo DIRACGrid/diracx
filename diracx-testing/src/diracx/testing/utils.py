@@ -360,6 +360,29 @@ class ClientFactory:
             yield client
 
     @contextlib.contextmanager
+    def pilot(self):
+        from diracx.core.properties import GENERIC_PILOT, LIMITED_DELEGATION
+        from diracx.routers.auth.token import create_token
+
+        with self.unauthenticated() as client:
+            payload = {
+                "sub": "testingVO:yellow-sub",
+                "exp": datetime.now(tz=timezone.utc)
+                + timedelta(self.test_auth_settings.access_token_expire_minutes),
+                "iss": ISSUER,
+                "dirac_properties": [GENERIC_PILOT, LIMITED_DELEGATION],
+                "jti": str(uuid7()),
+                "preferred_username": "preferred_username",
+                "dirac_group": "test_group",
+                "vo": "lhcb",
+            }
+            token = create_token(payload, self.test_auth_settings)
+
+            client.headers["Authorization"] = f"Bearer {token}"
+            client.dirac_token_payload = payload
+            yield client
+
+    @contextlib.contextmanager
     def normal_user(self):
         from diracx.core.properties import NORMAL_USER
         from diracx.routers.auth.token import create_token

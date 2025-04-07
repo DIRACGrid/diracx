@@ -6,8 +6,11 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB, SandboxMetadataDB
+from diracx.core.properties import (
+    JOB_ADMINISTRATOR,
+    NORMAL_USER,
+)
+from diracx.db.sql import JobDB, PilotAgentsDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -41,16 +44,12 @@ class WMSAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
+        pilot_db: PilotAgentsDB | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
     ):
         assert action, "action is a mandatory parameter"
         assert job_db, "job_db is a mandatory parameter"
-
-        if action == ActionType.PILOT:
-            # TODO: For now we map this to MANAGE but it should be changed once
-            # we have pilot credentials
-            action = ActionType.MANAGE
 
         if action == ActionType.CREATE:
             if job_ids is not None:
