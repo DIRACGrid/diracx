@@ -5,7 +5,7 @@ __all__ = ["JobDB"]
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import bindparam, case, delete, func, insert, literal, select, update
+from sqlalchemy import bindparam, case, delete, func, literal, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
@@ -170,6 +170,11 @@ class JobDB(BaseSQLDB):
     async def set_job_attributes(self, job_data):
         """Update the parameters of the given jobs."""
         # TODO: add myDate and force parameters.
+
+        if not job_data:
+            # nothing to do!
+            raise ValueError("job_data is empty")
+
         for job_id in job_data.keys():
             if "Status" in job_data[job_id]:
                 job_data[job_id].update(
@@ -216,7 +221,7 @@ class JobDB(BaseSQLDB):
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
         """Store a command to be passed to the job together with the next heart beat."""
         await self.conn.execute(
-            insert(JobCommands),
+            JobCommands.__table__.insert(),
             [
                 {
                     "JobID": job_id,
