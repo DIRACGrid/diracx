@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from enum import StrEnum, auto
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -11,18 +10,6 @@ from diracx.core.properties import GENERIC_PILOT, LIMITED_DELEGATION
 from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
-
-
-class ActionType(StrEnum):
-    #: Create a job or a sandbox
-    CREATE = auto()
-    #: Check job status, download a sandbox
-    READ = auto()
-    #: delete, kill, remove, set status, etc of a job
-    #: delete or assign a sandbox
-    MANAGE = auto()
-    #: Search
-    QUERY = auto()
 
 
 class RegisteredPilotAccessPolicy(BaseAccessPolicy):

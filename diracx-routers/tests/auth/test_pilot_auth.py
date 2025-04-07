@@ -43,9 +43,16 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     async with db as pilot_agents_db:
         # Register a pilot
-        pilot_id = await pilot_agents_db.register_new_pilot(
-            vo=pilot_vo, pilot_job_reference=pilot_reference, pilot_stamp="pilot-stamp"
+        pilot_ids = await pilot_agents_db.add_pilot_references(
+            vo=pilot_vo,
+            pilot_ref=[pilot_reference],
+            grid_type="grid-type",
         )
+
+        assert len(pilot_ids) == 1
+
+        # Only one element
+        pilot_id = pilot_ids[0]
 
         # Add credentials to this pilot
         await pilot_agents_db.add_pilot_credentials(
@@ -116,3 +123,45 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_id / pilot_secret"
+
+    # ----------------- Exchange for new tokens -----------------
+    request_data = {"refresh_token": refresh_token}
+    r = test_client.post(
+        "/api/auth/pilot-refresh-token",
+        params=request_data,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert r.status_code == 200
+
+    new_access_token = r.json()["access_token"]
+    new_refresh_token = r.json()["refresh_token"]
+
+    # ----------------- Get info with new token -----------------
+    r = test_client.get(
+        "/api/pilots/info", headers={"Authorization": f"Bearer {new_access_token}"}
+    )
+
+    assert r.status_code == 200
+
+    # ----------------- Exchange token with old token -----------------
+    request_data = {"refresh_token": refresh_token}
+    r = test_client.post(
+        "/api/auth/pilot-refresh-token",
+        params=request_data,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert r.status_code == 401, r.json()
+
+    # ----------------- Exchange token with new token -----------------
+    request_data = {"refresh_token": new_refresh_token}
+    r = test_client.post(
+        "/api/auth/pilot-refresh-token",
+        params=request_data,
+        headers={"Authorization": f"Bearer {new_access_token}"},
+    )
+
+    # RFC6749
+    # https://datatracker.ietf.org/doc/html/rfc6749#section-10.4
+    assert r.status_code == 401, r.json()
