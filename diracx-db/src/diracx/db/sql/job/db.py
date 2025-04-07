@@ -167,6 +167,24 @@ class JobDB(BaseSQLDB):
             ],
         )
 
+    @staticmethod
+    def _set_job_attributes_fix_value(column, value):
+        """Apply corrections to the values before inserting them into the database.
+
+        TODO: Move this logic into the sqlalchemy model.
+        """
+        if column == "VerifiedFlag":
+            value_str = str(value)
+            if value_str in ("True", "False"):
+                return value_str
+        if column == "AccountedFlag":
+            value_str = str(value)
+            if value_str in ("True", "False", "Failed"):
+                return value_str
+        else:
+            return value
+        raise NotImplementedError(f"Unrecognized value for column {column}: {value}")
+
     async def set_job_attributes(self, job_data):
         """Update the parameters of the given jobs."""
         # TODO: add myDate and force parameters.
@@ -179,7 +197,10 @@ class JobDB(BaseSQLDB):
         case_expressions = {
             column: case(
                 *[
-                    (Jobs.__table__.c.JobID == job_id, attrs[column])
+                    (
+                        Jobs.__table__.c.JobID == job_id,
+                        self._set_job_attributes_fix_value(column, attrs[column]),
+                    )
                     for job_id, attrs in job_data.items()
                     if column in attrs
                 ],

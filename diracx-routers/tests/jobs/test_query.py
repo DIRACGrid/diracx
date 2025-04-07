@@ -779,6 +779,48 @@ def test_set_single_job_properties(normal_user_client: TestClient, valid_job_id:
     assert new_job_state["LastUpdateTime"] != initial_last_update_time
 
 
+@pytest.mark.parametrize(
+    "column_name,expected_initial,updated_values",
+    [
+        ("AccountedFlag", False, [True, False, "Failed", True, "Failed"]),
+        # "New"-style jobs are always inserted with VerifiedFlag=True, no idea why...
+        ("VerifiedFlag", True, [True, False, True]),
+    ],
+)
+def test_setting_flag(
+    normal_user_client: TestClient,
+    valid_job_id: int,
+    column_name: str,
+    expected_initial: bool | str,
+    updated_values: list[bool | str],
+):
+    search_query = {
+        "search": [
+            {
+                "parameter": "JobID",
+                "operator": "eq",
+                "value": valid_job_id,
+            }
+        ]
+    }
+
+    res = normal_user_client.post("/api/jobs/search", json=search_query)
+    assert res.status_code == 200, res.text
+    assert len(res.json()) == 1
+    assert res.json()[0][column_name] == expected_initial
+
+    for update in updated_values:
+        res = normal_user_client.patch(
+            "/api/jobs/metadata", json={valid_job_id: {column_name: update}}
+        )
+        assert res.status_code == 204, res.text
+
+        res = normal_user_client.post("/api/jobs/search", json=search_query)
+        assert res.status_code == 200, res.text
+        assert len(res.json()) == 1
+        assert res.json()[0][column_name] == update
+
+
 def test_set_single_job_properties_non_existing_job(
     normal_user_client: TestClient, invalid_job_id: int
 ):
