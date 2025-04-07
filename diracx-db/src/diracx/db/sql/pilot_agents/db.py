@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 
 from ..utils import BaseSQLDB
 from .schema import PilotAgents, PilotAgentsDBBase
@@ -43,4 +43,14 @@ class PilotAgentsDB(BaseSQLDB):
         # Insert multiple rows in a single execute call
         stmt = insert(PilotAgents).values(values)
         await self.conn.execute(stmt)
-        return
+
+    async def get_pilot_by_reference(self, pilot_ref: str):
+        stmt = select(PilotAgents).where(PilotAgents.pilot_job_reference == pilot_ref)
+
+        # Execute the query and fetch one result
+        result = await self.conn.execute(stmt)
+
+        # Get the first row, which should be the pilot if it exists
+        pilot = result.scalars().first()
+
+        return pilot
