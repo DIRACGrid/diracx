@@ -200,11 +200,13 @@ async def test_get_sandbox_owner_id(sandbox_metadata_db: SandboxMetadataDB):
         await sandbox_metadata_db.insert_sandbox(owner_id, sandbox_se, pfn, 100)
 
     async with sandbox_metadata_db:
-        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn)
+        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn, sandbox_se)
 
     assert owner_id == 1
     assert sb_owner_id == owner_id
 
     async with sandbox_metadata_db:
-        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id("not_found")
+        sb_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(
+            "not_found", sandbox_se
+        )
     assert sb_owner_id is None

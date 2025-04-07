@@ -98,6 +98,7 @@ async def get_sandbox_file(
         sandbox_metadata_db=sandbox_metadata_db,
         pfns=[short_pfn],
         required_prefix=required_prefix,
+        se_name=settings.se_name,
     )
 
     return await get_sandbox_file_bl(pfn, settings)

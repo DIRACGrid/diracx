@@ -118,6 +118,7 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         sandbox_metadata_db: SandboxMetadataDB | None = None,
         pfns: list[str] | None = None,
         required_prefix: str | None = None,
+        se_name: str | None = None,
     ):
         assert action, "action is a mandatory parameter"
         assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
@@ -140,6 +141,8 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                 raise NotImplementedError(
                     "required_prefix is None. This shouldn't happen"
                 )
+            if se_name is None:
+                raise NotImplementedError("se_name is None. This shouldn't happen")
             for pfn in pfns:
                 if not pfn.startswith(required_prefix):
                     raise HTTPException(
@@ -148,7 +151,9 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                     )
                 # Checking if the user owns the sandbox
                 owner_id = await sandbox_metadata_db.get_owner_id(user_info)
-                sandbox_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(pfn)
+                sandbox_owner_id = await sandbox_metadata_db.get_sandbox_owner_id(
+                    pfn, se_name
+                )
                 if not owner_id or owner_id != sandbox_owner_id:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
