@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sqlalchemy.types as types
 from sqlalchemy import (
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -10,6 +9,8 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import declarative_base
+
+from diracx.db.sql.utils.types import StringParsingDateTime
 
 from ..utils import Column, EnumBackedBool, NullColumn
 
@@ -19,11 +20,8 @@ JobDBBase = declarative_base()
 class AccountedFlagEnum(types.TypeDecorator):
     """Maps a ``AccountedFlagEnum()`` column to True/False in Python."""
 
-    impl = types.Enum
+    impl = types.Enum("True", "False", "Failed", name="accounted_flag_enum")
     cache_ok: bool = True
-
-    def __init__(self) -> None:
-        super().__init__("True", "False", "Failed")
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:
@@ -63,12 +61,12 @@ class Jobs(JobDBBase):
     owner = Column("Owner", String(64), default="Unknown")
     owner_group = Column("OwnerGroup", String(128), default="Unknown")
     vo = Column("VO", String(32))
-    submission_time = NullColumn("SubmissionTime", DateTime)
-    reschedule_time = NullColumn("RescheduleTime", DateTime)
-    last_update_time = NullColumn("LastUpdateTime", DateTime)
-    start_exec_time = NullColumn("StartExecTime", DateTime)
-    heart_beat_time = NullColumn("HeartBeatTime", DateTime)
-    end_exec_time = NullColumn("EndExecTime", DateTime)
+    submission_time = NullColumn("SubmissionTime", StringParsingDateTime)
+    reschedule_time = NullColumn("RescheduleTime", StringParsingDateTime)
+    last_update_time = NullColumn("LastUpdateTime", StringParsingDateTime)
+    start_exec_time = NullColumn("StartExecTime", StringParsingDateTime)
+    heart_beat_time = NullColumn("HeartBeatTime", StringParsingDateTime)
+    end_exec_time = NullColumn("EndExecTime", StringParsingDateTime)
     status = Column("Status", String(32), default="Received")
     minor_status = Column("MinorStatus", String(128), default="Unknown")
     application_status = Column("ApplicationStatus", String(255), default="Unknown")
@@ -143,7 +141,7 @@ class HeartBeatLoggingInfo(JobDBBase):
     )
     name = Column("Name", String(100), primary_key=True)
     value = Column("Value", Text)
-    heart_beat_time = Column("HeartBeatTime", DateTime, primary_key=True)
+    heart_beat_time = Column("HeartBeatTime", StringParsingDateTime, primary_key=True)
 
 
 class JobCommands(JobDBBase):
@@ -154,5 +152,5 @@ class JobCommands(JobDBBase):
     command = Column("Command", String(100))
     arguments = Column("Arguments", String(100))
     status = Column("Status", String(64), default="Received")
-    reception_time = Column("ReceptionTime", DateTime, primary_key=True)
-    execution_time = NullColumn("ExecutionTime", DateTime)
+    reception_time = Column("ReceptionTime", StringParsingDateTime, primary_key=True)
+    execution_time = NullColumn("ExecutionTime", StringParsingDateTime)
