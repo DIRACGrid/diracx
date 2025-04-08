@@ -551,14 +551,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def revoke_refresh_token(self, jti: str, **kwargs: Any) -> str:
+    async def revoke_refresh_token(self, *, refresh_token: str, **kwargs: Any) -> str:
         """Revoke Refresh Token.
 
         Revoke a refresh token. If the user has the ``proxy_management`` property, then
         the subject is not used to filter the refresh tokens.
 
-        :param jti: Required.
-        :type jti: str
+        :keyword refresh_token: Required.
+        :paramtype refresh_token: str
         :return: str
         :rtype: str
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -577,7 +577,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         cls: ClsType[str] = kwargs.pop("cls", None)
 
         _request = build_auth_revoke_refresh_token_request(
-            jti=jti,
+            refresh_token=refresh_token,
             headers=_headers,
             params=_params,
         )
