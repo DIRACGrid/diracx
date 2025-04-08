@@ -163,23 +163,26 @@ def build_auth_get_refresh_tokens_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_auth_revoke_refresh_token_request(jti: str, **kwargs: Any) -> HttpRequest:
+def build_auth_revoke_refresh_token_request(
+    *, refresh_token: str, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/auth/refresh-tokens/{jti}"
-    path_format_arguments = {
-        "jti": _SERIALIZER.url("jti", jti, "str"),
-    }
+    _url = "/api/auth/refresh-tokens"
 
-    _url: str = _url.format(**path_format_arguments)  # type: ignore
+    # Construct parameters
+    _params["refresh_token"] = _SERIALIZER.query("refresh_token", refresh_token, "str")
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="DELETE", url=_url, headers=_headers, **kwargs)
+    return HttpRequest(
+        method="DELETE", url=_url, params=_params, headers=_headers, **kwargs
+    )
 
 
 def build_auth_userinfo_request(**kwargs: Any) -> HttpRequest:
@@ -1169,14 +1172,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace
-    def revoke_refresh_token(self, jti: str, **kwargs: Any) -> str:
+    def revoke_refresh_token(self, *, refresh_token: str, **kwargs: Any) -> str:
         """Revoke Refresh Token.
 
         Revoke a refresh token. If the user has the ``proxy_management`` property, then
         the subject is not used to filter the refresh tokens.
 
-        :param jti: Required.
-        :type jti: str
+        :keyword refresh_token: Required.
+        :paramtype refresh_token: str
         :return: str
         :rtype: str
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1195,7 +1198,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         cls: ClsType[str] = kwargs.pop("cls", None)
 
         _request = build_auth_revoke_refresh_token_request(
-            jti=jti,
+            refresh_token=refresh_token,
             headers=_headers,
             params=_params,
         )

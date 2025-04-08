@@ -51,6 +51,9 @@ from ...operations._operations import (
     build_jobs_summary_request,
     build_jobs_unassign_bulk_jobs_sandboxes_request,
     build_jobs_unassign_job_sandboxes_request,
+    build_lollygag_get_gubbins_secrets_request,
+    build_lollygag_get_owner_object_request,
+    build_lollygag_insert_owner_object_request,
     build_well_known_get_installation_metadata_request,
     build_well_known_get_openid_configuration_request,
 )
@@ -146,13 +149,15 @@ class WellKnownOperations:
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def get_installation_metadata(self, **kwargs: Any) -> _models.Metadata:
+    async def get_installation_metadata(
+        self, **kwargs: Any
+    ) -> _models.ExtendedMetadata:
         """Get Installation Metadata.
 
-        Get metadata about the dirac installation.
+        Get Installation Metadata.
 
-        :return: Metadata
-        :rtype: ~_generated.models.Metadata
+        :return: ExtendedMetadata
+        :rtype: ~_generated.models.ExtendedMetadata
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -166,7 +171,7 @@ class WellKnownOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[_models.Metadata] = kwargs.pop("cls", None)
+        cls: ClsType[_models.ExtendedMetadata] = kwargs.pop("cls", None)
 
         _request = build_well_known_get_installation_metadata_request(
             headers=_headers,
@@ -189,7 +194,9 @@ class WellKnownOperations:
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("Metadata", pipeline_response.http_response)
+        deserialized = self._deserialize(
+            "ExtendedMetadata", pipeline_response.http_response
+        )
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -540,14 +547,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def revoke_refresh_token(self, jti: str, **kwargs: Any) -> str:
+    async def revoke_refresh_token(self, *, refresh_token: str, **kwargs: Any) -> str:
         """Revoke Refresh Token.
 
         Revoke a refresh token. If the user has the ``proxy_management`` property, then
         the subject is not used to filter the refresh tokens.
 
-        :param jti: Required.
-        :type jti: str
+        :keyword refresh_token: Required.
+        :paramtype refresh_token: str
         :return: str
         :rtype: str
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -566,7 +573,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         cls: ClsType[str] = kwargs.pop("cls", None)
 
         _request = build_auth_revoke_refresh_token_request(
-            jti=jti,
+            refresh_token=refresh_token,
             headers=_headers,
             params=_params,
         )
@@ -2277,6 +2284,190 @@ class JobsOperations:
         deserialized = self._deserialize(
             "[InsertedJob]", pipeline_response.http_response
         )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+
+class LollygagOperations:
+    """
+    .. warning::
+        **DO NOT** instantiate this class directly.
+
+        Instead, you should access the following operations through
+        :class:`~_generated.aio.Dirac`'s
+        :attr:`lollygag` attribute.
+    """
+
+    models = _models
+
+    def __init__(self, *args, **kwargs) -> None:
+        input_args = list(args)
+        self._client: AsyncPipelineClient = (
+            input_args.pop(0) if input_args else kwargs.pop("client")
+        )
+        self._config: DiracConfiguration = (
+            input_args.pop(0) if input_args else kwargs.pop("config")
+        )
+        self._serialize: Serializer = (
+            input_args.pop(0) if input_args else kwargs.pop("serializer")
+        )
+        self._deserialize: Deserializer = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
+        )
+
+    @distributed_trace_async
+    async def insert_owner_object(self, owner_name: str, **kwargs: Any) -> Any:
+        """Insert Owner Object.
+
+        Insert Owner Object.
+
+        :param owner_name: Required.
+        :type owner_name: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_lollygag_insert_owner_object_request(
+            owner_name=owner_name,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace_async
+    async def get_owner_object(self, **kwargs: Any) -> Any:
+        """Get Owner Object.
+
+        Get Owner Object.
+
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_lollygag_get_owner_object_request(
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace_async
+    async def get_gubbins_secrets(self, **kwargs: Any) -> Any:
+        """Get Gubbins Secrets.
+
+        Does nothing but expects a GUBBINS_SENSEI permission.
+
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_lollygag_get_gubbins_secrets_request(
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

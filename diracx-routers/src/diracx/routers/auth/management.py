@@ -24,10 +24,9 @@ from diracx.logic.auth.management import (
 from diracx.logic.auth.management import (
     revoke_refresh_token as revoke_refresh_token_bl,
 )
+from diracx.logic.auth.token import read_token
 
-from ..dependencies import (
-    AuthDB,
-)
+from ..dependencies import AuthDB, AuthSettings
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
@@ -60,11 +59,12 @@ async def get_refresh_tokens(
     return await get_refresh_tokens_bl(auth_db, subject)
 
 
-@router.delete("/refresh-tokens/{jti}")
+@router.delete("/refresh-tokens")
 async def revoke_refresh_token(
     auth_db: AuthDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    jti: str,
+    settings: AuthSettings,
+    refresh_token: str,
 ) -> str:
     """Revoke a refresh token. If the user has the `proxy_management` property, then
     the subject is not used to filter the refresh tokens.
@@ -74,7 +74,8 @@ async def revoke_refresh_token(
         subject = None
 
     try:
-        await revoke_refresh_token_bl(auth_db, subject, UUID(jti))
+        token_information = read_token(refresh_token, settings)
+        await revoke_refresh_token_bl(auth_db, subject, UUID(token_information["jti"]))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -90,7 +91,7 @@ async def revoke_refresh_token(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
-    return f"Refresh token {jti} revoked"
+    return "Refresh token revoked"
 
 
 @router.get("/userinfo")

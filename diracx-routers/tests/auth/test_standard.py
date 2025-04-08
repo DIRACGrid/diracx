@@ -763,22 +763,17 @@ async def test_revoke_refresh_tokens_normal_user(
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
     normal_user_access_token = normal_user_tokens["access_token"]
     normal_user_refresh_token = normal_user_tokens["refresh_token"]
-    normal_user_refresh_payload = jwt.decode(
-        normal_user_refresh_token, options={"verify_signature": False}
-    )
 
     # Token manager gets a pair of tokens
     token_manager_tokens = _get_tokens(
         test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
     )
     token_manager_refresh_token = token_manager_tokens["refresh_token"]
-    token_manager_refresh_payload = jwt.decode(
-        token_manager_refresh_token, options={"verify_signature": False}
-    )
 
     # Normal user tries to delete a random and non-existing RT: should raise an error
     r = test_client.delete(
-        "/api/auth/refresh-tokens/does-not-exists",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": "does-not-exist"},
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -786,7 +781,8 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete token manager's RT: should not work
     r = test_client.delete(
-        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": token_manager_refresh_token},
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -794,7 +790,8 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete his/her RT: should work
     r = test_client.delete(
-        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": normal_user_refresh_token},
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -802,7 +799,8 @@ async def test_revoke_refresh_tokens_normal_user(
 
     # Normal user tries to delete his/her RT again: should work
     r = test_client.delete(
-        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": normal_user_refresh_token},
         headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     data = r.json()
@@ -821,9 +819,6 @@ async def test_revoke_refresh_tokens_token_manager(
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
     normal_user_refresh_token = normal_user_tokens["refresh_token"]
-    normal_user_refresh_payload = jwt.decode(
-        normal_user_refresh_token, options={"verify_signature": False}
-    )
 
     # Token manager gets a pair of tokens
     token_manager_tokens = _get_tokens(
@@ -831,13 +826,11 @@ async def test_revoke_refresh_tokens_token_manager(
     )
     token_manager_access_token = token_manager_tokens["access_token"]
     token_manager_refresh_token = token_manager_tokens["refresh_token"]
-    token_manager_refresh_payload = jwt.decode(
-        token_manager_refresh_token, options={"verify_signature": False}
-    )
 
     # Token manager tries to delete token manager's RT: should work
     r = test_client.delete(
-        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": normal_user_refresh_token},
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
@@ -845,7 +838,8 @@ async def test_revoke_refresh_tokens_token_manager(
 
     # Token manager tries to delete his/her RT: should work
     r = test_client.delete(
-        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        "/api/auth/refresh-tokens",
+        params={"refresh_token": token_manager_refresh_token},
         headers={"Authorization": f"Bearer {token_manager_access_token}"},
     )
     data = r.json()
