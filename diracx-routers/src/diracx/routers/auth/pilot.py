@@ -40,7 +40,7 @@ async def pilot_login(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
-):
+) -> TokenResponse:
     """Endpoint without policy, the pilot uses only its secret."""
     try:
         await try_login(
@@ -93,7 +93,7 @@ async def refresh_pilot_tokens(
     check_permissions: RegisteredPilotAccessPolicyCallable,
     refresh_token: str,
     pilot_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-):
+) -> TokenResponse:
     """Endpoint where a pilot can exchange a refresh token against a token."""
     await check_permissions()
 
@@ -118,7 +118,7 @@ async def refresh_pilot_tokens(
 
     serialized_access_token = create_token(new_access_token, settings=settings)
 
-    serialized_refresh_token = create_token(new_access_token, settings=settings)
+    serialized_refresh_token = create_token(new_refresh_token, settings=settings)
 
     return TokenResponse(
         access_token=serialized_access_token,
