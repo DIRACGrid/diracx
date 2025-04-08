@@ -73,6 +73,9 @@ ignore = [
     "D401",
     "D404",
 ]
+extend-select = [
+  "UP",  # pyupgrade
+]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
