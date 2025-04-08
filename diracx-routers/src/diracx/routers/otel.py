@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 # https://opentelemetry.io/blog/2023/logs-collection/
 # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
@@ -93,6 +93,34 @@ def instrument_otel(app: FastAPI) -> None:
     )
     meter_provider = MeterProvider(metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+
+    meter = metrics.get_meter("diracx.routers")
+
+    # Histogram of duration of the HTTP requests
+    http_server_duration = meter.create_histogram(
+        name="http.server.duration",
+        description="measures the duration of the inbound HTTP request",
+        unit="s",
+    )
+
+    @app.middleware("http")
+    async def record_request_duration(request: Request, call_next):
+        from time import perf_counter
+
+        start_time = perf_counter()
+        response = await call_next(request)
+        duration = perf_counter() - start_time
+
+        http_server_duration.record(
+            duration,
+            attributes={
+                "http.method": request.method,
+                "http.route": request.url.path,
+                "http.status_code": response.status_code,
+            },
+        )
+
+        return response
 
     ###################################
 
