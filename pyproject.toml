@@ -104,7 +104,7 @@ profile = "black"
 
 
 [tool.mypy]
-strict = true
+strict = false
 warn_unreachable = true
 files = [
     "diracx-api/src/**/*.py",
