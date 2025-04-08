@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 
 import pytest
+import tzlocal
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 
@@ -191,18 +192,37 @@ def test_insert_malformed_jdl(normal_user_client):
     assert r.status_code == 400, r.json()
 
 
-@freeze_time("2024-01-01T00:00:00.123456Z")
+# "2024-01-01 00:00:00.123456"
+@freeze_time(
+    datetime(
+        year=2024,
+        month=1,
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=123456,
+        tzinfo=tzlocal.get_localzone(),
+    )
+)
 def test_insert_and_search_by_datetime(normal_user_client):
     """Test inserting a job and then searching for it.
 
     Focus on the SubmissionTime parameter.
     """
+    print(datetime.now(tz=timezone.utc))
+
     # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
     assert r.status_code == 200, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
+    r = normal_user_client.post("/api/jobs/search")
+    assert len(r.json()) == 1, "No jobs submitted"
+
+    submitted_jobs_info = r.json()
+    print(submitted_jobs_info)
 
     # 1.1 Search for all jobs submitted in 2024
     r = normal_user_client.post(
@@ -218,7 +238,7 @@ def test_insert_and_search_by_datetime(normal_user_client):
         },
     )
     assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
+    assert len(r.json()) == 1, [tzlocal.get_localzone_name(), submitted_jobs_info]
 
     # 1.2 Search for all jobs submitted before 2024
     r = normal_user_client.post(

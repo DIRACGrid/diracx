@@ -5,6 +5,7 @@ from functools import partial
 from zoneinfo import ZoneInfo
 
 import sqlalchemy.types as types
+import tzlocal
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum
 
@@ -20,16 +21,7 @@ def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
 
 
 def get_local_timezone() -> ZoneInfo:
-    now = datetime.now()  # noqa: DTZ005
-    local_now = now.astimezone()
-    local_tz = local_now.tzinfo
-    if not local_tz:
-        raise NotImplementedError("datetime.now().astimezone() returns nothing!")
-    local_tzname = local_tz.tzname(local_now)
-    if not local_tzname:
-        raise NotImplementedError(f"local_tz.tzname({local_now}) returns nothing!")
-
-    return ZoneInfo(local_tzname)
+    return ZoneInfo(tzlocal.get_localzone_name())
 
 
 class EnumBackedBool(types.TypeDecorator):

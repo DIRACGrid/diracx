@@ -4,7 +4,7 @@ description = "TODO"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = []
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -17,13 +17,12 @@ dependencies = [
     "opensearch-py[async]",
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
+    "tzlocal",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-]
+testing = ["diracx-testing"]
 
 [project.entry-points."diracx.dbs.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
@@ -51,8 +50,10 @@ root = ".."
 testpaths = ["tests"]
 addopts = [
     "-v",
-    "--cov=diracx.db", "--cov-report=term-missing",
-    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--cov=diracx.db",
+    "--cov-report=term-missing",
+    "-pdiracx.testing",
+    "-pdiracx.testing.osdb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

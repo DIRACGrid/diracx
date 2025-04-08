@@ -8,3 +8,4 @@ dependencies:
   - m2crypto
   - python-gfal2
   - mypy
+  - tzlocal >5

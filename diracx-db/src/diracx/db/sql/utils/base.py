@@ -20,6 +20,7 @@ from diracx.core.extensions import select_from_extension
 from diracx.core.models import SortDirection
 from diracx.core.settings import SqlalchemyDsn
 from diracx.db.exceptions import DBUnavailableError
+from diracx.db.sql.utils.types import StringParsingDateTime
 
 from .functions import date_trunc
 
@@ -265,7 +266,7 @@ def apply_search_filters(column_mapping, stmt, search):
         except KeyError as e:
             raise InvalidQueryError(f"Unknown column {query['parameter']}") from e
 
-        if isinstance(column.type, DateTime):
+        if isinstance(column.type, (DateTime, StringParsingDateTime)):
             if "value" in query and isinstance(query["value"], str):
                 resolution, value = find_time_resolution(query["value"])
                 if resolution:

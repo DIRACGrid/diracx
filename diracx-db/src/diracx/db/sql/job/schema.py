@@ -21,7 +21,7 @@ class AccountedFlagEnum(types.TypeDecorator):
     """Maps a ``AccountedFlagEnum()`` column to True/False in Python."""
 
     impl = types.Enum("True", "False", "Failed", name="accounted_flag_enum")
-    cache_ok: bool = True
+    cache_ok = True
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:
