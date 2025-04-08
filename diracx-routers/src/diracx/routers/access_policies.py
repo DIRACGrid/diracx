@@ -133,15 +133,18 @@ def check_permissions(
     finally:
 
         if not has_been_called:
-            # TODO nice error message with inspect
-            # That should really not happen
-            print(
-                "THIS SHOULD NOT HAPPEN, ALWAYS VERIFY PERMISSION",
-                "(PS: I hope you are in a CI)",
-                flush=True,
-            )
             # If enable, just crash, meanly
             if dev_settings.crash_on_missed_access_policy:
+
+                # TODO nice error message with inspect
+                # It would also be nice to print it when there's a real
+                # problem, not when we get 402
+                # see https://github.com/DIRACGrid/diracx/issues/275
+                print(
+                    "THIS SHOULD NOT HAPPEN, ALWAYS VERIFY PERMISSION",
+                    "(PS: I hope you are in a CI)",
+                    flush=True,
+                )
                 # Sleep a bit to make sure the flush happened
                 time.sleep(1)
                 os._exit(1)

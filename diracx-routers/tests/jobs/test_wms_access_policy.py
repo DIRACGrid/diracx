@@ -223,6 +223,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
             )
 
 
+SE_NAME = "ProductionSEName"
 SANDBOX_PREFIX = "/S3/bucket_name/myvo/mygroup/mypreferred_username"
 USER_SANDBOX_PFN = f"{SANDBOX_PREFIX}/mysandbox.tar.gz"
 OTHER_USER_SANDBOX_PFN = (
@@ -277,6 +278,7 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
         sandbox_metadata_db=sandbox_metadata_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
+        se_name=SE_NAME,
     )
 
     await SandboxAccessPolicy.policy(
@@ -286,6 +288,7 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
         sandbox_metadata_db=sandbox_metadata_db,
         pfns=[OTHER_USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
+        se_name=SE_NAME,
     )
 
     # need required_prefix for READ
@@ -296,6 +299,17 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
             action=ActionType.READ,
             sandbox_metadata_db=sandbox_metadata_db,
             pfns=[USER_SANDBOX_PFN],
+        )
+
+    # need se_name for READ
+    with pytest.raises(NotImplementedError):
+        await SandboxAccessPolicy.policy(
+            SANDBOX_POLICY_NAME,
+            normal_user,
+            action=ActionType.READ,
+            sandbox_metadata_db=sandbox_metadata_db,
+            pfns=[USER_SANDBOX_PFN],
+            required_prefix=SANDBOX_PREFIX,
         )
 
     # User can act on his own sandbox
@@ -317,6 +331,7 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
         sandbox_metadata_db=sandbox_metadata_db,
         pfns=[USER_SANDBOX_PFN],
         required_prefix=SANDBOX_PREFIX,
+        se_name=SE_NAME,
     )
 
     # User cannot act on others
@@ -333,4 +348,16 @@ async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
             sandbox_metadata_db=sandbox_metadata_db,
             pfns=[OTHER_USER_SANDBOX_PFN],
             required_prefix=SANDBOX_PREFIX,
+            se_name=SE_NAME,
+        )
+
+    with pytest.raises(HTTPException):
+        await SandboxAccessPolicy.policy(
+            SANDBOX_POLICY_NAME,
+            normal_user,
+            action=ActionType.READ,
+            sandbox_metadata_db=sandbox_metadata_db,
+            pfns=[USER_SANDBOX_PFN],
+            required_prefix=SANDBOX_PREFIX,
+            se_name="OTHER_SE_NAME",
         )
