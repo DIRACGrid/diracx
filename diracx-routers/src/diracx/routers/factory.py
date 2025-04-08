@@ -318,6 +318,12 @@ def create_app_inner(
     )
 
     configure_logger()
+
+    # Required by FastAPIInstrumentor
+    # to follow semantic conventions for HTTP metrics
+    # https://opentelemetry.io/docs/specs/semconv/http/http-metrics/
+    os.environ["OTEL_SEMCONV_STABILITY_OPT_IN"] = "http"
+
     instrument_otel(app)
 
     return app
