@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Sequence
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
@@ -27,7 +26,7 @@ class PilotAgentsDB(BaseSQLDB):
         vo: str,
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
-    ) -> Sequence:  # Return a list of primary keys
+    ) -> None:
 
         if pilot_stamps is None:
             pilot_stamps = {}
@@ -49,17 +48,9 @@ class PilotAgentsDB(BaseSQLDB):
         ]
 
         # Insert multiple rows in a single execute call and use 'returning' to get primary keys
-        stmt = (
-            insert(PilotAgents).values(values).returning(PilotAgents.pilot_id)
-        )  # Assuming 'id' is the primary key
-        result = await self.conn.execute(stmt)
+        stmt = insert(PilotAgents).values(values)  # Assuming 'id' is the primary key
 
-        # Use .scalars() and .all() to get the primary keys directly in a list
-        primary_keys = (
-            result.scalars().all()
-        )  # This returns a flat list of primary keys
-
-        return primary_keys
+        await self.conn.execute(stmt)
 
     async def increment_pilot_secret_use(
         self,

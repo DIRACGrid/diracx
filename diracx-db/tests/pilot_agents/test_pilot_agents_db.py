@@ -59,16 +59,16 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
         pilot_reference = "pilot-reference-test"
-        pilot_ids = await pilot_agents_db.add_pilot_references(
+        # Register a pilot
+        await pilot_agents_db.add_pilot_references(
             vo="lhcb",
             pilot_ref=[pilot_reference],
             grid_type="grid-type",
         )
 
-        assert len(pilot_ids) == 1
+        pilot = await pilot_agents_db.get_pilot_by_reference(pilot_reference)
 
-        # Only one element
-        pilot_id = pilot_ids[0]
+        pilot_id = pilot["PilotID"]
 
         secret = "AW0nd3rfulS3cr3t"
         pilot_hashed_secret = hash(secret)
