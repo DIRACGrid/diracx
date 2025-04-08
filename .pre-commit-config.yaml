@@ -42,7 +42,7 @@ repos:
     hooks:
     - id: codespell
 
-  - repo: https://github.com/hukkin/mdformat
+  - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22  # Use the ref you want to point at
     hooks:
     - id: mdformat
