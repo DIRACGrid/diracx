@@ -20,6 +20,8 @@ import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.dependencies.models import Dependant
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
@@ -47,6 +49,7 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 
 
 logger = logging.getLogger(__name__)
+logger_422 = logger.getChild("debug.422.errors")
 
 
 DIRACX_MIN_CLIENT_VERSION = "0.0.1a1"
@@ -293,6 +296,9 @@ def create_app_inner(
     app.add_exception_handler(
         DBUnavailableError, cast(handler_signature, route_unavailable_error_hander)
     )
+    app.add_exception_handler(
+        RequestValidationError, cast(handler_signature, validation_error_handler)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -401,6 +407,26 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
         headers={"Retry-After": "10"},
         content={"detail": str(exc.args)},
     )
+
+
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    logger_422.warning(
+        "Got validation error: %s in %s %s with body %r",
+        exc.errors(),
+        request.method,
+        request.url,
+        await request.body(),
+        # TODO: It would be nicer to do:
+        # extra={
+        #     "request": {
+        #         "method": request.method,
+        #         "url": str(request.url),
+        #         "body": await request.body(),
+        #         "headers": request.headers, should probably be an allowlist
+        #     }
+        # },
+    )
+    return await request_validation_exception_handler(request, exc)
 
 
 def find_dependents(
