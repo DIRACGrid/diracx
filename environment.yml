@@ -9,3 +9,6 @@ dependencies:
   - python-gfal2
   - mypy
   - codespell
+  - mdformat
+  - mdformat-gfm
+  - mdformat-black

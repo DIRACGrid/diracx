@@ -42,3 +42,25 @@ repos:
     hooks:
     - id: codespell
 
+  - repo: https://github.com/hukkin/mdformat
+    rev: 0.7.22  # Use the ref you want to point at
+    hooks:
+    - id: mdformat
+      # Optionally add plugins
+      additional_dependencies:
+      - mdformat-gfm
+      - mdformat-black
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0  # Use the ref you want to point at
+    hooks:
+    - id: python-use-type-annotations
+    - id: python-check-blanket-noqa
+    - id: python-check-blanket-type-ignore
+    - id: python-no-eval
+    - id: python-no-log-warn
+    - id: rst-backticks
+    - id: rst-directive-colons
+    - id: rst-inline-touching-normal
+    - id: text-unicode-replacement-char
+    # ...
