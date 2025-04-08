@@ -13,6 +13,7 @@ from diracx.core.exceptions import (
     InvalidCredentialsError,
     PilotNotFoundError,
 )
+from diracx.core.models import TokenResponse
 from diracx.logic.auth.pilot import try_login
 from diracx.logic.auth.token import create_token, generate_pilot_tokens
 from diracx.routers.pilots.access_policies import RegisteredPilotAccessPolicyCallable
@@ -71,10 +72,15 @@ async def pilot_login(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
 
-    return {
-        "access_token": create_token(access_token, settings),
-        "refresh_token": create_token(refresh_token, settings),
-    }
+    serialized_access_token = create_token(access_token, settings=settings)
+
+    serialized_refresh_token = create_token(refresh_token, settings=settings)
+
+    return TokenResponse(
+        access_token=serialized_access_token,
+        expires_in=settings.access_token_expire_minutes * 60,
+        refresh_token=serialized_refresh_token,
+    )
 
 
 @router.post("/pilot-refresh-token")
@@ -110,7 +116,12 @@ async def refresh_pilot_tokens(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
 
-    return {
-        "access_token": create_token(new_access_token, settings),
-        "refresh_token": create_token(new_refresh_token, settings),
-    }
+    serialized_access_token = create_token(new_access_token, settings=settings)
+
+    serialized_refresh_token = create_token(new_access_token, settings=settings)
+
+    return TokenResponse(
+        access_token=serialized_access_token,
+        expires_in=settings.access_token_expire_minutes * 60,
+        refresh_token=serialized_refresh_token,
+    )
