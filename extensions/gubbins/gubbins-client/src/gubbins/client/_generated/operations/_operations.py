@@ -1513,7 +1513,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     @distributed_trace
     def pilot_login(
         self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
-    ) -> Any:
+    ) -> _models.TokenResponse:
         """Pilot Login.
 
         Endpoint without policy, the pilot uses only its secret.
@@ -1522,8 +1522,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         :paramtype pilot_job_reference: str
         :keyword pilot_secret: Required.
         :paramtype pilot_secret: str
-        :return: any
-        :rtype: any
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1537,7 +1537,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         _request = build_auth_pilot_login_request(
             pilot_job_reference=pilot_job_reference,
@@ -1562,7 +1562,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response.http_response)
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1570,15 +1572,17 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace
-    def refresh_pilot_tokens(self, *, refresh_token: str, **kwargs: Any) -> Any:
+    def refresh_pilot_tokens(
+        self, *, refresh_token: str, **kwargs: Any
+    ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
         Endpoint where a pilot can exchange a refresh token against a token.
 
         :keyword refresh_token: Required.
         :paramtype refresh_token: str
-        :return: any
-        :rtype: any
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1592,7 +1596,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         _request = build_auth_refresh_pilot_tokens_request(
             refresh_token=refresh_token,
@@ -1616,7 +1620,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response.http_response)
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

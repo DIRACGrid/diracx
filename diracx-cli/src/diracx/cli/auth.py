@@ -143,24 +143,20 @@ def callback(output_format: Optional[str] = None):
 
 @app.async_command()
 async def pilot_login(
-    pilot_reference: Optional[str] = typer.Argument(None, help="Pilot job reference."),
-    pilot_secret: Optional[str] = typer.Argument(
-        None, help="Pilot secret given by DiracX."
-    ),
+    pilot_reference: str = typer.Argument(None, help="Pilot job reference."),
+    pilot_secret: str = typer.Argument(None, help="Pilot secret given by DiracX."),
 ):
     """Login to the DIRAC system using a pilot exchange (a [reference,secret] pair)."""
     async with AsyncDiracClient() as api:
 
         try:
-            response = await api.auth.pilot_login(
-                pilot_job_reference=pilot_reference, pilot_secret=pilot_secret
-            )
+            response = await api.auth.pilot_login(pilot_job_reference=pilot_reference, pilot_secret=pilot_secret)  # type: ignore
         except Exception as e:
             print(f"Error signing in DiracX {e!r}")
             return
 
         # Save credentials
-        write_credentials(response)
+        write_credentials(response)  # type: ignore
         credentials_path = get_diracx_preferences().credentials_path
         print(f"Saved credentials to {credentials_path}")
     print("\nLogin successful!")
