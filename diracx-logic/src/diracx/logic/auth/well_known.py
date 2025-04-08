@@ -10,6 +10,7 @@ async def get_openid_configuration(
     userinfo_endpoint: str,
     authorization_endpoint: str,
     device_authorization_endpoint: str,
+    revoke_refresh_token_endpoint: str,
     config: Config,
     settings: AuthSettings,
 ) -> OpenIDConfiguration:
@@ -26,6 +27,7 @@ async def get_openid_configuration(
         "userinfo_endpoint": userinfo_endpoint,
         "authorization_endpoint": authorization_endpoint,
         "device_authorization_endpoint": device_authorization_endpoint,
+        "revocation_endpoint": revoke_refresh_token_endpoint,
         "grant_types_supported": [
             "authorization_code",
             "urn:ietf:params:oauth:grant-type:device_code",

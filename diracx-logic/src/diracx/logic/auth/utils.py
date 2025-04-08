@@ -8,6 +8,7 @@ import secrets
 import httpx
 from authlib.integrations.starlette_client import OAuthError
 from authlib.jose import JsonWebKey, JsonWebToken
+from authlib.jose.errors import DecodeError
 from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
@@ -189,6 +190,21 @@ async def get_token_from_iam(
     return id_token
 
 
+def read_token(
+    payload: str, token_algorithm: str, key: JsonWebKey, claims_options=None
+) -> dict:
+    # First transform it into bytes, then return a jwt object
+    # Don't take settings as a parameter to allow claims_options to be None or something else
+    try:
+        encoded_payload = payload.encode("ascii")
+        jwt = JsonWebToken(token_algorithm)
+        decoded_jwt = jwt.decode(encoded_payload, key, claims_options=claims_options)
+        decoded_jwt.validate()
+    except DecodeError as e:
+        raise ValueError("wrong json payload") from e
+    return decoded_jwt
+
+
 async def verify_dirac_refresh_token(
     refresh_token: str,
     settings: AuthSettings,
@@ -196,12 +212,7 @@ async def verify_dirac_refresh_token(
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint.
     """
-    jwt = JsonWebToken(settings.token_algorithm)
-    token = jwt.decode(
-        refresh_token,
-        key=settings.token_key.jwk,
-    )
-    token.validate()
+    token = read_token(refresh_token, settings.token_algorithm, settings.token_key.jwk)
 
     return UUID(token["jti"]), float(token["exp"]), token["legacy_exchange"]
 

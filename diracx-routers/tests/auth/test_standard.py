@@ -749,7 +749,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     assert len(data) == 3
 
 
-async def test_revoke_refresh_tokens_normal_user(
+async def test_revoke_refresh_tokens_normal_user_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
@@ -809,7 +809,7 @@ async def test_revoke_refresh_tokens_normal_user(
     assert r.status_code == 200, data
 
 
-async def test_revoke_refresh_tokens_token_manager(
+async def test_revoke_refresh_tokens_token_manager_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
@@ -850,6 +850,65 @@ async def test_revoke_refresh_tokens_token_manager(
     )
     data = r.json()
     assert r.status_code == 200, data
+
+
+async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXMock):
+    """Test if a user can revoke its token by the "traditional" endpoint, then try to refresh it."""
+    # Normal user gets a pair of tokens
+    normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
+    normal_user_access_token = normal_user_tokens["access_token"]
+    normal_user_refresh_token = normal_user_tokens["refresh_token"]
+
+    # Get all refresh tokens, expect one refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert len(r.json()) == 1
+
+    # See: https://datatracker.ietf.org/doc/html/rfc7009#section-2.2
+    # Normal user tries to delete a random and non-existing RT: should respond with a 200
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": "does-not-exist",
+            "client_id": DIRAC_CLIENT_ID,
+        },
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    assert r.status_code == 200
+
+    # Normal user tries to delete his/her RT: should work
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": normal_user_refresh_token,
+            "client_id": DIRAC_CLIENT_ID,
+        },
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    assert r.status_code == 200
+
+    # Get all refresh tokens, expect no refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert r.json() == []
+
+    # Normal user tries to delete a valid RT using the wrong client id
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": normal_user_refresh_token,
+            "client_id": "a_wrong_dirac_client_id",
+        },
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    assert r.status_code == 403
+    assert r.json()["detail"] == "Unrecognised client_id"
 
 
 def _get_tokens(
