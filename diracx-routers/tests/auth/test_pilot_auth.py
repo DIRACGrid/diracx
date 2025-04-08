@@ -43,16 +43,15 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     async with db as pilot_agents_db:
         # Register a pilot
-        pilot_ids = await pilot_agents_db.add_pilot_references(
+        await pilot_agents_db.add_pilot_references(
             vo=pilot_vo,
             pilot_ref=[pilot_reference],
             grid_type="grid-type",
         )
 
-        assert len(pilot_ids) == 1
+        pilot = await pilot_agents_db.get_pilot_by_reference(pilot_reference)
 
-        # Only one element
-        pilot_id = pilot_ids[0]
+        pilot_id = pilot["PilotID"]
 
         # Add credentials to this pilot
         await pilot_agents_db.add_pilot_credentials(
