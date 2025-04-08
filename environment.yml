@@ -10,5 +10,3 @@ dependencies:
   - mypy
   - codespell
   - mdformat
-  - mdformat-gfm
-  - mdformat-black
