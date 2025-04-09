@@ -7,12 +7,9 @@ to get information about the user's identity.
 from __future__ import annotations
 
 from typing import Annotated, Any
+from uuid import UUID
 
-from fastapi import (
-    Depends,
-    HTTPException,
-    status,
-)
+from fastapi import Depends, HTTPException, Response, status
 from typing_extensions import TypedDict
 
 from diracx.core.exceptions import TokenNotFoundError
@@ -21,9 +18,11 @@ from diracx.logic.auth.management import (
     get_refresh_tokens as get_refresh_tokens_bl,
 )
 from diracx.logic.auth.management import (
-    revoke_refresh_token as revoke_refresh_token_bl,
+    revoke_refresh_token_by_jti as revoke_refresh_token_by_jti_bl,
 )
-from diracx.logic.auth.token import read_token
+from diracx.logic.auth.management import (
+    revoke_refresh_token_by_refresh_token as revoke_refresh_token_by_refresh_token_bl,
+)
 
 from ..dependencies import AuthDB, AuthSettings
 from ..fastapi_classes import DiracxRouter
@@ -58,8 +57,8 @@ async def get_refresh_tokens(
     return await get_refresh_tokens_bl(auth_db, subject)
 
 
-@router.delete("/refresh-tokens")
-async def revoke_refresh_token(
+@router.post("/revoke")
+async def revoke_refresh_token_by_refresh_token(
     auth_db: AuthDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     settings: AuthSettings,
@@ -73,8 +72,31 @@ async def revoke_refresh_token(
         subject = None
 
     try:
-        token_information = read_token(refresh_token, settings)
-        await revoke_refresh_token_bl(auth_db, subject, token_information["jti"])
+        await revoke_refresh_token_by_refresh_token_bl(
+            auth_db, subject, refresh_token, settings
+        )
+    except ValueError:
+        print(f"{user_info.preferred_username} tried to revoke its token but failed.")
+
+    # RFC 7009: https://datatracker.ietf.org/doc/html/rfc7009
+    return Response(status_code=200)
+
+
+@router.delete("/refresh-tokens/{jti}")
+async def revoke_refresh_token_by_jti(
+    auth_db: AuthDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    jti: str,
+) -> str:
+    """Revoke a refresh token. If the user has the `proxy_management` property, then
+    the subject is not used to filter the refresh tokens.
+    """
+    subject: str | None = user_info.sub
+    if PROXY_MANAGEMENT in user_info.properties:
+        subject = None
+
+    try:
+        await revoke_refresh_token_by_jti_bl(auth_db, subject, UUID(jti, version=4))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
