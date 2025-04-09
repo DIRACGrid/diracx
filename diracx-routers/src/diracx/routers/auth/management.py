@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Response, status
+from fastapi import Depends, HTTPException, status
 from typing_extensions import TypedDict
 from uuid_utils import UUID
 
@@ -79,8 +79,7 @@ async def revoke_refresh_token_by_refresh_token(
     except ValueError:
         print(f"{user_info.preferred_username} tried to revoke its token but failed.")
 
-    # RFC 7009: https://datatracker.ietf.org/doc/html/rfc7009
-    return Response(status_code=200)
+    return "Refresh token revoked"
 
 
 @router.delete("/refresh-tokens/{jti}")
