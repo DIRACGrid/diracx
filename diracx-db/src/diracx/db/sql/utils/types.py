@@ -20,15 +20,15 @@ def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
     return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
-def get_local_timezone() -> ZoneInfo:
-    return ZoneInfo(tzlocal.get_localzone_name())
+def get_local_timezone():
+    return tzlocal.get_localzone()
 
 
 class EnumBackedBool(types.TypeDecorator):
     """Maps a ``EnumBackedBool()`` column to True/False in Python."""
 
     impl = types.Enum("True", "False", name="enum_backed_bool")
-    cache_ok: bool = True
+    cache_ok = True
 
     def process_bind_param(self, value, dialect) -> str:
         if value is True:
@@ -58,9 +58,9 @@ class StringParsingDateTime(types.TypeDecorator):
     impl = DateTime()
     cache_ok = True
 
-    def __init__(self, tz=None, stored_naive=True):
+    def __init__(self, tz: ZoneInfo | None=None, stored_naive=True):
         self._stored_naive = stored_naive
-        self._tz = tz  # None = Local timezone
+        self._tz: ZoneInfo | None = tz  # None = Local timezone
 
     def process_bind_param(self, value, dialect):
         if value is None:
@@ -75,11 +75,25 @@ class StringParsingDateTime(types.TypeDecorator):
         if not isinstance(value, datetime):
             raise ValueError(f"Expected datetime or ISO8601 string, but got {value!r}")
 
-        # Check that we need to convert the timezone to match self._tz timezone
+        if not value.tzinfo:
+            raise ValueError(
+                f"Provided timestamp {value=} has no tzinfo -"
+                " this is problematic and may cause inconsistencies in stored timestamps.\n"
+                " Please always work with tz-aware datetimes / attach tzinfo to your datetime objects:"
+                " e.g. datetime.now(tz=timezone.utc) or use tzlocal.get_localzone() if you need to "
+                "attach tzinfo to a local naive timestamp."
+            )
+
+        # Check that we need to convert the timezone to match self._tz timezone:
+            # e.g. _stored_naive is True
+            #   --> We need to ensure the datetime is in the correct timezone
+            #   if tzinfo in the provided timestamp is None, we assume already correct
         if self._stored_naive and value.tzinfo is not None:
-            # astimezone converts to the correct stored timezone
-            # replace strips the TZ info such that the datetime object becomes naive
+            # if self._tz is None, we use our system timezone.
             stored_tz = self._tz or get_local_timezone()
+
+            # astimezone converts to the stored timezone
+            # replace strips the TZ info --> naive datetime object
             value = value.astimezone(tz=stored_tz).replace(tzinfo=None)
 
         return value
