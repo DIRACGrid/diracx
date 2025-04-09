@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import timedelta
+from time import sleep
+
 import pytest
 from sqlalchemy.exc import NoResultFound
 
@@ -74,8 +77,14 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
         pilot_hashed_secret = hash(secret)
 
         # Add creds
-        await pilot_agents_db.add_pilot_credentials(
+        date_added = await pilot_agents_db.add_pilot_credentials(
             pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
+        )
+
+        expiration_date = date_added + timedelta(seconds=10)
+
+        await pilot_agents_db.set_pilot_credentials_expiration(
+            pilot_id=pilot_id, pilot_secret_expiration_date=expiration_date
         )
 
         assert secret is not None
@@ -92,5 +101,48 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
 
             await pilot_agents_db.verify_pilot_secret(
                 pilot_job_reference="I am a spider",
+                pilot_hashed_secret=pilot_hashed_secret,
+            )
+
+
+async def test_create_pilot_and_verify_secret_with_delay(
+    pilot_agents_db: PilotAgentsDB,
+):
+
+    async with pilot_agents_db as pilot_agents_db:
+        pilot_reference = "pilot-reference-test"
+        # Register a pilot
+        await pilot_agents_db.add_pilot_references(
+            vo="lhcb",
+            pilot_ref=[pilot_reference],
+            grid_type="grid-type",
+        )
+
+        pilot = await pilot_agents_db.get_pilot_by_reference(pilot_reference)
+
+        pilot_id = pilot["PilotID"]
+
+        secret = "AW0nd3rfulS3cr3t"
+        pilot_hashed_secret = hash(secret)
+
+        # Add creds
+        date_added = await pilot_agents_db.add_pilot_credentials(
+            pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
+        )
+
+        expiration_date = date_added + timedelta(seconds=1)
+
+        await pilot_agents_db.set_pilot_credentials_expiration(
+            pilot_id=pilot_id, pilot_secret_expiration_date=expiration_date
+        )
+
+        assert secret is not None
+
+        # So that the secret expires
+        sleep(3)
+
+        with pytest.raises(AuthorizationError):
+            await pilot_agents_db.verify_pilot_secret(
+                pilot_job_reference=pilot_reference,
                 pilot_hashed_secret=pilot_hashed_secret,
             )

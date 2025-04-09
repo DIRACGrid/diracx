@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
@@ -54,8 +56,14 @@ async def test_create_pilot_and_verify_secret(test_client):
         pilot_id = pilot["PilotID"]
 
         # Add credentials to this pilot
-        await pilot_agents_db.add_pilot_credentials(
+        date_added = await pilot_agents_db.add_pilot_credentials(
             pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
+        )
+
+        expiration_date = date_added + timedelta(seconds=2)
+
+        await pilot_agents_db.set_pilot_credentials_expiration(
+            pilot_id=pilot_id, pilot_secret_expiration_date=expiration_date
         )
 
     request_data = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
@@ -66,7 +74,7 @@ async def test_create_pilot_and_verify_secret(test_client):
         headers={"Content-Type": "application/json"},
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, r.json()
 
     access_token = r.json()["access_token"]
     refresh_token = r.json()["refresh_token"]
@@ -109,7 +117,7 @@ async def test_create_pilot_and_verify_secret(test_client):
     )
 
     assert r.status_code == 401, r.json()
-    assert r.json()["detail"] == "bad pilot_id / pilot_secret"
+    assert r.json()["detail"] == "bad pilot_id / pilot_secret or secret has expired"
 
     # -----------------  Wrong ID  -----------------
     request_data = {"pilot_job_reference": "It is a reference", "pilot_secret": secret}
