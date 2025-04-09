@@ -4,6 +4,7 @@ from enum import Enum, auto
 
 from sqlalchemy import (
     JSON,
+    Index,
     String,
     Uuid,
 )
@@ -91,9 +92,11 @@ class RefreshTokens(Base):
     status = EnumColumn(
         "Status", RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
     )
-    creation_time = DateNowColumn("CreationTime")
+    creation_time = DateNowColumn("CreationTime", index=True)
     scope = Column("Scope", String(1024))
 
     # User attributes bound to the refresh token
-    sub = Column("Sub", String(1024))
+    sub = Column("Sub", String(256), index=True)
     preferred_username = Column("PreferredUsername", String(255))
+
+    __table_args__ = (Index("index_status_sub", status, sub),)
