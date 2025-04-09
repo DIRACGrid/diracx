@@ -210,8 +210,6 @@ def test_insert_and_search_by_datetime(normal_user_client):
 
     Focus on the SubmissionTime parameter.
     """
-    print(datetime.now(tz=timezone.utc))
-
     # job_definitions = [TEST_JDL%(normal_user_client.dirac_token_payload)]
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
@@ -222,7 +220,6 @@ def test_insert_and_search_by_datetime(normal_user_client):
     assert len(r.json()) == 1, "No jobs submitted"
 
     submitted_jobs_info = r.json()
-    print(submitted_jobs_info)
 
     # 1.1 Search for all jobs submitted in 2024
     r = normal_user_client.post(

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import pytest
+import sqlalchemy
 from sqlalchemy.exc import IntegrityError
 
 from diracx.core.exceptions import InvalidQueryError
@@ -45,6 +49,55 @@ async def populated_job_db(job_db):
             }
         await db.insert_job_attributes(jobs_to_insert)
     yield job_db
+
+
+async def test_bad_naive_datetime_used(populated_job_db):
+    async with populated_job_db as db:
+        compressed_jdl = "CompressedJDL0001111BadJob"
+        job_id = await db.create_job(compressed_jdl)
+        jobs_to_insert = {}
+        jobs_to_insert[job_id] = {
+            "JobID": job_id,
+            "Status": "New",
+            "Owner": "owner0101010101",
+            "OwnerGroup": "owner_group1",
+            "VO": "lhcb",
+            "HeartBeatTime": datetime.now().replace(tzinfo=None),  # noqa
+        }
+        with pytest.raises(sqlalchemy.exc.StatementError):
+            await db.insert_job_attributes(jobs_to_insert)  # should complain
+
+
+async def test_timezone_converted_back_to_utc(populated_job_db):
+    current_utc_dt = datetime.now(tz=ZoneInfo("UTC"))
+
+    async with populated_job_db as db:
+        compressed_jdl = "CompressedJDL0001111BadJob"
+        job_id = await db.create_job(compressed_jdl)
+        jobs_to_insert = {}
+        jobs_to_insert[job_id] = {
+            "JobID": job_id,
+            "Status": "New",
+            "Owner": "owner0101010101",
+            "OwnerGroup": "owner_group1",
+            "VO": "lhcb",
+            "HeartBeatTime": current_utc_dt.astimezone(ZoneInfo("Asia/Tokyo")),
+        }
+        await db.insert_job_attributes(jobs_to_insert)
+
+        total, result = await db.search(
+            ["JobID", "HeartBeatTime"],
+            [
+                ScalarSearchSpec(
+                    parameter="JobID",
+                    operator=ScalarSearchOperator.EQUAL,
+                    value=int(job_id),
+                )
+            ],
+            [],
+        )
+        assert total == 1
+        assert result[0]["HeartBeatTime"] == current_utc_dt, result
 
 
 async def test_search_parameters(populated_job_db):

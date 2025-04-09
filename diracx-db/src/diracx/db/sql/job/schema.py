@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from zoneinfo import ZoneInfo
+
 import sqlalchemy.types as types
 from sqlalchemy import (
     ForeignKey,
@@ -61,12 +63,42 @@ class Jobs(JobDBBase):
     owner = Column("Owner", String(64), default="Unknown")
     owner_group = Column("OwnerGroup", String(128), default="Unknown")
     vo = Column("VO", String(32))
-    submission_time = NullColumn("SubmissionTime", StringParsingDateTime)
-    reschedule_time = NullColumn("RescheduleTime", StringParsingDateTime)
-    last_update_time = NullColumn("LastUpdateTime", StringParsingDateTime)
-    start_exec_time = NullColumn("StartExecTime", StringParsingDateTime)
-    heart_beat_time = NullColumn("HeartBeatTime", StringParsingDateTime)
-    end_exec_time = NullColumn("EndExecTime", StringParsingDateTime)
+    submission_time = NullColumn(
+        "SubmissionTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
+    reschedule_time = NullColumn(
+        "RescheduleTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
+    last_update_time = NullColumn(
+        "LastUpdateTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
+    start_exec_time = NullColumn(
+        "StartExecTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
+    heart_beat_time = NullColumn(
+        "HeartBeatTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
+    end_exec_time = NullColumn(
+        "EndExecTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )
     status = Column("Status", String(32), default="Received")
     minor_status = Column("MinorStatus", String(128), default="Unknown")
     application_status = Column("ApplicationStatus", String(255), default="Unknown")
@@ -141,7 +173,13 @@ class HeartBeatLoggingInfo(JobDBBase):
     )
     name = Column("Name", String(100), primary_key=True)
     value = Column("Value", Text)
-    heart_beat_time = Column("HeartBeatTime", StringParsingDateTime, primary_key=True)
+    heart_beat_time = Column(
+        "HeartBeatTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+        primary_key=True,
+    )
 
 
 class JobCommands(JobDBBase):
@@ -152,5 +190,16 @@ class JobCommands(JobDBBase):
     command = Column("Command", String(100))
     arguments = Column("Arguments", String(100))
     status = Column("Status", String(64), default="Received")
-    reception_time = Column("ReceptionTime", StringParsingDateTime, primary_key=True)
-    execution_time = NullColumn("ExecutionTime", StringParsingDateTime)
+    reception_time = Column(
+        "ReceptionTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+        primary_key=True,
+    )
+    execution_time = NullColumn(
+        "ExecutionTime",
+        StringParsingDateTime(
+            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+        ),
+    )

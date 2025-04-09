@@ -104,27 +104,6 @@ class JobDB(BaseSQLDB):
                 raise InvalidQueryError("Per page must be a positive integer")
             stmt = stmt.offset((page - 1) * per_page).limit(per_page)
 
-        from sqlalchemy.dialects import mysql, sqlite
-
-        # for debugging inside CI container FIXME
-        print("SQLite")
-        print("SQLite")
-        print("SQLite")
-        print("SQLite")
-        compiled_sqlite = stmt.compile(
-            dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True}
-        )
-        print(compiled_sqlite)
-        print("MySQL")
-        print("MySQL")
-        print("MySQL")
-        print("MySQL")
-        compiled_mysql = stmt.compile(
-            dialect=mysql.dialect(), compile_kwargs={"literal_binds": True}
-        )
-        print(compiled_mysql)
-        # ----
-
         # Execute the query
         return total, [
             dict(row._mapping) async for row in (await self.conn.stream(stmt))
