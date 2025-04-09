@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.sql.utils.types import StringParsingDateTime
+from diracx.db.sql.utils.types import SmarterDateTime
 
 from ..utils import Column, EnumBackedBool, NullColumn
 
@@ -65,37 +65,37 @@ class Jobs(JobDBBase):
     vo = Column("VO", String(32))
     submission_time = NullColumn(
         "SubmissionTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
     reschedule_time = NullColumn(
         "RescheduleTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
     last_update_time = NullColumn(
         "LastUpdateTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
     start_exec_time = NullColumn(
         "StartExecTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
     heart_beat_time = NullColumn(
         "HeartBeatTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
     end_exec_time = NullColumn(
         "EndExecTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )
@@ -175,7 +175,7 @@ class HeartBeatLoggingInfo(JobDBBase):
     value = Column("Value", Text)
     heart_beat_time = Column(
         "HeartBeatTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
         primary_key=True,
@@ -192,14 +192,14 @@ class JobCommands(JobDBBase):
     status = Column("Status", String(64), default="Received")
     reception_time = Column(
         "ReceptionTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
         primary_key=True,
     )
     execution_time = NullColumn(
         "ExecutionTime",
-        StringParsingDateTime(
+        SmarterDateTime(
             stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
         ),
     )

@@ -47,11 +47,11 @@ class EnumBackedBool(types.TypeDecorator):
             raise NotImplementedError(f"Unknown {value=}")
 
 
-class StringParsingDateTime(types.TypeDecorator):
+class SmarterDateTime(types.TypeDecorator):
     """A DateTime type that also accepts ISO8601 strings.
 
     Takes into account converting timezone aware datetime objects into
-    naive form if required.
+    naive form and back when needed.
 
     """
 
