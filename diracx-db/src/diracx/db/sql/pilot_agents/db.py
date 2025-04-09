@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import DateTime, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
@@ -85,8 +85,13 @@ class PilotAgentsDB(BaseSQLDB):
 
         stmt = (
             select(PilotRegistrations)
+            .with_for_update()
             .where(PilotRegistrations.pilot_hashed_secret == pilot_hashed_secret)
             .where(PilotRegistrations.pilot_id == pilot_id)
+            .where(
+                PilotRegistrations.pilot_secret_expiration_date
+                > datetime.now(tz=timezone.utc)
+            )
         )
 
         # Execute the request
@@ -95,12 +100,16 @@ class PilotAgentsDB(BaseSQLDB):
         result = res.fetchone()
 
         if result is None:
-            raise AuthorizationError(detail="bad pilot_id / pilot_secret")
+            raise AuthorizationError(
+                detail="bad pilot_id / pilot_secret or secret has expired"
+            )
 
         # Increment the count
         await self.increment_pilot_secret_use(pilot_id=pilot_id)
 
-    async def add_pilot_credentials(self, pilot_id: int, pilot_hashed_secret: str):
+    async def add_pilot_credentials(
+        self, pilot_id: int, pilot_hashed_secret: str
+    ) -> datetime:
 
         stmt = insert(PilotRegistrations).values(
             pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
@@ -115,6 +124,22 @@ class PilotAgentsDB(BaseSQLDB):
                 raise PilotAlreadyExistsError(
                     pilot_id=pilot_id, detail="this pilot has already credentials"
                 ) from e
+
+        added_creds = await self.get_pilot_creds_by_id(pilot_id)
+
+        return added_creds["PilotSecretCreationDate"]
+
+    async def set_pilot_credentials_expiration(
+        self, pilot_id: int, pilot_secret_expiration_date: DateTime
+    ):
+        #  Prepare the update statement
+        stmt = (
+            update(PilotRegistrations)
+            .values(pilot_secret_expiration_date=pilot_secret_expiration_date)
+            .where(PilotRegistrations.pilot_id == pilot_id)
+        )
+
+        await self.conn.execute(stmt)
 
     async def fetch_all_pilots(self):
         stmt = select(PilotRegistrations).with_for_update()
@@ -133,4 +158,13 @@ class PilotAgentsDB(BaseSQLDB):
         )
 
         # We assume it is unique...
+        return dict((await self.conn.execute(stmt)).one()._mapping)
+
+    async def get_pilot_creds_by_id(self, pilot_id: int):
+        stmt = (
+            select(PilotRegistrations)
+            .with_for_update()
+            .where(PilotRegistrations.pilot_id == pilot_id)
+        )
+
         return dict((await self.conn.execute(stmt)).one()._mapping)

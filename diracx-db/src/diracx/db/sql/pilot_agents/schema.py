@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import DateTime, Double, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, EnumBackedBool, NullColumn
+from ..utils import Column, DateNowColumn, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
 
@@ -64,3 +64,7 @@ class PilotRegistrations(PilotAgentsDBBase):
     )
     pilot_hashed_secret = Column("PilotHashedSecret", String(64))
     pilot_secret_use_count = Column("PilotSecretUseCount", Integer, default=0)
+    pilot_secret_creation_time = DateNowColumn("PilotSecretCreationDate")
+    pilot_secret_expiration_date = NullColumn(
+        "PilotSecretExpirationDate", DateTime(timezone=True)
+    )
