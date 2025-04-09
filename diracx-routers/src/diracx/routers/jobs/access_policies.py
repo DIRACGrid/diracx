@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
+from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
@@ -62,6 +62,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
             return
 
         if JOB_ADMINISTRATOR in user_info.properties:
+            return
+
+        if action == ActionType.MANAGE and GENERIC_PILOT in user_info.properties:
+            # TODO: When we have pilot credentials we should limit this to only
+            # the applicable tests
             return
 
         if NORMAL_USER not in user_info.properties:
