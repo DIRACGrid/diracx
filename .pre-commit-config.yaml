@@ -41,6 +41,7 @@ repos:
     rev: v2.4.1
     hooks:
     -   id: codespell
+    exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
 -   repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22  # Use the ref you want to point at
@@ -50,6 +51,7 @@ repos:
         additional_dependencies:
         -   mdformat-gfm
         -   mdformat-black
+        exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
 -   repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0  # Use the ref you want to point at
@@ -63,6 +65,7 @@ repos:
     -   id: rst-directive-colons
     -   id: rst-inline-touching-normal
     -   id: text-unicode-replacement-char
+    exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
     # ...
 
 -   repo: https://github.com/adamchainz/blacken-docs
@@ -71,6 +74,7 @@ repos:
     -   id: blacken-docs
         additional_dependencies:
         -   black==25.1.0 # use sync-pre-commit-deps below??
+    exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
 -   repo: https://github.com/pre-commit/sync-pre-commit-deps
     rev: v0.0.3
