@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 from fastapi import FastAPI
 
@@ -43,7 +42,7 @@ class OTELSettings(ServiceSettingsBase):
     grpc_insecure: bool = True
     # headers to pass to the OTEL Collector
     # e.g. {"tenant_id": "lhcbdiracx-cert"}
-    headers: Optional[dict[str, str]] = None
+    headers: dict[str, str] | None = None
 
 
 def instrument_otel(app: FastAPI) -> None:

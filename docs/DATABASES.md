@@ -23,7 +23,6 @@ export DIRACX_DB_URL_MYDB="mysql+aiomysql://user:pass@hostname:3306/MyDB"
 
 See the DiracX helm chart for more details about configuring access to databases.
 
-
 ### Using SQL databases
 
 See the services/tasks documentation for details about how the database classes should be used.

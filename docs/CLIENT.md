@@ -15,15 +15,16 @@ The DiracX client is a comprehensive toolset designed to interact with various s
 ```
 
 1. **diracx-client**: A client library generated from OpenAPI specifications.
-2. **diracx-api**: A Python API to interact with services using the diracx-client.
-3. **diracx-cli**: A command-line interface for direct interaction with the services.
+1. **diracx-api**: A Python API to interact with services using the diracx-client.
+1. **diracx-cli**: A command-line interface for direct interaction with the services.
 
 ## diracx-client
 
 The `diracx-client` consists of three parts:
-* an auto-generated client library that facilitates communication with services defined by OpenAPI specifications. (the `generated` folder)
-* customization, in the `patches` folder, which mirror the structure of the generated client.
-* the base modules (`aio`, `extensions`, `models`) just exporting what we want to be exporting
+
+- an auto-generated client library that facilitates communication with services defined by OpenAPI specifications. (the `generated` folder)
+- customization, in the `patches` folder, which mirror the structure of the generated client.
+- the base modules (`aio`, `extensions`, `models`) just exporting what we want to be exporting
 
 `diracx-client` also defines a `AsyncDiracClient` class which exposes all these low level calls, and handles the authentication/authorisation aspects, as well as the interactions with extensions.
 
@@ -83,7 +84,6 @@ Optional environment variables:
 - `DIRACX_LOG_LEVEL`: logging level (e.g. `ERROR`). Defaults to `INFO`.
 - `DIRACX_CREDENTIALS_PATH`: path where access and refresh tokens are stored. Defaults to `~/.cache/diracx/credentials.json`.
 
-
 ### Getting preferences
 
 Developers can get access to the preferences through the following method:
@@ -107,8 +107,8 @@ The `diracx-api` provides a Python API for interacting with services, leveraging
 API methods are located in `diracx-api/src/diracx/api/`. To create an API method:
 
 1. Import `AsyncDiracClient`.
-2. Decorate the method with `@with_client` to handle client configuration.
-3. Pass the `client` as a keyword argument.
+1. Decorate the method with `@with_client` to handle client configuration.
+1. Pass the `client` as a keyword argument.
 
 #### Example
 
@@ -116,9 +116,9 @@ API methods are located in `diracx-api/src/diracx/api/`. To create an API method
 from diracx.client.aio import AsyncDiracClient
 from .utils import with_client
 
+
 @with_client
-async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
-    ...
+async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str: ...
 ```
 
 In this example, `paths` are the parameters of the API. The `@with_client` decorator allows the method to be called without manually managing the client:
@@ -142,8 +142,8 @@ The `diracx-cli` is a command-line interface built on `diracx-client` and `dirac
 CLI commands are located in `diracx-cli/src/diracx/cli/`. To create a CLI command:
 
 1. Import `AsyncDiracClient` and/or the diracx API.
-2. Import `utils.AsyncTyper`.
-3. Use the `@app.async_command` decorator to define commands.
+1. Import `utils.AsyncTyper`.
+1. Use the `@app.async_command` decorator to define commands.
 
 For adding a new command, it needs to be added to one of the following entrypoint:
 
@@ -164,6 +164,7 @@ from diracx.client.aio import AsyncDiracClient
 
 app = AsyncTyper()
 
+
 @app.async_command()
 async def submit(jdl: list[FileText]):
     async with AsyncDiracClient() as client:
@@ -175,7 +176,9 @@ For more details on Typer and Rich options, refer to their [Typer documentation]
 ### Associating Commands and Subcommands
 
 - Commands without subcommands (e.g., `dirac login`) should be implemented directly in `src/diracx/__init__.py` and decorated with `app.async_command()`.
+
 - Commands with subcommands (e.g., `dirac jobs submit`) should have their own modules in `src/diracx/<command>` and use `AsyncTyper`.
+
   - To associate the command with `dirac`, import the module in `src/diracx/__init__.py`:
 
   ```python

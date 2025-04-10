@@ -95,7 +95,7 @@ class JobLoggingDB(BaseSQLDB):
                     status,
                     minor_status,
                     application_status,
-                    status_time.replace(tzinfo=timezone.utc),
+                    status_time.replace(tzinfo=UTC),
                     status_source,
                 ]
             )

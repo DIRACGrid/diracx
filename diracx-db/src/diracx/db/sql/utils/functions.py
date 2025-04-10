@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, func
@@ -104,7 +104,7 @@ def sqlite_date_trunc(element, compiler, **kw):
 
 
 def substract_date(**kwargs: float) -> datetime:
-    return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
+    return datetime.now(tz=UTC) - timedelta(**kwargs)
 
 
 def hash(code: str):

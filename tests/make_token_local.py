@@ -28,7 +28,7 @@ def main(token_key):
     preferred_username = "localuser"
     dirac_properties = [NORMAL_USER]
     settings = AuthSettings(token_key=token_key)
-    creation_time = datetime.now(tz=timezone.utc)
+    creation_time = datetime.now(tz=UTC)
     expires_in = 7 * 24 * 60 * 60
 
     access_payload = {

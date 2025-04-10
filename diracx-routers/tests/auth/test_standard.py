@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -571,7 +571,7 @@ async def test_refresh_token_expired(
 
     # Modify the expiration time (utc now - 5 hours)
     refresh_payload["exp"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
+        (datetime.now(tz=UTC) - timedelta(hours=5)).timestamp()
     )
 
     # Encode it differently

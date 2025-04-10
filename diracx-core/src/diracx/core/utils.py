@@ -45,7 +45,7 @@ def serialize_credentials(token_response: TokenResponse) -> str:
     This method is separated from write_credentials to allow for DIRAC to be
     able to serialize credentials for inclusion in the proxy file.
     """
-    expires = datetime.now(tz=timezone.utc) + timedelta(
+    expires = datetime.now(tz=UTC) + timedelta(
         seconds=token_response.expires_in - EXPIRES_GRACE_SECONDS
     )
     credential_data = {
@@ -62,7 +62,7 @@ def read_credentials(location: Path) -> TokenResponse:
 
     credentials_path = location or get_diracx_preferences().credentials_path
     try:
-        with open(credentials_path, "r") as f:
+        with open(credentials_path) as f:
             # Lock the file to prevent other processes from writing to it at the same time
             fcntl.flock(f, fcntl.LOCK_SH)
             # Read the credentials from the file
@@ -76,8 +76,7 @@ def read_credentials(location: Path) -> TokenResponse:
 
     return TokenResponse(
         access_token=credentials["access_token"],
-        expires_in=credentials["expires_on"]
-        - int(datetime.now(tz=timezone.utc).timestamp()),
+        expires_in=credentials["expires_on"] - int(datetime.now(tz=UTC).timestamp()),
         token_type="Bearer",  # noqa: S106
         refresh_token=credentials.get("refresh_token"),
     )

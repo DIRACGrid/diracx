@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial
 
 import pytest
@@ -11,7 +11,7 @@ from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.osdb import DummyOSDB
 
 DOC1 = {
-    "DateField": datetime.now(tz=timezone.utc),
+    "DateField": datetime.now(tz=UTC),
     "IntField": 1234,
     "KeywordField0": "a",
     "KeywordField1": "keyword1",
@@ -20,7 +20,7 @@ DOC1 = {
     "UnknownField": "unknown field 1",
 }
 DOC2 = {
-    "DateField": datetime.now(tz=timezone.utc) - timedelta(days=1, minutes=34),
+    "DateField": datetime.now(tz=UTC) - timedelta(days=1, minutes=34),
     "IntField": 679,
     "KeywordField0": "c",
     "KeywordField1": "keyword1",
@@ -29,7 +29,7 @@ DOC2 = {
     "UnknownField": "unknown field 2",
 }
 DOC3 = {
-    "DateField": datetime.now(tz=timezone.utc) - timedelta(days=1),
+    "DateField": datetime.now(tz=UTC) - timedelta(days=1),
     "IntField": 42,
     "KeywordField0": "b",
     "KeywordField1": "keyword2",

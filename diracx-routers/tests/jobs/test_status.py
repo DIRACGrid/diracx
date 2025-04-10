@@ -54,7 +54,7 @@ def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
         "/api/jobs/status",
         json={
             valid_job_id: {
-                datetime.now(tz=timezone.utc).isoformat(): {
+                datetime.now(tz=UTC).isoformat(): {
                     "Status": new_status,
                     "MinorStatus": new_minor_status,
                 }
@@ -94,7 +94,7 @@ def test_set_job_status_invalid_job(
         "/api/jobs/status",
         json={
             invalid_job_id: {
-                datetime.now(tz=timezone.utc).isoformat(): {
+                datetime.now(tz=UTC).isoformat(): {
                     "Status": JobStatus.CHECKING.value,
                     "MinorStatus": "JobPath",
                 }
@@ -117,7 +117,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
     valid_job_id: int,
 ):
     # Act
-    date = datetime.now(tz=timezone.utc).isoformat(sep=" ").split("+")[0]
+    date = datetime.now(tz=UTC).isoformat(sep=" ").split("+")[0]
     r = normal_user_client.patch(
         "/api/jobs/status",
         json={
@@ -166,7 +166,7 @@ def test_set_job_status_cannot_make_impossible_transitions(
         "/api/jobs/status",
         json={
             valid_job_id: {
-                datetime.now(tz=timezone.utc).isoformat(): {
+                datetime.now(tz=UTC).isoformat(): {
                     "Status": new_status,
                     "MinorStatus": new_minor_status,
                 }
@@ -226,7 +226,7 @@ def test_set_job_status_force(normal_user_client: TestClient, valid_job_id: int)
         "/api/jobs/status",
         json={
             valid_job_id: {
-                datetime.now(tz=timezone.utc).isoformat(): {
+                datetime.now(tz=UTC).isoformat(): {
                     "Status": new_status,
                     "MinorStatus": new_minor_status,
                 }
@@ -288,7 +288,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient, valid_job_ids):
         "/api/jobs/status",
         json={
             job_id: {
-                datetime.now(timezone.utc).isoformat(): {
+                datetime.now(UTC).isoformat(): {
                     "Status": new_status,
                     "MinorStatus": new_minor_status,
                 }
@@ -332,7 +332,7 @@ def test_set_job_status_with_invalid_job_id(
         "/api/jobs/status",
         json={
             invalid_job_id: {
-                datetime.now(tz=timezone.utc).isoformat(): {
+                datetime.now(tz=UTC).isoformat(): {
                     "Status": JobStatus.CHECKING.value,
                     "MinorStatus": "JobPath",
                 }
@@ -477,7 +477,7 @@ def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: i
         "/api/jobs/status",
         json={
             valid_job_id: {
-                str(datetime.now(tz=timezone.utc)): {
+                str(datetime.now(tz=UTC)): {
                     "Status": JobStatus.DELETED,
                     "MinorStatus": "Checking accounting",
                 }
@@ -512,7 +512,7 @@ def test_delete_job_invalid_job_id(normal_user_client: TestClient, invalid_job_i
         "/api/jobs/status",
         json={
             invalid_job_id: {
-                str(datetime.now(tz=timezone.utc)): {
+                str(datetime.now(tz=UTC)): {
                     "Status": JobStatus.DELETED,
                     "MinorStatus": "Checking accounting",
                 }
@@ -534,7 +534,7 @@ def test_delete_bulk_jobs_valid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(tz=timezone.utc)): {
+                str(datetime.now(tz=UTC)): {
                     "Status": JobStatus.DELETED,
                     "MinorStatus": "Checking accounting",
                 }
@@ -571,7 +571,7 @@ def test_delete_bulk_jobs_invalid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(tz=timezone.utc)): {
+                str(datetime.now(tz=UTC)): {
                     "Status": JobStatus.DELETED,
                     "MinorStatus": "Checking accounting",
                 }
@@ -601,7 +601,7 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(tz=timezone.utc)): {
+                str(datetime.now(tz=UTC)): {
                     "Status": JobStatus.DELETED,
                     "MinorStatus": "Checking accounting",
                 }
@@ -649,7 +649,7 @@ def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int
         "/api/jobs/status",
         json={
             valid_job_id: {
-                str(datetime.now(timezone.utc)): {
+                str(datetime.now(UTC)): {
                     "Status": JobStatus.KILLED,
                     "MinorStatus": "Marked for termination",
                 }
@@ -687,7 +687,7 @@ def test_kill_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id:
         "/api/jobs/status",
         json={
             int(invalid_job_id): {
-                str(datetime.now(timezone.utc)): {
+                str(datetime.now(UTC)): {
                     "Status": JobStatus.KILLED,
                     "MinorStatus": "Marked for termination",
                 }
@@ -711,7 +711,7 @@ def test_kill_bulk_jobs_valid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(timezone.utc)): {
+                str(datetime.now(UTC)): {
                     "Status": JobStatus.KILLED,
                     "MinorStatus": "Marked for termination",
                 }
@@ -753,7 +753,7 @@ def test_kill_bulk_jobs_invalid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(timezone.utc)): {
+                str(datetime.now(UTC)): {
                     "Status": JobStatus.KILLED,
                     "MinorStatus": "Marked for termination",
                 }
@@ -785,7 +785,7 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
         "/api/jobs/status",
         json={
             job_id: {
-                str(datetime.now(timezone.utc)): {
+                str(datetime.now(UTC)): {
                     "Status": JobStatus.KILLED,
                     "MinorStatus": "Marked for termination",
                 }
@@ -967,7 +967,7 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
         assert j["ApplicationStatus"] == "Unknown"
 
     # Act
-    hbt = str(datetime.now(timezone.utc))
+    hbt = str(datetime.now(UTC))
     r = normal_user_client.patch(
         "/api/jobs/metadata",
         json={
@@ -1031,7 +1031,7 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
         assert j["ApplicationStatus"] == "Unknown"
 
     # Act
-    hbt = str(datetime.now(timezone.utc))
+    hbt = str(datetime.now(UTC))
     r = normal_user_client.patch(
         "/api/jobs/metadata",
         json={

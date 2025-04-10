@@ -10,11 +10,12 @@ import os
 import re
 import ssl
 import subprocess
-from datetime import datetime, timedelta, timezone
+from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
@@ -367,7 +368,7 @@ class ClientFactory:
         with self.unauthenticated() as client:
             payload = {
                 "sub": "testingVO:yellow-sub",
-                "exp": datetime.now(tz=timezone.utc)
+                "exp": datetime.now(tz=UTC)
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
                 "iss": ISSUER,
                 "dirac_properties": [NORMAL_USER],

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import (
@@ -50,7 +50,7 @@ async def serve_config(
         try:
             not_before = datetime.strptime(
                 if_modified_since, LAST_MODIFIED_FORMAT
-            ).astimezone(timezone.utc)
+            ).astimezone(UTC)
         except ValueError:
             pass
         else:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import insert
 
@@ -24,7 +24,7 @@ class PilotAgentsDB(BaseSQLDB):
         if pilot_stamps is None:
             pilot_stamps = {}
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         # Prepare the list of dictionaries for bulk insertion
         values = [

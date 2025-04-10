@@ -9,7 +9,7 @@ import asyncio
 import logging
 import os
 from abc import ABCMeta, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated
@@ -67,7 +67,7 @@ class ConfigSource(metaclass=ABCMeta):
     """
 
     # Keep a mapping between the scheme and the class
-    __registry: dict[str, type["ConfigSource"]] = {}
+    __registry: dict[str, type[ConfigSource]] = {}
     scheme: str
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
@@ -114,7 +114,7 @@ class ConfigSource(metaclass=ABCMeta):
     @classmethod
     def create_from_url(
         cls, *, backend_url: ConfigSourceUrl | Path | str
-    ) -> "ConfigSource":
+    ) -> ConfigSource:
         """Factory method to produce a concrete instance depending on
         the backend URL scheme.
 
@@ -191,7 +191,7 @@ class BaseGitConfigSource(ConfigSource):
                 _tty_out=False,
                 _async=is_running_in_async_context(),
             ).strip()
-            modified = datetime.fromtimestamp(int(commit_info), tz=timezone.utc)
+            modified = datetime.fromtimestamp(int(commit_info), tz=UTC)
         except sh.ErrorReturnCode as e:
             raise BadConfigurationVersionError(
                 f"Error parsing latest revision: {e}"
