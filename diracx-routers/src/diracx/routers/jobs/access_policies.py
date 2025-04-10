@@ -63,11 +63,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
                 len(job_ids) == 1
             ), "a pilot can have only one job_id associated, and it has to be given"
 
-            job_id = job_ids[0]
             pilot_info = user_info  # For semantic
 
             # Syntax to avoid code duplication
             if {GENERIC_PILOT, LIMITED_DELEGATION} & set(pilot_info.properties):
+                # Get his informations
                 pilot_data = await pilot_db.get_pilot_by_reference(
                     pilot_info.preferred_username
                 )
@@ -77,7 +77,13 @@ class WMSAccessPolicy(BaseAccessPolicy):
                         status.HTTP_403_FORBIDDEN, "this pilot is not registered"
                     )
 
-                if pilot_data["CurrentJobID"] == job_id:
+                # Get his jobs
+                pilot_jobs = await pilot_db.get_pilot_job_ids(
+                    pilot_id=pilot_data["PilotID"]
+                )
+
+                # Equivalent of issubset, but cleaner
+                if set(job_ids) <= pilot_jobs:
                     return
 
                 raise HTTPException(

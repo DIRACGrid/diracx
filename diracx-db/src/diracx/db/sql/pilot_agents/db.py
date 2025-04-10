@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import insert, select
 
 from ..utils import BaseSQLDB
-from .schema import PilotAgents, PilotAgentsDBBase
+from .schema import JobToPilotMapping, PilotAgents, PilotAgentsDBBase
 
 
 class PilotAgentsDB(BaseSQLDB):
@@ -51,6 +51,30 @@ class PilotAgentsDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
 
         # Get the first row, which should be the pilot if it exists
-        pilot = result.scalars().first()
+        pilot = result.one()
 
-        return pilot
+        return dict(pilot._mapping)
+
+    async def get_pilot_job_ids(self, pilot_id: set) -> set[dict]:
+        stmt = select(JobToPilotMapping.job_id).where(
+            JobToPilotMapping.pilot_id == pilot_id
+        )
+
+        # Execute the results
+        result = await self.conn.execute(stmt)
+
+        return set(result.scalars().all())
+
+    async def associate_pilot_with_jobs(self, pilot_id: int, job_ids: set[int]):
+
+        now = datetime.now(tz=timezone.utc)
+
+        # Prepare the list of dictionaries for bulk insertion
+        values = [
+            {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+            for job_id in job_ids
+        ]
+
+        # Insert multiple rows in a single execute call
+        stmt = insert(JobToPilotMapping).values(values)
+        await self.conn.execute(stmt)
