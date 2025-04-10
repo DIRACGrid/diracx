@@ -22,7 +22,10 @@ class SBOwners(Base):
     Owner = Column(String(32))
     OwnerGroup = Column(String(32))
     VO = Column(String(64))
-    __table_args__ = (PrimaryKeyConstraint("OwnerID"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("OwnerID"),
+        UniqueConstraint("Owner", "OwnerGroup", "VO", name="unique_owner_group_vo"),
+    )
 
 
 class SandBoxes(Base):
