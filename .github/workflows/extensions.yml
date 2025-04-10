@@ -48,7 +48,6 @@ jobs:
             python-gfal2
             mypy
             pip
-            tzlocal
           init-shell: bash
           post-cleanup: "all"
       - name: Set up environment

@@ -5,7 +5,6 @@ from functools import partial
 from zoneinfo import ZoneInfo
 
 import sqlalchemy.types as types
-import tzlocal
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum
 
@@ -18,10 +17,6 @@ DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=ut
 
 def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
     return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
-
-
-def get_local_timezone():
-    return tzlocal.get_localzone()
 
 
 class EnumBackedBool(types.TypeDecorator):
@@ -97,19 +92,16 @@ class SmarterDateTime(types.TypeDecorator):
                 f"Provided timestamp {value=} has no tzinfo -"
                 " this is problematic and may cause inconsistencies in stored timestamps.\n"
                 " Please always work with tz-aware datetimes / attach tzinfo to your datetime objects:"
-                " e.g. datetime.now(tz=timezone.utc) or use tzlocal.get_localzone() if you need to "
-                "attach tzinfo to a local naive timestamp."
+                " e.g. datetime.now(tz=timezone.utc) or use datetime_obj.astimezone() with no arguments if you need to "
+                "attach the local timezone to a local naive timestamp."
             )
 
-        # Check that we need to convert the timezone to match self._tz timezone:
-        # e.g. _stored_naive is True
-        #   --> We need to ensure the datetime is in the correct timezone
-        #   if tzinfo in the provided timestamp is None, we assume already correct
-        if self._stored_naive(dialect) and value.tzinfo is not None:
-            # if self._tz is None, we use our system timezone.
-            stored_tz = self._stored_tz or get_local_timezone()
+        # Check that we need to convert the timezone to match self._stored_tz timezone:
+        if self._stored_naive(dialect):
+            # if self._stored_tz is None, we use our local/system timezone.
+            stored_tz = self._stored_tz
 
-            # astimezone converts to the stored timezone
+            # astimezone converts to the stored timezone (local timezone if None)
             # replace strips the TZ info --> naive datetime object
             value = value.astimezone(tz=stored_tz).replace(tzinfo=None)
 
@@ -131,7 +123,7 @@ class SmarterDateTime(types.TypeDecorator):
                     value = value.replace(tzinfo=self._stored_tz)
                 else:
                     # if stored as a local time, add back the system timezone info...
-                    value = value.replace(tzinfo=get_local_timezone())
+                    value = value.astimezone()
             else:
                 raise ValueError(
                     f"stored_naive is True for {dialect.name=}, but the database engine returned "
