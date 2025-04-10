@@ -6,8 +6,8 @@ import asyncio
 import json
 import os
 from asyncio import sleep
-from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import typer
 
@@ -43,14 +43,14 @@ def vo_callback(vo: str | None) -> str:
 @app.async_command()
 async def login(
     vo: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(callback=vo_callback, help="Virtual Organization name"),
     ] = None,
-    group: Optional[str] = typer.Option(
+    group: str | None = typer.Option(
         None,
         help="Group name within the VO. If not provided, the default group for the VO will be used.",
     ),
-    property: Optional[list[str]] = typer.Option(
+    property: list[str] | None = typer.Option(
         None,
         help=(
             "List of properties to add to the default properties of the group. "
@@ -83,10 +83,8 @@ async def login(
             scope=" ".join(scopes),
         )
         print("Now go to:", data.verification_uri_complete)
-        expires = datetime.now(tz=timezone.utc) + timedelta(
-            seconds=data.expires_in - 30
-        )
-        while expires > datetime.now(tz=timezone.utc):
+        expires = datetime.now(tz=UTC) + timedelta(seconds=data.expires_in - 30)
+        while expires > datetime.now(tz=UTC):
             print(".", end="", flush=True)
             response = await api.auth.get_oidc_token(device_code=data.device_code, client_id=api.client_id)  # type: ignore
             if isinstance(response, DeviceFlowErrorResponse):
@@ -136,6 +134,6 @@ async def logout():
 
 
 @app.callback()
-def callback(output_format: Optional[str] = None):
+def callback(output_format: str | None = None):
     if output_format is not None:
         os.environ["DIRACX_OUTPUT_FORMAT"] = output_format

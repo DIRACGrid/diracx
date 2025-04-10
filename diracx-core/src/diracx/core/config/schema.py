@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import MutableMapping
 from datetime import datetime
-from typing import Annotated, Any, MutableMapping, TypeVar
+from typing import Annotated, Any, TypeVar
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator

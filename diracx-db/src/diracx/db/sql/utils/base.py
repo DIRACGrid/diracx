@@ -99,7 +99,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         self._engine: AsyncEngine | None = None
 
     @classmethod
-    def available_implementations(cls, db_name: str) -> list[type["BaseSQLDB"]]:
+    def available_implementations(cls, db_name: str) -> list[type[BaseSQLDB]]:
         """Return the available implementations of the DB in reverse priority order."""
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()

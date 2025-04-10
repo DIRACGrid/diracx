@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import opensearchpy
 import pytest
@@ -8,7 +8,7 @@ import pytest
 from diracx.testing.osdb import DummyOSDB
 
 DUMMY_DOCUMENT = {
-    "DateField": datetime.now(tz=timezone.utc),
+    "DateField": datetime.now(tz=UTC),
     "IntField": 1234,
     "KeywordField1": "keyword1",
     "KeywordField2": "keyword two",

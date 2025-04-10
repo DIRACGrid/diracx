@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from authlib.jose import JsonWebToken
@@ -364,9 +364,7 @@ async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
     """Get the device flow from the DB and check few parameters before returning it."""
     res = await auth_db.get_device_flow(device_code)
 
-    if res["CreationTime"].replace(tzinfo=timezone.utc) < substract_date(
-        seconds=max_validity
-    ):
+    if res["CreationTime"].replace(tzinfo=UTC) < substract_date(seconds=max_validity):
         raise ExpiredFlowError()
 
     if res["Status"] == FlowStatus.READY:
