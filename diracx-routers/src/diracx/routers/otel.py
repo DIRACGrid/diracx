@@ -6,6 +6,11 @@ from typing import Optional
 
 from fastapi import FastAPI
 
+# Required by FastAPIInstrumentor
+# to follow semantic conventions for HTTP metrics
+# https://opentelemetry.io/docs/specs/semconv/http/http-metrics/
+os.environ["OTEL_SEMCONV_STABILITY_OPT_IN"] = "http"
+
 # https://opentelemetry.io/blog/2023/logs-collection/
 # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
 from opentelemetry import _logs, metrics, trace
