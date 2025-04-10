@@ -55,7 +55,7 @@ class SmarterDateTime(types.TypeDecorator):
 
     def __init__(
         self,
-        stored_tz: ZoneInfo | None = None,
+        stored_tz: ZoneInfo | None = ZoneInfo("UTC"),
         returned_tz: ZoneInfo = ZoneInfo("UTC"),
         stored_naive_sqlite=True,
         stored_naive_mysql=True,

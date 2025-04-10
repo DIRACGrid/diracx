@@ -66,37 +66,49 @@ class Jobs(JobDBBase):
     submission_time = NullColumn(
         "SubmissionTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     reschedule_time = NullColumn(
         "RescheduleTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     last_update_time = NullColumn(
         "LastUpdateTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     start_exec_time = NullColumn(
         "StartExecTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     heart_beat_time = NullColumn(
         "HeartBeatTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     end_exec_time = NullColumn(
         "EndExecTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
     status = Column("Status", String(32), default="Received")
@@ -176,7 +188,9 @@ class HeartBeatLoggingInfo(JobDBBase):
     heart_beat_time = Column(
         "HeartBeatTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
         primary_key=True,
     )
@@ -193,13 +207,17 @@ class JobCommands(JobDBBase):
     reception_time = Column(
         "ReceptionTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
         primary_key=True,
     )
     execution_time = NullColumn(
         "ExecutionTime",
         SmarterDateTime(
-            stored_tz=None, returned_tz=ZoneInfo("UTC"), stored_naive_mysql=True
+            stored_tz=ZoneInfo("UTC"),
+            returned_tz=ZoneInfo("UTC"),
+            stored_naive_mysql=True,
         ),
     )
