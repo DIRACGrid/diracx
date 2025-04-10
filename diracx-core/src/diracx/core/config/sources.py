@@ -26,9 +26,10 @@ from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_GIT_BRANCH = "master"
-DEFAULT_CS_CACHE_TTL = 5
+
+DEFAULT_CS_CACHE_TTL = 5 * 60
 MAX_CS_CACHED_VERSIONS = 1
-DEFAULT_PULL_CACHE_TTL = 5
+DEFAULT_PULL_CACHE_TTL = 5 * 60
 MAX_PULL_CACHED_VERSIONS = 1
 
 logger = logging.getLogger(__name__)
