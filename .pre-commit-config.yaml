@@ -41,7 +41,7 @@ repos:
     rev: v2.4.1
     hooks:
     -   id: codespell
-        exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
+        args: ["--ignore-regex=^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)"]
 
 -   repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22  # Use the ref you want to point at
