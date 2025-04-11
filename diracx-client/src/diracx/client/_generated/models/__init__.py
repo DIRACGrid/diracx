@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
+    ExtendedMetadata,
     GroupInfo,
     HTTPValidationError,
     HeartbeatData,
@@ -25,7 +26,6 @@ from ._models import (  # type: ignore
     JobStatusUpdate,
     JobSummaryParams,
     JobSummaryParamsSearchItem,
-    Metadata,
     OpenIDConfiguration,
     SandboxDownloadResponse,
     SandboxInfo,
@@ -61,6 +61,7 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
+    "ExtendedMetadata",
     "GroupInfo",
     "HTTPValidationError",
     "HeartbeatData",
@@ -72,7 +73,6 @@ __all__ = [
     "JobStatusUpdate",
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
-    "Metadata",
     "OpenIDConfiguration",
     "SandboxDownloadResponse",
     "SandboxInfo",
