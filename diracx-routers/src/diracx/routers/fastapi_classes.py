@@ -82,9 +82,10 @@ class DiracxRouter(APIRouter):
         *,
         dependencies=None,
         require_auth: bool = True,
+        include_in_schema: bool = True,
         path_root: str = "/api",
     ):
-        super().__init__(dependencies=dependencies)
+        super().__init__(dependencies=dependencies, include_in_schema=include_in_schema)
         self.diracx_require_auth = require_auth
         self.diracx_path_root = path_root
 

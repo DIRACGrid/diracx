@@ -41,10 +41,11 @@ types = [
 ]
 
 [project.entry-points."diracx.services"]
-jobs = "diracx.routers.jobs:router"
-config = "diracx.routers.configuration:router"
-auth = "diracx.routers.auth:router"
 ".well-known" = "diracx.routers.auth.well_known:router"
+auth = "diracx.routers.auth:router"
+config = "diracx.routers.configuration:router"
+health = "diracx.routers.health:router"
+jobs = "diracx.routers.jobs:router"
 
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
