@@ -9,7 +9,6 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from authlib.jose import JsonWebToken
-from authlib.jose.errors import DecodeError
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (
@@ -336,17 +335,6 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
         {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
     )
     return encoded_jwt.decode("ascii")
-
-
-def read_token(payload: str, settings: AuthSettings) -> dict:
-    # First transform it into bytes, then return a jwt object
-    try:
-        encoded_payload = payload.encode("ascii")
-        jwt = JsonWebToken(settings.token_algorithm)
-        decoded_jwt = jwt.decode(encoded_payload, settings.token_key.jwk)
-    except DecodeError as e:
-        raise ValueError("wrong json payload") from e
-    return decoded_jwt
 
 
 async def insert_refresh_token(

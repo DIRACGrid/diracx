@@ -33,8 +33,9 @@ async def test_logout(monkeypatch, capfd, cli_env, with_cli_login):
     captured = capfd.readouterr()
     assert (
         "You are not connected to DiracX, or your credentials are missing."
-        not in captured.out
+        in captured.out
     )
+    assert "Login successful!" not in captured.out
     assert captured.err == ""
 
     # Ensure the credentials file still does not exist
