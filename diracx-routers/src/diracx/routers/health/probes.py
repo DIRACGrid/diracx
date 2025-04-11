@@ -14,13 +14,17 @@ router = DiracxRouter(require_auth=False)
 
 
 @router.get("/live", include_in_schema=False)
-async def liveness():
-    """Returns a simple status to indicate the app is running."""
+async def liveness(config: Config):
+    """Returns a simple status to indicate the app is running.
+
+    The method doesn't use the config but we want to depend on it so the check
+    fails if the config expires without managing to refresh.
+    """
     return JSONResponse(content={"status": "live"})
 
 
 @router.get("/ready", include_in_schema=False)
-async def readiness(config: Config, auth_db: AuthDB):
+async def ready(config: Config, auth_db: AuthDB):
     """Readiness endpoint.
 
     Checks if at least the configuration is loaded and the AuthDB database
@@ -36,7 +40,7 @@ async def readiness(config: Config, auth_db: AuthDB):
 
 
 @router.get("/startup", include_in_schema=False)
-async def startup_check(config: Config, auth_db: AuthDB):
+async def startup(config: Config, auth_db: AuthDB):
     """Startup endpoint.
 
     Checks if at least the configuration is loaded and the AuthDB database

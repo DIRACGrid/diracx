@@ -17,19 +17,19 @@ from urllib.parse import urlparse, urlunparse
 
 import sh
 import yaml
-from cachetools import Cache, LRUCache, TTLCache, cachedmethod
+from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersionError
+from ..exceptions import BadConfigurationVersionError, NotReadyError
 from ..extensions import select_from_extension
+from ..utils import TwoLevelCache
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_GIT_BRANCH = "master"
-DEFAULT_CS_CACHE_TTL = 5
-MAX_CS_CACHED_VERSIONS = 1
-DEFAULT_PULL_CACHE_TTL = 5
-MAX_PULL_CACHED_VERSIONS = 1
+DEFAULT_CS_CACHE_SOFT_TTL = 5
+# TODO: Reduce the hard TTL when we have more redundancy around the source of truth
+DEFAULT_CS_CACHE_HARD_TTL = 60 * 60
 
 logger = logging.getLogger(__name__)
 
@@ -58,18 +58,27 @@ ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_sc
 
 
 class ConfigSource(metaclass=ABCMeta):
-    """This class is the abstract base class that should be used everywhere
-    throughout the code.
-    It acts as a factory for concrete implementations
-    See the abstractmethods to implement a concrete class.
+    """Abstract class for the configuration source.
+
+    This class takes care of the expected caching and locking logic. Subclasses
+    are responsible for implementing the actual logic to find revisions and
+    reading the configuration.
     """
 
     # Keep a mapping between the scheme and the class
     __registry: dict[str, type["ConfigSource"]] = {}
     scheme: str
 
-    @abstractmethod
-    def __init__(self, *, backend_url: ConfigSourceUrl) -> None: ...
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
+        self._cache = TwoLevelCache(
+            soft_ttl=DEFAULT_CS_CACHE_SOFT_TTL,
+            hard_ttl=DEFAULT_CS_CACHE_HARD_TTL,
+            max_workers=1,
+            max_items=1,
+        )
+        self._raw_cache: Cache = LRUCache(maxsize=2)
+        self._tasks: dict[str, asyncio.Task] = {}
+        self._lock = asyncio.Lock()
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
@@ -77,16 +86,13 @@ class ConfigSource(metaclass=ABCMeta):
         * a unique hash as a string, representing the last version
         * a datetime object corresponding to when the version dates.
         """
-        ...
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
         """Return the Config object that corresponds to the
         specific hash
         The `modified` parameter is just added as a attribute to the config.
-
         """
-        ...
 
     def __init_subclass__(cls) -> None:
         """Keep a record of <scheme: class>."""
@@ -110,22 +116,57 @@ class ConfigSource(metaclass=ABCMeta):
         return cls.__registry[url.scheme](backend_url=url)
 
     def read_config(self) -> Config:
-        """:raises:
-        git.exc.BadName if version does not exist
-        """
-        hexsha, modified = self.latest_revision()
-        return self.read_raw(hexsha, modified)
+        """Load the configuration from the backend with appropriate caching.
 
-    @abstractmethod
-    def clear_caches(self): ...
+        :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
+        :raises: git.exc.BadName if version does not exist
+        """
+        hexsha, modified = self._cache.get(
+            "latest_revision", self.latest_revision, blocking=True
+        )
+        if raw := self._raw_cache.get(hexsha, None):
+            return raw
+        self._raw_cache[hexsha] = self.read_raw(hexsha=hexsha, modified=modified)
+        return self._raw_cache[hexsha]
+
+    async def read_config_non_blocking(self) -> Config:
+        """Load the configuration from the backend with appropriate caching.
+
+        :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
+        :raises: git.exc.BadName if version does not exist
+        """
+        hexsha, modified = self._cache.get(
+            "latest_revision", self.latest_revision, blocking=False
+        )
+        if raw := self._raw_cache.get(hexsha, None):
+            return raw
+        # If the config is not in the cache, check if we need to spawn a task to load it
+        async with self._lock:
+            if hexsha not in self._tasks:
+                self._tasks[hexsha] = asyncio.create_task(
+                    self._read_in_thread(hexsha=hexsha, modified=modified)
+                )
+        # The config is being loaded in a thread so raise an exception
+        raise NotReadyError(
+            f"Configuration {hexsha} is being loaded, please retry later."
+        )
+
+    async def _read_in_thread(self, hexsha: str, modified: datetime) -> None:
+        """Read the configuration in a separate thread."""
+        self._raw_cache[hexsha] = await asyncio.to_thread(
+            self.read_raw, hexsha, modified
+        )
+        self._tasks.pop(hexsha)
+
+    def clear_caches(self):
+        """Clear the caches."""
+        self._raw_cache.clear()
+        self._tasks.clear()
+        self._cache.clear()
 
 
 class BaseGitConfigSource(ConfigSource):
-    """Base class for the git based config source
-    The caching is based on 2 caches:
-    * TTL to find the latest commit hashes
-    * LRU to keep in memory the last few versions.
-    """
+    """Base class for the git based config source."""
 
     repo_location: Path
 
@@ -133,14 +174,10 @@ class BaseGitConfigSource(ConfigSource):
     scheme = "basegit"
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        self._latest_revision_cache: Cache = TTLCache(
-            MAX_CS_CACHED_VERSIONS, DEFAULT_CS_CACHE_TTL
-        )
-        self._read_raw_cache: Cache = LRUCache(MAX_CS_CACHED_VERSIONS)
+        super().__init__(backend_url=backend_url)
         self.remote_url = self.extract_remote_url(backend_url)
         self.git_branch = self.get_git_branch_from_url(backend_url)
 
-    @cachedmethod(lambda self: self._latest_revision_cache)
     def latest_revision(self) -> tuple[str, datetime]:
         try:
             rev = sh.git(
@@ -166,7 +203,6 @@ class BaseGitConfigSource(ConfigSource):
         logger.debug("Latest revision for %s is %s with mtime %s", self, rev, modified)
         return rev, modified
 
-    @cachedmethod(lambda self: self._read_raw_cache)
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
         """:param: hexsha commit hash"""
         logger.debug("Reading %s for %s with mtime %s", self, hexsha, modified)
@@ -190,10 +226,6 @@ class BaseGitConfigSource(ConfigSource):
         config._hexsha = hexsha
         config._modified = modified
         return config
-
-    def clear_caches(self):
-        self._latest_revision_cache.clear()
-        self._read_raw_cache.clear()
 
     def extract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the base URL without the 'git+' prefix and query parameters."""
@@ -253,25 +285,15 @@ class RemoteGitConfigSource(BaseGitConfigSource):
         sh.git.clone(
             self.remote_url, self.repo_location, branch=self.git_branch, _async=False
         )
-        self._pull_cache: Cache = TTLCache(
-            MAX_PULL_CACHED_VERSIONS, DEFAULT_PULL_CACHE_TTL
-        )
-
-    def clear_caches(self):
-        super().clear_caches()
-        self._pull_cache.clear()
 
     def __hash__(self):
         return hash(self.repo_location)
 
-    @cachedmethod(lambda self: self._pull_cache)
-    def _pull(self):
-        """Git pull from remote repo."""
+    def latest_revision(self) -> tuple[str, datetime]:
+        logger.debug("Pulling latest version from %s", self)
         try:
             sh.git.pull(_cwd=self.repo_location, _async=False)
         except sh.ErrorReturnCode as err:
             logger.exception(err)
 
-    def latest_revision(self) -> tuple[str, datetime]:
-        self._pull()
         return super().latest_revision()
