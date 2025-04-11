@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
+from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers.jobs.access_policies import (
     ActionType,
     SandboxAccessPolicy,
@@ -27,6 +27,11 @@ class FakeJobDB:
     async def summary(self, *args): ...
 
 
+class FakePilotDB:
+    async def get_pilot_by_reference(self, *args): ...
+    async def get_pilot_job_ids(self, *args): ...
+
+
 class FakeSBMetadataDB:
     async def get_owner_id(self, *args): ...
     async def get_sandbox_owner_id(self, *args): ...
@@ -35,6 +40,11 @@ class FakeSBMetadataDB:
 @pytest.fixture
 def job_db():
     yield FakeJobDB()
+
+
+@pytest.fixture
+def pilot_db():
+    yield FakePilotDB()
 
 
 @pytest.fixture
@@ -67,6 +77,114 @@ async def test_wms_access_policy_weird_user(job_db):
             job_db=job_db,
             job_ids=[1, 2, 3],
         )
+
+
+async def test_wms_access_policy_pilot(job_db, pilot_db, monkeypatch):
+
+    normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
+    pilot = AuthorizedUserInfo(properties=[GENERIC_PILOT], **base_payload)
+
+    # ------------------------- Simple User accessing a pilot action -------------------------
+    # A user cannot create any resource
+    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}") as excinfo:
+        await WMSAccessPolicy.policy(
+            WMS_POLICY_NAME,
+            normal_user,
+            action=ActionType.PILOT,
+            job_db=job_db,
+            pilot_db=pilot_db,
+            job_ids=[1, 2],
+        )
+
+    # Split to distinguish the generated part ("403 ") from the message part ("you are not a pilot")
+    assert str(excinfo.value) == "403: " + "you are not a pilot", excinfo
+
+    # ------------------------- Lost pilot -------------------------
+    async def get_pilot_by_reference_patch(*args):
+        return []
+
+    monkeypatch.setattr(
+        pilot_db, "get_pilot_by_reference", get_pilot_by_reference_patch
+    )
+
+    # A pilot that has expired (removed from db) should not be able to access jobs
+    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}") as excinfo:
+        await WMSAccessPolicy.policy(
+            WMS_POLICY_NAME,
+            pilot,
+            action=ActionType.PILOT,
+            pilot_db=pilot_db,
+            job_db=job_db,
+            job_ids=[1, 2],
+        )
+
+    assert str(excinfo.value) == "403: " + "this pilot is not registered", excinfo
+
+    # ------------------------- Pilot accessing wrong jobs -------------------------
+    async def get_pilot_by_reference_patch(*args, **kwargs):
+        return {"PilotID": 1}
+
+    async def get_pilot_job_ids_patch(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(
+        pilot_db, "get_pilot_by_reference", get_pilot_by_reference_patch
+    )
+    monkeypatch.setattr(pilot_db, "get_pilot_job_ids", get_pilot_job_ids_patch)
+
+    # A pilot that has is not associated with a job can't access a job
+    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}") as excinfo:
+        await WMSAccessPolicy.policy(
+            WMS_POLICY_NAME,
+            pilot,
+            action=ActionType.PILOT,
+            pilot_db=pilot_db,
+            job_db=job_db,
+            job_ids=[1, 2],
+        )
+
+    assert (
+        str(excinfo.value)
+        == "403: " + "this pilot can't access/modify some jobs: ids={1, 2}"
+    ), excinfo
+
+    # ------------------------- Pilot accessing some of his jobs -------------------------
+    async def get_pilot_job_ids_patch(*args, **kwargs):
+        return [1, 2, 3, 4]
+
+    monkeypatch.setattr(pilot_db, "get_pilot_job_ids", get_pilot_job_ids_patch)
+
+    # A pilot that is associated with a job can access a job
+    await WMSAccessPolicy.policy(
+        WMS_POLICY_NAME,
+        pilot,
+        action=ActionType.PILOT,
+        pilot_db=pilot_db,
+        job_db=job_db,
+        job_ids=[1, 2],
+    )
+
+    # ------------------------- Pilot accessing some of his jobs plus some forbidden -------------------------
+    async def get_pilot_job_ids_patch(*args, **kwargs):
+        return [1, 2, 3, 4]
+
+    monkeypatch.setattr(pilot_db, "get_pilot_job_ids", get_pilot_job_ids_patch)
+
+    # A pilot that fetches few jobs, one where he does not have the rights, and few where he has the rights
+    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}") as excinfo:
+        await WMSAccessPolicy.policy(
+            WMS_POLICY_NAME,
+            pilot,
+            action=ActionType.PILOT,
+            pilot_db=pilot_db,
+            job_db=job_db,
+            job_ids=[1, 2, 12],
+        )
+
+    assert (
+        str(excinfo.value)
+        == "403: " + "this pilot can't access/modify some jobs: ids={12}"
+    ), excinfo
 
 
 async def test_wms_access_policy_create(job_db):
