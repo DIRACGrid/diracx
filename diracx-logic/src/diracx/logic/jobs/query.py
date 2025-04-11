@@ -24,7 +24,7 @@ async def search(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
     job_logging_db: JobLoggingDB,
-    preferred_username: str,
+    preferred_username: str | None,
     page: int = 1,
     per_page: int = 100,
     body: JobSearchParams | None = None,
@@ -46,7 +46,10 @@ async def search(
                 body.parameters = ["JobID"] + (body.parameters or [])
 
     # TODO: Apply all the job policy stuff properly using user_info
-    if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
+    if (
+        not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo
+        and preferred_username
+    ):
         body.search.append(
             {
                 "parameter": "Owner",
