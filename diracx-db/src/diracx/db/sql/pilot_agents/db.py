@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, insert, select, update
+from sqlalchemy import DateTime, asc, bindparam, insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
@@ -12,6 +12,7 @@ from diracx.core.exceptions import (
 )
 
 from ..utils import BaseSQLDB
+from ..utils.functions import rows_to_dicts
 from .schema import PilotAgents, PilotAgentsDBBase, PilotRegistrations
 
 
@@ -22,7 +23,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     async def add_pilot_references(
         self,
-        pilot_ref: list[str],
+        pilot_refs: list[str],
         vo: str,
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
@@ -44,7 +45,7 @@ class PilotAgentsDB(BaseSQLDB):
                 "Status": "Submitted",
                 "PilotStamp": pilot_stamps.get(ref, ""),
             }
-            for ref in pilot_ref
+            for ref in pilot_refs
         ]
 
         # Insert multiple rows in a single execute call and use 'returning' to get primary keys
@@ -77,11 +78,12 @@ class PilotAgentsDB(BaseSQLDB):
     ) -> None:
 
         try:
-            pilot = await self.get_pilot_by_reference(pilot_job_reference)
+            pilots = await self.get_pilots_by_references_bulk([pilot_job_reference])
+            assert len(pilots) == 1
         except NoResultFound as e:
             raise PilotNotFoundError(pilot_ref=pilot_job_reference) from e
 
-        pilot_id = pilot["PilotID"]
+        pilot_id = pilots[0]["PilotID"]
 
         stmt = (
             select(PilotRegistrations)
@@ -107,64 +109,90 @@ class PilotAgentsDB(BaseSQLDB):
         # Increment the count
         await self.increment_pilot_secret_use(pilot_id=pilot_id)
 
-    async def add_pilot_credentials(
-        self, pilot_id: int, pilot_hashed_secret: str
-    ) -> datetime:
+    async def add_pilots_credentials(
+        self, pilot_ids: list[int], pilot_hashed_secrets: list[str]
+    ) -> list[datetime]:
 
-        stmt = insert(PilotRegistrations).values(
-            pilot_id=pilot_id, pilot_hashed_secret=pilot_hashed_secret
-        )
+        if len(pilot_ids) != len(pilot_hashed_secrets):
+            raise ValueError("Each pilot has to have a secret")
+
+        values = [
+            {"PilotID": pilot_id, "PilotHashedSecret": pilot_secret}
+            for pilot_id, pilot_secret in zip(pilot_ids, pilot_hashed_secrets)
+        ]
+
+        stmt = insert(PilotRegistrations).values(values)
 
         try:
             await self.conn.execute(stmt)
+            await self.conn.commit()
         except IntegrityError as e:
+            # Undo changes
+            await self.conn.rollback()
+
             if "foreign key" in str(e.orig).lower():
-                raise PilotNotFoundError(pilot_id=pilot_id) from e
+                raise PilotNotFoundError(pilot_id=pilot_ids) from e
             if "duplicate entry" in str(e.orig).lower():
                 raise PilotAlreadyExistsError(
-                    pilot_id=pilot_id, detail="this pilot has already credentials"
+                    pilot_id=pilot_ids,
+                    detail="at least one of these pilots already have a secret",
                 ) from e
 
-        added_creds = await self.get_pilot_creds_by_id(pilot_id)
+        added_creds = await self.get_pilots_credentials_by_id_bulk(pilot_ids)
 
-        return added_creds["PilotSecretCreationDate"]
+        return [cred["PilotSecretCreationDate"] for cred in added_creds]
 
     async def set_pilot_credentials_expiration(
-        self, pilot_id: int, pilot_secret_expiration_date: DateTime
+        self, pilot_ids: list[int], pilot_secret_expiration_dates: list[DateTime]
     ):
+        values = [
+            {"b_PilotID": pilot_id, "PilotSecretExpirationDate": pilot_secret}
+            for pilot_id, pilot_secret in zip(pilot_ids, pilot_secret_expiration_dates)
+        ]
+
         #  Prepare the update statement
         stmt = (
             update(PilotRegistrations)
-            .values(pilot_secret_expiration_date=pilot_secret_expiration_date)
-            .where(PilotRegistrations.pilot_id == pilot_id)
+            .where(PilotRegistrations.pilot_id == bindparam("b_PilotID"))
+            .values(
+                {"PilotSecretExpirationDate": bindparam("PilotSecretExpirationDate")}
+            )
         )
 
-        await self.conn.execute(stmt)
+        await self.conn.execute(stmt, values)
 
-    async def fetch_all_pilots(self):
-        stmt = select(PilotRegistrations).with_for_update()
-        result = await self.conn.execute(stmt)
-
-        # Convert results into a dictionary
-        pilots = [dict(row._mapping) for row in result]
-
-        return pilots
-
-    async def get_pilot_by_reference(self, pilot_ref: str):
+    async def get_pilots_by_references_bulk(self, refs: list[str]) -> list[dict]:
+        """Bulk fetch pilots. Ensure all refs are found, else raise error."""
         stmt = (
             select(PilotAgents)
-            .with_for_update()
-            .where(PilotAgents.pilot_job_reference == pilot_ref)
+            .where(PilotAgents.pilot_job_reference.in_(refs))
+            .order_by(asc(PilotAgents.pilot_id))
         )
+        results = rows_to_dicts(await self.conn.execute(stmt))
 
-        # We assume it is unique...
-        return dict((await self.conn.execute(stmt)).one()._mapping)
+        # Build a map to verify all refs are found
+        result_map = {pilot["PilotJobReference"]: pilot for pilot in results}
+        missing = set(refs) - result_map.keys()
 
-    async def get_pilot_creds_by_id(self, pilot_id: int):
+        if missing:
+            raise PilotNotFoundError(pilot_ref=missing, detail=str(missing))
+
+        return results
+
+    async def get_pilots_credentials_by_id_bulk(self, ids: list[int]) -> list[dict]:
+        """Bulk fetch pilots. Ensure all refs are found, else raise error."""
         stmt = (
             select(PilotRegistrations)
-            .with_for_update()
-            .where(PilotRegistrations.pilot_id == pilot_id)
+            .where(PilotRegistrations.pilot_id.in_(ids))
+            .order_by(asc(PilotRegistrations.pilot_id))
         )
+        results = rows_to_dicts(await self.conn.execute(stmt))
 
-        return dict((await self.conn.execute(stmt)).one()._mapping)
+        # Build a map to verify all refs are found
+        result_map = {pilot["PilotID"]: pilot for pilot in results}
+        missing = set(ids) - result_map.keys()
+
+        if missing:
+            raise PilotNotFoundError(pilot_id=set(missing), detail=str(missing))
+
+        return results
