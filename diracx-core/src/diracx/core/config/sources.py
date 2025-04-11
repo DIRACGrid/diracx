@@ -70,13 +70,21 @@ class ConfigSource(metaclass=ABCMeta):
     scheme: str
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        self._cache = TwoLevelCache(
+        # Revision cache is used to store the latest revision and its
+        # modification date. This cache has two TTLs, one which triggers the
+        # background refresh and the other which is results in a hard failure.
+        # This allows us to avoid blocking while the refresh is done, while
+        # maintaining strong guarantees on the data freshness.
+        self._revision_cache = TwoLevelCache(
             soft_ttl=DEFAULT_CS_CACHE_SOFT_TTL,
             hard_ttl=DEFAULT_CS_CACHE_HARD_TTL,
             max_workers=1,
             max_items=1,
         )
-        self._raw_cache: Cache = LRUCache(maxsize=2)
+        # The content of a given revision can be stored in a simple LRU cache
+        # We keep the last two versions in memory to avoid any potential to flip
+        # flop between two versions when it changes.
+        self._content_cache: Cache = LRUCache(maxsize=2)
         self._tasks: dict[str, asyncio.Task] = {}
         self._lock = asyncio.Lock()
 
@@ -121,13 +129,13 @@ class ConfigSource(metaclass=ABCMeta):
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha, modified = self._cache.get(
+        hexsha, modified = self._revision_cache.get(
             "latest_revision", self.latest_revision, blocking=True
         )
-        if raw := self._raw_cache.get(hexsha, None):
+        if raw := self._content_cache.get(hexsha, None):
             return raw
-        self._raw_cache[hexsha] = self.read_raw(hexsha=hexsha, modified=modified)
-        return self._raw_cache[hexsha]
+        self._content_cache[hexsha] = self.read_raw(hexsha=hexsha, modified=modified)
+        return self._content_cache[hexsha]
 
     async def read_config_non_blocking(self) -> Config:
         """Load the configuration from the backend with appropriate caching.
@@ -135,10 +143,10 @@ class ConfigSource(metaclass=ABCMeta):
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha, modified = self._cache.get(
+        hexsha, modified = self._revision_cache.get(
             "latest_revision", self.latest_revision, blocking=False
         )
-        if raw := self._raw_cache.get(hexsha, None):
+        if raw := self._content_cache.get(hexsha, None):
             return raw
         # If the config is not in the cache, check if we need to spawn a task to load it
         async with self._lock:
@@ -153,16 +161,16 @@ class ConfigSource(metaclass=ABCMeta):
 
     async def _read_in_thread(self, hexsha: str, modified: datetime) -> None:
         """Read the configuration in a separate thread."""
-        self._raw_cache[hexsha] = await asyncio.to_thread(
+        self._content_cache[hexsha] = await asyncio.to_thread(
             self.read_raw, hexsha, modified
         )
         self._tasks.pop(hexsha)
 
     def clear_caches(self):
         """Clear the caches."""
-        self._raw_cache.clear()
+        self._content_cache.clear()
         self._tasks.clear()
-        self._cache.clear()
+        self._revision_cache.clear()
 
 
 class BaseGitConfigSource(ConfigSource):
