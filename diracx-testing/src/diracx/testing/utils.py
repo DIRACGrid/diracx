@@ -184,7 +184,8 @@ class ClientFactory:
 
             @staticmethod
             def enrich_tokens(
-                access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload
+                access_payload: AccessTokenPayload,
+                refresh_payload: RefreshTokenPayload | None,
             ):
 
                 return {"PolicySpecific": "OpenAccessForTest"}, {}

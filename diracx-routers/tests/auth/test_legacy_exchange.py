@@ -95,6 +95,7 @@ async def test_refresh_token(test_client, legacy_credentials):
     )
     assert r.status_code == 200
     initial_refresh_token = r.json()["refresh_token"]
+    initial_access_token = r.json()["access_token"]
 
     # Refresh the access token
     request_data = {
@@ -106,6 +107,7 @@ async def test_refresh_token(test_client, legacy_credentials):
     data = r.json()
     assert r.status_code == 200, data
     new_refresh_token1 = data["refresh_token"]
+    new_access_token1 = data["access_token"]
 
     # Refresh the access token using the initial refresh token
     # In a normal case, it should have been revoked by the refresh token rotation mechanism
@@ -120,10 +122,15 @@ async def test_refresh_token(test_client, legacy_credentials):
     data = r.json()
     assert r.status_code == 200, data
     new_refresh_token2 = data["refresh_token"]
+    new_access_token2 = data["access_token"]
 
-    # Make sure that obtained refresh tokens are all different
-    assert new_refresh_token1 != initial_refresh_token
-    assert new_refresh_token1 != new_refresh_token2
+    # Make sure that obtained refresh tokens are all the same
+    assert new_refresh_token1 == initial_refresh_token
+    assert new_refresh_token2 == initial_refresh_token
+
+    # Make sure that obtained access tokens are all different
+    assert new_access_token1 != initial_access_token
+    assert new_access_token2 != initial_access_token
 
 
 async def test_disabled(test_client):
