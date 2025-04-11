@@ -62,13 +62,20 @@ async def test_jobs_association(pilot_agents_db: PilotAgentsDB):
 
         # Get the jobs associated with the first pilot
         fetched_job_ids = await pilot_agents_db.get_pilot_job_ids(pilot_id)
+        # Convert to set, it is easier to play with
+        fetched_job_ids_set = set(fetched_job_ids)
+        job_ids_set = set(job_ids)
+
         # Asserts
         assert len(fetched_job_ids) == len(job_ids)
-        assert fetched_job_ids.issubset(job_ids)
-        assert job_ids.issubset(fetched_job_ids)
+        assert fetched_job_ids_set == job_ids_set
 
         # Get the jobs associated with the second pilot
-        fetched_job_ids = await pilot_agents_db.get_pilot_job_ids(pilot_id_2)
+        fetched_job_ids_2 = await pilot_agents_db.get_pilot_job_ids(pilot_id_2)
+        # Convert to set, it is easier to play with
+        fetched_job_ids_set_2 = set(fetched_job_ids_2)
+        job_ids_set_2 = set(job_ids_2)
+
+        # Asserts
         assert len(fetched_job_ids) == len(job_ids_2)
-        assert fetched_job_ids.issubset(job_ids_2)
-        assert job_ids_2.issubset(fetched_job_ids)
+        assert fetched_job_ids_set_2 == job_ids_set_2
