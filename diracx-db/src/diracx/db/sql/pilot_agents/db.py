@@ -44,7 +44,7 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = insert(PilotAgents).values(values)
         await self.conn.execute(stmt)
 
-    async def get_pilot_by_reference(self, pilot_ref: str):
+    async def get_pilot_by_reference(self, pilot_ref: str) -> dict:
         stmt = select(PilotAgents).where(PilotAgents.pilot_job_reference == pilot_ref)
 
         # Execute the query and fetch one result
@@ -55,7 +55,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         return dict(pilot._mapping)
 
-    async def get_pilot_job_ids(self, pilot_id: set) -> set[dict]:
+    async def get_pilot_job_ids(self, pilot_id: set) -> list[int]:
         stmt = select(JobToPilotMapping.job_id).where(
             JobToPilotMapping.pilot_id == pilot_id
         )
@@ -63,9 +63,9 @@ class PilotAgentsDB(BaseSQLDB):
         # Execute the results
         result = await self.conn.execute(stmt)
 
-        return set(result.scalars().all())
+        return list(result.scalars().all())
 
-    async def associate_pilot_with_jobs(self, pilot_id: int, job_ids: set[int]):
+    async def associate_pilot_with_jobs(self, pilot_id: int, job_ids: list[int]):
 
         now = datetime.now(tz=timezone.utc)
 
