@@ -31,6 +31,8 @@ from pydantic_settings import SettingsConfigDict
 
 from diracx.core.settings import ServiceSettingsBase
 
+logger = logging.getLogger(__name__)
+
 
 class OTELSettings(ServiceSettingsBase):
     """Settings for the Open Telemetry Configuration."""
@@ -46,6 +48,29 @@ class OTELSettings(ServiceSettingsBase):
     headers: Optional[dict[str, str]] = None
 
 
+def randomly_enable_otel() -> bool:
+    """Enable opentelemetry if the first integer  in reverse order in the hostname
+    is odd.
+    """
+    enable_otel = False
+    try:
+        import socket
+
+        name = socket.gethostname()
+
+        for c in name[::-1]:
+            try:
+                enable_otel = bool(int(c) % 2)
+                break
+            except ValueError:
+                pass
+    except Exception as exe:
+        logger.exception(exe)
+
+    logger.info(f"Randomly enabling OTEL {enable_otel=}")
+    return enable_otel
+
+
 def instrument_otel(app: FastAPI) -> None:
     """Instrument the application to send OpenTelemetryData.
     Metrics, Traces and Logs are sent to an OTEL collector.
@@ -57,6 +82,9 @@ def instrument_otel(app: FastAPI) -> None:
     """
     otel_settings = OTELSettings()
     if not otel_settings.enabled:
+        return
+
+    if not randomly_enable_otel():
         return
 
     # set the service name to show in traces
