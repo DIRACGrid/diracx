@@ -20,16 +20,17 @@ import yaml
 from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersionError, NotReadyError
+from ..exceptions import BadConfigurationVersionError
 from ..extensions import select_from_extension
 from ..utils import TwoLevelCache
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_GIT_BRANCH = "master"
-DEFAULT_CS_CACHE_SOFT_TTL = 5
+DEFAULT_CS_REV_CACHE_SOFT_TTL = 5
 # TODO: Reduce the hard TTL when we have more redundancy around the source of truth
-DEFAULT_CS_CACHE_HARD_TTL = 60 * 60
+DEFAULT_CS_REV_CACHE_HARD_TTL = 60 * 60
+DEFAULT_CS_CONTENT_HARD_TTL = 15
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +77,8 @@ class ConfigSource(metaclass=ABCMeta):
         # This allows us to avoid blocking while the refresh is done, while
         # maintaining strong guarantees on the data freshness.
         self._revision_cache = TwoLevelCache(
-            soft_ttl=DEFAULT_CS_CACHE_SOFT_TTL,
-            hard_ttl=DEFAULT_CS_CACHE_HARD_TTL,
+            soft_ttl=DEFAULT_CS_REV_CACHE_SOFT_TTL,
+            hard_ttl=DEFAULT_CS_REV_CACHE_HARD_TTL,
             max_workers=1,
             max_items=1,
         )
@@ -85,8 +86,6 @@ class ConfigSource(metaclass=ABCMeta):
         # We keep the last two versions in memory to avoid any potential to flip
         # flop between two versions when it changes.
         self._content_cache: Cache = LRUCache(maxsize=2)
-        self._tasks: dict[str, asyncio.Task] = {}
-        self._lock = asyncio.Lock()
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
@@ -129,12 +128,9 @@ class ConfigSource(metaclass=ABCMeta):
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha, modified = self._revision_cache.get(
-            "latest_revision", self.latest_revision, blocking=True
+        hexsha = self._revision_cache.get(
+            "latest_revision", self._read_config_work, blocking=True
         )
-        if raw := self._content_cache.get(hexsha, None):
-            return raw
-        self._content_cache[hexsha] = self.read_raw(hexsha=hexsha, modified=modified)
         return self._content_cache[hexsha]
 
     async def read_config_non_blocking(self) -> Config:
@@ -143,34 +139,26 @@ class ConfigSource(metaclass=ABCMeta):
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha, modified = self._revision_cache.get(
-            "latest_revision", self.latest_revision, blocking=False
+        hexsha = self._revision_cache.get(
+            "latest_revision", self._read_config_work, blocking=False
         )
-        if raw := self._content_cache.get(hexsha, None):
-            return raw
-        # If the config is not in the cache, check if we need to spawn a task to load it
-        async with self._lock:
-            if hexsha not in self._tasks:
-                self._tasks[hexsha] = asyncio.create_task(
-                    self._read_in_thread(hexsha=hexsha, modified=modified)
-                )
-        # The config is being loaded in a thread so raise an exception
-        raise NotReadyError(
-            f"Configuration {hexsha} is being loaded, please retry later."
-        )
+        return self._content_cache[hexsha]
 
-    async def _read_in_thread(self, hexsha: str, modified: datetime) -> None:
-        """Read the configuration in a separate thread."""
-        self._content_cache[hexsha] = await asyncio.to_thread(
-            self.read_raw, hexsha, modified
-        )
-        self._tasks.pop(hexsha)
+    def _read_config_work(self) -> str:
+        """Work function for the thread pool of `self._revision_cache`.
+
+        This function ensures that the latest revision is loaded into the
+        content cache before it is admitted into the revision cache.
+        """
+        hexsha, modified = self.latest_revision()
+        if hexsha not in self._content_cache:
+            self._content_cache[hexsha] = self.read_raw(hexsha, modified)
+        return hexsha
 
     def clear_caches(self):
         """Clear the caches."""
-        self._content_cache.clear()
-        self._tasks.clear()
         self._revision_cache.clear()
+        self._content_cache.clear()
 
 
 class BaseGitConfigSource(ConfigSource):
