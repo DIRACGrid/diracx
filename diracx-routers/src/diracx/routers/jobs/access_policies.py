@@ -59,10 +59,6 @@ class WMSAccessPolicy(BaseAccessPolicy):
                 pilot_db
             ), "pilot_db is a mandatory parameter when using a pilot action"
             assert job_ids, "job_ids has to be defined"
-            assert (
-                len(job_ids) == 1
-            ), "a pilot can have only one job_id associated, and it has to be given"
-
             pilot_info = user_info  # For semantic
 
             # Syntax to avoid code duplication
@@ -83,11 +79,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
                 )
 
                 # Equivalent of issubset, but cleaner
-                if set(job_ids) <= pilot_jobs:
+                if set(job_ids) <= set(pilot_jobs):
                     return
 
                 raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, "this pilot can't modify this job"
+                    status.HTTP_403_FORBIDDEN, "this pilot can't access/modify this job"
                 )
 
             raise HTTPException(status.HTTP_403_FORBIDDEN, "you are not a pilot")
