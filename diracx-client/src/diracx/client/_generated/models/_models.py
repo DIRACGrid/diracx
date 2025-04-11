@@ -94,6 +94,91 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
+    """Body_auth_register_new_pilots_to_db.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_references: Pilot References. Required.
+    :vartype pilot_references: list[str]
+    :ivar pilot_stamps: Pilot Stamps.
+    :vartype pilot_stamps: dict[str, any]
+    """
+
+    _validation = {
+        "pilot_references": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_references": {"key": "pilot_references", "type": "[str]"},
+        "pilot_stamps": {"key": "pilot_stamps", "type": "{object}"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_references: List[str],
+        pilot_stamps: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_references: Pilot References. Required.
+        :paramtype pilot_references: list[str]
+        :keyword pilot_stamps: Pilot Stamps.
+        :paramtype pilot_stamps: dict[str, any]
+        """
+        super().__init__(**kwargs)
+        self.pilot_references = pilot_references
+        self.pilot_stamps = pilot_stamps
+
+
+class ExtendedMetadata(_serialization.Model):
+    """ExtendedMetadata.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar virtual_organizations: Virtual Organizations. Required.
+    :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+    :ivar gubbins_secrets: Gubbins Secrets. Required.
+    :vartype gubbins_secrets: str
+    :ivar gubbins_user_info: Gubbins User Info. Required.
+    :vartype gubbins_user_info: dict[str, list[str]]
+    """
+
+    _validation = {
+        "virtual_organizations": {"required": True},
+        "gubbins_secrets": {"required": True},
+        "gubbins_user_info": {"required": True},
+    }
+
+    _attribute_map = {
+        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+        "gubbins_secrets": {"key": "gubbins_secrets", "type": "str"},
+        "gubbins_user_info": {"key": "gubbins_user_info", "type": "{[str]}"},
+    }
+
+    def __init__(
+        self,
+        *,
+        virtual_organizations: Dict[str, "_models.VOInfo"],
+        gubbins_secrets: str,
+        gubbins_user_info: Dict[str, List[str]],
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword virtual_organizations: Virtual Organizations. Required.
+        :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+        :keyword gubbins_secrets: Gubbins Secrets. Required.
+        :paramtype gubbins_secrets: str
+        :keyword gubbins_user_info: Gubbins User Info. Required.
+        :paramtype gubbins_user_info: dict[str, list[str]]
+        """
+        super().__init__(**kwargs)
+        self.virtual_organizations = virtual_organizations
+        self.gubbins_secrets = gubbins_secrets
+        self.gubbins_user_info = gubbins_user_info
+
+
 class GroupInfo(_serialization.Model):
     """GroupInfo.
 
@@ -516,34 +601,6 @@ class JobSummaryParams(_serialization.Model):
 
 class JobSummaryParamsSearchItem(_serialization.Model):
     """JobSummaryParamsSearchItem."""
-
-
-class Metadata(_serialization.Model):
-    """Metadata.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar virtual_organizations: Virtual Organizations. Required.
-    :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
-    """
-
-    _validation = {
-        "virtual_organizations": {"required": True},
-    }
-
-    _attribute_map = {
-        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
-    }
-
-    def __init__(
-        self, *, virtual_organizations: Dict[str, "_models.VOInfo"], **kwargs: Any
-    ) -> None:
-        """
-        :keyword virtual_organizations: Virtual Organizations. Required.
-        :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
-        """
-        super().__init__(**kwargs)
-        self.virtual_organizations = virtual_organizations
 
 
 class OpenIDConfiguration(_serialization.Model):

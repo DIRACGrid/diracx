@@ -345,6 +345,37 @@ def build_auth_refresh_pilot_tokens_request(
     )
 
 
+def build_auth_register_new_pilots_to_db_request(  # pylint: disable=name-too-long
+    *, vo: str, grid_type: str = "Dirac", **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/auth/register-new-pilots"
+
+    # Construct parameters
+    _params["vo"] = _SERIALIZER.query("vo", vo, "str")
+    if grid_type is not None:
+        _params["grid_type"] = _SERIALIZER.query("grid_type", grid_type, "str")
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
 def build_config_serve_config_request(
     *,
     if_modified_since: Optional[str] = None,
@@ -1772,6 +1803,142 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         deserialized = self._deserialize(
             "TokenResponse", pipeline_response.http_response
         )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    def register_new_pilots_to_db(
+        self,
+        body: _models.BodyAuthRegisterNewPilotsToDb,
+        *,
+        vo: str,
+        grid_type: str = "Dirac",
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Any:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their credentials.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb
+        :keyword vo: Required.
+        :paramtype vo: str
+        :keyword grid_type: Default value is "Dirac".
+        :paramtype grid_type: str
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def register_new_pilots_to_db(
+        self,
+        body: IO[bytes],
+        *,
+        vo: str,
+        grid_type: str = "Dirac",
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> Any:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their credentials.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword vo: Required.
+        :paramtype vo: str
+        :keyword grid_type: Default value is "Dirac".
+        :paramtype grid_type: str
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def register_new_pilots_to_db(
+        self,
+        body: Union[_models.BodyAuthRegisterNewPilotsToDb, IO[bytes]],
+        *,
+        vo: str,
+        grid_type: str = "Dirac",
+        **kwargs: Any,
+    ) -> Any:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their credentials.
+
+        :param body: Is either a BodyAuthRegisterNewPilotsToDb type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb or IO[bytes]
+        :keyword vo: Required.
+        :paramtype vo: str
+        :keyword grid_type: Default value is "Dirac".
+        :paramtype grid_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthRegisterNewPilotsToDb")
+
+        _request = build_auth_register_new_pilots_to_db_request(
+            vo=vo,
+            grid_type=grid_type,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

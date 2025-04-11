@@ -109,3 +109,7 @@ def substract_date(**kwargs: float) -> datetime:
 
 def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
+
+
+def rows_to_dicts(rows):
+    return [dict(row._mapping) for row in rows]
