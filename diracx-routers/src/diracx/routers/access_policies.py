@@ -93,7 +93,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
 
     @staticmethod
     def enrich_tokens(
-        access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload
+        access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload | None
     ) -> tuple[dict, dict]:
         """This method is called when issuing a token, and can add whatever
         content it wants inside the access or refresh payload.
