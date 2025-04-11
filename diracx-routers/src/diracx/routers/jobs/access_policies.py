@@ -82,8 +82,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
                 if set(job_ids) <= set(pilot_jobs):
                     return
 
+                forbidden_jobs_ids = set(job_ids) - set(pilot_jobs)
+
                 raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, "this pilot can't access/modify this job"
+                    status.HTTP_403_FORBIDDEN,
+                    f"this pilot can't access/modify some jobs: ids={forbidden_jobs_ids}",
                 )
 
             raise HTTPException(status.HTTP_403_FORBIDDEN, "you are not a pilot")

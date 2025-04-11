@@ -144,7 +144,8 @@ async def test_wms_access_policy_pilot(job_db, pilot_db, monkeypatch):
         )
 
     assert (
-        str(excinfo.value) == "403: " + "this pilot can't access/modify this job"
+        str(excinfo.value)
+        == "403: " + "this pilot can't access/modify some jobs: ids={1, 2}"
     ), excinfo
 
     # ------------------------- Pilot accessing some of his jobs -------------------------
@@ -181,7 +182,8 @@ async def test_wms_access_policy_pilot(job_db, pilot_db, monkeypatch):
         )
 
     assert (
-        str(excinfo.value) == "403: " + "this pilot can't access/modify this job"
+        str(excinfo.value)
+        == "403: " + "this pilot can't access/modify some jobs: ids={12}"
     ), excinfo
 
 
