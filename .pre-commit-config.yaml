@@ -51,7 +51,7 @@ repos:
         additional_dependencies:
         -   mdformat-gfm
         -   mdformat-black
-        exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
+        exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated|extensions/gubbins/gubbins-client/tests)
 
 -   repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0  # Use the ref you want to point at
@@ -61,12 +61,13 @@ repos:
     -   id: python-check-blanket-type-ignore
     -   id: python-no-eval
     -   id: python-no-log-warn
-    -   id: rst-backticks
-    -   id: rst-directive-colons
-    -   id: rst-inline-touching-normal
     -   id: text-unicode-replacement-char
-        exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
-    # ...
+        exclude: |
+            (?x)(
+                ^extensions/gubbins/gubbins-client/tests|
+                ^diracx-client/src/diracx/client/_generated
+            )
+#        exclude: ^(extensions/gubbins/gubbins-client/tests)
 
 -   repo: https://github.com/adamchainz/blacken-docs
     rev: "v1.12.1"  # replace with latest tag on GitHub
