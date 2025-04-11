@@ -101,3 +101,57 @@ class JobError(Exception):
         super().__init__(
             f"Error concerning job {job_id}" + (": {detail} " if detail else "")
         )
+
+
+class PilotNotFoundError(Exception):
+    def __init__(
+        self,
+        pilot_ref: str | set[str] | list[str] | None = None,
+        pilot_id: int | set[int] | list[int] | None = None,
+        detail: str | None = None,
+    ):
+
+        if type(pilot_ref) is set[str]:
+            pilot_ref = str(pilot_ref)
+
+        pilot_id_str = None
+        if pilot_id:
+            pilot_id_str = str(pilot_id)
+
+        self.pilot_ref = pilot_ref
+        self.pilot_id = pilot_id
+        self.detail = detail
+        super().__init__(
+            "Pilot "
+            + (f"(Ref: {pilot_ref})" if pilot_ref else "")
+            + (f" (ID: {pilot_id_str})" if pilot_id_str is not None else "")
+            + " not found"
+            + (f": {detail}" if detail else "")
+        )
+
+
+class PilotAlreadyExistsError(Exception):
+    def __init__(
+        self,
+        pilot_ref: str | set[str] | list[str] | None = None,
+        pilot_id: int | set[int] | list[int] | None = None,
+        detail: str | None = None,
+    ):
+
+        if type(pilot_ref) is set[str]:
+            pilot_ref = str(pilot_ref)
+
+        pilot_id_str = None
+        if pilot_id:
+            pilot_id_str = str(pilot_id)
+
+        self.pilot_ref = pilot_ref
+        self.pilot_id = pilot_id
+        self.detail = detail
+        super().__init__(
+            "Pilot "
+            + (f"(Ref: {pilot_ref})" if pilot_ref else "")
+            + (f" (ID: {pilot_id_str})" if pilot_id_str is not None else "")
+            + " already exists"
+            + (f": {detail}" if detail else "")
+        )
