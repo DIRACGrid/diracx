@@ -1608,7 +1608,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
-        Endpoint where a pilot can exchange a refresh token against a token.
+        Endpoint where a pilot can exchange a refresh token for a token.
 
         :keyword refresh_token: Required.
         :paramtype refresh_token: str

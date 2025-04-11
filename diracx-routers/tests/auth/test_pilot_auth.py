@@ -4,12 +4,9 @@ from datetime import timedelta
 from random import shuffle
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils import hash
-
-from .test_standard import _get_tokens
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -27,6 +24,12 @@ pytestmark = pytest.mark.enabled_dependencies(
 @pytest.fixture
 def test_client(client_factory):
     with client_factory.unauthenticated() as client:
+        yield client
+
+
+@pytest.fixture
+def normal_test_client(client_factory):
+    with client_factory.normal_user() as client:
         yield client
 
 
@@ -186,23 +189,21 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.status_code == 401, r.json()
 
 
-async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTPXMock):
+async def test_create_pilots_with_credentials(normal_test_client):
     # Lots of request, to validate that it returns the credentials in the same order as the input references
     pilot_refs = [f"ref_{i}" for i in range(100)]
     vo = "lhcb"
-    token = _get_tokens(test_client)["access_token"]
 
     #  -------------- Bulk insert --------------
     request_data = {"vo": vo}
     body = {"pilot_references": pilot_refs}
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/register-new-pilots",
         params=request_data,
         json=body,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
         },
     )
 
@@ -217,7 +218,7 @@ async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTP
     for pilot_reference, secret in pairs:
         request_data = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
 
-        r = test_client.post(
+        r = normal_test_client.post(
             "/api/auth/pilot-login",
             params=request_data,
             headers={"Content-Type": "application/json"},
@@ -230,13 +231,12 @@ async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTP
     request_data = {"vo": vo}
     body = {"pilot_references": [pilot_refs[0], pilot_refs[0] + "_new_one"]}
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/register-new-pilots",
         params=request_data,
         json=body,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
         },
     )
 
@@ -250,13 +250,12 @@ async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTP
     request_data = {"vo": vo}
     body = {"pilot_references": [pilot_refs[0] + "_new_one"]}
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/register-new-pilots",
         params=request_data,
         json=body,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
         },
     )
 
@@ -270,7 +269,7 @@ async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTP
         "pilot_secret": secret,
     }
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/pilot-login",
         params=request_data,
         headers={"Content-Type": "application/json"},
@@ -287,7 +286,7 @@ async def test_create_pilots_with_credentials(test_client, auth_httpx_mock: HTTP
         ],  # [0] = first pilot from the list before, [1] = the secret
     }
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/pilot-login",
         params=request_data,
         headers={"Content-Type": "application/json"},

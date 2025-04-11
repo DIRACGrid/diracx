@@ -388,13 +388,19 @@ async def generate_pilot_tokens(
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
     refresh_token: str | None = None,
-) -> tuple[AccessTokenPayload, RefreshTokenPayload]:
+) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
 
     scope = None
     pilot_info = None
 
     if refresh_token is not None:
-        pilot_info, scope, _ = await get_token_info_from_refresh_flow(
+        (
+            pilot_info,
+            scope,
+            legacy_exchange,
+            refresh_token_expire_minutes,
+            include_refresh_token,
+        ) = await get_token_info_from_refresh_flow(
             refresh_token=refresh_token, auth_db=auth_db, settings=settings
         )
     else:
@@ -410,6 +416,10 @@ async def generate_pilot_tokens(
 
         scope = generate_pilot_scope(pilot)
 
+        refresh_token_expire_minutes = None
+        include_refresh_token = True
+        legacy_exchange = False
+
     access_token, refresh_token = await exchange_token(
         auth_db=auth_db,
         scope=scope,
@@ -418,6 +428,9 @@ async def generate_pilot_tokens(
         settings=settings,
         available_properties=available_properties,
         pilot_exchange=True,
+        legacy_exchange=legacy_exchange,
+        refresh_token_expire_minutes=refresh_token_expire_minutes,
+        include_refresh_token=include_refresh_token,
     )
 
     return access_token, refresh_token
