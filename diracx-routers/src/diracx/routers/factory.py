@@ -159,6 +159,10 @@ def create_app_inner(
     app.dependency_overrides[ConfigSource.create] = (
         config_source.read_config_non_blocking
     )
+    try:
+        config_source.read_config_non_blocking()
+    except Exception:
+        ...
 
     all_access_policies_used = {}
 
