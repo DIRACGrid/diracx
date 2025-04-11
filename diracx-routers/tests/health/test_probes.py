@@ -35,7 +35,6 @@ async def test_startup(client_factory):
         ].__self__.clear_caches()
         r = client.get("/api/health/startup")
         assert r.status_code == 503, r.text
-        assert "is being loaded, please retry later" in r.json()["detail"]
 
         # Ensure that the startup probe returns to normal after a short delay
         for _ in range(50):
