@@ -179,17 +179,20 @@ class TwoLevelCache:
                 if key not in self.futures:
                     self.futures[key] = self.pool.submit(self._work, key, populate_func)
                 if result := self.hard_cache.get(key):
+                    # The soft cache will be updated by _work so we can fill the soft
+                    # cache to avoid later requests needign to acquire the lock.
                     self.soft_cache[key] = result
                     return result
                 future = self.futures[key]
             finally:
                 self.locks[key].release()
-            # It is critical that ``future`` is waited for outside of the lock
-            # as _work aquires the lock before filling the caches. This also
-            # means we can guarantee that the future has not yet been removed
-            # from the futures dict.
-            wait([future])
-            return self.hard_cache[key]
+            if blocking:
+                # It is critical that ``future`` is waited for outside of the lock
+                # as _work aquires the lock before filling the caches. This also
+                # means we can guarantee that the future has not yet been removed
+                # from the futures dict.
+                wait([future])
+                return self.hard_cache[key]
 
         # If the lock is not acquired we're in a non-blocking mode, try to get the
         # value from the hard cache. If it's not there, raise NotReadyError.
