@@ -2,31 +2,33 @@
 
 from __future__ import annotations
 
+import base64
 import inspect
 import logging
 import os
+import re
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from http import HTTPStatus
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from logging import Formatter, StreamHandler
-from typing import (
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import Any, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.dependencies.models import Dependant
-from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exception_handlers import (
+    http_exception_handler,
+    request_validation_exception_handler,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from packaging.version import InvalidVersion, parse
 from pydantic import TypeAdapter
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
@@ -49,6 +51,7 @@ T2 = TypeVar("T2", bound=BaseSQLDB | BaseOSDB)
 
 
 logger = logging.getLogger(__name__)
+logger_401 = logger.getChild("debug.401.errors")
 logger_422 = logger.getChild("debug.422.errors")
 
 
@@ -299,6 +302,9 @@ def create_app_inner(
     app.add_exception_handler(
         RequestValidationError, cast(handler_signature, validation_error_handler)
     )
+    app.add_exception_handler(
+        StarletteHTTPException, cast(handler_signature, http_exception_error_handler)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -407,6 +413,30 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
         headers={"Retry-After": "10"},
         content={"detail": str(exc.args)},
     )
+
+
+async def http_exception_error_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        header_info = "Unknown"
+        if auth_header := request.headers.get("Authorization"):
+            if match := re.fullmatch(r"Bearer (.+)", auth_header):
+                try:
+                    raw_token = match.group(1).split(".")[1]
+                    padding = "=" * (-len(raw_token) % 4)
+                    header_info = base64.urlsafe_b64decode(raw_token + padding).decode(
+                        "utf-8"
+                    )
+                except Exception as e:
+                    header_info = f"Error decoding token: {e}"
+        logger_401.warning(
+            "Got 401 error: %s in %s %s with header_info=%r body %r",
+            exc.detail,
+            request.method,
+            request.url,
+            header_info,
+            await request.body(),
+        )
+    return await http_exception_handler(request, exc)
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError):
