@@ -591,6 +591,51 @@ async def test_refresh_token_expired(
     assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
 
 
+async def test_refresh_token_rotated_expiration_time(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test the expiration date of the newly generated refresh token is similar to the previous one.
+    - get a refresh token
+    - decode it and change the expiration time
+    - recode it (with the JWK of the server)
+    - get a new refresh token using the old one
+    - check that the new refresh token is not expired but has a similar expiration time.
+    """
+    # Get refresh token
+    initial_refresh_token = _get_tokens(test_client)["refresh_token"]
+
+    # Decode it
+    refresh_payload = jwt.decode(
+        initial_refresh_token, options={"verify_signature": False}
+    )
+
+    # Modify the expiration time (utc now + 5 hours)
+    refresh_payload["exp"] = int(
+        (datetime.now(tz=timezone.utc) + timedelta(hours=5)).timestamp()
+    )
+
+    # Encode it differently
+    new_refresh_token = create_token(refresh_payload, test_auth_settings)
+
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": new_refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
+
+    # Try to get a new access token using the invalid refresh token
+    # The server should detect that it is not encoded properly
+    r = test_client.post("/api/auth/token", data=request_data)
+    data = r.json()
+    assert r.status_code == 200, data
+
+    # Check that the new refresh token expiration time is similar to the previous one (modified)
+    new_refresh_payload = jwt.decode(
+        data["refresh_token"], options={"verify_signature": False}
+    )
+    assert abs(new_refresh_payload["exp"] - refresh_payload["exp"]) <= 2
+
+
 async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     """Test the validity of the passed refresh token.
     - get a refresh token
