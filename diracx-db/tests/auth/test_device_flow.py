@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import timezone
+from datetime import UTC
 
 import pytest
 from sqlalchemy.exc import NoResultFound
@@ -98,7 +98,7 @@ async def test_device_flow_lookup(auth_db: AuthDB, monkeypatch):
 
         res = await auth_db.get_device_flow(device_code1)
         # The device code should be expired
-        assert res["CreationTime"].replace(tzinfo=timezone.utc) > substract_date(
+        assert res["CreationTime"].replace(tzinfo=UTC) > substract_date(
             seconds=MAX_VALIDITY
         )
 

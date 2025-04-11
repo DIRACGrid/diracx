@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import timezone
+from datetime import UTC
 from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, func, select
@@ -116,7 +116,7 @@ class JobLoggingDB(BaseSQLDB):
                     status,
                     minor_status,
                     application_status,
-                    status_time.replace(tzinfo=timezone.utc),
+                    status_time.replace(tzinfo=UTC),
                     status_source,
                 ]
             )

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 __all__ = ["JobDB"]
 
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Iterable
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import bindparam, case, delete, func, insert, select, update
 
@@ -190,9 +191,7 @@ class JobDB(BaseSQLDB):
         # TODO: add myDate and force parameters.
         for job_id in job_data.keys():
             if "Status" in job_data[job_id]:
-                job_data[job_id].update(
-                    {"LastUpdateTime": datetime.now(tz=timezone.utc)}
-                )
+                job_data[job_id].update({"LastUpdateTime": datetime.now(tz=UTC)})
         columns = set(key for attrs in job_data.values() for key in attrs.keys())
         case_expressions = {
             column: case(
@@ -238,7 +237,7 @@ class JobDB(BaseSQLDB):
                     "JobID": job_id,
                     "Command": command,
                     "Arguments": arguments,
-                    "ReceptionTime": datetime.now(tz=timezone.utc),
+                    "ReceptionTime": datetime.now(tz=UTC),
                 }
                 for job_id, command, arguments in commands
             ],
@@ -272,7 +271,7 @@ class JobDB(BaseSQLDB):
             c.name: bindparam(c.name) for c in columns
         }
         if update_timestamp:
-            values["LastUpdateTime"] = datetime.now(tz=timezone.utc)
+            values["LastUpdateTime"] = datetime.now(tz=UTC)
 
         stmt = update(Jobs).where(Jobs.job_id == bindparam("job_id")).values(**values)
         rows = await self.conn.execute(stmt, update_parameters)

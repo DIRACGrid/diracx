@@ -6,9 +6,10 @@ __all__ = (
 )
 
 import contextlib
-from datetime import datetime, timezone
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from functools import partial
-from typing import Any, AsyncIterator
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -147,7 +148,7 @@ class MockOSDBMixin:
                     result.update(result.pop("extra"))
                 for k, v in list(result.items()):
                     if isinstance(v, datetime) and v.tzinfo is None:
-                        result[k] = v.replace(tzinfo=timezone.utc)
+                        result[k] = v.replace(tzinfo=UTC)
                     if v is None:
                         result.pop(k)
                 results.append(result)

@@ -13,8 +13,9 @@ __all__ = [
 import logging
 from asyncio import TaskGroup
 from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Any, Iterable
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import MagicMock
 
 from DIRAC.Core.Utilities import TimeUtilities
@@ -166,9 +167,7 @@ async def set_job_statuses(
         status_dict = status_dicts[job_id]
         # This is more precise than "LastTime". time_stamps is a sorted list of tuples...
         time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
-        last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(
-            tzinfo=timezone.utc
-        )
+        last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(tzinfo=UTC)
 
         # Get chronological order of new updates
         update_times = sorted(status_dict)
@@ -197,7 +196,7 @@ async def set_job_statuses(
             if new_status:
                 job_data.update(additional_attributes.get(job_id, {}))
                 job_data["Status"] = new_status
-                job_data["LastUpdateTime"] = str(datetime.now(timezone.utc))
+                job_data["LastUpdateTime"] = str(datetime.now(UTC))
             if new_minor:
                 job_data["MinorStatus"] = new_minor
             if new_application:
@@ -332,7 +331,7 @@ async def reschedule_jobs(
 
         if job_attrs["RescheduleCounter"] > reschedule_max:
             status_changes[job_id] = {
-                datetime.now(tz=timezone.utc): JobStatusUpdate(
+                datetime.now(tz=UTC): JobStatusUpdate(
                     Status=JobStatus.FAILED,
                     MinorStatus=JobMinorStatus.MAX_RESCHEDULING,
                     ApplicationStatus="Unknown",
@@ -413,7 +412,7 @@ async def reschedule_jobs(
         additional_attrs = {
             "Site": site,
             "UserPriority": priority,
-            "RescheduleTime": datetime.now(tz=timezone.utc),
+            "RescheduleTime": datetime.now(tz=UTC),
             "RescheduleCounter": jobs_to_resched[job_id]["RescheduleCounter"],
         }
 
@@ -422,7 +421,7 @@ async def reschedule_jobs(
 
         # set new status
         status_changes[job_id] = {
-            datetime.now(tz=timezone.utc): JobStatusUpdate(
+            datetime.now(tz=UTC): JobStatusUpdate(
                 Status=JobStatus.RECEIVED,
                 MinorStatus=JobMinorStatus.RESCHEDULED,
                 ApplicationStatus="Unknown",
@@ -558,7 +557,7 @@ async def add_heartbeat(
         raise ValueError(f"Failed to lookup job IDs: {data.keys()=} {results=}")
     status_changes = {
         int(result["JobID"]): {
-            datetime.now(timezone.utc): JobStatusUpdate(
+            datetime.now(UTC): JobStatusUpdate(
                 Status=JobStatus.RUNNING,
                 Source="Heartbeat",
             )

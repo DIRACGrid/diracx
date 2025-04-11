@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import fcntl
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
@@ -15,7 +15,7 @@ from diracx.core.utils import serialize_credentials
 # Create a fake jwt dictionary
 REFRESH_CONTENT = {
     "jti": "f0706e0a-af1e-4538-9f1f-7b9620783cba",
-    "exp": int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp()),
+    "exp": int((datetime.now(tz=UTC) + timedelta(days=1)).timestamp()),
     "legacy_exchange": False,
     "dirac_policies": {},
 }
@@ -71,8 +71,7 @@ def test_get_token_valid_input_token(tmp_path):
         token_response.access_token,
         int(
             (
-                datetime.now(tz=timezone.utc)
-                + timedelta(seconds=token_response.expires_in)
+                datetime.now(tz=UTC) + timedelta(seconds=token_response.expires_in)
             ).timestamp()
         ),
     )
@@ -106,7 +105,7 @@ def test_get_token_valid_input_credential(tmp_path):
     # Verify that the returned token is the expected token
     assert isinstance(result, AccessToken)
     assert result.token == TOKEN_RESPONSE_DICT["access_token"]
-    assert result.expires_on > datetime.now(tz=timezone.utc).timestamp()
+    assert result.expires_on > datetime.now(tz=UTC).timestamp()
 
 
 def test_get_token_input_token_not_exists(tmp_path):
@@ -156,7 +155,7 @@ def test_get_token_refresh_valid(monkeypatch, tmp_path):
 
     # Create expired access token
     token_response["expires_on"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(seconds=10)).timestamp()
+        (datetime.now(tz=UTC) - timedelta(seconds=10)).timestamp()
     )
     token_response.pop("expires_in")
 
@@ -184,7 +183,7 @@ def test_get_token_refresh_valid(monkeypatch, tmp_path):
     )
 
     # Verify that the credential file has been refreshed:
-    with open(token_location, "r") as f:
+    with open(token_location) as f:
         content = f.read()
         assert content == serialize_credentials(expected_token_response)
 
@@ -203,11 +202,11 @@ def test_get_token_refresh_expired(tmp_path):
     refresh_token = REFRESH_CONTENT.copy()
 
     refresh_token["exp"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(seconds=10)).timestamp()
+        (datetime.now(tz=UTC) - timedelta(seconds=10)).timestamp()
     )
 
     token_response["expires_on"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(seconds=10)).timestamp()
+        (datetime.now(tz=UTC) - timedelta(seconds=10)).timestamp()
     )
     token_response.pop("expires_in")
     token_response["refresh_token"] = jwt.encode(refresh_token, "secret_key")

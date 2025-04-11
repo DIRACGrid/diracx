@@ -1,13 +1,13 @@
-
 Start from DIRAC v8
 
 Edit the CS:
-* DiracX/DisabledVO is all of them
-* DiracX/LegacyClientEnabled is empty
+
+- DiracX/DisabledVO is all of them
+- DiracX/LegacyClientEnabled is empty
 
 Add in the CS:
-* conversion info
 
+- conversion info
 
 Update to v9
 
