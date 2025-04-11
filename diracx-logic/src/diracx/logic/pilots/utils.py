@@ -7,6 +7,16 @@ async def get_pilot_informations_by_reference(
     pilot_db: PilotAgentsDB,
     pilot_job_reference: str,
 ):
-    pilot = await pilot_db.get_pilot_by_reference(pilot_ref=pilot_job_reference)
+    pilots = await pilot_db.get_pilots_by_references_bulk([pilot_job_reference])
 
-    return pilot
+    assert len(pilots) == 1
+
+    return pilots[0]
+
+
+async def get_pilot_ids_from_references(
+    pilot_db: PilotAgentsDB, pilot_references: list[str]
+) -> list[int]:
+    pilots = await pilot_db.get_pilots_by_references_bulk(refs=pilot_references)
+
+    return [pilot["PilotID"] for pilot in pilots]

@@ -94,6 +94,44 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
+    """Body_auth_register_new_pilots_to_db.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_references: Pilot References. Required.
+    :vartype pilot_references: list[str]
+    :ivar pilot_stamps: Pilot Stamps.
+    :vartype pilot_stamps: dict[str, any]
+    """
+
+    _validation = {
+        "pilot_references": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_references": {"key": "pilot_references", "type": "[str]"},
+        "pilot_stamps": {"key": "pilot_stamps", "type": "{object}"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_references: List[str],
+        pilot_stamps: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_references: Pilot References. Required.
+        :paramtype pilot_references: list[str]
+        :keyword pilot_stamps: Pilot Stamps.
+        :paramtype pilot_stamps: dict[str, any]
+        """
+        super().__init__(**kwargs)
+        self.pilot_references = pilot_references
+        self.pilot_stamps = pilot_stamps
+
+
 class ExtendedMetadata(_serialization.Model):
     """ExtendedMetadata.
 
