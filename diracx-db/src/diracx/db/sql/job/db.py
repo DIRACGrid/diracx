@@ -170,6 +170,11 @@ class JobDB(BaseSQLDB):
     async def set_job_attributes(self, job_data):
         """Update the parameters of the given jobs."""
         # TODO: add myDate and force parameters.
+
+        if not job_data:
+            # nothing to do!
+            raise ValueError("job_data is empty")
+
         for job_id in job_data.keys():
             if "Status" in job_data[job_id]:
                 job_data[job_id].update(

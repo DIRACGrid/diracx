@@ -241,7 +241,8 @@ async def set_job_statuses(
                 )
             )
 
-    await job_db.set_job_attributes(job_attribute_updates)
+    if job_attribute_updates:
+        await job_db.set_job_attributes(job_attribute_updates)
 
     await remove_jobs_from_task_queue(
         list(deletable_killable_jobs),
