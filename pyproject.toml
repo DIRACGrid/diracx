@@ -27,7 +27,7 @@ testing = ["diracx-testing"]
 packages = []
 
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
+requires = ["setuptools>=61", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
@@ -41,7 +41,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errrors
+    "E",   # pycodestyle errors
     "F",   # pyflakes
     "B",   # flake8-bugbear
     "I",   # isort
@@ -73,6 +73,9 @@ ignore = [
     "D401",
     "D404",
 ]
+extend-select = [
+  "UP",  # pyupgrade
+]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
@@ -101,6 +104,8 @@ profile = "black"
 
 
 [tool.mypy]
+strict = false
+warn_unreachable = true
 files = [
     "diracx-api/src/**/*.py",
     "diracx-cli/src/**/*.py",
@@ -124,7 +129,7 @@ allow_redefinition = true
 explicit_package_bases = true
 # disallow_untyped_defs = true
 # strict = true
-enable_error_code = ["import", "attr-defined"]
+enable_error_code = ["import", "attr-defined", "ignore-without-code", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
 module = 'DIRAC.*'
@@ -139,6 +144,9 @@ module = 'sh.*'
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+minversion = "8"
+log_cli_level = "INFO"
+xfail_strict = true
 testpaths = [
     "diracx-api/tests",
     "diracx-cli/tests",
@@ -154,7 +162,9 @@ addopts = [
     "-pdiracx.testing",
     "-pdiracx.testing.osdb",
     "--import-mode=importlib",
+    "-ra", "--strict-config", "--strict-markers"
 ]
+filterwarnings = ["default"]
 asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",

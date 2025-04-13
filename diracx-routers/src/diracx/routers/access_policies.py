@@ -65,7 +65,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
     @classmethod
     def available_implementations(cls, access_policy_name: str):
         """Return the available implementations of the AccessPolicy in reverse priority order."""
-        policy_classes: list[type["BaseAccessPolicy"]] = [
+        policy_classes: list[type[BaseAccessPolicy]] = [
             entry_point.load()
             for entry_point in select_from_extension(
                 group="diracx.access_policies", name=access_policy_name
