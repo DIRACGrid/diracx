@@ -5,12 +5,37 @@ services components (db, logic, routers).
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
+from DIRAC.Core.Utilities import TimeUtilities
+from pydantic import AwareDatetime, BaseModel, BeforeValidator, Field
+from typing_extensions import Annotated, TypedDict
+
+
+def good_utc_dt(v):
+    # We need to specify that timezone is UTC because otherwise timestamp
+    # assumes local time while we mean UTC.
+    if not v:
+        # Make the UTC datetime
+        v = datetime.now(tz=timezone.utc)
+
+    if isinstance(v, str):
+        # The date is provided as a string in UTC
+        v = TimeUtilities.fromString(v)
+
+    if isinstance(v, datetime):
+        if not v.tzinfo:
+            raise ValueError(f"datetime object provided but tzinfo was None. got {v=}")
+        return v.astimezone(timezone.utc)
+
+    raise ValueError(
+        f"Incorrect date for the logging record: got {v=}. Should be a UTC datetime object."
+    )
+
+
+DiracUTCDatetime = Annotated[AwareDatetime, BeforeValidator(good_utc_dt)]
 
 
 class ScalarSearchOperator(StrEnum):
@@ -101,7 +126,7 @@ class JobLoggingRecord(BaseModel):
     status: JobStatus | Literal["idem"]
     minor_status: str
     application_status: str
-    date: datetime
+    date: DiracUTCDatetime
     source: str
 
 
@@ -130,10 +155,10 @@ class SetJobStatusReturn(BaseModel):
         Status: JobStatus | None = None
         MinorStatus: str | None = None
         ApplicationStatus: str | None = None
-        HeartBeatTime: datetime | None = None
-        StartExecTime: datetime | None = None
-        EndExecTime: datetime | None = None
-        LastUpdateTime: datetime | None = None
+        HeartBeatTime: DiracUTCDatetime | None = None
+        StartExecTime: DiracUTCDatetime | None = None
+        EndExecTime: DiracUTCDatetime | None = None
+        LastUpdateTime: DiracUTCDatetime | None = None
 
     success: dict[int, SetJobStatusReturnSuccess]
     failed: dict[int, dict[str, str]]
