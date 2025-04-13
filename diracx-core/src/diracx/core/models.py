@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Literal
 
-from DIRAC.Core.Utilities import TimeUtilities
 from pydantic import AwareDatetime, BaseModel, BeforeValidator, Field
 from typing_extensions import Annotated, TypedDict
 
@@ -22,8 +21,8 @@ def good_utc_dt(v):
         v = datetime.now(tz=timezone.utc)
 
     if isinstance(v, str):
-        # The date is provided as a string in UTC
-        v = TimeUtilities.fromString(v)
+        # The date is provided as a string.
+        v = datetime.fromisoformat(v)
 
     if isinstance(v, datetime):
         if not v.tzinfo:
@@ -81,7 +80,7 @@ class InsertedJob(TypedDict):
     JobID: int
     Status: str
     MinorStatus: str
-    TimeStamp: datetime
+    TimeStamp: DiracUTCDatetime
 
 
 class JobSummaryParams(BaseModel):
