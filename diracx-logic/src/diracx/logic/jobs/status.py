@@ -124,7 +124,7 @@ async def set_job_statuses(
 
     # search all jobs at once
     _, results = await job_db.search(
-        parameters=["Status", "StartExecTime", "EndExecTime", "JobID"],
+        parameters=["Status", "StartExecTime", "EndExecTime", "JobID", "VO"],
         search=[
             {
                 "parameter": "JobID",
@@ -203,11 +203,7 @@ async def set_job_statuses(
             if new_application:
                 job_data["ApplicationStatus"] = new_application
 
-            # TODO: implement elasticJobParametersDB ?
-            # if cls.elasticJobParametersDB:
-            #     result = cls.elasticJobParametersDB.setJobParameter(int(jobID), "Status", status)
-            #     if not result["OK"]:
-            #         return result
+            await job_parameters_db.upsert(res["VO"], job_id, {"Status": new_status})
 
         for upd_time in update_times:
             if status_dict[upd_time]["Source"].startswith("Job"):
