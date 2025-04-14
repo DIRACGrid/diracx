@@ -22,6 +22,7 @@ from diracx.core.models import (
     RefreshTokenPayload,
     TokenResponse,
 )
+from diracx.core.properties import GENERIC_PILOT, LIMITED_DELEGATION
 from diracx.logic.auth.pilot import (
     try_login,
 )
@@ -31,7 +32,6 @@ from diracx.logic.auth.token import (
     perform_legacy_exchange as perform_legacy_exchange_bl,
 )
 from diracx.routers.access_policies import BaseAccessPolicy
-from diracx.routers.pilots.access_policies import RegisteredPilotAccessPolicyCallable
 
 from ..dependencies import (
     AuthDB,
@@ -321,7 +321,6 @@ async def refresh_pilot_tokens(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
-    check_permissions: RegisteredPilotAccessPolicyCallable,
     refresh_token: str,
     pilot_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     all_access_policies: Annotated[
@@ -329,7 +328,10 @@ async def refresh_pilot_tokens(
     ],
 ) -> TokenResponse:
     """Endpoint where a pilot can exchange a refresh token for a token."""
-    await check_permissions()
+    if not {GENERIC_PILOT, LIMITED_DELEGATION} & set(pilot_info.properties):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="you are not a pilot"
+        )
 
     try:
         new_access_token, new_refresh_token = await generate_pilot_tokens(

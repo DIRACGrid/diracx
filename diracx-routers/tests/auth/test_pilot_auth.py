@@ -16,7 +16,6 @@ pytestmark = pytest.mark.enabled_dependencies(
         "ConfigSource",
         "BaseAccessPolicy",
         "PilotAgentsDB",
-        "RegisteredPilotAccessPolicy",
     ]
 )
 
@@ -99,21 +98,21 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     # -----------------  Get pilot info without permissions -----------------
     r = test_client.get(
-        "/api/pilots/info",
+        "/api/auth/userinfo",
     )
 
     assert r.status_code == 401
 
     # -----------------  Get pilot info with access_token  -----------------
     r = test_client.get(
-        "/api/pilots/info", headers={"Authorization": f"Bearer {access_token}"}
+        "/api/auth/userinfo", headers={"Authorization": f"Bearer {access_token}"}
     )
 
     assert r.status_code == 200
 
     # -----------------  Get pilot info with wrong access_token  -----------------
     r = test_client.get(
-        "/api/pilots/info", headers={"Authorization": "Bearer 4dm1n B34r3r"}
+        "/api/auth/userinfo", headers={"Authorization": "Bearer 4dm1n B34r3r"}
     )
 
     assert r.status_code == 401, r.json()
@@ -161,7 +160,7 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     # ----------------- Get info with new token -----------------
     r = test_client.get(
-        "/api/pilots/info", headers={"Authorization": f"Bearer {new_access_token}"}
+        "/api/auth/userinfo", headers={"Authorization": f"Bearer {new_access_token}"}
     )
 
     assert r.status_code == 200

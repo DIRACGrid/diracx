@@ -89,7 +89,9 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
 
         # Add creds
         date_added = await pilot_agents_db.add_pilots_credentials(
-            pilot_ids=pilot_ids, pilot_hashed_secrets=pilot_hashed_secrets
+            pilot_ids=pilot_ids,
+            pilot_hashed_secrets=pilot_hashed_secrets,
+            pilot_secret_use_count_max=10,
         )
 
         assert len(date_added) == len(pilots)
@@ -149,7 +151,9 @@ async def test_create_pilot_and_verify_secret_with_delay(
 
         # Add creds
         date_added = await pilot_agents_db.add_pilots_credentials(
-            pilot_ids=[pilot_id], pilot_hashed_secrets=[pilot_hashed_secret]
+            pilot_ids=[pilot_id],
+            pilot_hashed_secrets=[pilot_hashed_secret],
+            pilot_secret_use_count_max=10,
         )
 
         assert len(date_added) == 1
@@ -165,6 +169,61 @@ async def test_create_pilot_and_verify_secret_with_delay(
         # So that the secret expires
         sleep(3)
 
+        with pytest.raises(AuthorizationError):
+            await pilot_agents_db.verify_pilot_secret(
+                pilot_job_reference=pilot_reference,
+                pilot_hashed_secret=pilot_hashed_secret,
+            )
+
+
+async def test_create_pilot_and_verify_secret_too_much_secret_use(
+    pilot_agents_db: PilotAgentsDB,
+):
+
+    async with pilot_agents_db as pilot_agents_db:
+        pilot_reference = "pilot-reference-test"
+        # Register a pilot
+        await pilot_agents_db.add_pilot_references(
+            vo="lhcb",
+            pilot_refs=[pilot_reference],
+            grid_type="grid-type",
+        )
+
+        pilots = await pilot_agents_db.get_pilots_by_references_bulk([pilot_reference])
+
+        assert len(pilots) == 1
+
+        pilot = pilots[0]
+
+        pilot_id = pilot["PilotID"]
+
+        secret = "AW0nd3rfulS3cr3t"
+        pilot_hashed_secret = hash(secret)
+
+        # Add creds
+        date_added = await pilot_agents_db.add_pilots_credentials(
+            pilot_ids=[pilot_id],
+            pilot_hashed_secrets=[pilot_hashed_secret],
+            pilot_secret_use_count_max=1,
+        )
+
+        assert len(date_added) == 1
+
+        expiration_date = date_added[0] + timedelta(seconds=10)
+
+        await pilot_agents_db.set_pilot_credentials_expiration(
+            pilot_ids=[pilot_id], pilot_secret_expiration_dates=[expiration_date]
+        )
+
+        assert secret is not None
+
+        # First login, should work
+        await pilot_agents_db.verify_pilot_secret(
+            pilot_job_reference=pilot_reference,
+            pilot_hashed_secret=pilot_hashed_secret,
+        )
+
+        # Second login, should not work because maxed out at 1 try
         with pytest.raises(AuthorizationError):
             await pilot_agents_db.verify_pilot_secret(
                 pilot_job_reference=pilot_reference,

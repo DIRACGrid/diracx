@@ -56,7 +56,7 @@ async def try_login(
     hashed_secret = hash(pilot_secret)
 
     await pilot_db.verify_pilot_secret(
-        pilot_hashed_secret=hashed_secret, pilot_job_reference=pilot_reference
+        pilot_job_reference=pilot_reference, pilot_hashed_secret=hashed_secret
     )
 
 
