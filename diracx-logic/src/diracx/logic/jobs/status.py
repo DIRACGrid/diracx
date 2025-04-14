@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 from unittest.mock import MagicMock
 
-from DIRAC.Core.Utilities import TimeUtilities
 from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
 from DIRAC.Core.Utilities.ReturnValues import SErrorException, returnValueOrRaise
 from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
@@ -110,6 +109,7 @@ async def set_job_statuses(
     failed: dict[int, Any] = {}
     deletable_killable_jobs = set()
     job_attribute_updates: dict[int, dict[str, str]] = {}
+    skipped_job_attribute_updates: set[int] = set()
     job_logging_updates: list[JobLoggingRecord] = []
     status_dicts: dict[int, dict[datetime, dict[str, str]]] = defaultdict(dict)
 
@@ -165,16 +165,22 @@ async def set_job_statuses(
         #####################################################################################################
         status_dict = status_dicts[job_id]
         # This is more precise than "LastTime". time_stamps is a sorted list of tuples...
-        time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
-        last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(
-            tzinfo=timezone.utc
-        )
+        # time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
+        first_status = min(
+            wms_time_stamps[job_id].items(), key=lambda x: x[1], default=("", 0)
+        )[0]
+        last_time = max(wms_time_stamps[job_id].values())
 
         # Get chronological order of new updates
         update_times = sorted(status_dict)
 
         new_start_time, new_end_time = getStartAndEndTime(
-            start_time, end_time, update_times, time_stamps, status_dict
+            start_time,
+            end_time,
+            update_times,
+            # Use a type ignore hint here as it exists solely to use the DIRAC API
+            defaultdict(lambda x=first_status: x),  # type: ignore[misc]
+            status_dict,
         )
 
         job_data: dict[str, str] = {}
@@ -223,6 +229,8 @@ async def set_job_statuses(
         # Update database tables
         if job_data:
             job_attribute_updates[job_id] = job_data
+        else:
+            skipped_job_attribute_updates.add(job_id)
 
         for upd_time in update_times:
             s_dict = status_dict[upd_time]
@@ -237,7 +245,8 @@ async def set_job_statuses(
                 )
             )
 
-    await job_db.set_job_attributes(job_attribute_updates)
+    if job_attribute_updates:
+        await job_db.set_job_attributes(job_attribute_updates)
 
     await remove_jobs_from_task_queue(
         list(deletable_killable_jobs),
@@ -256,7 +265,7 @@ async def set_job_statuses(
     await job_logging_db.insert_records(job_logging_updates)
 
     return SetJobStatusReturn(
-        success=job_attribute_updates,
+        success=job_attribute_updates | {j: {} for j in skipped_job_attribute_updates},
         failed=failed,
     )
 

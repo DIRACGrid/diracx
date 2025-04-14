@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, timezone
+from typing import Iterable
 
 from sqlalchemy import delete, func, select
 
@@ -138,7 +139,7 @@ class JobLoggingDB(BaseSQLDB):
         await self.conn.execute(stmt)
 
     async def get_wms_time_stamps(
-        self, job_ids: list[int]
+        self, job_ids: Iterable[int]
     ) -> dict[int, dict[str, datetime]]:
         """Get TimeStamps for job MajorState transitions for multiple jobs at once
         return a {JobID: {State:timestamp}} dictionary.
