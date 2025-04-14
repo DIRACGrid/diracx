@@ -96,7 +96,7 @@ def instrument_otel(app: FastAPI) -> None:
         ),
         export_interval_millis=3000,
     )
-    meter_provider = MeterProvider(metric_readers=[metric_reader])
+    meter_provider = MeterProvider(metric_readers=[metric_reader], resource=resource)
     metrics.set_meter_provider(meter_provider)
 
     ###################################
