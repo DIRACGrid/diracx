@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from datetime import timezone
 from typing import TYPE_CHECKING
 
@@ -35,14 +34,6 @@ class JobLoggingDB(BaseSQLDB):
         records: list[JobLoggingRecord],
     ):
         """Bulk insert entries to the JobLoggingDB table."""
-
-        def get_epoc(date):
-            return (
-                time.mktime(date.timetuple())
-                + date.microsecond / 1000000.0
-                - MAGIC_EPOC_NUMBER
-            )
-
         # First, fetch the maximum SeqNums for the given job_ids
         seqnum_stmt = (
             select(
@@ -70,7 +61,7 @@ class JobLoggingDB(BaseSQLDB):
                     "MinorStatus": record.minor_status,
                     "ApplicationStatus": record.application_status[:255],
                     "StatusTime": record.date,
-                    "StatusTimeOrder": get_epoc(record.date),
+                    "StatusTimeOrder": record.date.timestamp() - MAGIC_EPOC_NUMBER,
                     "StatusSource": record.source[:32],
                 }
             )
