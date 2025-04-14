@@ -11,8 +11,7 @@ from diracx.core.exceptions import (
     PilotNotFoundError,
 )
 
-from ..utils import BaseSQLDB
-from ..utils.functions import rows_to_dicts
+from ..utils import BaseSQLDB, rows_to_dicts, utcnow
 from .schema import PilotAgents, PilotAgentsDBBase, PilotRegistrations
 
 
@@ -53,7 +52,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def increment_pilot_secret_use(
+    async def increment_pilot_secret_and_last_time_use(
         self,
         pilot_id: int,
     ) -> None:
@@ -62,7 +61,8 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = (
             update(PilotRegistrations)
             .values(
-                pilot_secret_use_count=PilotRegistrations.pilot_secret_use_count + 1
+                pilot_secret_use_count=PilotRegistrations.pilot_secret_use_count + 1,
+                pilot_secret_last_use_time=utcnow(),
             )
             .where(PilotRegistrations.pilot_id == pilot_id)
         )
@@ -94,6 +94,10 @@ class PilotAgentsDB(BaseSQLDB):
                 PilotRegistrations.pilot_secret_expiration_date
                 > datetime.now(tz=timezone.utc)
             )
+            .where(
+                PilotRegistrations.pilot_secret_use_count
+                < PilotRegistrations.pilot_secret_use_count_max
+            )
         )
 
         # Execute the request
@@ -107,17 +111,24 @@ class PilotAgentsDB(BaseSQLDB):
             )
 
         # Increment the count
-        await self.increment_pilot_secret_use(pilot_id=pilot_id)
+        await self.increment_pilot_secret_and_last_time_use(pilot_id=pilot_id)
 
     async def add_pilots_credentials(
-        self, pilot_ids: list[int], pilot_hashed_secrets: list[str]
+        self,
+        pilot_ids: list[int],
+        pilot_hashed_secrets: list[str],
+        pilot_secret_use_count_max: int = 1,
     ) -> list[datetime]:
 
         if len(pilot_ids) != len(pilot_hashed_secrets):
             raise ValueError("Each pilot has to have a secret")
 
         values = [
-            {"PilotID": pilot_id, "PilotHashedSecret": pilot_secret}
+            {
+                "PilotID": pilot_id,
+                "PilotHashedSecret": pilot_secret,
+                "PilotSecretUseCountMax": pilot_secret_use_count_max,
+            }
             for pilot_id, pilot_secret in zip(pilot_ids, pilot_hashed_secrets)
         ]
 
