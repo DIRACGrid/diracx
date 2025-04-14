@@ -1,28 +1,14 @@
 from __future__ import annotations
 
-import time
-from datetime import timezone
-from typing import TYPE_CHECKING
+from collections import defaultdict
+from datetime import datetime, timezone
 
 from sqlalchemy import delete, func, select
 
-if TYPE_CHECKING:
-    pass
-
-from collections import defaultdict
-
-from diracx.core.models import (
-    JobLoggingRecord,
-    JobStatusReturn,
-)
+from diracx.core.models import JobLoggingRecord, JobStatusReturn
 
 from ..utils import BaseSQLDB
-from .schema import (
-    JobLoggingDBBase,
-    LoggingInfo,
-)
-
-MAGIC_EPOC_NUMBER = 1270000000
+from .schema import JobLoggingDBBase, LoggingInfo
 
 
 class JobLoggingDB(BaseSQLDB):
@@ -35,14 +21,6 @@ class JobLoggingDB(BaseSQLDB):
         records: list[JobLoggingRecord],
     ):
         """Bulk insert entries to the JobLoggingDB table."""
-
-        def get_epoc(date):
-            return (
-                time.mktime(date.timetuple())
-                + date.microsecond / 1000000.0
-                - MAGIC_EPOC_NUMBER
-            )
-
         # First, fetch the maximum SeqNums for the given job_ids
         seqnum_stmt = (
             select(
@@ -70,7 +48,7 @@ class JobLoggingDB(BaseSQLDB):
                     "MinorStatus": record.minor_status,
                     "ApplicationStatus": record.application_status[:255],
                     "StatusTime": record.date,
-                    "StatusTimeOrder": get_epoc(record.date),
+                    "StatusTimeOrder": record.date,
                     "StatusSource": record.source[:32],
                 }
             )
@@ -159,21 +137,16 @@ class JobLoggingDB(BaseSQLDB):
         stmt = delete(LoggingInfo).where(LoggingInfo.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
-    async def get_wms_time_stamps(self, job_ids):
+    async def get_wms_time_stamps(
+        self, job_ids: list[int]
+    ) -> dict[int, dict[str, datetime]]:
         """Get TimeStamps for job MajorState transitions for multiple jobs at once
         return a {JobID: {State:timestamp}} dictionary.
         """
-        result = defaultdict(dict)
+        result: defaultdict[int, dict[str, datetime]] = defaultdict(dict)
         stmt = select(
-            LoggingInfo.job_id,
-            LoggingInfo.status,
-            LoggingInfo.status_time_order,
+            LoggingInfo.job_id, LoggingInfo.status, LoggingInfo.status_time_order
         ).where(LoggingInfo.job_id.in_(job_ids))
-        rows = await self.conn.execute(stmt)
-        if not rows.rowcount:
-            return {}
-
-        for job_id, event, etime in rows:
-            result[job_id][event] = str(etime + MAGIC_EPOC_NUMBER)
-
-        return result
+        for job_id, event, etime in await self.conn.execute(stmt):
+            result[job_id][event] = etime
+        return dict(result)
