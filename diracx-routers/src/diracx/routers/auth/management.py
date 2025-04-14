@@ -6,6 +6,7 @@ to get information about the user's identity.
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -30,6 +31,9 @@ from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 router = DiracxRouter(require_auth=False)
+
+
+logger = logging.getLogger(__name__)
 
 
 class UserInfoResponse(TypedDict):
@@ -77,7 +81,9 @@ async def revoke_refresh_token_by_refresh_token(
             auth_db, subject, refresh_token, settings
         )
     except ValueError:
-        print(f"{user_info.preferred_username} tried to revoke its token but failed.")
+        logger.warning(
+            f"{user_info.preferred_username} tried to revoke its token but failed."
+        )
 
     return "Refresh token revoked"
 

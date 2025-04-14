@@ -749,7 +749,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     assert len(data) == 3
 
 
-async def test_revoke_refresh_tokens_normal_user(
+async def test_revoke_refresh_tokens_normal_user_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
@@ -763,6 +763,109 @@ async def test_revoke_refresh_tokens_normal_user(
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
     normal_user_access_token = normal_user_tokens["access_token"]
     normal_user_refresh_token = normal_user_tokens["refresh_token"]
+    normal_user_refresh_payload = jwt.decode(
+        normal_user_refresh_token, options={"verify_signature": False}
+    )
+
+    # Token manager gets a pair of tokens
+    token_manager_tokens = _get_tokens(
+        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
+    )
+    token_manager_refresh_token = token_manager_tokens["refresh_token"]
+    token_manager_refresh_payload = jwt.decode(
+        token_manager_refresh_token, options={"verify_signature": False}
+    )
+
+    # Normal user tries to delete a random and non-existing RT: should raise an error
+    r = test_client.delete(
+        "/api/auth/refresh-tokens/does-not-exists",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 400, data
+
+    # Normal user tries to delete token manager's RT: should not work
+    r = test_client.delete(
+        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 403, data
+
+    # Normal user tries to delete his/her RT: should work
+    r = test_client.delete(
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 200, data
+
+    # Normal user tries to delete his/her RT again: should work
+    r = test_client.delete(
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 200, data
+
+
+async def test_revoke_refresh_tokens_token_manager_with_jti(
+    test_client, auth_httpx_mock: HTTPXMock
+):
+    """Test the refresh token revokation with 2 users, a normal one and token manager:
+    - normal user gets a refresh token
+    - token manager gets a refresh token
+    - token manager tries to delete normal user's RT: should work
+    - token manager tries to delete his/her RT: should work too.
+    """
+    # Normal user gets a pair of tokens
+    normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
+    normal_user_refresh_token = normal_user_tokens["refresh_token"]
+    normal_user_refresh_payload = jwt.decode(
+        normal_user_refresh_token, options={"verify_signature": False}
+    )
+
+    # Token manager gets a pair of tokens
+    token_manager_tokens = _get_tokens(
+        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
+    )
+    token_manager_access_token = token_manager_tokens["access_token"]
+    token_manager_refresh_token = token_manager_tokens["refresh_token"]
+    token_manager_refresh_payload = jwt.decode(
+        token_manager_refresh_token, options={"verify_signature": False}
+    )
+
+    # Token manager tries to delete token manager's RT: should work
+    r = test_client.delete(
+        f"/api/auth/refresh-tokens/{normal_user_refresh_payload['jti']}",
+        headers={"Authorization": f"Bearer {token_manager_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 200, data
+
+    # Token manager tries to delete his/her RT: should work
+    r = test_client.delete(
+        f"/api/auth/refresh-tokens/{token_manager_refresh_payload['jti']}",
+        headers={"Authorization": f"Bearer {token_manager_access_token}"},
+    )
+    data = r.json()
+    assert r.status_code == 200, data
+
+
+async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXMock):
+    """Test if a user can revoke its token by the "traditional" endpoint, then try to refresh it."""
+    # Normal user gets a pair of tokens
+    normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
+    normal_user_access_token = normal_user_tokens["access_token"]
+    normal_user_refresh_token = normal_user_tokens["refresh_token"]
+
+    # Get all refresh tokens, expect one refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert len(r.json()) == 1
 
     # See: https://datatracker.ietf.org/doc/html/rfc7009#section-2.2
     # Normal user tries to delete a random and non-existing RT: should respond with a 200
@@ -781,42 +884,13 @@ async def test_revoke_refresh_tokens_normal_user(
     )
     assert r.status_code == 200
 
-
-async def test_revoke_refresh_tokens_token_manager(
-    test_client, auth_httpx_mock: HTTPXMock
-):
-    """Test the refresh token revokation with 2 users, a normal one and token manager:
-    - normal user gets a refresh token
-    - token manager gets a refresh token
-    - token manager tries to delete normal user's RT: should work
-    - token manager tries to delete his/her RT: should work too.
-    """
-    # Normal user gets a pair of tokens
-    normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
-    normal_user_refresh_token = normal_user_tokens["refresh_token"]
-
-    # Token manager gets a pair of tokens
-    token_manager_tokens = _get_tokens(
-        test_client, group="lhcb_tokenmgr", property=PROXY_MANAGEMENT
+    # Get all refresh tokens, expect no refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
-    token_manager_access_token = token_manager_tokens["access_token"]
-    token_manager_refresh_token = token_manager_tokens["refresh_token"]
 
-    # Token manager tries to delete token manager's RT: should work
-    r = test_client.post(
-        "/api/auth/revoke",
-        params={"refresh_token": normal_user_refresh_token},
-        headers={"Authorization": f"Bearer {token_manager_access_token}"},
-    )
-    assert r.status_code == 200
-
-    # Token manager tries to delete his/her RT: should work
-    r = test_client.post(
-        "/api/auth/revoke",
-        params={"refresh_token": token_manager_refresh_token},
-        headers={"Authorization": f"Bearer {token_manager_access_token}"},
-    )
-    assert r.status_code == 200
+    assert r.json() == []
 
 
 def _get_tokens(

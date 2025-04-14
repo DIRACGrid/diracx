@@ -6,7 +6,7 @@ from uuid_utils import UUID
 
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
-from diracx.logic.auth.utils import read_token
+from diracx.logic.auth.utils import verify_dirac_refresh_token
 
 
 async def get_refresh_tokens(
@@ -38,10 +38,6 @@ async def revoke_refresh_token_by_refresh_token(
     auth_db: AuthDB, subject: str | None, refresh_token: str, settings: AuthSettings
 ) -> str:
     """Revoke a refresh token. If a subject is provided, then the refresh token must be owned by that subject."""
-    token_information = read_token(
-        refresh_token, settings.token_algorithm, settings.token_key.jwk
-    )
-
-    jti = token_information["jti"]
+    jti, _, _ = await verify_dirac_refresh_token(refresh_token, settings)
 
     return await revoke_refresh_token_by_jti(auth_db=auth_db, subject=subject, jti=jti)
