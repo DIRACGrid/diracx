@@ -98,6 +98,8 @@ class JobError(Exception):
     def __init__(self, job_id, detail: str | None = None):
         self.job_id: int = job_id
         self.detail = detail
-        super().__init__(
-            f"Error concerning job {job_id}" + (": {detail} " if detail else "")
-        )
+        super().__init__(f"Error concerning job {job_id}: {detail or ''}")
+
+
+class NotReadyError(Exception):
+    """Tried to access a value which is asynchronously loaded but not yet available."""

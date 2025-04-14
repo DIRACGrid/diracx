@@ -219,6 +219,12 @@ class ClientFactory:
             for e in select_from_extension(group="diracx.access_policies")
         }
 
+        config_source = ConfigSource.create_from_url(
+            backend_url=f"git+file://{with_config_repo}"
+        )
+        # Warm the cache to avoid 503 errors
+        config_source.read_config()
+
         self.app = create_app_inner(
             enabled_systems=enabled_systems,
             all_service_settings=[
@@ -228,9 +234,7 @@ class ClientFactory:
             ],
             database_urls=database_urls,
             os_database_conn_kwargs=os_database_conn_kwargs,
-            config_source=ConfigSource.create_from_url(
-                backend_url=f"git+file://{with_config_repo}"
-            ),
+            config_source=config_source,
             all_access_policies=all_access_policies,
         )
 
