@@ -212,7 +212,8 @@ async def set_job_statuses(
             await job_parameters_db.upsert(res["VO"], job_id, {"Status": new_status})
 
         for upd_time in update_times:
-            if status_dict[upd_time]["Source"].startswith("Job"):
+            source = status_dict[upd_time]["Source"]
+            if source.startswith("Job") or source == "Heartbeat":
                 job_data["HeartBeatTime"] = str(upd_time)
 
         if not start_time and new_start_time:
