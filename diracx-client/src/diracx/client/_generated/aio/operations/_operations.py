@@ -935,18 +935,56 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         return deserialized  # type: ignore
 
-    @distributed_trace_async
+    @overload
     async def pilot_login(
-        self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
+        self,
+        body: _models.BodyAuthPilotLogin,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
     ) -> _models.TokenResponse:
         """Pilot Login.
 
         Endpoint without policy, the pilot uses only its secret.
 
-        :keyword pilot_job_reference: Required.
-        :paramtype pilot_job_reference: str
-        :keyword pilot_secret: Required.
-        :paramtype pilot_secret: str
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthPilotLogin
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def pilot_login(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Pilot Login.
+
+        Endpoint without policy, the pilot uses only its secret.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def pilot_login(
+        self, body: Union[_models.BodyAuthPilotLogin, IO[bytes]], **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Pilot Login.
+
+        Endpoint without policy, the pilot uses only its secret.
+
+        :param body: Is either a BodyAuthPilotLogin type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthPilotLogin or IO[bytes]
         :return: TokenResponse
         :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -959,14 +997,26 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthPilotLogin")
+
         _request = build_auth_pilot_login_request(
-            pilot_job_reference=pilot_job_reference,
-            pilot_secret=pilot_secret,
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -996,16 +1046,56 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         return deserialized  # type: ignore
 
-    @distributed_trace_async
+    @overload
     async def refresh_pilot_tokens(
-        self, *, refresh_token: str, **kwargs: Any
+        self,
+        body: _models.BodyAuthRefreshPilotTokens,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
         Endpoint where a pilot can exchange a refresh token for a token.
 
-        :keyword refresh_token: Required.
-        :paramtype refresh_token: str
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthRefreshPilotTokens
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def refresh_pilot_tokens(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token for a token.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def refresh_pilot_tokens(
+        self, body: Union[_models.BodyAuthRefreshPilotTokens, IO[bytes]], **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token for a token.
+
+        :param body: Is either a BodyAuthRefreshPilotTokens type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthRefreshPilotTokens or IO[bytes]
         :return: TokenResponse
         :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1018,13 +1108,26 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthRefreshPilotTokens")
+
         _request = build_auth_refresh_pilot_tokens_request(
-            refresh_token=refresh_token,
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -1059,54 +1162,44 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         self,
         body: _models.BodyAuthRegisterNewPilotsToDb,
         *,
-        vo: str,
-        grid_type: str = "Dirac",
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> Any:
+    ) -> _models.PilotCredentialsResponse:
         """Register New Pilots To Db.
 
-        Endpoint where a you can create pilots with their credentials.
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
 
         :param body: Required.
         :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb
-        :keyword vo: Required.
-        :paramtype vo: str
-        :keyword grid_type: Default value is "Dirac".
-        :paramtype grid_type: str
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any
-        :rtype: any
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
     async def register_new_pilots_to_db(
-        self,
-        body: IO[bytes],
-        *,
-        vo: str,
-        grid_type: str = "Dirac",
-        content_type: str = "application/json",
-        **kwargs: Any,
-    ) -> Any:
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.PilotCredentialsResponse:
         """Register New Pilots To Db.
 
-        Endpoint where a you can create pilots with their credentials.
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
 
         :param body: Required.
         :type body: IO[bytes]
-        :keyword vo: Required.
-        :paramtype vo: str
-        :keyword grid_type: Default value is "Dirac".
-        :paramtype grid_type: str
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: any
-        :rtype: any
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1114,23 +1207,19 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def register_new_pilots_to_db(
         self,
         body: Union[_models.BodyAuthRegisterNewPilotsToDb, IO[bytes]],
-        *,
-        vo: str,
-        grid_type: str = "Dirac",
         **kwargs: Any,
-    ) -> Any:
+    ) -> _models.PilotCredentialsResponse:
         """Register New Pilots To Db.
 
-        Endpoint where a you can create pilots with their credentials.
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
 
         :param body: Is either a BodyAuthRegisterNewPilotsToDb type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb or IO[bytes]
-        :keyword vo: Required.
-        :paramtype vo: str
-        :keyword grid_type: Default value is "Dirac".
-        :paramtype grid_type: str
-        :return: any
-        :rtype: any
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -1147,7 +1236,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[Any] = kwargs.pop("cls", None)
+        cls: ClsType[_models.PilotCredentialsResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -1158,8 +1247,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             _json = self._serialize.body(body, "BodyAuthRegisterNewPilotsToDb")
 
         _request = build_auth_register_new_pilots_to_db_request(
-            vo=vo,
-            grid_type=grid_type,
             content_type=content_type,
             json=_json,
             content=_content,
@@ -1183,7 +1270,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             )
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("object", pipeline_response.http_response)
+        deserialized = self._deserialize(
+            "PilotCredentialsResponse", pipeline_response.http_response
+        )
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

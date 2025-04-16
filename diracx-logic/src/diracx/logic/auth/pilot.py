@@ -4,7 +4,13 @@ from ast import literal_eval
 from datetime import timedelta
 from secrets import token_hex
 
-from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
+from diracx.core.config import Config
+from diracx.core.exceptions import (
+    ConfigurationError,
+    PilotAlreadyExistsError,
+    PilotNotFoundError,
+)
+from diracx.core.models import PilotCredentialsInfo, PilotCredentialsResponse
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import PilotAgentsDB
 
@@ -19,7 +25,7 @@ def generate_pilot_secret() -> str:
 
 async def add_pilot_credentials(
     pilot_ids: list[int], pilot_db: PilotAgentsDB, settings: AuthSettings
-) -> list[str]:
+) -> tuple[list[str], list[int]]:
     # Get a random string
     # Can be customized
     random_secrets = [generate_pilot_secret() for _ in range(len(pilot_ids))]
@@ -42,11 +48,74 @@ async def add_pilot_credentials(
         pilot_secret_expiration_dates=expiration_dates,  # type: ignore
     )
 
-    return random_secrets
+    expiration_dates_timestamps = [
+        int(expire_date.timestamp()) for expire_date in expiration_dates
+    ]
+
+    return random_secrets, expiration_dates_timestamps
 
 
-def generate_pilot_scope(pilot: dict) -> str:
-    return f"vo:{pilot['VO']} property:LimitedDelegation property:GenericPilot"
+def create_pilot_credentials_response(
+    pilot_references: list[str],
+    pilot_secrets: list[str],
+    pilot_expiration_dates: list[int],
+) -> PilotCredentialsResponse:
+    credentials_list = [
+        PilotCredentialsInfo(
+            pilot_reference=ref, pilot_secret=secret, pilot_secret_expires_in=expires_in
+        )
+        for ref, secret, expires_in in zip(
+            pilot_references, pilot_secrets, pilot_expiration_dates
+        )
+    ]
+
+    return PilotCredentialsResponse(pilot_credentials=credentials_list)
+
+
+def get_registry_and_group_configuration(config: Config, vo: str):
+    try:
+        vo_config_operations = config.Operations[vo].Pilot
+        vo_config_registry = config.Registry[vo]
+    except KeyError:
+        try:
+            vo_config_operations = config.Operations["Default"].Pilot
+            vo_config_registry = config.Registry["Default"]
+        except KeyError as e:
+            raise ConfigurationError(
+                f"Given VO ({vo}) and 'Default' are not registered in the configuration"
+            ) from e
+
+    if not vo_config_operations:
+        raise ConfigurationError("Bad config")
+
+    operation_group = vo_config_operations["GenericPilotGroup"]
+    registry_group = vo_config_registry.Groups[operation_group]
+
+    return operation_group, registry_group
+
+
+def generate_pilot_scope(pilot: dict, config: Config) -> str:
+
+    operation_group, registry_group = get_registry_and_group_configuration(
+        config, pilot["VO"]
+    )
+
+    properties = " ".join(
+        [f"property:{pilot_property}" for pilot_property in registry_group.Properties]
+    )
+
+    return f"vo:{pilot['VO']} {properties} group:{operation_group}"
+
+
+def generate_pilot_sub(pilot: dict, config: Config):
+
+    _, registry_group = get_registry_and_group_configuration(config, pilot["VO"])
+
+    pilot_users = list(registry_group.Users)
+
+    # TODO: Assume we have only one group?
+    assert len(pilot_users) == 1
+    return pilot_users[0]
 
 
 async def try_login(

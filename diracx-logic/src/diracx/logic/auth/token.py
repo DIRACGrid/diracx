@@ -30,7 +30,7 @@ from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB, PilotAgentsDB
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 from diracx.db.sql.utils.functions import substract_date
-from diracx.logic.auth.pilot import generate_pilot_scope
+from diracx.logic.auth.pilot import generate_pilot_scope, generate_pilot_sub
 from diracx.logic.pilots.utils import get_pilot_informations_by_reference
 
 from .utils import (
@@ -314,7 +314,6 @@ async def exchange_token(
     refresh_token_expire_minutes: float | None = None,
     legacy_exchange: bool = False,
     include_refresh_token: bool = True,
-    pilot_exchange: bool = False,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
     """Method called to exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
@@ -328,13 +327,9 @@ async def exchange_token(
 
     preferred_username = None
 
-    if not pilot_exchange:
-        preferred_username = get_verified_preferred_username(
-            config, oidc_token_info, dirac_group, properties, sub, vo
-        )
-
-    else:
-        preferred_username = oidc_token_info["preferred_username"]
+    preferred_username = get_verified_preferred_username(
+        config, oidc_token_info, dirac_group, properties, sub, vo
+    )
 
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
@@ -411,29 +406,26 @@ async def generate_pilot_tokens(
 
         pilot_info = {
             "preferred_username": pilot["PilotJobReference"],
-            "sub": pilot["PilotJobReference"],
+            "sub": generate_pilot_sub(pilot=pilot, config=config),
         }
 
-        scope = generate_pilot_scope(pilot)
+        scope = generate_pilot_scope(pilot=pilot, config=config)
 
         refresh_token_expire_minutes = None
         include_refresh_token = True
         legacy_exchange = False
 
-    access_token, refresh_token = await exchange_token(
+    return await exchange_token(
         auth_db=auth_db,
         scope=scope,
         oidc_token_info=pilot_info,
         config=config,
         settings=settings,
         available_properties=available_properties,
-        pilot_exchange=True,
         legacy_exchange=legacy_exchange,
         refresh_token_expire_minutes=refresh_token_expire_minutes,
         include_refresh_token=include_refresh_token,
     )
-
-    return access_token, refresh_token
 
 
 def create_token(payload: TokenPayload, settings: AuthSettings) -> str:

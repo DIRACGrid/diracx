@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from random import shuffle
 
 import pytest
 
@@ -80,13 +79,9 @@ async def test_create_pilot_and_verify_secret(test_client):
             pilot_ids=[pilot_id], pilot_secret_expiration_dates=[expiration_date]
         )
 
-    request_data = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
+    body = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
 
-    r = test_client.post(
-        "/api/auth/pilot-login",
-        params=request_data,
-        headers={"Content-Type": "application/json"},
-    )
+    r = test_client.post("/api/auth/pilot-login", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -119,37 +114,32 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.json()["detail"] == "Invalid JWT"
 
     # -----------------  Wrong password  -----------------
-    request_data = {
+    body = {
         "pilot_job_reference": pilot_reference,
         "pilot_secret": "My 1ncr3d1bl3 t0k3n",
     }
 
-    r = test_client.post(
-        "/api/auth/pilot-login",
-        params=request_data,
-        headers={"Content-Type": "application/json"},
-    )
+    r = test_client.post("/api/auth/pilot-login", json=body)
 
     assert r.status_code == 401, r.json()
     assert r.json()["detail"] == "bad pilot_id / pilot_secret or secret has expired"
 
     # -----------------  Wrong ID  -----------------
-    request_data = {"pilot_job_reference": "It is a reference", "pilot_secret": secret}
+    body = {"pilot_job_reference": "It is a reference", "pilot_secret": secret}
 
     r = test_client.post(
         "/api/auth/pilot-login",
-        params=request_data,
-        headers={"Content-Type": "application/json"},
+        json=body,
     )
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_id / pilot_secret"
 
     # ----------------- Exchange for new tokens -----------------
-    request_data = {"refresh_token": refresh_token}
+    body = {"refresh_token": refresh_token}
     r = test_client.post(
         "/api/auth/pilot-refresh-token",
-        params=request_data,
+        json=body,
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
@@ -166,20 +156,20 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.status_code == 200
 
     # ----------------- Exchange token with old token -----------------
-    request_data = {"refresh_token": refresh_token}
+    body = {"refresh_token": refresh_token}
     r = test_client.post(
         "/api/auth/pilot-refresh-token",
-        params=request_data,
+        json=body,
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
     assert r.status_code == 401, r.json()
 
     # ----------------- Exchange token with new token -----------------
-    request_data = {"refresh_token": new_refresh_token}
+    body = {"refresh_token": new_refresh_token}
     r = test_client.post(
         "/api/auth/pilot-refresh-token",
-        params=request_data,
+        json=body,
         headers={"Authorization": f"Bearer {new_access_token}"},
     )
 
@@ -194,32 +184,25 @@ async def test_create_pilots_with_credentials(normal_test_client):
     vo = "lhcb"
 
     #  -------------- Bulk insert --------------
-    request_data = {"vo": vo}
-    body = {"pilot_references": pilot_refs}
+    body = {"vo": vo, "pilot_references": pilot_refs}
 
     r = normal_test_client.post(
         "/api/auth/register-new-pilots",
-        params=request_data,
         json=body,
-        headers={
-            "Content-Type": "application/json",
-        },
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, r.json()
 
     #  -------------- Logins --------------
+    pilot_credentials_list = r.json()["pilot_credentials"]
+    for credentials in pilot_credentials_list:
+        pilot_reference, secret, _ = credentials.values()
 
-    pairs = list(zip(pilot_refs, r.json()["credentials"]))
-    # Shuffle it to prove that credentials are well associated
-    shuffle(pairs)
-
-    for pilot_reference, secret in pairs:
-        request_data = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
+        body = {"pilot_job_reference": pilot_reference, "pilot_secret": secret}
 
         r = normal_test_client.post(
             "/api/auth/pilot-login",
-            params=request_data,
+            json=body,
             headers={"Content-Type": "application/json"},
         )
 
@@ -227,12 +210,10 @@ async def test_create_pilots_with_credentials(normal_test_client):
 
     #  -------------- Register a pilot that already exist, and one that does not --------------
 
-    request_data = {"vo": vo}
-    body = {"pilot_references": [pilot_refs[0], pilot_refs[0] + "_new_one"]}
+    body = {"vo": vo, "pilot_references": [pilot_refs[0], pilot_refs[0] + "_new_one"]}
 
     r = normal_test_client.post(
         "/api/auth/register-new-pilots",
-        params=request_data,
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -245,13 +226,10 @@ async def test_create_pilots_with_credentials(normal_test_client):
     #  -------------- Register a pilot that does not exists **but** was called before in an error --------------
     # To prove that, if I tried to register a pilot that does not exist with one that already exists,
     # i can normally add the one that did not exist before (it should not have added it before)
-
-    request_data = {"vo": vo}
-    body = {"pilot_references": [pilot_refs[0] + "_new_one"]}
+    body = {"vo": vo, "pilot_references": [pilot_refs[0] + "_new_one"]}
 
     r = normal_test_client.post(
         "/api/auth/register-new-pilots",
-        params=request_data,
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -259,18 +237,18 @@ async def test_create_pilots_with_credentials(normal_test_client):
     )
 
     assert r.status_code == 200
-    secret = r.json()["credentials"]
+    _, secret, _ = r.json()["pilot_credentials"][0].values()
 
     #  -------------- Login with a pilot that does not exists **but** was called before in an error --------------
 
-    request_data = {
+    body = {
         "pilot_job_reference": pilot_refs[0] + "_new_one",
         "pilot_secret": secret,
     }
 
     r = normal_test_client.post(
         "/api/auth/pilot-login",
-        params=request_data,
+        json=body,
         headers={"Content-Type": "application/json"},
     )
 
@@ -278,16 +256,16 @@ async def test_create_pilots_with_credentials(normal_test_client):
 
     #  -------------- Login with a pilot credentials of another pilot --------------
 
-    request_data = {
+    body = {
         "pilot_job_reference": pilot_refs[0] + "_new_one",
-        "pilot_secret": pairs[0][
-            1
+        "pilot_secret": pilot_credentials_list[0][
+            "pilot_secret"
         ],  # [0] = first pilot from the list before, [1] = the secret
     }
 
     r = normal_test_client.post(
         "/api/auth/pilot-login",
-        params=request_data,
+        json=body,
         headers={"Content-Type": "application/json"},
     )
 
