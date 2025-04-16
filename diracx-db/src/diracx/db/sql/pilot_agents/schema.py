@@ -3,14 +3,16 @@ from __future__ import annotations
 from sqlalchemy import (
     DateTime,
     Double,
+    ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, EnumBackedBool, NullColumn
+from ..utils import Column, DateNowColumn, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
 
@@ -58,3 +60,26 @@ class PilotOutput(PilotAgentsDBBase):
     pilot_id = Column("PilotID", Integer, primary_key=True)
     std_output = Column("StdOutput", Text)
     std_error = Column("StdError", Text)
+
+
+class PilotRegistrations(PilotAgentsDBBase):
+    __tablename__ = "PilotRegistrations"
+
+    pilot_id = Column(
+        "PilotID",
+        Integer,
+        ForeignKey("PilotAgents.PilotID", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    pilot_hashed_secret = Column("PilotHashedSecret", String(64))
+    pilot_secret_use_count = Column("PilotSecretUseCount", SmallInteger, default=0)
+    pilot_secret_creation_time = DateNowColumn("PilotSecretCreationDate")
+    pilot_secret_expiration_date = NullColumn(
+        "PilotSecretExpirationDate", DateTime(timezone=True)
+    )
+    pilot_secret_last_use_time = NullColumn(
+        "PilotSecretLastUseDate", DateTime(timezone=True)
+    )
+    pilot_secret_use_count_max = Column(
+        "PilotSecretUseCountMax", SmallInteger, default=1
+    )

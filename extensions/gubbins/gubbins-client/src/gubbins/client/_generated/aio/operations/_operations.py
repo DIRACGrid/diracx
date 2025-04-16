@@ -33,6 +33,9 @@ from ...operations._operations import (
     build_auth_get_refresh_tokens_request,
     build_auth_initiate_authorization_flow_request,
     build_auth_initiate_device_flow_request,
+    build_auth_pilot_login_request,
+    build_auth_refresh_pilot_tokens_request,
+    build_auth_register_new_pilots_to_db_request,
     build_auth_revoke_refresh_token_request,
     build_auth_userinfo_request,
     build_config_serve_config_request,
@@ -821,6 +824,350 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    async def pilot_login(
+        self,
+        body: _models.BodyAuthPilotLogin,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.TokenResponse:
+        """Pilot Login.
+
+        Endpoint without policy, the pilot uses only its secret.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthPilotLogin
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def pilot_login(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Pilot Login.
+
+        Endpoint without policy, the pilot uses only its secret.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def pilot_login(
+        self, body: Union[_models.BodyAuthPilotLogin, IO[bytes]], **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Pilot Login.
+
+        Endpoint without policy, the pilot uses only its secret.
+
+        :param body: Is either a BodyAuthPilotLogin type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthPilotLogin or IO[bytes]
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthPilotLogin")
+
+        _request = build_auth_pilot_login_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    async def refresh_pilot_tokens(
+        self,
+        body: _models.BodyAuthRefreshPilotTokens,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.TokenResponse:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token for a token.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthRefreshPilotTokens
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def refresh_pilot_tokens(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token for a token.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def refresh_pilot_tokens(
+        self, body: Union[_models.BodyAuthRefreshPilotTokens, IO[bytes]], **kwargs: Any
+    ) -> _models.TokenResponse:
+        """Refresh Pilot Tokens.
+
+        Endpoint where a pilot can exchange a refresh token for a token.
+
+        :param body: Is either a BodyAuthRefreshPilotTokens type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthRefreshPilotTokens or IO[bytes]
+        :return: TokenResponse
+        :rtype: ~_generated.models.TokenResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthRefreshPilotTokens")
+
+        _request = build_auth_refresh_pilot_tokens_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    async def register_new_pilots_to_db(
+        self,
+        body: _models.BodyAuthRegisterNewPilotsToDb,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> _models.PilotCredentialsResponse:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def register_new_pilots_to_db(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.PilotCredentialsResponse:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def register_new_pilots_to_db(
+        self,
+        body: Union[_models.BodyAuthRegisterNewPilotsToDb, IO[bytes]],
+        **kwargs: Any,
+    ) -> _models.PilotCredentialsResponse:
+        """Register New Pilots To Db.
+
+        Endpoint where a you can create pilots with their references.
+        It will return the pilot secrets as well as an expiration date.
+
+        If a pilot reference already exists, it will block the insertion.
+
+        :param body: Is either a BodyAuthRegisterNewPilotsToDb type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb or IO[bytes]
+        :return: PilotCredentialsResponse
+        :rtype: ~_generated.models.PilotCredentialsResponse
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.PilotCredentialsResponse] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyAuthRegisterNewPilotsToDb")
+
+        _request = build_auth_register_new_pilots_to_db_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "PilotCredentialsResponse", pipeline_response.http_response
+        )
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
