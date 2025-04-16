@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy import func, insert, select
+from uuid_utils import UUID
 
 from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
 

@@ -6,9 +6,9 @@ import base64
 import hashlib
 import re
 from datetime import datetime, timedelta, timezone
-from uuid import UUID, uuid4
 
 from authlib.jose import JsonWebToken
+from uuid_utils import UUID, uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (
@@ -347,7 +347,7 @@ async def exchange_token(
         "vo": vo,
         "iss": settings.token_issuer,
         "dirac_properties": list(properties),
-        "jti": str(uuid4()),
+        "jti": str(uuid7()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
         "exp": creation_time + timedelta(minutes=settings.access_token_expire_minutes),
@@ -373,7 +373,7 @@ async def insert_refresh_token(
 ) -> tuple[UUID, datetime]:
     """Insert a refresh token into the database and return the JWT ID and creation time."""
     # Generate a JWT ID
-    jti = uuid4()
+    jti = uuid7()
 
     # Insert the refresh token into the DB
     await auth_db.insert_refresh_token(
