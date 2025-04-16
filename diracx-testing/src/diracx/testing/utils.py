@@ -465,6 +465,10 @@ def with_config_repo(tmp_path_factory):
                             "PreferedUsername": "albdr",
                             "Email": None,
                         },
+                        "3a2fb203-9db1-46b1-b097-25039eeeee5c": {
+                            "PreferedUsername": "lbpilot",
+                            "Email": None,
+                        },
                     },
                     "Groups": {
                         "lhcb_user": {
@@ -482,10 +486,22 @@ def with_config_repo(tmp_path_factory):
                             "Properties": ["NormalUser", "ProxyManagement"],
                             "Users": ["c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152"],
                         },
+                        "lhcb_pilot_group": {
+                            "Properties": ["GenericPilot", "LimitedDelegation"],
+                            "Users": ["3a2fb203-9db1-46b1-b097-25039eeeee5c"],
+                        },
                     },
                 }
             },
-            "Operations": {"Defaults": {}},
+            "Operations": {
+                "Defaults": {},
+                "lhcb": {
+                    "Pilot": {
+                        "GenericPilotGroup": "lhcb_pilot_group",
+                        "GenericPilotUser": "lhcb_pilot",
+                    }
+                },
+            },
             "Systems": {
                 "WorkloadManagement": {
                     "Databases": {

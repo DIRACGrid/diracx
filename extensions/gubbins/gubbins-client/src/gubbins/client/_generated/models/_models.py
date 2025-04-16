@@ -94,23 +94,91 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyAuthPilotLogin(_serialization.Model):
+    """Body_auth_pilot_login.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_job_reference: Job reference used by a pilot to login. Required.
+    :vartype pilot_job_reference: str
+    :ivar pilot_secret: Pilot secret given by Dirac/DiracX. Required.
+    :vartype pilot_secret: str
+    """
+
+    _validation = {
+        "pilot_job_reference": {"required": True},
+        "pilot_secret": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_job_reference": {"key": "pilot_job_reference", "type": "str"},
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+    }
+
+    def __init__(
+        self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_job_reference: Job reference used by a pilot to login. Required.
+        :paramtype pilot_job_reference: str
+        :keyword pilot_secret: Pilot secret given by Dirac/DiracX. Required.
+        :paramtype pilot_secret: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_job_reference = pilot_job_reference
+        self.pilot_secret = pilot_secret
+
+
+class BodyAuthRefreshPilotTokens(_serialization.Model):
+    """Body_auth_refresh_pilot_tokens.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar refresh_token: Refresh Token given at login by DiracX. Required.
+    :vartype refresh_token: str
+    """
+
+    _validation = {
+        "refresh_token": {"required": True},
+    }
+
+    _attribute_map = {
+        "refresh_token": {"key": "refresh_token", "type": "str"},
+    }
+
+    def __init__(self, *, refresh_token: str, **kwargs: Any) -> None:
+        """
+        :keyword refresh_token: Refresh Token given at login by DiracX. Required.
+        :paramtype refresh_token: str
+        """
+        super().__init__(**kwargs)
+        self.refresh_token = refresh_token
+
+
 class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
     """Body_auth_register_new_pilots_to_db.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_references: Pilot References. Required.
+    :ivar pilot_references: List of the pilot references we want to add to the db. Required.
     :vartype pilot_references: list[str]
-    :ivar pilot_stamps: Pilot Stamps.
+    :ivar vo: Virtual Organisation associated with the inserted pilots. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilots.
+    :vartype grid_type: str
+    :ivar pilot_stamps: Association of a pilot reference with a pilot stamp.
     :vartype pilot_stamps: dict[str, any]
     """
 
     _validation = {
         "pilot_references": {"required": True},
+        "vo": {"required": True},
     }
 
     _attribute_map = {
         "pilot_references": {"key": "pilot_references", "type": "[str]"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
         "pilot_stamps": {"key": "pilot_stamps", "type": "{object}"},
     }
 
@@ -118,17 +186,25 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
         self,
         *,
         pilot_references: List[str],
+        vo: str,
+        grid_type: str = "Dirac",
         pilot_stamps: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         """
-        :keyword pilot_references: Pilot References. Required.
+        :keyword pilot_references: List of the pilot references we want to add to the db. Required.
         :paramtype pilot_references: list[str]
-        :keyword pilot_stamps: Pilot Stamps.
+        :keyword vo: Virtual Organisation associated with the inserted pilots. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilots.
+        :paramtype grid_type: str
+        :keyword pilot_stamps: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_stamps: dict[str, any]
         """
         super().__init__(**kwargs)
         self.pilot_references = pilot_references
+        self.vo = vo
+        self.grid_type = grid_type
         self.pilot_stamps = pilot_stamps
 
 
@@ -734,6 +810,84 @@ class OpenIDConfiguration(_serialization.Model):
             token_endpoint_auth_methods_supported
         )
         self.code_challenge_methods_supported = code_challenge_methods_supported
+
+
+class PilotCredentialsInfo(_serialization.Model):
+    """PilotCredentialsInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_reference: Pilot Reference. Required.
+    :vartype pilot_reference: str
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    :ivar pilot_secret_expires_in: Pilot Secret Expires In. Required.
+    :vartype pilot_secret_expires_in: int
+    """
+
+    _validation = {
+        "pilot_reference": {"required": True},
+        "pilot_secret": {"required": True},
+        "pilot_secret_expires_in": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_reference": {"key": "pilot_reference", "type": "str"},
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+        "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_reference: str,
+        pilot_secret: str,
+        pilot_secret_expires_in: int,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_reference: Pilot Reference. Required.
+        :paramtype pilot_reference: str
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        :keyword pilot_secret_expires_in: Pilot Secret Expires In. Required.
+        :paramtype pilot_secret_expires_in: int
+        """
+        super().__init__(**kwargs)
+        self.pilot_reference = pilot_reference
+        self.pilot_secret = pilot_secret
+        self.pilot_secret_expires_in = pilot_secret_expires_in
+
+
+class PilotCredentialsResponse(_serialization.Model):
+    """PilotCredentialsResponse.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_credentials: Pilot Credentials. Required.
+    :vartype pilot_credentials: list[~_generated.models.PilotCredentialsInfo]
+    """
+
+    _validation = {
+        "pilot_credentials": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_credentials": {
+            "key": "pilot_credentials",
+            "type": "[PilotCredentialsInfo]",
+        },
+    }
+
+    def __init__(
+        self, *, pilot_credentials: List["_models.PilotCredentialsInfo"], **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_credentials: Pilot Credentials. Required.
+        :paramtype pilot_credentials: list[~_generated.models.PilotCredentialsInfo]
+        """
+        super().__init__(**kwargs)
+        self.pilot_credentials = pilot_credentials
 
 
 class SandboxDownloadResponse(_serialization.Model):

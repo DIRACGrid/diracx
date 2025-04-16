@@ -6,7 +6,7 @@ import os
 from typing import Annotated, Literal
 
 from authlib.jose import JoseError
-from fastapi import Depends, Form, Header, HTTPException, status
+from fastapi import Body, Depends, Form, Header, HTTPException, status
 
 from diracx.core.exceptions import (
     AuthorizationError,
@@ -269,8 +269,12 @@ async def perform_legacy_exchange(
 async def pilot_login(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
-    pilot_job_reference: str,
-    pilot_secret: str,
+    pilot_job_reference: Annotated[
+        str, Body(description="Job reference used by a pilot to login.")
+    ],
+    pilot_secret: Annotated[
+        str, Body(description="Pilot secret given by Dirac/DiracX.")
+    ],
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
@@ -321,7 +325,9 @@ async def refresh_pilot_tokens(
     config: Config,
     settings: AuthSettings,
     available_properties: AvailableSecurityProperties,
-    refresh_token: str,
+    refresh_token: Annotated[
+        str, Body(description="Refresh Token given at login by DiracX.", embed=True)
+    ],
     pilot_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     all_access_policies: Annotated[
         dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
