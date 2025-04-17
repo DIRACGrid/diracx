@@ -9,7 +9,6 @@ from datetime import datetime, timedelta, timezone
 
 from authlib.jose import JsonWebToken
 from uuid_utils import UUID, uuid7
-from authlib.jose.errors import DecodeError
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (

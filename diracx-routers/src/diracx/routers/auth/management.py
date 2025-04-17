@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from typing import Annotated, Any
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from typing_extensions import TypedDict
