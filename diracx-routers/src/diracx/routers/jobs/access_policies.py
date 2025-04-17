@@ -6,8 +6,13 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.db.sql import JobDB, SandboxMetadataDB
+from diracx.core.properties import (
+    GENERIC_PILOT,
+    JOB_ADMINISTRATOR,
+    LIMITED_DELEGATION,
+    NORMAL_USER,
+)
+from diracx.db.sql import JobDB, PilotAgentsDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -41,6 +46,7 @@ class WMSAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
+        pilot_db: PilotAgentsDB | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
     ):
@@ -48,9 +54,42 @@ class WMSAccessPolicy(BaseAccessPolicy):
         assert job_db, "job_db is a mandatory parameter"
 
         if action == ActionType.PILOT:
-            # TODO: For now we map this to MANAGE but it should be changed once
-            # we have pilot credentials
-            action = ActionType.MANAGE
+
+            assert (
+                pilot_db
+            ), "pilot_db is a mandatory parameter when using a pilot action"
+            assert job_ids, "job_ids has to be defined"
+            pilot_info = user_info  # For semantic
+
+            # Syntax to avoid code duplication
+            if {GENERIC_PILOT, LIMITED_DELEGATION} & set(pilot_info.properties):
+                # Get his informations
+                pilot_data = await pilot_db.get_pilot_by_reference(
+                    pilot_info.preferred_username
+                )
+
+                if not pilot_data:
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN, "this pilot is not registered"
+                    )
+
+                # Get his jobs
+                pilot_jobs = await pilot_db.get_pilot_job_ids(
+                    pilot_id=pilot_data["PilotID"]
+                )
+
+                # Equivalent of issubset, but cleaner
+                if set(job_ids) <= set(pilot_jobs):
+                    return
+
+                forbidden_jobs_ids = set(job_ids) - set(pilot_jobs)
+
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    f"this pilot can't access/modify some jobs: ids={forbidden_jobs_ids}",
+                )
+
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "you are not a pilot")
 
         if action == ActionType.CREATE:
             if job_ids is not None:
