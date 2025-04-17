@@ -199,7 +199,6 @@ class AuthDB(BaseSQLDB):
         self,
         jti: UUID,
         subject: str,
-        preferred_username: str,
         scope: str,
     ) -> None:
         """Insert a refresh token in the DB as well as user attributes
@@ -209,7 +208,6 @@ class AuthDB(BaseSQLDB):
         stmt = insert(RefreshTokens).values(
             jti=str(jti),
             sub=subject,
-            preferred_username=preferred_username,
             scope=scope,
         )
         await self.conn.execute(stmt)

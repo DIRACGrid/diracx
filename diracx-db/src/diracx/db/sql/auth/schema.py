@@ -97,6 +97,5 @@ class RefreshTokens(Base):
 
     # User attributes bound to the refresh token
     sub = Column("Sub", String(256), index=True)
-    preferred_username = Column("PreferredUsername", String(255))
 
     __table_args__ = (Index("index_status_sub", status, sub),)

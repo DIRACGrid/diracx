@@ -24,7 +24,6 @@ async def test_insert(auth_db: AuthDB):
         await auth_db.insert_refresh_token(
             jti1,
             "subject",
-            "username",
             "vo:lhcb property:NormalUser",
         )
 
@@ -34,7 +33,6 @@ async def test_insert(auth_db: AuthDB):
         await auth_db.insert_refresh_token(
             jti2,
             "subject",
-            "username",
             "vo:lhcb property:NormalUser",
         )
 
@@ -47,7 +45,6 @@ async def test_get(auth_db: AuthDB):
     # Refresh token details we want to insert
     refresh_token_details = {
         "sub": "12345",
-        "preferred_username": "John Doe",
         "scope": "vo:lhcb property:NormalUser",
     }
 
@@ -57,7 +54,6 @@ async def test_get(auth_db: AuthDB):
         await auth_db.insert_refresh_token(
             jti,
             refresh_token_details["sub"],
-            refresh_token_details["preferred_username"],
             refresh_token_details["scope"],
         )
         creation_time = (await auth_db.get_refresh_token(jti))["CreationTime"]
@@ -65,7 +61,6 @@ async def test_get(auth_db: AuthDB):
     # Enrich the dict with the generated refresh token attributes
     expected_refresh_token = {
         "Sub": refresh_token_details["sub"],
-        "PreferredUsername": refresh_token_details["preferred_username"],
         "Scope": refresh_token_details["scope"],
         "JTI": jti,
         "Status": RefreshTokenStatus.CREATED,
@@ -98,7 +93,6 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
             await auth_db.insert_refresh_token(
                 uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 
@@ -126,7 +120,6 @@ async def test_revoke(auth_db: AuthDB):
         await auth_db.insert_refresh_token(
             jti,
             "subject",
-            "username",
             "scope",
         )
 
@@ -156,7 +149,6 @@ async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
             await auth_db.insert_refresh_token(
                 uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 
@@ -201,7 +193,6 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
             await auth_db.insert_refresh_token(
                 jti,
                 sub,
-                "username",
                 "scope",
             )
             jtis.append(jti)
@@ -249,7 +240,6 @@ async def test_get_refresh_tokens(auth_db: AuthDB):
             await auth_db.insert_refresh_token(
                 uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 

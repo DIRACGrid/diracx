@@ -212,7 +212,6 @@ async def get_oidc_token_info_from_refresh_flow(
         # The sub attribute coming from the DB contains the VO name
         # We need to remove it as if it were coming from an ID token from an external IdP
         "sub": sub.split(":", 1)[1],
-        "preferred_username": refresh_token_attributes["PreferredUsername"],
     }
     scope = refresh_token_attributes["Scope"]
     return (
@@ -323,7 +322,6 @@ async def exchange_token(
         jti, creation_time = await insert_refresh_token(
             auth_db=auth_db,
             subject=sub,
-            preferred_username=preferred_username,
             scope=scope,
         )
 
@@ -368,7 +366,6 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
 async def insert_refresh_token(
     auth_db: AuthDB,
     subject: str,
-    preferred_username: str,
     scope: str,
 ) -> tuple[UUID, datetime]:
     """Insert a refresh token into the database and return the JWT ID and creation time."""
@@ -379,7 +376,6 @@ async def insert_refresh_token(
     await auth_db.insert_refresh_token(
         jti=jti,
         subject=subject,
-        preferred_username=preferred_username,
         scope=scope,
     )
 
