@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import re
+import uuid as std_uuid
 from typing import Annotated, Any
-from uuid import UUID
 
 from authlib.jose import JoseError, JsonWebToken
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
-from pydantic import BaseModel
+from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+from uuid_utils import UUID as _UUID
 
 from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
@@ -21,6 +23,29 @@ from diracx.routers.dependencies import AuthSettings
 oidc_scheme = OpenIdConnect(
     openIdConnectUrl="/.well-known/openid-configuration", auto_error=False
 )
+
+
+class UUID(_UUID):
+    """Subclass of uuid_utils.UUID to add pydantic support."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Use the stdlib uuid.UUID schema for validation and serialization."""
+        std_schema = handler(std_uuid.UUID)
+
+        def to_uuid_utils(u: std_uuid.UUID) -> UUID:
+            return cls(str(u))
+
+        return core_schema.no_info_after_validator_function(to_uuid_utils, std_schema)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
+    ) -> dict[str, Any]:
+        """Return the stdlib uuid.UUID schema for JSON serialization."""
+        return handler(core_schema)
 
 
 class AuthInfo(BaseModel):

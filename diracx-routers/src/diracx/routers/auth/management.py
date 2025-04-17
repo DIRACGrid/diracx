@@ -7,7 +7,6 @@ to get information about the user's identity.
 from __future__ import annotations
 
 from typing import Annotated, Any
-from uuid import UUID
 
 from fastapi import (
     Depends,
@@ -15,6 +14,7 @@ from fastapi import (
     status,
 )
 from typing_extensions import TypedDict
+from uuid_utils import UUID
 
 from diracx.core.exceptions import TokenNotFoundError
 from diracx.core.properties import PROXY_MANAGEMENT, SecurityProperty
@@ -74,7 +74,7 @@ async def revoke_refresh_token(
         subject = None
 
     try:
-        await revoke_refresh_token_bl(auth_db, subject, UUID(jti, version=4))
+        await revoke_refresh_token_bl(auth_db, subject, UUID(jti))
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

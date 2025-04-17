@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import secrets
-from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import (
     AuthorizationError,
@@ -126,7 +126,7 @@ class AuthDB(BaseSQLDB):
         code_challenge_method: str,
         redirect_uri: str,
     ) -> str:
-        uuid = str(uuid4())
+        uuid = str(uuid7())
 
         stmt = insert(AuthorizationFlows).values(
             uuid=uuid,

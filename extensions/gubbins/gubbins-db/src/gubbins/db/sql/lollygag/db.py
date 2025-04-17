@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
 from sqlalchemy import func, insert, select
+from uuid_utils import UUID
 
 from .schema import Base as LollygagDBBase
 from .schema import Cars, Owners

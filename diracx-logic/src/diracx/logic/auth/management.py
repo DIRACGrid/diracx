@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid_utils import UUID
 
 from diracx.db.sql import AuthDB
 

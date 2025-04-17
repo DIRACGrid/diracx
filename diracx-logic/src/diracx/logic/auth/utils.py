@@ -4,7 +4,6 @@ import base64
 import hashlib
 import json
 import secrets
-from uuid import UUID
 
 import httpx
 from authlib.integrations.starlette_client import OAuthError
@@ -13,6 +12,7 @@ from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
 from typing_extensions import TypedDict
+from uuid_utils import UUID
 
 from diracx.core.config.schema import Config
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
@@ -203,11 +203,7 @@ async def verify_dirac_refresh_token(
     )
     token.validate()
 
-    return (
-        UUID(token["jti"], version=4),
-        float(token["exp"]),
-        token["legacy_exchange"],
-    )
+    return UUID(token["jti"]), float(token["exp"]), token["legacy_exchange"]
 
 
 def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:

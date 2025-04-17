@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 import pytest
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.sql.utils import SQLDBUnavailableError
+from uuid_utils import uuid7
 
 from gubbins.db.sql.lollygag.db import LollygagDB
 
@@ -43,7 +43,7 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
         # Add cars, belonging to the same guy
         result = await asyncio.gather(
             *(
-                lollygag_db.insert_car(uuid4(), f"model_{i}", owner_id)
+                lollygag_db.insert_car(uuid7(), f"model_{i}", owner_id)
                 for i in range(10)
             )
         )
