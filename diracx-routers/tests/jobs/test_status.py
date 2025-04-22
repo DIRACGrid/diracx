@@ -1072,3 +1072,29 @@ def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
     payload = {valid_job_id: {(time - timedelta(minutes=2)).isoformat(): inner_payload}}
     r = normal_user_client.patch("/api/jobs/status", json={valid_job_id: payload})
     assert r.status_code == 200, r.json()
+
+
+def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
+    search_body = {
+        "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
+    }
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    old_data = r.json()[0]
+    assert old_data["HeartBeatTime"] is None
+
+    payload = {valid_job_id: {"Vsize": 1234}}
+    r = normal_user_client.patch(
+        "/api/jobs/heartbeat", json=payload, params={"force": True}
+    )
+    r.raise_for_status()
+
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    new_data = r.json()[0]
+
+    hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
+    # TODO: This should be timezone aware
+    assert hbt.tzinfo is None
+    hbt = hbt.replace(tzinfo=timezone.utc)
+    assert hbt > datetime.now(tz=timezone.utc) - timedelta(seconds=10)
