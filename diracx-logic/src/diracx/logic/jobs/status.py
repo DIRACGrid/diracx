@@ -46,6 +46,7 @@ from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
+from diracx.db.sql.utils.functions import utcnow
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
 
@@ -585,6 +586,13 @@ async def add_heartbeat(
                     job_parameters_db=job_parameters_db,
                 )
             )
+
+        if other_ids := set(data) - set(status_changes):
+            # If there are no status changes, we still need to update the heartbeat time
+            heartbeat_updates = {
+                job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
+            }
+            tg.create_task(job_db.set_job_attributes(heartbeat_updates))
 
         os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
         for job_id, job_data in data.items():
