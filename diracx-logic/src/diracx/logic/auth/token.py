@@ -31,7 +31,7 @@ from diracx.db.sql import AuthDB, PilotAgentsDB
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 from diracx.db.sql.utils.functions import substract_date
 from diracx.logic.auth.pilot import generate_pilot_scope, generate_pilot_sub
-from diracx.logic.pilots.utils import get_pilot_informations_by_reference
+from diracx.logic.pilots.utils import get_pilot_informations_by_stamps
 
 from .utils import (
     get_allowed_user_properties,
@@ -378,7 +378,7 @@ async def exchange_token(
 async def generate_pilot_tokens(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
-    pilot_job_reference: str,
+    pilot_stamp: str,
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
@@ -400,8 +400,8 @@ async def generate_pilot_tokens(
         )
     else:
 
-        pilot = await get_pilot_informations_by_reference(
-            pilot_db=pilot_db, pilot_job_reference=pilot_job_reference
+        pilot = await get_pilot_informations_by_stamps(
+            pilot_db=pilot_db, pilot_stamp=pilot_stamp
         )
 
         pilot_info = {

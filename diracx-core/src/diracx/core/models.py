@@ -226,7 +226,7 @@ class TokenResponse(BaseModel):
 
 
 class PilotCredentialsInfo(BaseModel):
-    pilot_reference: str
+    pilot_stamp: str
     pilot_secret: str
     pilot_secret_expires_in: int
 

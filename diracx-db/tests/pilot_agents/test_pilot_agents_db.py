@@ -6,7 +6,13 @@ from time import sleep
 
 import pytest
 
-from diracx.core.exceptions import AuthorizationError, PilotNotFoundError
+from diracx.core.exceptions import (
+    CredentialsNotFoundError,
+    OverusedSecretError,
+    PilotNotFoundError,
+    SecretHasExpiredError,
+    SecretNotFoundError,
+)
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils.functions import hash
 
@@ -23,64 +29,58 @@ async def pilot_agents_db(tmp_path):
 async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
-        # Add a pilot reference
+        # Add pilots
         refs = [f"ref_{i}" for i in range(10)]
         stamps = [f"stamp_{i}" for i in range(10)]
-        stamp_dict = dict(zip(refs, stamps))
+        pilot_references = dict(zip(stamps, refs))
 
-        await pilot_agents_db.add_pilot_references(
-            refs, "test_vo", grid_type="DIRAC", pilot_stamps=stamp_dict
+        await pilot_agents_db.add_pilots_bulk(
+            stamps, "test_vo", grid_type="DIRAC", pilot_references=pilot_references
         )
 
-        await pilot_agents_db.add_pilot_references(
-            refs, "test_vo", grid_type="DIRAC", pilot_stamps=None
+        await pilot_agents_db.add_pilots_bulk(
+            stamps, "test_vo", grid_type="DIRAC", pilot_references=None
         )
 
 
 async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
-        pilot_reference = "pilot-reference-test"
-        await pilot_agents_db.add_pilot_references(
+        pilot_stamp = "pilot-reference-test"
+        await pilot_agents_db.add_pilots_bulk(
             vo="lhcb",
-            pilot_refs=[pilot_reference],
+            pilot_stamps=[pilot_stamp],
             grid_type="grid-type",
         )
 
-        res = await pilot_agents_db.get_pilots_by_references_bulk([pilot_reference])
+        res = await pilot_agents_db.get_pilots_by_stamp_bulk([pilot_stamp])
 
         assert len(res) == 1
 
         pilot = res[0]
 
         with pytest.raises(PilotNotFoundError):
-            await pilot_agents_db.get_pilots_by_references_bulk(["I am a fake ref"])
+            await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
 
         # Set values
         assert pilot["VO"] == "lhcb"
-        assert pilot["PilotJobReference"] == pilot_reference
+        assert pilot["PilotStamp"] == pilot_stamp
         assert pilot["GridType"] == "grid-type"
 
 
 async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
+        # Add pilots
         refs = [f"ref_{i}" for i in range(100)]
         stamps = [f"stamp_{i}" for i in range(100)]
-        stamp_dict = dict(zip(refs, stamps))
+        pilot_references = dict(zip(stamps, refs))
 
-        # Verify that they don't exist
-        with pytest.raises(PilotNotFoundError):
-            await pilot_agents_db.get_pilots_by_references_bulk(refs)
-
-        # Register a pilot
-        await pilot_agents_db.add_pilot_references(
-            vo="lhcb", pilot_refs=refs, grid_type="grid-type", pilot_stamps=stamp_dict
+        await pilot_agents_db.add_pilots_bulk(
+            stamps, "test_vo", grid_type="DIRAC", pilot_references=pilot_references
         )
 
-        pilots = await pilot_agents_db.get_pilots_by_references_bulk(refs)
-
-        assert len(pilots) == len(refs)
+        pilots = await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
 
         pilot_ids = [pilot["PilotID"] for pilot in pilots]
 
@@ -88,39 +88,44 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
         pilot_hashed_secrets = [hash(secret) for secret in secrets]
 
         # Add creds
-        date_added = await pilot_agents_db.add_pilots_credentials(
-            pilot_ids=pilot_ids,
+        added_secrets = await pilot_agents_db.add_pilots_credentials_bulk(
+            pilot_stamps=stamps,
             pilot_hashed_secrets=pilot_hashed_secrets,
-            pilot_secret_use_count_max=10,
+            pilot_secret_use_count_max=1,
         )
 
-        assert len(date_added) == len(pilots)
+        assert len(added_secrets) == len(pilots)
 
-        expiration_dates = [date + timedelta(seconds=10) for date in date_added]
+        # Extract dates
+        creation_dates = [secret["SecretCreationDate"] for secret in added_secrets]
+        pilot_secret_ids = [secret["SecretID"] for secret in added_secrets]
 
-        await pilot_agents_db.set_pilot_credentials_expiration(
-            pilot_ids=pilot_ids, pilot_secret_expiration_dates=expiration_dates
+        expiration_dates = [
+            creation_date + timedelta(seconds=10) for creation_date in creation_dates
+        ]
+
+        await pilot_agents_db.set_secret_expirations_bulk(
+            secret_ids=pilot_secret_ids, pilot_secret_expiration_dates=expiration_dates
         )
 
-        assert all(secret is not None for secret in secrets)
-
-        pairs = list(zip(refs, secrets))
+        pairs = list(zip(stamps, secrets))
         # Shuffle it to prove that credentials are well associated
         shuffle(pairs)
 
-        for pilot_reference, secret in pairs:
+        for stamp, secret in pairs:
             await pilot_agents_db.verify_pilot_secret(
-                pilot_job_reference=pilot_reference, pilot_hashed_secret=hash(secret)
+                pilot_stamp=stamp, pilot_hashed_secret=hash(secret)
             )
 
-        with pytest.raises(AuthorizationError):
+        with pytest.raises(SecretNotFoundError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_job_reference=refs[0],
+                pilot_stamp=stamps[0],
                 pilot_hashed_secret=hash("I love stawberries :)"),
             )
 
+        with pytest.raises(CredentialsNotFoundError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_job_reference="I am a spider",
+                pilot_stamp="I am a spider",
                 pilot_hashed_secret=secrets[0],
             )
 
@@ -130,48 +135,42 @@ async def test_create_pilot_and_verify_secret_with_delay(
 ):
 
     async with pilot_agents_db as pilot_agents_db:
-        pilot_reference = "pilot-reference-test"
+        pilot_stamp = "pilot-stamp"
         # Register a pilot
-        await pilot_agents_db.add_pilot_references(
+        await pilot_agents_db.add_pilots_bulk(
             vo="lhcb",
-            pilot_refs=[pilot_reference],
+            pilot_stamps=[pilot_stamp],
             grid_type="grid-type",
         )
-
-        pilots = await pilot_agents_db.get_pilots_by_references_bulk([pilot_reference])
-
-        assert len(pilots) == 1
-
-        pilot = pilots[0]
-
-        pilot_id = pilot["PilotID"]
 
         secret = "AW0nd3rfulS3cr3t"
         pilot_hashed_secret = hash(secret)
 
         # Add creds
-        date_added = await pilot_agents_db.add_pilots_credentials(
-            pilot_ids=[pilot_id],
+        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
+            pilot_stamps=[pilot_stamp],
             pilot_hashed_secrets=[pilot_hashed_secret],
             pilot_secret_use_count_max=10,
         )
 
-        assert len(date_added) == 1
+        assert len(secrets_added) == 1
+        secret = secrets_added[0]
 
-        expiration_date = date_added[0] + timedelta(seconds=1)
+        expiration_date = secret["SecretCreationDate"] + timedelta(seconds=1)
 
-        await pilot_agents_db.set_pilot_credentials_expiration(
-            pilot_ids=[pilot_id], pilot_secret_expiration_dates=[expiration_date]
+        await pilot_agents_db.set_secret_expirations_bulk(
+            secret_ids=[secret["SecretID"]],
+            pilot_secret_expiration_dates=[expiration_date],
         )
 
         assert secret is not None
 
         # So that the secret expires
-        sleep(3)
+        sleep(1)
 
-        with pytest.raises(AuthorizationError):
+        with pytest.raises(SecretHasExpiredError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_job_reference=pilot_reference,
+                pilot_stamp=pilot_stamp,
                 pilot_hashed_secret=pilot_hashed_secret,
             )
 
@@ -181,51 +180,43 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
 ):
 
     async with pilot_agents_db as pilot_agents_db:
-        pilot_reference = "pilot-reference-test"
+        pilot_stamp = "pilot-stamp"
         # Register a pilot
-        await pilot_agents_db.add_pilot_references(
+        await pilot_agents_db.add_pilots_bulk(
             vo="lhcb",
-            pilot_refs=[pilot_reference],
+            pilot_stamps=[pilot_stamp],
             grid_type="grid-type",
         )
-
-        pilots = await pilot_agents_db.get_pilots_by_references_bulk([pilot_reference])
-
-        assert len(pilots) == 1
-
-        pilot = pilots[0]
-
-        pilot_id = pilot["PilotID"]
 
         secret = "AW0nd3rfulS3cr3t"
         pilot_hashed_secret = hash(secret)
 
         # Add creds
-        date_added = await pilot_agents_db.add_pilots_credentials(
-            pilot_ids=[pilot_id],
+        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
+            pilot_stamps=[pilot_stamp],
             pilot_hashed_secrets=[pilot_hashed_secret],
             pilot_secret_use_count_max=1,
         )
 
-        assert len(date_added) == 1
+        assert len(secrets_added) == 1
+        secret = secrets_added[0]
 
-        expiration_date = date_added[0] + timedelta(seconds=10)
+        expiration_date = secret["SecretCreationDate"] + timedelta(seconds=10)
 
-        await pilot_agents_db.set_pilot_credentials_expiration(
-            pilot_ids=[pilot_id], pilot_secret_expiration_dates=[expiration_date]
+        await pilot_agents_db.set_secret_expirations_bulk(
+            secret_ids=[secret["SecretID"]],
+            pilot_secret_expiration_dates=[expiration_date],
         )
-
-        assert secret is not None
 
         # First login, should work
         await pilot_agents_db.verify_pilot_secret(
-            pilot_job_reference=pilot_reference,
+            pilot_stamp=pilot_stamp,
             pilot_hashed_secret=pilot_hashed_secret,
         )
 
         # Second login, should not work because maxed out at 1 try
-        with pytest.raises(AuthorizationError):
+        with pytest.raises(OverusedSecretError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_job_reference=pilot_reference,
+                pilot_stamp=pilot_stamp,
                 pilot_hashed_secret=pilot_hashed_secret,
             )

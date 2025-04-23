@@ -24,27 +24,29 @@ def generate_pilot_secret() -> str:
 
 
 async def add_pilot_credentials(
-    pilot_ids: list[int], pilot_db: PilotAgentsDB, settings: AuthSettings
+    pilot_stamps: list[str], pilot_db: PilotAgentsDB, settings: AuthSettings
 ) -> tuple[list[str], list[int]]:
     # Get a random string
     # Can be customized
-    random_secrets = [generate_pilot_secret() for _ in range(len(pilot_ids))]
+    random_secrets = [generate_pilot_secret() for _ in range(len(pilot_stamps))]
 
     hashed_secrets = [hash(random_secret) for random_secret in random_secrets]
 
-    date_added = await pilot_db.add_pilots_credentials(
-        pilot_ids=pilot_ids, pilot_hashed_secrets=hashed_secrets
+    secrets_added = await pilot_db.add_pilots_credentials_bulk(
+        pilot_stamps=pilot_stamps, pilot_hashed_secrets=hashed_secrets
     )
 
     # If we have millions of pilots to add, can take few seconds / minutes to add
     expiration_dates = [
-        date + timedelta(seconds=settings.pilot_secret_expire_seconds)
-        for date in date_added
+        secret["SecretCreationDate"]
+        + timedelta(seconds=settings.pilot_secret_expire_seconds)
+        for secret in secrets_added
     ]
+    secret_ids = [secret["SecretID"] for secret in secrets_added]
 
     # Helps compatibility between sql engines
-    await pilot_db.set_pilot_credentials_expiration(
-        pilot_ids=pilot_ids,
+    await pilot_db.set_secret_expirations_bulk(
+        secret_ids=secret_ids,
         pilot_secret_expiration_dates=expiration_dates,  # type: ignore
     )
 
@@ -56,16 +58,18 @@ async def add_pilot_credentials(
 
 
 def create_pilot_credentials_response(
-    pilot_references: list[str],
+    pilot_stamps: list[str],
     pilot_secrets: list[str],
     pilot_expiration_dates: list[int],
 ) -> PilotCredentialsResponse:
     credentials_list = [
         PilotCredentialsInfo(
-            pilot_reference=ref, pilot_secret=secret, pilot_secret_expires_in=expires_in
+            pilot_stamp=pilot_stamp,
+            pilot_secret=secret,
+            pilot_secret_expires_in=expires_in,
         )
-        for ref, secret, expires_in in zip(
-            pilot_references, pilot_secrets, pilot_expiration_dates
+        for pilot_stamp, secret, expires_in in zip(
+            pilot_stamps, pilot_secrets, pilot_expiration_dates
         )
     ]
 
@@ -119,28 +123,28 @@ def generate_pilot_sub(pilot: dict, config: Config):
 
 
 async def try_login(
-    pilot_reference: str, pilot_db: PilotAgentsDB, pilot_secret: str
+    pilot_stamp: str, pilot_db: PilotAgentsDB, pilot_secret: str
 ) -> None:
 
     hashed_secret = hash(pilot_secret)
 
     await pilot_db.verify_pilot_secret(
-        pilot_job_reference=pilot_reference, pilot_hashed_secret=hashed_secret
+        pilot_stamp=pilot_stamp, pilot_hashed_secret=hashed_secret
     )
 
 
 async def register_new_pilots(
     pilot_db: PilotAgentsDB,
-    pilot_job_references: list[str],
+    pilot_stamps: list[str],
     vo: str,
     grid_type: str = "Dirac",
-    pilot_stamps: dict | None = None,
+    pilot_job_references: dict | None = None,
 ):
     # [IMPORTANT] Check unicity of pilot references
     # If a pilot already exists, it will undo everything and raise an error
     try:
-        await pilot_db.get_pilots_by_references_bulk(refs=pilot_job_references)
-        raise PilotAlreadyExistsError(pilot_ref=pilot_job_references)
+        await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps=pilot_stamps)
+        raise PilotAlreadyExistsError(data={"pilot_stamps": str(pilot_stamps)})
     except PilotNotFoundError as e:
         # e.detail is a string representation of the pilot that are not found
         # Ex: e.detail = '{"ref1", "ref2", ...}'
@@ -153,30 +157,26 @@ async def register_new_pilots(
         # To help verification, we transform them temporarily into sets
         # We don't deal with sets everytime because they remove the order
         try:
-            if not e.detail:
-                raise ValueError("e.detail is None")
+            if isinstance(e.detail, str):
+                pilots_that_already_exist = set(pilot_stamps) - set(
+                    literal_eval(e.detail)
+                )
+        except AttributeError as e2:
+            raise ValueError("Must be defined and a set string representation") from e2
 
-            pilots_that_already_exist = set(pilot_job_references) - set(
-                literal_eval(e.detail)
-            )
-        except ValueError as e2:
-            raise ValueError(
-                f"Must be a set string representation, got: {e.detail}"
-            ) from e2
-
-        if type(pilots_that_already_exist) is not set:
+        if not isinstance(pilots_that_already_exist, set):
             raise ValueError(
                 f"Must be a set, got {type(pilots_that_already_exist)}: {pilots_that_already_exist}"
             ) from e
 
         if pilots_that_already_exist:
             raise PilotAlreadyExistsError(
-                pilot_ref=str(pilots_that_already_exist)
+                data={"pilot_stamps": str(pilots_that_already_exist)}
             ) from e
 
-    await pilot_db.add_pilot_references(
-        pilot_refs=pilot_job_references,
+    await pilot_db.add_pilots_bulk(
+        pilot_stamps=pilot_stamps,
         vo=vo,
         grid_type=grid_type,
-        pilot_stamps=pilot_stamps,
+        pilot_references=pilot_job_references,
     )

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Type
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, asc, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import ColumnElement, expression
+
+from diracx.core.exceptions import GenericError
+from diracx.db.exceptions import DBInBadStateError
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -113,3 +118,73 @@ def hash(code: str):
 
 def rows_to_dicts(rows):
     return [dict(row._mapping) for row in rows]
+
+
+# For efficiency
+_SNAKE_SPLIT_RE = re.compile(r"_+")
+
+
+def snake_to_pascal(snake_str: str) -> str:
+    # Split the string using the precompiled regex
+    # Capitalize each word and join to form PascalCase
+    return "".join(word.capitalize() for word in _SNAKE_SPLIT_RE.split(snake_str))
+
+
+async def fetch_records_bulk_or_raises(
+    conn: AsyncConnection,
+    model: Any,  # Here, we currently must use `Any` because `declarative_base()` returns any
+    missing_elements_error_cls: Type[GenericError],
+    column_to_use: str,
+    elements_to_fetch: list,
+    order_by: tuple[str, str] | None = None,
+) -> list[dict]:
+    """Fetches a list of elements in a table, returns a list of elements.
+    All elements fro the `element_to_fetch` **must** be present.
+    Raises the specified error if at least one is missing.
+
+    Example:
+    fetch_records_bulk_or_raises(
+        self.conn,
+        PilotAgents,
+        PilotNotFound,
+        "PilotID",
+        [1,2,3]
+    )
+
+    """
+    assert elements_to_fetch
+
+    # Get the column that needs to be in elements_to_fetch
+    column = getattr(model, column_to_use)
+
+    # Create the request
+    stmt = select(model).with_for_update().where(column.in_(elements_to_fetch))
+
+    if order_by:
+        column_name_to_order_by, direction = order_by
+        column_to_order_by = getattr(model, column_name_to_order_by)
+
+        operator: ColumnElement = (
+            asc(column_to_order_by) if direction == "asc" else desc(column_to_order_by)
+        )
+
+        stmt = stmt.order_by(operator)
+
+    # Transform into dictionnaries
+    results = rows_to_dicts(await conn.execute(stmt))
+
+    # Detects duplicates
+    if len(results) > len(elements_to_fetch):
+        raise DBInBadStateError(detail="Seems to have duplicates in the database.")
+
+    # Checks if we have every elements we wanted
+    camel_case_column_to_use = snake_to_pascal(column_to_use)
+    found_keys = {row[camel_case_column_to_use] for row in results}
+    missing = set(elements_to_fetch) - found_keys
+
+    if missing:
+        raise missing_elements_error_cls(
+            data={camel_case_column_to_use: str(missing)}, detail=str(missing)
+        )
+
+    return results

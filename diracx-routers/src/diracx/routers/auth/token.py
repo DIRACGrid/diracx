@@ -9,12 +9,16 @@ from fastapi import Depends, Form, Header, HTTPException, status
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
-    AuthorizationError,
+    BadPilotCredentialsError,
+    CredentialsNotFoundError,
     DiracHttpResponseError,
     ExpiredFlowError,
     InvalidCredentialsError,
+    OverusedSecretError,
     PendingAuthorizationError,
     PilotNotFoundError,
+    SecretHasExpiredError,
+    SecretNotFoundError,
 )
 from diracx.core.models import (
     AccessTokenPayload,
@@ -269,9 +273,7 @@ async def perform_legacy_exchange(
 async def pilot_login(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
-    pilot_job_reference: Annotated[
-        str, Body(description="Job reference used by a pilot to login.")
-    ],
+    pilot_stamp: Annotated[str, Body(description="Stamp used by a pilot to login.")],
     pilot_secret: Annotated[
         str, Body(description="Pilot secret given by Dirac/DiracX.")
     ],
@@ -285,25 +287,40 @@ async def pilot_login(
     """Endpoint without policy, the pilot uses only its secret."""
     try:
         await try_login(
-            pilot_reference=pilot_job_reference,
+            pilot_stamp=pilot_stamp,
             pilot_db=pilot_db,
             pilot_secret=pilot_secret,
         )
-    except AuthorizationError as e:
+    except (BadPilotCredentialsError, CredentialsNotFoundError) as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=e.detail
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="bad credentials"
         ) from e
     except PilotNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="bad pilot_id / pilot_secret",
+            detail="bad pilot_stamp",
+        ) from e
+    except SecretNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="bad pilot_secret",
+        ) from e
+    except OverusedSecretError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="secret has been overused",
+        ) from e
+    except SecretHasExpiredError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="secret expired",
         ) from e
 
     try:
         access_token, refresh_token = await generate_pilot_tokens(
             pilot_db=pilot_db,
             auth_db=auth_db,
-            pilot_job_reference=pilot_job_reference,
+            pilot_stamp=pilot_stamp,
             config=config,
             settings=settings,
             available_properties=available_properties,
@@ -343,7 +360,7 @@ async def refresh_pilot_tokens(
         new_access_token, new_refresh_token = await generate_pilot_tokens(
             pilot_db=pilot_db,
             auth_db=auth_db,
-            pilot_job_reference=pilot_info.preferred_username,
+            pilot_stamp=pilot_info.preferred_username,
             config=config,
             settings=settings,
             available_properties=available_properties,

@@ -3,20 +3,20 @@ from __future__ import annotations
 from diracx.db.sql import PilotAgentsDB
 
 
-async def get_pilot_informations_by_reference(
+async def get_pilot_informations_by_stamps(
     pilot_db: PilotAgentsDB,
-    pilot_job_reference: str,
+    pilot_stamp: str,
 ):
-    pilots = await pilot_db.get_pilots_by_references_bulk([pilot_job_reference])
+    pilots = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
 
     assert len(pilots) == 1
 
     return pilots[0]
 
 
-async def get_pilot_ids_from_references(
-    pilot_db: PilotAgentsDB, pilot_references: list[str]
+async def get_pilot_ids_from_stamps(
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str]
 ) -> list[int]:
-    pilots = await pilot_db.get_pilots_by_references_bulk(refs=pilot_references)
+    pilots = await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps=pilot_stamps)
 
     return [pilot["PilotID"] for pilot in pilots]
