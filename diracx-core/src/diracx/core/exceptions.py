@@ -137,6 +137,11 @@ class BadPilotCredentialsError(GenericError):
     tail = ""
 
 
+class BadPilotVOError(GenericError):
+    head = "Bad VO"
+    tail = ""
+
+
 class SecretNotFoundError(GenericError):
     head = "Secret"
     tail = "not found"

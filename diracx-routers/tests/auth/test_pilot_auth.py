@@ -44,9 +44,10 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     async with db as pilot_agents_db:
         pilot_stamp = "pilot-stamp"
+        vo = "lhcb"
         # Register a pilot
         await pilot_agents_db.add_pilots_bulk(
-            vo="lhcb",
+            vo=vo,
             pilot_stamps=[pilot_stamp],
             grid_type="grid-type",
         )
@@ -59,6 +60,7 @@ async def test_create_pilot_and_verify_secret(test_client):
             pilot_stamps=[pilot_stamp],
             pilot_hashed_secrets=[pilot_hashed_secret],
             pilot_secret_use_count_max=1,  # Important later
+            vo=vo,
         )
 
         assert len(secrets_added) == 1

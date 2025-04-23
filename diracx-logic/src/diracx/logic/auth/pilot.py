@@ -24,7 +24,10 @@ def generate_pilot_secret() -> str:
 
 
 async def add_pilot_credentials(
-    pilot_stamps: list[str], pilot_db: PilotAgentsDB, settings: AuthSettings
+    pilot_stamps: list[str],
+    pilot_db: PilotAgentsDB,
+    settings: AuthSettings,
+    vo: str | None,
 ) -> tuple[list[str], list[int]]:
     # Get a random string
     # Can be customized
@@ -33,7 +36,7 @@ async def add_pilot_credentials(
     hashed_secrets = [hash(random_secret) for random_secret in random_secrets]
 
     secrets_added = await pilot_db.add_pilots_credentials_bulk(
-        pilot_stamps=pilot_stamps, pilot_hashed_secrets=hashed_secrets
+        pilot_stamps=pilot_stamps, pilot_hashed_secrets=hashed_secrets, vo=vo
     )
 
     # If we have millions of pilots to add, can take few seconds / minutes to add

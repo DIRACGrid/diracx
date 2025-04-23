@@ -76,6 +76,9 @@ class PilotSecrets(PilotAgentsDBBase):
     )
     secret_creation_time = DateNowColumn("SecretCreationDate")
     secret_expiration_date = NullColumn("SecretExpirationDate", DateTime(timezone=True))
+    # To authorize only pilots from a specific VO to access a secret
+    # Null VO => Can be used by everyone
+    secret_vo = NullColumn("SecretVO", String(128))
 
     __table_args__ = (UniqueConstraint("HashedSecret", name="uq_hashed_secret"),)
 

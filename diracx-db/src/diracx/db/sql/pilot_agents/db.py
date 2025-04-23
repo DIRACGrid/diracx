@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
+    BadPilotVOError,
     CredentialsNotFoundError,
     OverusedSecretError,
     PilotAlreadyExistsError,
@@ -112,32 +113,40 @@ class PilotAgentsDB(BaseSQLDB):
             )
 
         # 5. Verify the secret counter
-        if secret["SecretGlobalUseCount"] + 1 > secret["SecretGlobalUseCountMax"]:
-            raise OverusedSecretError(
-                data={
-                    "pilot_stamp" "pilot_hashed_secret": pilot_hashed_secret,
-                    "secret_global_use_count": secret["SecretGlobalUseCount"],
-                    "secret_global_use_count_max": secret["SecretGlobalUseCountMax"],
-                }
-            )
+        # 5.1 Only check if the SecretGlobalUseCountMax is defined
+        # If not defined, there is an infinite use.
+        if secret["SecretGlobalUseCountMax"]:
+            # 5.2 Finite use, we check if we can still login
+            if secret["SecretGlobalUseCount"] + 1 > secret["SecretGlobalUseCountMax"]:
+                raise OverusedSecretError(
+                    data={
+                        "pilot_stamp" "pilot_hashed_secret": pilot_hashed_secret,
+                        "secret_global_use_count": secret["SecretGlobalUseCount"],
+                        "secret_global_use_count_max": secret[
+                            "SecretGlobalUseCountMax"
+                        ],
+                    }
+                )
 
-        # Now the pilot is authorized. Increment the counters (globally and locally).
+        # 6. Now the pilot is authorized, increment the counters (globally and locally).
         try:
-            # Increment the local count
+            # 6.1 Increment the local count
             await self.increment_pilot_local_secret_and_last_time_use(
                 pilot_secret_id=pilot_credentials["PilotSecretID"],
                 pilot_stamp=pilot_credentials["PilotStamp"],
             )
 
-            # Increment the global count
+            # 6.2 Increment the global count
             await self.increment_global_secret_use(
                 secret_id=pilot_credentials["PilotSecretID"]
             )
         except Exception as e:  # Generic, to catch it.
             # Should NOT happen
-            # Still caught in case of an error in the counters
+            # Wrapped in a try/catch to still catch in case of an error in the counters
             # Caught and raised here to avoid raising a 4XX error
-            raise DBInBadStateError(detail="This should not happen.") from e
+            raise DBInBadStateError(
+                detail="This should not happen. Pilot has credentials, but has a corrupted secret."
+            ) from e
 
     async def add_pilots_bulk(
         self,
@@ -175,6 +184,7 @@ class PilotAgentsDB(BaseSQLDB):
         self,
         pilot_stamps: list[str],
         pilot_hashed_secrets: list[str],
+        vo: str | None,
         pilot_secret_use_count_max: int = 1,
     ) -> list[dict]:
 
@@ -186,6 +196,7 @@ class PilotAgentsDB(BaseSQLDB):
         await self.insert_unique_secrets_bulk(
             hashed_secrets=pilot_hashed_secrets,
             secret_global_use_count_max=pilot_secret_use_count_max,
+            vo=vo,
         )
 
         # Get the secret ids to later associate them with pilots
@@ -207,13 +218,17 @@ class PilotAgentsDB(BaseSQLDB):
         return secrets
 
     async def insert_unique_secrets_bulk(
-        self, hashed_secrets: list[str], secret_global_use_count_max: int = 1
+        self,
+        hashed_secrets: list[str],
+        vo: str | None,
+        secret_global_use_count_max: int = 1,
     ):
         """Bulk insert secrets. Raises an error in case of a Integrity violation."""
         values = [
             {
                 "SecretGlobalUseCountMax": secret_global_use_count_max,
                 "HashedSecret": hashed_secret,
+                "SecretVO": vo,
             }
             for hashed_secret in hashed_secrets
         ]
@@ -234,13 +249,19 @@ class PilotAgentsDB(BaseSQLDB):
                 ) from e
 
             # Other errors to catch
-            raise DBInBadStateError("Engine Specific error not caught") from e
+            raise DBInBadStateError("Engine Specific error not caught" + str(e)) from e
 
     async def associate_pilots_with_secrets_bulk(
         self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
     ):
         """Bulk associate pilots with secrets. Raises an error in case of a Integrity violation."""
         # Better to give as a parameter pilot to secret associations, rather than associating here.
+
+        # First verify that pilots can access a certain secret
+        await self.verify_that_pilot_can_access_secret_bulk(
+            pilot_to_secret_id_mapping_values
+        )
+
         stmt = insert(PilotToSecretMapping).values(pilot_to_secret_id_mapping_values)
 
         try:
@@ -260,6 +281,52 @@ class PilotAgentsDB(BaseSQLDB):
                     data={"pilot_stamps": str(pilot_to_secret_id_mapping_values)},
                     detail="at least one of these pilots already have a secret",
                 ) from e
+
+    async def verify_that_pilot_can_access_secret_bulk(
+        self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
+    ):
+        # 1. Extract unique pilot_stamps and secret_ids
+        pilot_stamps = [
+            entry["PilotStamp"] for entry in pilot_to_secret_id_mapping_values
+        ]
+        secret_ids = [
+            entry["PilotSecretID"] for entry in pilot_to_secret_id_mapping_values
+        ]
+
+        # 2. Bulk fetch pilot and secret info
+        pilots = await self.get_pilots_by_stamp_bulk(pilot_stamps)
+        secrets = await self.get_secrets_by_secret_ids_bulk(secret_ids)
+
+        # 3. Build lookup maps
+        pilot_vo_map = {pilot["PilotStamp"]: pilot["VO"] for pilot in pilots}
+        secret_vo_map = {secret["SecretID"]: secret["SecretVO"] for secret in secrets}
+
+        # 4. Validate access
+        bad_mapping = []
+
+        for mapping in pilot_to_secret_id_mapping_values:
+            pilot_stamp = mapping["PilotStamp"]
+            secret_id = mapping["PilotSecretID"]
+
+            pilot_vo = pilot_vo_map[pilot_stamp]
+            secret_vo = secret_vo_map[secret_id]
+
+            # If secret_vo is set to NULL, everybody can access it
+            if not secret_vo:
+                continue
+
+            # Access allowed only if VOs match or secret_vo is open (None)
+            if secret_vo is not None and pilot_vo != secret_vo:
+                bad_mapping.append(
+                    {
+                        "pilot_stamp": pilot_stamp,
+                        "given_vo": pilot_vo,
+                        "expected_vo": secret_vo,
+                    }
+                )
+
+        if bad_mapping:
+            raise BadPilotVOError(data={"bad_mapping": str(bad_mapping)})
 
     async def set_secret_expirations_bulk(
         self, secret_ids: list[int], pilot_secret_expiration_dates: list[DateTime]
@@ -288,6 +355,7 @@ class PilotAgentsDB(BaseSQLDB):
             PilotAgents,
             PilotNotFoundError,
             "pilot_stamp",
+            "PilotStamp",
             pilot_stamps,
         )
 
@@ -300,6 +368,7 @@ class PilotAgentsDB(BaseSQLDB):
             PilotToSecretMapping,
             CredentialsNotFoundError,
             "pilot_stamp",
+            "PilotStamp",
             pilot_stamps,
         )
 
@@ -310,6 +379,18 @@ class PilotAgentsDB(BaseSQLDB):
             PilotSecrets,
             SecretNotFoundError,
             "hashed_secret",
+            "HashedSecret",
             hashed_secrets,
             order_by=("secret_id", "asc"),
+        )
+
+    async def get_secrets_by_secret_ids_bulk(self, secret_ids: list[int]):
+        """Bulk fetch secrets. Ensure all secrets are found, else raise an error."""
+        return await fetch_records_bulk_or_raises(
+            self.conn,
+            PilotSecrets,
+            SecretNotFoundError,
+            "secret_id",
+            "SecretID",
+            secret_ids,
         )

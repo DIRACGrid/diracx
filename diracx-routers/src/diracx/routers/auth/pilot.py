@@ -63,7 +63,7 @@ async def register_new_pilots_to_db(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
     credentials, expiration_dates = await add_pilot_credentials(
-        pilot_stamps=pilot_stamps, pilot_db=pilot_db, settings=settings
+        pilot_stamps=pilot_stamps, pilot_db=pilot_db, settings=settings, vo=vo
     )
 
     # Logs credentials creation
