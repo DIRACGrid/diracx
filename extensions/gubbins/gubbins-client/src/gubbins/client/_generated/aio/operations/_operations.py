@@ -1177,7 +1177,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
 
-        If a pilot reference already exists, it will block the insertion.
+        If a pilot stamp already exists, it will block the insertion.
 
         :param body: Required.
         :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb
@@ -1198,7 +1198,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
 
-        If a pilot reference already exists, it will block the insertion.
+        If a pilot stamp already exists, it will block the insertion.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1221,7 +1221,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
 
-        If a pilot reference already exists, it will block the insertion.
+        If a pilot stamp already exists, it will block the insertion.
 
         :param body: Is either a BodyAuthRegisterNewPilotsToDb type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyAuthRegisterNewPilotsToDb or IO[bytes]

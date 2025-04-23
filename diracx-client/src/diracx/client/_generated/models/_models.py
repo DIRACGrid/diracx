@@ -99,33 +99,31 @@ class BodyAuthPilotLogin(_serialization.Model):
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_job_reference: Job reference used by a pilot to login. Required.
-    :vartype pilot_job_reference: str
+    :ivar pilot_stamp: Stamp used by a pilot to login. Required.
+    :vartype pilot_stamp: str
     :ivar pilot_secret: Pilot secret given by Dirac/DiracX. Required.
     :vartype pilot_secret: str
     """
 
     _validation = {
-        "pilot_job_reference": {"required": True},
+        "pilot_stamp": {"required": True},
         "pilot_secret": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_job_reference": {"key": "pilot_job_reference", "type": "str"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
         "pilot_secret": {"key": "pilot_secret", "type": "str"},
     }
 
-    def __init__(
-        self, *, pilot_job_reference: str, pilot_secret: str, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, pilot_stamp: str, pilot_secret: str, **kwargs: Any) -> None:
         """
-        :keyword pilot_job_reference: Job reference used by a pilot to login. Required.
-        :paramtype pilot_job_reference: str
+        :keyword pilot_stamp: Stamp used by a pilot to login. Required.
+        :paramtype pilot_stamp: str
         :keyword pilot_secret: Pilot secret given by Dirac/DiracX. Required.
         :paramtype pilot_secret: str
         """
         super().__init__(**kwargs)
-        self.pilot_job_reference = pilot_job_reference
+        self.pilot_stamp = pilot_stamp
         self.pilot_secret = pilot_secret
 
 
@@ -160,99 +158,52 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_references: List of the pilot references we want to add to the db. Required.
-    :vartype pilot_references: list[str]
+    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+    :vartype pilot_stamps: list[str]
     :ivar vo: Virtual Organisation associated with the inserted pilots. Required.
     :vartype vo: str
     :ivar grid_type: Grid type of the pilots.
     :vartype grid_type: str
-    :ivar pilot_stamps: Association of a pilot reference with a pilot stamp.
-    :vartype pilot_stamps: dict[str, any]
+    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
+    :vartype pilot_references: dict[str, any]
     """
 
     _validation = {
-        "pilot_references": {"required": True},
+        "pilot_stamps": {"required": True},
         "vo": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_references": {"key": "pilot_references", "type": "[str]"},
+        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
         "vo": {"key": "vo", "type": "str"},
         "grid_type": {"key": "grid_type", "type": "str"},
-        "pilot_stamps": {"key": "pilot_stamps", "type": "{object}"},
+        "pilot_references": {"key": "pilot_references", "type": "{object}"},
     }
 
     def __init__(
         self,
         *,
-        pilot_references: List[str],
+        pilot_stamps: List[str],
         vo: str,
         grid_type: str = "Dirac",
-        pilot_stamps: Optional[Dict[str, Any]] = None,
+        pilot_references: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         """
-        :keyword pilot_references: List of the pilot references we want to add to the db. Required.
-        :paramtype pilot_references: list[str]
+        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+        :paramtype pilot_stamps: list[str]
         :keyword vo: Virtual Organisation associated with the inserted pilots. Required.
         :paramtype vo: str
         :keyword grid_type: Grid type of the pilots.
         :paramtype grid_type: str
-        :keyword pilot_stamps: Association of a pilot reference with a pilot stamp.
-        :paramtype pilot_stamps: dict[str, any]
+        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
+        :paramtype pilot_references: dict[str, any]
         """
         super().__init__(**kwargs)
-        self.pilot_references = pilot_references
+        self.pilot_stamps = pilot_stamps
         self.vo = vo
         self.grid_type = grid_type
-        self.pilot_stamps = pilot_stamps
-
-
-class ExtendedMetadata(_serialization.Model):
-    """ExtendedMetadata.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar virtual_organizations: Virtual Organizations. Required.
-    :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
-    :ivar gubbins_secrets: Gubbins Secrets. Required.
-    :vartype gubbins_secrets: str
-    :ivar gubbins_user_info: Gubbins User Info. Required.
-    :vartype gubbins_user_info: dict[str, list[str]]
-    """
-
-    _validation = {
-        "virtual_organizations": {"required": True},
-        "gubbins_secrets": {"required": True},
-        "gubbins_user_info": {"required": True},
-    }
-
-    _attribute_map = {
-        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
-        "gubbins_secrets": {"key": "gubbins_secrets", "type": "str"},
-        "gubbins_user_info": {"key": "gubbins_user_info", "type": "{[str]}"},
-    }
-
-    def __init__(
-        self,
-        *,
-        virtual_organizations: Dict[str, "_models.VOInfo"],
-        gubbins_secrets: str,
-        gubbins_user_info: Dict[str, List[str]],
-        **kwargs: Any,
-    ) -> None:
-        """
-        :keyword virtual_organizations: Virtual Organizations. Required.
-        :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
-        :keyword gubbins_secrets: Gubbins Secrets. Required.
-        :paramtype gubbins_secrets: str
-        :keyword gubbins_user_info: Gubbins User Info. Required.
-        :paramtype gubbins_user_info: dict[str, list[str]]
-        """
-        super().__init__(**kwargs)
-        self.virtual_organizations = virtual_organizations
-        self.gubbins_secrets = gubbins_secrets
-        self.gubbins_user_info = gubbins_user_info
+        self.pilot_references = pilot_references
 
 
 class GroupInfo(_serialization.Model):
@@ -679,6 +630,34 @@ class JobSummaryParamsSearchItem(_serialization.Model):
     """JobSummaryParamsSearchItem."""
 
 
+class Metadata(_serialization.Model):
+    """Metadata.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar virtual_organizations: Virtual Organizations. Required.
+    :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+    """
+
+    _validation = {
+        "virtual_organizations": {"required": True},
+    }
+
+    _attribute_map = {
+        "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+    }
+
+    def __init__(
+        self, *, virtual_organizations: Dict[str, "_models.VOInfo"], **kwargs: Any
+    ) -> None:
+        """
+        :keyword virtual_organizations: Virtual Organizations. Required.
+        :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+        """
+        super().__init__(**kwargs)
+        self.virtual_organizations = virtual_organizations
+
+
 class OpenIDConfiguration(_serialization.Model):
     """OpenIDConfiguration.
 
@@ -833,8 +812,8 @@ class PilotCredentialsInfo(_serialization.Model):
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_reference: Pilot Reference. Required.
-    :vartype pilot_reference: str
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
     :ivar pilot_secret: Pilot Secret. Required.
     :vartype pilot_secret: str
     :ivar pilot_secret_expires_in: Pilot Secret Expires In. Required.
@@ -842,13 +821,13 @@ class PilotCredentialsInfo(_serialization.Model):
     """
 
     _validation = {
-        "pilot_reference": {"required": True},
+        "pilot_stamp": {"required": True},
         "pilot_secret": {"required": True},
         "pilot_secret_expires_in": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_reference": {"key": "pilot_reference", "type": "str"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
         "pilot_secret": {"key": "pilot_secret", "type": "str"},
         "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
     }
@@ -856,21 +835,21 @@ class PilotCredentialsInfo(_serialization.Model):
     def __init__(
         self,
         *,
-        pilot_reference: str,
+        pilot_stamp: str,
         pilot_secret: str,
         pilot_secret_expires_in: int,
         **kwargs: Any,
     ) -> None:
         """
-        :keyword pilot_reference: Pilot Reference. Required.
-        :paramtype pilot_reference: str
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
         :keyword pilot_secret: Pilot Secret. Required.
         :paramtype pilot_secret: str
         :keyword pilot_secret_expires_in: Pilot Secret Expires In. Required.
         :paramtype pilot_secret_expires_in: int
         """
         super().__init__(**kwargs)
-        self.pilot_reference = pilot_reference
+        self.pilot_stamp = pilot_stamp
         self.pilot_secret = pilot_secret
         self.pilot_secret_expires_in = pilot_secret_expires_in
 
