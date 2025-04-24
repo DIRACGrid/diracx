@@ -105,7 +105,9 @@ async def prefilled_db(request):
     impl = request.param
     async with resolve_fixtures_hack(request, impl) as dummy_opensearch_db:
         await dummy_opensearch_db.upsert("dummyvo", 798811211, DOC1)
-        await dummy_opensearch_db.upsert("dummyvo", 998811211, DOC2)
+        # the following line tests if the index name is made properly lowercase in case
+        # the VO has capital letters e.g. "diracAdmin"
+        await dummy_opensearch_db.upsert("dummyVO", 998811211, DOC2)
         await dummy_opensearch_db.upsert("dummyvo", 798811212, DOC3)
 
         # Force a refresh to make sure the documents are available
