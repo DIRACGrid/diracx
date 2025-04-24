@@ -52,54 +52,55 @@ class InvalidQueryError(DiracError):
     """It was not possible to build a valid database query from the given input."""
 
 
-class TokenNotFoundError(Exception):
+class TokenNotFoundError(DiracError):
     def __init__(self, jti: str, detail: str | None = None):
         self.jti: str = jti
-        super().__init__(f"Token {jti} not found" + (" ({detail})" if detail else ""))
+        super().__init__(f"Token {jti} not found" + (f" ({detail})" if detail else ""))
 
 
-class JobNotFoundError(Exception):
+class JobNotFoundError(DiracError):
     def __init__(self, job_id: int, detail: str | None = None):
         self.job_id: int = job_id
-        super().__init__(f"Job {job_id} not found" + (" ({detail})" if detail else ""))
+        super().__init__(f"Job {job_id} not found" + (f" ({detail})" if detail else ""))
 
 
-class SandboxNotFoundError(Exception):
+class SandboxNotFoundError(DiracError):
     def __init__(self, pfn: str, se_name: str, detail: str | None = None):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
             f"Sandbox with {pfn} and {se_name} not found"
-            + (" ({detail})" if detail else "")
+            + (f" ({detail})" if detail else "")
         )
 
 
-class SandboxAlreadyAssignedError(Exception):
+class SandboxAlreadyAssignedError(DiracError):
     def __init__(self, pfn: str, se_name: str, detail: str | None = None):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
             f"Sandbox with {pfn} and {se_name} already assigned"
-            + (" ({detail})" if detail else "")
+            + (f" ({detail})" if detail else "")
         )
 
 
-class SandboxAlreadyInsertedError(Exception):
+class SandboxAlreadyInsertedError(DiracError):
     def __init__(self, pfn: str, se_name: str, detail: str | None = None):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
             f"Sandbox with {pfn} and {se_name} already inserted"
-            + (" ({detail})" if detail else "")
+            + (f" ({detail})" if detail else "")
         )
 
 
-class JobError(Exception):
+class JobError(DiracError):
     def __init__(self, job_id, detail: str | None = None):
         self.job_id: int = job_id
-        self.detail = detail
-        super().__init__(f"Error concerning job {job_id}: {detail or ''}")
+        super().__init__(
+            f"Error concerning job {job_id}" + (f" ({detail})" if detail else "")
+        )
 
 
-class NotReadyError(Exception):
+class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
