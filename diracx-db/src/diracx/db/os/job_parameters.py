@@ -25,7 +25,8 @@ class JobParametersDB(BaseOSDB):
 
     def index_name(self, vo, doc_id: int) -> str:
         split = int(int(doc_id) // 1e6)
-        return f"{self.index_prefix}_{vo}_{split}m"
+        # The index name must be lowercase or opensearchpy will throw.
+        return f"{self.index_prefix}_{vo.lower()}_{split}m"
 
     def upsert(self, vo, doc_id, document):
         document = {
