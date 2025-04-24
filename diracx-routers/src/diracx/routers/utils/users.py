@@ -4,7 +4,7 @@ import re
 import uuid as std_uuid
 from typing import Annotated, Any
 
-from authlib.jose import JoseError, JsonWebToken
+from authlib.jose import JoseError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
 from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
@@ -13,6 +13,7 @@ from uuid_utils import UUID as _UUID
 
 from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
+from diracx.logic.auth.utils import read_token
 from diracx.routers.dependencies import AuthSettings
 
 # auto_error=False is used to avoid raising the wrong exception when the token is missing
@@ -88,15 +89,14 @@ async def verify_dirac_access_token(
         )
 
     try:
-        jwt = JsonWebToken(settings.token_algorithm)
-        token = jwt.decode(
+        token = read_token(
             raw_token,
-            key=settings.token_key.jwk,
+            settings.token_algorithm,
+            settings.token_key.jwk,
             claims_options={
                 "iss": {"values": [settings.token_issuer]},
             },
         )
-        token.validate()
     except JoseError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

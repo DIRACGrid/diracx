@@ -7,6 +7,7 @@ from functools import wraps
 
 import typer
 from azure.core.exceptions import ClientAuthenticationError
+from httpx import ConnectError
 from rich import print
 
 
@@ -21,6 +22,10 @@ class AsyncTyper(typer.Typer):
                     print(
                         ":x: [bold red]You are not authenticated. Log in with:[/bold red] "
                         "[bold] dirac login [OPTIONS] [VO] [/bold]"
+                    )
+                except ConnectError:
+                    print(
+                        ":x: [bold red]Please configure a valid DiracX server.[/bold red]"
                     )
 
             self.command(*args, **kwargs)(sync_func)

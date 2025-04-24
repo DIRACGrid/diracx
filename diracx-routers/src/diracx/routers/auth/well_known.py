@@ -28,6 +28,7 @@ async def get_openid_configuration(
         str(request.url_for("userinfo")),
         str(request.url_for("initiate_authorization_flow")),
         str(request.url_for("initiate_device_flow")),
+        str(request.url_for("revoke_refresh_token_by_refresh_token")),
         config,
         settings,
     )
