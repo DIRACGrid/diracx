@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
+from authlib.jose import JoseError
 from fastapi import Depends, HTTPException, status
 from typing_extensions import TypedDict
 from uuid_utils import UUID
@@ -79,7 +80,7 @@ async def revoke_refresh_token_by_refresh_token(
         await revoke_refresh_token_by_refresh_token_bl(
             auth_db, None, refresh_token, settings
         )
-    except ValueError:
+    except JoseError:
         logger.warning("Someone tried to revoke its token but failed.")
 
     return "Refresh token revoked"

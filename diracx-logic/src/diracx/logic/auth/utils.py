@@ -8,7 +8,6 @@ import secrets
 import httpx
 from authlib.integrations.starlette_client import OAuthError
 from authlib.jose import JsonWebKey, JsonWebToken
-from authlib.jose.errors import DecodeError
 from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
@@ -195,13 +194,10 @@ def read_token(
 ) -> dict:
     # First transform it into bytes, then return a jwt object
     # Don't take settings as a parameter to allow claims_options to be None or something else
-    try:
-        encoded_payload = payload.encode("ascii")
-        jwt = JsonWebToken(token_algorithm)
-        decoded_jwt = jwt.decode(encoded_payload, key, claims_options=claims_options)
-        decoded_jwt.validate()
-    except DecodeError as e:
-        raise ValueError("wrong json payload") from e
+    encoded_payload = payload.encode("ascii")
+    jwt = JsonWebToken(token_algorithm)
+    decoded_jwt = jwt.decode(encoded_payload, key, claims_options=claims_options)
+    decoded_jwt.validate()
     return decoded_jwt
 
 

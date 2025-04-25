@@ -685,6 +685,20 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     assert data["detail"] == "Invalid JWT: bad_signature: "
 
 
+async def test_bad_access_token(test_client):
+    """Test accessing a resource with a bad token."""
+    # From https://github.com/DIRACGrid/diracx/pull/496
+    r = test_client.get(
+        "/api/auth/userinfo", headers={"Authorization": "Bearer thisisabadbearer"}
+    )
+    data = r.json()
+
+    # Should raise a 401, with "Invalid JWT"
+    # Not Invalid Authorization Header because raised when decoding the token
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
+
+
 async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     """Test the refresh token listing with 2 users, a normal one and token manager:
     - normal user gets a refresh token and lists it
@@ -875,7 +889,6 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
             "refresh_token": "does-not-exist",
             "client_id": DIRAC_CLIENT_ID,
         },
-        headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     assert r.status_code == 200
 
@@ -886,7 +899,6 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
             "refresh_token": normal_user_refresh_token,
             "client_id": DIRAC_CLIENT_ID,
         },
-        headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     assert r.status_code == 200
 
@@ -905,7 +917,6 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
             "refresh_token": normal_user_refresh_token,
             "client_id": "a_wrong_dirac_client_id",
         },
-        headers={"Authorization": f"Bearer {normal_user_access_token}"},
     )
     assert r.status_code == 403
     assert r.json()["detail"] == "Unrecognised client_id"
