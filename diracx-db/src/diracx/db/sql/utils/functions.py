@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, func
+from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 
@@ -120,22 +121,30 @@ class DBStateAssertation:
     """Class to handler context where we should not raise any excepted error.
 
     Example:
-    with DBStateAssertation([PilotNotFoundError, SecretNotFoundError]):
+    with DBStateAssertation(self.conn, [PilotNotFoundError, SecretNotFoundError]):
         # Some code that should not raise any error filled previously
         # Else, raises an error
 
+    Note: Will rollback changes.
+
     """
 
-    def __init__(self, exceptions: list[type[Exception]]) -> None:
+    def __init__(
+        self, conn: AsyncConnection, exceptions: list[type[Exception]]
+    ) -> None:
         self.exceptions = exceptions
+        self.conn = conn
 
-    def __enter__(self):
+    async def __aenter__(self):
         pass
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
+    async def __aexit__(self, exc_type, exc_value, exc_tb):
         if exc_type is None:
             # No exception occurred
             return False
+
+        # If we get here, an error occured, so we rollback changes
+        await self.conn.rollback()
 
         # Check if the exception is among the expected ones
         if any(issubclass(exc_type, exc) for exc in self.exceptions):
