@@ -90,7 +90,10 @@ class PilotToSecretMapping(PilotAgentsDBBase):
 
     # Primary key is (PilotSecretID, PilotStamp) pair
     pilot_secret_id = Column(
-        "PilotSecretID", Integer, ForeignKey("PilotSecrets.SecretID"), primary_key=True
+        "PilotSecretID",
+        Integer,
+        ForeignKey("PilotSecrets.SecretID", ondelete="CASCADE"),
+        primary_key=True,
     )
     pilot_stamp = Column("PilotStamp", String(32), primary_key=True)
     # Different from global use: only counts how many a specific pilot used a specific secret

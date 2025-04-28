@@ -14,7 +14,6 @@ from diracx.core.exceptions import (
     DiracHttpResponseError,
     ExpiredFlowError,
     InvalidCredentialsError,
-    OverusedSecretError,
     PendingAuthorizationError,
     PilotNotFoundError,
     SecretHasExpiredError,
@@ -304,11 +303,6 @@ async def pilot_login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="bad pilot_secret",
-        ) from e
-    except OverusedSecretError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="secret has been overused",
         ) from e
     except SecretHasExpiredError as e:
         raise HTTPException(

@@ -9,7 +9,6 @@ import pytest
 from diracx.core.exceptions import (
     BadPilotVOError,
     CredentialsNotFoundError,
-    OverusedSecretError,
     PilotNotFoundError,
     SecretHasExpiredError,
     SecretNotFoundError,
@@ -223,7 +222,8 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
         )
 
         # Second login, should not work because maxed out at 1 try
-        with pytest.raises(OverusedSecretError):
+        # If the foreign key works, we should have "SecretNotFoundError"
+        with pytest.raises(SecretNotFoundError):
             await pilot_agents_db.verify_pilot_secret(
                 pilot_stamp=pilot_stamp,
                 pilot_hashed_secret=pilot_hashed_secret,

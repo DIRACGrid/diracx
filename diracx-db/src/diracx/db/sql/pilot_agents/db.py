@@ -5,12 +5,12 @@ from typing import Any
 
 from sqlalchemy import DateTime, bindparam, insert, update
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.sql import delete
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
     BadPilotVOError,
     CredentialsNotFoundError,
-    OverusedSecretError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
     SecretAlreadyExistsError,
@@ -47,6 +47,7 @@ class PilotAgentsDB(BaseSQLDB):
         res = await self.conn.execute(stmt)
 
         if res.rowcount == 0:
+            await self.conn.rollback()
             raise PilotNotFoundError(
                 data={
                     "pilot_stamp": pilot_stamp,
@@ -70,7 +71,13 @@ class PilotAgentsDB(BaseSQLDB):
         res = await self.conn.execute(stmt)
 
         if res.rowcount == 0:
+            await self.conn.rollback()
             raise SecretNotFoundError(data={"secret_id": str(secret_id)})
+        if res.rowcount != 1:
+            await self.conn.rollback()
+            raise DBInBadStateError(
+                detail="This should not happen. Pilot should have a secret, but is not found."
+            )
 
     async def verify_pilot_secret(
         self, pilot_stamp: str, pilot_hashed_secret: str
@@ -90,6 +97,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         # 3. Compare the secret_id
         if not secret["SecretID"] == pilot_credentials["PilotSecretID"]:
+
             raise BadPilotCredentialsError(
                 data={
                     "pilot_stamp": pilot_stamp,
@@ -104,6 +112,16 @@ class PilotAgentsDB(BaseSQLDB):
         # Convert the timezone, TODO: Change with #454: https://github.com/DIRACGrid/diracx/pull/454
         expiration = secret["SecretExpirationDate"].replace(tzinfo=timezone.utc)
         if expiration < now:
+
+            try:
+                await self.delete_secrets_bulk([secret["SecretID"]])
+            except SecretNotFoundError as e:
+                await self.conn.rollback()
+
+                raise DBInBadStateError(
+                    detail="This should not happen. Pilot should have a secret, but not found."
+                ) from e
+
             raise SecretHasExpiredError(
                 data={
                     "pilot_hashed_secret": pilot_hashed_secret,
@@ -112,31 +130,15 @@ class PilotAgentsDB(BaseSQLDB):
                 }
             )
 
-        # 5. Verify the secret counter
-        # 5.1 Only check if the SecretGlobalUseCountMax is defined
-        # If not defined, there is an infinite use.
-        if secret["SecretGlobalUseCountMax"]:
-            # 5.2 Finite use, we check if we can still login
-            if secret["SecretGlobalUseCount"] + 1 > secret["SecretGlobalUseCountMax"]:
-                raise OverusedSecretError(
-                    data={
-                        "pilot_stamp" "pilot_hashed_secret": pilot_hashed_secret,
-                        "secret_global_use_count": secret["SecretGlobalUseCount"],
-                        "secret_global_use_count_max": secret[
-                            "SecretGlobalUseCountMax"
-                        ],
-                    }
-                )
-
-        # 6. Now the pilot is authorized, increment the counters (globally and locally).
+        # 5. Now the pilot is authorized, increment the counters (globally and locally).
         try:
-            # 6.1 Increment the local count
+            # 5.1 Increment the local count
             await self.increment_pilot_local_secret_and_last_time_use(
                 pilot_secret_id=pilot_credentials["PilotSecretID"],
                 pilot_stamp=pilot_credentials["PilotStamp"],
             )
 
-            # 6.2 Increment the global count
+            # 5.2 Increment the global count
             await self.increment_global_secret_use(
                 secret_id=pilot_credentials["PilotSecretID"]
             )
@@ -144,9 +146,23 @@ class PilotAgentsDB(BaseSQLDB):
             # Should NOT happen
             # Wrapped in a try/catch to still catch in case of an error in the counters
             # Caught and raised here to avoid raising a 4XX error
+            await self.conn.rollback()
+
             raise DBInBadStateError(
                 detail="This should not happen. Pilot has credentials, but has a corrupted secret."
             ) from e
+
+        # 6. Delete all secrets if its count attained the secret_global_use_count_max
+        if secret["SecretGlobalUseCountMax"]:
+            if secret["SecretGlobalUseCount"] + 1 == secret["SecretGlobalUseCountMax"]:
+                try:
+                    await self.delete_secrets_bulk([secret["SecretID"]])
+                except SecretNotFoundError as e:
+                    # Should NOT happen
+                    await self.conn.rollback()
+                    raise DBInBadStateError(
+                        detail="This should not happen. Pilot has credentials, but has corrupted secret."
+                    ) from e
 
     async def add_pilots_bulk(
         self,
@@ -216,6 +232,20 @@ class PilotAgentsDB(BaseSQLDB):
         # Return the added credentials
         # Used later to add an expiration date to the credentials
         return secrets
+
+    async def delete_secrets_bulk(self, secret_ids: list[int]):
+        """Bulk delete secrets."""
+        stmt = delete(PilotSecrets).where(PilotSecrets.secret_id.in_(secret_ids))
+
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount != len(secret_ids):
+            await self.conn.rollback()
+
+            raise SecretNotFoundError(data={"secrets": str(secret_ids)})
+
+        # To avoid raise condition
+        await self.conn.commit()
 
     async def insert_unique_secrets_bulk(
         self,

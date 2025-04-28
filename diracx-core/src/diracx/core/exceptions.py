@@ -157,11 +157,6 @@ class SecretHasExpiredError(GenericError):
     tail = "has expired"
 
 
-class OverusedSecretError(GenericError):
-    head = "Secret"
-    tail = "too much used"
-
-
 class SecretAlreadyExistsError(GenericError):
     head = "Secret"
     tail = "already exists"

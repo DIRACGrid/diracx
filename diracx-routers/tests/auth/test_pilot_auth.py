@@ -74,6 +74,19 @@ async def test_create_pilot_and_verify_secret(test_client):
             pilot_secret_expiration_dates=[expiration_date],
         )
 
+    # -----------------  Wrong password  -----------------
+    body = {
+        "pilot_stamp": pilot_stamp,
+        "pilot_secret": "My 1ncr3d1bl3 t0k3n",
+    }
+
+    r = test_client.post("/api/auth/pilot-login", json=body)
+
+    assert r.status_code == 401, r.json()
+    assert r.json()["detail"] == "bad pilot_secret"
+
+    # ----------------- Good password  -----------------
+
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
     r = test_client.post("/api/auth/pilot-login", json=body)
@@ -107,17 +120,6 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     assert r.status_code == 401, r.json()
     assert r.json()["detail"] == "Invalid JWT"
-
-    # -----------------  Wrong password  -----------------
-    body = {
-        "pilot_stamp": pilot_stamp,
-        "pilot_secret": "My 1ncr3d1bl3 t0k3n",
-    }
-
-    r = test_client.post("/api/auth/pilot-login", json=body)
-
-    assert r.status_code == 401, r.json()
-    assert r.json()["detail"] == "bad pilot_secret"
 
     # -----------------  Wrong ID  -----------------
     body = {"pilot_stamp": "It is a stamp", "pilot_secret": secret}
@@ -178,7 +180,45 @@ async def test_create_pilot_and_verify_secret(test_client):
     r = test_client.post("/api/auth/pilot-login", json=body)
 
     assert r.status_code == 401
-    assert r.json()["detail"] == "secret has been overused"
+    assert r.json()["detail"] == "bad credentials"
+
+
+async def test_expired_secret(test_client):
+
+    # see https://github.com/DIRACGrid/diracx/blob/78e00aa57f4191034dbf643c7ed2857a93b53f60/diracx-routers/tests/pilots/test_pilot_logger.py#L37
+    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+
+    async with db as pilot_agents_db:
+        pilot_stamp = "pilot-stamp"
+        vo = "lhcb"
+        # Register a pilot
+        await pilot_agents_db.add_pilots_bulk(
+            vo=vo,
+            pilot_stamps=[pilot_stamp],
+            grid_type="grid-type",
+        )
+
+        secret = "AW0nd3rfulS3cr3t"
+        pilot_hashed_secret = hash(secret)
+
+        # Add creds
+        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
+            pilot_stamps=[pilot_stamp],
+            pilot_hashed_secrets=[pilot_hashed_secret],
+            pilot_secret_use_count_max=1,  # Important later
+            vo=vo,
+        )
+
+        assert len(secrets_added) == 1
+
+        secret_added = secrets_added[0]
+
+        expiration_date = secret_added["SecretCreationDate"] + timedelta(seconds=2)
+
+        await pilot_agents_db.set_secret_expirations_bulk(
+            secret_ids=[secret_added["SecretID"]],
+            pilot_secret_expiration_dates=[expiration_date],
+        )
 
     # ----------------- Secret that expired -----------------
     sleep(2)
@@ -189,6 +229,16 @@ async def test_create_pilot_and_verify_secret(test_client):
 
     assert r.status_code == 401
     assert r.json()["detail"] == "secret expired"
+
+    # ----------------- Secret that expired, but reused -----------------
+    # Should be deleted by the verify_pilot_secret, because deleted
+
+    body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
+
+    r = test_client.post("/api/auth/pilot-login", json=body)
+
+    assert r.status_code == 401
+    assert r.json()["detail"] == "bad credentials"
 
 
 async def test_create_pilots_with_credentials(normal_test_client):
