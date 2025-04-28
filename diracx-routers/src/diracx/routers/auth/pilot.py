@@ -11,6 +11,7 @@ from diracx.core.exceptions import (
 from diracx.core.models import PilotCredentialsResponse
 from diracx.logic.auth.pilot import (
     add_pilot_credentials,
+    create_credentials,
     create_pilot_credentials_response,
     register_new_pilots,
 )
@@ -70,7 +71,44 @@ async def register_new_pilots_to_db(
     logger.debug(f"{user_info.preferred_username} added {len(pilot_stamps)} pilots.")
 
     return create_pilot_credentials_response(
-        pilot_stamps=pilot_stamps,
+        pilot_stamps=pilot_stamps,  # type: ignore
         pilot_secrets=credentials,
+        pilot_expiration_dates=expiration_dates,
+    )
+
+
+@router.post("/create-pilot-secrets")
+async def create_pilot_secrets(
+    n: Annotated[int, Body(description="Number of secrets to create.")],
+    vo: Annotated[
+        str | None, Body(description="Virtual Organisation of the secrets to create.")
+    ],
+    expiration_minutes: Annotated[
+        int | None, Body(description="Time in minutes before expiring.")
+    ],
+    pilot_secret_use_count_max: Annotated[
+        int | None, Body(description="Number of times that we can use a secret.")
+    ],
+    pilot_db: PilotAgentsDB,
+    settings: AuthSettings,
+):
+    if expiration_minutes and expiration_minutes <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="expiration_minutes must be strictly positive.",
+        )
+    if pilot_secret_use_count_max and pilot_secret_use_count_max <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="pilot_secret_use_count_max is either None or a positive number.",
+        )
+
+    secrets, _, expiration_dates = await create_credentials(
+        n, pilot_db, settings, vo, pilot_secret_use_count_max, expiration_minutes
+    )
+
+    return create_pilot_credentials_response(
+        pilot_stamps=[None] * n,
+        pilot_secrets=secrets,
         pilot_expiration_dates=expiration_dates,
     )

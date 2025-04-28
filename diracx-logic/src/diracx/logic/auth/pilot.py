@@ -23,26 +23,40 @@ def generate_pilot_secret() -> str:
     return token_hex(32)
 
 
-async def add_pilot_credentials(
-    pilot_stamps: list[str],
+async def create_credentials(
+    n: int,
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
     vo: str | None,
-) -> tuple[list[str], list[int]]:
+    pilot_secret_use_count_max: int | None = 1,
+    expiration_minutes: int | None = None,
+):
+
     # Get a random string
     # Can be customized
-    random_secrets = [generate_pilot_secret() for _ in range(len(pilot_stamps))]
+    random_secrets = [generate_pilot_secret() for _ in range(n)]
 
     hashed_secrets = [hash(random_secret) for random_secret in random_secrets]
 
-    secrets_added = await pilot_db.add_pilots_credentials_bulk(
-        pilot_stamps=pilot_stamps, pilot_hashed_secrets=hashed_secrets, vo=vo
+    # Insert secrets
+    await pilot_db.insert_unique_secrets_bulk(
+        hashed_secrets=hashed_secrets,
+        secret_global_use_count_max=pilot_secret_use_count_max,
+        vo=vo,
     )
+
+    secrets_added = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
 
     # If we have millions of pilots to add, can take few seconds / minutes to add
     expiration_dates = [
         secret["SecretCreationDate"]
-        + timedelta(seconds=settings.pilot_secret_expire_seconds)
+        + timedelta(
+            seconds=(
+                expiration_minutes
+                if expiration_minutes
+                else settings.pilot_secret_expire_seconds
+            )
+        )
         for secret in secrets_added
     ]
     secret_ids = [secret["SecretID"] for secret in secrets_added]
@@ -57,11 +71,45 @@ async def add_pilot_credentials(
         int(expire_date.timestamp()) for expire_date in expiration_dates
     ]
 
+    return random_secrets, hashed_secrets, expiration_dates_timestamps
+
+
+async def add_pilot_credentials(
+    pilot_stamps: list[str],
+    pilot_db: PilotAgentsDB,
+    settings: AuthSettings,
+    vo: str | None,
+    pilot_secret_use_count_max: int = 1,
+) -> tuple[list[str], list[int]]:
+    random_secrets, hashed_secrets, expiration_dates_timestamps = (
+        await create_credentials(
+            n=len(pilot_stamps),
+            pilot_db=pilot_db,
+            settings=settings,
+            vo=vo,
+            pilot_secret_use_count_max=pilot_secret_use_count_max,
+        )
+    )
+
+    # Get the secret ids to later associate them with pilots
+    secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
+    secret_ids = [secret["SecretID"] for secret in secrets]
+
+    # Associates pilots with their secrets
+    pilot_to_secret_id_mapping_values = [
+        {
+            "PilotSecretID": secret_id,
+            "PilotStamp": pilot_stamp,
+        }
+        for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
+    ]
+    await pilot_db.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
+
     return random_secrets, expiration_dates_timestamps
 
 
 def create_pilot_credentials_response(
-    pilot_stamps: list[str],
+    pilot_stamps: list[str | None],
     pilot_secrets: list[str],
     pilot_expiration_dates: list[int],
 ) -> PilotCredentialsResponse:

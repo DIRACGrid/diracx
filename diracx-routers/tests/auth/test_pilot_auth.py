@@ -19,6 +19,9 @@ pytestmark = pytest.mark.enabled_dependencies(
     ]
 )
 
+MAIN_VO = "lhcb"
+N = 100
+
 
 @pytest.fixture
 def test_client(client_factory):
@@ -37,42 +40,89 @@ def non_mocked_hosts(test_client) -> list[str]:
     return [test_client.base_url.host]
 
 
-async def test_create_pilot_and_verify_secret(test_client):
+@pytest.fixture
+async def add_stamps(test_client):
 
-    # see https://github.com/DIRACGrid/diracx/blob/78e00aa57f4191034dbf643c7ed2857a93b53f60/diracx-routers/tests/pilots/test_pilot_logger.py#L37
     db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db as pilot_agents_db:
-        pilot_stamp = "pilot-stamp"
-        vo = "lhcb"
-        # Register a pilot
+
+        # Add pilots
+        refs = [f"ref_{i}" for i in range(N)]
+        stamps = [f"stamp_{i}" for i in range(N)]
+        pilot_references = dict(zip(stamps, refs))
+
+        vo = MAIN_VO
+
         await pilot_agents_db.add_pilots_bulk(
-            vo=vo,
-            pilot_stamps=[pilot_stamp],
-            grid_type="grid-type",
+            stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
         )
 
-        secret = "AW0nd3rfulS3cr3t"
-        pilot_hashed_secret = hash(secret)
+        pilots = await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+        return pilots
+
+
+@pytest.fixture
+async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
+
+    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+
+    async with db as pilot_agents_db:
+        # Retrieve the stamps from the add_stamps fixture
+        stamps = [pilot["PilotStamp"] for pilot in add_stamps]
+
+        secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
+        hashed_secrets = [hash(secret) for secret in secrets]
 
         # Add creds
-        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=[pilot_stamp],
-            pilot_hashed_secrets=[pilot_hashed_secret],
-            pilot_secret_use_count_max=1,  # Important later
-            vo=vo,
+        await pilot_agents_db.insert_unique_secrets_bulk(
+            hashed_secrets=hashed_secrets, vo=MAIN_VO
         )
 
-        assert len(secrets_added) == 1
+        # Associate with pilot
+        secrets_obj = await pilot_agents_db.get_secrets_by_hashed_secrets_bulk(
+            hashed_secrets
+        )
 
-        secret_added = secrets_added[0]
+        assert len(secrets_obj) == len(hashed_secrets) == len(stamps)
 
-        expiration_date = secret_added["SecretCreationDate"] + timedelta(seconds=2)
+        # Associate pilot with its secret
+        pilot_to_secret_id_mapping_values = [
+            {
+                "PilotSecretID": secret["SecretID"],
+                "PilotStamp": stamp,
+            }
+            for secret, stamp in zip(secrets_obj, stamps)
+        ]
+        await pilot_agents_db.associate_pilots_with_secrets_bulk(
+            pilot_to_secret_id_mapping_values
+        )
+
+        expiration_date = [
+            secret_obj["SecretCreationDate"] + timedelta(seconds=secret_duration_sec)
+            for secret_obj in secrets_obj
+        ]
 
         await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret_added["SecretID"]],
-            pilot_secret_expiration_dates=[expiration_date],
+            secret_ids=[secret_obj["SecretID"] for secret_obj in secrets_obj],
+            pilot_secret_expiration_dates=expiration_date,
         )
+
+        # Return both non-hashed secrets and stamps
+        return {"stamps": stamps, "secrets": secrets}
+
+
+@pytest.mark.parametrize("secret_duration_sec", [10])
+async def test_create_pilot_and_verify_secret(test_client, add_secrets_and_time):
+
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
+
+    pilot_stamp = stamps[0]
+    secret = secrets[0]
 
     # -----------------  Wrong password  -----------------
     body = {
@@ -183,42 +233,16 @@ async def test_create_pilot_and_verify_secret(test_client):
     assert r.json()["detail"] == "bad credentials"
 
 
-async def test_expired_secret(test_client):
+@pytest.mark.parametrize("secret_duration_sec", [2])
+async def test_expired_secret(test_client, add_secrets_and_time):
 
-    # see https://github.com/DIRACGrid/diracx/blob/78e00aa57f4191034dbf643c7ed2857a93b53f60/diracx-routers/tests/pilots/test_pilot_logger.py#L37
-    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
 
-    async with db as pilot_agents_db:
-        pilot_stamp = "pilot-stamp"
-        vo = "lhcb"
-        # Register a pilot
-        await pilot_agents_db.add_pilots_bulk(
-            vo=vo,
-            pilot_stamps=[pilot_stamp],
-            grid_type="grid-type",
-        )
-
-        secret = "AW0nd3rfulS3cr3t"
-        pilot_hashed_secret = hash(secret)
-
-        # Add creds
-        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=[pilot_stamp],
-            pilot_hashed_secrets=[pilot_hashed_secret],
-            pilot_secret_use_count_max=1,  # Important later
-            vo=vo,
-        )
-
-        assert len(secrets_added) == 1
-
-        secret_added = secrets_added[0]
-
-        expiration_date = secret_added["SecretCreationDate"] + timedelta(seconds=2)
-
-        await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret_added["SecretID"]],
-            pilot_secret_expiration_dates=[expiration_date],
-        )
+    pilot_stamp = stamps[0]
+    secret = secrets[0]
 
     # ----------------- Secret that expired -----------------
     sleep(2)

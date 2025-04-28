@@ -196,43 +196,6 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def add_pilots_credentials_bulk(
-        self,
-        pilot_stamps: list[str],
-        pilot_hashed_secrets: list[str],
-        vo: str | None,
-        pilot_secret_use_count_max: int = 1,
-    ) -> list[dict]:
-
-        assert len(pilot_stamps) == len(
-            pilot_hashed_secrets
-        ), "Each pilot has to have a secret"
-
-        # Insert secrets
-        await self.insert_unique_secrets_bulk(
-            hashed_secrets=pilot_hashed_secrets,
-            secret_global_use_count_max=pilot_secret_use_count_max,
-            vo=vo,
-        )
-
-        # Get the secret ids to later associate them with pilots
-        secrets = await self.get_secrets_by_hashed_secrets_bulk(pilot_hashed_secrets)
-        secret_ids = [secret["SecretID"] for secret in secrets]
-
-        # Associates pilots with their secrets
-        pilot_to_secret_id_mapping_values = [
-            {
-                "PilotSecretID": secret_id,
-                "PilotStamp": pilot_stamp,
-            }
-            for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
-        ]
-        await self.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
-
-        # Return the added credentials
-        # Used later to add an expiration date to the credentials
-        return secrets
-
     async def delete_secrets_bulk(self, secret_ids: list[int]):
         """Bulk delete secrets."""
         stmt = delete(PilotSecrets).where(PilotSecrets.secret_id.in_(secret_ids))
@@ -251,7 +214,7 @@ class PilotAgentsDB(BaseSQLDB):
         self,
         hashed_secrets: list[str],
         vo: str | None,
-        secret_global_use_count_max: int = 1,
+        secret_global_use_count_max: int | None = 1,
     ):
         """Bulk insert secrets. Raises an error in case of a Integrity violation."""
         values = [

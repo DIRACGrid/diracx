@@ -16,6 +16,9 @@ from diracx.core.exceptions import (
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils.functions import hash
 
+MAIN_VO = "lhcb"
+N = 100
+
 
 @pytest.fixture
 async def pilot_agents_db(tmp_path):
@@ -26,6 +29,74 @@ async def pilot_agents_db(tmp_path):
         yield agents_db
 
 
+@pytest.fixture
+async def add_stamps(pilot_agents_db):
+    async with pilot_agents_db as pilot_agents_db:
+        # Add pilots
+        refs = [f"ref_{i}" for i in range(N)]
+        stamps = [f"stamp_{i}" for i in range(N)]
+        pilot_references = dict(zip(stamps, refs))
+
+        vo = MAIN_VO
+
+        await pilot_agents_db.add_pilots_bulk(
+            stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
+        )
+
+        pilots = await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+        return pilots
+
+
+@pytest.fixture
+async def add_secrets_and_time(pilot_agents_db, add_stamps, secret_duration_sec):
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Retrieve the stamps from the add_stamps fixture
+        stamps = [pilot["PilotStamp"] for pilot in add_stamps]
+
+        secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
+        hashed_secrets = [hash(secret) for secret in secrets]
+
+        # Add creds
+        await pilot_agents_db.insert_unique_secrets_bulk(
+            hashed_secrets=hashed_secrets, vo=MAIN_VO
+        )
+
+        # Associate with pilot
+        secrets_obj = await pilot_agents_db.get_secrets_by_hashed_secrets_bulk(
+            hashed_secrets
+        )
+
+        assert len(secrets_obj) == len(hashed_secrets) == len(stamps)
+
+        # Associate pilot with its secret
+        pilot_to_secret_id_mapping_values = [
+            {
+                "PilotSecretID": secret["SecretID"],
+                "PilotStamp": stamp,
+            }
+            for secret, stamp in zip(secrets_obj, stamps)
+        ]
+        await pilot_agents_db.associate_pilots_with_secrets_bulk(
+            pilot_to_secret_id_mapping_values
+        )
+
+        expiration_date = [
+            secret_obj["SecretCreationDate"] + timedelta(seconds=secret_duration_sec)
+            for secret_obj in secrets_obj
+        ]
+
+        await pilot_agents_db.set_secret_expirations_bulk(
+            secret_ids=[secret_obj["SecretID"] for secret_obj in secrets_obj],
+            pilot_secret_expiration_dates=expiration_date,
+        )
+
+        # Return both non-hashed secrets and stamps
+        return {"stamps": stamps, "secrets": secrets}
+
+
+@pytest.mark.asyncio
 async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
@@ -35,20 +106,21 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
         pilot_references = dict(zip(stamps, refs))
 
         await pilot_agents_db.add_pilots_bulk(
-            stamps, "test_vo", grid_type="DIRAC", pilot_references=pilot_references
+            stamps, MAIN_VO, grid_type="DIRAC", pilot_references=pilot_references
         )
 
         await pilot_agents_db.add_pilots_bulk(
-            stamps, "test_vo", grid_type="DIRAC", pilot_references=None
+            stamps, MAIN_VO, grid_type="DIRAC", pilot_references=None
         )
 
 
+@pytest.mark.asyncio
 async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
         pilot_stamp = "pilot-reference-test"
         await pilot_agents_db.add_pilots_bulk(
-            vo="lhcb",
+            vo=MAIN_VO,
             pilot_stamps=[pilot_stamp],
             grid_type="grid-type",
         )
@@ -63,58 +135,27 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
             await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
 
         # Set values
-        assert pilot["VO"] == "lhcb"
+        assert pilot["VO"] == MAIN_VO
         assert pilot["PilotStamp"] == pilot_stamp
         assert pilot["GridType"] == "grid-type"
 
 
-async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
+@pytest.mark.parametrize("secret_duration_sec", [10])
+@pytest.mark.asyncio
+async def test_create_pilot_and_verify_secret(
+    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
+):
+
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
+
+    pairs = list(zip(stamps, secrets))
+    # Shuffle it to prove that credentials are well associated
+    shuffle(pairs)
 
     async with pilot_agents_db as pilot_agents_db:
-        # Add pilots
-        refs = [f"ref_{i}" for i in range(100)]
-        stamps = [f"stamp_{i}" for i in range(100)]
-        pilot_references = dict(zip(stamps, refs))
-
-        vo = "test_vo"
-
-        await pilot_agents_db.add_pilots_bulk(
-            stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
-        )
-
-        pilots = await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
-
-        pilot_ids = [pilot["PilotID"] for pilot in pilots]
-
-        secrets = [f"AW0nd3rfulS3cr3t_{pilot_id}" for pilot_id in pilot_ids]
-        pilot_hashed_secrets = [hash(secret) for secret in secrets]
-
-        # Add creds
-        added_secrets = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=stamps,
-            pilot_hashed_secrets=pilot_hashed_secrets,
-            pilot_secret_use_count_max=1,
-            vo=vo,
-        )
-
-        assert len(added_secrets) == len(pilots)
-
-        # Extract dates
-        creation_dates = [secret["SecretCreationDate"] for secret in added_secrets]
-        pilot_secret_ids = [secret["SecretID"] for secret in added_secrets]
-
-        expiration_dates = [
-            creation_date + timedelta(seconds=10) for creation_date in creation_dates
-        ]
-
-        await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=pilot_secret_ids, pilot_secret_expiration_dates=expiration_dates
-        )
-
-        pairs = list(zip(stamps, secrets))
-        # Shuffle it to prove that credentials are well associated
-        shuffle(pairs)
-
         for stamp, secret in pairs:
             await pilot_agents_db.verify_pilot_secret(
                 pilot_stamp=stamp, pilot_hashed_secret=hash(secret)
@@ -129,107 +170,59 @@ async def test_create_pilot_and_verify_secret(pilot_agents_db: PilotAgentsDB):
         with pytest.raises(CredentialsNotFoundError):
             await pilot_agents_db.verify_pilot_secret(
                 pilot_stamp="I am a spider",
-                pilot_hashed_secret=secrets[0],
+                pilot_hashed_secret=hash(secrets[0]),
             )
 
 
+@pytest.mark.parametrize("secret_duration_sec", [1])
+@pytest.mark.asyncio
 async def test_create_pilot_and_verify_secret_with_delay(
-    pilot_agents_db: PilotAgentsDB,
+    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
 ):
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
+
+    # So that the secret expires
+    sleep(1)
 
     async with pilot_agents_db as pilot_agents_db:
-        pilot_stamp = "pilot-stamp"
-        vo = "lhcb"
-        # Register a pilot
-        await pilot_agents_db.add_pilots_bulk(
-            vo=vo,
-            pilot_stamps=[pilot_stamp],
-            grid_type="grid-type",
-        )
-
-        secret = "AW0nd3rfulS3cr3t"
-        pilot_hashed_secret = hash(secret)
-
-        # Add creds
-        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=[pilot_stamp],
-            pilot_hashed_secrets=[pilot_hashed_secret],
-            pilot_secret_use_count_max=10,
-            vo=vo,
-        )
-
-        assert len(secrets_added) == 1
-        secret = secrets_added[0]
-
-        expiration_date = secret["SecretCreationDate"] + timedelta(seconds=1)
-
-        await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret["SecretID"]],
-            pilot_secret_expiration_dates=[expiration_date],
-        )
-
-        assert secret is not None
-
-        # So that the secret expires
-        sleep(1)
-
         with pytest.raises(SecretHasExpiredError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_stamp=pilot_stamp,
-                pilot_hashed_secret=pilot_hashed_secret,
+                pilot_stamp=stamps[0],
+                pilot_hashed_secret=hash(secrets[0]),
             )
 
 
+@pytest.mark.parametrize("secret_duration_sec", [10])
+@pytest.mark.asyncio
 async def test_create_pilot_and_verify_secret_too_much_secret_use(
-    pilot_agents_db: PilotAgentsDB,
+    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
 ):
 
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
+
     async with pilot_agents_db as pilot_agents_db:
-        pilot_stamp = "pilot-stamp"
-        vo = "lhcb"
-        # Register a pilot
-        await pilot_agents_db.add_pilots_bulk(
-            vo=vo,
-            pilot_stamps=[pilot_stamp],
-            grid_type="grid-type",
-        )
-
-        secret = "AW0nd3rfulS3cr3t"
-        pilot_hashed_secret = hash(secret)
-
-        # Add creds
-        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=[pilot_stamp],
-            pilot_hashed_secrets=[pilot_hashed_secret],
-            pilot_secret_use_count_max=1,
-            vo=vo,
-        )
-
-        assert len(secrets_added) == 1
-        secret = secrets_added[0]
-
-        expiration_date = secret["SecretCreationDate"] + timedelta(seconds=10)
-
-        await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret["SecretID"]],
-            pilot_secret_expiration_dates=[expiration_date],
-        )
-
         # First login, should work
         await pilot_agents_db.verify_pilot_secret(
-            pilot_stamp=pilot_stamp,
-            pilot_hashed_secret=pilot_hashed_secret,
+            pilot_stamp=stamps[0],
+            pilot_hashed_secret=hash(secrets[0]),
         )
 
         # Second login, should not work because maxed out at 1 try
         # If the foreign key works, we should have "SecretNotFoundError"
         with pytest.raises(SecretNotFoundError):
             await pilot_agents_db.verify_pilot_secret(
-                pilot_stamp=pilot_stamp,
-                pilot_hashed_secret=pilot_hashed_secret,
+                pilot_stamp=stamps[0],
+                pilot_hashed_secret=hash(secrets[0]),
             )
 
 
+@pytest.mark.asyncio
 async def test_create_pilot_and_login_with_wrong_vo(
     pilot_agents_db: PilotAgentsDB,
 ):
@@ -249,20 +242,33 @@ async def test_create_pilot_and_login_with_wrong_vo(
         pilot_hashed_secret = hash(secret_text)
 
         # Add creds
-        secrets_added = await pilot_agents_db.add_pilots_credentials_bulk(
-            pilot_stamps=[pilot_stamp_1],
-            pilot_hashed_secrets=[pilot_hashed_secret],
-            pilot_secret_use_count_max=2,  # Important later
-            vo=vo_1,
+        await pilot_agents_db.insert_unique_secrets_bulk(
+            hashed_secrets=[pilot_hashed_secret], vo=vo_1, secret_global_use_count_max=2
         )
 
-        assert len(secrets_added) == 1
-        secret = secrets_added[0]
+        # Associate with pilot
+        # Get the secret ids to later associate them with pilots
+        secrets = await pilot_agents_db.get_secrets_by_hashed_secrets_bulk(
+            [pilot_hashed_secret]
+        )
 
-        expiration_date = secret["SecretCreationDate"] + timedelta(seconds=10)
+        assert len(secrets) == 1
+        secret_obj = secrets[0]
+        # Associate pilot with its secret
+        pilot_to_secret_id_mapping_values = [
+            {
+                "PilotSecretID": secret_obj["SecretID"],
+                "PilotStamp": pilot_stamp_1,
+            }
+        ]
+        await pilot_agents_db.associate_pilots_with_secrets_bulk(
+            pilot_to_secret_id_mapping_values
+        )
+
+        expiration_date = secret_obj["SecretCreationDate"] + timedelta(seconds=10)
 
         await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret["SecretID"]],
+            secret_ids=[secret_obj["SecretID"]],
             pilot_secret_expiration_dates=[expiration_date],
         )
 
@@ -285,8 +291,8 @@ async def test_create_pilot_and_login_with_wrong_vo(
 
         # Add creds with a bad vo
         with pytest.raises(BadPilotVOError) as exc_info:
-            secrets_added = await pilot_agents_db.associate_pilots_with_secrets_bulk(
-                [{"PilotSecretID": secret["SecretID"], "PilotStamp": pilot_stamp_2}]
+            await pilot_agents_db.associate_pilots_with_secrets_bulk(
+                [{"PilotSecretID": secret_obj["SecretID"], "PilotStamp": pilot_stamp_2}]
             )
 
         assert "Bad VO" in str(exc_info.value)
