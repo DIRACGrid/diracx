@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, func
+from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
+
+from diracx.db.exceptions import DBInBadStateError
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -140,3 +146,54 @@ def substract_date(**kwargs: float) -> datetime:
 
 def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
+
+
+class DBStateAssertion:
+    """Context manager to ensure the integrity of a database transaction,
+    specifically by rolling back any changes if certain expected exceptions
+    occur—and raising a standardized error to indicate the database is in a bad state.
+
+    Example:
+    with DBStateAssertation(self.conn, [PilotNotFoundError, SecretNotFoundError]):
+        # Some code that should not raise any error filled previously
+        # Else, raises an error
+
+    Note: Will rollback changes.
+
+    """
+
+    def __init__(
+        self, conn: AsyncConnection, exceptions: list[type[Exception]]
+    ) -> None:
+        self.exceptions = exceptions
+        self.conn = conn
+
+    async def __aenter__(self):
+        pass
+
+    async def __aexit__(self, exc_type, exc_value, exc_tb):
+        if exc_type is None:
+            # No exception occurred
+            return False
+
+        # If we get here, an error occurred, so we rollback changes
+        # (Rollback will be done by the fastapi application itself)
+        # (See routes and db documentation)
+        message = (
+            f"Rolling back DB transaction due to: {exc_type.__name__}: {exc_value}"
+        )
+
+        # Check if the exception is among the expected ones
+        if any(issubclass(exc_type, exc) for exc in self.exceptions):
+            logger.warning(f"{message}. This error was expected.")
+            raise DBInBadStateError(
+                "This error may NOT have been raised. "
+                "Please report this at https://github.com/DIRACGrid/diracx/issues"
+            ) from exc_value
+
+        # Unexpected exception; raise an unexpected error
+        logger.warning(f"{message}. This error was NOT expected.")
+        raise DBInBadStateError(
+            f"Unexpected error ({exc_type.__name__}): {exc_value}. "
+            "Please report this at https://github.com/DIRACGrid/diracx/issues"
+        ) from exc_value
