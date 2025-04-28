@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
+
+from diracx.db.exceptions import DBInBadStateError
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
@@ -109,3 +114,41 @@ def substract_date(**kwargs: float) -> datetime:
 
 def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
+
+
+class DBStateAssertation:
+    """Class to handler context where we should not raise any excepted error.
+
+    Example:
+    with DBStateAssertation([PilotNotFoundError, SecretNotFoundError]):
+        # Some code that should not raise any error filled previously
+        # Else, raises an error
+
+    """
+
+    def __init__(self, exceptions: list[type[Exception]]) -> None:
+        self.exceptions = exceptions
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if exc_type is None:
+            # No exception occurred
+            return False
+
+        # Check if the exception is among the expected ones
+        if any(issubclass(exc_type, exc) for exc in self.exceptions):
+            logger.error(
+                f"An error occured with the db, exception message: {exc_value}"
+            )
+            raise DBInBadStateError(
+                "This error may NOT have been raised. "
+                "Please report this error: https://github.com/DIRACGrid/diracx/issues"
+            ) from exc_value
+
+        # Not an expected exception; raise an unexpected error
+        raise DBInBadStateError(
+            "This should NOT happen. A miscellaneous error occured. "
+            "Please report this error: https://github.com/DIRACGrid/diracx/issues"
+        ) from exc_value
