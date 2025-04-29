@@ -152,6 +152,11 @@ class CredentialsNotFoundError(GenericError):
     tail = "not found"
 
 
+class CredentialsAlreadyExistError(GenericError):
+    head = "Credentials"
+    tail = "already exist"
+
+
 class SecretHasExpiredError(GenericError):
     head = "Secret"
     tail = "has expired"

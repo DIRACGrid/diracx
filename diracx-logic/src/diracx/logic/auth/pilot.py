@@ -7,10 +7,11 @@ from secrets import token_hex
 from diracx.core.config import Config
 from diracx.core.exceptions import (
     ConfigurationError,
+    CredentialsAlreadyExistError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
 )
-from diracx.core.models import PilotCredentialsInfo, PilotCredentialsResponse
+from diracx.core.models import PilotCredentialsInfo, PilotSecretsInfo, PilotStampInfo
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import PilotAgentsDB
 
@@ -52,7 +53,7 @@ async def create_credentials(
         secret["SecretCreationDate"]
         + timedelta(
             seconds=(
-                expiration_minutes
+                expiration_minutes * 60
                 if expiration_minutes
                 else settings.pilot_secret_expire_seconds
             )
@@ -74,6 +75,36 @@ async def create_credentials(
     return random_secrets, hashed_secrets, expiration_dates_timestamps
 
 
+async def associate_pilots_with_secrets(
+    pilot_db: PilotAgentsDB,
+    pilot_stamps: list[str],
+    secrets: list[str] | None = None,
+    hashed_secrets: list[str] | None = None,
+):
+
+    if not hashed_secrets:
+        assert secrets
+        hashed_secrets = [hash(secret) for secret in secrets]
+
+    # Get the secret ids to later associate them with pilots
+    secrets_obj = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
+    secret_ids = [secret["SecretID"] for secret in secrets_obj]
+
+    if len(secret_ids) == 1:
+        secret_ids = secret_ids * len(pilot_stamps)
+
+    # Associates pilots with their secrets
+    pilot_to_secret_id_mapping_values = [
+        {
+            "PilotSecretID": secret_id,
+            "PilotStamp": pilot_stamp,
+        }
+        for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
+    ]
+
+    await pilot_db.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
+
+
 async def add_pilot_credentials(
     pilot_stamps: list[str],
     pilot_db: PilotAgentsDB,
@@ -91,29 +122,25 @@ async def add_pilot_credentials(
         )
     )
 
-    # Get the secret ids to later associate them with pilots
-    secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
-    secret_ids = [secret["SecretID"] for secret in secrets]
-
-    # Associates pilots with their secrets
-    pilot_to_secret_id_mapping_values = [
-        {
-            "PilotSecretID": secret_id,
-            "PilotStamp": pilot_stamp,
-        }
-        for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
-    ]
-    await pilot_db.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
+    try:
+        await associate_pilots_with_secrets(
+            pilot_db=pilot_db, hashed_secrets=hashed_secrets, pilot_stamps=pilot_stamps
+        )
+    except CredentialsAlreadyExistError as e:
+        # Undo everything in case of an error.
+        # TODO: Validate in PR
+        await pilot_db.conn.rollback()
+        raise e
 
     return random_secrets, expiration_dates_timestamps
 
 
 def create_pilot_credentials_response(
-    pilot_stamps: list[str | None],
+    pilot_stamps: list[str],
     pilot_secrets: list[str],
     pilot_expiration_dates: list[int],
-) -> PilotCredentialsResponse:
-    credentials_list = [
+) -> list[PilotCredentialsInfo]:
+    return [
         PilotCredentialsInfo(
             pilot_stamp=pilot_stamp,
             pilot_secret=secret,
@@ -124,7 +151,22 @@ def create_pilot_credentials_response(
         )
     ]
 
-    return PilotCredentialsResponse(pilot_credentials=credentials_list)
+
+def create_secrets_response(
+    pilot_secrets: list[str],
+    pilot_expiration_dates: list[int],
+) -> list[PilotSecretsInfo]:
+    return [
+        PilotSecretsInfo(
+            pilot_secret=secret,
+            pilot_secret_expires_in=expires_in,
+        )
+        for secret, expires_in in zip(pilot_secrets, pilot_expiration_dates)
+    ]
+
+
+def create_stamp_response(pilot_stamps: list[str]) -> list[PilotStampInfo]:
+    return [PilotStampInfo(pilot_stamp=stamp) for stamp in pilot_stamps]
 
 
 def get_registry_and_group_configuration(config: Config, vo: str):
@@ -212,6 +254,8 @@ async def register_new_pilots(
                 pilots_that_already_exist = set(pilot_stamps) - set(
                     literal_eval(e.detail)
                 )
+            else:
+                raise ValueError("Bad internal error.")
         except AttributeError as e2:
             raise ValueError("Must be defined and a set string representation") from e2
 

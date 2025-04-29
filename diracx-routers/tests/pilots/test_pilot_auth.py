@@ -10,6 +10,7 @@ from diracx.db.sql.utils import hash
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
+        "PilotCredentialsAccessPolicy",
         "DevelopmentSettings",
         "AuthDB",
         "AuthSettings",
@@ -114,7 +115,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
-async def test_create_pilot_and_verify_secret(test_client, add_secrets_and_time):
+async def test_verify_secret(test_client, add_secrets_and_time):
 
     # Add pilots
     result = add_secrets_and_time
@@ -262,102 +263,4 @@ async def test_expired_secret(test_client, add_secrets_and_time):
     r = test_client.post("/api/auth/pilot-login", json=body)
 
     assert r.status_code == 401
-    assert r.json()["detail"] == "bad credentials"
-
-
-async def test_create_pilots_with_credentials(normal_test_client):
-    # Lots of request, to validate that it returns the credentials in the same order as the input references
-    pilot_stamps = [f"stamps_{i}" for i in range(100)]
-    vo = "lhcb"
-
-    #  -------------- Bulk insert --------------
-    body = {"vo": vo, "pilot_stamps": pilot_stamps}
-
-    r = normal_test_client.post(
-        "/api/auth/register-new-pilots",
-        json=body,
-    )
-
-    assert r.status_code == 200, r.json()
-
-    #  -------------- Logins --------------
-    pilot_credentials_list = r.json()["pilot_credentials"]
-    for credentials in pilot_credentials_list:
-        pilot_stamp, secret, _ = credentials.values()
-
-        body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
-
-        r = normal_test_client.post(
-            "/api/auth/pilot-login",
-            json=body,
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert r.status_code == 200, r.json()
-
-    #  -------------- Register a pilot that already exist, and one that does not --------------
-
-    body = {"vo": vo, "pilot_stamps": [pilot_stamps[0], pilot_stamps[0] + "_new_one"]}
-
-    r = normal_test_client.post(
-        "/api/auth/register-new-pilots",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
-
-    assert r.status_code == 409
-    assert (
-        r.json()["detail"]
-        == f"Pilot (pilot_stamps: {{'{pilot_stamps[0]}'}}) already exists"
-    )
-
-    #  -------------- Register a pilot that does not exists **but** was called before in an error --------------
-    # To prove that, if I tried to register a pilot that does not exist with one that already exists,
-    # i can normally add the one that did not exist before (it should not have added it before)
-    body = {"vo": vo, "pilot_stamps": [pilot_stamps[0] + "_new_one"]}
-
-    r = normal_test_client.post(
-        "/api/auth/register-new-pilots",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
-
-    assert r.status_code == 200
-    _, secret, _ = r.json()["pilot_credentials"][0].values()
-
-    #  -------------- Login with a pilot that does not exists **but** was called before in an error --------------
-
-    body = {
-        "pilot_stamp": pilot_stamps[0] + "_new_one",
-        "pilot_secret": secret,
-    }
-
-    r = normal_test_client.post(
-        "/api/auth/pilot-login",
-        json=body,
-        headers={"Content-Type": "application/json"},
-    )
-
-    assert r.status_code == 200, r.json()
-
-    #  -------------- Login with a pilot credentials of another pilot --------------
-
-    body = {
-        "pilot_stamp": pilot_stamps[0] + "_new_one",
-        "pilot_secret": pilot_credentials_list[0][
-            "pilot_secret"
-        ],  # [0] = first pilot from the list before, [1] = the secret
-    }
-
-    r = normal_test_client.post(
-        "/api/auth/pilot-login",
-        json=body,
-        headers={"Content-Type": "application/json"},
-    )
-
-    assert r.status_code == 401, r.json()
     assert r.json()["detail"] == "bad credentials"

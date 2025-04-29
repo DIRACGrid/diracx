@@ -10,8 +10,8 @@ from sqlalchemy.sql import delete
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
     BadPilotVOError,
+    CredentialsAlreadyExistError,
     CredentialsNotFoundError,
-    PilotAlreadyExistsError,
     PilotNotFoundError,
     SecretAlreadyExistsError,
     SecretHasExpiredError,
@@ -87,25 +87,41 @@ class PilotAgentsDB(BaseSQLDB):
         pilots_credentials = await self.get_pilots_credentials_by_stamps_bulk(
             [pilot_stamp]
         )
-        pilot_credentials = pilots_credentials[
-            0
-        ]  # Semantic, assured by fetch_records_bulk_or_raises
 
         # 2. Get the pilot secret itself
         secrets = await self.get_secrets_by_hashed_secrets_bulk([pilot_hashed_secret])
         secret = secrets[0]  # Semantic, assured by fetch_records_bulk_or_raises
 
+        matches = [
+            pilot_credential
+            for pilot_credential in pilots_credentials
+            if secret["SecretID"] == pilot_credential["PilotSecretID"]
+        ]
+
         # 3. Compare the secret_id
-        if not secret["SecretID"] == pilot_credentials["PilotSecretID"]:
+        if len(matches) == 0:
 
             raise BadPilotCredentialsError(
                 data={
                     "pilot_stamp": pilot_stamp,
                     "pilot_hashed_secret": pilot_hashed_secret,
                     "real_hashed_secret": secret["HashedSecret"],
-                    str(secret["SecretID"]): str(pilot_credentials["PilotSecretID"]),
+                    "pilot_secret_id[]": str(
+                        [
+                            pilot_credential["PilotSecretID"]
+                            for pilot_credential in pilots_credentials
+                        ]
+                    ),
+                    "secret_id": secret["SecretID"],
+                    "test": str(pilots_credentials),
                 }
             )
+        elif len(matches) > 1:
+
+            raise DBInBadStateError(
+                detail="This should not happen. Duplicates in the database."
+            )
+        pilot_credentials = matches[0]  # Semantic
 
         # 4. Check if the secret is expired
         now = datetime.now(tz=timezone.utc)
@@ -260,20 +276,24 @@ class PilotAgentsDB(BaseSQLDB):
         try:
             await self.conn.execute(stmt)
             await self.conn.commit()
+
         except (IntegrityError, OperationalError) as e:
             # Undo changes
             await self.conn.rollback()
-
             if "foreign key" in str(e.orig).lower():
                 raise PilotNotFoundError(
                     data={"pilot_stamps": str(pilot_to_secret_id_mapping_values)},
                     detail="at least one of these pilots or secrets does not exist",
                 ) from e
-            if "duplicate entry" in str(e.orig).lower():
-                raise PilotAlreadyExistsError(
+            if any(
+                el in str(e.orig).lower()
+                for el in ["duplicate entry", "unique constraint"]
+            ):
+                raise CredentialsAlreadyExistError(
                     data={"pilot_stamps": str(pilot_to_secret_id_mapping_values)},
                     detail="at least one of these pilots already have a secret",
                 ) from e
+            raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
 
     async def verify_that_pilot_can_access_secret_bulk(
         self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
@@ -363,6 +383,7 @@ class PilotAgentsDB(BaseSQLDB):
             "pilot_stamp",
             "PilotStamp",
             pilot_stamps,
+            allow_more_than_one_result_per_input=True,
         )
 
     async def get_secrets_by_hashed_secrets_bulk(self, hashed_secrets: list[str]):

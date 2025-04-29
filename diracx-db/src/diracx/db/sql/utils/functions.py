@@ -127,6 +127,7 @@ async def fetch_records_bulk_or_raises(
     column_name: str,
     elements_to_fetch: list,
     order_by: tuple[str, str] | None = None,
+    allow_more_than_one_result_per_input: bool = False,
 ) -> list[dict]:
     """Fetches a list of elements in a table, returns a list of elements.
     All elements fro the `element_to_fetch` **must** be present.
@@ -165,8 +166,9 @@ async def fetch_records_bulk_or_raises(
     results = rows_to_dicts(await conn.execute(stmt))
 
     # Detects duplicates
-    if len(results) > len(elements_to_fetch):
-        raise DBInBadStateError(detail="Seems to have duplicates in the database.")
+    if not allow_more_than_one_result_per_input:
+        if len(results) > len(elements_to_fetch):
+            raise DBInBadStateError(detail="Seems to have duplicates in the database.")
 
     # Checks if we have every elements we wanted
     found_keys = {row[column_name] for row in results}

@@ -225,14 +225,17 @@ class TokenResponse(BaseModel):
     refresh_token: str | None = None
 
 
-class PilotCredentialsInfo(BaseModel):
-    pilot_stamp: str | None
+class PilotSecretsInfo(BaseModel):
     pilot_secret: str
     pilot_secret_expires_in: int
 
 
-class PilotCredentialsResponse(BaseModel):
-    pilot_credentials: list[PilotCredentialsInfo]
+class PilotStampInfo(BaseModel):
+    pilot_stamp: str
+
+
+class PilotCredentialsInfo(PilotSecretsInfo, PilotStampInfo):
+    pass
 
 
 class AccessTokenPayload(TokenPayload):
