@@ -161,7 +161,7 @@ class AuthSettings(ServiceSettingsBase):
     allowed_redirects: list[str] = []
     device_flow_expiration_seconds: int = 600
     authorization_flow_expiration_seconds: int = 300
-    pilot_secret_expire_seconds: int = 600
+    pilot_secret_expire_seconds: int = 3600
 
     # State key is used to encrypt/decrypt the state dict passed to the IAM
     state_key: FernetKey
