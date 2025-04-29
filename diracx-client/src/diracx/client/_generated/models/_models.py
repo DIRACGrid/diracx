@@ -153,8 +153,103 @@ class BodyAuthRefreshPilotTokens(_serialization.Model):
         self.refresh_token = refresh_token
 
 
-class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
-    """Body_auth_register_new_pilots_to_db.
+class BodyPilotsAssociatePilotsWithSecrets(_serialization.Model):
+    """Body_pilots_associate_pilots_with_secrets.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamps: List of all pilot stamps. Required.
+    :vartype pilot_stamps: list[str]
+    :ivar pilot_secrets: List of all secrets.Possibility of providing only one (1) secret, it will
+     apply it to all pilots. Required.
+    :vartype pilot_secrets: list[str]
+    """
+
+    _validation = {
+        "pilot_stamps": {"required": True},
+        "pilot_secrets": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
+        "pilot_secrets": {"key": "pilot_secrets", "type": "[str]"},
+    }
+
+    def __init__(
+        self, *, pilot_stamps: List[str], pilot_secrets: List[str], **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamps: List of all pilot stamps. Required.
+        :paramtype pilot_stamps: list[str]
+        :keyword pilot_secrets: List of all secrets.Possibility of providing only one (1) secret, it
+         will apply it to all pilots. Required.
+        :paramtype pilot_secrets: list[str]
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamps = pilot_stamps
+        self.pilot_secrets = pilot_secrets
+
+
+class BodyPilotsCreatePilotSecrets(_serialization.Model):
+    """Body_pilots_create_pilot_secrets.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar n: Number of secrets to create. Required.
+    :vartype n: int
+    :ivar vo: Virtual Organisation of the secrets to create. Required.
+    :vartype vo: str
+    :ivar expiration_minutes: Time in minutes before expiring. Required.
+    :vartype expiration_minutes: int
+    :ivar pilot_secret_use_count_max: Number of times that we can use a secret. Required.
+    :vartype pilot_secret_use_count_max: int
+    """
+
+    _validation = {
+        "n": {"required": True},
+        "vo": {"required": True},
+        "expiration_minutes": {"required": True},
+        "pilot_secret_use_count_max": {"required": True},
+    }
+
+    _attribute_map = {
+        "n": {"key": "n", "type": "int"},
+        "vo": {"key": "vo", "type": "str"},
+        "expiration_minutes": {"key": "expiration_minutes", "type": "int"},
+        "pilot_secret_use_count_max": {
+            "key": "pilot_secret_use_count_max",
+            "type": "int",
+        },
+    }
+
+    def __init__(
+        self,
+        *,
+        n: int,
+        vo: str,
+        expiration_minutes: int,
+        pilot_secret_use_count_max: int,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword n: Number of secrets to create. Required.
+        :paramtype n: int
+        :keyword vo: Virtual Organisation of the secrets to create. Required.
+        :paramtype vo: str
+        :keyword expiration_minutes: Time in minutes before expiring. Required.
+        :paramtype expiration_minutes: int
+        :keyword pilot_secret_use_count_max: Number of times that we can use a secret. Required.
+        :paramtype pilot_secret_use_count_max: int
+        """
+        super().__init__(**kwargs)
+        self.n = n
+        self.vo = vo
+        self.expiration_minutes = expiration_minutes
+        self.pilot_secret_use_count_max = pilot_secret_use_count_max
+
+
+class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
+    """Body_pilots_register_new_pilots_to_db.
 
     All required parameters must be populated in order to send to server.
 
@@ -166,6 +261,8 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
     :vartype grid_type: str
     :ivar pilot_references: Association of a pilot reference with a pilot stamp.
     :vartype pilot_references: dict[str, any]
+    :ivar generate_secrets: Boolean to allow secret creation or not.
+    :vartype generate_secrets: bool
     """
 
     _validation = {
@@ -178,6 +275,7 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
         "vo": {"key": "vo", "type": "str"},
         "grid_type": {"key": "grid_type", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{object}"},
+        "generate_secrets": {"key": "generate_secrets", "type": "bool"},
     }
 
     def __init__(
@@ -187,6 +285,7 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
         vo: str,
         grid_type: str = "Dirac",
         pilot_references: Optional[Dict[str, Any]] = None,
+        generate_secrets: bool = True,
         **kwargs: Any,
     ) -> None:
         """
@@ -198,12 +297,15 @@ class BodyAuthRegisterNewPilotsToDb(_serialization.Model):
         :paramtype grid_type: str
         :keyword pilot_references: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_references: dict[str, any]
+        :keyword generate_secrets: Boolean to allow secret creation or not.
+        :paramtype generate_secrets: bool
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
         self.vo = vo
         self.grid_type = grid_type
         self.pilot_references = pilot_references
+        self.generate_secrets = generate_secrets
 
 
 class GroupInfo(_serialization.Model):
@@ -854,35 +956,43 @@ class PilotCredentialsInfo(_serialization.Model):
         self.pilot_secret_expires_in = pilot_secret_expires_in
 
 
-class PilotCredentialsResponse(_serialization.Model):
-    """PilotCredentialsResponse.
+class PilotSecretsInfo(_serialization.Model):
+    """PilotSecretsInfo.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_credentials: Pilot Credentials. Required.
-    :vartype pilot_credentials: list[~_generated.models.PilotCredentialsInfo]
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    :ivar pilot_secret_expires_in: Pilot Secret Expires In. Required.
+    :vartype pilot_secret_expires_in: int
     """
 
     _validation = {
-        "pilot_credentials": {"required": True},
+        "pilot_secret": {"required": True},
+        "pilot_secret_expires_in": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_credentials": {
-            "key": "pilot_credentials",
-            "type": "[PilotCredentialsInfo]",
-        },
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+        "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
     }
 
     def __init__(
-        self, *, pilot_credentials: List["_models.PilotCredentialsInfo"], **kwargs: Any
+        self, *, pilot_secret: str, pilot_secret_expires_in: int, **kwargs: Any
     ) -> None:
         """
-        :keyword pilot_credentials: Pilot Credentials. Required.
-        :paramtype pilot_credentials: list[~_generated.models.PilotCredentialsInfo]
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        :keyword pilot_secret_expires_in: Pilot Secret Expires In. Required.
+        :paramtype pilot_secret_expires_in: int
         """
         super().__init__(**kwargs)
-        self.pilot_credentials = pilot_credentials
+        self.pilot_secret = pilot_secret
+        self.pilot_secret_expires_in = pilot_secret_expires_in
+
+
+class ResponsePilotsRegisterNewPilotsToDb(_serialization.Model):
+    """Response Pilots Register New Pilots To Db."""
 
 
 class SandboxDownloadResponse(_serialization.Model):
