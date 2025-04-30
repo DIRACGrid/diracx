@@ -6,6 +6,7 @@ from __future__ import annotations
 # are the enabled_dependencies markers
 import asyncio
 import contextlib
+import json
 import os
 import re
 import ssl
@@ -19,6 +20,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
 import pytest
+from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
 from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
@@ -67,16 +69,14 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def private_key_pem() -> str:
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-    private_key = Ed25519PrivateKey.generate()
-    return private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+def private_key() -> OKPKey:
+    return OKPKey.generate_key(
+        parameters={
+            "key_ops": ["sign", "verify"],
+            "alg": "EdDSA",
+            "kid": uuid7().hex,
+        }
+    )
 
 
 @pytest.fixture(scope="session")
@@ -94,15 +94,12 @@ def test_dev_settings() -> Generator[DevelopmentSettings, None, None]:
 
 
 @pytest.fixture(scope="session")
-def test_auth_settings(
-    private_key_pem, fernet_key
-) -> Generator[AuthSettings, None, None]:
+def test_auth_settings(private_key, fernet_key) -> Generator[AuthSettings, None, None]:
     from diracx.core.settings import AuthSettings
 
     yield AuthSettings(
         token_issuer=ISSUER,
-        token_algorithm="EdDSA",
-        token_key=private_key_pem,
+        token_keystore=json.dumps(KeySet([private_key]).as_dict(private_keys=True)),
         state_key=fernet_key,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",

@@ -6,8 +6,10 @@ import base64
 import hashlib
 import re
 from datetime import datetime, timedelta, timezone
+from typing import cast
 
-from authlib.jose import JsonWebToken
+from joserfc import jwt
+from joserfc.jwt import Claims
 from uuid_utils import UUID, uuid7
 
 from diracx.core.config import Config
@@ -356,11 +358,24 @@ async def exchange_token(
 
 
 def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
-    jwt = JsonWebToken(settings.token_algorithm)
-    encoded_jwt = jwt.encode(
-        {"alg": settings.token_algorithm}, payload, settings.token_key.jwk
+    """Create a JWT token with the given payload and settings."""
+    signing_key = None
+    for key in settings.token_keystore.jwks.keys:
+        # TODO: https://github.com/authlib/joserfc/issues/52
+        key_ops = cast(list[str] | None, key.get("key_ops"))
+        if key_ops and "sign" in key_ops:
+            signing_key = key
+            break
+
+    if not signing_key:
+        raise ValueError("No signing key found in JWKS")
+
+    return jwt.encode(
+        header={"alg": signing_key.get("alg"), "kid": signing_key.get("kid")},
+        claims=cast(Claims, payload),
+        key=settings.token_keystore.jwks,
+        algorithms=settings.token_allowed_algorithms,
     )
-    return encoded_jwt.decode("ascii")
 
 
 async def insert_refresh_token(

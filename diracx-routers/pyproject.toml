@@ -13,7 +13,6 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "authlib",
     "cachetools",
     "diracx-core",
     "diracx-logic",
@@ -22,6 +21,7 @@ dependencies = [
     "python-multipart",
     "fastapi",
     "httpx",
+    "joserfc",
     "pydantic >=2.10",
     "uvicorn",
     "opentelemetry-api",

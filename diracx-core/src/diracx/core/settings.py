@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from diracx.core.properties import SecurityProperty
 from diracx.core.s3 import s3_bucket_exists
 
@@ -17,10 +19,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar
 
 from aiobotocore.session import get_session
-from authlib.jose import JsonWebKey
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
+from joserfc.jws import KeySet
 from pydantic import (
     AnyUrl,
     BeforeValidator,
@@ -51,28 +53,40 @@ class SqlalchemyDsn(AnyUrl):
     )
 
 
-class _TokenSigningKey(SecretStr):
-    jwk: JsonWebKey
+class _TokenSigningKeyStore(SecretStr):
+    jwks: KeySet
 
     def __init__(self, data: str):
         super().__init__(data)
-        self.jwk = JsonWebKey.import_key(self.get_secret_value())
+
+        # Load the keys from the JSON string
+        try:
+            keys = json.loads(self.get_secret_value())
+        except json.JSONDecodeError as e:
+            raise ValueError("Invalid JSON string") from e
+        if not isinstance(keys, dict):
+            raise ValueError("Invalid JSON string")
+        self.jwks = KeySet.import_key_set(keys)  # type: ignore
 
 
-def _maybe_load_key_from_file(value: Any) -> Any:
+def _maybe_load_keys_from_file(value: Any) -> Any:
     """Load private keys from files if needed."""
-    if isinstance(value, str) and not value.strip().startswith("-----BEGIN"):
-        url = TypeAdapter(LocalFileUrl).validate_python(value)
-        if not url.scheme == "file":
-            raise ValueError("Only file:// URLs are supported")
-        if url.path is None:
-            raise ValueError("No path specified")
-        value = Path(url.path).read_text()
+    if isinstance(value, str):
+        # If the value is a string, we need to check if it is a JSON string or a file URL
+        if not (value.strip().startswith("{") or value.startswith("[")):
+            # If it is not a JSON string, we assume it is a file URL
+            url = TypeAdapter(LocalFileUrl).validate_python(value)
+            if not url.scheme == "file":
+                raise ValueError("Only file:// URLs are supported")
+            if url.path is None:
+                raise ValueError("No path specified")
+            return Path(url.path).read_text()
+
     return value
 
 
-TokenSigningKey = Annotated[
-    _TokenSigningKey, BeforeValidator(_maybe_load_key_from_file)
+TokenSigningKeyStore = Annotated[
+    _TokenSigningKeyStore, BeforeValidator(_maybe_load_keys_from_file)
 ]
 
 
@@ -137,8 +151,8 @@ class AuthSettings(ServiceSettingsBase):
     state_key: FernetKey
 
     token_issuer: str
-    token_key: TokenSigningKey
-    token_algorithm: str = "RS256"  # noqa: S105
+    token_keystore: TokenSigningKeyStore
+    token_allowed_algorithms: list[str] = ["RS256", "EdDSA"]  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
 
