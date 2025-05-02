@@ -991,6 +991,32 @@ class PilotSecretsInfo(_serialization.Model):
         self.pilot_secret_expires_in = pilot_secret_expires_in
 
 
+class PilotStampInfo(_serialization.Model):
+    """PilotStampInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+    }
+
+    def __init__(self, *, pilot_stamp: str, **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+
+
 class ResponsePilotsRegisterNewPilotsToDb(_serialization.Model):
     """Response Pilots Register New Pilots To Db."""
 

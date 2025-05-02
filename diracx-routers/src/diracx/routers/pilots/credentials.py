@@ -11,12 +11,13 @@ from diracx.core.exceptions import (
     PilotNotFoundError,
     SecretNotFoundError,
 )
-from diracx.core.models import PilotCredentialsInfo, PilotSecretsInfo
+from diracx.core.models import PilotCredentialsInfo, PilotSecretsInfo, PilotStampInfo
 from diracx.logic.auth.pilot import (
     add_pilot_credentials,
     create_credentials,
     create_pilot_credentials_response,
     create_secrets_response,
+    create_stamp_response,
     register_new_pilots,
 )
 from diracx.logic.auth.pilot import (
@@ -58,7 +59,7 @@ async def register_new_pilots_to_db(
     generate_secrets: Annotated[
         bool, Body(description="Boolean to allow secret creation or not.")
     ] = True,
-) -> list[PilotSecretsInfo] | list[PilotCredentialsInfo]:
+) -> list[PilotStampInfo] | list[PilotCredentialsInfo]:
     """Endpoint where a you can create pilots with their references.
     It will return the pilot secrets as well as an expiration date.
 
@@ -91,9 +92,7 @@ async def register_new_pilots_to_db(
             pilot_expiration_dates=expiration_dates,
         )
     else:
-        return create_secrets_response(
-            pilot_secrets=credentials, pilot_expiration_dates=expiration_dates
-        )
+        return create_stamp_response(pilot_stamps=pilot_stamps)
 
 
 @router.post("/create-pilot-secrets")
@@ -113,6 +112,11 @@ async def create_pilot_secrets(
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
 ) -> list[PilotSecretsInfo]:
+
+    # TODO: Check max for pilot_max
+    # [SQL: INSERT INTO `PilotSecrets` (`HashedSecret`, `SecretGlobalUseCount`, `SecretGlobalUseCountMax`, `SecretVO`)
+    # VALUES (%s, %s, %s, %s)]
+    # [parameters: ('debc69a1f3ada36060b7fea2d1f5bf09339971b089cc2b8037bc3ecba527babf', 0, 1000000000, 'diracAdmin')]
 
     await check_permissions(action=ActionType.CREATE_PILOT_OR_SECRET, vo=vo)
 
@@ -158,7 +162,9 @@ async def associate_pilots_with_secrets(
     check_permissions: CheckPilotCredentialsPolicyCallable,
 ):
 
-    await check_permissions(action=ActionType.ASSOCIATE_PILOT_WITH_SECRET)
+    vo = user_info.vo
+
+    await check_permissions(action=ActionType.ASSOCIATE_PILOT_WITH_SECRET, vo=vo)
 
     if len(pilot_secrets) != 1 and len(pilot_secrets) != len(pilot_stamps):
         raise HTTPException(

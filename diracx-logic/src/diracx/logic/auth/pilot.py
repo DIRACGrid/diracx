@@ -172,14 +172,22 @@ def create_stamp_response(pilot_stamps: list[str]) -> list[PilotStampInfo]:
 def get_registry_and_group_configuration(config: Config, vo: str):
     try:
         vo_config_operations = config.Operations[vo].Pilot
+    except KeyError:
+        try:
+            vo_config_operations = config.Operations["Defaults"].Pilot
+        except KeyError as e:
+            raise ConfigurationError(
+                f"Given VO ({vo}) and 'Defaults' are not registered in the configuration for the Pilot"
+            ) from e
+
+    try:
         vo_config_registry = config.Registry[vo]
     except KeyError:
         try:
-            vo_config_operations = config.Operations["Default"].Pilot
-            vo_config_registry = config.Registry["Default"]
+            vo_config_registry = config.Registry["Defaults"]
         except KeyError as e:
             raise ConfigurationError(
-                f"Given VO ({vo}) and 'Default' are not registered in the configuration"
+                f"Given VO ({vo}) and 'Defaults' are not registered in the configuration for the registry"
             ) from e
 
     if not vo_config_operations:

@@ -45,7 +45,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
     assert r.status_code == 200, r.json()
 
     #  -------------- Logins --------------
-    pilot_credentials_list = r.json()["pilot_credentials"]
+    pilot_credentials_list = r.json()
     for credentials in pilot_credentials_list:
         pilot_stamp, secret, _ = credentials.values()
 
@@ -94,7 +94,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
     )
 
     assert r.status_code == 200
-    _, secret, _ = r.json()["pilot_credentials"][0].values()
+    _, secret, _ = r.json()[0].values()
 
     #  -------------- Login with a pilot that does not exists **but** was called before in an error --------------
 
@@ -152,7 +152,7 @@ async def test_create_secrets_and_login(normal_test_client):
     assert r.status_code == 200, r.json()
 
     # Format : {"pilot_secret": "...", "pilot_secret_expires_in": ..., "pilot_stamps": None}
-    secrets_mapping = r.json()["pilot_credentials"]
+    secrets_mapping = r.json()
 
     secrets = [el["pilot_secret"] for el in secrets_mapping]
 
