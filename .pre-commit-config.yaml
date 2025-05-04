@@ -51,4 +51,4 @@ repos:
     hooks:
     - id: codespell
       args: ["--skip=./diracx-client/src/diracx/client/_generated/*, ./diracx-[a-z]*/tests/*, ./diracx-testing/*, build/*, ./extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*, ./extensions/gubbins/gubbins-*/tests/*",
-      "--ignore-words-list=CheckIn"]
+      "--ignore-words-list=CheckIn", "-w"]
