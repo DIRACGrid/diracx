@@ -67,7 +67,7 @@ jobs:
         run: |
           set -xeuo pipefail
           IFS=$'\n\t'
-          # Needed for the advanced patter matching used in REFERENCE_BRANCH
+          # Needed for the advanced pattern matching used in REFERENCE_BRANCH
           PREV_VERSION=$(git describe --tags --abbrev=0)
           # In case of manual trigger,
           # GITHUB_REF is of the form refs/heads/main -> we want main
