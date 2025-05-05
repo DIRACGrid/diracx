@@ -26,9 +26,9 @@ Depending on which module you are using, there could be rules to follow that are
 ```python
 import pytest
 
+
 @pytest.fixture
-def my_ficture():
-    ...
+def my_ficture(): ...
 ```
 
 </td>
@@ -38,9 +38,9 @@ def my_ficture():
 ```python
 from pytest import fixture
 
+
 @fixture
-def my_ficture():
-    ...
+def my_ficture(): ...
 ```
 
 </td>
@@ -50,6 +50,7 @@ def my_ficture():
 <td>
 
 `datetime`
+
 </td>
 
 <td>
@@ -65,6 +66,7 @@ delay = datetime.now(tz=timezone.utc) + timedelta(hours=1)
 
 ```python
 import datetime
+
 delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 ```
 
@@ -75,6 +77,7 @@ delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 <td>
 
 `SQL Alchemy`
+
 </td>
 
 <td>
@@ -82,13 +85,11 @@ delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 ```python
 class Owners(Base):
     __tablename__ = "Owners"
-    owner_id = Column("OwnerID",
-        Integer,
-        primary_key=True,
-        autoincrement=True)
+    owner_id = Column("OwnerID", Integer, primary_key=True, autoincrement=True)
     creation_time = DateNowColumn("CreationTime")
     name = Column("Name", String(255))
 ```
+
 </td>
 
 <td>
@@ -96,17 +97,15 @@ class Owners(Base):
 ```python
 class Owners(Base):
     __tablename__ = "Owners"
-    OwnerID = Column(Integer,
-        primary_key=True,
-        autoincrement=True)
+    OwnerID = Column(Integer, primary_key=True, autoincrement=True)
     CreationTime = DateNowColumn()
     Name = Column(String(255))
 ```
+
 </td>
 </tr>
 
 </table>
-
 
 ## Structure
 
@@ -117,7 +116,6 @@ The following structures principles may also be followed:
 - If we need more files (think of jobs, which have the sandbox, the joblogging, etc), we put them in a sub module (e.g routers.job). The code goes in a specific file (job.py, joblogging.py) but we use the the __init__.py to expose the specific file
 
 See [this issue](https://github.com/DIRACGrid/diracx/issues/268).
-
 
 ## Architecture
 

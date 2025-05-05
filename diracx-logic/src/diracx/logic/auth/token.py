@@ -6,9 +6,9 @@ import base64
 import hashlib
 import re
 from datetime import datetime, timedelta, timezone
-from uuid import UUID, uuid4
 
 from authlib.jose import JsonWebToken
+from uuid_utils import UUID, uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (
@@ -212,7 +212,6 @@ async def get_oidc_token_info_from_refresh_flow(
         # The sub attribute coming from the DB contains the VO name
         # We need to remove it as if it were coming from an ID token from an external IdP
         "sub": sub.split(":", 1)[1],
-        "preferred_username": refresh_token_attributes["PreferredUsername"],
     }
     scope = refresh_token_attributes["Scope"]
     return (
@@ -323,7 +322,6 @@ async def exchange_token(
         jti, creation_time = await insert_refresh_token(
             auth_db=auth_db,
             subject=sub,
-            preferred_username=preferred_username,
             scope=scope,
         )
 
@@ -347,7 +345,7 @@ async def exchange_token(
         "vo": vo,
         "iss": settings.token_issuer,
         "dirac_properties": list(properties),
-        "jti": str(uuid4()),
+        "jti": str(uuid7()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
         "exp": creation_time + timedelta(minutes=settings.access_token_expire_minutes),
@@ -368,18 +366,16 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
 async def insert_refresh_token(
     auth_db: AuthDB,
     subject: str,
-    preferred_username: str,
     scope: str,
 ) -> tuple[UUID, datetime]:
     """Insert a refresh token into the database and return the JWT ID and creation time."""
     # Generate a JWT ID
-    jti = uuid4()
+    jti = uuid7()
 
     # Insert the refresh token into the DB
     await auth_db.insert_refresh_token(
         jti=jti,
         subject=subject,
-        preferred_username=preferred_username,
         scope=scope,
     )
 

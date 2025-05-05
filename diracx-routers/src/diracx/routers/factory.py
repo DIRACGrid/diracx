@@ -31,7 +31,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponseError
+from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
@@ -155,7 +155,10 @@ def create_app_inner(
         app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
 
     # Override the ConfigSource.create by the actual reading of the config
-    app.dependency_overrides[ConfigSource.create] = config_source.read_config
+    # Mark it as non-blocking so we can serve 503 errors while waiting for the config
+    app.dependency_overrides[ConfigSource.create] = (
+        config_source.read_config_non_blocking
+    )
 
     all_access_policies_used = {}
 
@@ -299,6 +302,9 @@ def create_app_inner(
     app.add_exception_handler(
         RequestValidationError, cast(handler_signature, validation_error_handler)
     )
+    app.add_exception_handler(
+        NotReadyError, cast(handler_signature, route_unavailable_error_hander)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -405,7 +411,7 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
-        content={"detail": str(exc.args)},
+        content={"detail": str(exc)},
     )
 
 

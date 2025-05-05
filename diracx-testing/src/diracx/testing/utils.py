@@ -16,10 +16,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 from urllib.parse import parse_qs, urljoin, urlparse
-from uuid import uuid4
 
 import httpx
 import pytest
+from uuid_utils import uuid7
 
 from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
 
@@ -219,6 +219,12 @@ class ClientFactory:
             for e in select_from_extension(group="diracx.access_policies")
         }
 
+        config_source = ConfigSource.create_from_url(
+            backend_url=f"git+file://{with_config_repo}"
+        )
+        # Warm the cache to avoid 503 errors
+        config_source.read_config()
+
         self.app = create_app_inner(
             enabled_systems=enabled_systems,
             all_service_settings=[
@@ -228,9 +234,7 @@ class ClientFactory:
             ],
             database_urls=database_urls,
             os_database_conn_kwargs=os_database_conn_kwargs,
-            config_source=ConfigSource.create_from_url(
-                backend_url=f"git+file://{with_config_repo}"
-            ),
+            config_source=config_source,
             all_access_policies=all_access_policies,
         )
 
@@ -367,7 +371,7 @@ class ClientFactory:
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
                 "iss": ISSUER,
                 "dirac_properties": [NORMAL_USER],
-                "jti": str(uuid4()),
+                "jti": str(uuid7()),
                 "preferred_username": "preferred_username",
                 "dirac_group": "test_group",
                 "vo": "lhcb",
@@ -388,7 +392,7 @@ class ClientFactory:
                 "sub": "testingVO:yellow-sub",
                 "iss": ISSUER,
                 "dirac_properties": [JOB_ADMINISTRATOR],
-                "jti": str(uuid4()),
+                "jti": str(uuid7()),
                 "preferred_username": "preferred_username",
                 "dirac_group": "test_group",
                 "vo": "lhcb",

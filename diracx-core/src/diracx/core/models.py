@@ -201,6 +201,7 @@ class OpenIDConfiguration(TypedDict):
     userinfo_endpoint: str
     authorization_endpoint: str
     device_authorization_endpoint: str
+    revocation_endpoint: str
     grant_types_supported: list[str]
     scopes_supported: list[str]
     response_types_supported: list[str]

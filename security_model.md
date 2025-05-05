@@ -5,26 +5,31 @@ Version: v0.9.0
 ## Table of Contents
 
 1. [Introduction](#introduction)
+
    - [Terms and Definitions](#terms-and-definitions)
 
 2. [DiracX Authorisation and Authentication](#diracx-authorisation-and-authentication)
+
    - [User and Group Management](#user-and-group-management)
    - [Lifetime](#lifetime)
    - [Token Profile](#token-profile)
    - [Signature Verification](#signature-verification)
    - [Issuance](#issuance)
-       - [Supported Authorisation Flows](#supported-authorisation-flows)
+     - [Supported Authorisation Flows](#supported-authorisation-flows)
    - [Pilot Jobs](#pilot-jobs)
    - [Installation Administrators](#installation-administrators)
 
 3. [External Authorization and Authentication](#external-authorization-and-authentication)
+
    - [Storage Access](#storage-access)
    - [Computing Resources](#computing-resources)
 
 4. [Network Communication](#network-communication)
+
    - [Certificate Signing](#certificate-signing)
 
 5. [Threat Analysis](#threat-analysis)
+
    - [Compromised External IdP](#compromised-external-idp)
    - [Compromised Batch Submission System](#compromised-batch-submission-system)
    - [Compromised Worker Node](#compromised-worker-node)
@@ -47,27 +52,27 @@ This document describes how DiracX enables installations to be secure and robust
 
 ### Terms and Definitions
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119).
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119).
 
 Commonly used terms in this document are described below.
 
-* **External IdP:** The Identity Provider that is responsible for managing a Virtual Organisation's users.
-* **Group:** A DiracX-specific extension to a user's identity that enables additional access control features. A user may be a member of many groups but only ever has one associated with their current identity. All the members of a group belong to the same Virtual Organisation.
-* **Identity:** The subject and their currently chosen group.
-* **Installation administrator:** A person responsible for managing the DiracX installation itself.
-* **Installation:** A single deployment of DiracX services.
-* **Pilot:** A job submitted to a computing resource's batch system. DiracX then uses this to run any number of DiracX jobs on behalf of users in a Virtual Organisation.
-* **Capability:** A string which represents a specific authorisation within DiracX.
-* **User:** An identity which is registered within a Virtual Organisation that is part of the DiracX installation.
-* **Virtual Organisation:** A set of users that is defined around a common set of resource-sharing rules and conditions.
+- **External IdP:** The Identity Provider that is responsible for managing a Virtual Organisation's users.
+- **Group:** A DiracX-specific extension to a user's identity that enables additional access control features. A user may be a member of many groups but only ever has one associated with their current identity. All the members of a group belong to the same Virtual Organisation.
+- **Identity:** The subject and their currently chosen group.
+- **Installation administrator:** A person responsible for managing the DiracX installation itself.
+- **Installation:** A single deployment of DiracX services.
+- **Pilot:** A job submitted to a computing resource's batch system. DiracX then uses this to run any number of DiracX jobs on behalf of users in a Virtual Organisation.
+- **Capability:** A string which represents a specific authorisation within DiracX.
+- **User:** An identity which is registered within a Virtual Organisation that is part of the DiracX installation.
+- **Virtual Organisation:** A set of users that is defined around a common set of resource-sharing rules and conditions.
 
 ## DiracX authorisation and authentication
 
 DiracX is built around the OAuth 2.0 authorisation flow, with the exception that an identity MUST always be present alongside authorisation to enable user-specific behaviours such as:
 
-* Limiting file access to a user's/group's files (POSIX style)
-* Enforcing user/group-specific quotas on compute and storage resources
-* Allowing for easier traceability
+- Limiting file access to a user's/group's files (POSIX style)
+- Enforcing user/group-specific quotas on compute and storage resources
+- Allowing for easier traceability
 
 For communication between users and DiracX services JSON Web Tokens (JWTs) are used as OAuth2 bearer tokens. The same mechanism is used whenever impersonation is required, such as running a user-provided payload in a job. The need to use encrypted JWT is not forseen.
 
@@ -90,9 +95,9 @@ Refresh tokens have a longer lifetime and are verified by a central service. Ref
 
 The access token profile contains the standardised fields from RFC-7519 (`sub`, `aud`, `iss`, `jti`) and OpenID Connect Core 1.0 (`preferred_username`). The `sub` field is unique per person per VO and there is a single issuer per installation. In addition, the token contains DiracX-specific fields:
 
-* `vo`: String containing the name of the virtual Organisation to which the user belongs. This field may change if it becomes a registered field following the merge of WLCG, EGI and SciTokens profiles, in which case we would adapt.
-* `dirac_group`: String containing the name of the current group that the user is acting as a member of. This is used only for identity purposes.
-* `dirac_capabilities`: A list of strings representing the DiracX-specific permissions for authentication.
+- `vo`: String containing the name of the virtual Organisation to which the user belongs. This field may change if it becomes a registered field following the merge of WLCG, EGI and SciTokens profiles, in which case we would adapt.
+- `dirac_group`: String containing the name of the current group that the user is acting as a member of. This is used only for identity purposes.
+- `dirac_capabilities`: A list of strings representing the DiracX-specific permissions for authentication.
 
 These fields are requested using the `scope` parameter when initiating the OAuth2 flow.
 
@@ -106,37 +111,36 @@ The JSON Web Keys required for verifying tokens are publically exposed according
 
 Users need to be issued tokens in two main contexts:
 
-* within a web browser for the DIRAC web portal
-* within an interactive terminal session
+- within a web browser for the DIRAC web portal
+- within an interactive terminal session
 
 There MAY also be other contexts in which can be issued tokens on a per-installation basis. This mechanism is very generic, and only relies on being able to receive a proof of identity from a trusted source. Some examples include:
 
-* Exchange an ID token generated by a continuous integration provider (e.g. GitLab, GitHub). These providers might be limited to read-only data access and the DiracX tokens lifetime SHOULD NOT exceed the lifetime of the CI job.
-* Exchange an ID token which is provided automatically to a Jupyter instance such as is already used by several analysis facility prototypes.
-* Using alternative mechanisms such as Kerberos to verify a user's identity. This case might be configured to only support issuing tokens with commonly required user capabilities and be prevented from accessing more powerful capabilities.
+- Exchange an ID token generated by a continuous integration provider (e.g. GitLab, GitHub). These providers might be limited to read-only data access and the DiracX tokens lifetime SHOULD NOT exceed the lifetime of the CI job.
+- Exchange an ID token which is provided automatically to a Jupyter instance such as is already used by several analysis facility prototypes.
+- Using alternative mechanisms such as Kerberos to verify a user's identity. This case might be configured to only support issuing tokens with commonly required user capabilities and be prevented from accessing more powerful capabilities.
 
 In these cases, DiracX provides options to limit the contents of tokens which are issued, such as the group, capabilities and lifetime. Installation admins MUST take care to ensure to carefully consider which additional issuance mechanisms to support.
 
 Each VO in DiracX is associated with an external identity provider which MUST:
 
-* Support the authorization code flow with Proof Key of Code Exchange
-* Only issue identity tokens for users which are intended to have access to the VO's resources
+- Support the authorization code flow with Proof Key of Code Exchange
+- Only issue identity tokens for users which are intended to have access to the VO's resources
 
 #### Supported authorisation flows
 
 DiracX issues access and refresh tokens via three OAuth2 authorisation flows:
 
-* **Authorization Code with Proof Key of Code Exchange:** This is primarily used for the DiracX web portal.
-* **Device Authorization Flow with Proof Key of Code Exchange:** This is primarily used for terminal access to DiracX services.
-* **Refresh Token Grant:** This is used with the refresh tokens issued with the other flows.
-* **Token Exchange Grant:** Enables trusted externally issued tokens to be exchanged for DiracX credentials.
+- **Authorization Code with Proof Key of Code Exchange:** This is primarily used for the DiracX web portal.
+- **Device Authorization Flow with Proof Key of Code Exchange:** This is primarily used for terminal access to DiracX services.
+- **Refresh Token Grant:** This is used with the refresh tokens issued with the other flows.
+- **Token Exchange Grant:** Enables trusted externally issued tokens to be exchanged for DiracX credentials.
 
 There is currently no need foreseen for DiracX to issue `id_tokens` as all the information is already contained in the access token.
 
 All flows involving the external IdP follow the same sequence:
 
 ![](https://user-images.githubusercontent.com/3728211/274624748-aaa0c6c1-9bcf-4c89-8344-4597b3e15cfe.png)
-
 
 ### Pilot jobs
 
@@ -170,8 +174,8 @@ Communication between components is performed using HTTP and DiracX does not dir
 
 Installations SHOULD use certificates signed by a widely trusted root certificate authority to:
 
-* Ensure clients can be securely bootstrapped
-* Prevent users from being encouraged to bypass certificate warnings when interacting with DiracX
+- Ensure clients can be securely bootstrapped
+- Prevent users from being encouraged to bypass certificate warnings when interacting with DiracX
 
 These certificates SHOULD be generated in accordance with best practices at the time.
 
@@ -185,9 +189,9 @@ Here we consider a variety of scenarios where malicious parties attempt to acces
 
 If an IdP has been compromised then DiracX no longer has a means of verifying user identities. In this situation:
 
-* The VO is banned within DiracX and can no longer be used
-* All refresh tokens for the VO are revoked
-* Review all activity from the VO
+- The VO is banned within DiracX and can no longer be used
+- All refresh tokens for the VO are revoked
+- Review all activity from the VO
 
 ### Compromised batch submission system
 
@@ -195,19 +199,19 @@ If an attacker gains access to the information held within a site's batch submis
 
 Depending on the nature of the compromise, installation admins SHOULD:
 
-* Stop submission of new pilots to the resource
-* Invalidate potentially affected pilot secrets
-* Invalidate any refresh tokens which originated from a leaked pilot secret
-* Invalidate any pilot-matching secrets which originated from a leaked pilot secret
-* Review any activity that was done with potentially compromised access tokens
+- Stop submission of new pilots to the resource
+- Invalidate potentially affected pilot secrets
+- Invalidate any refresh tokens which originated from a leaked pilot secret
+- Invalidate any pilot-matching secrets which originated from a leaked pilot secret
+- Review any activity that was done with potentially compromised access tokens
 
 ### Compromised worker node
 
 If one or more worker nodes are compromised the refresh tokens granted to them are no longer be trusted. In this situation installation admins MUST:
 
-* Invalidate any refresh tokens which were sent to the given worker node
-* Invalidate the pilot matching secret
-* Review any activity that was done with potentially compromised access tokens
+- Invalidate any refresh tokens which were sent to the given worker node
+- Invalidate the pilot matching secret
+- Review any activity that was done with potentially compromised access tokens
 
 ### Compromised refresh token
 
@@ -217,19 +221,19 @@ If a user's refresh token is exposed they MUST be able to revoke it independentl
 
 If a user's identity is compromised the installation admin MUST:
 
-* Block the user within DiracX
-* Ask the IdP to block the user and reestablish their identity
-* Revoke all refresh tokens granted to that user
-* Kill any waiting jobs within the system
-* Review all user activity
+- Block the user within DiracX
+- Ask the IdP to block the user and reestablish their identity
+- Revoke all refresh tokens granted to that user
+- Kill any waiting jobs within the system
+- Review all user activity
 
 ### Compromised JWK
 
 In the event that the JWK used for signing DIRAC tokens is compromised installation admins MUST generate new keys immediately and cease to use the previous public keys. In addition, they SHOULD:
 
-* Consider shutting down the instance entirely
-* Review the DiracX configuration service for malicious changes
-* Review all user activity
+- Consider shutting down the instance entirely
+- Review the DiracX configuration service for malicious changes
+- Review all user activity
 
 ### Compromised DB
 
@@ -239,20 +243,20 @@ For databases containing secrets (e.g. pilot secrets), the secrets are hashed su
 
 If the attacker has the means to modify the DB contents and installation admins SHOULD:
 
-* Change DB credentials
-* Review what activity might be possible as the result of access to this DB. For example, modifying the job database would enable arbitrary payload execution and the exfiltration of limited-scope user refresh tokens.
+- Change DB credentials
+- Review what activity might be possible as the result of access to this DB. For example, modifying the job database would enable arbitrary payload execution and the exfiltration of limited-scope user refresh tokens.
 
 ### Compromised hosts
 
 In the event of a host being compromised it MUST be treated as equivalent to the sections previously described:
 
-* Compromised all JWKs
-* Compromised all DBs
+- Compromised all JWKs
+- Compromised all DBs
 
 Additionally:
 
-* Any secrets DiracX services have access to (e.g. salts for hashing, passwords) MAY increase the severity of the compromise.
-* At a minimum the host SHOULD be reinstalled, though replacing the hardware might be required depending on the nature of the attacker.
+- Any secrets DiracX services have access to (e.g. salts for hashing, passwords) MAY increase the severity of the compromise.
+- At a minimum the host SHOULD be reinstalled, though replacing the hardware might be required depending on the nature of the attacker.
 
 ### Malicious legitimate user
 
@@ -268,17 +272,17 @@ In the event of malicious activity, refer to existing procedures in addition to 
 
 ## Changelog
 
-* v0.1.0 (2023-06-07): Initial draft for internal review.
-* v0.2.0 (2023-06-12): Add glossary of common terms.
-* v0.3.0 (2023-06-27):
-    * Define Identity
-    * Specify token issuer
-    * Change property to capability
-    * Add diagram of the role of the external IdP, DiracX and the user
-* v0.9.0 (2023-10-11):
-    * Specify traceability consideration
-    * Specify reference of the registered claim
-    * `vo` field in the token may change if it becomes a standard
-    * Better description of alternative mechanism to issue a token
-    * Explicit the reason for not needing to issue `id_token`
-    * Recommend to contact VO admins in case of compromission
+- v0.1.0 (2023-06-07): Initial draft for internal review.
+- v0.2.0 (2023-06-12): Add glossary of common terms.
+- v0.3.0 (2023-06-27):
+  - Define Identity
+  - Specify token issuer
+  - Change property to capability
+  - Add diagram of the role of the external IdP, DiracX and the user
+- v0.9.0 (2023-10-11):
+  - Specify traceability consideration
+  - Specify reference of the registered claim
+  - `vo` field in the token may change if it becomes a standard
+  - Better description of alternative mechanism to issue a token
+  - Explicit the reason for not needing to issue `id_token`
+  - Recommend to contact VO admins in case of compromission

@@ -4,7 +4,6 @@ import base64
 import hashlib
 import json
 import secrets
-from uuid import UUID
 
 import httpx
 from authlib.integrations.starlette_client import OAuthError
@@ -13,6 +12,7 @@ from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
 from typing_extensions import TypedDict
+from uuid_utils import UUID
 
 from diracx.core.config.schema import Config
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
@@ -189,6 +189,18 @@ async def get_token_from_iam(
     return id_token
 
 
+def read_token(
+    payload: str, token_algorithm: str, key: JsonWebKey, claims_options=None
+) -> dict:
+    # First transform it into bytes, then return a jwt object
+    # Don't take settings as a parameter to allow claims_options to be None or something else
+    encoded_payload = payload.encode("ascii")
+    jwt = JsonWebToken(token_algorithm)
+    decoded_jwt = jwt.decode(encoded_payload, key, claims_options=claims_options)
+    decoded_jwt.validate()
+    return decoded_jwt
+
+
 async def verify_dirac_refresh_token(
     refresh_token: str,
     settings: AuthSettings,
@@ -196,18 +208,9 @@ async def verify_dirac_refresh_token(
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint.
     """
-    jwt = JsonWebToken(settings.token_algorithm)
-    token = jwt.decode(
-        refresh_token,
-        key=settings.token_key.jwk,
-    )
-    token.validate()
+    token = read_token(refresh_token, settings.token_algorithm, settings.token_key.jwk)
 
-    return (
-        UUID(token["jti"], version=4),
-        float(token["exp"]),
-        token["legacy_exchange"],
-    )
+    return UUID(token["jti"]), float(token["exp"]), token["legacy_exchange"]
 
 
 def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:

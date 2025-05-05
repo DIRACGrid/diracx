@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import argparse
-import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from uuid_utils import uuid7
 
 from diracx.core.models import TokenResponse
 from diracx.core.properties import NORMAL_USER
@@ -35,7 +36,7 @@ def main(token_key):
         "vo": vo,
         "iss": settings.token_issuer,
         "dirac_properties": dirac_properties,
-        "jti": str(uuid.uuid4()),
+        "jti": str(uuid7()),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
         "exp": creation_time + timedelta(seconds=expires_in),

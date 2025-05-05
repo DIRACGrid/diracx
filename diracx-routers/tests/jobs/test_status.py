@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 import pytest
@@ -1048,3 +1048,53 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     assert (
         r.status_code == 400
     ), "PATCH metadata should 400 Bad Request if an attribute column's case is incorrect"
+
+
+def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
+    """Test fix for https://github.com/DIRACGrid/diracx/issues/476."""
+    inner_payload = {"Status": JobStatus.FAILED.value, "MinorStatus": "Payload failed"}
+    time = datetime.now(tz=timezone.utc)
+
+    payload = {valid_job_id: {time.isoformat(): inner_payload}}
+    r = normal_user_client.patch(
+        "/api/jobs/status", json=payload, params={"force": True}
+    )
+    assert r.status_code == 200, r.json()
+
+    body = {"search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]}
+    r = normal_user_client.post("/api/jobs/search", json=body)
+    assert r.status_code == 200, r.json()
+    result = r.json()
+    assert len(result) == 1, result
+    assert result[0]["JobID"] == valid_job_id
+    assert result[0]["Status"] == "Failed", result
+
+    payload = {valid_job_id: {(time - timedelta(minutes=2)).isoformat(): inner_payload}}
+    r = normal_user_client.patch("/api/jobs/status", json={valid_job_id: payload})
+    assert r.status_code == 200, r.json()
+
+
+def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
+    search_body = {
+        "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
+    }
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    old_data = r.json()[0]
+    assert old_data["HeartBeatTime"] is None
+
+    payload = {valid_job_id: {"Vsize": 1234}}
+    r = normal_user_client.patch(
+        "/api/jobs/heartbeat", json=payload, params={"force": True}
+    )
+    r.raise_for_status()
+
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    new_data = r.json()[0]
+
+    hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
+    # TODO: This should be timezone aware
+    assert hbt.tzinfo is None
+    hbt = hbt.replace(tzinfo=timezone.utc)
+    assert hbt > datetime.now(tz=timezone.utc) - timedelta(seconds=10)
