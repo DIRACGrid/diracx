@@ -23,4 +23,4 @@ The documentation is scattered around [various files](./docs/).
 - [The NeXt Dirac Incarnation - CHEP 24](https://indico.cern.ch/event/1338689/contributions/6010971/)
 - [Eventually coming with some Documentation - Dirac User Workshop 24](https://indico.cern.ch/event/1341205/contributions/5972930/)
 - [Demo and Technical details - Dirac & Rucio Workshop 23](https://indico.cern.ch/event/1252369/contributions/5515392/)
-- [Dirac: future Part1](https://indico.cern.ch/event/1292287/) and [Part2 -  Bild-Dev meeting June 23](https://indico.cern.ch/event/1297397/)
+- [Dirac: future Part1](https://indico.cern.ch/event/1292287/) and [Part2 - Bild-Dev meeting June 23](https://indico.cern.ch/event/1297397/)
