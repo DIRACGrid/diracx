@@ -58,3 +58,12 @@ class PilotOutput(PilotAgentsDBBase):
     pilot_id = Column("PilotID", Integer, primary_key=True)
     std_output = Column("StdOutput", Text)
     std_error = Column("StdError", Text)
+
+
+class PilotsHistorySummary(PilotAgentsDBBase):
+    __tablename__ = "PilotsHistorySummary"
+
+    grid_site = Column("GridSite", String(128), primary_key=True)
+    grid_type = Column("GridType", String(32), primary_key=True)
+    status = Column("Status", String(32), primary_key=True)
+    pilot_count = Column("PilotCount", Integer)
