@@ -19,7 +19,7 @@ from typing import (
 import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from fastapi.dependencies.models import Dependent
+from fastapi.dependencies.models import Dependant  # codespell:ignore dependant
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -436,14 +436,16 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 def find_dependents(
-    obj: APIRouter | Iterable[Dependent], cls: type[T]
+    obj: APIRouter | Iterable[Dependant], cls: type[T]  # codespell:ignore dependant
 ) -> Iterable[type[T]]:
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
         for route in obj.routes:
             if isinstance(route, APIRoute):
-                yield from find_dependents(route.dependent.dependencies, cls)
+                yield from find_dependents(
+                    route.dependant.dependencies, cls  # codespell:ignore dependant
+                )
         return
 
     for dependency in obj:
