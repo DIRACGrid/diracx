@@ -1,0 +1,112 @@
+extra_css:
+  - assets/css/extra.css
+
+extra_javascript:
+  - assets/js/hide-title-home.js
+
+site_name: DiracX
+repo_url: https://github.com/DIRACGrid/diracx
+site_url: https://diracx.io/
+site_description: >-
+  Write your documentation in Markdown and create a professional static site in
+  minutes – searchable, customizable, in 60+ languages, for all devices
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/theme-light-dark
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
+  font:
+    text: Roboto
+    code: Roboto Mono
+  logo: assets/images/logo.svg
+  icon:
+    logo: logo
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - header.autohide
+    - navigation.tabs
+    - navigation.tabs.sticky
+
+nav:
+  - Home: index.md
+  - Roadmap: roadmap.md
+  - Users:
+    - Introduction: user/index.md
+    - Tutorials: user/tutorials/index.md
+    - How-To: user/how-to/index.md
+    - Explanations: user/explanations/index.md
+    - Reference:
+      - Client Config: user/reference/client_configuration.md
+      - Index: user/reference/index.md
+  - Administrators:
+    - Introduction: admin/index.md
+    - Tutorials: admin/tutorials/index.md
+    - How-To: admin/how-to/index.md
+    - Explanations: admin/explanations/index.md
+    - Reference: admin/reference/index.md
+  - Developers:
+    - Introduction:dev/index.md
+    - Tutorials: dev/tutorials/index.md
+    - How-To: dev/how-to/index.md
+    - Explanations: dev/explanations/index.md
+    - Reference: dev/reference/index.md
+  - Project:
+    - Introduction: project/index.md
+    - Consortium: project/consortium.md
+
+markdown_extensions:
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - tables
+
+plugins:
+  - diracx:
+      repos:
+        - url: https://github.com/chaen/diracx-charts.git
+          branch: mkdoc
+          include:
+            - docs
+            - diracx
+        - url: https://github.com/chaen/diracx-web.git
+          branch: mkdoc
+          include:
+            - docs
+  - search

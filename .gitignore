@@ -91,3 +91,8 @@ docs/source/_build
 # CMT junk
 /*/*/x86_64-*-*-*/
 */*/cmt/Makefile
+
+# pixi environments
+.pixi
+pixi.lock
+*.egg-info
