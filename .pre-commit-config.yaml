@@ -16,9 +16,9 @@ repos:
     rev: 'v0.11.7'
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: ["--fix", "--show-fixes"]
 
-  - repo: https://github.com/psf/black
+  - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 25.1.0
     hooks:
       - id: black
@@ -36,3 +36,12 @@ repos:
           - types-aiobotocore[essential]
           - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.22
+    hooks:
+    - id: mdformat
+      args: ["--number"]
+      additional_dependencies:
+      - mdformat-gfm
+      - mdformat-black

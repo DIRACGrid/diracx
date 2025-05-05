@@ -42,6 +42,7 @@ Example:
 @add_settings_annotation
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
+
     model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
 
     token_key: TokenSigningKey
@@ -61,8 +62,7 @@ Usage example:
 
 ```python
 @router.get("/openid-configuration")
-async def get_openid_configuration(settings: AuthSettings):
-    ...
+async def get_openid_configuration(settings: AuthSettings): ...
 ```
 
 ### User Info
@@ -71,8 +71,9 @@ To retrieve information about the current user, depend on `AuthorizedUserInfo`.
 
 ```python
 @router.get("/userinfo")
-async def userinfo(user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)]):
-    ...
+async def userinfo(
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+): ...
 ```
 
 **TODO:** Consider avoiding the need to manually specify the annotation.
@@ -83,8 +84,7 @@ To extract information from the central DIRAC configuration:
 
 ```python
 @router.post("/summary")
-async def summary(config: Annotated[Config, Depends(ConfigSource.create)]):
-    ...
+async def summary(config: Annotated[Config, Depends(ConfigSource.create)]): ...
 ```
 
 The `Config` object is cached efficiently between requests and automatically refreshed. It is strongly typed and immutable for the duration of a request.
@@ -100,9 +100,9 @@ Example:
 ```python
 from diracx.routers.dependencies import JobDB, JobLoggingDB
 
+
 @router.delete("/{job_id}")
-async def delete_single_job(job_db: JobDB, job_logging_db: JobLoggingDB):
-    ...
+async def delete_single_job(job_db: JobDB, job_logging_db: JobLoggingDB): ...
 ```
 
 There are advanced and uncommon scenarios where committing a transaction is necessary even when returning an error response (e.g., revoking tokens in the database and returning an error to a potentially malicious user). In such cases, explicitly committing the transaction before raising an exception is crucial. Without this explicit commit, the intended changes would be rolled back along with the transaction, leading to unintended consequences:
@@ -136,9 +136,9 @@ Example:
 ```python
 from diracx.routers.dependencies import JobParametersDB
 
+
 @router.post("/search", responses=EXAMPLE_RESPONSES)
-async def search(job_parameters_db: JobParametersDB):
-    ...
+async def search(job_parameters_db: JobParametersDB): ...
 ```
 
 ## Permission Management
@@ -158,6 +158,7 @@ Each route must have a policy as an argument and call it:
 ```python
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
+
 @router.post("/")
 async def submit_jobs(
     job_definitions: Annotated[list[str], Body()],
@@ -175,13 +176,14 @@ Some routes do not need access permissions, like the authorization ones, in whic
 ```python
 from .access_policies import open_access
 
+
 @open_access
 @router.get("/")
-async def serve_config():
-    ...
+async def serve_config(): ...
 ```
 
 Implementing a new `AccessPolicy` is done by:
+
 1. Creating a module in `diracx.routers.<service>access_policies.py`
 2. Creating a new class inheriting from `BaseAccessPolicy`
 3. For specific instructions, see `diracx-routers/src/diracx/routers/access_policies.py`
@@ -196,8 +198,8 @@ When routes are defined they're automatically included in the OpenAPI specificat
 This is then used to automatically generate client bindings and means that more of the Python code is included in the externally visible interface than is typically expected.
 To ensure consistency, the following rules must be followed:
 
-* All routers must be tagged and the first tag becomes the name of the sub-client.
-* The name of the route becomes the name of the client method.
-* Uses of `fastapi.Form` must specify a `description`.
+- All routers must be tagged and the first tag becomes the name of the sub-client.
+- The name of the route becomes the name of the client method.
+- Uses of `fastapi.Form` must specify a `description`.
 
-[^1]: The only exception is `/.well-known/`.
+\[^1\]: The only exception is `/.well-known/`.

@@ -78,12 +78,10 @@ pytest --demo-dir=../diracx-charts/
 
 This only runs the diracx server, not any dependency like external IdP.
 
-
 ```bash
 # In the `diracx` folder
 ./run_local.sh
 ```
-
 
 ## Add a DB
 
@@ -91,7 +89,6 @@ Database classes live in `src/diracx/db/sql/<dbname>`. Have a look at the `src/d
 
 > [!NOTE]
 > We do not want to use the `ORM` part of `SQLAlchemy` (only the `core`) for performance reasons
-
 
 ## Dependency injection
 
@@ -107,8 +104,7 @@ def my_route(
     settings: Annotated[AuthSettings, Depends(AuthSettings.create)],
     job_db: Annotated[JobDB, Depends(JobDB.transaction)],
     user_info: Annotated[UserInfo, Depends(verify_dirac_token)],
-) -> MyReturnType:
-    ...
+) -> MyReturnType: ...
 ```
 
 ### Configuration
@@ -158,12 +154,10 @@ diracx.services =
 	parking = diracx.routers.parking:router
 ```
 
-
 This will prefix the routes with `/parking/` and mark them with the `"parking"` tag in the OpenAPI spec.
 
 > [!WARNING]
 > Any modification in the `setup.cfg` requires to re-install install `diracx`, even if it is a developer installation (`pip install -e`)
-
 
 ## Conventions
 

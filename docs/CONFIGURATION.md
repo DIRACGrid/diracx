@@ -8,8 +8,8 @@ Confidential information (such as passwords) is only handled in Settings, see th
 The DiracX configuration is stored as a single YAML file.
 We recommend that this is stored within a Git repository, and DiracX provides two git-based backends can be used by servers:
 
-* `git+file`: Refers to a local git repository. This must be stored on a shared volume which is made available to all DiracX servers.
-* `git+https`: Refers to a remote git repository that can be stored on any standard git host.
+- `git+file`: Refers to a local git repository. This must be stored on a shared volume which is made available to all DiracX servers.
+- `git+https`: Refers to a remote git repository that can be stored on any standard git host.
 
 ## Structure of the CS
 
@@ -46,19 +46,24 @@ import zlib
 from pathlib import Path
 
 import DIRAC
+
 DIRAC.initialize()
 from DIRAC import gConfig
 from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
 from DIRAC.ConfigurationSystem.Client.ConfigurationClient import ConfigurationClient
 
-client = ConfigurationClient(url=gConfig.getValue("/DIRAC/Configuration/MasterServer", ""))
+client = ConfigurationClient(
+    url=gConfig.getValue("/DIRAC/Configuration/MasterServer", "")
+)
 data = returnValueOrRaise(client.getCompressedData())
 data = zlib.decompress(data)
 with tempfile.NamedTemporaryFile() as tmp:
     tmp.write(data)
     tmp.flush()
     cmd = ["dirac", "internal", "legacy", "cs-sync", tmp.name, "default.yml"]
-    subprocess.run(cmd, env=os.environ | {"DIRAC_COMPAT_ENABLE_CS_CONVERSION": "yes"}, check=True)
+    subprocess.run(
+        cmd, env=os.environ | {"DIRAC_COMPAT_ENABLE_CS_CONVERSION": "yes"}, check=True
+    )
 
 print("Synced CS to default.yml, now you can review the changes and commit/push them")
 ```
