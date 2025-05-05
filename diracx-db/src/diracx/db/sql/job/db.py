@@ -50,7 +50,7 @@ class JobDB(BaseSQLDB):
     }
 
     # TODO: this is copied from the DIRAC JobDB
-    # but is overwriten in LHCbDIRAC, so we need
+    # but is overwritten in LHCbDIRAC, so we need
     # to find a way to make it dynamic
     jdl_2_db_parameters = ["JobName", "JobType", "JobGroup"]
 

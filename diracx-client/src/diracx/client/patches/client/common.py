@@ -132,7 +132,7 @@ def refresh_token(
 
     if response.status_code != 200:
         raise RuntimeError(
-            f"An issue occured while refreshing your access token: {response.json()['detail']}"
+            f"An issue occurred while refreshing your access token: {response.json()['detail']}"
         )
 
     res = response.json()

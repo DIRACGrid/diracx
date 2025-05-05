@@ -79,7 +79,7 @@ function cleanup(){
   trap - SIGTERM
   kill $moto_pid
   kill $diracx_pid
-  echo "Waiting for proccesses to exit"
+  echo "Waiting for processes to exit"
   wait $moto_pid $diracx_pid
   echo "Cleaning up"
   rm -rf "${tmp_dir}"

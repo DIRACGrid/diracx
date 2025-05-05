@@ -82,7 +82,7 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ):
-    """This the url callbacked by IAM/Checkin after the authorization
+    """This the url callbacked by IAM/CheckIn after the authorization
     flow was granted.
     """
     decrypted_state = decrypt_state(state, settings.state_key.fernet)

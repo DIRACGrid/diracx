@@ -19,7 +19,7 @@ from typing import (
 import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.models import Dependent
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -110,7 +110,7 @@ def create_app_inner(
 ) -> DiracFastAPI:
     """This method does the heavy lifting work of putting all the pieces together.
 
-    When starting the application normaly, this method is called by create_app,
+    When starting the application normally, this method is called by create_app,
     and the values of the parameters are taken from environment variables or
     entrypoints.
 
@@ -173,7 +173,7 @@ def create_app_inner(
         # This means vanilla DiracX routers get an instance of the extension's AccessPolicy
         for access_policy_class in access_policy_classes:
             # Here we do not check that access_policy_class.check is
-            # not already in the dependency_overrides becaue the same
+            # not already in the dependency_overrides because the same
             # policy could be used for multiple purpose
             # (e.g. open access)
             # assert access_policy_class.check not in app.dependency_overrides
@@ -436,14 +436,14 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 def find_dependents(
-    obj: APIRouter | Iterable[Dependant], cls: type[T]
+    obj: APIRouter | Iterable[Dependent], cls: type[T]
 ) -> Iterable[type[T]]:
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
         for route in obj.routes:
             if isinstance(route, APIRoute):
-                yield from find_dependents(route.dependant.dependencies, cls)
+                yield from find_dependents(route.dependent.dependencies, cls)
         return
 
     for dependency in obj:
@@ -458,7 +458,7 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
     """Cache the result of pinging the DB
-    (exceptions are not cachable).
+    (exceptions are not cacheable).
     """
     if db not in _db_alive_cache:
         try:

@@ -52,7 +52,7 @@ async def search(
                 "parameter": "Owner",
                 "operator": ScalarSearchOperator.EQUAL,
                 # TODO-385: https://github.com/DIRACGrid/diracx/issues/385
-                # The value shoud be user_info.sub,
+                # The value should be user_info.sub,
                 # but since we historically rely on the preferred_username
                 # we will keep using the preferred_username for now.
                 "value": preferred_username,
@@ -91,7 +91,7 @@ async def summary(
                 "parameter": "Owner",
                 "operator": ScalarSearchOperator.EQUAL,
                 # TODO-385: https://github.com/DIRACGrid/diracx/issues/385
-                # The value shoud be user_info.sub,
+                # The value should be user_info.sub,
                 # but since we historically rely on the preferred_username
                 # we will keep using the preferred_username for now.
                 "value": preferred_username,

@@ -26,7 +26,7 @@ These headers can be used to efficiently check for updates without needing to do
 ## Modifying configuration
 
 Currently the canonical source of configuration is from the legacy DIRAC Configuration Service.
-We forsee this will continue to be the case until the migration from DIRAC -> DiracX is complete.
+We foresee this will continue to be the case until the migration from DIRAC -> DiracX is complete.
 During this time, the DiracX configuration is not intended to be edited directly.
 The DiracX `default.yml` file differs in structure and contents from the legacy DIRAC Configuration Service.
 The legacy DIRAC CFG file can be converted into the new YAML format with:

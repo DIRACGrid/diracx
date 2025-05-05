@@ -56,7 +56,7 @@ class TaskQueueDB(BaseSQLDB):
         )
         rows = await self.conn.execute(stmt)
         # Get owners in this group and the amount of times they appear
-        # TODO: I guess the rows are already a list of tupes
+        # TODO: I guess the rows are already a list of tuples
         # maybe refactor
         return {r[0]: r[1] for r in rows if r}
 
@@ -108,7 +108,7 @@ class TaskQueueDB(BaseSQLDB):
         tq_ids: list[int],
         priority: float,
     ):
-        """Set the priority for a user/userGroup combo given a splitted share."""
+        """Set the priority for a user/userGroup combo given a split share."""
         update_stmt = (
             update(TaskQueues)
             .where(TaskQueues.TQId.in_(tq_ids))

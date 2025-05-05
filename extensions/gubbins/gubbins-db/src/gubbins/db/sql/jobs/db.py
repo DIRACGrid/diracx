@@ -24,7 +24,7 @@ class GubbinsJobDB(JobDB):
         self, job_ids, original: bool = False, with_info=False
     ) -> dict:
         """
-        This method modifes the one in the parent class:
+        This method modifies the one in the parent class:
         * adds an extra argument
         * changes the return type
 

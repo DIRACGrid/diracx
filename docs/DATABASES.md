@@ -15,7 +15,7 @@ For convenience SQLite is used for testing and development however this should n
 
 Connections to DiracX DBs are configured using the [SQLAlchemy connection URL format](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls).
 DiracX requires that the `driver` part of the URL is always specified and it must refer to an async-compatible backend.
-The value of this URL is taken from the environment vairable of the form `DIRACX_DB_URL_<db-name>`, where `<db-name>` is defined by the entry in the `diracx.dbs.sql` entrypoint in the `pyproject.toml`.
+The value of this URL is taken from the environment variable of the form `DIRACX_DB_URL_<db-name>`, where `<db-name>` is defined by the entry in the `diracx.dbs.sql` entrypoint in the `pyproject.toml`.
 
 ```bash
 export DIRACX_DB_URL_MYDB="mysql+aiomysql://user:pass@hostname:3306/MyDB"
