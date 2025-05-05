@@ -121,6 +121,8 @@ ignore-words-list = [
 
 
 [tool.mypy]
+warn_unreachable = true
+enable_error_code = ["redundant-expr", "truthy-bool"]
 files = [
     "diracx-api/src/**/*.py",
     "diracx-cli/src/**/*.py",
