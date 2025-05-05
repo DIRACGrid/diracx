@@ -250,6 +250,10 @@ def set_user_as_pilot(
     # No error is raised. We could change the "official" pilot group
     pilot = config.Operations[vo].Pilot
 
+    if pilot is None:
+        typer.echo("Pilot operation must not be None", err=True)
+        raise typer.Exit(1)
+
     pilot["GenericPilotGroup"] = pilot_group
     pilot["GenericPilotUser"] = pilot_preferred_username
 
