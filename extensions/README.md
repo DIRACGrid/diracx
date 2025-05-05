@@ -205,7 +205,7 @@ Note that even if you have your own `testing` package depending on `diracx-testi
 
 Working on this test extension is tricky as it is a subdirectory. if you want to debug it you need to:
 
-- buid the `gubbins` docker images (or download an art)
+- build the `gubbins` docker images (or download an art)
 - copy the files somewhere else
 - edit the pyproject
 - run_demo
