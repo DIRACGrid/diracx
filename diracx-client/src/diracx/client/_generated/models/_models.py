@@ -263,6 +263,8 @@ class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
     :vartype pilot_references: dict[str, any]
     :ivar generate_secrets: Boolean to allow secret creation or not.
     :vartype generate_secrets: bool
+    :ivar pilot_secret_use_count_max: Number of times we can use a secret.
+    :vartype pilot_secret_use_count_max: int
     """
 
     _validation = {
@@ -276,6 +278,10 @@ class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
         "grid_type": {"key": "grid_type", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{object}"},
         "generate_secrets": {"key": "generate_secrets", "type": "bool"},
+        "pilot_secret_use_count_max": {
+            "key": "pilot_secret_use_count_max",
+            "type": "int",
+        },
     }
 
     def __init__(
@@ -286,6 +292,7 @@ class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
         grid_type: str = "Dirac",
         pilot_references: Optional[Dict[str, Any]] = None,
         generate_secrets: bool = True,
+        pilot_secret_use_count_max: int = 1,
         **kwargs: Any,
     ) -> None:
         """
@@ -299,6 +306,8 @@ class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
         :paramtype pilot_references: dict[str, any]
         :keyword generate_secrets: Boolean to allow secret creation or not.
         :paramtype generate_secrets: bool
+        :keyword pilot_secret_use_count_max: Number of times we can use a secret.
+        :paramtype pilot_secret_use_count_max: int
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
@@ -306,6 +315,7 @@ class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
         self.grid_type = grid_type
         self.pilot_references = pilot_references
         self.generate_secrets = generate_secrets
+        self.pilot_secret_use_count_max = pilot_secret_use_count_max
 
 
 class GroupInfo(_serialization.Model):

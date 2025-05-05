@@ -59,6 +59,9 @@ async def register_new_pilots_to_db(
     generate_secrets: Annotated[
         bool, Body(description="Boolean to allow secret creation or not.")
     ] = True,
+    pilot_secret_use_count_max: Annotated[
+        int, Body(description="Number of times we can use a secret.")
+    ] = 1,
 ) -> list[PilotStampInfo] | list[PilotCredentialsInfo]:
     """Endpoint where a you can create pilots with their references.
     It will return the pilot secrets as well as an expiration date.
@@ -80,7 +83,11 @@ async def register_new_pilots_to_db(
 
     if generate_secrets:
         credentials, expiration_dates = await add_pilot_credentials(
-            pilot_stamps=pilot_stamps, pilot_db=pilot_db, settings=settings, vo=vo
+            pilot_stamps=pilot_stamps,
+            pilot_db=pilot_db,
+            settings=settings,
+            vo=vo,
+            pilot_secret_use_count_max=pilot_secret_use_count_max,
         )
     # Logs credentials creation
     logger.debug(f"{user_info.preferred_username} added {len(pilot_stamps)} pilots.")
