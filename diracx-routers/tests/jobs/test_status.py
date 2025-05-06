@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
+from time import sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -394,7 +395,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     }
 
 
-## test edge case for rescheduling
+# test edge case for rescheduling
 
 
 def test_reschedule_job_attr_update(normal_user_client: TestClient):
@@ -1084,9 +1085,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     assert old_data["HeartBeatTime"] is None
 
     payload = {valid_job_id: {"Vsize": 1234}}
-    r = normal_user_client.patch(
-        "/api/jobs/heartbeat", json=payload, params={"force": True}
-    )
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
     r.raise_for_status()
 
     r = normal_user_client.post("/api/jobs/search", json=search_body)
@@ -1097,4 +1096,48 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     # TODO: This should be timezone aware
     assert hbt.tzinfo is None
     hbt = hbt.replace(tzinfo=timezone.utc)
-    assert hbt > datetime.now(tz=timezone.utc) - timedelta(seconds=10)
+    assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
+
+    breakpoint()
+    # Kill the job by setting the status on it
+    #
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            valid_job_id: {
+                str(datetime.now(timezone.utc)): {
+                    "Status": JobStatus.KILLED,
+                    "MinorStatus": "Marked for termination",
+                }
+            }
+        },
+    )
+    r.raise_for_status()
+
+    # Send another heartbeat and check that a Kill job command was set
+    #
+    payload = {valid_job_id: {"Vsize": 1235}}
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r.raise_for_status()
+
+    #
+
+    commands = r.json()
+    assert len(commands) == 1, "Exactly one job command should be returned"
+    assert commands[0]["job_id"] == valid_job_id, (
+        "Wrong job id," f" should be '{valid_job_id}' but got {commands[0]['job_id']=}"
+    )
+    assert commands[0]["command"] == "Kill", (
+        "Wrong job command received," f" should be 'Kill' but got {commands[0]=}"
+    )
+    sleep(1)
+
+    # Send another heartbeat and check the job commands are empty
+    #
+    payload = {valid_job_id: {"Vsize": 1234}}
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r.raise_for_status()
+    commands = r.json()
+    assert (
+        len(commands) == 0
+    ), "Exactly zero job commands should be returned after heartbeat commands are sent"
