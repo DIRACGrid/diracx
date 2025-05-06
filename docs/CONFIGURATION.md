@@ -25,17 +25,19 @@ These headers can be used to efficiently check for updates without needing to do
 
 ## Modifying configuration
 
-Currently the canonical source of configuration is from the legacy DIRAC Configuration Service.
-We forsee this will continue to be the case until the migration from DIRAC -> DiracX is complete.
+The diracx configuration differs in structure and contents from the legacy DIRAC Configuration Service. Contrary to DIRAC's legacy configuration, which is stored in a custom [cfg](https://github.com/DIRACGrid/diraccfg) format, the diracx configuration is stored in a standard yaml format.
+Apart from these differences, DIRAC and DiracX need to share the same information, so a way to go from DIRAC configuration to DiracX one needs to be there, and the configurations should be in sync.
+
+The canonical source of configuration is from the legacy DIRAC Configuration Service.
+We foresee this will continue to be the case until the migration from DIRAC -> DiracX is complete.
 During this time, the DiracX configuration is not intended to be edited directly.
-The DiracX `default.yml` file differs in structure and contents from the legacy DIRAC Configuration Service.
 The legacy DIRAC CFG file can be converted into the new YAML format with:
 
 ```bash
 DIRAC_COMPAT_ENABLE_CS_CONVERSION=true dirac internal legacy cs-sync dirac-cs.cfg diracx-config/default.yml
 ```
 
-The following can be run on any client with a proxy
+The following script serves as wrapper for running the above command, and can be run on any diracx client (so, on any DIRAC v9+ client or server) with a proxy:
 
 ```python
 #!/usr/bin/env python
