@@ -1098,7 +1098,6 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     hbt = hbt.replace(tzinfo=timezone.utc)
     assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
 
-    breakpoint()
     # Kill the job by setting the status on it
     #
     r = normal_user_client.patch(
