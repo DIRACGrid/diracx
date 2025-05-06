@@ -18,7 +18,7 @@ class ActionType(StrEnum):
     ASSOCIATE_PILOT_WITH_SECRET = auto()
 
 
-class PilotCredentialsAccessPolicy(BaseAccessPolicy):
+class PilotManagementAccessPolicy(BaseAccessPolicy):
     """Rules:
     * You need either NORMAL_USER or TRUSTED_HOST in your properties
     * A NORMAL_USER can create a secret
@@ -60,6 +60,6 @@ class PilotCredentialsAccessPolicy(BaseAccessPolicy):
         raise ValueError("Unknown action.")
 
 
-CheckPilotCredentialsPolicyCallable = Annotated[
-    Callable, Depends(PilotCredentialsAccessPolicy.check)
+CheckPilotManagementPolicyCallable = Annotated[
+    Callable, Depends(PilotManagementAccessPolicy.check)
 ]

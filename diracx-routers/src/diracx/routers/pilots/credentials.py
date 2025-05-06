@@ -30,7 +30,7 @@ from ..dependencies import (
 )
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from .access_policies import ActionType, CheckPilotCredentialsPolicyCallable
+from .access_policies import ActionType, CheckPilotManagementPolicyCallable
 
 router = DiracxRouter()
 
@@ -50,7 +50,7 @@ async def register_new_pilots_to_db(
     ],
     settings: AuthSettings,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckPilotCredentialsPolicyCallable,
+    check_permissions: CheckPilotManagementPolicyCallable,
     grid_type: Annotated[str, Body(description="Grid type of the pilots.")] = "Dirac",
     pilot_references: Annotated[
         dict | None,
@@ -115,7 +115,7 @@ async def create_pilot_secrets(
         int | None, Body(description="Number of times that we can use a secret.")
     ],
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckPilotCredentialsPolicyCallable,
+    check_permissions: CheckPilotManagementPolicyCallable,
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
 ) -> list[PilotSecretsInfo]:
@@ -166,7 +166,7 @@ async def associate_pilots_with_secrets(
     ],
     pilot_agents_db: PilotAgentsDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckPilotCredentialsPolicyCallable,
+    check_permissions: CheckPilotManagementPolicyCallable,
 ):
 
     vo = user_info.vo
