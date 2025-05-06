@@ -30,16 +30,18 @@ types = [
     "types-python-dateutil",
     "types-PyYAML",
 ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
 root = "../../.."
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gubbins"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
