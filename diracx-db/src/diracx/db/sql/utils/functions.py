@@ -130,7 +130,7 @@ async def fetch_records_bulk_or_raises(
     allow_more_than_one_result_per_input: bool = False,
 ) -> list[dict]:
     """Fetches a list of elements in a table, returns a list of elements.
-    All elements fro the `element_to_fetch` **must** be present.
+    All elements from the `element_to_fetch` **must** be present.
     Raises the specified error if at least one is missing.
 
     Example:
