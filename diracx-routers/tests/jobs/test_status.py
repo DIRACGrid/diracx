@@ -1113,6 +1113,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     )
     r.raise_for_status()
 
+    sleep(1)
     # Send another heartbeat and check that a Kill job command was set
     #
     payload = {valid_job_id: {"Vsize": 1235}}
