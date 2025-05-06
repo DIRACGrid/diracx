@@ -44,7 +44,7 @@ class MagicEpochDateTime(TypeDecorator):
         """
         if value is None:
             return None
-        # Carefully convert from Decimal to datetime to avoid loosing precision
+        # Carefully convert from Decimal to datetime to avoid losing precision
         value += self.MAGIC_EPOC_NUMBER
         value_int = int(value)
         result = datetime.fromtimestamp(value_int, tz=UTC)

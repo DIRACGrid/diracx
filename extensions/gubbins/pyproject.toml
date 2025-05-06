@@ -43,7 +43,7 @@ profile = "black"
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errrors
+    "E",   # pycodestyle errors
     "F",   # pyflakes
     "B",   # flake8-bugbear
     "I",   # isort

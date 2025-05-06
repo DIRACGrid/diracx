@@ -1033,7 +1033,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Finish Device Flow.
 
-        This the url callbacked by IAM/Checkin after the authorization
+        This the url callbacked by IAM/CheckIn after the authorization
         flow was granted.
         It gets us the code we need for the authorization flow, and we
         can map it to the corresponding device flow using the user_code

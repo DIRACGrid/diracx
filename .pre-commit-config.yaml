@@ -45,3 +45,10 @@ repos:
       additional_dependencies:
       - mdformat-gfm
       - mdformat-black
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+    - id: codespell
+      args: ["--skip=diracx-client/src/diracx/client/_generated/*, diracx-[a-z]*/tests/*, diracx-testing/*, build/*, extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*, extensions/gubbins/gubbins-*/tests/*",
+      "--ignore-words-list=CheckIn", "-w"]

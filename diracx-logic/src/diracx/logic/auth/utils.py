@@ -233,7 +233,7 @@ def parse_and_validate_scope(
     return dict with group and properties.
 
     :raises:
-        * ValueError in case the scope isn't valide
+        * ValueError in case the scope isn't valid
     """
     scopes = set(scope.split(" "))
 

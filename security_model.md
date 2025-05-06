@@ -74,7 +74,7 @@ DiracX is built around the OAuth 2.0 authorisation flow, with the exception that
 - Enforcing user/group-specific quotas on compute and storage resources
 - Allowing for easier traceability
 
-For communication between users and DiracX services JSON Web Tokens (JWTs) are used as OAuth2 bearer tokens. The same mechanism is used whenever impersonation is required, such as running a user-provided payload in a job. The need to use encrypted JWT is not forseen.
+For communication between users and DiracX services JSON Web Tokens (JWTs) are used as OAuth2 bearer tokens. The same mechanism is used whenever impersonation is required, such as running a user-provided payload in a job. The need to use encrypted JWT is not foreseen.
 
 ### User and group management
 
@@ -105,7 +105,7 @@ These fields are requested using the `scope` parameter when initiating the OAuth
 
 DiracX exclusively uses asymmetric cryptography for signing tokens. It follows the current best practices for algorithms and key lengths and supports multiple active keys at the same time to facilitate key rotation. The time required before the key can be invalidated without disruption is related to the installation configured access token duration.
 
-The JSON Web Keys required for verifying tokens are publically exposed according to OIDC standards.
+The JSON Web Keys required for verifying tokens are publicly exposed according to OIDC standards.
 
 ### Issuance
 
@@ -144,7 +144,7 @@ All flows involving the external IdP follow the same sequence:
 
 ### Pilot jobs
 
-Pilots are submitted with a unique secret which can be used to start the pilot. This secret is hashed and registered in a database and can only be used to start a pilot only once. In special cases (such as Vaccum) a secret can be registered in the database manually by an installation admin for use with multiple pilots.
+Pilots are submitted with a unique secret which can be used to start the pilot. This secret is hashed and registered in a database and can only be used to start a pilot only once. In special cases (such as Vacuum) a secret can be registered in the database manually by an installation admin for use with multiple pilots.
 
 This initial secret is exchanged for a credential that can be used for pilot-specific activities, such as matching jobs or uploading pilot logging information, henceforth referred to as the pilot-matching secret.
 

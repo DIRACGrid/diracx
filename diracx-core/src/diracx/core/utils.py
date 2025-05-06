@@ -188,7 +188,7 @@ class TwoLevelCache:
                 self.locks[key].release()
             if blocking:
                 # It is critical that ``future`` is waited for outside of the lock
-                # as _work aquires the lock before filling the caches. This also
+                # as _work acquires the lock before filling the caches. This also
                 # means we can guarantee that the future has not yet been removed
                 # from the futures dict.
                 wait([future])

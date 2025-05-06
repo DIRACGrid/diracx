@@ -80,7 +80,7 @@ async def set_priorities_for_entity(
     task_queue_db: TaskQueueDB,
     owner: str | None = None,
 ):
-    """Set the priority for a user/userGroup combo given a splitted share."""
+    """Set the priority for a user/userGroup combo given a split share."""
     tq_dict = await task_queue_db.get_task_queue_priorities(owner_group, owner)
     if not tq_dict:
         return

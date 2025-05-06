@@ -128,7 +128,7 @@ class SandboxMetadataDB(BaseSQLDB):
         sb_type: SandboxType,
         se_name: str,
     ) -> None:
-        """Mapp sandbox and jobs."""
+        """Map sandbox and jobs."""
         for job_id in jobs_ids:
             # Define the entity id as 'Entity:entity_id' due to the DB definition:
             entity_id = self.jobid_to_entity_id(job_id)
