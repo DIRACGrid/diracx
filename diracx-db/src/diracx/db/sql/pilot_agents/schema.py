@@ -84,7 +84,7 @@ class PilotSecrets(PilotAgentsDBBase):
 
 
 class PilotToSecretMapping(PilotAgentsDBBase):
-    """Map multiple pilots to multiple secrets. Allow secret re-use."""
+    """Map multiple pilots to multiple secrets. Allow secret reuse."""
 
     __tablename__ = "PilotToSecretMapping"
 

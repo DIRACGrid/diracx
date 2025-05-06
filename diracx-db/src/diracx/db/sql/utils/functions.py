@@ -162,7 +162,7 @@ async def fetch_records_bulk_or_raises(
 
         stmt = stmt.order_by(operator)
 
-    # Transform into dictionnaries
+    # Transform into dictionaries
     results = rows_to_dicts(await conn.execute(stmt))
 
     # Detects duplicates

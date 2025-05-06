@@ -256,7 +256,7 @@ async def register_new_pilots(
         # We can verify it with "is not list"
 
         # To help verification, we transform them temporarily into sets
-        # We don't deal with sets everytime because they remove the order
+        # We don't deal with sets every time because they remove the order
         try:
             if isinstance(e.detail, str):
                 pilots_that_already_exist = set(pilot_stamps) - set(
