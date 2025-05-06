@@ -56,9 +56,9 @@ def my_ficture(): ...
 <td>
 
 ```python
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-delay = datetime.now() + timedelta(hours=1)
+delay = datetime.now(tz=timezone.utc) + timedelta(hours=1)
 ```
 
 </td>
