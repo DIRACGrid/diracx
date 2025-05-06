@@ -5,10 +5,12 @@ __all__ = ["JobDB"]
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import bindparam, case, delete, func, insert, select, update
+from sqlalchemy import bindparam, case, delete, func, insert, select, text, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
+
+from DIRAC.WorkloadManagementSystem.Client import JobStatus
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
@@ -333,3 +335,60 @@ class JobDB(BaseSQLDB):
             JobCommand(job_id=cmd.JobID, command=cmd.Command, arguments=cmd.Arguments)
             for cmd in commands
         ]
+
+    async def fill_jobs_history_summary(self):
+        """Fill the JobsHistorySummary table with the summary of the jobs in a final state."""
+        # Create the staging table
+        dialect = self.conn.dialect
+        if dialect == "mysql":
+            create_staging_table_sql = "CREATE TABLE IF NOT EXISTS JobsHistorySummary_staging LIKE JobsHistorySummary"
+        elif dialect == "postgresql":
+            create_staging_table_sql = (
+                "CREATE TABLE IF NOT EXISTS JobsHistorySummary_staging "
+                "(LIKE JobsHistorySummary INCLUDING ALL)"
+            )
+        elif dialect == "sqlite":
+            create_staging_table_sql = "CREATE TABLE IF NOT EXISTS JobsHistorySummary_staging AS JobsHistorySummary"
+        await self.conn.execute(text(create_staging_table_sql))
+
+        if dialect == "mysql":
+            current_date_expr = "UTC_DATE()"
+        elif dialect == "postgresql":
+            current_date_expr = "CURRENT_DATE"
+        elif dialect == "sqlite":
+            current_date_expr = "DATE('now')"
+        else:
+            raise ValueError(f"Unsupported DB dialect: {dialect}")
+
+        # Columns for grouping
+        def_columns = "Status, Site, Owner, OwnerGroup, JobGroup, JobType, ApplicationStatus, MinorStatus"
+        agg_columns = "COUNT(JobID), SUM(RescheduleCounter)"
+
+        # Final states list
+        final_states = JobStatus.JOB_FINAL_STATES + JobStatus.JOB_REALLY_FINAL_STATES
+        final_states_sql = ", ".join(f"'{state}'" for state in final_states)
+
+        # Build SQL statement
+        insert_sql = f"""
+            INSERT INTO JobsHistorySummary_staging
+            SELECT {def_columns}, {agg_columns}
+            FROM Jobs
+            WHERE Status IN ({final_states_sql})
+            AND LastUpdateTime < {current_date_expr}
+            GROUP BY {def_columns}
+        """  # noqa: S608
+        await self.conn.execute(text(insert_sql))
+
+        stmts = []
+
+        if dialect in {"mysql", "sqlite", "postgresql"}:
+            stmts = [
+                "ALTER TABLE JobsHistorySummary RENAME TO JobsHistorySummary_old;",
+                "ALTER TABLE JobsHistorySummary_staging RENAME TO JobsHistorySummary;",
+                "DROP TABLE JobsHistorySummary_old;",
+            ]
+        else:
+            raise ValueError(f"Unsupported DB dialect: {dialect}")
+
+        for stmt in stmts:
+            await self.conn.execute(text(stmt))
