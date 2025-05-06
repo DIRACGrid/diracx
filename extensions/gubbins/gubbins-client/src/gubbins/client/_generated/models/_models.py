@@ -582,6 +582,8 @@ class OpenIDConfiguration(_serialization.Model):
     :vartype device_authorization_endpoint: str
     :ivar revocation_endpoint: Revocation Endpoint. Required.
     :vartype revocation_endpoint: str
+    :ivar jwks_uri: Jwks Uri. Required.
+    :vartype jwks_uri: str
     :ivar grant_types_supported: Grant Types Supported. Required.
     :vartype grant_types_supported: list[str]
     :ivar scopes_supported: Scopes Supported. Required.
@@ -604,6 +606,7 @@ class OpenIDConfiguration(_serialization.Model):
         "authorization_endpoint": {"required": True},
         "device_authorization_endpoint": {"required": True},
         "revocation_endpoint": {"required": True},
+        "jwks_uri": {"required": True},
         "grant_types_supported": {"required": True},
         "scopes_supported": {"required": True},
         "response_types_supported": {"required": True},
@@ -622,6 +625,7 @@ class OpenIDConfiguration(_serialization.Model):
             "type": "str",
         },
         "revocation_endpoint": {"key": "revocation_endpoint", "type": "str"},
+        "jwks_uri": {"key": "jwks_uri", "type": "str"},
         "grant_types_supported": {"key": "grant_types_supported", "type": "[str]"},
         "scopes_supported": {"key": "scopes_supported", "type": "[str]"},
         "response_types_supported": {
@@ -651,6 +655,7 @@ class OpenIDConfiguration(_serialization.Model):
         authorization_endpoint: str,
         device_authorization_endpoint: str,
         revocation_endpoint: str,
+        jwks_uri: str,
         grant_types_supported: List[str],
         scopes_supported: List[str],
         response_types_supported: List[str],
@@ -672,6 +677,8 @@ class OpenIDConfiguration(_serialization.Model):
         :paramtype device_authorization_endpoint: str
         :keyword revocation_endpoint: Revocation Endpoint. Required.
         :paramtype revocation_endpoint: str
+        :keyword jwks_uri: Jwks Uri. Required.
+        :paramtype jwks_uri: str
         :keyword grant_types_supported: Grant Types Supported. Required.
         :paramtype grant_types_supported: list[str]
         :keyword scopes_supported: Scopes Supported. Required.
@@ -694,6 +701,7 @@ class OpenIDConfiguration(_serialization.Model):
         self.authorization_endpoint = authorization_endpoint
         self.device_authorization_endpoint = device_authorization_endpoint
         self.revocation_endpoint = revocation_endpoint
+        self.jwks_uri = jwks_uri
         self.grant_types_supported = grant_types_supported
         self.scopes_supported = scopes_supported
         self.response_types_supported = response_types_supported
