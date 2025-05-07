@@ -1,5 +1,7 @@
 # Databases
 
+TODO: review
+
 The primary store of operational data in DiracX is in SQL databases managed through SQLAlchemy.
 In addition, DiracX utilizes OpenSearch (or Elasticsearch) for storing pilot logs, medium-term metadata about jobs and pilots ("Job Parameters" and "Pilot Parameters"), and optionally, for OpenTelemetry data.
 Access to databases is managed by the `diracx-db` package.

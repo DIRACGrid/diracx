@@ -49,7 +49,7 @@ TODO: WRONG
   - To associate the command with `dirac`, import the module in `src/diracx/__init__.py`:
 
   ```python
-  from . import command
+    from . import command
   ...
 
   app.add_typer(<command name>.app, name="<command name>")
