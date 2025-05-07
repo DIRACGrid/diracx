@@ -22,6 +22,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+testing = []
 types = [
     "boto3-stubs",
     "types-aiobotocore[essential]",
@@ -30,6 +31,7 @@ types = [
     "types-python-dateutil",
     "types-PyYAML",
 ]
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
