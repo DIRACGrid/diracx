@@ -1099,7 +1099,6 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
 
     # Kill the job by setting the status on it
-    #
     r = normal_user_client.patch(
         "/api/jobs/status",
         json={
@@ -1115,12 +1114,9 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
 
     sleep(1)
     # Send another heartbeat and check that a Kill job command was set
-    #
     payload = {valid_job_id: {"Vsize": 1235}}
     r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
     r.raise_for_status()
-
-    #
 
     commands = r.json()
     assert len(commands) == 1, "Exactly one job command should be returned"
@@ -1133,7 +1129,6 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     sleep(1)
 
     # Send another heartbeat and check the job commands are empty
-    #
     payload = {valid_job_id: {"Vsize": 1234}}
     r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
     r.raise_for_status()
