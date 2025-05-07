@@ -13,9 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    # This is obvious
     "diracx-db",
-    # We should add something else
 ]
 dynamic = ["version"]
 
@@ -26,18 +24,18 @@ testing = ["gubbins-testing", "diracx-testing"]
 LollygagDB = "gubbins.db.sql:LollygagDB"
 JobDB = "gubbins.db.sql:GubbinsJobDB"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-# This should not be in your extension !
-# It is just because we have this demo extension
-# in a subfolder of our git repo
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
 root = "../../.."
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gubbins"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
