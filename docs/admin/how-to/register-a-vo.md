@@ -72,7 +72,7 @@
    ```
 
 After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
-See [Convert CS](./convert_cs.md) for next steps.
+See [Convert CS](./convert-cs.md) for next steps.
 
 ## Interact with Computing Elements
 

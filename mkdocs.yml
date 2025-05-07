@@ -1,9 +1,6 @@
 extra_css:
   - assets/css/extra.css
 
-extra_javascript:
-  - assets/js/hide-title-home.js
-
 site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
 site_url: https://diracx.io/
@@ -43,27 +40,68 @@ theme:
 
 nav:
   - Home: index.md
+
+  - Security Policy: SECURITY.md
+
   - Roadmap: roadmap.md
+
   - Users:
-    - Introduction: user/index.md
-    - Tutorials: user/tutorials/index.md
-    - How-To: user/how-to/index.md
-    - Explanations: user/explanations/index.md
     - Reference:
-      - Client Config: user/reference/client_configuration.md
-      - Index: user/reference/index.md
+      - Client Config: user/reference/client-configuration.md
+
   - Administrators:
-    - Introduction: admin/index.md
-    - Tutorials: admin/tutorials/index.md
-    - How-To: admin/how-to/index.md
-    - Explanations: admin/explanations/index.md
-    - Reference: admin/reference/index.md
+    - Explanations:
+      - Configuration: admin/explanations/configuration.md
+      - OpenTelemetry: admin/explanations/opentelemetry.md
+      - Chart structure: admin/explanations/chart-structure.md
+
+    - How-To:
+      - Convert CS: admin/how-to/convert-cs.md
+      - Register a VO: admin/how-to/register-a-vo.md
+      - Register the admin VO: admin/how-to/register-the-admin-vo.md
+      - Debugging: admin/how-to/debugging.md
+      - Install kubernetes: admin/how-to/install-kubernetes.md
+      - Installing: admin/how-to/installing.md
+      - Upgrading: admin/how-to/upgrading.md
+
+    - Reference:
+      - Security Model: admin/reference/security_model.md
+      - Charts values: admin/reference/values.md
+
+    - Tutorials:
+      - Run locally: admin/tutorials/run_locally.md
+
   - Developers:
-    - Introduction:dev/index.md
-    - Tutorials: dev/tutorials/index.md
-    - How-To: dev/how-to/index.md
-    - Explanations: dev/explanations/index.md
-    - Reference: dev/reference/index.md
+    - Explanations:
+      - Components:
+        - Introduction: dev/explanations/components/index.md
+        - API: dev/explanations/components/api.md
+        - CLI: dev/explanations/components/cli.md
+        - DataBases: dev/explanations/components/db.md
+        - Routes: dev/explanations/components/routes.md
+
+      - Client: dev/explanations/client.md
+      - Testing: dev/explanations/testing.md
+      - Run demo: dev/explanations/run_demo.md
+
+    - How-To:
+      - Add a DB: dev/how-to/add-a-db.md
+      - Add a router: dev/how-to/add-a-route.md
+      - Add settings: dev/how-to/add-a-setting.md
+      - Client customization: dev/how-to/client-customization.md
+      - Client generation: dev/how-to/client-generation.md
+      - Write docs: dev/how-to/write-docs.md
+
+    - Reference:
+      - Coding conventions: dev/reference/coding-conventions.md
+      - Configuration: dev/reference/configuration.md
+      - Dependency injection: dev/reference/dependency-injection.md
+
+    - Tutorials:
+      - Getting started: dev/tutorials/getting-started.md
+      - Play with auth: dev/tutorials/play-with-auth.md
+      - Run locally: dev/tutorials/run-locally.md
+
   - Project:
     - Introduction: project/index.md
     - Consortium: project/consortium.md
@@ -100,8 +138,8 @@ markdown_extensions:
 plugins:
   - diracx:
       repos:
-        - url: https://github.com/chaen/diracx-charts.git
-          branch: mkdoc
+        - url: https://github.com/DIRACGrid/diracx-charts.git
+          branch: master
           include:
             - docs
             - diracx

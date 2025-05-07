@@ -1,3 +1,4 @@
+@import url('fontawesome-all.min.css');
 @import url("https://fonts.googleapis.com/css?family=Roboto:100,300,100italic,300italic");
 /*
 	Landed by HTML5 UP
@@ -2848,7 +2849,7 @@ body.landing #header {
 #banner {
   background-attachment: fixed;
   background-color: #4e5558;
-  background-image: url("images/banner.jpg");
+  /* background-image: url("images/banner.jpg"); */
   background-position: center center;
   background-size: cover;
   box-shadow: 0 0.25em 0.5em 0 rgba(0, 0, 0, 0.25);

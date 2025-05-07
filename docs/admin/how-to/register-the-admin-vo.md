@@ -93,4 +93,4 @@ We currently support [Indigo IAM](https://indigo-iam.github.io/) and [dex](https
    ```
 
 After saving, you should sync the configuration with DiracX.
-See [Convert CS](./convert_cs.md) for next steps.
+See [Convert CS](./convert-cs.md) for next steps.
