@@ -9,11 +9,22 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import ColumnElement, expression
 
-from diracx.core.exceptions import GenericError
+from diracx.core.exceptions import GenericError, InvalidQueryError
 from diracx.db.exceptions import DBInBadStateError
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
+
+
+def _get_columns(table, parameters):
+    columns = [x for x in table.columns]
+    if parameters:
+        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
+            raise InvalidQueryError(
+                f"Unrecognised parameters requested {unrecognised_parameters}"
+            )
+        columns = [c for c in columns if c.name in parameters]
+    return columns
 
 
 class utcnow(expression.FunctionElement):  # noqa: N801

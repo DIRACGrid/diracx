@@ -6,7 +6,9 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.properties import NORMAL_USER, TRUSTED_HOST
+from diracx.core.exceptions import PilotNotFoundError
+from diracx.core.properties import NORMAL_USER
+from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -14,8 +16,8 @@ from diracx.routers.utils.users import AuthorizedUserInfo
 class ActionType(StrEnum):
     # Create a pilot or a secret
     CREATE_PILOT_OR_SECRET = auto()
-    # Associate a pilot with a secret
-    ASSOCIATE_PILOT_WITH_SECRET = auto()
+    # Change some pilot fields
+    CHANGE_PILOT_FIELD = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
@@ -31,11 +33,37 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         user_info: AuthorizedUserInfo,
         /,
         *,
+        pilot_db: PilotAgentsDB | None = None,
+        pilot_stamps: list[str] | None = None,
         vo: str | None = None,
         action: ActionType | None = None,
     ):
         assert action, "action is a mandatory parameter"
-        assert vo, "vo is a mandatory parameter"
+
+        if not vo:
+            assert pilot_stamps and pilot_db, (
+                "if vo is not provided, "
+                "pilot_stamp and pilot_db are mandatory to determine the vo"
+            )
+
+            try:
+                pilots = await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps)
+            except PilotNotFoundError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="The given stamp is not associated with a pilot",
+                ) from e
+
+            # Semantic assured by get_pilots_by_stamp_bulk
+            first_vo = pilots[0]["VO"]
+
+            if not all(pilot["VO"] == first_vo for pilot in pilots):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You gave pilots with different VOs.",
+                )
+
+            vo = first_vo
 
         if not vo == user_info.vo:
             raise HTTPException(
@@ -43,19 +71,18 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                 detail="You don't have the right VO for this resource.",
             )
 
-        if action == ActionType.CREATE_PILOT_OR_SECRET:
-            if NORMAL_USER in user_info.properties:
-                return
-
+        if NORMAL_USER not in user_info.properties:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have the rights to create secrets.",
             )
-        if action == ActionType.ASSOCIATE_PILOT_WITH_SECRET:
-            if {NORMAL_USER, TRUSTED_HOST} & set(user_info.properties):
-                return
 
-            raise HTTPException(status.HTTP_403_FORBIDDEN)
+        if action == ActionType.CREATE_PILOT_OR_SECRET:
+            return
+
+        if action == ActionType.CHANGE_PILOT_FIELD:
+            # TODO: Tailor, user-specific?
+            return
 
         raise ValueError("Unknown action.")
 

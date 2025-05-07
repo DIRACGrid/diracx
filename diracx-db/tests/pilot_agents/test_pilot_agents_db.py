@@ -13,6 +13,7 @@ from diracx.core.exceptions import (
     SecretHasExpiredError,
     SecretNotFoundError,
 )
+from diracx.core.models import PilotFieldsMapping, PilotStatus
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils.functions import hash
 
@@ -115,7 +116,7 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
 
 
 @pytest.mark.asyncio
-async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
+async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
         pilot_stamp = "pilot-reference-test"
@@ -134,10 +135,47 @@ async def test_insert_and_select_single(pilot_agents_db: PilotAgentsDB):
         with pytest.raises(PilotNotFoundError):
             await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
 
+        # Assert values
+        assert pilot["VO"] == MAIN_VO
+        assert pilot["PilotStamp"] == pilot_stamp
+        assert pilot["GridType"] == "grid-type"
+        assert pilot["BenchMark"] == 0.0
+        assert pilot["Status"] == "Submitted"
+        assert pilot["StatusReason"] == "Unknown"
+        assert not pilot["AccountingSent"]
+
+        #
+        # Modify a pilot, then check if every change is done
+        #
+        await pilot_agents_db.update_pilot_fields_bulk(
+            [
+                PilotFieldsMapping(
+                    PilotStamp=pilot_stamp,
+                    BenchMark=1.0,
+                    StatusReason="NewReason",
+                    AccountingSent=True,
+                    Status=PilotStatus.WAITING,
+                )
+            ]
+        )
+
+        res = await pilot_agents_db.get_pilots_by_stamp_bulk([pilot_stamp])
+
+        assert len(res) == 1
+
+        pilot = res[0]
+
+        with pytest.raises(PilotNotFoundError):
+            await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
+
         # Set values
         assert pilot["VO"] == MAIN_VO
         assert pilot["PilotStamp"] == pilot_stamp
         assert pilot["GridType"] == "grid-type"
+        assert pilot["BenchMark"] == 1.0
+        assert pilot["Status"] == PilotStatus.WAITING
+        assert pilot["StatusReason"] == "NewReason"
+        assert pilot["AccountingSent"]
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])

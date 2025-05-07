@@ -6,8 +6,8 @@ services components (db, logic, routers).
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
-from typing import Literal
+from enum import Enum, StrEnum
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -236,6 +236,42 @@ class PilotStampInfo(BaseModel):
 
 class PilotCredentialsInfo(PilotSecretsInfo, PilotStampInfo):
     pass
+
+
+class PilotStatus(str, Enum):
+    """Pilot statuses from Dirac."""
+
+    #: The pilot has been generated and is transferred to a remote site:
+    SUBMITTED = "Submitted"
+    #: The pilot is waiting for a computing resource in a batch queue:
+    WAITING = "Waiting"
+    #: The pilot is running a payload on a worker node:
+    RUNNING = "Running"
+    #: The pilot finished its execution:
+    DONE = "Done"
+    #: The pilot execution failed:
+    FAILED = "Failed"
+    #: The pilot was deleted:
+    DELETED = "Deleted"
+    #: The pilot execution was aborted:
+    ABORTED = "Aborted"
+    #: Cannot get information about the pilot status:
+    UNKNOWN = "Unknown"
+
+
+class PilotFieldsMapping(BaseModel):
+    """All the fields that a user can modify on a Pilot (except PilotStamp)."""
+
+    PilotStamp: str
+    StatusReason: Optional[str] = None
+    Status: Optional[PilotStatus] = None
+    BenchMark: Optional[float] = None
+    DestinationSite: Optional[str] = None
+    Queue: Optional[str] = None
+    GridSite: Optional[str] = None
+    GridType: Optional[str] = None
+    AccountingSent: Optional[bool] = None
+    CurrentJobID: Optional[bool] = None
 
 
 class AccessTokenPayload(TokenPayload):

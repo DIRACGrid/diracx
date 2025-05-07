@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, bindparam, insert, update
+from sqlalchemy import DateTime, bindparam
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.sql import delete
+from sqlalchemy.sql import delete, insert, update
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
@@ -17,9 +17,14 @@ from diracx.core.exceptions import (
     SecretHasExpiredError,
     SecretNotFoundError,
 )
+from diracx.core.models import PilotFieldsMapping
 from diracx.db.exceptions import DBInBadStateError
 
-from ..utils import BaseSQLDB, fetch_records_bulk_or_raises, utcnow
+from ..utils import (
+    BaseSQLDB,
+    fetch_records_bulk_or_raises,
+    utcnow,
+)
 from .schema import PilotAgents, PilotAgentsDBBase, PilotSecrets, PilotToSecretMapping
 
 
@@ -226,6 +231,20 @@ class PilotAgentsDB(BaseSQLDB):
         # To avoid raise condition
         await self.conn.commit()
 
+    async def delete_pilots_bulk(self, pilot_stamps: list[str]):
+        """Bulk delete pilots."""
+        stmt = delete(PilotAgents).where(PilotAgents.pilot_stamp.in_(pilot_stamps))
+
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount != len(pilot_stamps):
+            await self.conn.rollback()
+
+            raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
+
+        # To avoid raise condition
+        await self.conn.commit()
+
     async def insert_unique_secrets_bulk(
         self,
         hashed_secrets: list[str],
@@ -294,6 +313,46 @@ class PilotAgentsDB(BaseSQLDB):
                     detail="at least one of these pilots already have a secret",
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
+
+    async def update_pilot_fields_bulk(
+        self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
+    ):
+        """Bulk update pilots with a mapping.
+
+        The mapping helps to update multiple fields at a time.
+        """
+        stmt = (
+            update(PilotAgents)
+            .where(PilotAgents.pilot_stamp == bindparam("b_pilot_stamp"))
+            .values(
+                {
+                    key: bindparam(key)
+                    for key in pilot_stamps_to_fields_mapping[0]
+                    .model_dump(exclude_none=True)
+                    .keys()
+                    if key != "PilotStamp"
+                }
+            )
+        )
+
+        values = [
+            {
+                **{"b_pilot_stamp": mapping.PilotStamp},
+                **mapping.model_dump(exclude={"PilotStamp"}, exclude_none=True),
+            }
+            for mapping in pilot_stamps_to_fields_mapping
+        ]
+
+        res = await self.conn.execute(stmt, values)
+
+        if res.rowcount != len(pilot_stamps_to_fields_mapping):
+            await self.conn.rollback()
+
+            raise PilotNotFoundError(
+                data={"mapping": str(pilot_stamps_to_fields_mapping)}
+            )
+
+        await self.conn.commit()
 
     async def verify_that_pilot_can_access_secret_bulk(
         self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]

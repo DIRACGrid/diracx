@@ -39,7 +39,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
 
     r = normal_test_client.post(
-        "/api/pilots/register-new-pilots",
+        "/api/pilots/",
         json=body,
     )
 
@@ -68,7 +68,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
     }
 
     r = normal_test_client.post(
-        "/api/pilots/register-new-pilots",
+        "/api/pilots/",
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -87,7 +87,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamps[0] + "_new_one"]}
 
     r = normal_test_client.post(
-        "/api/pilots/register-new-pilots",
+        "/api/pilots/",
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -145,7 +145,7 @@ async def test_create_secrets_and_login(normal_test_client):
     }
 
     r = normal_test_client.post(
-        "/api/pilots/create-pilot-secrets",
+        "/api/pilots/fields/secrets",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -164,7 +164,7 @@ async def test_create_secrets_and_login(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps, "generate_secrets": False}
 
     r = normal_test_client.post(
-        "/api/pilots/register-new-pilots",
+        "/api/pilots/",
         json=body,
     )
 
@@ -174,14 +174,13 @@ async def test_create_secrets_and_login(normal_test_client):
 
     body = {"pilot_stamps": pilot_stamps, "pilot_secrets": secrets}
 
-    r = normal_test_client.post(
-        "/api/pilots/associate-pilot-with-secrets",
+    r = normal_test_client.patch(
+        "/api/pilots/fields/secrets",
         json=body,
         headers={"Content-Type": "application/json"},
     )
 
-    assert r.status_code == 200, r.json()
-
+    assert r.status_code == 204
     #  -------------- Login with the right credentials --------------
 
     for stamp, secret in zip(pilot_stamps, secrets):
@@ -213,8 +212,8 @@ async def test_create_secrets_and_login(normal_test_client):
     # Allowed by the router to avoid sending thousands of the same secret, if we want bunch of pilots to share a secret
     body = {"pilot_stamps": pilot_stamps, "pilot_secrets": [secrets[1]]}
 
-    r = normal_test_client.post(
-        "/api/pilots/associate-pilot-with-secrets",
+    r = normal_test_client.patch(
+        "/api/pilots/fields/secrets",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -234,13 +233,13 @@ async def test_create_secrets_and_login(normal_test_client):
         "pilot_secrets": [secrets[1]],
     }
 
-    r = normal_test_client.post(
-        "/api/pilots/associate-pilot-with-secrets",
+    r = normal_test_client.patch(
+        "/api/pilots/fields/secrets",
         json=body,
         headers={"Content-Type": "application/json"},
     )
 
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 204
 
     #  -------------- Login with the right credentials --------------
     for stamp in pilot_stamps:
@@ -254,3 +253,19 @@ async def test_create_secrets_and_login(normal_test_client):
         )
 
         assert r.status_code == 200, r.json()
+
+
+async def test_create_pilots_and_modify_them(normal_test_client):
+    pilot_stamp = "stamps_1"
+
+    #  -------------- Bulk insert --------------
+    body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamp]}
+
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+    # TODO: Search (as Jobs) for pilots

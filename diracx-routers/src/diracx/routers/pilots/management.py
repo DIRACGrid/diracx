@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import Body, Depends, HTTPException, status
@@ -11,7 +12,12 @@ from diracx.core.exceptions import (
     PilotNotFoundError,
     SecretNotFoundError,
 )
-from diracx.core.models import PilotCredentialsInfo, PilotSecretsInfo, PilotStampInfo
+from diracx.core.models import (
+    PilotCredentialsInfo,
+    PilotFieldsMapping,
+    PilotSecretsInfo,
+    PilotStampInfo,
+)
 from diracx.logic.auth.pilot import (
     add_pilot_credentials,
     create_credentials,
@@ -23,6 +29,7 @@ from diracx.logic.auth.pilot import (
 from diracx.logic.auth.pilot import (
     associate_pilots_with_secrets as associate_pilots_with_secrets_bl,
 )
+from diracx.logic.pilots.management import delete_pilots_bulk, update_pilots_fields
 
 from ..dependencies import (
     AuthSettings,
@@ -37,7 +44,7 @@ router = DiracxRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/register-new-pilots")
+@router.post("/")
 async def register_new_pilots_to_db(
     pilot_db: PilotAgentsDB,
     pilot_stamps: Annotated[
@@ -102,7 +109,31 @@ async def register_new_pilots_to_db(
         return create_stamp_response(pilot_stamps=pilot_stamps)
 
 
-@router.post("/create-pilot-secrets")
+@router.delete("/", status_code=HTTPStatus.NO_CONTENT)
+async def patch_pilot_data(
+    pilot_stamps: Annotated[
+        list[str], Body(description="Stamps of the pilots we want to delete.")
+    ],
+    pilot_agents_db: PilotAgentsDB,
+    check_permissions: CheckPilotManagementPolicyCallable,
+):
+    """Endpoint to delete a pilot."""
+    await check_permissions(
+        action=ActionType.CHANGE_PILOT_FIELD,
+        pilot_stamps=pilot_stamps,
+        pilot_db=pilot_agents_db,
+    )
+
+    try:
+        await delete_pilots_bulk(pilot_db=pilot_agents_db, pilot_stamps=pilot_stamps)
+    except PilotNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one pilot has not been found.",
+        ) from e
+
+
+@router.post("/fields/secrets")
 async def create_pilot_secrets(
     n: Annotated[int, Body(description="Number of secrets to create.")],
     vo: Annotated[
@@ -152,7 +183,7 @@ async def create_pilot_secrets(
     )
 
 
-@router.post("/associate-pilot-with-secrets")
+@router.patch("/fields/secrets", status_code=HTTPStatus.NO_CONTENT)
 async def associate_pilots_with_secrets(
     pilot_stamps: Annotated[list[str], Body(description="List of all pilot stamps.")],
     pilot_secrets: Annotated[
@@ -168,10 +199,12 @@ async def associate_pilots_with_secrets(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
-
-    vo = user_info.vo
-
-    await check_permissions(action=ActionType.ASSOCIATE_PILOT_WITH_SECRET, vo=vo)
+    """Endpoint to associate pilots with secrets."""
+    await check_permissions(
+        action=ActionType.CHANGE_PILOT_FIELD,
+        pilot_stamps=pilot_stamps,
+        pilot_db=pilot_agents_db,
+    )
 
     if len(pilot_secrets) != 1 and len(pilot_secrets) != len(pilot_stamps):
         raise HTTPException(
@@ -205,4 +238,26 @@ async def associate_pilots_with_secrets(
         f"with {len(pilot_secrets)} secrets."
     )
 
-    return "Done."
+
+@router.patch("/fields", status_code=HTTPStatus.NO_CONTENT)
+async def update_pilot_fields(
+    pilot_stamps_to_fields_mapping: Annotated[
+        list[PilotFieldsMapping],
+        Body(description="(pilot_stamp, pilot_fields) mapping to change."),
+    ],
+    pilot_agents_db: PilotAgentsDB,
+    check_permissions: CheckPilotManagementPolicyCallable,
+):
+
+    pilot_stamps = [mapping.PilotStamp for mapping in pilot_stamps_to_fields_mapping]
+
+    await check_permissions(
+        action=ActionType.CHANGE_PILOT_FIELD,
+        pilot_db=pilot_agents_db,
+        pilot_stamps=pilot_stamps,
+    )
+
+    await update_pilots_fields(
+        pilot_db=pilot_agents_db,
+        pilot_stamps_to_fields_mapping=pilot_stamps_to_fields_mapping,
+    )

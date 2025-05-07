@@ -7,6 +7,7 @@ from .base import (
     apply_sort_constraints,
 )
 from .functions import (
+    _get_columns,
     fetch_records_bulk_or_raises,
     hash,
     rows_to_dicts,
@@ -30,4 +31,5 @@ __all__ = (
     "SQLDBUnavailableError",
     "rows_to_dicts",
     "fetch_records_bulk_or_raises",
+    "_get_columns",
 )
