@@ -1,0 +1,19 @@
+[workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[feature.docs.dependencies]
+python = ">=3.13.3,<3.14"
+
+[feature.docs.pypi-dependencies]
+mkdocs-material = "*"
+mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
+
+[environments]
+docs = ["docs"]
+
+[tasks]
+docs = { cmd = "mkdocs {{ args }}", args = [{ arg = "args" }]}
+
+[tasks.docs-serve]
+depends-on = [{ task = "docs", environment = "docs", args = ["serve"]}]
