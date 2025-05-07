@@ -12,25 +12,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    shell: bash -el {0}
-
 jobs:
 
   shellcheck:
     runs-on: ubuntu-latest
-    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
-    timeout-minutes: 30
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Run shellcheck
-      # Excluded codes related to sourcing files
-      #     SC1090: Can't follow non-constant source
-      #     SC1091: Not following sourced file
-      run: |
-        find -name '*.sh' -print0 | xargs -0 -n1 shellcheck --exclude=SC1090,SC1091 --external-source
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          environments: shellcheck
+      - name: Run shellcheck
+        run: pixi run shellcheck
 
   unittest:
     name: Unit test - ${{ matrix.package }}
@@ -38,49 +31,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - package: "./diracx-core"
-            dependencies: "./diracx-testing"
-          - package: "./diracx-db"
-            dependencies: "./diracx-testing ./diracx-core"
-          - package: "./diracx-logic"
-            dependencies: "./diracx-core ./diracx-db"
-          - package: "./diracx-routers"
-            dependencies: "./diracx-testing ./diracx-core ./diracx-db ./diracx-logic"
-          - package: "./diracx-client"
-            dependencies: "./diracx-testing ./diracx-core"
-          - package: "./diracx-api"
-            dependencies: "./diracx-testing ./diracx-core ./diracx-client"
-          - package: "./diracx-cli"
-            dependencies: "./diracx-testing ./diracx-core ./diracx-client ./diracx-api"
+        package:
+          - diracx-core
+          - diracx-db
+          - diracx-logic
+          - diracx-routers
+          - diracx-client
+          - diracx-api
+          - diracx-cli
+          - gubbins-core
+          - gubbins-db
+          - gubbins-logic
+          - gubbins-routers
+          - gubbins-client
+          - gubbins-api
+          - gubbins-cli
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          # TODO: Use a conda environment file used for the diracx/base container image
-          environment-name: test-env
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install pytest-github-actions-annotate-failures
-          # Note: DIRAC will install pretty much everything
-          # from diracx so installing just the dependency may
-          # be a bit useless
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ${{ matrix.dependencies }}
+          environments: ${{ matrix.package }}
       - name: Run pytest
-        if: ${{ matrix.package != './diracx-logic' }}
-        run: |
-          cd ${{ matrix.package }}
-          pip install .[testing]
-          pytest --cov-report=xml:coverage.xml --junitxml=report.xml
-      - name: Run mypy
-        run: |
-          pip install mypy ${{ matrix.package }}[types]
-          mypy ${{ matrix.package }}/src
+        env:
+          EXTRA_PYTEST_ARGS: --cov-report=xml:coverage.xml --junitxml=report.xml
+        run: pixi run pytest-${{ matrix.package }}
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
 
@@ -89,16 +64,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/
+          environments: default
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
@@ -123,9 +91,10 @@ jobs:
           fi
       - name: Run pytest
         run: |
-          pytest --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+          pixi run pytest-diracx --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
+          set -x
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
           export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
           export PATH=${DIRACX_DEMO_DIR}:$PATH
@@ -136,7 +105,7 @@ jobs:
           # Combine the coverage data from the demo and make an XML report
           coverage_data=$(mktemp)
           sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
-          coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
+          pixi run -e default coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
 
           # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
           fake_module=$(mktemp -d)
@@ -147,7 +116,7 @@ jobs:
           sed -i "s@source =@source =\n    ${fake_module}/src@g" .coveragerc
           cat .coveragerc
 
-          coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
+          pixi run -e default coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
         with:
@@ -155,22 +124,15 @@ jobs:
 
   client-generation:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [diracx, gubbins]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          micromamba install -c conda-forge nodejs pre-commit
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/ ./diracx-api/ ./diracx-cli/ -e ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/ ./diracx-testing/
-          npm install -g autorest
+          environments: ${{ matrix.package }}-generate-client
       - name: Run autorest
-        run: |
-          autorest --python --help
-          $HOME/.autorest/\@autorest_python\@*/node_modules/\@autorest/python/venv/bin/python -m pip install --upgrade setuptools
-          pytest --no-cov --regenerate-client diracx-client/tests/test_regenerate.py
+        run: pixi run -e ${{ matrix.package }}-generate-client generate-client

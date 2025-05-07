@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - gubbins
   pull_request:
     branches:
       - main
@@ -15,59 +14,6 @@ defaults:
     shell: bash -el {0}
 
 jobs:
-  unittest:
-    name: Unit test - ${{ matrix.package }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # In principle, the dependencies could be limited to the extension packages.
-        # However, we want to use the local packages, and not those published on pypi
-        include:
-          - package: "./extensions/gubbins/gubbins-core"
-            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./diracx-core"
-          - package: "./extensions/gubbins/gubbins-db"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-core"
-          - package: "./extensions/gubbins/gubbins-logic"
-            dependencies: "./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-core ./diracx-db ./diracx-core ./diracx-logic"
-          - package: "./extensions/gubbins/gubbins-routers"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-db ./extensions/gubbins/gubbins-logic ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-db ./diracx-logic ./diracx-core ./diracx-routers"
-          - package: "./extensions/gubbins/gubbins-client"
-            dependencies: "./extensions/gubbins/gubbins-testing ./diracx-testing ./extensions/gubbins/gubbins-client ./extensions/gubbins/gubbins-core ./diracx-client ./diracx-core"
-          - package: "./extensions/gubbins/gubbins-cli"
-            dependencies: "./extensions/gubbins/gubbins-testing ./extensions/gubbins/gubbins-client ./extensions/gubbins/gubbins-core ./diracx-testing ./diracx-cli ./diracx-client ./diracx-core ./diracx-api"
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
-        with:
-          # TODO: Use a conda environment file used for the diracx/base container image
-          environment-name: test-env
-          create-args: >-
-            python=3.11
-            m2crypto
-            python-gfal2
-            mypy
-            pip
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ${{ matrix.dependencies }} ${{ matrix.package }}[types]
-      - name: Run mypy
-        run: |
-          mypy ${{ matrix.package }}/src
-      - name: Run pytest
-        if: ${{ matrix.package != './extensions/gubbins/gubbins-logic' }}
-        run: |
-          cd ${{ matrix.package }}
-          pip install .[testing]
-          pytest --cov-report=xml:coverage.xml --junitxml=report.xml
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v5.4.2
-
 
   build-wheels:
     name: Build wheels
@@ -178,16 +124,9 @@ jobs:
           docker image ls -a
       - name: Checkout code
         uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          pip install pytest-github-actions-annotate-failures
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-logic/[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-cli/[testing] ./extensions/gubbins/gubbins-core/[testing]
+          environments: default-gubbins
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
@@ -221,7 +160,7 @@ jobs:
       - name: Run pytest
         run: |
           cd extensions/gubbins
-          pytest --demo-dir=../../../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+          pixi run pytest-gubbins --demo-dir=../../../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
@@ -235,7 +174,7 @@ jobs:
           # Combine the coverage data from the demo and make an XML report
           coverage_data=$(mktemp)
           sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
-          coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
+          pixi run -e pytest-gubbins coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
 
           # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
           fake_module=$(mktemp -d)
@@ -244,7 +183,6 @@ jobs:
           for fn in "${PWD}"/*/src/diracx/*; do
             ln -sf "${fn}" "${fake_module}/src/diracx/$(basename "${fn}")"
           done
-
 
           mkdir -p "${fake_module}/src/gubbins"
           for fn in "${PWD}"/extensions/gubbins/*/src/gubbins/*; do
@@ -255,30 +193,8 @@ jobs:
 
           cat .coveragerc
 
-          coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
+          pixi run -e pytest-gubbins coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
-
-  client-generation:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: environment.yml
-          init-shell: bash
-          post-cleanup: 'all'
-      - name: Set up environment
-        run: |
-          micromamba install -c conda-forge nodejs pre-commit
-          pip install git+https://github.com/DIRACGrid/DIRAC.git@integration
-          pip install ./diracx-core/[testing] ./diracx-api/[testing] ./diracx-cli/[testing] ./diracx-client/[testing] ./diracx-routers/[testing] ./diracx-logic/[testing] ./diracx-logic/[testing] ./diracx-db/[testing] ./diracx-testing/[testing]  ./extensions/gubbins/gubbins-testing[testing] ./extensions/gubbins/gubbins-db[testing] ./extensions/gubbins/gubbins-logic[testing] ./extensions/gubbins/gubbins-routers/[testing] ./extensions/gubbins/gubbins-testing/[testing] -e ./extensions/gubbins/gubbins-client/[testing] ./extensions/gubbins/gubbins-core/[testing]
-          npm install -g autorest
-      - name: Run autorest
-        run: |
-          autorest --python --help
-          $HOME/.autorest/\@autorest_python\@*/node_modules/\@autorest/python/venv/bin/python -m pip install --upgrade setuptools
-          pytest --no-cov --regenerate-client extensions/gubbins/gubbins-client/tests/test_regenerate.py
