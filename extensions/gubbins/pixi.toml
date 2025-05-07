@@ -1,0 +1,91 @@
+[workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.11.3,<3.12"
+# Add some useful development dependencies to most environments
+pip = ">=25.1.1"
+ipython = ">=9.2.0"
+# Ensure these packages are installed using conda instead of pip
+python-gfal2 = "*"
+m2crypto = "*"
+
+# Gubbins features for providing dependencies
+[feature.gubbins.pypi-dependencies]
+gubbins = { path = ".", editable = true, extras = ["testing"] }
+[feature.gubbins-core.pypi-dependencies]
+gubbins-core = { path = "./gubbins-core", editable = true, extras = ["testing"] }
+gubbins-testing = { path = "./gubbins-testing", editable = true }
+[feature.gubbins-cli.pypi-dependencies]
+gubbins-cli = { path = "./gubbins-cli", editable = true, extras = ["testing"] }
+[feature.gubbins-api.pypi-dependencies]
+gubbins-api = { path = "./gubbins-api", editable = true, extras = ["testing"] }
+[feature.gubbins-client.pypi-dependencies]
+gubbins-client = { path = "./gubbins-client", editable = true, extras = ["testing"] }
+[feature.gubbins-db.pypi-dependencies]
+gubbins-db = { path = "./gubbins-db", editable = true, extras = ["testing"] }
+[feature.gubbins-logic.pypi-dependencies]
+gubbins-logic = { path = "./gubbins-logic", editable = true, extras = ["testing"] }
+[feature.gubbins-routers.pypi-dependencies]
+gubbins-routers = { path = "./gubbins-routers", editable = true, extras = ["testing"] }
+
+# Gubbins features for providing tasks. This is needed to make it so that running
+# "pixi run pytest-gubbins-core -vvv --pdb" passes the arguments as expected.
+# See: https://github.com/prefix-dev/pixi/issues/1519#issuecomment-2651078457
+[feature.task-gubbins.tasks.pytest-gubbins]
+cmd = "pytest"
+[feature.task-gubbins-core.tasks.pytest-gubbins-core]
+cmd = "cd gubbins-core/ && pytest"
+[feature.task-gubbins-cli.tasks.pytest-gubbins-cli]
+cmd = "cd gubbins-cli/ && pytest"
+[feature.task-gubbins-api.tasks.pytest-gubbins-api]
+cmd = "cd gubbins-api/ && pytest"
+[feature.task-gubbins-client.tasks.pytest-gubbins-client]
+cmd = "cd gubbins-client/ && pytest"
+[feature.task-gubbins-db.tasks.pytest-gubbins-db]
+cmd = "cd gubbins-db/ && pytest"
+[feature.task-gubbins-logic.tasks.pytest-gubbins-logic]
+cmd = "cd gubbins-logic/ && pytest"
+[feature.task-gubbins-routers.tasks.pytest-gubbins-routers]
+cmd = "cd gubbins-routers/ && pytest"
+
+# Features for running pre-commit hooks
+[feature.pre-commit.dependencies]
+pre-commit = "*"
+[feature.pre-commit.tasks]
+pre-commit = "pre-commit"
+
+# Features for generating the clients
+[feature.client-gen.dependencies]
+nodejs = ">=10.9.2"
+pre-commit = "*"
+[feature.client-gen.tasks.generate-client]
+cmd = "python -m diracx.testing.client_generation"
+env = { AUTOREST_HOME = "$CONDA_PREFIX/.autorest" }
+
+[environments]
+default = {features = ["task-gubbins", "gubbins", "gubbins-core", "gubbins-api", "gubbins-cli", "gubbins-client", "gubbins-db", "gubbins-logic", "gubbins-routers"], solve-group = "gubbins"}
+gubbins-core = {features = ["task-gubbins-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-api = {features = ["task-gubbins-api", "gubbins-api", "gubbins-client", "gubbins-core"], solve-group = "gubbins"}
+gubbins-cli = {features = ["task-gubbins-cli", "gubbins-cli", "gubbins-api", "gubbins-client", "gubbins-core"], solve-group = "gubbins"}
+gubbins-client = {features = ["task-gubbins-client", "gubbins-client", "gubbins-core"], solve-group = "gubbins"}
+gubbins-db = {features = ["task-gubbins-db", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+gubbins-logic = {features = ["task-gubbins-logic", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+gubbins-routers = {features = ["task-gubbins-routers", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+
+generate-client = {features = ["client-gen", "gubbins-client", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+
+# Tooling environments
+pre-commit = {features = ["pre-commit"], no-default-feature = true}
+
+[tasks.pytest-all-one-by-one]
+depends-on = [
+  { task = "pytest-gubbins-core", environment = "gubbins-core" },
+  { task = "pytest-gubbins-api", environment = "gubbins-api" },
+  { task = "pytest-gubbins-cli", environment = "gubbins-cli" },
+  { task = "pytest-gubbins-client", environment = "gubbins-client" },
+  { task = "pytest-gubbins-db", environment = "gubbins-db" },
+  { task = "pytest-gubbins-logic", environment = "gubbins-logic" },
+  { task = "pytest-gubbins-routers", environment = "gubbins-routers" },
+]
