@@ -12,8 +12,7 @@ import httpx
 import jwt
 import pytest
 from cryptography.fernet import Fernet
-from joserfc.jwk import RSAKey, OKPKey
-from joserfc.jws import KeySet
+from joserfc.jwk import RSAKey, OKPKey, KeySet
 from joserfc.errors import UnsupportedKeyOperationError
 from pytest_httpx import HTTPXMock
 from uuid_utils import uuid7

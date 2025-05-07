@@ -22,8 +22,9 @@ from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
-from joserfc.jws import KeySet
+from joserfc.jwk import KeySet, RSAKey
 from pydantic import (
+    AliasChoices,
     AnyUrl,
     BeforeValidator,
     Field,
@@ -70,7 +71,7 @@ class _TokenSigningKeyStore(SecretStr):
 
 
 def _maybe_load_keys_from_file(value: Any) -> Any:
-    """Load private keys from files if needed."""
+    """Load jwks from files if needed."""
     if isinstance(value, str):
         # If the value is a string, we need to check if it is a JSON string or a file URL
         if not (value.strip().startswith("{") or value.startswith("[")):
@@ -80,13 +81,25 @@ def _maybe_load_keys_from_file(value: Any) -> Any:
                 raise ValueError("Only file:// URLs are supported")
             if url.path is None:
                 raise ValueError("No path specified")
-            return Path(url.path).read_text()
+            value = Path(url.path).read_text()
 
+    if isinstance(value, str) and value.strip().startswith("-----BEGIN"):
+        return json.dumps(
+            KeySet(
+                keys=[
+                    RSAKey.import_key(
+                        value,  # type: ignore
+                        parameters={"key_ops": ["sign", "verify"], "alg": "RS256"},  # type: ignore
+                    )
+                ]
+            ).as_dict(private=True)
+        )
     return value
 
 
 TokenSigningKeyStore = Annotated[
-    _TokenSigningKeyStore, BeforeValidator(_maybe_load_keys_from_file)
+    _TokenSigningKeyStore,
+    BeforeValidator(_maybe_load_keys_from_file),
 ]
 
 
@@ -138,7 +151,9 @@ class DevelopmentSettings(ServiceSettingsBase):
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
 
-    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_SERVICE_AUTH_", validate_by_name=True
+    )
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
@@ -151,7 +166,13 @@ class AuthSettings(ServiceSettingsBase):
     state_key: FernetKey
 
     token_issuer: str
-    token_keystore: TokenSigningKeyStore
+    token_keystore: TokenSigningKeyStore = Field(
+        validation_alias=AliasChoices(
+            "token_keystore",
+            "DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE",
+            "DIRACX_SERVICE_AUTH_TOKEN_KEY",
+        )
+    )
     token_allowed_algorithms: list[str] = ["RS256", "EdDSA"]  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60

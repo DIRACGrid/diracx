@@ -9,7 +9,7 @@ import httpx
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
 from joserfc import jwt
-from joserfc.jws import KeySet
+from joserfc.jwk import KeySet
 from joserfc.jwt import Claims, JWTClaimsRegistry
 from typing_extensions import TypedDict
 from uuid_utils import UUID
