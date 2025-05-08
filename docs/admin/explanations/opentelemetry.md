@@ -6,6 +6,6 @@
 `diracx.routers.otel.OTELSettings` classes
 `diracx` will then export metrics, traces, and logs. For the moment, nothing is really instrumented, but the infrastructure is there
 
-![OTEL Logs](./otel-logs.png)
-![OTEL Metrics](./otel-metrics.png)
-![OTEL Traces](./otel-traces.png)
+![OTEL Logs](https://diracx-docs-static.s3.cern.ch/assets/images/admin/explanations/otel/otel-logs.png)
+![OTEL Metrics](https://diracx-docs-static.s3.cern.ch/assets/images/admin/explanations/otel/otel-metrics.png)
+![OTEL Traces](https://diracx-docs-static.s3.cern.ch/assets/images/admin/explanations/otel/otel-traces.png)
