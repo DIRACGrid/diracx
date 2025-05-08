@@ -295,6 +295,46 @@ class BodyPilotsAssociatePilotWithJobs(_serialization.Model):
         self.pilot_jobs_ids = pilot_jobs_ids
 
 
+class BodyPilotsClearPilots(_serialization.Model):
+    """Body_pilots_clear_pilots.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar age_in_days: The number of days that define the maximum age of pilots to be
+     deleted.Pilots older than this age will be considered for deletion. Required.
+    :vartype age_in_days: int
+    :ivar delete_only_aborted: Flag indicating whether to only delete pilots whose status is
+     'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
+     default as True to avoid any mistake.
+    :vartype delete_only_aborted: bool
+    """
+
+    _validation = {
+        "age_in_days": {"required": True},
+    }
+
+    _attribute_map = {
+        "age_in_days": {"key": "age_in_days", "type": "int"},
+        "delete_only_aborted": {"key": "delete_only_aborted", "type": "bool"},
+    }
+
+    def __init__(
+        self, *, age_in_days: int, delete_only_aborted: bool = True, **kwargs: Any
+    ) -> None:
+        """
+        :keyword age_in_days: The number of days that define the maximum age of pilots to be
+         deleted.Pilots older than this age will be considered for deletion. Required.
+        :paramtype age_in_days: int
+        :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
+         'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
+         default as True to avoid any mistake.
+        :paramtype delete_only_aborted: bool
+        """
+        super().__init__(**kwargs)
+        self.age_in_days = age_in_days
+        self.delete_only_aborted = delete_only_aborted
+
+
 class BodyPilotsCreatePilotSecrets(_serialization.Model):
     """Body_pilots_create_pilot_secrets.
 

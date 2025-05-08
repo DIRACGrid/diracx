@@ -17,7 +17,10 @@ from diracx.logic.auth.pilot import (
     create_stamp_response,
     register_new_pilots,
 )
-from diracx.logic.pilots.management import delete_pilots_bulk
+from diracx.logic.pilots.management import (
+    clear_pilots_bulk,
+    delete_pilots_by_stamps_bulk,
+)
 from diracx.logic.pilots.management import get_pilot_info as get_pilot_info_bl
 
 from ..dependencies import AuthSettings, PilotAgentsDB
@@ -114,12 +117,59 @@ async def delete_pilots(
     )
 
     try:
-        await delete_pilots_bulk(pilot_db=pilot_agents_db, pilot_stamps=pilot_stamps)
+        await delete_pilots_by_stamps_bulk(
+            pilot_db=pilot_agents_db, pilot_stamps=pilot_stamps
+        )
     except PilotNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least one pilot has not been found.",
         ) from e
+
+
+@router.delete("/interval", status_code=HTTPStatus.NO_CONTENT)
+async def clear_pilots(
+    pilot_agents_db: PilotAgentsDB,
+    age_in_days: Annotated[
+        int,
+        Body(
+            description=(
+                "The number of days that define the maximum age of pilots to be deleted."
+                "Pilots older than this age will be considered for deletion."
+            )
+        ),
+    ],
+    check_permissions: CheckPilotManagementPolicyCallable,
+    delete_only_aborted: Annotated[
+        bool,
+        Body(
+            description=(
+                "Flag indicating whether to only delete pilots whose status is 'Aborted'."
+                "If set to True, only pilots with the 'Aborted' status will be deleted."
+                "It is set by default as True to avoid any mistake."
+            )
+        ),
+    ] = True,
+):
+    """Delete all pilots that lived more than age_in_days."""
+    # TODO: Be stricter here and only allow admins?
+    # TODO: Add test (how to test? Millisec?)
+    await check_permissions(
+        action=ActionType.CREATE_PILOT_OR_SECRET,
+        pilot_db=pilot_agents_db,
+    )
+
+    if age_in_days < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="age_in_days must be positive.",
+        )
+
+    await clear_pilots_bulk(
+        pilot_db=pilot_agents_db,
+        age_in_days=age_in_days,
+        delete_only_aborted=delete_only_aborted,
+    )
 
 
 EXAMPLE_SEARCHES = {

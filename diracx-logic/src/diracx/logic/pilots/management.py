@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from diracx.core.models import PilotFieldsMapping, SearchParams
@@ -8,8 +9,10 @@ from diracx.db.sql import PilotAgentsDB
 MAX_PER_PAGE = 10000
 
 
-async def delete_pilots_bulk(pilot_db: PilotAgentsDB, pilot_stamps: list[str]):
-    await pilot_db.delete_pilots_bulk(pilot_stamps)
+async def delete_pilots_by_stamps_bulk(
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str]
+):
+    await pilot_db.delete_pilots_by_stamps_bulk(pilot_stamps)
 
 
 async def update_pilots_fields(
@@ -40,7 +43,7 @@ async def get_pilot_info(
     if body is None:
         body = SearchParams()
 
-    total, jobs = await pilot_db.search(
+    total, pilots = await pilot_db.search(
         body.parameters,
         body.search,
         body.sort,
@@ -49,4 +52,15 @@ async def get_pilot_info(
         per_page=per_page,
     )
 
-    return total, jobs
+    return total, pilots
+
+
+async def clear_pilots_bulk(
+    pilot_db: PilotAgentsDB, age_in_days: int, delete_only_aborted: bool
+):
+    """Delete pilots that have been submitted before interval_in_days."""
+    cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)
+
+    await pilot_db.clear_pilots_bulk(
+        cutoff_date=cutoff_date, delete_only_aborted=delete_only_aborted
+    )

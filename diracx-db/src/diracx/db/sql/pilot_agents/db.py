@@ -241,7 +241,7 @@ class PilotAgentsDB(BaseSQLDB):
         # To avoid raise condition
         await self.conn.commit()
 
-    async def delete_pilots_bulk(self, pilot_stamps: list[str]):
+    async def delete_pilots_by_stamps_bulk(self, pilot_stamps: list[str]):
         """Bulk delete pilots."""
         stmt = delete(PilotAgents).where(PilotAgents.pilot_stamp.in_(pilot_stamps))
 
@@ -589,3 +589,16 @@ class PilotAgentsDB(BaseSQLDB):
         return total, [
             dict(row._mapping) async for row in (await self.conn.stream(stmt))
         ]
+
+    async def clear_pilots_bulk(self, cutoff_date: datetime, delete_only_aborted: bool):
+        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'."""
+        # TODO: Add test (Millisec?)
+        stmt = delete(PilotAgents).where(PilotAgents.submission_time < cutoff_date)
+
+        # If delete_only_aborted is True, add the condition for 'Status' being 'Aborted'
+        if delete_only_aborted:
+            stmt = stmt.where(PilotAgents.status == "Aborted")
+
+        # Execute the statement
+        await self.conn.execute(stmt)
+        await self.conn.commit()
