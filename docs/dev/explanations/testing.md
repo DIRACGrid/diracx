@@ -9,3 +9,5 @@ Note: `diracx-logic` does not contain any unit tests, developers are expected to
 For the integration tests, we always use the [services|tasks|client] dev image and do a pip install directly with `--no-deps`.
 
 Same for unit tests (router tests use `services:dev`, etc)
+
+Possibly: reference of all the fixtures we have
