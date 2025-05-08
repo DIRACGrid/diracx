@@ -117,8 +117,10 @@ def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
 
 
-class DBStateAssertation:
-    """Class to handler context where we should not raise any excepted error.
+class DBStateAssertion:
+    """Context manager to ensure the integrity of a database transaction,
+    specifically by rolling back any changes if certain expected exceptions
+    occur—and raising a standardized error to indicate the database is in a bad state.
 
     Example:
     with DBStateAssertation(self.conn, [PilotNotFoundError, SecretNotFoundError]):
@@ -143,21 +145,21 @@ class DBStateAssertation:
             # No exception occurred
             return False
 
-        # If we get here, an error occured, so we rollback changes
+        # If we get here, an error occurred, so we rollback changes
         await self.conn.rollback()
 
         # Check if the exception is among the expected ones
         if any(issubclass(exc_type, exc) for exc in self.exceptions):
             logger.error(
-                f"An error occured with the db, exception message: {exc_value}"
+                f"An error occurred with the db, exception message: {exc_value}"
             )
             raise DBInBadStateError(
                 "This error may NOT have been raised. "
-                "Please report this error: https://github.com/DIRACGrid/diracx/issues"
+                "Please report this at https://github.com/DIRACGrid/diracx/issues"
             ) from exc_value
 
         # Not an expected exception; raise an unexpected error
         raise DBInBadStateError(
-            "This should NOT happen. A miscellaneous error occured. "
-            "Please report this error: https://github.com/DIRACGrid/diracx/issues"
+            f"Unexpected error ({exc_type.__name__}): {exc_value}. "
+            "Please report this at https://github.com/DIRACGrid/diracx/issues"
         ) from exc_value
