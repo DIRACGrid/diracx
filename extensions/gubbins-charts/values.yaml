@@ -9,4 +9,4 @@ diracx:
   global:
     images:
       tag: "dev"
-      services: gubbins/services
+      services: ghcr.io/diracgrid/gubbins/services
