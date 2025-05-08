@@ -99,6 +99,12 @@ jobs:
     needs: deploy-pypi
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extension:
+          - diracx
+          - gubbins
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -119,9 +125,10 @@ jobs:
         with:
           context: .
           file: containers/Dockerfile
-          build-args: PIXI_ENV=container-services
+          build-args: |
+            PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-services' || 'gubbins-container-services' }}
           push: true
-          tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins' }}/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (release)
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
@@ -129,9 +136,10 @@ jobs:
         with:
           context: .
           file: containers/Dockerfile
-          build-args: PIXI_ENV=container-client
+          build-args: |
+            PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-client' || 'gubbins-container-client' }}
           push: true
-          tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins' }}/client:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
 
       - name: Build and push services (dev)
@@ -139,18 +147,20 @@ jobs:
         with:
           context: .
           file: containers/Dockerfile
-          build-args: PIXI_ENV=container-services
+          build-args: |
+            PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-services' || 'gubbins-container-services' }}
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/services:dev
+          tags: ghcr.io/diracgrid/${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins' }}/services:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (dev)
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         with:
           context: .
           file: containers/Dockerfile
-          build-args: PIXI_ENV=container-client
+          build-args: |
+            PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-client' || 'gubbins-container-client' }}
           push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/client:dev
+          tags: ghcr.io/diracgrid/${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins' }}/client:dev
           platforms: linux/amd64,linux/arm64
 
   update-charts:
