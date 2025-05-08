@@ -1,7 +1,8 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import base64
 import hashlib
+import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,9 +12,10 @@ import httpx
 import jwt
 import pytest
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from joserfc.jwk import RSAKey, OKPKey, KeySet
+from joserfc.errors import UnsupportedKeyOperationError
 from pytest_httpx import HTTPXMock
+from uuid_utils import uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import AuthorizationError
@@ -27,6 +29,7 @@ from diracx.logic.auth.utils import (
     encrypt_state,
     get_server_metadata,
     parse_and_validate_scope,
+    verify_dirac_refresh_token,
 )
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
@@ -650,17 +653,19 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     # Encode it differently (using another algorithm)
-    private_key = Ed25519PrivateKey.generate()
-    pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+    key = RSAKey.generate_key(
+        2048,
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "RS256",
+            "kid": uuid7().hex,
+        },
+    )
 
     new_auth_settings = AuthSettings(
         token_issuer="https://iam-auth.web.cern.ch/",
-        token_algorithm="EdDSA",
-        token_key=pem,
+        token_allowed_algorithms=["EdDSA", "RS256"],
+        token_keystore=json.dumps(KeySet(keys=[key]).as_dict(private=True)),
         state_key=Fernet.generate_key(),
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
@@ -681,8 +686,131 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     # The server should detect that it is not encoded properly
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
-    assert r.status_code == 401, data
-    assert data["detail"] == "Invalid JWT: bad_signature: "
+    assert r.status_code == 400, data
+    assert "No key for kid" in data["detail"]
+
+
+async def test_keystore(test_client):
+    """Test the keystore."""
+    # Basic Auth params
+    issuer = "https://iam-auth.web.cern.ch/"
+    state_key = Fernet.generate_key()
+    allowed_redirects = [
+        "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+    ]
+
+    payload = {
+        "jti": "49ecc171-20be-5b88-0d65-26012c07f397",
+        "exp": (datetime.now(tz=timezone.utc) + timedelta(hours=1)).timestamp(),
+        "legacy_exchange": False,
+    }
+
+    # Generate keys
+    rsa_key = RSAKey.generate_key(
+        2048,
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "RS256",
+            "kid": uuid7().hex,
+        },
+    )
+    eddsa_key = OKPKey.generate_key(
+        "Ed25519",
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "EdDSA",
+            "kid": uuid7().hex,
+        },
+    )
+
+    # Generate the keystore with rsa key only first
+    jwks = KeySet(keys=[eddsa_key])
+
+    # Generate the keystore with eddsa key only first
+    auth_settings = AuthSettings(
+        token_issuer=issuer,
+        token_allowed_algorithms=["RS256"],  # We purposefully remove EdDSA
+        token_keystore=json.dumps(jwks.as_dict(private=True)),
+        state_key=state_key,
+        allowed_redirects=allowed_redirects,
+    )
+
+    # Encode/Decode with the keystore: should not work
+    # because EdDSA is not part of the allowed algorithms
+    with pytest.raises(ValueError):
+        token = create_token(payload, auth_settings)
+
+    # Add EdDSA to the allowed algorithms
+    auth_settings.token_allowed_algorithms.append("EdDSA")
+
+    # Encode/Decode with the keystore: should work
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Add the rsa key to the keystore
+    jwks.keys.append(rsa_key)
+
+    auth_settings = AuthSettings(
+        token_issuer=issuer,
+        token_allowed_algorithms=["RS256", "EdDSA"],  # We purposefully remove EdDSA
+        token_keystore=json.dumps(jwks.as_dict(private=True)),
+        state_key=state_key,
+        allowed_redirects=allowed_redirects,
+    )
+
+    # Encode/Decode with the keystore: should work
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove 'sign' operation from the RSA key:
+    # should still work because eddsa_key is still there
+    auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("sign")
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove 'verify' operation from the RSA key:
+    # should still work because RSA key is still in the keystore
+    auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("verify")
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove RSA key from the keystore:
+    # should still work except decoding the token signed with the RSA key
+    auth_settings.token_keystore.jwks.keys.pop(1)
+    ed_signed_token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove 'sign' operation from the OPK key:
+    # Should not work
+    auth_settings.token_keystore.jwks.keys[0].get("key_ops").remove("sign")
+
+    with pytest.raises(ValueError):
+        create_token(payload, auth_settings)
+
+    # But we can still verify the token
+    await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove 'verify' operation from the OPK key:
+    # Verification should still not work anymore
+    auth_settings.token_keystore.jwks.keys[0].get("key_ops").remove("verify")
+
+    with pytest.raises(ValueError):
+        # This should raise an error because the key is not usable for verifying
+        create_token(payload, auth_settings)
+
+    with pytest.raises(UnsupportedKeyOperationError):
+        await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove the key from the keystore:
+    auth_settings.token_keystore.jwks.keys.pop(0)
+
+    with pytest.raises(ValueError):
+        # This should raise an error because there is no key in the keystore
+        create_token(payload, auth_settings)
+
+    # This should raise an error because there is no key in the keystore
+    with pytest.raises(ValueError):
+        await verify_dirac_refresh_token(ed_signed_token, auth_settings)
 
 
 async def test_bad_access_token(test_client):

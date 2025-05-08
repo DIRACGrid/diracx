@@ -7,6 +7,9 @@ from diracx.logic.auth.well_known import (
     get_installation_metadata as get_installation_metadata_bl,
 )
 from diracx.logic.auth.well_known import (
+    get_jwks as get_jwks_bl,
+)
+from diracx.logic.auth.well_known import (
     get_openid_configuration as get_openid_configuration_bl,
 )
 
@@ -29,9 +32,18 @@ async def get_openid_configuration(
         str(request.url_for("initiate_authorization_flow")),
         str(request.url_for("initiate_device_flow")),
         str(request.url_for("revoke_refresh_token_by_refresh_token")),
+        str(request.url_for("get_jwks")),
         config,
         settings,
     )
+
+
+@router.get("/jwks.json")
+async def get_jwks(
+    settings: AuthSettings,
+) -> dict:
+    """Get the JWKs (public keys)."""
+    return await get_jwks_bl(settings)
 
 
 @router.get("/dirac-metadata")

@@ -4,9 +4,9 @@ import re
 import uuid as std_uuid
 from typing import Annotated, Any
 
-from authlib.jose import JoseError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
+from joserfc.jwt import JWTClaimsRegistry
 from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from uuid_utils import UUID as _UUID
@@ -89,27 +89,27 @@ async def verify_dirac_access_token(
         )
 
     try:
-        token = read_token(
+        claims = read_token(
             raw_token,
-            settings.token_algorithm,
-            settings.token_key.jwk,
-            claims_options={
-                "iss": {"values": [settings.token_issuer]},
-            },
+            settings.token_keystore.jwks,
+            settings.token_allowed_algorithms,
+            claims_requests=JWTClaimsRegistry(
+                iss={"essential": True, "value": settings.token_issuer},
+            ),
         )
-    except JoseError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",
-        ) from None
+        ) from e
 
     return AuthorizedUserInfo(
         bearer_token=raw_token,
-        token_id=token["jti"],
-        properties=token["dirac_properties"],
-        sub=token["sub"],
-        preferred_username=token["preferred_username"],
-        dirac_group=token["dirac_group"],
-        vo=token["vo"],
-        policies=token.get("dirac_policies", {}),
+        token_id=claims["jti"],
+        properties=claims["dirac_properties"],
+        sub=claims["sub"],
+        preferred_username=claims["preferred_username"],
+        dirac_group=claims["dirac_group"],
+        vo=claims["vo"],
+        policies=claims.get("dirac_policies", {}),
     )

@@ -6,11 +6,11 @@ import json
 import secrets
 
 import httpx
-from authlib.integrations.starlette_client import OAuthError
-from authlib.jose import JsonWebKey, JsonWebToken
-from authlib.oidc.core import IDToken
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
+from joserfc import jwt
+from joserfc.jwk import KeySet
+from joserfc.jwt import Claims, JWTClaimsRegistry
 from typing_extensions import TypedDict
 from uuid_utils import UUID
 
@@ -76,7 +76,7 @@ async def fetch_jwk_set(url: str):
             raise NotImplementedError(res)
         jwk_set = res.json()
 
-    return JsonWebKey.import_key_set(jwk_set)
+    return KeySet.import_key_set(jwk_set)
 
 
 async def parse_id_token(config, vo, raw_id_token: str):
@@ -87,19 +87,21 @@ async def parse_id_token(config, vo, raw_id_token: str):
     alg_values = server_metadata.get("id_token_signing_alg_values_supported", ["RS256"])
     jwk_set = await fetch_jwk_set(config.Registry[vo].IdP.server_metadata_url)
 
-    token = JsonWebToken(alg_values).decode(
+    token = jwt.decode(
         raw_id_token,
         key=jwk_set,
-        claims_cls=IDToken,
-        claims_options={
-            "iss": {"values": [server_metadata["issuer"]]},
-            # The audience is a required parameter and is the client ID of the application
-            # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
-            "aud": {"values": [config.Registry[vo].IdP.ClientID]},
-        },
+        algorithms=alg_values,
     )
-    token.validate()
-    return token
+    JWTClaimsRegistry(
+        iss={"essential": True, "value": server_metadata["issuer"]},
+        # The audience is a required parameter and is the client ID of the application
+        # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
+        aud={"essential": True, "values": [config.Registry[vo].IdP.ClientID]},
+        exp={"essential": True},
+        iat={"essential": True},
+        sub={"essential": True},
+    ).validate(token.claims)
+    return token.claims
 
 
 async def initiate_authorization_flow_with_iam(
@@ -183,22 +185,24 @@ async def get_token_from_iam(
             vo=vo,
             raw_id_token=raw_id_token,
         )
-    except OAuthError:
+    except ValueError:
         raise
 
     return id_token
 
 
 def read_token(
-    payload: str, token_algorithm: str, key: JsonWebKey, claims_options=None
-) -> dict:
-    # First transform it into bytes, then return a jwt object
-    # Don't take settings as a parameter to allow claims_options to be None or something else
-    encoded_payload = payload.encode("ascii")
-    jwt = JsonWebToken(token_algorithm)
-    decoded_jwt = jwt.decode(encoded_payload, key, claims_options=claims_options)
-    decoded_jwt.validate()
-    return decoded_jwt
+    payload: str,
+    jwks: KeySet,
+    allowed_algorithms: list[str],
+    claims_requests: JWTClaimsRegistry | None = None,
+) -> Claims:
+    if not claims_requests:
+        claims_requests = JWTClaimsRegistry()
+
+    token = jwt.decode(payload, key=jwks, algorithms=allowed_algorithms)
+    claims_requests.validate(token.claims)
+    return token.claims
 
 
 async def verify_dirac_refresh_token(
@@ -208,9 +212,15 @@ async def verify_dirac_refresh_token(
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint.
     """
-    token = read_token(refresh_token, settings.token_algorithm, settings.token_key.jwk)
+    claims = read_token(
+        refresh_token, settings.token_keystore.jwks, settings.token_allowed_algorithms
+    )
 
-    return UUID(token["jti"]), float(token["exp"]), token["legacy_exchange"]
+    return (
+        UUID(claims["jti"]),
+        float(claims["exp"]),
+        claims["legacy_exchange"],
+    )
 
 
 def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:

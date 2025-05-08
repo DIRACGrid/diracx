@@ -1,47 +1,45 @@
 from __future__ import annotations
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+import json
+
+from joserfc.jwk import KeySet, OKPKey
 from pydantic import TypeAdapter
+from uuid_utils import uuid7
 
-from diracx.core.settings import TokenSigningKey
-
-
-def compare_keys(key1, key2):
-    """Compare two keys by checking their public keys."""
-    key1_public = key1.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    key2_public = key2.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    assert key1_public == key2_public
+from diracx.core.settings import TokenSigningKeyStore
 
 
 def test_token_signing_key(tmp_path):
-    private_key = Ed25519PrivateKey.generate()
-    private_key_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode("ascii")
-    key_file = tmp_path / "private_key.pem"
-    key_file.write_text(private_key_pem)
-
-    adapter = TypeAdapter(TokenSigningKey)
-
-    # Test that we can load a key from a file
-    compare_keys(
-        adapter.validate_python(f"{key_file}").jwk.get_private_key(), private_key
-    )
-    compare_keys(
-        adapter.validate_python(f"file://{key_file}").jwk.get_private_key(),
-        private_key,
+    keyset = KeySet(
+        keys=[
+            OKPKey.generate_key(
+                parameters={
+                    "key_ops": ["sign", "verify"],
+                    "alg": "EdDSA",
+                    "kid": uuid7().hex,
+                }
+            )
+        ]
     )
 
-    # Test with can load the PEM data directly
-    compare_keys(
-        adapter.validate_python(private_key_pem).jwk.get_private_key(), private_key
+    jwks_file = tmp_path / "jwks.json"
+    jwks_file.write_text(json.dumps(keyset.as_dict(private=True)))
+
+    adapter = TypeAdapter(TokenSigningKeyStore)
+
+    # Test that we can load a keystore from a file
+    assert (
+        adapter.validate_python(f"{jwks_file}").jwks.keys[0].kid == keyset.keys[0].kid
+    )
+    assert (
+        adapter.validate_python(f"file://{jwks_file}").jwks.keys[0].kid
+        == keyset.keys[0].kid
+    )
+
+    # Test with can load the keystore data directly from a JSON string
+    assert (
+        adapter.validate_python(json.dumps(keyset.as_dict(private=True)))
+        .jwks.keys[0]
+        .kid
+        == keyset.keys[0].kid
     )

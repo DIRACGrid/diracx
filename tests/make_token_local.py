@@ -7,7 +7,7 @@ from pathlib import Path
 
 from uuid_utils import uuid7
 
-from diracx.core.models import TokenResponse
+from diracx.core.models import AccessTokenPayload, TokenResponse
 from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import AuthSettings
 from diracx.core.utils import write_credentials
@@ -16,22 +16,24 @@ from diracx.logic.auth.token import create_token
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("token_key", type=Path, help="The key to sign the token with")
+    parser.add_argument(
+        "token_keystore", type=Path, help="The jwks to sign the token with"
+    )
     args = parser.parse_args()
-    main(args.token_key.read_text())
+    main(args.token_keystore.read_text())
 
 
-def main(token_key):
+def main(token_keystore: str):
     vo = "diracAdmin"
     dirac_group = "admin"
     sub = "75212b23-14c2-47be-9374-eb0113b0575e"
     preferred_username = "localuser"
-    dirac_properties = [NORMAL_USER]
-    settings = AuthSettings(token_key=token_key)
+    dirac_properties = [str(NORMAL_USER)]
+    settings = AuthSettings(token_keystore=token_keystore)
     creation_time = datetime.now(tz=timezone.utc)
     expires_in = 7 * 24 * 60 * 60
 
-    access_payload = {
+    access_payload: AccessTokenPayload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
         "iss": settings.token_issuer,
@@ -40,6 +42,7 @@ def main(token_key):
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
         "exp": creation_time + timedelta(seconds=expires_in),
+        "dirac_policies": {},
     }
     token = TokenResponse(
         access_token=create_token(access_payload, settings),

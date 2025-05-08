@@ -17,6 +17,7 @@ dependencies = [
     "dirac",
     "diracx-core",
     "diracx-db",
+    "joserfc",
     "pydantic >=2.10",
     "uuid-utils",
 ]

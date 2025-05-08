@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from typing import Annotated, Literal
 
-from authlib.jose import JoseError
 from fastapi import Depends, Form, Header, HTTPException, status
+from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
     DiracHttpResponseError,

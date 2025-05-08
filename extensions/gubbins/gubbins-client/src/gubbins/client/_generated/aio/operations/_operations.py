@@ -57,6 +57,7 @@ from ...operations._operations import (
     build_lollygag_get_owner_object_request,
     build_lollygag_insert_owner_object_request,
     build_well_known_get_installation_metadata_request,
+    build_well_known_get_jwks_request,
     build_well_known_get_openid_configuration_request,
 )
 from .._configuration import DiracConfiguration
@@ -143,6 +144,57 @@ class WellKnownOperations:
         deserialized = self._deserialize(
             "OpenIDConfiguration", pipeline_response.http_response
         )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace_async
+    async def get_jwks(self, **kwargs: Any) -> Dict[str, Any]:
+        """Get Jwks.
+
+        Get the JWKs (public keys).
+
+        :return: dict mapping str to any
+        :rtype: dict[str, any]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Dict[str, Any]] = kwargs.pop("cls", None)
+
+        _request = build_well_known_get_jwks_request(
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            await self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("{object}", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
