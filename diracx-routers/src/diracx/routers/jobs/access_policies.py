@@ -10,7 +10,7 @@ from diracx.core.properties import (
     JOB_ADMINISTRATOR,
     NORMAL_USER,
 )
-from diracx.db.sql import JobDB, PilotAgentsDB, SandboxMetadataDB
+from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -44,7 +44,6 @@ class WMSAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
-        pilot_db: PilotAgentsDB | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
     ):

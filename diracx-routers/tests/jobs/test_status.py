@@ -154,7 +154,6 @@ def test_set_job_status_cannot_make_impossible_transitions(
             ]
         },
     )
-
     assert r.status_code == 200, r.json()
     assert r.json()[0]["JobID"] == valid_job_id
     assert r.json()[0]["Status"] == JobStatus.RECEIVED.value
