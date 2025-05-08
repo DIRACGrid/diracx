@@ -146,19 +146,21 @@ class DBStateAssertion:
             return False
 
         # If we get here, an error occurred, so we rollback changes
+        message = (
+            f"Rolling back DB transaction due to: {exc_type.__name__}: {exc_value}"
+        )
         await self.conn.rollback()
 
         # Check if the exception is among the expected ones
         if any(issubclass(exc_type, exc) for exc in self.exceptions):
-            logger.error(
-                f"An error occurred with the db, exception message: {exc_value}"
-            )
+            logger.warning(f"{message}. This error was expected.")
             raise DBInBadStateError(
                 "This error may NOT have been raised. "
                 "Please report this at https://github.com/DIRACGrid/diracx/issues"
             ) from exc_value
 
-        # Not an expected exception; raise an unexpected error
+        # Unexpected exception; raise an unexpected error
+        logger.warning(f"{message}. This error was NOT expected.")
         raise DBInBadStateError(
             f"Unexpected error ({exc_type.__name__}): {exc_value}. "
             "Please report this at https://github.com/DIRACGrid/diracx/issues"
