@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.exceptions import PilotNotFoundError
-from diracx.core.properties import NORMAL_USER
+from diracx.core.properties import NORMAL_USER, TRUSTED_HOST
 from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
@@ -89,4 +89,23 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
 
 CheckPilotManagementPolicyCallable = Annotated[
     Callable, Depends(PilotManagementAccessPolicy.check)
+]
+
+
+class DiracServicesAccessPolicy(BaseAccessPolicy):
+    """This access policy is used by DIRAC services (ex: Matcher)."""
+
+    @staticmethod
+    async def policy(policy_name: str, user_info: AuthorizedUserInfo):
+        if TRUSTED_HOST in user_info.properties:
+            return
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is reserved only for DIRAC services.",
+        )
+
+
+CheckDiracServicesPolicyCallable = Annotated[
+    Callable, Depends(DiracServicesAccessPolicy.check)
 ]

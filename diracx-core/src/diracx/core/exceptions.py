@@ -165,3 +165,13 @@ class SecretHasExpiredError(GenericError):
 class SecretAlreadyExistsError(GenericError):
     head = "Secret"
     tail = "already exists"
+
+
+class PilotJobsNotFoundError(GenericError):
+    head = "Pilots or Jobs"
+    tail = "not found"
+
+
+class PilotAlreadyAssociatedWithJobError(GenericError):
+    head = "Pilot is already associated with a job"
+    tail = ""

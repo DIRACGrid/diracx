@@ -12,6 +12,8 @@ from diracx.core.exceptions import (
     BadPilotVOError,
     CredentialsAlreadyExistError,
     CredentialsNotFoundError,
+    PilotAlreadyAssociatedWithJobError,
+    PilotJobsNotFoundError,
     PilotNotFoundError,
     SecretAlreadyExistsError,
     SecretHasExpiredError,
@@ -25,7 +27,13 @@ from ..utils import (
     fetch_records_bulk_or_raises,
     utcnow,
 )
-from .schema import PilotAgents, PilotAgentsDBBase, PilotSecrets, PilotToSecretMapping
+from .schema import (
+    JobToPilotMapping,
+    PilotAgents,
+    PilotAgentsDBBase,
+    PilotSecrets,
+    PilotToSecretMapping,
+)
 
 
 class PilotAgentsDB(BaseSQLDB):
@@ -89,9 +97,7 @@ class PilotAgentsDB(BaseSQLDB):
     ) -> None:
         """Verify that a pilot can login with the given credentials."""
         # 1. Get the pilot to secret association
-        pilots_credentials = await self.get_pilots_credentials_by_stamps_bulk(
-            [pilot_stamp]
-        )
+        pilots_credentials = await self.get_pilot_credentials_by_stamp([pilot_stamp])
 
         # 2. Get the pilot secret itself
         secrets = await self.get_secrets_by_hashed_secrets_bulk([pilot_hashed_secret])
@@ -314,6 +320,48 @@ class PilotAgentsDB(BaseSQLDB):
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
 
+    async def associate_pilot_with_jobs(self, pilot_stamp: str, job_ids: list[int]):
+        """Associate a pilot with jobs. Raises an error if the pilot does  not exist and in case of a IntegrityError.
+
+        **Important note**: We don't verify if a job exists in the JobDB
+        """
+        pilot_ids = await self.get_pilot_ids_by_stamps([pilot_stamp])
+        # Semantic assured by fetch_records_bulk_or_raises
+        pilot_id = pilot_ids[0]
+
+        now = datetime.now(tz=timezone.utc)
+
+        # Prepare the list of dictionaries for bulk insertion
+        values = [
+            {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+            for job_id in job_ids
+        ]
+
+        # Insert multiple rows in a single execute call
+        stmt = insert(JobToPilotMapping).values(values)
+
+        try:
+            res = await self.conn.execute(stmt)
+        except IntegrityError as e:
+            raise PilotAlreadyAssociatedWithJobError(
+                data={"pilot_stamp": pilot_stamp, "job_ids": str(job_ids)}
+            ) from e
+
+        if res.rowcount != len(job_ids):
+            # If doubles
+            await self.conn.rollback()
+            raise PilotJobsNotFoundError(
+                data={"pilot_stamp": pilot_stamp, "job_ids": str(job_ids)}
+            )
+
+    async def get_pilot_jobs_ids_by_stamp(self, pilot_stamp: str) -> list[int]:
+        """Fetch pilot jobs by stamp."""
+        pilot_ids = await self.get_pilot_ids_by_stamps([pilot_stamp])
+        # Semantic assured by fetch_records_bulk_or_raises
+        pilot_id = pilot_ids[0]
+
+        return await self.get_pilot_jobs_ids_by_pilot_id(pilot_id)
+
     async def update_pilot_fields_bulk(
         self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
     ):
@@ -431,10 +479,10 @@ class PilotAgentsDB(BaseSQLDB):
             pilot_stamps,
         )
 
-    async def get_pilots_credentials_by_stamps_bulk(
+    async def get_pilot_credentials_by_stamp(
         self, pilot_stamps: list[str]
     ) -> list[dict]:
-        """Bulk fetch pilots credentials. Ensure all stamps are found, else raise an error."""
+        """Fetch pilot credentials. Ensure all stamps are found, else raise an error."""
         return await fetch_records_bulk_or_raises(
             self.conn,
             PilotToSecretMapping,
@@ -445,7 +493,9 @@ class PilotAgentsDB(BaseSQLDB):
             allow_more_than_one_result_per_input=True,
         )
 
-    async def get_secrets_by_hashed_secrets_bulk(self, hashed_secrets: list[str]):
+    async def get_secrets_by_hashed_secrets_bulk(
+        self, hashed_secrets: list[str]
+    ) -> list[dict]:
         """Bulk fetch secrets. Ensure all secrets are found, else raise an error."""
         return await fetch_records_bulk_or_raises(
             self.conn,
@@ -457,7 +507,7 @@ class PilotAgentsDB(BaseSQLDB):
             order_by=("secret_id", "asc"),
         )
 
-    async def get_secrets_by_secret_ids_bulk(self, secret_ids: list[int]):
+    async def get_secrets_by_secret_ids_bulk(self, secret_ids: list[int]) -> list[dict]:
         """Bulk fetch secrets. Ensure all secrets are found, else raise an error."""
         return await fetch_records_bulk_or_raises(
             self.conn,
@@ -467,3 +517,26 @@ class PilotAgentsDB(BaseSQLDB):
             "SecretID",
             secret_ids,
         )
+
+    async def get_pilot_jobs_ids_by_pilot_id(self, pilot_id: int) -> list[int]:
+        """Fetch pilot jobs."""
+        job_to_pilot_mapping = await fetch_records_bulk_or_raises(
+            self.conn,
+            JobToPilotMapping,
+            PilotJobsNotFoundError,
+            "pilot_id",
+            "PilotID",
+            [pilot_id],
+            allow_more_than_one_result_per_input=True,
+            allow_no_result=True,
+        )
+
+        return [mapping["JobID"] for mapping in job_to_pilot_mapping]
+
+    async def get_pilot_ids_by_stamps(self, pilot_stamps: list[str]) -> list[int]:
+        """Get pilot ids. Ensure all pilots are found, else raise an error."""
+        # This function is currently needed while we are relying on pilot_ids instead of pilot_stamps
+        # (Ex: JobToPilotMapping)
+        pilots = await self.get_pilots_by_stamp_bulk(pilot_stamps)
+
+        return [pilot["PilotID"] for pilot in pilots]

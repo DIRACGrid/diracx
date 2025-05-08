@@ -190,6 +190,41 @@ class BodyPilotsAssociatePilotsWithSecrets(_serialization.Model):
         self.pilot_secrets = pilot_secrets
 
 
+class BodyPilotsAssociatePilotWithJobs(_serialization.Model):
+    """Body_pilots_associate_pilot_with_jobs.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: The stamp of the pilot. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+    :vartype pilot_jobs_ids: list[int]
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_jobs_ids": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
+    }
+
+    def __init__(
+        self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: The stamp of the pilot. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+        :paramtype pilot_jobs_ids: list[int]
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_jobs_ids = pilot_jobs_ids
+
+
 class BodyPilotsCreatePilotSecrets(_serialization.Model):
     """Body_pilots_create_pilot_secrets.
 

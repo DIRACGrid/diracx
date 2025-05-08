@@ -190,6 +190,41 @@ class BodyPilotsAssociatePilotsWithSecrets(_serialization.Model):
         self.pilot_secrets = pilot_secrets
 
 
+class BodyPilotsAssociatePilotWithJobs(_serialization.Model):
+    """Body_pilots_associate_pilot_with_jobs.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: The stamp of the pilot. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+    :vartype pilot_jobs_ids: list[int]
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_jobs_ids": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
+    }
+
+    def __init__(
+        self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: The stamp of the pilot. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+        :paramtype pilot_jobs_ids: list[int]
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_jobs_ids = pilot_jobs_ids
+
+
 class BodyPilotsCreatePilotSecrets(_serialization.Model):
     """Body_pilots_create_pilot_secrets.
 
@@ -983,6 +1018,102 @@ class PilotCredentialsInfo(_serialization.Model):
         self.pilot_stamp = pilot_stamp
         self.pilot_secret = pilot_secret
         self.pilot_secret_expires_in = pilot_secret_expires_in
+
+
+class PilotFieldsMapping(_serialization.Model):
+    """All the fields that a user can modify on a Pilot (except PilotStamp).
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilotstamp. Required.
+    :vartype pilot_stamp: str
+    :ivar status_reason: Statusreason.
+    :vartype status_reason: str
+    :ivar status: Pilot statuses from Dirac. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype status: str or ~_generated.models.PilotStatus
+    :ivar bench_mark: Benchmark.
+    :vartype bench_mark: float
+    :ivar destination_site: Destinationsite.
+    :vartype destination_site: str
+    :ivar queue: Queue.
+    :vartype queue: str
+    :ivar grid_site: Gridsite.
+    :vartype grid_site: str
+    :ivar grid_type: Gridtype.
+    :vartype grid_type: str
+    :ivar accounting_sent: Accountingsent.
+    :vartype accounting_sent: bool
+    :ivar current_job_id: Currentjobid.
+    :vartype current_job_id: bool
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "PilotStamp", "type": "str"},
+        "status_reason": {"key": "StatusReason", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "bench_mark": {"key": "BenchMark", "type": "float"},
+        "destination_site": {"key": "DestinationSite", "type": "str"},
+        "queue": {"key": "Queue", "type": "str"},
+        "grid_site": {"key": "GridSite", "type": "str"},
+        "grid_type": {"key": "GridType", "type": "str"},
+        "accounting_sent": {"key": "AccountingSent", "type": "bool"},
+        "current_job_id": {"key": "CurrentJobID", "type": "bool"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        status_reason: Optional[str] = None,
+        status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        bench_mark: Optional[float] = None,
+        destination_site: Optional[str] = None,
+        queue: Optional[str] = None,
+        grid_site: Optional[str] = None,
+        grid_type: Optional[str] = None,
+        accounting_sent: Optional[bool] = None,
+        current_job_id: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_stamp: Pilotstamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword status_reason: Statusreason.
+        :paramtype status_reason: str
+        :keyword status: Pilot statuses from Dirac. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype status: str or ~_generated.models.PilotStatus
+        :keyword bench_mark: Benchmark.
+        :paramtype bench_mark: float
+        :keyword destination_site: Destinationsite.
+        :paramtype destination_site: str
+        :keyword queue: Queue.
+        :paramtype queue: str
+        :keyword grid_site: Gridsite.
+        :paramtype grid_site: str
+        :keyword grid_type: Gridtype.
+        :paramtype grid_type: str
+        :keyword accounting_sent: Accountingsent.
+        :paramtype accounting_sent: bool
+        :keyword current_job_id: Currentjobid.
+        :paramtype current_job_id: bool
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.status_reason = status_reason
+        self.status = status
+        self.bench_mark = bench_mark
+        self.destination_site = destination_site
+        self.queue = queue
+        self.grid_site = grid_site
+        self.grid_type = grid_type
+        self.accounting_sent = accounting_sent
+        self.current_job_id = current_job_id
 
 
 class PilotSecretsInfo(_serialization.Model):

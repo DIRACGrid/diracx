@@ -8,6 +8,7 @@ from fastapi import Body, Depends, HTTPException, status
 
 from diracx.core.exceptions import (
     CredentialsAlreadyExistError,
+    PilotAlreadyAssociatedWithJobError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
     SecretNotFoundError,
@@ -29,6 +30,9 @@ from diracx.logic.auth.pilot import (
 from diracx.logic.auth.pilot import (
     associate_pilots_with_secrets as associate_pilots_with_secrets_bl,
 )
+from diracx.logic.pilots.management import (
+    associate_pilot_with_jobs as associate_pilot_with_jobs_bl,
+)
 from diracx.logic.pilots.management import delete_pilots_bulk, update_pilots_fields
 
 from ..dependencies import (
@@ -37,7 +41,11 @@ from ..dependencies import (
 )
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from .access_policies import ActionType, CheckPilotManagementPolicyCallable
+from .access_policies import (
+    ActionType,
+    CheckDiracServicesPolicyCallable,
+    CheckPilotManagementPolicyCallable,
+)
 
 router = DiracxRouter()
 
@@ -261,3 +269,31 @@ async def update_pilot_fields(
         pilot_db=pilot_agents_db,
         pilot_stamps_to_fields_mapping=pilot_stamps_to_fields_mapping,
     )
+
+
+@router.patch("/fields/jobs", status_code=HTTPStatus.NO_CONTENT)
+async def associate_pilot_with_jobs(
+    pilot_agents_db: PilotAgentsDB,
+    pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
+    pilot_jobs_ids: Annotated[
+        list[int], Body(description="The jobs we want to add to the pilot.")
+    ],
+    check_permissions: CheckDiracServicesPolicyCallable,
+):
+    await check_permissions()
+
+    try:
+        await associate_pilot_with_jobs_bl(
+            pilot_db=pilot_agents_db,
+            pilot_stamp=pilot_stamp,
+            pilot_jobs_ids=pilot_jobs_ids,
+        )
+    except PilotNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="This pilot does not exist."
+        ) from e
+    except PilotAlreadyAssociatedWithJobError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This pilot is already associated with this job.",
+        ) from e
