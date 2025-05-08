@@ -153,6 +153,76 @@ class BodyAuthRefreshPilotTokens(_serialization.Model):
         self.refresh_token = refresh_token
 
 
+class BodyPilotsAddPilotStamps(_serialization.Model):
+    """Body_pilots_add_pilot_stamps.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+    :vartype pilot_stamps: list[str]
+    :ivar vo: Virtual Organisation associated with the inserted pilots. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilots.
+    :vartype grid_type: str
+    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
+    :vartype pilot_references: dict[str, any]
+    :ivar generate_secrets: Boolean to allow secret creation or not.
+    :vartype generate_secrets: bool
+    :ivar pilot_secret_use_count_max: Number of times we can use a secret.
+    :vartype pilot_secret_use_count_max: int
+    """
+
+    _validation = {
+        "pilot_stamps": {"required": True},
+        "vo": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "pilot_references": {"key": "pilot_references", "type": "{object}"},
+        "generate_secrets": {"key": "generate_secrets", "type": "bool"},
+        "pilot_secret_use_count_max": {
+            "key": "pilot_secret_use_count_max",
+            "type": "int",
+        },
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamps: List[str],
+        vo: str,
+        grid_type: str = "Dirac",
+        pilot_references: Optional[Dict[str, Any]] = None,
+        generate_secrets: bool = True,
+        pilot_secret_use_count_max: int = 1,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+        :paramtype pilot_stamps: list[str]
+        :keyword vo: Virtual Organisation associated with the inserted pilots. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilots.
+        :paramtype grid_type: str
+        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
+        :paramtype pilot_references: dict[str, any]
+        :keyword generate_secrets: Boolean to allow secret creation or not.
+        :paramtype generate_secrets: bool
+        :keyword pilot_secret_use_count_max: Number of times we can use a secret.
+        :paramtype pilot_secret_use_count_max: int
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamps = pilot_stamps
+        self.vo = vo
+        self.grid_type = grid_type
+        self.pilot_references = pilot_references
+        self.generate_secrets = generate_secrets
+        self.pilot_secret_use_count_max = pilot_secret_use_count_max
+
+
 class BodyPilotsAssociatePilotsWithSecrets(_serialization.Model):
     """Body_pilots_associate_pilots_with_secrets.
 
@@ -280,76 +350,6 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
         self.n = n
         self.vo = vo
         self.expiration_minutes = expiration_minutes
-        self.pilot_secret_use_count_max = pilot_secret_use_count_max
-
-
-class BodyPilotsRegisterNewPilotsToDb(_serialization.Model):
-    """Body_pilots_register_new_pilots_to_db.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
-    :vartype pilot_stamps: list[str]
-    :ivar vo: Virtual Organisation associated with the inserted pilots. Required.
-    :vartype vo: str
-    :ivar grid_type: Grid type of the pilots.
-    :vartype grid_type: str
-    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
-    :vartype pilot_references: dict[str, any]
-    :ivar generate_secrets: Boolean to allow secret creation or not.
-    :vartype generate_secrets: bool
-    :ivar pilot_secret_use_count_max: Number of times we can use a secret.
-    :vartype pilot_secret_use_count_max: int
-    """
-
-    _validation = {
-        "pilot_stamps": {"required": True},
-        "vo": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
-        "vo": {"key": "vo", "type": "str"},
-        "grid_type": {"key": "grid_type", "type": "str"},
-        "pilot_references": {"key": "pilot_references", "type": "{object}"},
-        "generate_secrets": {"key": "generate_secrets", "type": "bool"},
-        "pilot_secret_use_count_max": {
-            "key": "pilot_secret_use_count_max",
-            "type": "int",
-        },
-    }
-
-    def __init__(
-        self,
-        *,
-        pilot_stamps: List[str],
-        vo: str,
-        grid_type: str = "Dirac",
-        pilot_references: Optional[Dict[str, Any]] = None,
-        generate_secrets: bool = True,
-        pilot_secret_use_count_max: int = 1,
-        **kwargs: Any,
-    ) -> None:
-        """
-        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
-        :paramtype pilot_stamps: list[str]
-        :keyword vo: Virtual Organisation associated with the inserted pilots. Required.
-        :paramtype vo: str
-        :keyword grid_type: Grid type of the pilots.
-        :paramtype grid_type: str
-        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
-        :paramtype pilot_references: dict[str, any]
-        :keyword generate_secrets: Boolean to allow secret creation or not.
-        :paramtype generate_secrets: bool
-        :keyword pilot_secret_use_count_max: Number of times we can use a secret.
-        :paramtype pilot_secret_use_count_max: int
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamps = pilot_stamps
-        self.vo = vo
-        self.grid_type = grid_type
-        self.pilot_references = pilot_references
-        self.generate_secrets = generate_secrets
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
 
 
@@ -682,56 +682,6 @@ class JobCommand(_serialization.Model):
         self.arguments = arguments
 
 
-class JobSearchParams(_serialization.Model):
-    """JobSearchParams.
-
-    :ivar parameters: Parameters.
-    :vartype parameters: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSearchParamsSearchItem]
-    :ivar sort: Sort.
-    :vartype sort: list[~_generated.models.SortSpec]
-    :ivar distinct: Distinct.
-    :vartype distinct: bool
-    """
-
-    _attribute_map = {
-        "parameters": {"key": "parameters", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
-        "sort": {"key": "sort", "type": "[SortSpec]"},
-        "distinct": {"key": "distinct", "type": "bool"},
-    }
-
-    def __init__(
-        self,
-        *,
-        parameters: Optional[List[str]] = None,
-        search: List["_models.JobSearchParamsSearchItem"] = [],
-        sort: List["_models.SortSpec"] = [],
-        distinct: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """
-        :keyword parameters: Parameters.
-        :paramtype parameters: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSearchParamsSearchItem]
-        :keyword sort: Sort.
-        :paramtype sort: list[~_generated.models.SortSpec]
-        :keyword distinct: Distinct.
-        :paramtype distinct: bool
-        """
-        super().__init__(**kwargs)
-        self.parameters = parameters
-        self.search = search
-        self.sort = sort
-        self.distinct = distinct
-
-
-class JobSearchParamsSearchItem(_serialization.Model):
-    """JobSearchParamsSearchItem."""
-
-
 class JobStatusUpdate(_serialization.Model):
     """JobStatusUpdate.
 
@@ -1045,7 +995,7 @@ class PilotFieldsMapping(_serialization.Model):
     :ivar accounting_sent: Accountingsent.
     :vartype accounting_sent: bool
     :ivar current_job_id: Currentjobid.
-    :vartype current_job_id: bool
+    :vartype current_job_id: int
     """
 
     _validation = {
@@ -1062,7 +1012,7 @@ class PilotFieldsMapping(_serialization.Model):
         "grid_site": {"key": "GridSite", "type": "str"},
         "grid_type": {"key": "GridType", "type": "str"},
         "accounting_sent": {"key": "AccountingSent", "type": "bool"},
-        "current_job_id": {"key": "CurrentJobID", "type": "bool"},
+        "current_job_id": {"key": "CurrentJobID", "type": "int"},
     }
 
     def __init__(
@@ -1077,7 +1027,7 @@ class PilotFieldsMapping(_serialization.Model):
         grid_site: Optional[str] = None,
         grid_type: Optional[str] = None,
         accounting_sent: Optional[bool] = None,
-        current_job_id: Optional[bool] = None,
+        current_job_id: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -1101,7 +1051,7 @@ class PilotFieldsMapping(_serialization.Model):
         :keyword accounting_sent: Accountingsent.
         :paramtype accounting_sent: bool
         :keyword current_job_id: Currentjobid.
-        :paramtype current_job_id: bool
+        :paramtype current_job_id: int
         """
         super().__init__(**kwargs)
         self.pilot_stamp = pilot_stamp
@@ -1177,8 +1127,8 @@ class PilotStampInfo(_serialization.Model):
         self.pilot_stamp = pilot_stamp
 
 
-class ResponsePilotsRegisterNewPilotsToDb(_serialization.Model):
-    """Response Pilots Register New Pilots To Db."""
+class ResponsePilotsAddPilotStamps(_serialization.Model):
+    """Response Pilots Add Pilot Stamps."""
 
 
 class SandboxDownloadResponse(_serialization.Model):
@@ -1365,6 +1315,56 @@ class ScalarSearchSpec(_serialization.Model):
 
 class ScalarSearchSpecValue(_serialization.Model):
     """Value."""
+
+
+class SearchParams(_serialization.Model):
+    """SearchParams.
+
+    :ivar parameters: Parameters.
+    :vartype parameters: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SearchParamsSearchItem]
+    :ivar sort: Sort.
+    :vartype sort: list[~_generated.models.SortSpec]
+    :ivar distinct: Distinct.
+    :vartype distinct: bool
+    """
+
+    _attribute_map = {
+        "parameters": {"key": "parameters", "type": "[str]"},
+        "search": {"key": "search", "type": "[SearchParamsSearchItem]"},
+        "sort": {"key": "sort", "type": "[SortSpec]"},
+        "distinct": {"key": "distinct", "type": "bool"},
+    }
+
+    def __init__(
+        self,
+        *,
+        parameters: Optional[List[str]] = None,
+        search: List["_models.SearchParamsSearchItem"] = [],
+        sort: List["_models.SortSpec"] = [],
+        distinct: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword parameters: Parameters.
+        :paramtype parameters: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SearchParamsSearchItem]
+        :keyword sort: Sort.
+        :paramtype sort: list[~_generated.models.SortSpec]
+        :keyword distinct: Distinct.
+        :paramtype distinct: bool
+        """
+        super().__init__(**kwargs)
+        self.parameters = parameters
+        self.search = search
+        self.sort = sort
+        self.distinct = distinct
+
+
+class SearchParamsSearchItem(_serialization.Model):
+    """SearchParamsSearchItem."""
 
 
 class SetJobStatusReturn(_serialization.Model):

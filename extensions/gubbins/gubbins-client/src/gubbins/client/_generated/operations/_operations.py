@@ -773,9 +773,7 @@ def build_lollygag_get_gubbins_secrets_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_register_new_pilots_to_db_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilots_add_pilot_stamps_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop(
@@ -796,7 +794,7 @@ def build_pilots_register_new_pilots_to_db_request(
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_patch_pilot_data_request(**kwargs: Any) -> HttpRequest:
+def build_pilots_delete_pilots_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop(
@@ -812,6 +810,38 @@ def build_pilots_patch_pilot_data_request(**kwargs: Any) -> HttpRequest:
         )
 
     return HttpRequest(method="DELETE", url=_url, headers=_headers, **kwargs)
+
+
+def build_pilots_get_pilot_info_request(
+    *, page: int = 1, per_page: int = 100, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilots/search"
+
+    # Construct parameters
+    if page is not None:
+        _params["page"] = _SERIALIZER.query("page", page, "int")
+    if per_page is not None:
+        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
 
 
 def build_pilots_create_pilot_secrets_request(
@@ -3081,7 +3111,7 @@ class JobsOperations:
     @overload
     def search(
         self,
-        body: Optional[_models.JobSearchParams] = None,
+        body: Optional[_models.SearchParams] = None,
         *,
         page: int = 1,
         per_page: int = 100,
@@ -3095,7 +3125,7 @@ class JobsOperations:
         **TODO: Add more docs**.
 
         :param body: Default value is None.
-        :type body: ~_generated.models.JobSearchParams
+        :type body: ~_generated.models.SearchParams
         :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
@@ -3141,7 +3171,7 @@ class JobsOperations:
     @distributed_trace
     def search(
         self,
-        body: Optional[Union[_models.JobSearchParams, IO[bytes]]] = None,
+        body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
         *,
         page: int = 1,
         per_page: int = 100,
@@ -3153,8 +3183,8 @@ class JobsOperations:
 
         **TODO: Add more docs**.
 
-        :param body: Is either a JobSearchParams type or a IO[bytes] type. Default value is None.
-        :type body: ~_generated.models.JobSearchParams or IO[bytes]
+        :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
+        :type body: ~_generated.models.SearchParams or IO[bytes]
         :keyword page: Default value is 1.
         :paramtype page: int
         :keyword per_page: Default value is 100.
@@ -3186,7 +3216,7 @@ class JobsOperations:
             _content = body
         else:
             if body is not None:
-                _json = self._serialize.body(body, "JobSearchParams")
+                _json = self._serialize.body(body, "SearchParams")
             else:
                 _json = None
 
@@ -3658,14 +3688,14 @@ class PilotsOperations:
         )
 
     @overload
-    def register_new_pilots_to_db(
+    def add_pilot_stamps(
         self,
-        body: _models.BodyPilotsRegisterNewPilotsToDb,
+        body: _models.BodyPilotsAddPilotStamps,
         *,
         content_type: str = "application/json",
         **kwargs: Any,
-    ) -> _models.ResponsePilotsRegisterNewPilotsToDb:
-        """Register New Pilots To Db.
+    ) -> _models.ResponsePilotsAddPilotStamps:
+        """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
@@ -3673,20 +3703,20 @@ class PilotsOperations:
         If a pilot stamp already exists, it will block the insertion.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsRegisterNewPilotsToDb
+        :type body: ~_generated.models.BodyPilotsAddPilotStamps
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: ResponsePilotsRegisterNewPilotsToDb
-        :rtype: ~_generated.models.ResponsePilotsRegisterNewPilotsToDb
+        :return: ResponsePilotsAddPilotStamps
+        :rtype: ~_generated.models.ResponsePilotsAddPilotStamps
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
-    def register_new_pilots_to_db(
+    def add_pilot_stamps(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.ResponsePilotsRegisterNewPilotsToDb:
-        """Register New Pilots To Db.
+    ) -> _models.ResponsePilotsAddPilotStamps:
+        """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
@@ -3698,28 +3728,26 @@ class PilotsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: ResponsePilotsRegisterNewPilotsToDb
-        :rtype: ~_generated.models.ResponsePilotsRegisterNewPilotsToDb
+        :return: ResponsePilotsAddPilotStamps
+        :rtype: ~_generated.models.ResponsePilotsAddPilotStamps
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def register_new_pilots_to_db(
-        self,
-        body: Union[_models.BodyPilotsRegisterNewPilotsToDb, IO[bytes]],
-        **kwargs: Any,
-    ) -> _models.ResponsePilotsRegisterNewPilotsToDb:
-        """Register New Pilots To Db.
+    def add_pilot_stamps(
+        self, body: Union[_models.BodyPilotsAddPilotStamps, IO[bytes]], **kwargs: Any
+    ) -> _models.ResponsePilotsAddPilotStamps:
+        """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
         It will return the pilot secrets as well as an expiration date.
 
         If a pilot stamp already exists, it will block the insertion.
 
-        :param body: Is either a BodyPilotsRegisterNewPilotsToDb type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsRegisterNewPilotsToDb or IO[bytes]
-        :return: ResponsePilotsRegisterNewPilotsToDb
-        :rtype: ~_generated.models.ResponsePilotsRegisterNewPilotsToDb
+        :param body: Is either a BodyPilotsAddPilotStamps type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsAddPilotStamps or IO[bytes]
+        :return: ResponsePilotsAddPilotStamps
+        :rtype: ~_generated.models.ResponsePilotsAddPilotStamps
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -3736,9 +3764,7 @@ class PilotsOperations:
         content_type: Optional[str] = kwargs.pop(
             "content_type", _headers.pop("Content-Type", None)
         )
-        cls: ClsType[_models.ResponsePilotsRegisterNewPilotsToDb] = kwargs.pop(
-            "cls", None
-        )
+        cls: ClsType[_models.ResponsePilotsAddPilotStamps] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -3746,9 +3772,9 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsRegisterNewPilotsToDb")
+            _json = self._serialize.body(body, "BodyPilotsAddPilotStamps")
 
-        _request = build_pilots_register_new_pilots_to_db_request(
+        _request = build_pilots_add_pilot_stamps_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3773,7 +3799,7 @@ class PilotsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize(
-            "ResponsePilotsRegisterNewPilotsToDb", pipeline_response.http_response
+            "ResponsePilotsAddPilotStamps", pipeline_response.http_response
         )
 
         if cls:
@@ -3782,10 +3808,10 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
     @overload
-    def patch_pilot_data(
+    def delete_pilots(
         self, body: List[str], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Patch Pilot Data.
+        """Delete Pilots.
 
         Endpoint to delete a pilot.
 
@@ -3800,10 +3826,10 @@ class PilotsOperations:
         """
 
     @overload
-    def patch_pilot_data(
+    def delete_pilots(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Patch Pilot Data.
+        """Delete Pilots.
 
         Endpoint to delete a pilot.
 
@@ -3818,10 +3844,10 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def patch_pilot_data(  # pylint: disable=inconsistent-return-statements
+    def delete_pilots(  # pylint: disable=inconsistent-return-statements
         self, body: Union[List[str], IO[bytes]], **kwargs: Any
     ) -> None:
-        """Patch Pilot Data.
+        """Delete Pilots.
 
         Endpoint to delete a pilot.
 
@@ -3855,7 +3881,7 @@ class PilotsOperations:
         else:
             _json = self._serialize.body(body, "[str]")
 
-        _request = build_pilots_patch_pilot_data_request(
+        _request = build_pilots_delete_pilots_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3881,6 +3907,151 @@ class PilotsOperations:
 
         if cls:
             return cls(pipeline_response, None, {})  # type: ignore
+
+    @overload
+    def get_pilot_info(
+        self,
+        body: Optional[_models.SearchParams] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Get Pilot Info.
+
+        Retrieve information about pilots.
+
+        :param body: Default value is None.
+        :type body: ~_generated.models.SearchParams
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def get_pilot_info(
+        self,
+        body: Optional[IO[bytes]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Get Pilot Info.
+
+        Retrieve information about pilots.
+
+        :param body: Default value is None.
+        :type body: IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def get_pilot_info(
+        self,
+        body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Get Pilot Info.
+
+        Retrieve information about pilots.
+
+        :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
+        :type body: ~_generated.models.SearchParams or IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "SearchParams")
+            else:
+                _json = None
+
+        _request = build_pilots_get_pilot_info_request(
+            page=page,
+            per_page=per_page,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200, 206]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        response_headers = {}
+        if response.status_code == 206:
+            response_headers["Content-Range"] = self._deserialize(
+                "str", response.headers.get("Content-Range")
+            )
+
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, response_headers)  # type: ignore
+
+        return deserialized  # type: ignore
 
     @overload
     def create_pilot_secrets(
@@ -4113,7 +4284,7 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Fields.
 
-        Update Pilot Fields.
+        Modify a field of a pilot.
 
         :param body: Required.
         :type body: list[~_generated.models.PilotFieldsMapping]
@@ -4131,7 +4302,7 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Fields.
 
-        Update Pilot Fields.
+        Modify a field of a pilot.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -4149,7 +4320,7 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Fields.
 
-        Update Pilot Fields.
+        Modify a field of a pilot.
 
         :param body: Is either a [PilotFieldsMapping] type or a IO[bytes] type. Required.
         :type body: list[~_generated.models.PilotFieldsMapping] or IO[bytes]

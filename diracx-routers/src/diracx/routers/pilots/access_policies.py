@@ -18,6 +18,8 @@ class ActionType(StrEnum):
     CREATE_PILOT_OR_SECRET = auto()
     # Change some pilot fields
     CHANGE_PILOT_FIELD = auto()
+    # Read some pilot info
+    READ_PILOT_FIELDS = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
@@ -39,6 +41,15 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
     ):
         assert action, "action is a mandatory parameter"
+
+        if action == ActionType.READ_PILOT_FIELDS:
+            if NORMAL_USER in user_info.properties:
+                return
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You have to be logged on to see pilots.",
+            )
 
         if not vo:
             assert pilot_stamps and pilot_db, (

@@ -2,48 +2,29 @@ from __future__ import annotations
 
 import logging
 from http import HTTPStatus
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import Body, Depends, HTTPException, status
+from fastapi import Body, Depends, HTTPException, Response, status
 
 from diracx.core.exceptions import (
-    CredentialsAlreadyExistError,
-    PilotAlreadyAssociatedWithJobError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
-    SecretNotFoundError,
 )
-from diracx.core.models import (
-    PilotCredentialsInfo,
-    PilotFieldsMapping,
-    PilotSecretsInfo,
-    PilotStampInfo,
-)
+from diracx.core.models import PilotCredentialsInfo, PilotStampInfo, SearchParams
 from diracx.logic.auth.pilot import (
     add_pilot_credentials,
-    create_credentials,
     create_pilot_credentials_response,
-    create_secrets_response,
     create_stamp_response,
     register_new_pilots,
 )
-from diracx.logic.auth.pilot import (
-    associate_pilots_with_secrets as associate_pilots_with_secrets_bl,
-)
-from diracx.logic.pilots.management import (
-    associate_pilot_with_jobs as associate_pilot_with_jobs_bl,
-)
-from diracx.logic.pilots.management import delete_pilots_bulk, update_pilots_fields
+from diracx.logic.pilots.management import delete_pilots_bulk
+from diracx.logic.pilots.management import get_pilot_info as get_pilot_info_bl
 
-from ..dependencies import (
-    AuthSettings,
-    PilotAgentsDB,
-)
+from ..dependencies import AuthSettings, PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import (
     ActionType,
-    CheckDiracServicesPolicyCallable,
     CheckPilotManagementPolicyCallable,
 )
 
@@ -53,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/")
-async def register_new_pilots_to_db(
+async def add_pilot_stamps(
     pilot_db: PilotAgentsDB,
     pilot_stamps: Annotated[
         list[str],
@@ -118,7 +99,7 @@ async def register_new_pilots_to_db(
 
 
 @router.delete("/", status_code=HTTPStatus.NO_CONTENT)
-async def patch_pilot_data(
+async def delete_pilots(
     pilot_stamps: Annotated[
         list[str], Body(description="Stamps of the pilots we want to delete.")
     ],
@@ -141,159 +122,128 @@ async def patch_pilot_data(
         ) from e
 
 
-@router.post("/fields/secrets")
-async def create_pilot_secrets(
-    n: Annotated[int, Body(description="Number of secrets to create.")],
-    vo: Annotated[
-        str | None, Body(description="Virtual Organisation of the secrets to create.")
-    ],
-    expiration_minutes: Annotated[
-        int | None, Body(description="Time in minutes before expiring.")
-    ],
-    pilot_secret_use_count_max: Annotated[
-        int | None, Body(description="Number of times that we can use a secret.")
-    ],
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckPilotManagementPolicyCallable,
-    pilot_db: PilotAgentsDB,
-    settings: AuthSettings,
-) -> list[PilotSecretsInfo]:
-
-    # TODO: Check max for pilot_max
-    # [SQL: INSERT INTO `PilotSecrets` (`HashedSecret`, `SecretGlobalUseCount`, `SecretGlobalUseCountMax`, `SecretVO`)
-    # VALUES (%s, %s, %s, %s)]
-    # [parameters: ('debc69a1f3ada36060b7fea2d1f5bf09339971b089cc2b8037bc3ecba527babf', 0, 1000000000, 'diracAdmin')]
-
-    await check_permissions(action=ActionType.CREATE_PILOT_OR_SECRET, vo=vo)
-
-    if expiration_minutes and expiration_minutes <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="expiration_minutes must be strictly positive.",
-        )
-    if pilot_secret_use_count_max and pilot_secret_use_count_max <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="pilot_secret_use_count_max is either None or a positive number.",
-        )
-
-    secrets, _, expiration_dates = await create_credentials(
-        n, pilot_db, settings, vo, pilot_secret_use_count_max, expiration_minutes
-    )
-
-    logger.info(
-        f"{user_info.preferred_username} created {n} secrets that will last in {expiration_minutes} minute(s)."
-    )
-
-    return create_secrets_response(
-        pilot_secrets=secrets,
-        pilot_expiration_dates=expiration_dates,
-    )
+EXAMPLE_SEARCHES = {
+    "Show all": {
+        "summary": "Show all",
+        "description": "Shows all pilots the current user has access to.",
+        "value": {},
+    },
+    "A specific pilot": {
+        "summary": "A specific pilot",
+        "description": "Search for a specific pilot by ID",
+        "value": {"search": [{"parameter": "PilotID", "operator": "eq", "value": "5"}]},
+    },
+    "Get ordered pilot statuses": {
+        "summary": "Get ordered job statuses",
+        "description": "Get only job statuses for specific jobs, ordered by status",
+        "value": {
+            "parameters": ["PilotID", "Status"],
+            "search": [
+                {"parameter": "PilotID", "operator": "in", "values": ["6", "2", "3"]}
+            ],
+            "sort": [{"parameter": "PilotID", "direction": "asc"}],
+        },
+    },
+}
 
 
-@router.patch("/fields/secrets", status_code=HTTPStatus.NO_CONTENT)
-async def associate_pilots_with_secrets(
-    pilot_stamps: Annotated[list[str], Body(description="List of all pilot stamps.")],
-    pilot_secrets: Annotated[
-        list[str],
-        Body(
-            description=(
-                "List of all secrets."
-                "Possibility of providing only one (1) secret, it will apply it to all pilots."
-            )
-        ),
-    ],
-    pilot_agents_db: PilotAgentsDB,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckPilotManagementPolicyCallable,
-):
-    """Endpoint to associate pilots with secrets."""
-    await check_permissions(
-        action=ActionType.CHANGE_PILOT_FIELD,
-        pilot_stamps=pilot_stamps,
-        pilot_db=pilot_agents_db,
-    )
+EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
+    200: {
+        "description": "List of matching results",
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "PilotID": 3,
+                        "SubmissionTime": "2023-05-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-05-25T07:03:35.602656",
+                        "Status": "RUNNING",
+                        "GridType": "Dirac",
+                        "BenchMark": 1.0,
+                    },
+                    {
+                        "PilotID": 5,
+                        "SubmissionTime": "2023-06-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-07-25T07:03:35.602652",
+                        "Status": "RUNNING",
+                        "GridType": "Dirac",
+                        "BenchMark": 63.1,
+                    },
+                ]
+            }
+        },
+    },
+    206: {
+        "description": "Partial Content. Only a part of the requested range could be served.",
+        "headers": {
+            "Content-Range": {
+                "description": "The range of pilots returned in this response",
+                "schema": {"type": "string", "example": "pilots 0-1/4"},
+            }
+        },
+        "model": list[dict[str, Any]],
+        "content": {
+            "application/json": {
+                "example": [
+                    {
+                        "PilotID": 3,
+                        "SubmissionTime": "2023-05-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-05-25T07:03:35.602656",
+                        "Status": "RUNNING",
+                        "GridType": "Dirac",
+                        "BenchMark": 1.0,
+                    },
+                    {
+                        "PilotID": 5,
+                        "SubmissionTime": "2023-06-25T07:03:35.602654",
+                        "LastUpdateTime": "2023-07-25T07:03:35.602652",
+                        "Status": "RUNNING",
+                        "GridType": "Dirac",
+                        "BenchMark": 63.1,
+                    },
+                ]
+            }
+        },
+    },
+}
 
-    if len(pilot_secrets) != 1 and len(pilot_secrets) != len(pilot_stamps):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="pilot_secrets length must be one (1) or the same length as pilot_stamps",
-        )
 
-    try:
-        await associate_pilots_with_secrets_bl(
-            pilot_db=pilot_agents_db, secrets=pilot_secrets, pilot_stamps=pilot_stamps
-        )
-    except CredentialsAlreadyExistError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="one of the pilot already is associated with one of the secrets",
-            # TODO: Give more details
-        ) from e
-    except SecretNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="one of the secrets does not exist",
-        ) from e
-    except PilotNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="one of the pilots does not exist",
-        ) from e
-
-    logger.info(
-        f"{user_info.preferred_username} associated {len(pilot_stamps)} pilots"
-        f"with {len(pilot_secrets)} secrets."
-    )
-
-
-@router.patch("/fields", status_code=HTTPStatus.NO_CONTENT)
-async def update_pilot_fields(
-    pilot_stamps_to_fields_mapping: Annotated[
-        list[PilotFieldsMapping],
-        Body(description="(pilot_stamp, pilot_fields) mapping to change."),
-    ],
+@router.post("/search", responses=EXAMPLE_RESPONSES)
+async def get_pilot_info(
     pilot_agents_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
-):
+    response: Response,
+    page: int = 1,
+    per_page: int = 100,
+    body: Annotated[
+        SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
+    ] = None,
+) -> list[dict[str, Any]]:
+    """Retrieve information about pilots."""
+    # TODO: Test this route
+    await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
-    pilot_stamps = [mapping.PilotStamp for mapping in pilot_stamps_to_fields_mapping]
-
-    await check_permissions(
-        action=ActionType.CHANGE_PILOT_FIELD,
+    total, pilots = await get_pilot_info_bl(
         pilot_db=pilot_agents_db,
-        pilot_stamps=pilot_stamps,
+        page=page,
+        per_page=per_page,
+        body=body,
     )
 
-    await update_pilots_fields(
-        pilot_db=pilot_agents_db,
-        pilot_stamps_to_fields_mapping=pilot_stamps_to_fields_mapping,
-    )
+    # Set the Content-Range header if needed
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4
 
+    # No pilots found but there are pilots for the requested search
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
+    if len(pilots) == 0 and total > 0:
+        response.headers["Content-Range"] = f"pilots */{total}"
+        response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
 
-@router.patch("/fields/jobs", status_code=HTTPStatus.NO_CONTENT)
-async def associate_pilot_with_jobs(
-    pilot_agents_db: PilotAgentsDB,
-    pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
-    pilot_jobs_ids: Annotated[
-        list[int], Body(description="The jobs we want to add to the pilot.")
-    ],
-    check_permissions: CheckDiracServicesPolicyCallable,
-):
-    await check_permissions()
-
-    try:
-        await associate_pilot_with_jobs_bl(
-            pilot_db=pilot_agents_db,
-            pilot_stamp=pilot_stamp,
-            pilot_jobs_ids=pilot_jobs_ids,
-        )
-    except PilotNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="This pilot does not exist."
-        ) from e
-    except PilotAlreadyAssociatedWithJobError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This pilot is already associated with this job.",
-        ) from e
+    # The total number of pilots is greater than the number of pilots returned
+    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
+    elif len(pilots) < total:
+        first_idx = per_page * (page - 1)
+        last_idx = min(first_idx + len(pilots), total) - 1 if total > 0 else 0
+        response.headers["Content-Range"] = f"pilots {first_idx}-{last_idx}/{total}"
+        response.status_code = HTTPStatus.PARTIAL_CONTENT
+    return pilots

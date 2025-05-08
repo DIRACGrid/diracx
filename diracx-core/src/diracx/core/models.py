@@ -65,7 +65,7 @@ class JobSummaryParams(BaseModel):
     # TODO: Add more validation
 
 
-class JobSearchParams(BaseModel):
+class SearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []
@@ -271,7 +271,7 @@ class PilotFieldsMapping(BaseModel):
     GridSite: Optional[str] = None
     GridType: Optional[str] = None
     AccountingSent: Optional[bool] = None
-    CurrentJobID: Optional[bool] = None
+    CurrentJobID: Optional[int] = None
 
 
 class AccessTokenPayload(TokenPayload):

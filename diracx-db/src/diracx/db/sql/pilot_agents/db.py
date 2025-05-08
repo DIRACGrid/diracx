@@ -3,15 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, bindparam
+from sqlalchemy import DateTime, bindparam, func
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.sql import delete, insert, update
+from sqlalchemy.sql import delete, insert, select, update
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
     BadPilotVOError,
     CredentialsAlreadyExistError,
     CredentialsNotFoundError,
+    InvalidQueryError,
     PilotAlreadyAssociatedWithJobError,
     PilotJobsNotFoundError,
     PilotNotFoundError,
@@ -19,11 +20,14 @@ from diracx.core.exceptions import (
     SecretHasExpiredError,
     SecretNotFoundError,
 )
-from diracx.core.models import PilotFieldsMapping
+from diracx.core.models import PilotFieldsMapping, SearchSpec, SortSpec
 from diracx.db.exceptions import DBInBadStateError
 
 from ..utils import (
     BaseSQLDB,
+    _get_columns,
+    apply_search_filters,
+    apply_sort_constraints,
     fetch_records_bulk_or_raises,
     utcnow,
 )
@@ -540,3 +544,48 @@ class PilotAgentsDB(BaseSQLDB):
         pilots = await self.get_pilots_by_stamp_bulk(pilot_stamps)
 
         return [pilot["PilotID"] for pilot in pilots]
+
+    async def search(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        """Search for pilots in the database."""
+        # TODO: Refactorize with the search function for jobs.
+        # Find which columns to select
+        columns = _get_columns(PilotAgents.__table__, parameters)
+
+        stmt = select(*columns)
+
+        stmt = apply_search_filters(
+            PilotAgents.__table__.columns.__getitem__, stmt, search
+        )
+        stmt = apply_sort_constraints(
+            PilotAgents.__table__.columns.__getitem__, stmt, sorts
+        )
+
+        if distinct:
+            stmt = stmt.distinct()
+
+        # Calculate total count before applying pagination
+        total_count_subquery = stmt.alias()
+        total_count_stmt = select(func.count()).select_from(total_count_subquery)
+        total = (await self.conn.execute(total_count_stmt)).scalar_one()
+
+        # Apply pagination
+        if page is not None:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+        # Execute the query
+        return total, [
+            dict(row._mapping) async for row in (await self.conn.stream(stmt))
+        ]
