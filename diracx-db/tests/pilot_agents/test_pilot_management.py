@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
+from sqlalchemy.sql import update
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
@@ -8,6 +11,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import PilotFieldsMapping, PilotStatus
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
+from diracx.db.sql.pilot_agents.schema import PilotAgents
 
 MAIN_VO = "lhcb"
 N = 100
@@ -24,21 +28,101 @@ async def pilot_agents_db(tmp_path):
 
 @pytest.fixture
 async def add_stamps(pilot_agents_db):
+    async def _add_stamps(start_n=0):
+        async with pilot_agents_db as db:
+            # Add pilots
+            refs = [f"ref_{i}" for i in range(start_n, start_n + N)]
+            stamps = [f"stamp_{i}" for i in range(start_n, start_n + N)]
+            pilot_references = dict(zip(stamps, refs))
+
+            vo = MAIN_VO
+
+            await db.add_pilots_bulk(
+                stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
+            )
+
+            pilots = await db.get_pilots_by_stamp_bulk(stamps)
+
+            return pilots
+
+    return _add_stamps
+
+
+@pytest.fixture
+async def create_timed_pilots(pilot_agents_db, add_stamps):
+    async def _create_timed_pilots(
+        old_date: datetime, aborted: bool = False, start_n=0
+    ):
+
+        # Get pilots
+        pilots = await add_stamps(start_n)
+
+        async with pilot_agents_db as db:
+
+            # Update manually their age
+            # Collect PilotStamps
+            pilot_stamps = [pilot["PilotStamp"] for pilot in pilots]
+
+            stmt = (
+                update(PilotAgents)
+                .where(PilotAgents.pilot_stamp.in_(pilot_stamps))
+                .values(SubmissionTime=old_date)
+            )
+
+            if aborted:
+                stmt = stmt.values(Status="Aborted")
+
+            res = await db.conn.execute(stmt)
+            assert res.rowcount == len(pilot_stamps)
+
+            pilots = await db.get_pilots_by_stamp_bulk(pilot_stamps)
+            return pilots
+
+    return _create_timed_pilots
+
+
+@pytest.fixture
+async def create_old_pilots_environment(pilot_agents_db, create_timed_pilots):
+    non_aborted_recent = await create_timed_pilots(
+        datetime(2025, 1, 1, tzinfo=timezone.utc), False, N
+    )
+    aborted_recent = await create_timed_pilots(
+        datetime(2025, 1, 1, tzinfo=timezone.utc), True, 2 * N
+    )
+
+    aborted_very_old = await create_timed_pilots(
+        datetime(2003, 3, 10, tzinfo=timezone.utc), True, 3 * N
+    )
+    non_aborted_very_old = await create_timed_pilots(
+        datetime(2003, 3, 10, tzinfo=timezone.utc), False, 4 * N
+    )
+
+    pilot_number = 4 * N
+
+    assert pilot_number == (
+        len(non_aborted_recent)
+        + len(aborted_recent)
+        + len(aborted_very_old)
+        + len(non_aborted_very_old)
+    )
+
+    # Phase 0. Verify that we have the right environment
     async with pilot_agents_db as pilot_agents_db:
-        # Add pilots
-        refs = [f"ref_{i}" for i in range(N)]
-        stamps = [f"stamp_{i}" for i in range(N)]
-        pilot_references = dict(zip(stamps, refs))
-
-        vo = MAIN_VO
-
-        await pilot_agents_db.add_pilots_bulk(
-            stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
+        # Ensure that we can get every pilot (only get first of each group)
+        await pilot_agents_db.get_pilots_by_stamp_bulk(
+            [non_aborted_recent[0]["PilotStamp"]]
+        )
+        await pilot_agents_db.get_pilots_by_stamp_bulk(
+            [aborted_recent[0]["PilotStamp"]]
+        )
+        await pilot_agents_db.get_pilots_by_stamp_bulk(
+            [aborted_very_old[0]["PilotStamp"]]
+        )
+        await pilot_agents_db.get_pilots_by_stamp_bulk(
+            [non_aborted_very_old[0]["PilotStamp"]]
         )
 
-        pilots = await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
-
-        return pilots
+    return non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old
 
 
 @pytest.mark.asyncio
@@ -54,16 +138,176 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
             stamps, MAIN_VO, grid_type="DIRAC", pilot_references=pilot_references
         )
 
+        # Accept duplicates because it is checked by the logic
         await pilot_agents_db.add_pilots_bulk(
             stamps, MAIN_VO, grid_type="DIRAC", pilot_references=None
         )
 
 
 @pytest.mark.asyncio
+async def test_insert_and_delete(pilot_agents_db: PilotAgentsDB):
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Add pilots
+        refs = [f"ref_{i}" for i in range(2)]
+        stamps = [f"stamp_{i}" for i in range(2)]
+        pilot_references = dict(zip(stamps, refs))
+
+        await pilot_agents_db.add_pilots_bulk(
+            stamps, MAIN_VO, grid_type="DIRAC", pilot_references=pilot_references
+        )
+
+        # Works, the pilots exists
+        await pilot_agents_db.get_pilots_by_stamp_bulk([stamps[0]])
+        await pilot_agents_db.get_pilots_by_stamp_bulk([stamps[0]])
+
+        # We delete the first pilot
+        await pilot_agents_db.delete_pilots_by_stamps_bulk([stamps[0]])
+
+        # We get the 2nd pilot that is not delete (no error)
+        await pilot_agents_db.get_pilots_by_stamp_bulk([stamps[1]])
+        # We get the 1st pilot that is delete (error)
+        with pytest.raises(PilotNotFoundError):
+            await pilot_agents_db.get_pilots_by_stamp_bulk([stamps[0]])
+
+
+@pytest.mark.asyncio
+async def test_insert_and_delete_only_old_aborted(
+    pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
+):
+
+    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
+        create_old_pilots_environment
+    )
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Delete all aborted that were born before 2020
+        # Every aborted that are old may be delete
+        await pilot_agents_db.clear_pilots_bulk(
+            datetime(2020, 1, 1, tzinfo=timezone.utc), True
+        )
+
+        # Assert who still live
+        for normally_exiting_pilot_list in [
+            non_aborted_recent,
+            aborted_recent,
+            non_aborted_very_old,
+        ]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
+
+            await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+        # Assert who normally does not live
+        for normally_deleted_pilot_list in [aborted_very_old]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
+
+            with pytest.raises(PilotNotFoundError):
+                await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+
+@pytest.mark.asyncio
+async def test_insert_and_delete_old(
+    pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
+):
+
+    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
+        create_old_pilots_environment
+    )
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Delete all aborted that were born before 2020
+        # Every aborted that are old may be delete
+        await pilot_agents_db.clear_pilots_bulk(
+            datetime(2020, 1, 1, tzinfo=timezone.utc), False
+        )
+
+        # Assert who still live
+        for normally_exiting_pilot_list in [
+            non_aborted_recent,
+            aborted_recent,
+        ]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
+
+            await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+        # Assert who normally does not live
+        for normally_deleted_pilot_list in [
+            aborted_very_old,
+            non_aborted_very_old,
+        ]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
+
+            with pytest.raises(PilotNotFoundError):
+                await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+
+@pytest.mark.asyncio
+async def test_insert_and_delete_recent_only_aborted(
+    pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
+):
+
+    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
+        create_old_pilots_environment
+    )
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Delete all aborted that were born before 2020
+        # Every aborted that are old may be delete
+        await pilot_agents_db.clear_pilots_bulk(
+            datetime(2025, 3, 10, tzinfo=timezone.utc), True
+        )
+
+        # Assert who still live
+        for normally_exiting_pilot_list in [non_aborted_recent, non_aborted_very_old]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
+
+            await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+        # Assert who normally does not live
+        for normally_deleted_pilot_list in [
+            aborted_very_old,
+            aborted_recent,
+        ]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
+
+            with pytest.raises(PilotNotFoundError):
+                await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+
+@pytest.mark.asyncio
+async def test_insert_and_delete_recent(
+    pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
+):
+
+    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
+        create_old_pilots_environment
+    )
+
+    async with pilot_agents_db as pilot_agents_db:
+        # Delete all aborted that were born before 2020
+        # Every aborted that are old may be delete
+        await pilot_agents_db.clear_pilots_bulk(
+            datetime(2025, 3, 10, tzinfo=timezone.utc), False
+        )
+
+        # Assert who normally does not live
+        for normally_deleted_pilot_list in [
+            aborted_very_old,
+            aborted_recent,
+            non_aborted_recent,
+            non_aborted_very_old,
+        ]:
+            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
+
+            with pytest.raises(PilotNotFoundError):
+                await pilot_agents_db.get_pilots_by_stamp_bulk(stamps)
+
+
+@pytest.mark.asyncio
 async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgentsDB):
 
     async with pilot_agents_db as pilot_agents_db:
-        pilot_stamp = "pilot-reference-test"
+        pilot_stamp = "stamp-test"
         await pilot_agents_db.add_pilots_bulk(
             vo=MAIN_VO,
             pilot_stamps=[pilot_stamp],
@@ -71,13 +315,8 @@ async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgents
         )
 
         res = await pilot_agents_db.get_pilots_by_stamp_bulk([pilot_stamp])
-
         assert len(res) == 1
-
         pilot = res[0]
-
-        with pytest.raises(PilotNotFoundError):
-            await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
 
         # Assert values
         assert pilot["VO"] == MAIN_VO
@@ -104,13 +343,8 @@ async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgents
         )
 
         res = await pilot_agents_db.get_pilots_by_stamp_bulk([pilot_stamp])
-
         assert len(res) == 1
-
         pilot = res[0]
-
-        with pytest.raises(PilotNotFoundError):
-            await pilot_agents_db.get_pilots_by_stamp_bulk(["I am a fake stamp"])
 
         # Set values
         assert pilot["VO"] == MAIN_VO
@@ -134,7 +368,7 @@ async def test_associate_pilot_with_job_and_get_it(pilot_agents_db: PilotAgentsD
     6. Associate with jobs that he has not, but were involved in a crash
     """
     async with pilot_agents_db as pilot_agents_db:
-        pilot_stamp = "pilot-reference-test"
+        pilot_stamp = "stamp-test"
         # Add pilot
         await pilot_agents_db.add_pilots_bulk(
             vo=MAIN_VO,

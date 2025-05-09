@@ -4,7 +4,7 @@ import logging
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, HTTPException, Response, status
+from fastapi import Body, Depends, HTTPException, Query, Response, status
 
 from diracx.core.exceptions import (
     PilotAlreadyExistsError,
@@ -104,7 +104,7 @@ async def add_pilot_stamps(
 @router.delete("/", status_code=HTTPStatus.NO_CONTENT)
 async def delete_pilots(
     pilot_stamps: Annotated[
-        list[str], Body(description="Stamps of the pilots we want to delete.")
+        list[str], Query(description="Stamps of the pilots we want to delete.")
     ],
     pilot_agents_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
@@ -132,7 +132,7 @@ async def clear_pilots(
     pilot_agents_db: PilotAgentsDB,
     age_in_days: Annotated[
         int,
-        Body(
+        Query(
             description=(
                 "The number of days that define the maximum age of pilots to be deleted."
                 "Pilots older than this age will be considered for deletion."
@@ -142,7 +142,7 @@ async def clear_pilots(
     check_permissions: CheckPilotManagementPolicyCallable,
     delete_only_aborted: Annotated[
         bool,
-        Body(
+        Query(
             description=(
                 "Flag indicating whether to only delete pilots whose status is 'Aborted'."
                 "If set to True, only pilots with the 'Aborted' status will be deleted."

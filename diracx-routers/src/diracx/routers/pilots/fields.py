@@ -149,7 +149,7 @@ async def associate_pilots_with_secrets(
 async def update_pilot_fields(
     pilot_stamps_to_fields_mapping: Annotated[
         list[PilotFieldsMapping],
-        Body(description="(pilot_stamp, pilot_fields) mapping to change."),
+        Body(description="(pilot_stamp, pilot_fields) mapping to change.", embed=True),
     ],
     pilot_agents_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,

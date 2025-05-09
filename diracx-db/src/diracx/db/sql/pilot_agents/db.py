@@ -590,8 +590,12 @@ class PilotAgentsDB(BaseSQLDB):
             dict(row._mapping) async for row in (await self.conn.stream(stmt))
         ]
 
-    async def clear_pilots_bulk(self, cutoff_date: datetime, delete_only_aborted: bool):
-        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'."""
+    async def clear_pilots_bulk(
+        self, cutoff_date: datetime, delete_only_aborted: bool
+    ) -> int:
+        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
+        Returns the number of deletion.
+        """
         # TODO: Add test (Millisec?)
         stmt = delete(PilotAgents).where(PilotAgents.submission_time < cutoff_date)
 
@@ -600,5 +604,7 @@ class PilotAgentsDB(BaseSQLDB):
             stmt = stmt.where(PilotAgents.status == "Aborted")
 
         # Execute the statement
-        await self.conn.execute(stmt)
+        res = await self.conn.execute(stmt)
         await self.conn.commit()
+
+        return res.rowcount

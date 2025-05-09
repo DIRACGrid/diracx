@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from diracx.core.models import PilotFieldsMapping, PilotStatus
+
 pytestmark = pytest.mark.enabled_dependencies(
     [
         "PilotCredentialsAccessPolicy",
@@ -255,12 +257,13 @@ async def test_create_secrets_and_login(normal_test_client):
         assert r.status_code == 200, r.json()
 
 
-async def test_create_pilots_and_modify_them(normal_test_client):
+async def test_create_pilot_and_delete_it(normal_test_client):
     pilot_stamp = "stamps_1"
 
-    #  -------------- Bulk insert --------------
+    #  -------------- Insert --------------
     body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamp]}
 
+    # Create a pilot
     r = normal_test_client.post(
         "/api/pilots/",
         json=body,
@@ -268,4 +271,63 @@ async def test_create_pilots_and_modify_them(normal_test_client):
 
     assert r.status_code == 200, r.json()
 
-    # TODO: Search (as Jobs) for pilots
+    #  -------------- Duplicate --------------
+    # Duplicate because it exists, should have 409
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 409, r.json()
+
+    #  -------------- Delete --------------
+    params = {"pilot_stamps": [pilot_stamp]}
+
+    # We delete the pilot
+    r = normal_test_client.delete(
+        "/api/pilots/",
+        params=params,
+    )
+
+    assert r.status_code == 204
+
+    #  -------------- Insert --------------
+    # Create a the same pilot, but works because he does not exist anymore
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+
+async def test_create_pilot_and_modify_it(normal_test_client):
+    pilot_stamp = "stamps_1"
+
+    #  -------------- Insert --------------
+    body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamp]}
+
+    # Create a pilot
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+    #  -------------- Modify --------------
+    body = {
+        "pilot_stamps_to_fields_mapping": [
+            PilotFieldsMapping(
+                PilotStamp=pilot_stamp,
+                BenchMark=1.0,
+                StatusReason="NewReason",
+                AccountingSent=True,
+                Status=PilotStatus.WAITING,
+            ).model_dump(exclude_unset=True)
+        ]
+    }
+
+    r = normal_test_client.patch("/api/pilots/fields", json=body)
+
+    assert r.status_code == 204
