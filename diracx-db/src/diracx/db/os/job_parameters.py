@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from DIRAC.Core.Utilities import TimeUtilities
+from datetime import UTC, datetime
 
 from diracx.db.os.utils import BaseOSDB
 
@@ -31,7 +31,7 @@ class JobParametersDB(BaseOSDB):
     def upsert(self, vo, doc_id, document):
         document = {
             "JobID": doc_id,
-            "timestamp": TimeUtilities.toEpochMilliSeconds(),
+            "timestamp": int(datetime.now(tz=UTC).timestamp() * 1000),
             **document,
         }
         return super().upsert(vo, doc_id, document)

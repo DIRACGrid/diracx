@@ -2,17 +2,24 @@ from __future__ import annotations
 
 __all__ = [
     "regenerate_client",
-    "AUTOREST_VERSION",
 ]
 
+import argparse
 import ast
 import importlib.util
+import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import git
 
-AUTOREST_VERSION = "6.13.7"
+AUTOREST_VERSION = "3.7.1"
+AUTOREST_CORE_VERSION = "3.10.4"
+AUTOREST_PUGINS = {
+    "@autorest/python": "6.34.2",
+    "@autorest/modelerfour": "4.23.7",
+}
 
 
 def extract_static_all(path):
@@ -109,19 +116,16 @@ def regenerate_client(openapi_spec: Path, client_module: str):
             "Client is currently in a modified state, skipping regeneration"
         )
 
-    cmd = [
-        "autorest",
+    cmd = ["autorest", f"--version={AUTOREST_CORE_VERSION}"]
+    for plugin, version in AUTOREST_PUGINS.items():
+        cmd.append(f"--use={plugin}@{version}")
+    cmd += [
         "--python",
         f"--input-file={openapi_spec}",
         "--models-mode=msrest",
         "--namespace=_generated",
         f"--output-folder={client_root}",
     ]
-
-    # This is required to be able to work offline
-    # TODO: if offline, find the version already installed
-    # and use it
-    # cmd += [f"--use=@autorest/python@{AUTOREST_VERSION}"]
 
     # ruff: disable=S603
     subprocess.run(cmd, check=True)
@@ -154,3 +158,36 @@ def regenerate_client(openapi_spec: Path, client_module: str):
     if proc.returncode != 0:
         raise AssertionError("Pre-commit failed")
     raise AssertionError("Client was regenerated with changes")
+
+
+def main():
+    from diracx.core.extensions import extensions_by_priority
+
+    parser = argparse.ArgumentParser(
+        description="Regenerate the AutoREST client and run pre-commit checks on it."
+    )
+    parser.parse_args()
+
+    client_extension_name = min(extensions_by_priority(), key=lambda x: x == "diracx")
+
+    cmd = ["npm", "install", "-g", f"autorest@{AUTOREST_VERSION}"]
+    print("Ensuring autorest is installed by running", shlex.join(cmd))
+    subprocess.run(cmd, check=True)
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-pdiracx.testing",
+        "--import-mode=importlib",
+        "--no-cov",
+        f"--regenerate-client={client_extension_name}",
+        str(Path(__file__).parent / "client_generation_pytest.py"),
+    ]
+    print("Generating client for", client_extension_name)
+    print("Running:", shlex.join(cmd))
+    subprocess.run(cmd, check=True)
+
+
+if __name__ == "__main__":
+    main()
