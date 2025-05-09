@@ -377,23 +377,26 @@ async def test_associate_pilot_with_job_and_get_it(pilot_agents_db: PilotAgentsD
         )
 
         res = await pilot_agents_db.get_pilots_by_stamp_bulk([pilot_stamp])
-
         assert len(res) == 1
-
         pilot = res[0]
+        pilot_id = pilot["PilotID"]
 
         # Verify that he has no jobs
-        assert (
-            len(await pilot_agents_db.get_pilot_jobs_ids_by_pilot_id(pilot["PilotID"]))
-            == 0
-        )
+        assert len(await pilot_agents_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)) == 0
+
+        now = datetime.now(tz=timezone.utc)
 
         # Associate pilot with jobs
         pilot_jobs = [1, 2, 3]
-        await pilot_agents_db.associate_pilot_with_jobs(pilot_stamp, pilot_jobs)
+        # Prepare the list of dictionaries for bulk insertion
+        job_to_pilot_mapping = [
+            {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+            for job_id in pilot_jobs
+        ]
+        await pilot_agents_db.associate_pilot_with_jobs(job_to_pilot_mapping)
 
         # Verify that he has all jobs
-        db_jobs = await pilot_agents_db.get_pilot_jobs_ids_by_pilot_id(pilot["PilotID"])
+        db_jobs = await pilot_agents_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
         # We test both length and if every job is included if for any reason we have duplicates
         assert all(job in db_jobs for job in pilot_jobs)
         assert len(pilot_jobs) == len(db_jobs)
@@ -401,9 +404,19 @@ async def test_associate_pilot_with_job_and_get_it(pilot_agents_db: PilotAgentsD
         # Associate pilot with a job that he already has, and one that he has not
         pilot_jobs = [10, 1, 5]
         with pytest.raises(PilotAlreadyAssociatedWithJobError):
-            await pilot_agents_db.associate_pilot_with_jobs(pilot_stamp, pilot_jobs)
+            # Prepare the list of dictionaries for bulk insertion
+            job_to_pilot_mapping = [
+                {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+                for job_id in pilot_jobs
+            ]
+            await pilot_agents_db.associate_pilot_with_jobs(job_to_pilot_mapping)
 
         # Associate pilot with jobs that he has not, but was previously in an error
         # To test that the rollback worked
         pilot_jobs = [5, 10]
-        await pilot_agents_db.associate_pilot_with_jobs(pilot_stamp, pilot_jobs)
+        # Prepare the list of dictionaries for bulk insertion
+        job_to_pilot_mapping = [
+            {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+            for job_id in pilot_jobs
+        ]
+        await pilot_agents_db.associate_pilot_with_jobs(job_to_pilot_mapping)

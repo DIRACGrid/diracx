@@ -24,9 +24,33 @@ async def update_pilots_fields(
 async def associate_pilot_with_jobs(
     pilot_db: PilotAgentsDB, pilot_stamp: str, pilot_jobs_ids: list[int]
 ):
+
+    pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
+    # Semantic assured by fetch_records_bulk_or_raises
+    pilot_id = pilot_ids[0]
+
+    now = datetime.now(tz=timezone.utc)
+
+    # Prepare the list of dictionaries for bulk insertion
+    job_to_pilot_mapping = [
+        {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
+        for job_id in pilot_jobs_ids
+    ]
+
     await pilot_db.associate_pilot_with_jobs(
-        pilot_stamp=pilot_stamp, job_ids=pilot_jobs_ids
+        job_to_pilot_mapping=job_to_pilot_mapping,
     )
+
+
+async def get_pilot_jobs_ids_by_stamp(
+    pilot_db: PilotAgentsDB, pilot_stamp: str
+) -> list[int]:
+    """Fetch pilot jobs by stamp."""
+    pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
+    # Semantic assured by fetch_records_bulk_or_raises
+    pilot_id = pilot_ids[0]
+
+    return await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
 
 
 async def get_pilot_info(

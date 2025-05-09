@@ -79,7 +79,7 @@ def add_vo(
 
     config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
-    if vo in config.Registry or vo in config.Operations:
+    if vo in config.Registry:
         typer.echo(f"ERROR: VO {vo} already exists", err=True)
         raise typer.Exit(1)
 
@@ -182,7 +182,7 @@ def add_user(
 
 
 @app.command()
-def set_user_as_pilot(
+def set_user_as_pilot_user(
     config_repo: str,
     *,
     vo: Annotated[str, typer.Option()],

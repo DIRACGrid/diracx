@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 from ast import literal_eval
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from secrets import token_hex
+from typing import Any
 
 from diracx.core.config import Config
 from diracx.core.exceptions import (
+    BadPilotCredentialsError,
+    BadPilotVOError,
     ConfigurationError,
     CredentialsAlreadyExistError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
+    SecretHasExpiredError,
+    SecretNotFoundError,
 )
 from diracx.core.models import PilotCredentialsInfo, PilotSecretsInfo, PilotStampInfo
 from diracx.core.settings import AuthSettings
+from diracx.db.exceptions import DBInBadStateError
 from diracx.db.sql import PilotAgentsDB
 
 # TODO: Move this hash function in diracx-logic, and rename it
@@ -101,6 +107,12 @@ async def associate_pilots_with_secrets(
         }
         for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
     ]
+
+    # Verify first that pilot can access the secrets
+    await verify_that_pilot_can_access_secret_bulk(
+        pilot_db=pilot_db,
+        pilot_to_secret_id_mapping_values=pilot_to_secret_id_mapping_values,
+    )
 
     await pilot_db.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
 
@@ -229,9 +241,143 @@ async def try_login(
 
     hashed_secret = hash(pilot_secret)
 
-    await pilot_db.verify_pilot_secret(
-        pilot_stamp=pilot_stamp, pilot_hashed_secret=hashed_secret
-    )
+    # 1. Get the pilot to secret association
+    pilots_credentials = await pilot_db.get_pilot_credentials_by_stamp([pilot_stamp])
+
+    # 2. Get the pilot secret itself
+    secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk([hashed_secret])
+    secret = secrets[0]  # Semantic, assured by fetch_records_bulk_or_raises
+
+    matches = [
+        pilot_credential
+        for pilot_credential in pilots_credentials
+        if secret["SecretID"] == pilot_credential["PilotSecretID"]
+    ]
+
+    # 3. Compare the secret_id
+    if len(matches) == 0:
+
+        raise BadPilotCredentialsError(
+            data={
+                "pilot_stamp": pilot_stamp,
+                "pilot_hashed_secret": hashed_secret,
+                "real_hashed_secret": secret["HashedSecret"],
+                "pilot_secret_id[]": str(
+                    [
+                        pilot_credential["PilotSecretID"]
+                        for pilot_credential in pilots_credentials
+                    ]
+                ),
+                "secret_id": secret["SecretID"],
+                "test": str(pilots_credentials),
+            }
+        )
+    elif len(matches) > 1:
+
+        raise DBInBadStateError(
+            detail="This should not happen. Duplicates in the database."
+        )
+    pilot_credentials = matches[0]  # Semantic
+
+    # 4. Check if the secret is expired
+    now = datetime.now(tz=timezone.utc)
+    # Convert the timezone, TODO: Change with #454: https://github.com/DIRACGrid/diracx/pull/454
+    expiration = secret["SecretExpirationDate"].replace(tzinfo=timezone.utc)
+    if expiration < now:
+
+        try:
+            await pilot_db.delete_secrets_bulk([secret["SecretID"]])
+        except SecretNotFoundError as e:
+            await pilot_db.conn.rollback()
+
+            raise DBInBadStateError(
+                detail="This should not happen. Pilot should have a secret, but not found."
+            ) from e
+
+        raise SecretHasExpiredError(
+            data={
+                "pilot_hashed_secret": hashed_secret,
+                "now": str(now),
+                "expiration_date": secret["SecretExpirationDate"],
+            }
+        )
+
+    # 5. Now the pilot is authorized, increment the counters (globally and locally).
+    try:
+        # 5.1 Increment the local count
+        await pilot_db.increment_pilot_local_secret_and_last_time_use(
+            pilot_secret_id=pilot_credentials["PilotSecretID"],
+            pilot_stamp=pilot_credentials["PilotStamp"],
+        )
+
+        # 5.2 Increment the global count
+        await pilot_db.increment_global_secret_use(
+            secret_id=pilot_credentials["PilotSecretID"]
+        )
+    except Exception as e:  # Generic, to catch it.
+        # Should NOT happen
+        # Wrapped in a try/catch to still catch in case of an error in the counters
+        # Caught and raised here to avoid raising a 4XX error
+        await pilot_db.conn.rollback()
+
+        raise DBInBadStateError(
+            detail="This should not happen. Pilot has credentials, but has a corrupted secret."
+        ) from e
+
+    # 6. Delete all secrets if its count attained the secret_global_use_count_max
+    if secret["SecretGlobalUseCountMax"]:
+        if secret["SecretGlobalUseCount"] + 1 == secret["SecretGlobalUseCountMax"]:
+            try:
+                await pilot_db.delete_secrets_bulk([secret["SecretID"]])
+            except SecretNotFoundError as e:
+                # Should NOT happen
+                await pilot_db.conn.rollback()
+                raise DBInBadStateError(
+                    detail="This should not happen. Pilot has credentials, but has corrupted secret."
+                ) from e
+
+
+async def verify_that_pilot_can_access_secret_bulk(
+    pilot_db: PilotAgentsDB, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
+):
+    # 1. Extract unique pilot_stamps and secret_ids
+    pilot_stamps = [entry["PilotStamp"] for entry in pilot_to_secret_id_mapping_values]
+    secret_ids = [entry["PilotSecretID"] for entry in pilot_to_secret_id_mapping_values]
+
+    # 2. Bulk fetch pilot and secret info
+    pilots = await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps)
+    secrets = await pilot_db.get_secrets_by_secret_ids_bulk(secret_ids)
+
+    # 3. Build lookup maps
+    pilot_vo_map = {pilot["PilotStamp"]: pilot["VO"] for pilot in pilots}
+    secret_vo_map = {secret["SecretID"]: secret["SecretVO"] for secret in secrets}
+
+    # 4. Validate access
+    bad_mapping = []
+
+    for mapping in pilot_to_secret_id_mapping_values:
+        pilot_stamp = mapping["PilotStamp"]
+        secret_id = mapping["PilotSecretID"]
+
+        pilot_vo = pilot_vo_map[pilot_stamp]
+        secret_vo = secret_vo_map[secret_id]
+
+        # If secret_vo is set to NULL, everybody can access it
+        if not secret_vo:
+            continue
+
+        # Access allowed only if VOs match or secret_vo is open (None)
+        if secret_vo is not None and pilot_vo != secret_vo:
+            bad_mapping.append(
+                {
+                    "pilot_stamp": pilot_stamp,
+                    "given_vo": pilot_vo,
+                    "expected_vo": secret_vo,
+                }
+            )
+
+    if bad_mapping:
+        raise BadPilotVOError(data={"bad_mapping": str(bad_mapping)})
 
 
 async def register_new_pilots(

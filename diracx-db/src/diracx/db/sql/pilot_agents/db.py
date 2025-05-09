@@ -8,8 +8,6 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.sql import delete, insert, select, update
 
 from diracx.core.exceptions import (
-    BadPilotCredentialsError,
-    BadPilotVOError,
     CredentialsAlreadyExistError,
     CredentialsNotFoundError,
     InvalidQueryError,
@@ -17,7 +15,6 @@ from diracx.core.exceptions import (
     PilotJobsNotFoundError,
     PilotNotFoundError,
     SecretAlreadyExistsError,
-    SecretHasExpiredError,
     SecretNotFoundError,
 )
 from diracx.core.models import PilotFieldsMapping, SearchSpec, SortSpec
@@ -95,105 +92,6 @@ class PilotAgentsDB(BaseSQLDB):
             raise DBInBadStateError(
                 detail="This should not happen. Pilot should have a secret, but is not found."
             )
-
-    async def verify_pilot_secret(
-        self, pilot_stamp: str, pilot_hashed_secret: str
-    ) -> None:
-        """Verify that a pilot can login with the given credentials."""
-        # 1. Get the pilot to secret association
-        pilots_credentials = await self.get_pilot_credentials_by_stamp([pilot_stamp])
-
-        # 2. Get the pilot secret itself
-        secrets = await self.get_secrets_by_hashed_secrets_bulk([pilot_hashed_secret])
-        secret = secrets[0]  # Semantic, assured by fetch_records_bulk_or_raises
-
-        matches = [
-            pilot_credential
-            for pilot_credential in pilots_credentials
-            if secret["SecretID"] == pilot_credential["PilotSecretID"]
-        ]
-
-        # 3. Compare the secret_id
-        if len(matches) == 0:
-
-            raise BadPilotCredentialsError(
-                data={
-                    "pilot_stamp": pilot_stamp,
-                    "pilot_hashed_secret": pilot_hashed_secret,
-                    "real_hashed_secret": secret["HashedSecret"],
-                    "pilot_secret_id[]": str(
-                        [
-                            pilot_credential["PilotSecretID"]
-                            for pilot_credential in pilots_credentials
-                        ]
-                    ),
-                    "secret_id": secret["SecretID"],
-                    "test": str(pilots_credentials),
-                }
-            )
-        elif len(matches) > 1:
-
-            raise DBInBadStateError(
-                detail="This should not happen. Duplicates in the database."
-            )
-        pilot_credentials = matches[0]  # Semantic
-
-        # 4. Check if the secret is expired
-        now = datetime.now(tz=timezone.utc)
-        # Convert the timezone, TODO: Change with #454: https://github.com/DIRACGrid/diracx/pull/454
-        expiration = secret["SecretExpirationDate"].replace(tzinfo=timezone.utc)
-        if expiration < now:
-
-            try:
-                await self.delete_secrets_bulk([secret["SecretID"]])
-            except SecretNotFoundError as e:
-                await self.conn.rollback()
-
-                raise DBInBadStateError(
-                    detail="This should not happen. Pilot should have a secret, but not found."
-                ) from e
-
-            raise SecretHasExpiredError(
-                data={
-                    "pilot_hashed_secret": pilot_hashed_secret,
-                    "now": str(now),
-                    "expiration_date": secret["SecretExpirationDate"],
-                }
-            )
-
-        # 5. Now the pilot is authorized, increment the counters (globally and locally).
-        try:
-            # 5.1 Increment the local count
-            await self.increment_pilot_local_secret_and_last_time_use(
-                pilot_secret_id=pilot_credentials["PilotSecretID"],
-                pilot_stamp=pilot_credentials["PilotStamp"],
-            )
-
-            # 5.2 Increment the global count
-            await self.increment_global_secret_use(
-                secret_id=pilot_credentials["PilotSecretID"]
-            )
-        except Exception as e:  # Generic, to catch it.
-            # Should NOT happen
-            # Wrapped in a try/catch to still catch in case of an error in the counters
-            # Caught and raised here to avoid raising a 4XX error
-            await self.conn.rollback()
-
-            raise DBInBadStateError(
-                detail="This should not happen. Pilot has credentials, but has a corrupted secret."
-            ) from e
-
-        # 6. Delete all secrets if its count attained the secret_global_use_count_max
-        if secret["SecretGlobalUseCountMax"]:
-            if secret["SecretGlobalUseCount"] + 1 == secret["SecretGlobalUseCountMax"]:
-                try:
-                    await self.delete_secrets_bulk([secret["SecretID"]])
-                except SecretNotFoundError as e:
-                    # Should NOT happen
-                    await self.conn.rollback()
-                    raise DBInBadStateError(
-                        detail="This should not happen. Pilot has credentials, but has corrupted secret."
-                    ) from e
 
     async def add_pilots_bulk(
         self,
@@ -295,11 +193,6 @@ class PilotAgentsDB(BaseSQLDB):
         """Bulk associate pilots with secrets. Raises an error in case of a Integrity violation."""
         # Better to give as a parameter pilot to secret associations, rather than associating here.
 
-        # First verify that pilots can access a certain secret
-        await self.verify_that_pilot_can_access_secret_bulk(
-            pilot_to_secret_id_mapping_values
-        )
-
         stmt = insert(PilotToSecretMapping).values(pilot_to_secret_id_mapping_values)
 
         try:
@@ -324,47 +217,27 @@ class PilotAgentsDB(BaseSQLDB):
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
 
-    async def associate_pilot_with_jobs(self, pilot_stamp: str, job_ids: list[int]):
+    async def associate_pilot_with_jobs(self, job_to_pilot_mapping: list[dict]):
         """Associate a pilot with jobs. Raises an error if the pilot does  not exist and in case of a IntegrityError.
 
         **Important note**: We don't verify if a job exists in the JobDB
         """
-        pilot_ids = await self.get_pilot_ids_by_stamps([pilot_stamp])
-        # Semantic assured by fetch_records_bulk_or_raises
-        pilot_id = pilot_ids[0]
-
-        now = datetime.now(tz=timezone.utc)
-
-        # Prepare the list of dictionaries for bulk insertion
-        values = [
-            {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
-            for job_id in job_ids
-        ]
-
         # Insert multiple rows in a single execute call
-        stmt = insert(JobToPilotMapping).values(values)
+        stmt = insert(JobToPilotMapping).values(job_to_pilot_mapping)
 
         try:
             res = await self.conn.execute(stmt)
         except IntegrityError as e:
             raise PilotAlreadyAssociatedWithJobError(
-                data={"pilot_stamp": pilot_stamp, "job_ids": str(job_ids)}
+                data={"job_to_pilot_mapping": str(job_to_pilot_mapping)}
             ) from e
 
-        if res.rowcount != len(job_ids):
+        if res.rowcount != len(job_to_pilot_mapping):
             # If doubles
             await self.conn.rollback()
             raise PilotJobsNotFoundError(
-                data={"pilot_stamp": pilot_stamp, "job_ids": str(job_ids)}
+                data={"job_to_pilot_mapping": str(job_to_pilot_mapping)}
             )
-
-    async def get_pilot_jobs_ids_by_stamp(self, pilot_stamp: str) -> list[int]:
-        """Fetch pilot jobs by stamp."""
-        pilot_ids = await self.get_pilot_ids_by_stamps([pilot_stamp])
-        # Semantic assured by fetch_records_bulk_or_raises
-        pilot_id = pilot_ids[0]
-
-        return await self.get_pilot_jobs_ids_by_pilot_id(pilot_id)
 
     async def update_pilot_fields_bulk(
         self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
@@ -405,52 +278,6 @@ class PilotAgentsDB(BaseSQLDB):
             )
 
         await self.conn.commit()
-
-    async def verify_that_pilot_can_access_secret_bulk(
-        self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
-    ):
-        # 1. Extract unique pilot_stamps and secret_ids
-        pilot_stamps = [
-            entry["PilotStamp"] for entry in pilot_to_secret_id_mapping_values
-        ]
-        secret_ids = [
-            entry["PilotSecretID"] for entry in pilot_to_secret_id_mapping_values
-        ]
-
-        # 2. Bulk fetch pilot and secret info
-        pilots = await self.get_pilots_by_stamp_bulk(pilot_stamps)
-        secrets = await self.get_secrets_by_secret_ids_bulk(secret_ids)
-
-        # 3. Build lookup maps
-        pilot_vo_map = {pilot["PilotStamp"]: pilot["VO"] for pilot in pilots}
-        secret_vo_map = {secret["SecretID"]: secret["SecretVO"] for secret in secrets}
-
-        # 4. Validate access
-        bad_mapping = []
-
-        for mapping in pilot_to_secret_id_mapping_values:
-            pilot_stamp = mapping["PilotStamp"]
-            secret_id = mapping["PilotSecretID"]
-
-            pilot_vo = pilot_vo_map[pilot_stamp]
-            secret_vo = secret_vo_map[secret_id]
-
-            # If secret_vo is set to NULL, everybody can access it
-            if not secret_vo:
-                continue
-
-            # Access allowed only if VOs match or secret_vo is open (None)
-            if secret_vo is not None and pilot_vo != secret_vo:
-                bad_mapping.append(
-                    {
-                        "pilot_stamp": pilot_stamp,
-                        "given_vo": pilot_vo,
-                        "expected_vo": secret_vo,
-                    }
-                )
-
-        if bad_mapping:
-            raise BadPilotVOError(data={"bad_mapping": str(bad_mapping)})
 
     async def set_secret_expirations_bulk(
         self, secret_ids: list[int], pilot_secret_expiration_dates: list[DateTime]
