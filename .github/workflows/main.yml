@@ -61,16 +61,62 @@ jobs:
 
   pytest-integration:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        extension:
+          - diracx
+          - gubbins
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          environments: default
+          environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
+      - name: Download gubbins-image
+        if: ${{ matrix.extension == 'gubbins' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: gubbins-services-img
+          path: /tmp
+      - name: Load image
+        if: ${{ matrix.extension == 'gubbins' }}
+        run: |
+          docker load --input /tmp/gubbins_services_image.tar
+          docker image ls -a
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
+
+          declare -a demo_args=()
+          demo_args+=("--enable-open-telemetry")
+          demo_args+=("--enable-coverage")
+          demo_args+=("--exit-when-done")
+          demo_args+=("--set-value", "developer.autoReload=false")
+          demo_args+=("--ci-values", "../diracx-charts/demo/ci_values.yaml")
+
+          declare -a demo_source_dirs=("$PWD")
+
+          if [ ${{ matrix.extension }} == 'gubbins' ]; then
+            # We have to copy the code to another directory
+            # and make it a git repository by itself because otherwise the
+            # root in the pyproject to do not make sense once mounted
+            # in the containers.
+            cp -r ./extensions/gubbins /tmp/
+            sed -i 's@../..@.@g' /tmp/gubbins/pyproject.toml
+            sed -i 's@../../@@g' /tmp/gubbins/gubbins-*/pyproject.toml
+            git init /tmp/gubbins/
+
+            demo_args+=("--ci-values", "./extensions/gubbins_values.yaml")
+            demo_args+=("--load-docker-image", "gubbins/services:dev")
+            demo_source_dirs+=("/tmp/gubbins/")
+          elif [ ${{ matrix.extension }} != 'diracx' ]; then
+            echo "Unknown extension: ${{ matrix.extension }}"
+            exit 1
+          fi
+
+          # Run the demo with the provided arguments
+          set -x
+          ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
@@ -91,10 +137,10 @@ jobs:
           fi
       - name: Run pytest
         run: |
-          pixi run pytest-diracx --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+          pixi run pytest-${{ matrix.extension }} --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
-          pixi run -e default python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
+          pixi run -e ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }} python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
         with:
@@ -114,3 +160,97 @@ jobs:
           environments: ${{ matrix.package }}-generate-client
       - name: Run autorest
         run: pixi run -e ${{ matrix.package }}-generate-client generate-client
+
+
+  build-wheels:
+    name: Build wheels
+    runs-on: "ubuntu-latest"
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    defaults:
+      run:
+        # We need extglob for REFERENCE_BRANCH substitution
+        shell: bash -l -O extglob {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Installing dependencies
+        run: |
+          python -m pip install \
+              build \
+              python-dateutil \
+              pytz \
+              readme_renderer[md] \
+              requests \
+              setuptools_scm
+      - name: Build distributions
+        run: |
+          for pkg_dir in $PWD/diracx-*; do
+            echo "Building $pkg_dir"
+            python -m build --outdir $PWD/dist $pkg_dir
+          done
+          # Also build the diracx metapackage
+          python -m build --outdir $PWD/dist .
+          # And build the gubbins package
+          for pkg_dir in $PWD/extensions/gubbins/gubbins-*; do
+            # Skip the testing package
+            if [[ "${pkg_dir}" =~ .*testing.* ]];
+            then
+              echo "Do not build ${pkg_dir}";
+              continue;
+            fi
+            echo "Building $pkg_dir"
+            python -m build --outdir $PWD/dist $pkg_dir
+          done
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gubbins-whl
+          path: dist/*.whl
+          retention-days: 5
+
+  # Build to docker image with the code in it
+  build-image:
+    needs: build-wheels
+    timeout-minutes:  30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Download gubbins wheels
+        uses: actions/download-artifact@v4
+        with:
+            name: gubbins-whl
+      - name: "Find wheels"
+        id: find_wheel
+        run: |
+          # We need to copy them there to be able to access them in the RUN --mount
+          cp diracx*.whl gubbins*.whl extensions/containers/services/
+          for wheel_fn in *.whl; do
+            pkg_name=$(basename "${wheel_fn}" | cut -d '-' -f 1)
+            echo "${pkg_name}-wheel-name=$(ls "${pkg_name}"-*.whl)" >> $GITHUB_OUTPUT
+          done
+      - name: Build and export service
+        uses: docker/build-push-action@v6
+        with:
+          context: extensions/containers/services
+          tags: gubbins/services:dev
+          outputs: type=docker,dest=/tmp/gubbins_services_image.tar
+          build-args: |
+            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
+            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_logic*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
+      - name: Build and export client
+        uses: docker/build-push-action@v6
+        with:
+          context: extensions/containers/client
+          tags: gubbins/client:dev
+          outputs: type=docker,dest=/tmp/gubbins_client_image.tar
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gubbins-services-img
+          path: /tmp/gubbins_services_image.tar
