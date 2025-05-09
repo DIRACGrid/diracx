@@ -5,14 +5,19 @@ from __future__ import annotations
 import os
 from typing import Annotated, Literal
 
-from fastapi import Depends, Form, Header, HTTPException, status
+from fastapi import Body, Depends, Form, Header, HTTPException, status
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
+    BadPilotCredentialsError,
+    CredentialsNotFoundError,
     DiracHttpResponseError,
     ExpiredFlowError,
     InvalidCredentialsError,
     PendingAuthorizationError,
+    PilotNotFoundError,
+    SecretHasExpiredError,
+    SecretNotFoundError,
 )
 from diracx.core.models import (
     AccessTokenPayload,
@@ -20,15 +25,26 @@ from diracx.core.models import (
     RefreshTokenPayload,
     TokenResponse,
 )
-from diracx.logic.auth.token import create_token
+from diracx.core.properties import GENERIC_PILOT, LIMITED_DELEGATION
+from diracx.logic.auth.pilot import (
+    try_login,
+)
+from diracx.logic.auth.token import create_token, generate_pilot_tokens
 from diracx.logic.auth.token import get_oidc_token as get_oidc_token_bl
 from diracx.logic.auth.token import (
     perform_legacy_exchange as perform_legacy_exchange_bl,
 )
 from diracx.routers.access_policies import BaseAccessPolicy
 
-from ..dependencies import AuthDB, AuthSettings, AvailableSecurityProperties, Config
+from ..dependencies import (
+    AuthDB,
+    AuthSettings,
+    AvailableSecurityProperties,
+    Config,
+    PilotAgentsDB,
+)
 from ..fastapi_classes import DiracxRouter
+from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 router = DiracxRouter(require_auth=False)
 
@@ -249,4 +265,114 @@ async def perform_legacy_exchange(
         ) from e
     return await mint_token(
         access_payload, refresh_payload, None, all_access_policies, settings
+    )
+
+
+@router.post("/pilot-login")
+async def pilot_login(
+    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
+    pilot_stamp: Annotated[str, Body(description="Stamp used by a pilot to login.")],
+    pilot_secret: Annotated[
+        str, Body(description="Pilot secret given by Dirac/DiracX.")
+    ],
+    config: Config,
+    settings: AuthSettings,
+    available_properties: AvailableSecurityProperties,
+    all_access_policies: Annotated[
+        dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
+    ],
+) -> TokenResponse:
+    """Endpoint without policy, the pilot uses only its secret."""
+    try:
+        await try_login(
+            pilot_stamp=pilot_stamp,
+            pilot_db=pilot_db,
+            pilot_secret=pilot_secret,
+        )
+    except (BadPilotCredentialsError, CredentialsNotFoundError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="bad credentials"
+        ) from e
+    except PilotNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="bad pilot_stamp",
+        ) from e
+    except SecretNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="bad pilot_secret",
+        ) from e
+    except SecretHasExpiredError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="secret expired",
+        ) from e
+
+    try:
+        access_token, refresh_token = await generate_pilot_tokens(
+            pilot_db=pilot_db,
+            auth_db=auth_db,
+            pilot_stamp=pilot_stamp,
+            config=config,
+            settings=settings,
+            available_properties=available_properties,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+
+    return await mint_token(
+        access_token, refresh_token, None, all_access_policies, settings
+    )
+
+
+@router.post("/pilot-refresh-token")
+async def refresh_pilot_tokens(
+    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
+    config: Config,
+    settings: AuthSettings,
+    available_properties: AvailableSecurityProperties,
+    refresh_token: Annotated[
+        str, Body(description="Refresh Token given at login by DiracX.", embed=True)
+    ],
+    pilot_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    all_access_policies: Annotated[
+        dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
+    ],
+) -> TokenResponse:
+    """Endpoint where a pilot can exchange a refresh token for a token."""
+    if not {GENERIC_PILOT, LIMITED_DELEGATION} & set(pilot_info.properties):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="you are not a pilot"
+        )
+
+    try:
+        new_access_token, new_refresh_token = await generate_pilot_tokens(
+            pilot_db=pilot_db,
+            auth_db=auth_db,
+            pilot_stamp=pilot_info.preferred_username,
+            config=config,
+            settings=settings,
+            available_properties=available_properties,
+            refresh_token=refresh_token,
+        )
+    except InvalidCredentialsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
+        ) from e
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+
+    return await mint_token(
+        new_access_token,
+        new_refresh_token,
+        refresh_token,
+        all_access_policies,
+        settings,
     )

@@ -59,7 +59,7 @@ def generate_cs(config_repo: str):
     update_config_and_commit(
         repo_path=repo_path, config=config, message="Initial commit"
     )
-    typer.echo(f"Successfully created repo in {config_repo}", err=True)
+    typer.echo(f"Successfully created repo in {config_repo}")
 
 
 @app.command()
@@ -93,13 +93,14 @@ def add_vo(
         raise typer.Exit(1)
 
     config.Registry[vo] = new_registry
+    config.Operations[vo] = OperationsConfig(Pilot={})
 
     update_config_and_commit(
         repo_path=repo_path,
         config=config,
         message=f"Added vo {vo} registry (default group {default_group} and idp {idp_url})",
     )
-    typer.echo(f"Successfully added vo to {config_repo}", err=True)
+    typer.echo(f"Successfully added vo to {config_repo}")
 
 
 @app.command()
@@ -130,7 +131,7 @@ def add_group(
     update_config_and_commit(
         repo_path=repo_path, config=config, message=f"Added group {group} in {vo}"
     )
-    typer.echo(f"Successfully added group to {config_repo}", err=True)
+    typer.echo(f"Successfully added group to {config_repo}")
 
 
 @app.command()
@@ -177,7 +178,92 @@ def add_user(
         config=config,
         message=f"Added user {sub} ({preferred_username}) to vo {vo} and groups {groups}",
     )
-    typer.echo(f"Successfully added user to {config_repo}", err=True)
+    typer.echo(f"Successfully added user to {config_repo}")
+
+
+@app.command()
+def set_user_as_pilot_user(
+    config_repo: str,
+    *,
+    vo: Annotated[str, typer.Option()],
+    pilot_group: Annotated[str, typer.Option()],
+    sub: Annotated[str, typer.Option()],
+    pilot_preferred_username: Annotated[str, typer.Option()],
+):
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
+        raise NotImplementedError("Only git+file:// URLs are supported")
+
+    repo_path = Path(config_repo.path)
+
+    config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
+
+    # The VO has to exist
+    if vo not in config.Registry:
+        typer.echo(f"ERROR: Virtual Organization {vo} does not exist", err=True)
+        raise typer.Exit(1)
+
+    # The sub has to exist
+    if sub not in config.Registry[vo].Users:
+        typer.echo(
+            f"ERROR: User {sub} does not exist. You have to create it first before setting it as a pilot user",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # The preferred_username has to match the sub
+    if not config.Registry[vo].Users[sub].PreferedUsername == pilot_preferred_username:
+        typer.echo(
+            f"ERROR: User {sub} does not match pilot_preferred_username {pilot_preferred_username}"
+        )
+        raise typer.Exit(1)
+
+    # The pilot group has to exist
+    groups = config.Registry[vo].Groups
+    if pilot_group not in groups:
+        typer.echo(
+            (
+                f"ERROR: Group {pilot_group} does not exist."
+                "You have to create it first before setting it as a pilot group"
+            ),
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # The sub has to be in the pilot group
+    group_users = groups[pilot_group].Users
+    if sub not in group_users:
+        typer.echo(
+            (
+                f"ERROR: User {sub} is not set into the pilot group."
+                "You have to add it before setting this group as a pilot group"
+            ),
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Now we know that our pilot is in the pilot_group
+    # We need to define the Operations
+    # Normally, if we have a group, vo, ..., we do have Operations[vo]
+
+    # If the current pilot_group is different, just change it
+    # No error is raised. We could change the "official" pilot group
+    pilot = config.Operations[vo].Pilot
+
+    if pilot is None:
+        typer.echo("Pilot operation must not be None", err=True)
+        raise typer.Exit(1)
+
+    pilot["GenericPilotGroup"] = pilot_group
+    pilot["GenericPilotUser"] = pilot_preferred_username
+
+    update_config_and_commit(
+        repo_path=repo_path,
+        config=config,
+        message=f"Setting user {sub} ({pilot_preferred_username}) as {vo}'s pilot user in group {pilot_group}",
+    )
+    typer.echo(f"Successfully set user as pilot to {config_repo}")
+    typer.echo(f"New config :\n{config}")
 
 
 def update_config_and_commit(repo_path: Path, config: Config, message: str):

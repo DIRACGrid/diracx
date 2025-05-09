@@ -104,3 +104,74 @@ class JobError(DiracError):
 
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
+
+
+class GenericError(Exception):
+    head: str = "Error"
+    tail: str = ""
+
+    def __init__(self, data: dict[str, str], detail: str | None = None):
+        self.data = data
+        self.detail = detail
+
+        parts = [f"({key}: {value})" for key, value in data.items()]
+        message = f"{self.head} {' '.join(parts)} {self.tail}"
+        if detail:
+            message += f": {detail}"
+
+        super().__init__(message)
+
+
+class PilotNotFoundError(GenericError):
+    head = "Pilot"
+    tail = "not found"
+
+
+class PilotAlreadyExistsError(GenericError):
+    head = "Pilot"
+    tail = "already exists"
+
+
+class BadPilotCredentialsError(GenericError):
+    head = "Bad secret/pilot_stamp"
+    tail = ""
+
+
+class BadPilotVOError(GenericError):
+    head = "Bad VO"
+    tail = ""
+
+
+class SecretNotFoundError(GenericError):
+    head = "Secret"
+    tail = "not found"
+
+
+class CredentialsNotFoundError(GenericError):
+    head = "Credentials"
+    tail = "not found"
+
+
+class CredentialsAlreadyExistError(GenericError):
+    head = "Credentials"
+    tail = "already exist"
+
+
+class SecretHasExpiredError(GenericError):
+    head = "Secret"
+    tail = "has expired"
+
+
+class SecretAlreadyExistsError(GenericError):
+    head = "Secret"
+    tail = "already exists"
+
+
+class PilotJobsNotFoundError(GenericError):
+    head = "Pilots or Jobs"
+    tail = "not found"
+
+
+class PilotAlreadyAssociatedWithJobError(GenericError):
+    head = "Pilot is already associated with a job"
+    tail = ""

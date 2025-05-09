@@ -3,14 +3,17 @@ from __future__ import annotations
 from sqlalchemy import (
     DateTime,
     Double,
+    ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, EnumBackedBool, NullColumn
+from ..utils import Column, DateNowColumn, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
 
@@ -58,3 +61,43 @@ class PilotOutput(PilotAgentsDBBase):
     pilot_id = Column("PilotID", Integer, primary_key=True)
     std_output = Column("StdOutput", Text)
     std_error = Column("StdError", Text)
+
+
+class PilotSecrets(PilotAgentsDBBase):
+    __tablename__ = "PilotSecrets"
+
+    secret_id = Column("SecretID", Integer, primary_key=True)
+    hashed_secret = Column("HashedSecret", String(64))
+    # Global count
+    secret_global_use_count = Column("SecretGlobalUseCount", SmallInteger, default=0)
+    # Null: Infinite use
+    secret_global_use_count_max = NullColumn(
+        "SecretGlobalUseCountMax", SmallInteger, default=1
+    )
+    secret_creation_time = DateNowColumn("SecretCreationDate")
+    secret_expiration_date = NullColumn("SecretExpirationDate", DateTime(timezone=True))
+    # To authorize only pilots from a specific VO to access a secret
+    # Null VO => Can be used by everyone
+    secret_vo = NullColumn("SecretVO", String(128))
+
+    __table_args__ = (UniqueConstraint("HashedSecret", name="uq_hashed_secret"),)
+
+
+class PilotToSecretMapping(PilotAgentsDBBase):
+    """Map multiple pilots to multiple secrets. Allow secret reuse."""
+
+    __tablename__ = "PilotToSecretMapping"
+
+    # Primary key is (PilotSecretID, PilotStamp) pair
+    pilot_secret_id = Column(
+        "PilotSecretID",
+        Integer,
+        ForeignKey("PilotSecrets.SecretID", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    pilot_stamp = Column("PilotStamp", String(32), primary_key=True)
+    # Different from global use: only counts how many a specific pilot used a specific secret
+    pilot_secret_use_count = Column("PilotSecretUseCount", SmallInteger, default=0)
+    pilot_secret_last_use_time = NullColumn(
+        "PilotSecretLastUseDate", DateTime(timezone=True)
+    )

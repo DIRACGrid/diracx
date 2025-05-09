@@ -13,8 +13,13 @@ if TYPE_CHECKING:
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints
-from ..utils.functions import utcnow
+from ..utils import (
+    BaseSQLDB,
+    _get_columns,
+    apply_search_filters,
+    apply_sort_constraints,
+    utcnow,
+)
 from .schema import (
     HeartBeatLoggingInfo,
     InputData,
@@ -23,17 +28,6 @@ from .schema import (
     JobJDLs,
     Jobs,
 )
-
-
-def _get_columns(table, parameters):
-    columns = [x for x in table.columns]
-    if parameters:
-        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
-            raise InvalidQueryError(
-                f"Unrecognised parameters requested {unrecognised_parameters}"
-            )
-        columns = [c for c in columns if c.name in parameters]
-    return columns
 
 
 class JobDB(BaseSQLDB):
