@@ -22,9 +22,8 @@ from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
-from joserfc.jwk import KeySet, KeySetSerialization, RSAKey
+from joserfc.jwk import KeySet, KeySetSerialization
 from pydantic import (
-    AliasChoices,
     AnyUrl,
     BeforeValidator,
     Field,
@@ -88,19 +87,8 @@ def _maybe_load_keys_from_file(value: Any) -> Any:
                 raise ValueError("Only file:// URLs are supported")
             if url.path is None:
                 raise ValueError("No path specified")
-            value = Path(url.path).read_text()
+            return Path(url.path).read_text()
 
-    if isinstance(value, str) and value.strip().startswith("-----BEGIN"):
-        return json.dumps(
-            KeySet(
-                keys=[
-                    RSAKey.import_key(
-                        value,  # type: ignore
-                        parameters={"key_ops": ["sign", "verify"], "alg": "RS256"},  # type: ignore
-                    )
-                ]
-            ).as_dict(private=True)
-        )
     return value
 
 
@@ -158,9 +146,7 @@ class DevelopmentSettings(ServiceSettingsBase):
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_SERVICE_AUTH_", validate_by_name=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
@@ -173,13 +159,7 @@ class AuthSettings(ServiceSettingsBase):
     state_key: FernetKey
 
     token_issuer: str
-    token_keystore: TokenSigningKeyStore = Field(
-        validation_alias=AliasChoices(
-            "token_keystore",
-            "DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE",
-            "DIRACX_SERVICE_AUTH_TOKEN_KEY",
-        )
-    )
+    token_keystore: TokenSigningKeyStore
     token_allowed_algorithms: list[str] = ["RS256", "EdDSA"]  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
