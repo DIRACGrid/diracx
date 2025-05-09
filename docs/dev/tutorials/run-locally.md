@@ -1,4 +1,4 @@
-## Run a full diracx demo
+## Run a full DiracX demo
 
 TODO: expand
 
