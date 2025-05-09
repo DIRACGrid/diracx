@@ -94,29 +94,7 @@ jobs:
           pixi run pytest-diracx --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
-          set -x
-          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
-          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
-          export PATH=${DIRACX_DEMO_DIR}:$PATH
-          # Shutdown the pods so we collect coverage data
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
-            kubectl delete pod/"${pod_name}"
-          done
-          # Combine the coverage data from the demo and make an XML report
-          coverage_data=$(mktemp)
-          sudo chown -R $(id -u) "${DIRACX_DEMO_DIR}"/coverage-reports/
-          pixi run -e default coverage combine --keep --data-file "${coverage_data}" "${DIRACX_DEMO_DIR}"/coverage-reports/*
-
-          # coverage can't handle having multiple src directories, so we need to make a fake one with symlinks
-          fake_module=$(mktemp -d)
-          mkdir -p "${fake_module}/src/diracx"
-          for fn in "${PWD}"/*/src/diracx/*; do
-            ln -sf "${fn}" "${fake_module}/src/diracx/$(basename "${fn}")"
-          done
-          sed -i "s@source =@source =\n    ${fake_module}/src@g" .coveragerc
-          cat .coveragerc
-
-          pixi run -e default coverage xml -o coverage-demo.xml --data-file "${coverage_data}"
+          pixi run -e default python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
         with:
