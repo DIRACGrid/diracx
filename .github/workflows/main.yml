@@ -53,24 +53,95 @@ jobs:
         with:
           environments: ${{ matrix.package }}
       - name: Run pytest
-        env:
-          EXTRA_PYTEST_ARGS: --cov-report=xml:coverage.xml --junitxml=report.xml
-        run: pixi run pytest-${{ matrix.package }}
+        run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
 
   pytest-integration:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        extension:
+          - diracx
+          - gubbins
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          environments: default
+          environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
+      - name: Build gubbins wheels
+        if: ${{ matrix.extension == 'gubbins' }}
+        run: |
+          for pkg_dir in $PWD/diracx-*; do
+            echo "Building $pkg_dir"
+            pixi exec python-build --outdir $PWD/extensions/containers/services/ $pkg_dir
+          done
+          # Also build the diracx metapackage
+          pixi exec python-build --outdir $PWD/extensions/containers/services/ .
+          # And build the gubbins package
+          for pkg_dir in $PWD/extensions/gubbins/gubbins-*; do
+            # Skip the testing package
+            if [[ "${pkg_dir}" =~ .*testing.* ]];
+            then
+              echo "Do not build ${pkg_dir}";
+              continue;
+            fi
+            echo "Building $pkg_dir"
+            pixi exec python-build --outdir $PWD/extensions/containers/services/ $pkg_dir
+          done
+      - name: Set up Docker Buildx
+        if: ${{ matrix.extension == 'gubbins' }}
+        uses: docker/setup-buildx-action@v3
+      - name: Build container for gubbins
+        if: ${{ matrix.extension == 'gubbins' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: extensions/containers/services
+          tags: gubbins/services:dev
+          outputs: type=docker,dest=/tmp/gubbins_services_image.tar
+          build-args: |
+            EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_logic*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
+      - name: Load image
+        if: ${{ matrix.extension == 'gubbins' }}
+        run: |
+          docker load --input /tmp/gubbins_services_image.tar
+          docker image ls -a
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
-          ../diracx-charts/run_demo.sh --enable-open-telemetry --enable-coverage --exit-when-done --set-value developer.autoReload=false --ci-values ../diracx-charts/demo/ci_values.yaml $PWD
+
+          declare -a demo_args=()
+          demo_args+=("--enable-open-telemetry")
+          demo_args+=("--enable-coverage")
+          demo_args+=("--exit-when-done")
+          demo_args+=("--set-value" "developer.autoReload=false")
+          demo_args+=("--ci-values" "../diracx-charts/demo/ci_values.yaml")
+
+          declare -a demo_source_dirs=("$PWD")
+
+          if [ ${{ matrix.extension }} == 'gubbins' ]; then
+            # We have to copy the code to another directory
+            # and make it a git repository by itself because otherwise the
+            # root in the pyproject to do not make sense once mounted
+            # in the containers.
+            cp -r ./extensions/gubbins /tmp/
+            sed -i 's@../..@.@g' /tmp/gubbins/pyproject.toml
+            sed -i 's@../../@@g' /tmp/gubbins/gubbins-*/pyproject.toml
+            git init /tmp/gubbins/
+
+            demo_args+=("--ci-values" "./extensions/gubbins_values.yaml")
+            demo_args+=("--load-docker-image" "gubbins/services:dev")
+            demo_source_dirs+=("/tmp/gubbins/")
+          elif [ ${{ matrix.extension }} != 'diracx' ]; then
+            echo "Unknown extension: ${{ matrix.extension }}"
+            exit 1
+          fi
+
+          # Run the demo with the provided arguments
+          set -x
+          ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
@@ -91,10 +162,10 @@ jobs:
           fi
       - name: Run pytest
         run: |
-          pixi run pytest-diracx --demo-dir=../diracx-charts/ --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
+          pixi run pytest-${{ matrix.extension }} --demo-dir="$PWD/../diracx-charts/" --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
       - name: Collect demo coverage
         run: |
-          pixi run -e default python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
+          pixi run -e ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }} python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.2
         with:
