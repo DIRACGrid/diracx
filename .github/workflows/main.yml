@@ -19,8 +19,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
+          cache: false
           environments: shellcheck
       - name: Run shellcheck
         run: pixi run shellcheck
@@ -49,8 +63,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
+          cache: false
           environments: ${{ matrix.package }}
       - name: Run pytest
         run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
@@ -68,8 +96,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
+          cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
       - name: Build gubbins wheels
         if: ${{ matrix.extension == 'gubbins' }}
@@ -180,8 +222,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
       - uses: prefix-dev/setup-pixi@v0.8.3
         with:
+          cache: false
           environments: ${{ matrix.package }}-generate-client
       - name: Run autorest
         run: pixi run -e ${{ matrix.package }}-generate-client generate-client
