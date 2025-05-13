@@ -24,7 +24,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = []
+testing = ["diracx-testing", "freezegun"]
 types = [
     "types-cachetools",
 ]
@@ -43,4 +43,11 @@ root = ".."
 packages = ["src/diracx"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=diracx.logic", "--cov-report=term-missing",
+    "-pdiracx.testing", "-pdiracx.testing.osdb",
+    "--import-mode=importlib",
+]
 asyncio_mode = "auto"
