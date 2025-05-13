@@ -1,8 +1,24 @@
 from __future__ import annotations
 
-from typing import Any
+import logging
+from contextlib import asynccontextmanager
+from functools import partial
+from typing import Any, AsyncGenerator
 
-from sqlalchemy import Executable, delete, insert, literal, select, update
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    Executable,
+    MetaData,
+    Table,
+    and_,
+    delete,
+    insert,
+    literal,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from diracx.core.exceptions import (
@@ -12,14 +28,24 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
 from diracx.db.sql.utils.base import BaseSQLDB
-from diracx.db.sql.utils.functions import utcnow
+from diracx.db.sql.utils.functions import days_since, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners
 
+logger = logging.getLogger(__name__)
+
 
 class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
+
+    # Temporary table to store the sandboxes to delete, see `select_and_delete_expired`
+    _temp_table = Table(
+        "sb_to_delete",
+        MetaData(),
+        Column("SBId", BigInteger, primary_key=True),
+        prefixes=["TEMPORARY"],
+    )
 
     async def get_owner_id(self, user: UserInfo) -> int | None:
         """Get the id of the owner from the database."""
@@ -85,7 +111,13 @@ class SandboxMetadataDB(BaseSQLDB):
             .values(LastAccessTime=utcnow())
         )
         result = await self.conn.execute(stmt)
-        assert result.rowcount == 1
+        if result.rowcount == 0:
+            # If the update didn't affect any row, the sandbox doesn't exist
+            raise SandboxNotFoundError(pfn, se_name)
+        elif result.rowcount != 1:
+            raise NotImplementedError(
+                "More than one sandbox was updated. This should not happen."
+            )
 
     async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
         """Checks if a sandbox exists and has been assigned."""
@@ -187,3 +219,56 @@ class SandboxMetadataDB(BaseSQLDB):
                     .values(Assigned=False)
                 )
                 await self.conn.execute(unassign_stmt)
+
+    @asynccontextmanager
+    async def delete_unused_sandboxes(
+        self, *, limit: int | None = None
+    ) -> AsyncGenerator[AsyncGenerator[str, None], None]:
+        """Get the sandbox PFNs to delete.
+
+        The result of this function can be used as an async context manager
+        to yield the PFNs of the sandboxes to delete. The context manager
+        will automatically remove the sandboxes from the database upon exit.
+
+        Args:
+            limit: If not None, the maximum number of sandboxes to delete.
+
+        """
+        conditions = [
+            # If it has assigned to a job but is no longer mapped it can be removed
+            # and_(SandBoxes.Assigned, ~exists(SandBoxes.SBId == SBEntityMapping.SBId)),
+            # If the sandbox is still unassigned after 15 days, remove it
+            and_(~SandBoxes.Assigned, days_since(SandBoxes.LastAccessTime) >= 15),
+        ]
+        # Sandboxes which are not on S3 will be handled by legacy DIRAC
+        condition = and_(SandBoxes.SEPFN.like("/S3/%"), or_(*conditions))
+
+        # Copy the in-flight rows to a temporary table
+        await self.conn.run_sync(partial(self._temp_table.create, checkfirst=True))
+        select_stmt = select(SandBoxes.SBId).where(condition)
+        if limit:
+            select_stmt = select_stmt.limit(limit)
+        insert_stmt = insert(self._temp_table).from_select(["SBId"], select_stmt)
+        await self.conn.execute(insert_stmt)
+
+        try:
+            # Select the sandbox PFNs from the temporary table and yield them
+            select_stmt = select(SandBoxes.SEPFN).join(
+                self._temp_table, self._temp_table.c.SBId == SandBoxes.SBId
+            )
+
+            async def yield_pfns() -> AsyncGenerator[str, None]:
+                async for row in await self.conn.stream(select_stmt):
+                    yield row.SEPFN
+
+            yield yield_pfns()
+
+            # Delete the sandboxes from the main table
+            delete_stmt = delete(SandBoxes).where(
+                SandBoxes.SBId.in_(select(self._temp_table.c.SBId))
+            )
+            result = await self.conn.execute(delete_stmt)
+            logger.info("Deleted %d expired/unassigned sandboxes", result.rowcount)
+
+        finally:
+            await self.conn.run_sync(partial(self._temp_table.drop, checkfirst=True))

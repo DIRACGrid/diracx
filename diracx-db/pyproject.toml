@@ -22,9 +22,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-]
+testing = ["diracx-testing", "freezegun"]
 
 [project.entry-points."diracx.dbs.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
