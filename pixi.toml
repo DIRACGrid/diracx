@@ -11,6 +11,16 @@ ipython = ">=9.2.0"
 python-gfal2 = "*"
 m2crypto = "*"
 
+# Workaround for https://github.com/fastapi/typer/discussions/1215
+[feature.diracx.dependencies]
+click = "<8.2.0"
+[feature.diracx-cli.dependencies]
+click = "<8.2.0"
+[feature.gubbins.dependencies]
+click = "<8.2.0"
+[feature.gubbins-cli.dependencies]
+click = "<8.2.0"
+
 # DiracX features for providing dependencies
 [feature.diracx.pypi-dependencies]
 diracx = { path = ".", editable = true, extras = ["testing"] }
