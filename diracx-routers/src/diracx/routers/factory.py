@@ -321,6 +321,7 @@ def create_app_inner(
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Range"],
     )
 
     configure_logger()
