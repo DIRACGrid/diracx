@@ -7,10 +7,13 @@ __all__ = [
 import argparse
 import ast
 import importlib.util
+import json
 import shlex
 import subprocess
 import sys
+from importlib.metadata import Distribution
 from pathlib import Path
+from urllib.parse import urlparse
 
 import git
 
@@ -77,6 +80,26 @@ def fixup_models_init(generated_dir, extension_name):
         )
 
 
+def _module_path(module_name: str) -> Path:
+    """Get the path to a module.
+
+    Args:
+        module_name: The name of the module.
+
+    Returns:
+        The path to the module.
+
+    """
+    spec = importlib.util.find_spec(module_name)
+    if spec is None:
+        raise ImportError("Cannot locate client_module package")
+    if spec.origin is None:
+        raise ImportError(
+            "Cannot locate client_module package, did you forget the __init__.py?"
+        )
+    return Path(spec.origin).parent
+
+
 def regenerate_client(openapi_spec: Path, client_module: str):
     """Regenerate the AutoREST client and run pre-commit checks on it.
 
@@ -89,14 +112,29 @@ def regenerate_client(openapi_spec: Path, client_module: str):
 
     WARNING: This test will modify the source code of the client!
     """
-    spec = importlib.util.find_spec(client_module)
-    if spec is None:
-        raise ImportError("Cannot locate client_module package")
-    if spec.origin is None:
-        raise ImportError(
-            "Cannot locate client_module package, did you forget the __init__.py?"
+    client_root = _module_path(client_module)
+
+    # If the client is not an editable install, we need to find the source code
+    direct_url = Distribution.from_name(client_module).read_text("direct_url.json")
+    pkg_url_info = json.loads(direct_url)
+    if not pkg_url_info.get("dir_info", {}).get("editable", False):
+        src_url = pkg_url_info.get("url")
+        if src_url is None:
+            raise ValueError("No URL found in direct_url.json")
+        url_info = urlparse(src_url)
+        if url_info.scheme != "file":
+            raise ValueError("URL is not a file URL")
+        pkg_root = Path(url_info.path) / "src" / client_module.replace(".", "/")
+        if not pkg_root.is_dir():
+            raise NotImplementedError(
+                "Failed to resolve client sources", client_module, pkg_root
+            )
+        client_root = pkg_root
+
+    if not pkg_url_info.get("dir_info", {}).get("editable", False):
+        raise NotImplementedError(
+            "Client generation from non-editable install is not yet supported",
         )
-    client_root = Path(spec.origin).parent
 
     assert client_root.is_dir()
     assert client_root.name == "client"
@@ -104,7 +142,7 @@ def regenerate_client(openapi_spec: Path, client_module: str):
     extension_name = client_root.parent.name
 
     repo_root = client_root.parents[3]
-    if extension_name == "gubbins":
+    if extension_name == "gubbins" and not (repo_root / ".git").is_dir():
         # Gubbins is special because it has a different structure due to being
         # in a subdirectory of diracx
         repo_root = repo_root.parents[1]
