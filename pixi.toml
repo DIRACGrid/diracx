@@ -2,18 +2,178 @@
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
-[feature.docs.dependencies]
-python = ">=3.13.3,<3.14"
+[dependencies]
+python = ">=3.11.3,<3.12"
+# Add some useful development dependencies to most environments
+pip = ">=25.1.1"
+ipython = ">=9.2.0"
+# Ensure these packages are installed using conda instead of pip
+python-gfal2 = "*"
+m2crypto = "*"
 
-[feature.docs.pypi-dependencies]
+# Workaround for https://github.com/fastapi/typer/discussions/1215
+[feature.diracx.dependencies]
+click = "<8.2.0"
+[feature.diracx-cli.dependencies]
+click = "<8.2.0"
+[feature.gubbins.dependencies]
+click = "<8.2.0"
+[feature.gubbins-cli.dependencies]
+click = "<8.2.0"
+
+# DiracX features for providing dependencies
+[feature.diracx.pypi-dependencies]
+diracx = { path = ".", editable = true, extras = ["testing"] }
+[feature.diracx-core.pypi-dependencies]
+diracx-core = { path = "diracx-core", editable = true, extras = ["testing"] }
+diracx-testing = { path = "diracx-testing", editable = true }
+[feature.diracx-cli.pypi-dependencies]
+diracx-cli = { path = "diracx-cli", editable = true, extras = ["testing"] }
+[feature.diracx-api.pypi-dependencies]
+diracx-api = { path = "diracx-api", editable = true, extras = ["testing"] }
+[feature.diracx-client.pypi-dependencies]
+diracx-client = { path = "diracx-client", editable = true, extras = ["testing"] }
+[feature.diracx-db.pypi-dependencies]
+diracx-db = { path = "diracx-db", editable = true, extras = ["testing"] }
+[feature.diracx-logic.pypi-dependencies]
+diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
+[feature.diracx-routers.pypi-dependencies]
+diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
+
+# DiracX features for providing tasks. This is needed to make it so that running
+# "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
+# See: https://github.com/prefix-dev/pixi/issues/1519#issuecomment-2651078457
+[feature.task-diracx.tasks.pytest-diracx]
+cmd = "pytest"
+[feature.task-diracx-core.tasks.pytest-diracx-core]
+cmd = "cd diracx-core/ && pytest"
+[feature.task-diracx-cli.tasks.pytest-diracx-cli]
+cmd = "cd diracx-cli/ && pytest"
+[feature.task-diracx-api.tasks.pytest-diracx-api]
+cmd = "cd diracx-api/ && pytest"
+[feature.task-diracx-client.tasks.pytest-diracx-client]
+cmd = "cd diracx-client/ && pytest"
+[feature.task-diracx-db.tasks.pytest-diracx-db]
+cmd = "cd diracx-db/ && pytest"
+[feature.task-diracx-logic.tasks.pytest-diracx-logic]
+cmd = "cd diracx-logic/ && pytest"
+[feature.task-diracx-routers.tasks.pytest-diracx-routers]
+cmd = "cd diracx-routers/ && pytest"
+
+# Gubbins features for providing dependencies
+[feature.gubbins.pypi-dependencies]
+gubbins = { path = "extensions/gubbins", editable = true, extras = ["testing"] }
+[feature.gubbins-core.pypi-dependencies]
+gubbins-core = { path = "extensions/gubbins/gubbins-core", editable = true, extras = ["testing"] }
+gubbins-testing = { path = "extensions/gubbins/gubbins-testing", editable = true }
+[feature.gubbins-cli.pypi-dependencies]
+gubbins-cli = { path = "extensions/gubbins/gubbins-cli", editable = true, extras = ["testing"] }
+[feature.gubbins-api.pypi-dependencies]
+gubbins-api = { path = "extensions/gubbins/gubbins-api", editable = true, extras = ["testing"] }
+[feature.gubbins-client.pypi-dependencies]
+gubbins-client = { path = "extensions/gubbins/gubbins-client", editable = true, extras = ["testing"] }
+[feature.gubbins-db.pypi-dependencies]
+gubbins-db = { path = "extensions/gubbins/gubbins-db", editable = true, extras = ["testing"] }
+[feature.gubbins-logic.pypi-dependencies]
+gubbins-logic = { path = "extensions/gubbins/gubbins-logic", editable = true, extras = ["testing"] }
+[feature.gubbins-routers.pypi-dependencies]
+gubbins-routers = { path = "extensions/gubbins/gubbins-routers", editable = true, extras = ["testing"] }
+
+# Gubbins features for providing tasks. This is needed to make it so that running
+# "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
+# See: https://github.com/prefix-dev/pixi/issues/1519#issuecomment-2651078457
+[feature.task-gubbins.tasks.pytest-gubbins]
+cmd = "cd extensions/gubbins/ && pytest"
+[feature.task-gubbins-core.tasks.pytest-gubbins-core]
+cmd = "cd extensions/gubbins/gubbins-core/ && pytest"
+[feature.task-gubbins-cli.tasks.pytest-gubbins-cli]
+cmd = "cd extensions/gubbins/gubbins-cli/ && pytest"
+[feature.task-gubbins-api.tasks.pytest-gubbins-api]
+cmd = "cd extensions/gubbins/gubbins-api/ && pytest"
+[feature.task-gubbins-client.tasks.pytest-gubbins-client]
+cmd = "cd extensions/gubbins/gubbins-client/ && pytest"
+[feature.task-gubbins-db.tasks.pytest-gubbins-db]
+cmd = "cd extensions/gubbins/gubbins-db/ && pytest"
+[feature.task-gubbins-logic.tasks.pytest-gubbins-logic]
+cmd = "cd extensions/gubbins/gubbins-logic/ && pytest"
+[feature.task-gubbins-routers.tasks.pytest-gubbins-routers]
+cmd = "cd extensions/gubbins/gubbins-routers/ && pytest"
+
+# Features for generating the documentation
+[feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
+[feature.mkdocs.tasks]
+mkdocs = "mkdocs serve"
+
+# Features for running pre-commit hooks
+[feature.pre-commit.dependencies]
+pre-commit = "*"
+[feature.pre-commit.tasks]
+pre-commit = "pre-commit"
+
+# Features for generating the clients
+[feature.client-gen.dependencies]
+nodejs = ">=10.9.2"
+pre-commit = "*"
+[feature.client-gen.tasks.generate-client]
+cmd = "python -m diracx.testing.client_generation"
+env = { AUTOREST_HOME = "$CONDA_PREFIX/.autorest" }
+
+# Features for running shellcheck
+[feature.shellcheck.dependencies]
+shellcheck = "*"
+[feature.shellcheck.tasks]
+shellcheck = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 
 [environments]
-docs = ["docs"]
+# DiracX environments
+default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers"], solve-group = "diracx"}
+diracx-core = {features = ["task-diracx-core", "diracx-core"], solve-group = "diracx"}
+diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
+diracx-cli = {features = ["task-diracx-cli", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
+diracx-client = {features = ["task-diracx-client", "diracx-client", "diracx-core"], solve-group = "diracx"}
+diracx-db = {features = ["task-diracx-db", "diracx-db", "diracx-core"], solve-group = "diracx"}
+diracx-logic = {features = ["task-diracx-logic", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+diracx-routers = {features = ["task-diracx-routers", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 
-[tasks]
-docs = { cmd = "mkdocs {{ args }}", args = [{ arg = "args" }]}
+# Gubbins environments
+default-gubbins = {features = ["task-gubbins", "diracx", "gubbins", "diracx-core", "gubbins-core", "diracx-api", "gubbins-api", "diracx-cli", "gubbins-cli", "diracx-client", "gubbins-client", "diracx-db", "gubbins-db", "diracx-logic", "gubbins-logic", "diracx-routers", "gubbins-routers"], solve-group = "gubbins"}
+gubbins-core = {features = ["task-gubbins-core", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-api = {features = ["task-gubbins-api", "diracx-api", "gubbins-api", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-cli = {features = ["task-gubbins-cli", "diracx-cli", "gubbins-cli", "diracx-api", "gubbins-api", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-client = {features = ["task-gubbins-client", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-db = {features = ["task-gubbins-db", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-logic = {features = ["task-gubbins-logic", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-routers = {features = ["task-gubbins-routers", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 
-[tasks.docs-serve]
-depends-on = [{ task = "docs", environment = "docs", args = ["serve"]}]
+diracx-generate-client = {features = ["client-gen", "diracx-client", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-client", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+
+# Tooling environments
+mkdocs = ["mkdocs"]
+shellcheck = {features = ["shellcheck"], no-default-feature = true}
+pre-commit = {features = ["pre-commit"], no-default-feature = true}
+
+# Meta-tasks for running many tests at once
+[tasks.pytest-diracx-all-one-by-one]
+depends-on = [
+  { task = "pytest-diracx-core", environment = "diracx-core" },
+  { task = "pytest-diracx-api", environment = "diracx-api" },
+  { task = "pytest-diracx-cli", environment = "diracx-cli" },
+  { task = "pytest-diracx-client", environment = "diracx-client" },
+  { task = "pytest-diracx-db", environment = "diracx-db" },
+  { task = "pytest-diracx-logic", environment = "diracx-logic" },
+  { task = "pytest-diracx-routers", environment = "diracx-routers" },
+]
+
+[tasks.pytest-gubbins-all-one-by-one]
+depends-on = [
+  { task = "pytest-gubbins-core", environment = "gubbins-core" },
+  { task = "pytest-gubbins-api", environment = "gubbins-api" },
+  { task = "pytest-gubbins-cli", environment = "gubbins-cli" },
+  { task = "pytest-gubbins-client", environment = "gubbins-client" },
+  { task = "pytest-gubbins-db", environment = "gubbins-db" },
+  { task = "pytest-gubbins-logic", environment = "gubbins-logic" },
+  { task = "pytest-gubbins-routers", environment = "gubbins-routers" },
+]

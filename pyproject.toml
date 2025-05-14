@@ -132,10 +132,6 @@ module = 'DIRAC.*'
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = 'authlib.*'
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = 'sh.*'
 ignore_missing_imports = true
 

@@ -45,8 +45,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 def pytest_addoption(parser):
     parser.addoption(
         "--regenerate-client",
-        action="store_true",
-        default=False,
         help="Regenerate the AutoREST client",
     )
     parser.addoption(
@@ -55,17 +53,6 @@ def pytest_addoption(parser):
         default=None,
         help="Path to a diracx-charts directory with the demo running",
     )
-
-
-def pytest_collection_modifyitems(config, items):
-    """Disable the test_regenerate_client if not explicitly asked for."""
-    if config.getoption("--regenerate-client"):
-        # --regenerate-client given in cli: allow client re-generation
-        return
-    skip_regen = pytest.mark.skip(reason="need --regenerate-client option to run")
-    for item in items:
-        if item.name == "test_regenerate_client":
-            item.add_marker(skip_regen)
 
 
 @pytest.fixture(scope="session")

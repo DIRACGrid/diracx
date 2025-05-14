@@ -1,7 +1,0 @@
--e ./gubbins-routers/[testing]
--e ./gubbins-db/[testing]
--e ./gubbins-testing/[testing]
--e ./gubbins-client/[testing]
--e ./gubbins-cli/[testing]
--e ./gubbins-core/[testing]
--e ./gubbins-logic/[testing]
