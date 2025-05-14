@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from pyparsing import Any
@@ -14,9 +15,11 @@ from diracx.core.models import (
 )
 from diracx.core.s3 import (
     generate_presigned_upload,
+    s3_bulk_delete_with_retry,
     s3_object_exists,
 )
 from diracx.core.settings import SandboxStoreSettings
+from diracx.core.utils import batched_async
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 
 MAX_SANDBOX_SIZE_BYTES = 100 * 1024 * 1024
@@ -27,6 +30,8 @@ SANDBOX_PFN_REGEX = (
     # Followed /<vo>/<group>/<username>/<checksum_algorithm>:<checksum>.<format>
     r"(?:/[^/]+){3}/[a-z0-9]{3,10}:[0-9a-f]{64}\.[a-z0-9\.]+$"
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def initiate_sandbox_upload(
@@ -45,9 +50,9 @@ async def initiate_sandbox_upload(
     """
     pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
 
-    # TODO: THis test should come first, but if we do
+    # TODO: This test should come first, but if we do
     # the access policy will crash for not having been called
-    # so we need to find a way to ackownledge that
+    # so we need to find a way to acknowledge that
 
     if sandbox_info.size > MAX_SANDBOX_SIZE_BYTES:
         raise ValueError(
@@ -68,7 +73,7 @@ async def initiate_sandbox_upload(
         # they have been uploaded. Instead we check if the sandbox has been
         # assigned to a job. If it has then we know it has been uploaded and we
         # can avoid communicating with the storage backend.
-        if exists_and_assigned or s3_object_exists(
+        if exists_and_assigned or await s3_object_exists(
             settings.s3_client, settings.bucket_name, pfn_to_key(pfn)
         ):
             await sandbox_metadata_db.update_sandbox_last_access_time(
@@ -94,10 +99,15 @@ async def initiate_sandbox_upload(
 
 async def get_sandbox_file(
     pfn: str,
+    sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> SandboxDownloadResponse:
     """Get a presigned URL to download a sandbox file."""
     short_pfn = pfn.split("|", 1)[-1]
+
+    await sandbox_metadata_db.update_sandbox_last_access_time(
+        settings.se_name, short_pfn
+    )
 
     # TODO: Support by name and by job id?
     presigned_url = await settings.s3_client.generate_presigned_url(
@@ -184,3 +194,21 @@ async def insert_sandbox(
         await sandbox_metadata_db.insert_sandbox(owner_id, se_name, pfn, size)
     except SandboxAlreadyInsertedError:
         await sandbox_metadata_db.update_sandbox_last_access_time(se_name, pfn)
+
+
+async def clean_sandboxes(
+    sandbox_metadata_db: SandboxMetadataDB, settings: SandboxStoreSettings
+) -> None:
+    """Delete sandboxes that are not assigned to any job."""
+    async with sandbox_metadata_db.delete_unused_sandboxes(limit=10_000) as generator:
+        async for batch in batched_async(generator, 500):
+            objects = []
+            for pfn in batch:
+                logger.debug("Deleting sandbox %s from S3", pfn)
+                objects.append({"Key": pfn_to_key(pfn)})
+            await s3_bulk_delete_with_retry(
+                settings.s3_client, settings.bucket_name, objects
+            )
+            logger.info(
+                "Deleted %d sandboxes from %s", len(batch), settings.bucket_name
+            )

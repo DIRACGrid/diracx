@@ -101,7 +101,7 @@ async def get_sandbox_file(
         se_name=settings.se_name,
     )
 
-    return await get_sandbox_file_bl(pfn, settings)
+    return await get_sandbox_file_bl(pfn, sandbox_metadata_db, settings)
 
 
 @router.get("/{job_id}/sandbox")

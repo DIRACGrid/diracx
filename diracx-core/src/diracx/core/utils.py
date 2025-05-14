@@ -6,6 +6,7 @@ __all__ = [
     "read_credentials",
     "write_credentials",
     "TwoLevelCache",
+    "batched_async",
 ]
 
 import fcntl
@@ -18,7 +19,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, AsyncIterable, TypeVar
 
 from cachetools import Cache, TTLCache
 
@@ -229,3 +230,44 @@ class TwoLevelCache:
         self.hard_cache.clear()
         self.futures.clear()
         self.locks.clear()
+
+
+async def batched_async(
+    iterable: AsyncIterable[T], n: int, *, strict: bool = False
+) -> AsyncIterable[tuple[T, ...]]:
+    """Yield successive n-sized chunks from an async iterable.
+
+    Args:
+        iterable (async iterable): The input async iterable to be batched.
+        n (int): The size of each batch.
+        strict (bool): If True, raises ValueError for incomplete batches.
+
+    Yields:
+        tuple: A tuple containing the next n elements from the iterable.
+
+    Raises:
+        ValueError: If strict is True and the last batch is not of size n.
+
+    Example:
+        >>> async for batch in batched(aiter('ABCDEFG'), 3):
+        ...     print(batch)
+        ('A', 'B', 'C')
+        ('D', 'E', 'F')
+        ('G',)
+        >>> async for batch in batched(aiter('ABCDEFG'), 3, strict=True):
+        ...     print(batch)
+        ValueError: batched(): incomplete batch
+
+    """
+    if n < 1:
+        raise ValueError("n must be at least one")
+    batch = []
+    async for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield tuple(batch)
+            batch = []
+    if batch:
+        if strict and len(batch) != n:
+            raise ValueError("batched(): incomplete batch")
+        yield tuple(batch)

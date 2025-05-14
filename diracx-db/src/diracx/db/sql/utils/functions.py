@@ -103,6 +103,37 @@ def sqlite_date_trunc(element, compiler, **kw):
     )
 
 
+class days_since(expression.FunctionElement):  # noqa: N801
+    """Sqlalchemy function to get the number of days since a given date.
+
+    Primarily used to be able to query for a specific resolution of a date e.g.
+
+        select * from table where days_since(date_column) = 0
+        select * from table where days_since(date_column) = 1
+    """
+
+    type = DateTime()
+    inherit_cache = False
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+@compiles(days_since, "postgresql")
+def pg_days_since(element, compiler, **kw):
+    return f"EXTRACT(DAY FROM (now() - {compiler.process(element.clauses)}))"
+
+
+@compiles(days_since, "mysql")
+def mysql_days_since(element, compiler, **kw):
+    return f"DATEDIFF(NOW(), {compiler.process(element.clauses)})"
+
+
+@compiles(days_since, "sqlite")
+def sqlite_days_since(element, compiler, **kw):
+    return f"julianday('now') - julianday({compiler.process(element.clauses)})"
+
+
 def substract_date(**kwargs: float) -> datetime:
     return datetime.now(tz=timezone.utc) - timedelta(**kwargs)
 
