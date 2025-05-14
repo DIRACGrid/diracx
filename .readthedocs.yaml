@@ -10,7 +10,7 @@
    jobs:
      pre_install:
        - pip install mkdocs-material
-       - pip install mkdocs-diracx-plugin@git+https://github.com/aldbr/mkdocs-diracx-plugin
+       - pip install mkdocs-diracx-plugin@git+https://github.com/DIRACGrid/mkdocs-diracx-plugin
 
  mkdocs:
    configuration: mkdocs.yml
