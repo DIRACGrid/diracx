@@ -6,7 +6,7 @@ The `diracx-cli` is a command-line interface built on `diracx-client` and `dirac
 
 CLI commands are located in `diracx-cli/src/diracx/cli/`. To create a CLI command:
 
-1. Import `AsyncDiracClient` and/or the diracx API.
+1. Import `AsyncDiracClient` and/or `diracx-api`.
 2. Import `utils.AsyncTyper`.
 3. Use the `@app.async_command` decorator to define commands.
 
