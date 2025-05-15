@@ -15,7 +15,6 @@ TEST_REPO_SPECIFIC_BRANCH = TEST_REPO + "?branch=master"
 
 def github_is_down():
     try:
-
         request.urlopen("https://github.com", timeout=1)
         return False
     except Exception:
@@ -25,7 +24,6 @@ def github_is_down():
 @pytest.mark.skipif(github_is_down(), reason="Github unavailble")
 @pytest.mark.parametrize("repo_url", [TEST_REPO, TEST_REPO_SPECIFIC_BRANCH])
 def test_remote_git_config_source(monkeypatch, repo_url):
-
     monkeypatch.setattr(
         "diracx.core.config.sources.DEFAULT_CONFIG_FILE",
         "k3s/examples/cs.yaml",

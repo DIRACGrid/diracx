@@ -29,17 +29,13 @@ from .._utils.serialization import Deserializer, Serializer
 from .._utils.utils import prep_if_match, prep_if_none_match, raise_if_not_implemented
 
 T = TypeVar("T")
-ClsType = Optional[
-    Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]
-]
+ClsType = Optional[Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]]
 
 _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
 
 
-def build_well_known_get_openid_configuration_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_well_known_get_openid_configuration_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
@@ -67,9 +63,7 @@ def build_well_known_get_jwks_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_well_known_get_installation_metadata_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_well_known_get_installation_metadata_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
@@ -83,9 +77,7 @@ def build_well_known_get_installation_metadata_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_auth_initiate_device_flow_request(
-    *, client_id: str, scope: str, **kwargs: Any
-) -> HttpRequest:
+def build_auth_initiate_device_flow_request(*, client_id: str, scope: str, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
@@ -101,9 +93,7 @@ def build_auth_initiate_device_flow_request(
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpRequest:
@@ -121,14 +111,10 @@ def build_auth_do_device_flow_request(*, user_code: str, **kwargs: Any) -> HttpR
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_auth_finish_device_flow_request(
-    *, code: str, state: str, **kwargs: Any
-) -> HttpRequest:
+def build_auth_finish_device_flow_request(*, code: str, state: str, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
@@ -144,9 +130,7 @@ def build_auth_finish_device_flow_request(
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_auth_finished_request(**kwargs: Any) -> HttpRequest:
@@ -195,9 +179,7 @@ def build_auth_revoke_refresh_token_by_refresh_token_request(  # pylint: disable
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_auth_revoke_refresh_token_by_jti_request(  # pylint: disable=name-too-long
@@ -244,7 +226,7 @@ def build_auth_initiate_authorization_flow_request(  # pylint: disable=name-too-
     redirect_uri: str,
     scope: str,
     state: str,
-    **kwargs: Any,
+    **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -256,12 +238,8 @@ def build_auth_initiate_authorization_flow_request(  # pylint: disable=name-too-
 
     # Construct parameters
     _params["response_type"] = _SERIALIZER.query("response_type", response_type, "str")
-    _params["code_challenge"] = _SERIALIZER.query(
-        "code_challenge", code_challenge, "str"
-    )
-    _params["code_challenge_method"] = _SERIALIZER.query(
-        "code_challenge_method", code_challenge_method, "str"
-    )
+    _params["code_challenge"] = _SERIALIZER.query("code_challenge", code_challenge, "str")
+    _params["code_challenge_method"] = _SERIALIZER.query("code_challenge_method", code_challenge_method, "str")
     _params["client_id"] = _SERIALIZER.query("client_id", client_id, "str")
     _params["redirect_uri"] = _SERIALIZER.query("redirect_uri", redirect_uri, "str")
     _params["scope"] = _SERIALIZER.query("scope", scope, "str")
@@ -270,9 +248,7 @@ def build_auth_initiate_authorization_flow_request(  # pylint: disable=name-too-
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_auth_complete_authorization_flow_request(  # pylint: disable=name-too-long
@@ -293,9 +269,7 @@ def build_auth_complete_authorization_flow_request(  # pylint: disable=name-too-
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_config_serve_config_request(
@@ -303,7 +277,7 @@ def build_config_serve_config_request(
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
     match_condition: Optional[MatchConditions] = None,
-    **kwargs: Any,
+    **kwargs: Any
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
@@ -314,30 +288,22 @@ def build_config_serve_config_request(
 
     # Construct headers
     if if_modified_since is not None:
-        _headers["if-modified-since"] = _SERIALIZER.header(
-            "if_modified_since", if_modified_since, "str"
-        )
+        _headers["if-modified-since"] = _SERIALIZER.header("if_modified_since", if_modified_since, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
     if_match = prep_if_match(etag, match_condition)
     if if_match is not None:
         _headers["If-Match"] = _SERIALIZER.header("if_match", if_match, "str")
     if_none_match = prep_if_none_match(etag, match_condition)
     if if_none_match is not None:
-        _headers["If-None-Match"] = _SERIALIZER.header(
-            "if_none_match", if_none_match, "str"
-        )
+        _headers["If-None-Match"] = _SERIALIZER.header("if_none_match", if_none_match, "str")
 
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_initiate_sandbox_upload_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_jobs_initiate_sandbox_upload_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -345,9 +311,7 @@ def build_jobs_initiate_sandbox_upload_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -374,9 +338,7 @@ def build_jobs_get_sandbox_file_request(*, pfn: str, **kwargs: Any) -> HttpReque
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="GET", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_jobs_unassign_bulk_jobs_sandboxes_request(  # pylint: disable=name-too-long
@@ -396,9 +358,7 @@ def build_jobs_unassign_bulk_jobs_sandboxes_request(  # pylint: disable=name-too
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="DELETE", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="DELETE", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_jobs_get_job_sandboxes_request(job_id: int, **kwargs: Any) -> HttpRequest:
@@ -463,14 +423,10 @@ def build_jobs_get_job_sandbox_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_assign_sandbox_to_job_request(
-    job_id: int, *, content: str, **kwargs: Any
-) -> HttpRequest:
+def build_jobs_assign_sandbox_to_job_request(job_id: int, *, content: str, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -483,14 +439,10 @@ def build_jobs_assign_sandbox_to_job_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="PATCH", url=_url, headers=_headers, content=content, **kwargs
-    )
+    return HttpRequest(method="PATCH", url=_url, headers=_headers, content=content, **kwargs)
 
 
 def build_jobs_remove_jobs_request(*, job_ids: List[int], **kwargs: Any) -> HttpRequest:
@@ -508,20 +460,14 @@ def build_jobs_remove_jobs_request(*, job_ids: List[int], **kwargs: Any) -> Http
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="DELETE", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="DELETE", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_jobs_set_job_statuses_request(
-    *, force: bool = False, **kwargs: Any
-) -> HttpRequest:
+def build_jobs_set_job_statuses_request(*, force: bool = False, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -533,22 +479,16 @@ def build_jobs_set_job_statuses_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="PATCH", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="PATCH", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_jobs_add_heartbeat_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -556,17 +496,13 @@ def build_jobs_add_heartbeat_request(**kwargs: Any) -> HttpRequest:
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_reschedule_jobs_request(
-    *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
-) -> HttpRequest:
+def build_jobs_reschedule_jobs_request(*, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
@@ -583,38 +519,28 @@ def build_jobs_reschedule_jobs_request(
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_jobs_patch_metadata_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     # Construct URL
     _url = "/api/jobs/metadata"
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_search_request(
-    *, page: int = 1, per_page: int = 100, **kwargs: Any
-) -> HttpRequest:
+def build_jobs_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -628,22 +554,16 @@ def build_jobs_search_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -651,9 +571,7 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -662,9 +580,7 @@ def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
 def build_jobs_submit_jdl_jobs_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -672,9 +588,7 @@ def build_jobs_submit_jdl_jobs_request(**kwargs: Any) -> HttpRequest:
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -694,18 +608,10 @@ class WellKnownOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @distributed_trace
     def get_openid_configuration(self, **kwargs: Any) -> _models.OpenIDConfiguration:
@@ -737,23 +643,17 @@ class WellKnownOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "OpenIDConfiguration", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("OpenIDConfiguration", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -790,18 +690,14 @@ class WellKnownOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("{object}", pipeline_response.http_response)
@@ -841,18 +737,14 @@ class WellKnownOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("Metadata", pipeline_response.http_response)
@@ -877,18 +769,10 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
         raise_if_not_implemented(
             self.__class__,
@@ -898,9 +782,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         )
 
     @distributed_trace
-    def initiate_device_flow(
-        self, *, client_id: str, scope: str, **kwargs: Any
-    ) -> _models.InitiateDeviceFlowResponse:
+    def initiate_device_flow(self, *, client_id: str, scope: str, **kwargs: Any) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
         Initiate the device flow against DIRAC authorization Server.
@@ -957,23 +839,17 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "InitiateDeviceFlowResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("InitiateDeviceFlowResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1020,18 +896,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1081,18 +953,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1132,18 +1000,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1184,18 +1048,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[object]", pipeline_response.http_response)
@@ -1206,9 +1066,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace
-    def revoke_refresh_token_by_refresh_token(
-        self, *, refresh_token: str, client_id: str, **kwargs: Any
-    ) -> str:
+    def revoke_refresh_token_by_refresh_token(self, *, refresh_token: str, client_id: str, **kwargs: Any) -> str:
         """Revoke Refresh Token By Refresh Token.
 
         Revoke a refresh token.
@@ -1243,18 +1101,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("str", pipeline_response.http_response)
@@ -1298,18 +1152,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("str", pipeline_response.http_response)
@@ -1349,23 +1199,17 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "UserInfoResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("UserInfoResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1383,7 +1227,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         redirect_uri: str,
         scope: str,
         state: str,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> Any:
         """Initiate Authorization Flow.
 
@@ -1459,18 +1303,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1481,9 +1321,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         return deserialized  # type: ignore
 
     @distributed_trace
-    def complete_authorization_flow(
-        self, *, code: str, state: str, **kwargs: Any
-    ) -> Any:
+    def complete_authorization_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Complete Authorization Flow.
 
         Complete the authorization flow.
@@ -1524,18 +1362,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1560,18 +1394,10 @@ class ConfigOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @distributed_trace
     def serve_config(
@@ -1580,7 +1406,7 @@ class ConfigOperations:
         if_modified_since: Optional[str] = None,
         etag: Optional[str] = None,
         match_condition: Optional[MatchConditions] = None,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> Any:
         """Serve Config.
 
@@ -1631,18 +1457,14 @@ class ConfigOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1667,26 +1489,14 @@ class JobsOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @overload
     def initiate_sandbox_upload(
-        self,
-        body: _models.SandboxInfo,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: _models.SandboxInfo, *, content_type: str = "application/json", **kwargs: Any
     ) -> _models.SandboxUploadResponse:
         """Initiate Sandbox Upload.
 
@@ -1763,9 +1573,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.SandboxUploadResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -1786,23 +1594,17 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "SandboxUploadResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("SandboxUploadResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1810,9 +1612,7 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def get_sandbox_file(
-        self, *, pfn: str, **kwargs: Any
-    ) -> _models.SandboxDownloadResponse:
+    def get_sandbox_file(self, *, pfn: str, **kwargs: Any) -> _models.SandboxDownloadResponse:
         """Get Sandbox File.
 
         Get a presigned URL to download a sandbox file.
@@ -1850,23 +1650,17 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "SandboxDownloadResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("SandboxDownloadResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -1874,9 +1668,7 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def unassign_bulk_jobs_sandboxes(
-        self, *, jobs_ids: List[int], **kwargs: Any
-    ) -> Any:
+    def unassign_bulk_jobs_sandboxes(self, *, jobs_ids: List[int], **kwargs: Any) -> Any:
         """Unassign Bulk Jobs Sandboxes.
 
         Delete bulk jobs sandbox mapping.
@@ -1908,18 +1700,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -1962,18 +1750,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("{[object]}", pipeline_response.http_response)
@@ -2016,18 +1800,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -2038,9 +1818,7 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def get_job_sandbox(
-        self, job_id: int, sandbox_type: Union[str, _models.SandboxType], **kwargs: Any
-    ) -> List[Any]:
+    def get_job_sandbox(self, job_id: int, sandbox_type: Union[str, _models.SandboxType], **kwargs: Any) -> List[Any]:
         """Get Job Sandbox.
 
         Get input or output sandbox of given job.
@@ -2075,18 +1853,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[object]", pipeline_response.http_response)
@@ -2121,9 +1895,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: str = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", "application/json")
-        )
+        content_type: str = kwargs.pop("content_type", _headers.pop("Content-Type", "application/json"))
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         _content = self._serialize.body(body, "str")
@@ -2138,18 +1910,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -2197,18 +1965,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -2225,7 +1989,7 @@ class JobsOperations:
         *,
         force: bool = False,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
@@ -2245,12 +2009,7 @@ class JobsOperations:
 
     @overload
     def set_job_statuses(
-        self,
-        body: IO[bytes],
-        *,
-        force: bool = False,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: IO[bytes], *, force: bool = False, content_type: str = "application/json", **kwargs: Any
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
@@ -2274,7 +2033,7 @@ class JobsOperations:
         body: Union[Dict[str, Dict[str, _models.JobStatusUpdate]], IO[bytes]],
         *,
         force: bool = False,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
@@ -2299,9 +2058,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.SetJobStatusReturn] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2323,23 +2080,17 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "SetJobStatusReturn", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("SetJobStatusReturn", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -2348,11 +2099,7 @@ class JobsOperations:
 
     @overload
     def add_heartbeat(
-        self,
-        body: Dict[str, _models.HeartbeatData],
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: Dict[str, _models.HeartbeatData], *, content_type: str = "application/json", **kwargs: Any
     ) -> List[_models.JobCommand]:
         """Add Heartbeat.
 
@@ -2429,9 +2176,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[List[_models.JobCommand]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2452,23 +2197,17 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "[JobCommand]", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("[JobCommand]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -2476,9 +2215,7 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def reschedule_jobs(
-        self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any
-    ) -> Dict[str, Any]:
+    def reschedule_jobs(self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any) -> Dict[str, Any]:
         """Reschedule Jobs.
 
         Reschedule Jobs.
@@ -2513,18 +2250,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("{object}", pipeline_response.http_response)
@@ -2536,11 +2269,7 @@ class JobsOperations:
 
     @overload
     def patch_metadata(
-        self,
-        body: Dict[str, Dict[str, Any]],
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: Dict[str, Dict[str, Any]], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
         """Patch Metadata.
 
@@ -2557,9 +2286,7 @@ class JobsOperations:
         """
 
     @overload
-    def patch_metadata(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
+    def patch_metadata(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
         """Patch Metadata.
 
         Patch Metadata.
@@ -2599,9 +2326,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2622,18 +2347,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -2647,7 +2368,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2677,7 +2398,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2706,7 +2427,7 @@ class JobsOperations:
         *,
         page: int = 1,
         per_page: int = 100,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2735,9 +2456,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2763,25 +2482,19 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200, 206]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         response_headers = {}
         if response.status_code == 206:
-            response_headers["Content-Range"] = self._deserialize(
-                "str", response.headers.get("Content-Range")
-            )
+            response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
 
         deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
@@ -2791,13 +2504,7 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @overload
-    def summary(
-        self,
-        body: _models.JobSummaryParams,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
-    ) -> Any:
+    def summary(self, body: _models.JobSummaryParams, *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -2813,9 +2520,7 @@ class JobsOperations:
         """
 
     @overload
-    def summary(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> Any:
+    def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -2831,9 +2536,7 @@ class JobsOperations:
         """
 
     @distributed_trace
-    def summary(
-        self, body: Union[_models.JobSummaryParams, IO[bytes]], **kwargs: Any
-    ) -> Any:
+    def summary(self, body: Union[_models.JobSummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
         Show information suitable for plotting.
@@ -2855,9 +2558,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[Any] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2878,18 +2579,14 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
@@ -2936,9 +2633,7 @@ class JobsOperations:
         """
 
     @distributed_trace
-    def submit_jdl_jobs(
-        self, body: Union[List[str], IO[bytes]], **kwargs: Any
-    ) -> List[_models.InsertedJob]:
+    def submit_jdl_jobs(self, body: Union[List[str], IO[bytes]], **kwargs: Any) -> List[_models.InsertedJob]:
         """Submit Jdl Jobs.
 
         Submit a list of jobs in JDL format.
@@ -2960,9 +2655,7 @@ class JobsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[List[_models.InsertedJob]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -2983,23 +2676,17 @@ class JobsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "[InsertedJob]", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("[InsertedJob]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

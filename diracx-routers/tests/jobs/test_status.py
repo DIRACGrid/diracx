@@ -380,9 +380,9 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
         "/api/jobs/reschedule",
         params={"job_ids": submitted_job_ids},
     )
-    assert (
-        r.status_code != 200
-    ), f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
+    assert r.status_code != 200, (
+        f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
+    )
     assert r.json() == {
         "detail": {
             "success": [],
@@ -453,9 +453,9 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
         "/api/jobs/reschedule",
         params={"job_ids": submitted_job_ids},
     )
-    assert (
-        r.status_code != 200
-    ), f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
+    assert r.status_code != 200, (
+        f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
+    )
     assert r.json() == {
         "detail": {
             "success": [],
@@ -982,9 +982,9 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
 
     # Assert
-    assert (
-        r.status_code == 204
-    ), "PATCH metadata should return 204 No Content on success"
+    assert r.status_code == 204, (
+        "PATCH metadata should return 204 No Content on success"
+    )
     r = normal_user_client.post(
         "/api/jobs/search",
         json={
@@ -1046,9 +1046,9 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
 
     # Assert
-    assert (
-        r.status_code == 400
-    ), "PATCH metadata should 400 Bad Request if an attribute column's case is incorrect"
+    assert r.status_code == 400, (
+        "PATCH metadata should 400 Bad Request if an attribute column's case is incorrect"
+    )
 
 
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
@@ -1121,10 +1121,10 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     commands = r.json()
     assert len(commands) == 1, "Exactly one job command should be returned"
     assert commands[0]["job_id"] == valid_job_id, (
-        "Wrong job id," f" should be '{valid_job_id}' but got {commands[0]['job_id']=}"
+        f"Wrong job id, should be '{valid_job_id}' but got {commands[0]['job_id']=}"
     )
     assert commands[0]["command"] == "Kill", (
-        "Wrong job command received," f" should be 'Kill' but got {commands[0]=}"
+        f"Wrong job command received, should be 'Kill' but got {commands[0]=}"
     )
     sleep(1)
 
@@ -1133,6 +1133,6 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
     r.raise_for_status()
     commands = r.json()
-    assert (
-        len(commands) == 0
-    ), "Exactly zero job commands should be returned after heartbeat commands are sent"
+    assert len(commands) == 0, (
+        "Exactly zero job commands should be returned after heartbeat commands are sent"
+    )

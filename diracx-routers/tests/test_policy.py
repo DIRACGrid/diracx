@@ -31,7 +31,6 @@ def test_all_routes_have_policy():
             continue
 
         for route in router.routes:
-
             # If the route is decorated with the diracx_open_access
             # decorator, we skip it
             if getattr(route.endpoint, "diracx_open_access", False):

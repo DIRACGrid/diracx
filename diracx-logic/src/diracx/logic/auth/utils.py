@@ -266,8 +266,7 @@ def parse_and_validate_scope(
     if not vos:
         available_vo_scopes = [repr(f"vo:{vo}") for vo in config.Registry]
         raise ValueError(
-            "No vo scope requested, available values: "
-            f"{' '.join(available_vo_scopes)}"
+            f"No vo scope requested, available values: {' '.join(available_vo_scopes)}"
         )
     elif len(vos) > 1:
         raise ValueError(f"Only one vo is allowed but got {vos}")
@@ -291,7 +290,7 @@ def parse_and_validate_scope(
 
     if not set(properties).issubset(available_properties):
         raise ValueError(
-            f"{set(properties)-set(available_properties)} are not valid properties"
+            f"{set(properties) - set(available_properties)} are not valid properties"
         )
 
     return {
