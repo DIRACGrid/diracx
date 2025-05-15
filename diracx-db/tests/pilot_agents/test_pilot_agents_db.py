@@ -15,7 +15,6 @@ async def pilot_agents_db(tmp_path) -> PilotAgentsDB:
 
 
 async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
-
     async with pilot_agents_db as pilot_agents_db:
         # Add a pilot reference
         refs = [f"ref_{i}" for i in range(10)]

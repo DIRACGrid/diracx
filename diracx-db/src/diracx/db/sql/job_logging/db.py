@@ -89,7 +89,6 @@ class JobLoggingDB(BaseSQLDB):
             status_time,
             status_source,
         ) in rows:
-
             values[job_id].append(
                 [
                     status,

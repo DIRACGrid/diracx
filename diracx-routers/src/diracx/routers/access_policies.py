@@ -131,11 +131,9 @@ def check_permissions(
     try:
         yield wrapped_policy
     finally:
-
         if not has_been_called:
             # If enable, just crash, meanly
             if dev_settings.crash_on_missed_access_policy:
-
                 # TODO nice error message with inspect
                 # It would also be nice to print it when there's a real
                 # problem, not when we get 402

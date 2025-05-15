@@ -61,7 +61,7 @@ class BodyAuthGetOidcToken(_serialization.Model):
         redirect_uri: Optional[str] = None,
         code_verifier: Optional[str] = None,
         refresh_token: Optional[str] = None,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword grant_type: OAuth2 Grant type. Required.
@@ -125,7 +125,7 @@ class ExtendedMetadata(_serialization.Model):
         virtual_organizations: Dict[str, "_models.VOInfo"],
         gubbins_secrets: str,
         gubbins_user_info: Dict[str, List[str]],
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword virtual_organizations: Virtual Organizations. Required.
@@ -206,7 +206,7 @@ class HeartbeatData(_serialization.Model):
         cpu_consumed: Optional[float] = None,
         wall_clock_time: Optional[float] = None,
         standard_output: Optional[str] = None,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword load_average: Loadaverage.
@@ -245,9 +245,7 @@ class HTTPValidationError(_serialization.Model):
         "detail": {"key": "detail", "type": "[ValidationError]"},
     }
 
-    def __init__(
-        self, *, detail: Optional[List["_models.ValidationError"]] = None, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, detail: Optional[List["_models.ValidationError"]] = None, **kwargs: Any) -> None:
         """
         :keyword detail: Detail.
         :paramtype detail: list[~_generated.models.ValidationError]
@@ -284,10 +282,7 @@ class InitiateDeviceFlowResponse(_serialization.Model):
     _attribute_map = {
         "user_code": {"key": "user_code", "type": "str"},
         "device_code": {"key": "device_code", "type": "str"},
-        "verification_uri_complete": {
-            "key": "verification_uri_complete",
-            "type": "str",
-        },
+        "verification_uri_complete": {"key": "verification_uri_complete", "type": "str"},
         "verification_uri": {"key": "verification_uri", "type": "str"},
         "expires_in": {"key": "expires_in", "type": "int"},
     }
@@ -300,7 +295,7 @@ class InitiateDeviceFlowResponse(_serialization.Model):
         verification_uri_complete: str,
         verification_uri: str,
         expires_in: int,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword user_code: User Code. Required.
@@ -352,13 +347,7 @@ class InsertedJob(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        job_id: int,
-        status: str,
-        minor_status: str,
-        time_stamp: datetime.datetime,
-        **kwargs: Any,
+        self, *, job_id: int, status: str, minor_status: str, time_stamp: datetime.datetime, **kwargs: Any
     ) -> None:
         """
         :keyword job_id: Jobid. Required.
@@ -401,14 +390,7 @@ class JobCommand(_serialization.Model):
         "arguments": {"key": "arguments", "type": "str"},
     }
 
-    def __init__(
-        self,
-        *,
-        job_id: int,
-        command: str,
-        arguments: Optional[str] = None,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, *, job_id: int, command: str, arguments: Optional[str] = None, **kwargs: Any) -> None:
         """
         :keyword job_id: Job Id. Required.
         :paramtype job_id: int
@@ -450,7 +432,7 @@ class JobSearchParams(_serialization.Model):
         search: List["_models.JobSearchParamsSearchItem"] = [],
         sort: List["_models.SortSpec"] = [],
         distinct: bool = False,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword parameters: Parameters.
@@ -502,7 +484,7 @@ class JobStatusUpdate(_serialization.Model):
         minor_status: Optional[str] = None,
         application_status: Optional[str] = None,
         source: str = "Unknown",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
@@ -544,11 +526,7 @@ class JobSummaryParams(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        grouping: List[str],
-        search: List["_models.JobSummaryParamsSearchItem"] = [],
-        **kwargs: Any,
+        self, *, grouping: List[str], search: List["_models.JobSummaryParamsSearchItem"] = [], **kwargs: Any
     ) -> None:
         """
         :keyword grouping: Grouping. Required.
@@ -620,30 +598,18 @@ class OpenIDConfiguration(_serialization.Model):
         "token_endpoint": {"key": "token_endpoint", "type": "str"},
         "userinfo_endpoint": {"key": "userinfo_endpoint", "type": "str"},
         "authorization_endpoint": {"key": "authorization_endpoint", "type": "str"},
-        "device_authorization_endpoint": {
-            "key": "device_authorization_endpoint",
-            "type": "str",
-        },
+        "device_authorization_endpoint": {"key": "device_authorization_endpoint", "type": "str"},
         "revocation_endpoint": {"key": "revocation_endpoint", "type": "str"},
         "jwks_uri": {"key": "jwks_uri", "type": "str"},
         "grant_types_supported": {"key": "grant_types_supported", "type": "[str]"},
         "scopes_supported": {"key": "scopes_supported", "type": "[str]"},
-        "response_types_supported": {
-            "key": "response_types_supported",
-            "type": "[str]",
-        },
+        "response_types_supported": {"key": "response_types_supported", "type": "[str]"},
         "token_endpoint_auth_signing_alg_values_supported": {
             "key": "token_endpoint_auth_signing_alg_values_supported",
             "type": "[str]",
         },
-        "token_endpoint_auth_methods_supported": {
-            "key": "token_endpoint_auth_methods_supported",
-            "type": "[str]",
-        },
-        "code_challenge_methods_supported": {
-            "key": "code_challenge_methods_supported",
-            "type": "[str]",
-        },
+        "token_endpoint_auth_methods_supported": {"key": "token_endpoint_auth_methods_supported", "type": "[str]"},
+        "code_challenge_methods_supported": {"key": "code_challenge_methods_supported", "type": "[str]"},
     }
 
     def __init__(
@@ -662,7 +628,7 @@ class OpenIDConfiguration(_serialization.Model):
         token_endpoint_auth_signing_alg_values_supported: List[str],
         token_endpoint_auth_methods_supported: List[str],
         code_challenge_methods_supported: List[str],
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword issuer: Issuer. Required.
@@ -705,12 +671,8 @@ class OpenIDConfiguration(_serialization.Model):
         self.grant_types_supported = grant_types_supported
         self.scopes_supported = scopes_supported
         self.response_types_supported = response_types_supported
-        self.token_endpoint_auth_signing_alg_values_supported = (
-            token_endpoint_auth_signing_alg_values_supported
-        )
-        self.token_endpoint_auth_methods_supported = (
-            token_endpoint_auth_methods_supported
-        )
+        self.token_endpoint_auth_signing_alg_values_supported = token_endpoint_auth_signing_alg_values_supported
+        self.token_endpoint_auth_methods_supported = token_endpoint_auth_methods_supported
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
@@ -783,7 +745,7 @@ class SandboxInfo(_serialization.Model):
         checksum: str,
         size: int,
         format: Union[str, "_models.SandboxFormat"],
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword checksum_algorithm: ChecksumAlgorithm. Required. "sha256"
@@ -826,12 +788,7 @@ class SandboxUploadResponse(_serialization.Model):
     }
 
     def __init__(
-        self,
-        *,
-        pfn: str,
-        url: Optional[str] = None,
-        fields: Optional[Dict[str, str]] = None,
-        **kwargs: Any,
+        self, *, pfn: str, url: Optional[str] = None, fields: Optional[Dict[str, str]] = None, **kwargs: Any
     ) -> None:
         """
         :keyword pfn: Pfn. Required.
@@ -879,7 +836,7 @@ class ScalarSearchSpec(_serialization.Model):
         parameter: str,
         operator: Union[str, "_models.ScalarSearchOperator"],
         value: "_models.ScalarSearchSpecValue",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.
@@ -926,7 +883,7 @@ class SetJobStatusReturn(_serialization.Model):
         *,
         success: Dict[str, "_models.SetJobStatusReturnSuccess"],
         failed: Dict[str, Dict[str, str]],
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword success: Success. Required.
@@ -980,7 +937,7 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         start_exec_time: Optional[datetime.datetime] = None,
         end_exec_time: Optional[datetime.datetime] = None,
         last_update_time: Optional[datetime.datetime] = None,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
@@ -1031,13 +988,7 @@ class SortSpec(_serialization.Model):
         "direction": {"key": "direction", "type": "str"},
     }
 
-    def __init__(
-        self,
-        *,
-        parameter: str,
-        direction: Union[str, "_models.SortDirection"],
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, *, parameter: str, direction: Union[str, "_models.SortDirection"], **kwargs: Any) -> None:
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
@@ -1074,9 +1025,7 @@ class SupportInfo(_serialization.Model):
         "email": {"key": "email", "type": "str"},
     }
 
-    def __init__(
-        self, *, message: str, webpage: str, email: str, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, message: str, webpage: str, email: str, **kwargs: Any) -> None:
         """
         :keyword message: Message. Required.
         :paramtype message: str
@@ -1125,7 +1074,7 @@ class TokenResponse(_serialization.Model):
         expires_in: int,
         token_type: str = "Bearer",
         refresh_token: Optional[str] = None,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword access_token: Access Token. Required.
@@ -1190,7 +1139,7 @@ class UserInfoResponse(_serialization.Model):
         policies: Dict[str, Any],
         properties: List[str],
         preferred_username: str,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword sub: Sub. Required.
@@ -1240,14 +1189,7 @@ class ValidationError(_serialization.Model):
         "type": {"key": "type", "type": "str"},
     }
 
-    def __init__(
-        self,
-        *,
-        loc: List["_models.ValidationErrorLocItem"],
-        msg: str,
-        type: str,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, *, loc: List["_models.ValidationErrorLocItem"], msg: str, type: str, **kwargs: Any) -> None:
         """
         :keyword loc: Location. Required.
         :paramtype loc: list[~_generated.models.ValidationErrorLocItem]
@@ -1297,7 +1239,7 @@ class VectorSearchSpec(_serialization.Model):
         parameter: str,
         operator: Union[str, "_models.VectorSearchOperator"],
         values: "_models.VectorSearchSpecValues",
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword parameter: Parameter. Required.
@@ -1348,7 +1290,7 @@ class VOInfo(_serialization.Model):
         groups: Dict[str, "_models.GroupInfo"],
         support: "_models.SupportInfo",
         default_group: str,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         """
         :keyword groups: Groups. Required.
