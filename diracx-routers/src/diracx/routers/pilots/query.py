@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from fastapi import Body, Response
 
 from diracx.core.models import SearchParams
-from diracx.logic.pilots.management import get_pilot_info as get_pilot_info_bl
+from diracx.logic.pilots.management import search as search_bl
 
 from ..dependencies import PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
@@ -118,7 +118,7 @@ async def search(
     # Inspired by /api/jobs/query
     await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
-    total, pilots = await get_pilot_info_bl(
+    total, pilots = await search_bl(
         pilot_db=pilot_agents_db,
         page=page,
         per_page=per_page,
