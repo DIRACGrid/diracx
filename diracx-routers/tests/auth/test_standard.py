@@ -594,6 +594,40 @@ async def test_refresh_token_expired(
     assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
 
 
+async def test_access_token_expired(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test the expiration date of the passed access token.
+    - get an access token
+    - decode it and change the expiration time
+    - recode it (with the JWK of the server).
+    """
+    # Get access token
+    initial_access_token = _get_tokens(test_client)["access_token"]
+
+    # Decode it
+    access_payload = jwt.decode(
+        initial_access_token, options={"verify_signature": False}
+    )
+
+    # Modify the expiration time (utc now - 5 hours)
+    access_payload["exp"] = int(
+        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
+    )
+
+    # Encode it differently
+    new_access_token = create_token(access_payload, test_auth_settings)
+
+    headers = {"Authorization": f"Bearer {new_access_token}"}
+
+    # Try to get the userinfo using the invalid access token
+    # The server should detect that it is not encoded properly
+    r = test_client.get("/api/auth/userinfo", headers=headers)
+    data = r.json()
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
+
+
 async def test_refresh_token_rotated_expiration_time(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
