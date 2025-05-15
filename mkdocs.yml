@@ -51,6 +51,11 @@ nav:
 
   - User Guide:
     - user/index.md
+    - Getting started: user/tutorials/getting-started.md
+    - Known installations: user/reference/known-installations.md
+    - DiracX Web:
+      - user/web/index.md
+      - Getting started: user/web/getting-started.md
     - Programmatic Usage:
       - user/reference/programmatic-usage/index.md
       - Command Line: user/reference/programmatic-usage/command-line-interface.md
@@ -83,15 +88,26 @@ nav:
     - dev/index.md
     - Getting started: dev/tutorials/getting-started.md
     - Tutorials:
-      - Run locally: dev/tutorials/run-locally.md
+      - Larger developments: dev/tutorials/larger-developments.md
+      - Developing DiracX Web: dev/tutorials/develop-web.md
+      - Run a full DiracX instance locally: dev/tutorials/run-locally.md
       - Play with auth: dev/tutorials/play-with-auth.md
     - How-To:
-      - Add a DB: dev/how-to/add-a-db.md
-      - Add a router: dev/how-to/add-a-route.md
-      - Add a CLI command: dev/how-to/add-a-cli-command.md
-      - Add settings: dev/how-to/add-a-setting.md
+      - Contribute: dev/how-to/contribute.md
+      - Add functionality:
+        - dev/how-to/add-functionality/index.md
+        - New route or router: dev/how-to/add-a-route.md
+        - New task: dev/how-to/add-a-task.md
+        - New DB: dev/how-to/add-a-db.md
+        - New CLI command: dev/how-to/add-a-cli-command.md
+        - New settings: dev/how-to/add-a-setting.md
       - Client customization: dev/how-to/client-customization.md
       - Client generation: dev/how-to/client-generation.md
+      - Use the demo:
+        - dev/how-to/use-the-demo/index.md
+        - Accessing the client: dev/how-to/use-the-demo/swagger.md
+        - Use swagger: dev/how-to/use-the-demo/swagger.md
+        - Accessing DiracX Web: dev/how-to/use-the-demo/web.md
       - Write docs: dev/how-to/write-docs.md
     - Explanations:
       - Components:
@@ -140,12 +156,12 @@ markdown_extensions:
 plugins:
   - diracx:
       repos:
-        - url: https://github.com/DIRACGrid/diracx-charts.git
+        - url: /Users/cburr/Development/DIRAC-dev/diracx-charts
           branch: master
           include:
             - docs
             - diracx
-        - url: https://github.com/chaen/diracx-web.git
+        - url: /Users/cburr/Development/DIRAC-dev/diracx-web
           branch: mkdoc
           include:
             - docs

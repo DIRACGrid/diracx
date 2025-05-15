@@ -1,4 +1,4 @@
-# Contributing to DiracX-Web
+# Contributing to DiracX
 
 ### 1. Open an Issue
 
@@ -9,30 +9,39 @@
 
 ### 2. Make Changes
 
-*Requirements: [Getting Started](get_started.md)*
-
 - **Fork the Repository:** Start by forking the repository and creating a new branch for your work. Use a descriptive name for your branch that reflects the work you are doing.
 
-- **Code Documentation:** Ensure that any code you write is well-documented. This includes:
+=== "DiracX"
 
-    - Inline comments where necessary to explain complex logic.
-    - Updating or creating Storybook documentation if you are contributing to the `diracx-web-components` library.
+    **Requirements:** [Getting Started](../tutorials/getting-started.md)
 
-- **Writing/Updating Tests:** When you change or add new code, make sure to write or update tests accordingly. This helps maintain the reliability and stability of the codebase.
+    TODO
 
-**Note:** Don't forget to update the `extensions` code if you integrate breaking changes in the `diracx-web-components` library. See [Managing the extension](manage_extension.md) for further details.
+=== "DiracX Web"
+
+    **Requirements:** [Getting Started](get_started.md)
+
+    - **Code Documentation:** Ensure that any code you write is well-documented. This includes:
+
+        - Inline comments where necessary to explain complex logic.
+        - Updating or creating Storybook documentation if you are contributing to the `diracx-web-components` library.
+
+    - **Writing/Updating Tests:** When you change or add new code, make sure to write or update tests accordingly. This helps maintain the reliability and stability of the codebase.
+
+    **Note:** Don't forget to update the `extensions` code if you integrate breaking changes in the `diracx-web-components` library. See [Managing the extension](manage_extension.md) for further details.
 
 ### 3. Commit
 
 - **Conventional Commits:** All commits must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This ensures that commit messages are structured and consistent, which is important for automation and versioning.
 
     - **Examples:**
+        - `feat(cli): add transformation debug command`
         - `feat(ui): add new button component`
         - `fix(api): handle null values in response`
         - `docs(readme): update contributing guidelines`
     - **Why?** If your commit messages do not follow this convention, the Continuous Integration (CI) process will fail, and your PR will not be merged. Please ensure your commit messages are properly formatted before pushing.
 
-- **Note**: `Husky` is configured to run as a pre-commit script, executing tasks such as linting staged files to maintain code consistency with the codebase.
+- **Note**: We recommend using git hooks to automatically apply some validation to the commits. In `diracx`/`diracx-charts` we use [`pre-commit`](https://pre-commit.com/). In `diracx-web`, we use [`Husky`](https://typicode.github.io/husky/) is configured to run as a pre-commit hook, executing tasks such as linting staged files to maintain code consistency with the codebase.
 
 ### 4. Make a Pull Request (PR)
 
