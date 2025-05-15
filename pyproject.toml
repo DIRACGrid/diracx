@@ -102,6 +102,7 @@ profile = "black"
 
 
 [tool.mypy]
+warn_unreachable = true
 files = [
     "diracx-api/src/**/*.py",
     "diracx-cli/src/**/*.py",
@@ -125,7 +126,7 @@ allow_redefinition = true
 explicit_package_bases = true
 # disallow_untyped_defs = true
 # strict = true
-enable_error_code = ["import", "attr-defined"]
+enable_error_code = ["import", "attr-defined", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
 module = 'DIRAC.*'
