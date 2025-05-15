@@ -1,54 +1,11 @@
 /* Light Mode */
 [data-md-color-scheme="default"] {
     --my-primary-color: #66aa22;
-
     --md-primary-fg-color: var(--my-primary-color);
 }
 
 /* Dark Mode */
 [data-md-color-scheme="slate"] {
     --my-primary-color: #1f330a;
-
     --md-primary-fg-color: var(--my-primary-color);
 }
-
-.full-width-content {
-    position: relative;
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-}
-
-.md-content__inner::before {
-    display:none
-}
-.md-main__inner {
-    margin-top: 0rem !important;
-}
-.md-content__inner {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-    margin: 0;
-}
-.md-content__inner::after {
-    display: none
-}
-
-body.no-sidebar .md-header {
-    display: none !important;
-}
-
-body.no-sidebar .md-main,
-body.no-sidebar .md-main__inner,
-body.no-sidebar .md-content,
-body.no-sidebar .md-content__inner {
-  margin: 0;
-  padding: 0;
-  max-width: none;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.md-header__button.md-logo img {
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
-  }

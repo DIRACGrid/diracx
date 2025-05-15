@@ -1,16 +1,17 @@
 # Packaging and versioning
 
-DiracX is a comprehensive Python package, composed of several interconnected submodules. It's designed to provide robust and versatile functionalities, primarily through these key components:
+DiracX is written in Python package and composed of several interconnected submodules.
+It's designed to provide robust and versatile functionalities, primarily through these key components:
 
 1. **User-Facing Components**:
 
-   - **`diracx`**: This is the primary interface for users, integrating both the Command Line Interface (CLI) and Python API.
-   - **`diracx-routers`**: Serves as the server component, offering HTTPS endpoints.
-   - **`diracx-tasks`**: Handles operations executed by DiracX servers, either periodically or upon request.
+    - **`diracx`**: This is the primary interface for users, integrating both the Command Line Interface (CLI) and Python API.
+    - **`diracx-routers`**: Serves as the server component, offering HTTPS endpoints.
+    - **`diracx-tasks`**: Handles operations executed by DiracX servers, either periodically or upon request.
 
 2. **Containerization**:
 
-   - Each component is available as a container image, packaging DiracX along with all necessary dependencies.
+    - Each component is available as a container image, packaging DiracX along with all necessary dependencies.
 
 ## Python Modules
 
@@ -84,20 +85,20 @@ DiracX utilizes a structured approach to containerization:
 
 1. **Base Image**:
 
-   - All container images start from `diracx/base`.
+    - All container images start from `diracx/base`.
 
 2. **Specialized Base Images**:
 
-   - `diracx/services-base`
-   - `diracx/tasks-base`
-   - `diracx/client-base`
+    - `diracx/services-base`
+    - `diracx/tasks-base`
+    - `diracx/client-base`
 
 3. **Image Versioning and Building**:
 
-   - Images are built periodically (e.g., every Monday) and tagged as `YYYY.MM.DD.P`.
-   - A DiracX release triggers the creation of new `DiracXService`, `diracx/tasks`, and `diracx/client` images, based on specific `diracx/base` tags.
-   - This approach ensures stability in production environments.
-   - For testing purposes, the `latest` base images are used, with dependencies installed via `pip install`.
+    - Images are built periodically (e.g., every Monday) and tagged as `YYYY.MM.DD.P`.
+    - A DiracX release triggers the creation of new `DiracXService`, `diracx/tasks`, and `diracx/client` images, based on specific `diracx/base` tags.
+    - This approach ensures stability in production environments.
+    - For testing purposes, the `latest` base images are used, with dependencies installed via `pip install`.
 
 See this diagram for an example of how this looks in practice:
 
@@ -128,7 +129,7 @@ See this diagram for an example of how this looks in practice:
 TODO: document the entry point
 
 - `diracx-routers`:
-  - `diracx.diracx_min_client_version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `diracx-routers/src/__init.py__`
+    - `diracx.diracx_min_client_version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `diracx-routers/src/__init.py__`
 
 ## Extensions
 
