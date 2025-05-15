@@ -3609,6 +3609,8 @@ class PilotsOperations:
 
         Endpoint to delete a pilot.
 
+        If at least one pilot is not found, it WILL rollback.
+
         :keyword pilot_stamps: Stamps of the pilots we want to delete. Required.
         :paramtype pilot_stamps: list[str]
         :return: None
@@ -3659,7 +3661,7 @@ class PilotsOperations:
     ) -> None:
         """Clear Pilots.
 
-        Delete all pilots that lived more than age_in_days.
+        Endpoint for DIRAC to delete all pilots that lived more than age_in_days.
 
         :keyword age_in_days: The number of days that define the maximum age of pilots to be
          deleted.Pilots older than this age will be considered for deletion. Required.
@@ -3721,7 +3723,7 @@ class PilotsOperations:
     ) -> List[_models.PilotSecretsInfo]:
         """Create Pilot Secrets.
 
-        Create Pilot Secrets.
+        Endpoint to create secrets.
 
         :param body: Required.
         :type body: ~_generated.models.BodyPilotsCreatePilotSecrets
@@ -3739,7 +3741,7 @@ class PilotsOperations:
     ) -> List[_models.PilotSecretsInfo]:
         """Create Pilot Secrets.
 
-        Create Pilot Secrets.
+        Endpoint to create secrets.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3759,7 +3761,7 @@ class PilotsOperations:
     ) -> List[_models.PilotSecretsInfo]:
         """Create Pilot Secrets.
 
-        Create Pilot Secrets.
+        Endpoint to create secrets.
 
         :param body: Is either a BodyPilotsCreatePilotSecrets type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsCreatePilotSecrets or IO[bytes]
@@ -3944,6 +3946,8 @@ class PilotsOperations:
 
         Modify a field of a pilot.
 
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+
         :param body: Required.
         :type body: ~_generated.models.BodyPilotsUpdatePilotFields
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
@@ -3962,6 +3966,8 @@ class PilotsOperations:
 
         Modify a field of a pilot.
 
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
@@ -3979,6 +3985,8 @@ class PilotsOperations:
         """Update Pilot Fields.
 
         Modify a field of a pilot.
+
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
 
         :param body: Is either a BodyPilotsUpdatePilotFields type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsUpdatePilotFields or IO[bytes]
@@ -4047,7 +4055,7 @@ class PilotsOperations:
     ) -> None:
         """Associate Pilot With Jobs.
 
-        Associate Pilot With Jobs.
+        Endpoint only for DIRAC services, to associate a pilot with a job.
 
         :param body: Required.
         :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs
@@ -4065,7 +4073,7 @@ class PilotsOperations:
     ) -> None:
         """Associate Pilot With Jobs.
 
-        Associate Pilot With Jobs.
+        Endpoint only for DIRAC services, to associate a pilot with a job.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -4085,7 +4093,7 @@ class PilotsOperations:
     ) -> None:
         """Associate Pilot With Jobs.
 
-        Associate Pilot With Jobs.
+        Endpoint only for DIRAC services, to associate a pilot with a job.
 
         :param body: Is either a BodyPilotsAssociatePilotWithJobs type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs or IO[bytes]
@@ -4299,7 +4307,7 @@ class PilotsOperations:
     ) -> _models.TokenResponse:
         """Pilot Login.
 
-        Endpoint without policy, the pilot uses only its secret.
+        This endpoint is used by the pilot to exchange a secret for a token.
 
         :param body: Required.
         :type body: ~_generated.models.BodyPilotsPilotLogin
@@ -4317,7 +4325,7 @@ class PilotsOperations:
     ) -> _models.TokenResponse:
         """Pilot Login.
 
-        Endpoint without policy, the pilot uses only its secret.
+        This endpoint is used by the pilot to exchange a secret for a token.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -4335,7 +4343,7 @@ class PilotsOperations:
     ) -> _models.TokenResponse:
         """Pilot Login.
 
-        Endpoint without policy, the pilot uses only its secret.
+        This endpoint is used by the pilot to exchange a secret for a token.
 
         :param body: Is either a BodyPilotsPilotLogin type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsPilotLogin or IO[bytes]

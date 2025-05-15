@@ -53,7 +53,7 @@ async def get_pilot_jobs_ids_by_stamp(
     return await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
 
 
-async def get_pilot_info(
+async def search(
     pilot_db: PilotAgentsDB,
     page: int = 1,
     per_page: int = 100,
