@@ -27,6 +27,7 @@ diracx = { path = ".", editable = true, extras = ["testing"] }
 [feature.diracx-core.pypi-dependencies]
 diracx-core = { path = "diracx-core", editable = true, extras = ["testing"] }
 diracx-testing = { path = "diracx-testing", editable = true }
+dirac = { path = "/Users/cburr/Development/DIRAC-dev/DIRAC", editable = true }
 [feature.diracx-cli.pypi-dependencies]
 diracx-cli = { path = "diracx-cli", editable = true, extras = ["testing"] }
 [feature.diracx-api.pypi-dependencies]
