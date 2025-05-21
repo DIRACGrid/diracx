@@ -85,24 +85,26 @@ async def add_secrets_and_time(
         assert len(secrets_obj) == len(hashed_secrets) == len(stamps)
 
         # Associate pilot with its secret
-        pilot_to_secret_id_mapping_values = [
+        pilot_to_secret_uuid_mapping_values = [
             {
-                "b_PilotSecretID": secret["SecretID"],
+                "b_PilotSecretUUID": secret["SecretUUID"],
                 "b_PilotStamp": stamp,
             }
             for secret, stamp in zip(secrets_obj, stamps)
         ]
         await pilot_agents_db.associate_pilots_with_secrets_bulk(
-            pilot_to_secret_id_mapping_values
+            pilot_to_secret_uuid_mapping_values
         )
 
+        # extract_timestamp_from_uuid7(secret_obj["SecretUUID"]) does not work here
+        # See #548
         expiration_date = [
-            secret_obj["SecretCreationDate"] + timedelta(seconds=secret_duration_sec)
+            datetime.now(timezone.utc) + timedelta(seconds=secret_duration_sec)
             for secret_obj in secrets_obj
         ]
 
         await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret_obj["SecretID"] for secret_obj in secrets_obj],
+            secret_uuids=[secret_obj["SecretUUID"] for secret_obj in secrets_obj],
             pilot_secret_expiration_dates=expiration_date,
         )
 
@@ -111,30 +113,33 @@ async def add_secrets_and_time(
 
 
 async def verify_pilot_secret(
-    pilot_stamp: str, pilot_db: PilotAgentsDB, hashed_secret: str
+    pilot_stamp: str,
+    pilot_db: PilotAgentsDB,
+    hashed_secret: str,
+    frozen_time: freezegun.FreezeGun,
 ) -> None:
 
     # 1. Get the pilot
     pilots = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
     pilot = dict(pilots[0])  # Semantic, assured by fetch_records_bulk_or_raises
-    real_secret_id = pilot["PilotSecretID"]
+    real_secret_uuid = pilot["PilotSecretUUID"]
 
     # 2. Get the secret itself
     given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk([hashed_secret])
     given_secret = given_secrets[0]
-    given_secret_id = given_secret[
-        "SecretID"
+    given_secret_uuid = given_secret[
+        "SecretUUID"
     ]  # Semantic, assured by fetch_records_bulk_or_raises
 
-    # 3. Compare the secret_id
-    # If SecretID is NULL
-    if not real_secret_id or given_secret_id != real_secret_id:
+    # 3. Compare the secret_uuid
+    # If SecretUUID is NULL
+    if not real_secret_uuid or given_secret_uuid != real_secret_uuid:
         raise BadPilotCredentialsError(
             data={
                 "pilot_stamp": pilot_stamp,
                 "pilot_hashed_secret": hashed_secret,
-                "real_secret_id": str(real_secret_id),
-                "given_secret_id": str(given_secret_id),
+                "real_secret_uuid": str(real_secret_uuid),
+                "given_secret_uuid": str(given_secret_uuid),
             }
         )
 
@@ -142,10 +147,11 @@ async def verify_pilot_secret(
     now = datetime.now(tz=timezone.utc)
     # Convert the timezone, TODO: Change with #454: https://github.com/DIRACGrid/diracx/pull/454
     expiration = given_secret["SecretExpirationDate"].replace(tzinfo=timezone.utc)
+
     if expiration < now:
 
         try:
-            await pilot_db.delete_secrets_bulk([real_secret_id])
+            await pilot_db.delete_secrets_bulk([real_secret_uuid])
         except SecretNotFoundError as e:
             raise DBInBadStateError(
                 detail="This should not happen. Pilot should have a secret, but not found."
@@ -179,7 +185,7 @@ async def verify_pilot_secret(
             == given_secret["SecretGlobalUseCountMax"]
         ):
             try:
-                await pilot_db.delete_secrets_bulk([given_secret_id])
+                await pilot_db.delete_secrets_bulk([given_secret_uuid])
             except SecretNotFoundError as e:
                 # Should NOT happen
                 raise DBInBadStateError(
@@ -190,7 +196,9 @@ async def verify_pilot_secret(
 @pytest.mark.parametrize("secret_duration_sec", [10])
 @pytest.mark.asyncio
 async def test_create_pilot_and_verify_secret(
-    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
+    pilot_agents_db: PilotAgentsDB,
+    add_secrets_and_time,
+    frozen_time: freezegun.FreezeGun,
 ):
 
     # Add pilots
@@ -208,6 +216,7 @@ async def test_create_pilot_and_verify_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamp,
                 hashed_secret=hash(secret),
+                frozen_time=frozen_time,
             )
 
         with pytest.raises(SecretNotFoundError):
@@ -215,6 +224,7 @@ async def test_create_pilot_and_verify_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
                 hashed_secret=hash("I love stawberries :)"),
+                frozen_time=frozen_time,
             )
 
         with pytest.raises(PilotNotFoundError):
@@ -222,6 +232,7 @@ async def test_create_pilot_and_verify_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp="I am a spider",
                 hashed_secret=hash(secrets[0]),
+                frozen_time=frozen_time,
             )
 
 
@@ -246,13 +257,16 @@ async def test_create_pilot_and_verify_secret_with_delay(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
                 hashed_secret=hash(secrets[0]),
+                frozen_time=frozen_time,
             )
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
 @pytest.mark.asyncio
 async def test_create_pilot_and_verify_secret_too_much_secret_use(
-    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
+    pilot_agents_db: PilotAgentsDB,
+    add_secrets_and_time,
+    frozen_time: freezegun.FreezeGun,
 ):
 
     # Add pilots
@@ -266,6 +280,7 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
             pilot_db=pilot_agents_db,
             pilot_stamp=stamps[0],
             hashed_secret=hash(secrets[0]),
+            frozen_time=frozen_time,
         )
 
         # Second login, should not work because maxed out at 1 try
@@ -275,13 +290,16 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
                 hashed_secret=hash(secrets[0]),
+                frozen_time=frozen_time,
             )
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
 @pytest.mark.asyncio
 async def test_create_pilot_and_login_with_bad_secret(
-    pilot_agents_db: PilotAgentsDB, add_secrets_and_time
+    pilot_agents_db: PilotAgentsDB,
+    add_secrets_and_time,
+    frozen_time: freezegun.FreezeGun,
 ):
 
     # Add pilots
@@ -297,4 +315,5 @@ async def test_create_pilot_and_login_with_bad_secret(
                     pilot_db=pilot_agents_db,
                     pilot_stamp=stamps[0],
                     hashed_secret=hash(secret),
+                    frozen_time=frozen_time,
                 )

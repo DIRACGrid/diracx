@@ -23,6 +23,7 @@ from diracx.core.models import (
 )
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
+from diracx.core.utils import extract_timestamp_from_uuid7
 from diracx.db.exceptions import DBInBadStateError
 from diracx.db.sql import AuthDB, PilotAgentsDB
 
@@ -62,7 +63,7 @@ async def create_raw_secrets(
 
     # If we have millions of pilots to add, can take few seconds / minutes to add
     expiration_dates = [
-        secret["SecretCreationDate"]
+        extract_timestamp_from_uuid7(secret["SecretUUID"])
         + timedelta(
             seconds=(
                 expiration_minutes * 60
@@ -72,11 +73,11 @@ async def create_raw_secrets(
         )
         for secret in secrets_added
     ]
-    secret_ids = [secret["SecretID"] for secret in secrets_added]
+    secret_uuids = [secret["SecretUUID"] for secret in secrets_added]
 
     # Helps compatibility between sql engines
     await pilot_db.set_secret_expirations_bulk(
-        secret_ids=secret_ids,
+        secret_uuids=secret_uuids,
         pilot_secret_expiration_dates=expiration_dates,  # type: ignore
     )
 
@@ -123,27 +124,29 @@ async def associate_pilots_with_secrets(
 
     # 2. Get the secret ids to later associate them with pilots
     secrets_obj = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
-    secret_ids = [secret["SecretID"] for secret in secrets_obj]
+    secret_uuids = [secret["SecretUUID"] for secret in secrets_obj]
 
-    if len(secret_ids) == 1:
-        secret_ids = secret_ids * len(pilot_stamps)
+    if len(secret_uuids) == 1:
+        secret_uuids = secret_uuids * len(pilot_stamps)
 
     # Associates pilots with their secrets
-    pilot_to_secret_id_mapping_values = [
+    pilot_to_secret_uuid_mapping_values = [
         {
-            "b_PilotSecretID": secret_id,
+            "b_PilotSecretUUID": secret_uuid,
             "b_PilotStamp": pilot_stamp,
         }
-        for pilot_stamp, secret_id in zip(pilot_stamps, secret_ids)
+        for pilot_stamp, secret_uuid in zip(pilot_stamps, secret_uuids)
     ]
 
     # Verify first that pilot can access the secrets
     await verify_that_pilot_can_access_secret_bulk(
         pilot_db=pilot_db,
-        pilot_to_secret_id_mapping_values=pilot_to_secret_id_mapping_values,
+        pilot_to_secret_uuid_mapping_values=pilot_to_secret_uuid_mapping_values,
     )
 
-    await pilot_db.associate_pilots_with_secrets_bulk(pilot_to_secret_id_mapping_values)
+    await pilot_db.associate_pilots_with_secrets_bulk(
+        pilot_to_secret_uuid_mapping_values
+    )
 
 
 def get_registry_and_group_configuration(config: Config, vo: str):
@@ -256,24 +259,24 @@ async def verify_pilot_credentials(
     # 1. Get the pilot
     pilots = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
     pilot = dict(pilots[0])  # Semantic, assured by fetch_records_bulk_or_raises
-    real_secret_id = pilot["PilotSecretID"]
+    real_secret_uuid = pilot["PilotSecretUUID"]
 
     # 2. Get the secret itself
     given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk([hashed_secret])
     given_secret = given_secrets[0]
-    given_secret_id = given_secret[
-        "SecretID"
+    given_secret_uuid = given_secret[
+        "SecretUUID"
     ]  # Semantic, assured by fetch_records_bulk_or_raises
 
-    # 3. Compare the secret_id
-    # If SecretID is NULL
-    if not real_secret_id or given_secret_id != real_secret_id:
+    # 3. Compare the secret_uuid
+    # If SecretUUID is NULL
+    if not real_secret_uuid or given_secret_uuid != real_secret_uuid:
         raise BadPilotCredentialsError(
             data={
                 "pilot_stamp": pilot_stamp,
                 "pilot_hashed_secret": hashed_secret,
-                "real_secret_id": str(real_secret_id),
-                "given_secret_id": str(given_secret_id),
+                "real_secret_uuid": str(real_secret_uuid),
+                "given_secret_uuid": str(given_secret_uuid),
             }
         )
 
@@ -284,7 +287,7 @@ async def verify_pilot_credentials(
     if expiration < now:
 
         try:
-            await pilot_db.delete_secrets_bulk([real_secret_id])
+            await pilot_db.delete_secrets_bulk([real_secret_uuid])
         except SecretNotFoundError as e:
             raise DBInBadStateError(
                 detail="This should not happen. Pilot should have a secret, but not found."
@@ -318,7 +321,7 @@ async def verify_pilot_credentials(
             == given_secret["SecretGlobalUseCountMax"]
         ):
             try:
-                await pilot_db.delete_secrets_bulk([given_secret_id])
+                await pilot_db.delete_secrets_bulk([given_secret_uuid])
             except SecretNotFoundError as e:
                 # Should NOT happen
                 raise DBInBadStateError(
@@ -356,33 +359,33 @@ async def refresh_pilot_token(
 
 
 async def verify_that_pilot_can_access_secret_bulk(
-    pilot_db: PilotAgentsDB, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
+    pilot_db: PilotAgentsDB, pilot_to_secret_uuid_mapping_values: list[dict[str, Any]]
 ):
-    # 1. Extract unique pilot_stamps and secret_ids
+    # 1. Extract unique pilot_stamps and secret_uuids
     pilot_stamps = [
-        entry["b_PilotStamp"] for entry in pilot_to_secret_id_mapping_values
+        entry["b_PilotStamp"] for entry in pilot_to_secret_uuid_mapping_values
     ]
-    secret_ids = [
-        entry["b_PilotSecretID"] for entry in pilot_to_secret_id_mapping_values
+    secret_uuids = [
+        entry["b_PilotSecretUUID"] for entry in pilot_to_secret_uuid_mapping_values
     ]
 
     # 2. Bulk fetch pilot and secret info
     pilots = await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps)
-    secrets = await pilot_db.get_secrets_by_secret_ids_bulk(secret_ids)
+    secrets = await pilot_db.get_secrets_by_secret_uuids_bulk(secret_uuids)
 
     # 3. Build lookup maps
     pilot_vo_map = {pilot["PilotStamp"]: pilot["VO"] for pilot in pilots}
-    secret_vo_map = {secret["SecretID"]: secret["SecretVO"] for secret in secrets}
+    secret_vo_map = {secret["SecretUUID"]: secret["SecretVO"] for secret in secrets}
 
     # 4. Validate access
     bad_mapping = []
 
-    for mapping in pilot_to_secret_id_mapping_values:
+    for mapping in pilot_to_secret_uuid_mapping_values:
         pilot_stamp = mapping["b_PilotStamp"]
-        secret_id = mapping["b_PilotSecretID"]
+        secret_uuid = mapping["b_PilotSecretUUID"]
 
         pilot_vo = pilot_vo_map[pilot_stamp]
-        secret_vo = secret_vo_map[secret_id]
+        secret_vo = secret_vo_map[secret_uuid]
 
         # If secret_vo is set to NULL, everybody can access it
         if not secret_vo:
@@ -440,14 +443,12 @@ async def register_new_pilots(
 
     if generate_secrets:
 
-        pilot_secrets, hashed_secrets, expiration_dates_timestamps = (
-            await create_raw_secrets(
-                n=len(pilot_stamps),
-                pilot_db=pilot_db,
-                settings=settings,
-                vo=vo,
-                pilot_secret_use_count_max=pilot_secret_use_count_max,
-            )
+        pilot_secrets, _, expiration_dates_timestamps = await create_raw_secrets(
+            n=len(pilot_stamps),
+            pilot_db=pilot_db,
+            settings=settings,
+            vo=vo,
+            pilot_secret_use_count_max=pilot_secret_use_count_max,
         )
 
         await associate_pilots_with_secrets(

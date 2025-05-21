@@ -6,6 +6,7 @@ from typing import Any, Sequence
 from sqlalchemy import DateTime, RowMapping, bindparam, func
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.sql import delete, insert, select, update
+from uuid_utils import uuid7
 
 from diracx.core.exceptions import (
     InvalidQueryError,
@@ -72,7 +73,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     async def increment_global_secret_use(
         self,
-        secret_id: int,
+        secret_uuid: str,
     ) -> None:
         """Increment the global secret count.
 
@@ -85,14 +86,14 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = (
             update(PilotSecrets)
             .values(secret_global_use_count=PilotSecrets.secret_global_use_count + 1)
-            .where(PilotSecrets.secret_id == secret_id)
+            .where(PilotSecrets.secret_uuid == secret_uuid)
         )
 
         # Execute the update using the connection
         res = await self.conn.execute(stmt)
 
         if res.rowcount == 0:
-            raise SecretNotFoundError(data={"secret_id": str(secret_id)})
+            raise SecretNotFoundError(data={"secret_uuid": secret_uuid})
         if res.rowcount != 1:
             raise DBInBadStateError(
                 detail="This should not happen. Pilot should have a secret, but is not found."
@@ -133,17 +134,17 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def delete_secrets_bulk(self, secret_ids: list[int]):
+    async def delete_secrets_bulk(self, secret_uuids: list[str]):
         """Bulk delete secrets.
 
         Raises SecretNotFoundError if one of the secret was not found.
         """
-        stmt = delete(PilotSecrets).where(PilotSecrets.secret_id.in_(secret_ids))
+        stmt = delete(PilotSecrets).where(PilotSecrets.secret_uuid.in_(secret_uuids))
 
         res = await self.conn.execute(stmt)
 
-        if res.rowcount != len(secret_ids):
-            raise SecretNotFoundError(data={"secrets": str(secret_ids)})
+        if res.rowcount != len(secret_uuids):
+            raise SecretNotFoundError(data={"secrets": str(secret_uuids)})
 
         # We NEED to commit here, because we will raise an error after this function
         await self.conn.commit()
@@ -175,6 +176,7 @@ class PilotAgentsDB(BaseSQLDB):
         """
         values = [
             {
+                "SecretUUID": str(uuid7()),
                 "SecretGlobalUseCountMax": secret_global_use_count_max,
                 "HashedSecret": hashed_secret,
                 "SecretVO": vo,
@@ -202,7 +204,7 @@ class PilotAgentsDB(BaseSQLDB):
             ) from e
 
     async def associate_pilots_with_secrets_bulk(
-        self, pilot_to_secret_id_mapping_values: list[dict[str, Any]]
+        self, pilot_to_secret_uuid_mapping_values: list[dict[str, Any]]
     ):
         """Bulk associate pilots with secrets.
 
@@ -216,15 +218,15 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = (
             update(PilotAgents)
             .where(PilotAgents.pilot_stamp == bindparam("b_PilotStamp"))
-            .values({"PilotSecretID": bindparam("b_PilotSecretID")})
+            .values({"PilotSecretUUID": bindparam("b_PilotSecretUUID")})
         )
 
         try:
-            await self.conn.execute(stmt, pilot_to_secret_id_mapping_values)
+            await self.conn.execute(stmt, pilot_to_secret_uuid_mapping_values)
         except (IntegrityError, OperationalError) as e:
             if "foreign key" in str(e.orig).lower():
                 raise PilotNotFoundError(
-                    data={"pilot_stamps": str(pilot_to_secret_id_mapping_values)},
+                    data={"pilot_stamps": str(pilot_to_secret_uuid_mapping_values)},
                     detail="at least one of these pilots or secrets does not exist",
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
@@ -327,27 +329,27 @@ class PilotAgentsDB(BaseSQLDB):
             )
 
     async def set_secret_expirations_bulk(
-        self, secret_ids: list[int], pilot_secret_expiration_dates: list[DateTime]
+        self, secret_uuids: list[str], pilot_secret_expiration_dates: list[DateTime]
     ):
         """Bulk set expiration dates to secrets.
 
         Raises:
-        - SecretNotFoundError if one of the secret_id is not associated with a secret.
+        - SecretNotFoundError if one of the secret_uuid is not associated with a secret.
         - NotImplementedError if a integrity error is not caught.
         -
 
         """
         values = [
-            {"b_SecretID": secret_id, "SecretExpirationDate": pilot_secret}
-            for secret_id, pilot_secret in zip(
-                secret_ids, pilot_secret_expiration_dates
+            {"b_SecretUUID": secret_uuid, "SecretExpirationDate": pilot_secret}
+            for secret_uuid, pilot_secret in zip(
+                secret_uuids, pilot_secret_expiration_dates
             )
         ]
 
         #  Prepare the update statement
         stmt = (
             update(PilotSecrets)
-            .where(PilotSecrets.secret_id == bindparam("b_SecretID"))
+            .where(PilotSecrets.secret_uuid == bindparam("b_SecretUUID"))
             .values({"SecretExpirationDate": bindparam("SecretExpirationDate")})
         )
 
@@ -356,7 +358,7 @@ class PilotAgentsDB(BaseSQLDB):
         except IntegrityError as e:
             if "foreign key" in str(e.orig).lower():
                 raise SecretNotFoundError(
-                    data={"secret_ids": str(secret_ids)},
+                    data={"secret_uuids": str(secret_uuids)},
                     detail="at least one of these secrets does not exist",
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
@@ -411,27 +413,27 @@ class PilotAgentsDB(BaseSQLDB):
             "hashed_secret",
             "HashedSecret",
             hashed_secrets,
-            order_by=("secret_id", "asc"),
+            order_by=("secret_uuid", "asc"),
         )
 
-    async def get_secrets_by_secret_ids_bulk(
-        self, secret_ids: list[int]
+    async def get_secrets_by_secret_uuids_bulk(
+        self, secret_uuids: list[str]
     ) -> Sequence[RowMapping]:
         """Bulk fetch secrets.
 
         Raises:
-        - SecretNotFound if one of the secret_id is not associated with a secret.
-        - DBInBadStateError if multiple secrets are associated with the same secret_id.
+        - SecretNotFound if one of the secret_uuid is not associated with a secret.
+        - DBInBadStateError if multiple secrets are associated with the same secret_uuid.
 
         """
         return await fetch_records_bulk_or_raises(
             self.conn,
             PilotSecrets,
             SecretNotFoundError,
-            "secret_id",
-            "SecretID",
-            secret_ids,
-            order_by=("secret_id", "asc"),
+            "secret_uuid",
+            "SecretUUID",
+            secret_uuids,
+            order_by=("secret_uuid", "asc"),
         )
 
     async def get_pilot_jobs_ids_by_pilot_id(self, pilot_id: int) -> list[int]:

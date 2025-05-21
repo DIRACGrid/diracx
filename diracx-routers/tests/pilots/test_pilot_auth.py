@@ -5,6 +5,7 @@ from time import sleep
 
 import pytest
 
+from diracx.core.utils import extract_timestamp_from_uuid7
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils import hash
 
@@ -89,24 +90,25 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
         assert len(secrets_obj) == len(hashed_secrets) == len(stamps)
 
         # Associate pilot with its secret
-        pilot_to_secret_id_mapping_values = [
+        pilot_to_secret_uuid_mapping_values = [
             {
-                "b_PilotSecretID": secret["SecretID"],
+                "b_PilotSecretUUID": secret["SecretUUID"],
                 "b_PilotStamp": stamp,
             }
             for secret, stamp in zip(secrets_obj, stamps)
         ]
         await pilot_agents_db.associate_pilots_with_secrets_bulk(
-            pilot_to_secret_id_mapping_values
+            pilot_to_secret_uuid_mapping_values
         )
 
         expiration_date = [
-            secret_obj["SecretCreationDate"] + timedelta(seconds=secret_duration_sec)
+            extract_timestamp_from_uuid7(secret_obj["SecretUUID"])
+            + timedelta(seconds=secret_duration_sec)
             for secret_obj in secrets_obj
         ]
 
         await pilot_agents_db.set_secret_expirations_bulk(
-            secret_ids=[secret_obj["SecretID"] for secret_obj in secrets_obj],
+            secret_uuids=[secret_obj["SecretUUID"] for secret_obj in secrets_obj],
             pilot_secret_expiration_dates=expiration_date,
         )
 

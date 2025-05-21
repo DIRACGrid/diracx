@@ -10,10 +10,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
 )
 from sqlalchemy.orm import declarative_base
 
-from ..utils import Column, DateNowColumn, EnumBackedBool, NullColumn
+from ..utils import Column, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
 
@@ -39,11 +40,11 @@ class PilotAgents(PilotAgentsDBBase):
     accounting_sent = Column("AccountingSent", EnumBackedBool(), default=False)
 
     # New from DiracX
-    pilot_secret_id = NullColumn(
-        "PilotSecretID",
-        Integer,
+    pilot_secret_uuid = NullColumn(
+        "PilotSecretUUID",
+        Uuid(as_uuid=False),
         ForeignKey(
-            "PilotSecrets.SecretID", ondelete="SET NULL"
+            "PilotSecrets.SecretUUID", ondelete="SET NULL"
         ),  # SET NULL is  important here
     )
     # If a date is set, then it used a secret (acts also like a "PilotUsedSecret" field)
@@ -78,7 +79,7 @@ class PilotOutput(PilotAgentsDBBase):
 class PilotSecrets(PilotAgentsDBBase):
     __tablename__ = "PilotSecrets"
 
-    secret_id = Column("SecretID", Integer, primary_key=True)
+    secret_uuid = Column("SecretUUID", Uuid(as_uuid=False), primary_key=True)
     hashed_secret = Column("HashedSecret", String(64))
     # Global count
     secret_global_use_count = Column("SecretGlobalUseCount", SmallInteger, default=0)
@@ -86,7 +87,6 @@ class PilotSecrets(PilotAgentsDBBase):
     secret_global_use_count_max = NullColumn(
         "SecretGlobalUseCountMax", SmallInteger, default=1
     )
-    secret_creation_time = DateNowColumn("SecretCreationDate")
     secret_expiration_date = NullColumn("SecretExpirationDate", DateTime(timezone=True))
     # To authorize only pilots from a specific VO to access a secret
     # Null VO => Can be used by everyone
