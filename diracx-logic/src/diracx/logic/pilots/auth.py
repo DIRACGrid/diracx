@@ -50,7 +50,7 @@ async def create_raw_secrets(
     # Can be customized
     random_secrets = [generate_pilot_secret() for _ in range(n)]
 
-    hashed_secrets = [hash(random_secret) for random_secret in random_secrets]
+    hashed_secrets = [hash(random_secret).encode() for random_secret in random_secrets]
 
     # Insert secrets
     await pilot_db.insert_unique_secrets_bulk(
@@ -120,7 +120,7 @@ async def associate_pilots_with_secrets(
 ):
 
     # 1. Hash the secrets
-    hashed_secrets = [hash(secret) for secret in pilot_secrets]
+    hashed_secrets = [hash(secret).encode() for secret in pilot_secrets]
 
     # 2. Get the secret ids to later associate them with pilots
     secrets_obj = await pilot_db.get_secrets_by_hashed_secrets_bulk(hashed_secrets)
@@ -262,7 +262,9 @@ async def verify_pilot_credentials(
     real_secret_uuid = pilot["PilotSecretUUID"]
 
     # 2. Get the secret itself
-    given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk([hashed_secret])
+    given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk(
+        [hashed_secret.encode()]
+    )
     given_secret = given_secrets[0]
     given_secret_uuid = given_secret[
         "SecretUUID"

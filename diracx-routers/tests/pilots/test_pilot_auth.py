@@ -75,7 +75,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
         secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
-        hashed_secrets = [hash(secret) for secret in secrets]
+        hashed_secrets = [hash(secret).encode() for secret in secrets]
 
         # Add creds
         await pilot_agents_db.insert_unique_secrets_bulk(

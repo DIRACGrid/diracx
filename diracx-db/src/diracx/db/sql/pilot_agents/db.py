@@ -163,7 +163,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     async def insert_unique_secrets_bulk(
         self,
-        hashed_secrets: list[str],
+        hashed_secrets: list[bytes],
         vo: str | None,
         secret_global_use_count_max: int | None = 1,
     ):
@@ -397,7 +397,7 @@ class PilotAgentsDB(BaseSQLDB):
         return results
 
     async def get_secrets_by_hashed_secrets_bulk(
-        self, hashed_secrets: list[str]
+        self, hashed_secrets: list[bytes]
     ) -> Sequence[RowMapping]:
         """Bulk fetch secrets.
 

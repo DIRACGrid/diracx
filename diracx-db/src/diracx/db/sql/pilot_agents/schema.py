@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    BINARY,
     DateTime,
     Double,
     ForeignKey,
@@ -80,7 +81,7 @@ class PilotSecrets(PilotAgentsDBBase):
     __tablename__ = "PilotSecrets"
 
     secret_uuid = Column("SecretUUID", Uuid(as_uuid=False), primary_key=True)
-    hashed_secret = Column("HashedSecret", String(64))
+    hashed_secret = Column("HashedSecret", BINARY(32))
     # Global count
     secret_global_use_count = Column("SecretGlobalUseCount", SmallInteger, default=0)
     # Null: Infinite use
