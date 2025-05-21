@@ -200,8 +200,10 @@ def read_token(
     if not claims_requests:
         claims_requests = JWTClaimsRegistry()
 
-    token = jwt.decode(payload, key=jwks, algorithms=allowed_algorithms)
-    token.setdefault("kid", "0196af4d0ab27b1299dff55b8617991d")
+    try:
+        token = jwt.decode(payload, key=jwks, algorithms=allowed_algorithms)
+    except ValueError:
+        token = jwt.decode(payload, key=jwks.keys[-1], algorithms=allowed_algorithms)
     claims_requests.validate(token.claims)
     return token.claims
 
