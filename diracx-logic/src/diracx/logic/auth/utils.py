@@ -201,6 +201,7 @@ def read_token(
         claims_requests = JWTClaimsRegistry()
 
     token = jwt.decode(payload, key=jwks, algorithms=allowed_algorithms)
+    token.setdefault("kid", "0196af4d0ab27b1299dff55b8617991d")
     claims_requests.validate(token.claims)
     return token.claims
 
