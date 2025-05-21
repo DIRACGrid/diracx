@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated, Literal
 
@@ -31,6 +32,7 @@ from ..dependencies import AuthDB, AuthSettings, AvailableSecurityProperties, Co
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)
+logger = logging.getLogger(__name__)
 
 
 async def mint_token(
@@ -140,6 +142,7 @@ async def get_oidc_token(
             data={"error": "authorization_pending"},
         ) from e
     except ValueError as e:
+        logger.exception("ValueError in /token")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
