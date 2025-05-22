@@ -809,6 +809,86 @@ class JobSummaryParamsSearchItem(_serialization.Model):
     """JobSummaryParamsSearchItem."""
 
 
+class LogLine(_serialization.Model):
+    """LogLine.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar line_no: Line No. Required.
+    :vartype line_no: int
+    :ivar line: Line. Required.
+    :vartype line: str
+    """
+
+    _validation = {
+        "line_no": {"required": True},
+        "line": {"required": True},
+    }
+
+    _attribute_map = {
+        "line_no": {"key": "line_no", "type": "int"},
+        "line": {"key": "line", "type": "str"},
+    }
+
+    def __init__(self, *, line_no: int, line: str, **kwargs: Any) -> None:
+        """
+        :keyword line_no: Line No. Required.
+        :paramtype line_no: int
+        :keyword line: Line. Required.
+        :paramtype line: str
+        """
+        super().__init__(**kwargs)
+        self.line_no = line_no
+        self.line = line
+
+
+class LogMessage(_serialization.Model):
+    """LogMessage.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    :ivar lines: Lines. Required.
+    :vartype lines: list[~_generated.models.LogLine]
+    :ivar vo: Vo. Required.
+    :vartype vo: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "lines": {"required": True},
+        "vo": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "lines": {"key": "lines", "type": "[LogLine]"},
+        "vo": {"key": "vo", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        lines: List["_models.LogLine"],
+        vo: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword lines: Lines. Required.
+        :paramtype lines: list[~_generated.models.LogLine]
+        :keyword vo: Vo. Required.
+        :paramtype vo: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.lines = lines
+        self.vo = vo
+
+
 class OpenIDConfiguration(_serialization.Model):
     """OpenIDConfiguration.
 

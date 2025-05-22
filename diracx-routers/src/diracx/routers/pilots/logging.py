@@ -18,7 +18,7 @@ router = DiracxRouter()
 
 
 @open_access
-@router.post("/")
+@router.post("/message")
 async def send_message(
     data: LogMessage,
     pilot_logs_db: PilotLogsDB,

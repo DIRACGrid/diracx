@@ -15,7 +15,7 @@ class PilotLogsDB(BaseOSDB):
     }
     index_prefix = "pilot_logs"
 
-    def index_name(self, doc_id: int) -> str:
+    def index_name(self, vo: str, doc_id: int) -> str:
         # TODO decide how to define the index name
         # use pilot ID
         return f"{self.index_prefix}_{doc_id // 1e6:.0f}"

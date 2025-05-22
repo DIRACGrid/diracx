@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from diracx.db.sql import PilotAgentsDB
 from diracx.routers.utils.users import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
@@ -26,19 +27,17 @@ async def test_send_and_retrieve_logs(
     normal_user_client: TestClient, test_auth_settings: AuthSettings
 ):
 
-    from diracx.db.sql import PilotAgentsDB
-
     # Add a pilot reference
     upper_limit = 6
     refs = [f"ref_{i}" for i in range(1, upper_limit)]
     stamps = [f"stamp_{i}" for i in range(1, upper_limit)]
-    stamp_dict = dict(zip(refs, stamps))
+    pilot_references = dict(zip(stamps, refs))
 
     db = normal_user_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db:
-        await db.add_pilot_references(
-            refs, "test_vo", grid_type="DIRAC", pilot_stamps=stamp_dict
+        await db.add_pilots_bulk(
+            stamps, "test_vo", grid_type="DIRAC", pilot_references=pilot_references
         )
 
     msg = (
@@ -52,7 +51,7 @@ async def test_send_and_retrieve_logs(
     msg_dict = {"lines": lines, "pilot_stamp": "stamp_1", "vo": "diracAdmin"}
 
     # send message
-    r = normal_user_client.post("/api/pilots/", json=msg_dict)
+    r = normal_user_client.post("/api/pilots/message", json=msg_dict)
 
     assert r.status_code == 200, r.text
     # it just returns the pilot id corresponding for pilot stamp.

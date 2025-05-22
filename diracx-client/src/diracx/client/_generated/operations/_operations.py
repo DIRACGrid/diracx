@@ -890,6 +890,47 @@ def build_pilots_refresh_pilot_tokens_request(
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
+def build_pilots_send_message_request(**kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilots/message"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+def build_pilots_get_logs_request(*, pilot_id: int, **kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilots/logs"
+
+    # Construct parameters
+    _params["pilot_id"] = _SERIALIZER.query("pilot_id", pilot_id, "int")
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="GET", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
 class WellKnownOperations:
     """
     .. warning::
@@ -4278,6 +4319,169 @@ class PilotsOperations:
         deserialized = self._deserialize(
             "TokenResponse", pipeline_response.http_response
         )
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    def send_message(
+        self,
+        body: _models.LogMessage,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> int:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: ~_generated.models.LogMessage
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: int
+        :rtype: int
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def send_message(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> int:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: int
+        :rtype: int
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def send_message(
+        self, body: Union[_models.LogMessage, IO[bytes]], **kwargs: Any
+    ) -> int:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Is either a LogMessage type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.LogMessage or IO[bytes]
+        :return: int
+        :rtype: int
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[int] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "LogMessage")
+
+        _request = build_pilots_send_message_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("int", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace
+    def get_logs(self, *, pilot_id: int, **kwargs: Any) -> List[Dict[str, Any]]:
+        """Get Logs.
+
+        Get Logs.
+
+        :keyword pilot_id: Required.
+        :paramtype pilot_id: int
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+
+        _request = build_pilots_get_logs_request(
+            pilot_id=pilot_id,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

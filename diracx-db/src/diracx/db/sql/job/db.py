@@ -50,7 +50,7 @@ class JobDB(BaseSQLDB):
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
         """Get a summary of the jobs."""
-        columns = get_columns(Jobs.__table__, group_by)
+        columns = _get_columns(Jobs.__table__, group_by)
 
         stmt = select(*columns, func.count(Jobs.job_id).label("count"))
         stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
@@ -75,7 +75,7 @@ class JobDB(BaseSQLDB):
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for jobs in the database."""
         # Find which columns to select
-        columns = get_columns(Jobs.__table__, parameters)
+        columns = _get_columns(Jobs.__table__, parameters)
 
         stmt = select(*columns)
 
@@ -261,7 +261,7 @@ class JobDB(BaseSQLDB):
         required_parameters = list(required_parameters_set)[0]
         update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
 
-        columns = get_columns(Jobs.__table__, required_parameters)
+        columns = _get_columns(Jobs.__table__, required_parameters)
         values: dict[str, BindParameter[Any] | datetime] = {
             c.name: bindparam(c.name) for c in columns
         }

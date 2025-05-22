@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import Annotated
@@ -7,10 +8,13 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.exceptions import PilotNotFoundError
+from diracx.core.models import ScalarSearchOperator, ScalarSearchSpec
 from diracx.core.properties import NORMAL_USER, TRUSTED_HOST
 from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
+
+logger = logging.getLogger(__name__)
 
 
 class ActionType(StrEnum):

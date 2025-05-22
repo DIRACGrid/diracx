@@ -258,7 +258,7 @@ def find_time_resolution(value):
     raise InvalidQueryError(f"Cannot parse {value=}")
 
 
-def get_columns(table, parameters):
+def _get_columns(table, parameters):
     columns = [x for x in table.columns]
     if parameters:
         if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
