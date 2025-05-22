@@ -113,15 +113,19 @@ jobs:
         with:
           cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
-      - name: Build gubbins wheels
-        if: ${{ matrix.extension == 'gubbins' }}
+      - name: Build diracx wheels
         run: |
           for pkg_dir in $PWD/diracx-*; do
             echo "Building $pkg_dir"
-            pixi exec python-build --outdir $PWD/extensions/containers/services/ $pkg_dir
+            pixi exec python-build --outdir $PWD/containers/services/ $pkg_dir
           done
           # Also build the diracx metapackage
-          pixi exec python-build --outdir $PWD/extensions/containers/services/ .
+          pixi exec python-build --outdir $PWD/containers/services/ .
+      - name: Build gubbins wheels
+        if: ${{ matrix.extension == 'gubbins' }}
+        run: |
+          cp $PWD/containers/services/*.whl $PWD/extensions/containers/services/
+          cp $PWD/containers/services/*.tar.gz $PWD/extensions/containers/services/
           # And build the gubbins package
           for pkg_dir in $PWD/extensions/gubbins/gubbins-*; do
             # Skip the testing package
@@ -134,8 +138,21 @@ jobs:
             pixi exec python-build --outdir $PWD/extensions/containers/services/ $pkg_dir
           done
       - name: Set up Docker Buildx
-        if: ${{ matrix.extension == 'gubbins' }}
         uses: docker/setup-buildx-action@v3
+      - name: Build container for diracx
+        if: ${{ matrix.extension == 'diracx' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/services
+          tags: diracx/services:dev
+          outputs: type=docker,dest=/tmp/diracx_services_image.tar
+          build-args: |
+            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
+      - name: Load image diracx
+        if: ${{ matrix.extension == 'diracx' }}
+        run: |
+          docker load --input /tmp/diracx_services_image.tar && rm -f /tmp/diracx_services_image.tar
+          docker image ls -a
       - name: Build container for gubbins
         if: ${{ matrix.extension == 'gubbins' }}
         uses: docker/build-push-action@v6
@@ -144,11 +161,12 @@ jobs:
           tags: gubbins/services:dev
           outputs: type=docker,dest=/tmp/gubbins_services_image.tar
           build-args: |
+            EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
             EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_logic*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
-      - name: Load image
+      - name: Load image gubbins
         if: ${{ matrix.extension == 'gubbins' }}
         run: |
-          docker load --input /tmp/gubbins_services_image.tar
+          docker load --input /tmp/gubbins_services_image.tar && rm -f /tmp/gubbins_services_image.tar
           docker image ls -a
       - name: Start demo
         run: |
@@ -176,7 +194,9 @@ jobs:
             demo_args+=("--ci-values" "./extensions/gubbins_values.yaml")
             demo_args+=("--load-docker-image" "gubbins/services:dev")
             demo_source_dirs+=("/tmp/gubbins/")
-          elif [ ${{ matrix.extension }} != 'diracx' ]; then
+          elif [ ${{ matrix.extension }} == 'diracx' ]; then
+            demo_args+=("--load-docker-image" "diracx/services:dev")
+          else
             echo "Unknown extension: ${{ matrix.extension }}"
             exit 1
           fi
