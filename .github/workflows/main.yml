@@ -145,36 +145,19 @@ jobs:
         with:
           context: containers/services
           tags: diracx/services:dev
-          outputs: type=docker,dest=/tmp/diracx_services_image.tar
+          load: true
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
-      - name: Load image diracx
-        if: ${{ matrix.extension == 'diracx' }}
-        run: |
-          docker load --input /tmp/diracx_services_image.tar
-          docker image ls -a
       - name: Build container for gubbins
         if: ${{ matrix.extension == 'gubbins' }}
         uses: docker/build-push-action@v6
         with:
           context: extensions/containers/services
           tags: gubbins/services:dev
-          outputs: type=docker,dest=/tmp/gubbins_services_image.tar
+          load: true
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
             EXTENSION_CUSTOM_SOURCES_TO_INSTALL=/bindmount/gubbins_db*.whl,/bindmount/gubbins_logic*.whl,/bindmount/gubbins_routers*.whl,/bindmount/gubbins_client*.whl
-      - name: Load image gubbins
-        if: ${{ matrix.extension == 'gubbins' }}
-        run: |
-          docker load --input /tmp/gubbins_services_image.tar
-          docker image ls -a
-      - name: Cleanup build artifacts to free space
-        run: |
-          rm -f /tmp/gubbins_services_image.tar /tmp/diracx_services_image.tar || true
-          rm -f containers/services/*.whl containers/services/*.tar.gz || true
-          rm -f extensions/containers/services/*.whl extensions/containers/services/*.tar.gz || true
-          df -h
-          du -ah . | sort -rh | head -n 10
 
       - name: Start demo
         run: |
