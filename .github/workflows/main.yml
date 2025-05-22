@@ -151,7 +151,7 @@ jobs:
       - name: Load image diracx
         if: ${{ matrix.extension == 'diracx' }}
         run: |
-          docker load --input /tmp/diracx_services_image.tar && rm -f /tmp/diracx_services_image.tar
+          docker load --input /tmp/diracx_services_image.tar
           docker image ls -a
       - name: Build container for gubbins
         if: ${{ matrix.extension == 'gubbins' }}
@@ -166,8 +166,16 @@ jobs:
       - name: Load image gubbins
         if: ${{ matrix.extension == 'gubbins' }}
         run: |
-          docker load --input /tmp/gubbins_services_image.tar && rm -f /tmp/gubbins_services_image.tar
+          docker load --input /tmp/gubbins_services_image.tar
           docker image ls -a
+      - name: Cleanup build artifacts to free space
+        run: |
+          rm -f /tmp/gubbins_services_image.tar /tmp/diracx_services_image.tar || true
+          rm -f containers/services/*.whl containers/services/*.tar.gz || true
+          rm -f extensions/containers/services/*.whl extensions/containers/services/*.tar.gz || true
+          df -h
+          du -ah . | sort -rh | head -n 10
+
       - name: Start demo
         run: |
           git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
