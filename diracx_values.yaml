@@ -5,12 +5,7 @@ global:
   # and https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
   imagePullPolicy: IfNotPresent
   images:
-    services: gubbins/services
+    services: diracx/services
 
 developer:
   enabled: true
-
-diracx:
-  sqlDbs:
-    dbs:
-      LollygagDB:
