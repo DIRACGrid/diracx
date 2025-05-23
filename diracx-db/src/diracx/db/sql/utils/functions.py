@@ -157,6 +157,10 @@ def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
 
 
+def raw_hash(code: str):
+    return hashlib.sha256(code.encode()).digest()
+
+
 async def fetch_records_bulk_or_raises(
     conn: AsyncConnection,
     model: Any,  # Here, we currently must use `Any` because `declarative_base()` returns any

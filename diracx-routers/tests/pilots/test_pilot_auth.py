@@ -7,7 +7,7 @@ import pytest
 
 from diracx.core.utils import extract_timestamp_from_uuid7
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
-from diracx.db.sql.utils import hash
+from diracx.db.sql.utils.functions import raw_hash
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -75,7 +75,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
         secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
-        hashed_secrets = [hash(secret).encode() for secret in secrets]
+        hashed_secrets = [raw_hash(secret) for secret in secrets]
 
         # Add creds
         await pilot_agents_db.insert_unique_secrets_bulk(

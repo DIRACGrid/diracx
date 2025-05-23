@@ -16,7 +16,7 @@ from diracx.core.exceptions import (
 )
 from diracx.db.exceptions import DBInBadStateError
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
-from diracx.db.sql.utils.functions import hash
+from diracx.db.sql.utils.functions import raw_hash
 from diracx.testing.time import mock_sqlite_time
 
 MAIN_VO = "lhcb"
@@ -70,7 +70,7 @@ async def add_secrets_and_time(
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
         secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
-        hashed_secrets = [hash(secret).encode() for secret in secrets]
+        hashed_secrets = [raw_hash(secret) for secret in secrets]
 
         # Add creds
         await pilot_agents_db.insert_unique_secrets_bulk(
@@ -115,7 +115,7 @@ async def add_secrets_and_time(
 async def verify_pilot_secret(
     pilot_stamp: str,
     pilot_db: PilotAgentsDB,
-    hashed_secret: str,
+    hashed_secret: bytes,
     frozen_time: freezegun.FreezeGun,
 ) -> None:
 
@@ -125,9 +125,7 @@ async def verify_pilot_secret(
     real_secret_uuid = pilot["PilotSecretUUID"]
 
     # 2. Get the secret itself
-    given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk(
-        [hashed_secret.encode()]
-    )
+    given_secrets = await pilot_db.get_secrets_by_hashed_secrets_bulk([hashed_secret])
     given_secret = given_secrets[0]
     given_secret_uuid = given_secret[
         "SecretUUID"
@@ -217,7 +215,7 @@ async def test_create_pilot_and_verify_secret(
             await verify_pilot_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamp,
-                hashed_secret=hash(secret),
+                hashed_secret=raw_hash(secret),
                 frozen_time=frozen_time,
             )
 
@@ -225,7 +223,7 @@ async def test_create_pilot_and_verify_secret(
             await verify_pilot_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
-                hashed_secret=hash("I love stawberries :)"),
+                hashed_secret=raw_hash("I love stawberries :)"),
                 frozen_time=frozen_time,
             )
 
@@ -233,7 +231,7 @@ async def test_create_pilot_and_verify_secret(
             await verify_pilot_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp="I am a spider",
-                hashed_secret=hash(secrets[0]),
+                hashed_secret=raw_hash(secrets[0]),
                 frozen_time=frozen_time,
             )
 
@@ -258,7 +256,7 @@ async def test_create_pilot_and_verify_secret_with_delay(
             await verify_pilot_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
-                hashed_secret=hash(secrets[0]),
+                hashed_secret=raw_hash(secrets[0]),
                 frozen_time=frozen_time,
             )
 
@@ -281,7 +279,7 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
         await verify_pilot_secret(
             pilot_db=pilot_agents_db,
             pilot_stamp=stamps[0],
-            hashed_secret=hash(secrets[0]),
+            hashed_secret=raw_hash(secrets[0]),
             frozen_time=frozen_time,
         )
 
@@ -291,7 +289,7 @@ async def test_create_pilot_and_verify_secret_too_much_secret_use(
             await verify_pilot_secret(
                 pilot_db=pilot_agents_db,
                 pilot_stamp=stamps[0],
-                hashed_secret=hash(secrets[0]),
+                hashed_secret=raw_hash(secrets[0]),
                 frozen_time=frozen_time,
             )
 
@@ -316,6 +314,6 @@ async def test_create_pilot_and_login_with_bad_secret(
                 await verify_pilot_secret(
                     pilot_db=pilot_agents_db,
                     pilot_stamp=stamps[0],
-                    hashed_secret=hash(secret),
+                    hashed_secret=raw_hash(secret),
                     frozen_time=frozen_time,
                 )
