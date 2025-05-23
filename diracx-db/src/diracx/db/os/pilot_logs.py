@@ -7,24 +7,15 @@ class PilotLogsDB(BaseOSDB):
     fields = {
         "PilotStamp": {"type": "keyword"},
         "PilotID": {"type": "long"},
-        "SubmissionTime": {"type": "date"},
-        "LineNumber": {"type": "long"},
+        "Severity": {"type": "keyword"},
         "Message": {"type": "text"},
         "VO": {"type": "keyword"},
-        "timestamp": {"type": "date"},
+        "TimeStamp": {"type": "date_nanos"},
+        "Scope": {"type": "keyword"},
     }
     index_prefix = "pilot_logs"
 
     def index_name(self, vo: str, doc_id: int) -> str:
         # TODO decide how to define the index name
         # use pilot ID
-        return f"{self.index_prefix}_{doc_id // 1e6:.0f}"
-
-
-async def search_message(db: PilotLogsDB, search_params: list[dict]):
-
-    return await db.search(
-        ["Message"],
-        search_params,
-        [{"parameter": "LineNumber", "direction": "asc"}],
-    )
+        return f"{self.index_prefix}_{doc_id}"

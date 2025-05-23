@@ -4,28 +4,25 @@ import pytest
 from fastapi.testclient import TestClient
 
 from diracx.db.sql import PilotAgentsDB
-from diracx.routers.utils.users import AuthSettings
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
         "AuthSettings",
         "PilotAgentsDB",
         "PilotLogsDB",
-        "PilotLogsAccessPolicy",
         "DevelopmentSettings",
+        "PilotLogsAccessPolicy",
     ]
 )
 
 
 @pytest.fixture
-def normal_user_client(client_factory):
+def normal_test_client(client_factory):
     with client_factory.normal_user() as client:
         yield client
 
 
-async def test_send_and_retrieve_logs(
-    normal_user_client: TestClient, test_auth_settings: AuthSettings
-):
+async def test_send_and_retrieve_logs(normal_test_client: TestClient):
 
     # Add a pilot reference
     upper_limit = 6
@@ -33,30 +30,35 @@ async def test_send_and_retrieve_logs(
     stamps = [f"stamp_{i}" for i in range(1, upper_limit)]
     pilot_references = dict(zip(stamps, refs))
 
-    db = normal_user_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+    db = normal_test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db:
         await db.add_pilots_bulk(
             stamps, "test_vo", grid_type="DIRAC", pilot_references=pilot_references
         )
 
-    msg = (
-        "2022-02-26 13:48:35.123456 UTC DEBUG [PilotParams] JSON file loaded: pilot.json\n"
-        "2022-02-26 13:48:36.123456 UTC DEBUG [PilotParams] JSON file analysed: pilot.json"
-    )
+    msg = "JSON file loaded: pilot.json\n" "JSON file analysed: pilot.json"
     # message dict
     lines = []
-    for i, line in enumerate(msg.split("\n")):
-        lines.append({"line_no": i, "line": line})
-    msg_dict = {"lines": lines, "pilot_stamp": "stamp_1", "vo": "diracAdmin"}
+    for line in msg.split("\n"):
+        lines.append(
+            {
+                "message": line,
+                "timestamp": "2022-02-26 13:48:35.123456",
+                "scope": "PilotParams",
+                "severity": "DEBUG",
+            }
+        )
+    msg_dict = {"lines": lines, "pilot_stamp": "stamp_1"}
 
     # send message
-    r = normal_user_client.post("/api/pilots/message", json=msg_dict)
+    r = normal_test_client.post("/api/pilots/message", json=msg_dict)
 
-    assert r.status_code == 200, r.text
-    # it just returns the pilot id corresponding for pilot stamp.
-    assert r.json() == 1
+    assert r.status_code == 204, r.json()
     # get the message back:
-    r = normal_user_client.get("/api/pilots/logs?pilot_id=1")
+    data = {
+        "search": [{"parameter": "PilotStamp", "operator": "eq", "value": "stamp_1"}]
+    }
+    r = normal_test_client.post("/api/pilots/logs", json=data)
     assert r.status_code == 200, r.text
-    assert [next(iter(d.values())) for d in r.json()] == msg.split("\n")
+    assert [hit["Message"] for hit in r.json()] == msg.split("\n")

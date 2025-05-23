@@ -2,68 +2,84 @@ from __future__ import annotations
 
 import logging
 
-from diracx.core.models import LogMessage, ScalarSearchOperator, ScalarSearchSpec
-from diracx.db.os.pilot_logs import PilotLogsDB, search_message
+from diracx.core.exceptions import PilotNotFoundError
+from diracx.core.models import (
+    LogMessage,
+    SearchParams,
+    SortDirection,
+)
+from diracx.db.os.pilot_logs import PilotLogsDB
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 
 logger = logging.getLogger(__name__)
+
+
+MAX_PER_PAGE = 10000
 
 
 async def send_message(
     data: LogMessage,
     pilot_logs_db: PilotLogsDB,
     pilot_agents_db: PilotAgentsDB,
-) -> int:
+    vo: str,
+):
+    try:
+        pilot_ids = await pilot_agents_db.get_pilot_ids_by_stamps([data.pilot_stamp])
+        pilot_id = pilot_ids[0]  # Semantic
+    except PilotNotFoundError:
+        # If a pilot is not found, then we still store the data (to not lost it)
+        # We log it as it's not supposed to happen
+        pilot_id = -1  # To detect
 
-    # get the pilot ID corresponding to a given pilot stamp, expecting exactly one row:
-    search_params = ScalarSearchSpec(
-        parameter="PilotStamp",
-        operator=ScalarSearchOperator.EQUAL,
-        value=data.pilot_stamp,
-    )
-
-    total, result = await pilot_agents_db.search(
-        ["PilotID", "VO", "SubmissionTime"], [search_params], []
-    )
-    if total != 1:
-        logger.error(
-            "Cannot determine PilotID for requested PilotStamp: %r, (%d candidates)",
-            data.pilot_stamp,
-            total,
-        )
-        raise Exception(f"Number of rows !=1 {total}")
-
-    pilot_id, vo, submission_time = (
-        result[0]["PilotID"],
-        result[0]["VO"],
-        result[0]["SubmissionTime"],
-    )
     docs = []
     for line in data.lines:
         docs.append(
             {
                 "PilotStamp": data.pilot_stamp,
                 "PilotID": pilot_id,
-                "SubmissionTime": submission_time,
                 "VO": vo,
-                "LineNumber": line.line_no,
-                "Message": line.line,
+                "Severity": line.severity,
+                "Message": line.message,
+                "TimeStamp": line.timestamp,
+                "Scope": line.scope,
             }
         )
     # bulk insert pilot logs to OpenSearch DB:
     await pilot_logs_db.bulk_insert(pilot_logs_db.index_name(vo, pilot_id), docs)
-    return pilot_id
 
 
-async def get_logs(
-    pilot_id: int,
-    db: PilotLogsDB,
+async def search_logs(
+    vo: str,
+    body: SearchParams | None,
+    per_page: int,
+    page: int,
+    pilot_logs_db: PilotLogsDB,
 ) -> list[dict]:
+    """Retrieve logs from OpenSearch for a given PilotStamp."""
+    # Apply a limit to per_page to prevent abuse of the API
+    if per_page > MAX_PER_PAGE:
+        per_page = MAX_PER_PAGE
 
-    search_params = [{"parameter": "PilotID", "operator": "eq", "value": pilot_id}]
+    if body is None:
+        body = SearchParams()
 
-    result = await search_message(db, search_params)
+    search = body.search
+    parameters = body.parameters
+    sorts = body.sort
 
-    if not result:
-        return [{"Message": f"No logs for pilot ID = {pilot_id}"}]
-    return result
+    # Add the vo to make sure that we filter for pilots we can see
+    # TODO: Test it
+    search = search + [
+        {
+            "parameter": "VO",
+            "operator": "eq",
+            "value": vo,
+        }
+    ]
+
+    if not sorts:
+        sorts = [{"parameter": "TimeStamp", "direction": SortDirection("asc")}]
+
+    return await pilot_logs_db.search(
+        parameters=parameters, search=search, sorts=sorts, per_page=per_page, page=page
+    )

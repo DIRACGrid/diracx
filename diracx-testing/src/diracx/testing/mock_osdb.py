@@ -53,7 +53,11 @@ class MockOSDBMixin:
         for field, field_type in self.fields.items():
             match field_type["type"]:
                 case "date":
+                    # TODO: Warning, maybe this will crash? See date_nanos
+                    # I needed to set Varchar because it is sent as 2022-06-15T10:12:52.382719622Z, and not datetime
                     column_type = DateNowColumn
+                case "date_nanos":
+                    column_type = partial(Column, type_=String(32))
                 case "long":
                     column_type = partial(Column, type_=Integer)
                 case "keyword":

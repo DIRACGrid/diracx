@@ -324,11 +324,12 @@ class JobCommand(BaseModel):
 
 
 class LogLine(BaseModel):
-    line_no: int
-    line: str
+    timestamp: str
+    severity: str
+    message: str
+    scope: str
 
 
 class LogMessage(BaseModel):
     pilot_stamp: str
     lines: list[LogLine]
-    vo: str

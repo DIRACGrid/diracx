@@ -8,8 +8,12 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.exceptions import PilotNotFoundError
-from diracx.core.models import ScalarSearchOperator, ScalarSearchSpec
-from diracx.core.properties import NORMAL_USER, TRUSTED_HOST
+from diracx.core.properties import (
+    GENERIC_PILOT,
+    LIMITED_DELEGATION,
+    NORMAL_USER,
+    TRUSTED_HOST,
+)
 from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
@@ -25,9 +29,9 @@ class ActionType(StrEnum):
     # Read some pilot info
     READ_PILOT_FIELDS = auto()
     #: Create/update pilot log records
-    CREATE = auto()
+    CREATE_LOG = auto()
     #: Search
-    QUERY = auto()
+    QUERY_LOGS = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
@@ -49,7 +53,6 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
     ):
         assert action, "action is a mandatory parameter"
-
         if action == ActionType.READ_PILOT_FIELDS:
             if NORMAL_USER in user_info.properties:
                 return
@@ -132,9 +135,11 @@ CheckDiracServicesPolicyCallable = Annotated[
 
 class PilotLogsAccessPolicy(BaseAccessPolicy):
     """Rules:
-    Only NORMAL_USER in a correct VO and a diracAdmin VO member can query log records.
+    Only NORMAL_USER in a correct VO can query log records
     All other actions and users are explicitly denied access.
     """
+
+    # TODO: Better doc
 
     @staticmethod
     async def policy(
@@ -143,49 +148,34 @@ class PilotLogsAccessPolicy(BaseAccessPolicy):
         /,
         *,
         action: ActionType | None = None,
-        pilot_agents_db: PilotAgentsDB | None = None,
-        pilot_id: int | None = None,
+        pilot_db: PilotAgentsDB | None = None,
     ):
-        assert pilot_agents_db
-        if action is None:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, detail="Action is a mandatory argument"
-            )
-        elif action == ActionType.QUERY:
-            if pilot_id is None:
-                logger.error("Pilot ID value is not provided (None)")
-                raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST,
-                    detail=f"PilotID not provided: {pilot_id}",
-                )
-            search_params = ScalarSearchSpec(
-                parameter="PilotID",
-                operator=ScalarSearchOperator.EQUAL,
-                value=pilot_id,
-            )
 
-            total, result = await pilot_agents_db.search(["VO"], [search_params], [])
-            # we expect exactly one row.
-            if total != 1:
-                logger.error(
-                    "Cannot determine VO for requested PilotID: %d, found %d candidates.",
-                    pilot_id,
-                    total,
-                )
-                raise HTTPException(
-                    status.HTTP_400_BAD_REQUEST, detail=f"PilotID not found: {pilot_id}"
-                )
-            vo = result[0]["VO"]
+        assert pilot_db
+        if action == ActionType.CREATE_LOG:
+            pilot_info = user_info  # semantic
 
-            if user_info.vo == "diracAdmin":
+            if GENERIC_PILOT in pilot_info.properties:
                 return
 
-            if NORMAL_USER in user_info.properties and user_info.vo == vo:
+            if LIMITED_DELEGATION in pilot_info.properties:
+                return
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must be a pilot to create logs.",
+            )
+
+        elif action == ActionType.QUERY_LOGS:
+            # TODO: See if we move this elsewhere to separate from pilots
+            # TODO: To see if we can access a VO, we add a new rule a the end in the logic
+            # -> Do we add it here? (another verification)
+            if NORMAL_USER in user_info.properties:
                 return
 
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to access this pilot's log.",
+                detail="You don't have permission to access pilots log",
             )
         else:
             raise NotImplementedError(action)

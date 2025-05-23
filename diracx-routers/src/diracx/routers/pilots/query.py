@@ -116,6 +116,7 @@ async def search(
 ) -> list[dict[str, Any]]:
     """Retrieve information about pilots."""
     # Inspired by /api/jobs/query
+    # TODO: add verif for the VO
     await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
     total, pilots = await search_bl(

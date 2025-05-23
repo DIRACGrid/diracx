@@ -200,13 +200,22 @@ class BaseOSDB(metaclass=ABCMeta):
 
     async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
         """Bulk inserting to database."""
-        n_inserted = await async_bulk(
+        n_inserted, failed = await async_bulk(
             self.client, actions=[doc | {"_index": index_name} for doc in docs]
         )
-        logger.info("Inserted %d documents to %r", n_inserted, index_name)
+        logger.info("Inserted %d documents to %s", n_inserted, index_name)
+
+        if failed:
+            logger.error("Fail to insert %d documents to %s", failed, index_name)
 
     async def search(
-        self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
+        self,
+        parameters,
+        search,
+        sorts,
+        *,
+        per_page: int = 10000,
+        page: int | None = None,
     ) -> list[dict[str, Any]]:
         """Search the database for matching results.
 
@@ -221,7 +230,12 @@ class BaseOSDB(metaclass=ABCMeta):
         for sort in sorts:
             field_name = sort["parameter"]
             field_type = self.fields.get(field_name, {}).get("type")
-            require_type("sort", field_name, field_type, {"keyword", "long", "date"})
+            require_type(
+                "sort",
+                field_name,
+                field_type,
+                {"keyword", "long", "date", "date_nanos"},
+            )
             body["sort"].append({field_name: {"order": sort["direction"]}})
 
         params = {}
@@ -239,7 +253,7 @@ class BaseOSDB(metaclass=ABCMeta):
             for field_name in hit:
                 if field_name not in self.fields:
                     continue
-                if self.fields[field_name]["type"] == "date":
+                if self.fields[field_name]["type"] in ["date", "date_nanos"]:
                     hit[field_name] = datetime.strptime(
                         hit[field_name], "%Y-%m-%dT%H:%M:%S.%f%z"
                     )
@@ -286,30 +300,46 @@ def apply_search_filters(db_fields, search):
         match operator := query["operator"]:
             case "eq":
                 require_type(
-                    operator, field_name, field_type, {"keyword", "long", "date"}
+                    operator,
+                    field_name,
+                    field_type,
+                    {"keyword", "long", "date", "date_nanos"},
                 )
                 result["must"].append({"term": {field_name: {"value": query["value"]}}})
             case "neq":
                 require_type(
-                    operator, field_name, field_type, {"keyword", "long", "date"}
+                    operator,
+                    field_name,
+                    field_type,
+                    {"keyword", "long", "date", "date_nanos"},
                 )
                 result["must_not"].append(
                     {"term": {field_name: {"value": query["value"]}}}
                 )
             case "gt":
-                require_type(operator, field_name, field_type, {"long", "date"})
+                require_type(
+                    operator, field_name, field_type, {"long", "date", "date_nanos"}
+                )
                 result["must"].append({"range": {field_name: {"gt": query["value"]}}})
             case "lt":
-                require_type(operator, field_name, field_type, {"long", "date"})
+                require_type(
+                    operator, field_name, field_type, {"long", "date", "date_nanos"}
+                )
                 result["must"].append({"range": {field_name: {"lt": query["value"]}}})
             case "in":
                 require_type(
-                    operator, field_name, field_type, {"keyword", "long", "date"}
+                    operator,
+                    field_name,
+                    field_type,
+                    {"keyword", "long", "date", "date_nanos"},
                 )
                 result["must"].append({"terms": {field_name: query["values"]}})
             case "not in":
                 require_type(
-                    operator, field_name, field_type, {"keyword", "long", "date"}
+                    operator,
+                    field_name,
+                    field_type,
+                    {"keyword", "long", "date", "date_nanos"},
                 )
                 result["must_not"].append({"terms": {field_name: query["values"]}})
             # TODO: Implement like and ilike
