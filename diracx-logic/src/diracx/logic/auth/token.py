@@ -77,9 +77,7 @@ async def get_oidc_token(
             legacy_exchange,
             refresh_token_expire_minutes,
             include_refresh_token,
-        ) = await get_oidc_token_info_from_refresh_flow(
-            refresh_token, auth_db, settings
-        )
+        ) = await get_token_info_from_refresh_flow(refresh_token, auth_db, settings)
     else:
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
@@ -161,7 +159,7 @@ async def get_oidc_token_info_from_authorization_flow(
     return (oidc_token_info, scope)
 
 
-async def get_oidc_token_info_from_refresh_flow(
+async def get_token_info_from_refresh_flow(
     refresh_token: str, auth_db: AuthDB, settings: AuthSettings
 ) -> tuple[dict, str, bool, float, bool]:
     """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
@@ -270,27 +268,14 @@ async def perform_legacy_exchange(
     )
 
 
-async def exchange_token(
-    auth_db: AuthDB,
-    scope: str,
-    oidc_token_info: dict,
+def get_verified_preferred_username(
     config: Config,
-    settings: AuthSettings,
-    available_properties: set[SecurityProperty],
-    *,
-    refresh_token_expire_minutes: float | None = None,
-    legacy_exchange: bool = False,
-    include_refresh_token: bool = True,
-) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
-    """Method called to exchange the OIDC token for a DIRAC generated access token."""
-    # Extract dirac attributes from the OIDC scope
-    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
-    vo = parsed_scope["vo"]
-    dirac_group = parsed_scope["group"]
-    properties = parsed_scope["properties"]
-
-    # Extract attributes from the OIDC token details
-    sub = oidc_token_info["sub"]
+    oidc_token_info: dict,
+    dirac_group: str,
+    properties: set[str],
+    sub: str,
+    vo: str,
+):
     if user_info := config.Registry[vo].Users.get(sub):
         preferred_username = user_info.PreferedUsername
     else:
@@ -312,6 +297,37 @@ async def exchange_token(
             f"{' '.join(properties - allowed_user_properties)} are not valid properties "
             f"for user {preferred_username}, available values: {' '.join(allowed_user_properties)}"
         )
+
+    return preferred_username
+
+
+async def exchange_token(
+    auth_db: AuthDB,
+    scope: str,
+    oidc_token_info: dict,
+    config: Config,
+    settings: AuthSettings,
+    available_properties: set[SecurityProperty],
+    *,
+    refresh_token_expire_minutes: float | None = None,
+    legacy_exchange: bool = False,
+    include_refresh_token: bool = True,
+) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
+    """Method called to exchange the OIDC token for a DIRAC generated access token."""
+    # Extract dirac attributes from the OIDC scope
+    parsed_scope = parse_and_validate_scope(scope, config, available_properties)
+    vo = parsed_scope["vo"]
+    dirac_group = parsed_scope["group"]
+    properties = parsed_scope["properties"]
+
+    # Extract attributes from the OIDC token details
+    sub = oidc_token_info["sub"]
+
+    preferred_username = None
+
+    preferred_username = get_verified_preferred_username(
+        config, oidc_token_info, dirac_group, properties, sub, vo
+    )
 
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"

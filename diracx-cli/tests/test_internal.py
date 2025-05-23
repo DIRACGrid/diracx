@@ -222,3 +222,64 @@ def test_add_user(cs_repo, vo, user_group):
     assert sub in config.Registry[vo].Users
     for group in user_group or [TEST_USER_GROUP]:
         assert config.Registry[vo].Groups[group].Users == {sub}
+
+
+def test_add_pilot_user(cs_repo):
+
+    sub = "lhcb:rvandeme"
+
+    pilot_group = "pilot_group"
+    pilot_user = "pilot_user"
+
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+
+    # Add a second group to it
+    result = runner.invoke(
+        app,
+        [
+            "internal",
+            "add-group",
+            cs_repo,
+            f"--vo={TEST_VO}",
+            f"--group={pilot_group}",
+            "--properties",
+            "GenericPilot",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    # Add a user to it
+    result = runner.invoke(
+        app,
+        [
+            "internal",
+            "add-user",
+            cs_repo,
+            f"--vo={TEST_VO}",
+            f"--sub={sub}",
+            f"--preferred-username={pilot_user}",
+            f"--group={pilot_group}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    # Set this user as a pilot
+    result = runner.invoke(
+        app,
+        [
+            "internal",
+            "set-user-as-pilot-user",
+            cs_repo,
+            f"--vo={TEST_VO}",
+            f"--sub={sub}",
+            f"--pilot-preferred-username={pilot_user}",
+            f"--pilot-group={pilot_group}",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+
+    # User pilot exists, same for pilot group
+    assert config.Operations[TEST_VO].Pilot["GenericPilotUser"] == pilot_user
+    assert config.Operations[TEST_VO].Pilot["GenericPilotGroup"] == pilot_group

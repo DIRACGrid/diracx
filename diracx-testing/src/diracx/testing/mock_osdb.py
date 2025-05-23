@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from functools import partial
 from typing import Any, AsyncIterator
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from diracx.core.models import SearchSpec, SortSpec
@@ -53,7 +53,11 @@ class MockOSDBMixin:
         for field, field_type in self.fields.items():
             match field_type["type"]:
                 case "date":
+                    # TODO: Warning, maybe this will crash? See date_nanos
+                    # I needed to set Varchar because it is sent as 2022-06-15T10:12:52.382719622Z, and not datetime
                     column_type = DateNowColumn
+                case "date_nanos":
+                    column_type = partial(Column, type_=String(32))
                 case "long":
                     column_type = partial(Column, type_=Integer)
                 case "keyword":
@@ -98,6 +102,21 @@ class MockOSDBMixin:
             stmt = sqlite_insert(self._table).values(doc_id=doc_id, **values)
             # TODO: Upsert the JSON blob properly
             stmt = stmt.on_conflict_do_update(index_elements=["doc_id"], set_=values)
+            await self._sql_db.conn.execute(stmt)
+
+    async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
+        async with self._sql_db:
+            rows = []
+            for doc in docs:
+                # don't use doc_id column explicitly. This ensures that doc_id is unique.
+                values = {}
+                for key, value in doc.items():
+                    if key in self.fields:
+                        values[key] = value
+                    else:
+                        values.setdefault("extra", {})[key] = value
+                rows.append(values)
+            stmt = sqlite_insert(self._table).values(rows)
             await self._sql_db.conn.execute(stmt)
 
     async def search(
@@ -152,6 +171,14 @@ class MockOSDBMixin:
                         result.pop(k)
                 results.append(result)
         return results
+
+    async def delete(self, query: list[dict[str, Any]]) -> None:
+        async with self._sql_db:
+            stmt = delete(self._table)
+            stmt = sql_utils.apply_search_filters(
+                self._table.columns.__getitem__, stmt, query
+            )
+            await self._sql_db.conn.execute(stmt)
 
     async def ping(self):
         async with self._sql_db:
