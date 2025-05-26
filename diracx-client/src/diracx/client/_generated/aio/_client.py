@@ -19,6 +19,8 @@ from .operations import (
     AuthOperations,
     ConfigOperations,
     JobsOperations,
+    PilotOperations,
+    PilotsOperations,
     WellKnownOperations,
 )
 
@@ -34,6 +36,10 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype config: _generated.aio.operations.ConfigOperations
     :ivar jobs: JobsOperations operations
     :vartype jobs: _generated.aio.operations.JobsOperations
+    :ivar pilot: PilotOperations operations
+    :vartype pilot: _generated.aio.operations.PilotOperations
+    :ivar pilots: PilotsOperations operations
+    :vartype pilots: _generated.aio.operations.PilotsOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -84,6 +90,12 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
             self._client, self._config, self._serialize, self._deserialize
         )
         self.jobs = JobsOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.pilot = PilotOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.pilots = PilotsOperations(
             self._client, self._config, self._serialize, self._deserialize
         )
 

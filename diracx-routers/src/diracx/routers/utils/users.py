@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import re
-import uuid as std_uuid
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
 from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
-from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
-from pydantic_core import CoreSchema, core_schema
-from uuid_utils import UUID as _UUID
 
-from diracx.core.models import UserInfo
+from diracx.core.models import AuthInfo, UserInfo
 from diracx.core.properties import SecurityProperty
 from diracx.logic.auth.utils import read_token
 from diracx.routers.dependencies import AuthSettings
@@ -27,45 +23,10 @@ oidc_scheme = OpenIdConnect(
 )
 
 
-class UUID(_UUID):
-    """Subclass of uuid_utils.UUID to add pydantic support."""
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Use the stdlib uuid.UUID schema for validation and serialization."""
-        std_schema = handler(std_uuid.UUID)
-
-        def to_uuid_utils(u: std_uuid.UUID) -> UUID:
-            return cls(str(u))
-
-        return core_schema.no_info_after_validator_function(to_uuid_utils, std_schema)
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
-    ) -> dict[str, Any]:
-        """Return the stdlib uuid.UUID schema for JSON serialization."""
-        return handler(core_schema)
-
-
-class AuthInfo(BaseModel):
-    # raw token for propagation
-    bearer_token: str
-
-    # token ID in the DB for Component
-    # unique jwt identifier for user
-    token_id: UUID
-
+class AuthorizedUserInfo(AuthInfo, UserInfo):
     # list of DIRAC properties
     properties: list[SecurityProperty]
-
     policies: dict[str, Any] = {}
-
-
-class AuthorizedUserInfo(AuthInfo, UserInfo):
-    pass
 
 
 async def verify_dirac_access_token(
@@ -98,19 +59,21 @@ async def verify_dirac_access_token(
                 iss={"essential": True, "value": settings.token_issuer},
             ),
         )
-    except (ValueError, JoseError) as e:
+
+        return AuthorizedUserInfo(
+            bearer_token=raw_token,
+            token_id=claims["jti"],
+            properties=claims["dirac_properties"],
+            sub=claims["sub"],
+            preferred_username=claims["preferred_username"],
+            dirac_group=claims["dirac_group"],
+            vo=claims["vo"],
+            policies=claims.get("dirac_policies", {}),
+        )
+    # We catch KeyError if a pilot tries with its token to access this resource:
+    # -> claims["preferred_username"] will lead to a KeyError
+    except (ValueError, JoseError, KeyError) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",
         ) from e
-
-    return AuthorizedUserInfo(
-        bearer_token=raw_token,
-        token_id=claims["jti"],
-        properties=claims["dirac_properties"],
-        sub=claims["sub"],
-        preferred_username=claims["preferred_username"],
-        dirac_group=claims["dirac_group"],
-        vo=claims["vo"],
-        policies=claims.get("dirac_policies", {}),
-    )
