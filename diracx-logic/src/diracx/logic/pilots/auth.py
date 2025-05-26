@@ -223,7 +223,6 @@ async def generate_pilot_tokens(
         include_refresh_token=include_refresh_token,
     )
 
-
 async def check_pilot_constraints(
     pilot: dict[str, Any], secret_constraints: PilotSecretConstraints
 ):
@@ -354,7 +353,6 @@ async def refresh_pilot_token(
         refresh_token_payload=refresh_token_payload,
         settings=settings,
     )
-
 
 async def register_new_pilots(
     pilot_db: PilotAgentsDB,

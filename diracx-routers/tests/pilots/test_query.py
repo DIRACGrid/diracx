@@ -23,6 +23,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "DevelopmentSettings",
         "PilotAgentsDB",
         "PilotManagementAccessPolicy",
+        "PilotLogsDB",
     ]
 )
 
@@ -97,7 +98,7 @@ async def search(populated_pilot_client):
         params = {"per_page": per_page, "page": page}
 
         r = populated_pilot_client.post(
-            "/api/pilot_management/search", json=body, params=params
+            "/api/pilot_management/search/pilots", json=body, params=params
         )
 
         if r.status_code == 400:

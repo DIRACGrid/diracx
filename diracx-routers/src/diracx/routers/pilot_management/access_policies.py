@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+>>>>>>> e3b1128b (feat: Add pilot logging)
 from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import Annotated
@@ -12,6 +14,8 @@ from diracx.db.sql import PilotAgentsDB
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
+logger = logging.getLogger(__name__)
+
 
 class ActionType(StrEnum):
     # Create a pilot or a secret
@@ -20,6 +24,9 @@ class ActionType(StrEnum):
     CHANGE_PILOT_FIELD = auto()
     # Read some pilot info
     READ_PILOT_FIELDS = auto()
+    #: Search
+    # TODO: Remove this policy
+    QUERY_LOGS = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
@@ -120,3 +127,40 @@ class DiracServicesAccessPolicy(BaseAccessPolicy):
 CheckDiracServicesPolicyCallable = Annotated[
     Callable, Depends(DiracServicesAccessPolicy.check)
 ]
+
+
+class PilotLogsAccessPolicy(BaseAccessPolicy):
+    """Rules:
+    Only NORMAL_USER in a correct VO can query log records
+    All other actions and users are explicitly denied access.
+    """
+
+    # TODO: Better doc
+
+    @staticmethod
+    async def policy(
+        policy_name: str,
+        user_info: AuthorizedUserInfo,
+        /,
+        *,
+        action: ActionType | None = None,
+        pilot_db: PilotAgentsDB | None = None,
+    ):
+
+        assert pilot_db
+        if action == ActionType.QUERY_LOGS:
+            # TODO: See if we move this elsewhere to separate from pilots
+            # TODO: To see if we can access a VO, we add a new rule a the end in the logic
+            # -> Do we add it here? (another verification)
+            if NORMAL_USER in user_info.properties:
+                return
+
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to access pilots log",
+            )
+        else:
+            raise NotImplementedError(action)
+
+
+CheckPilotLogsPolicyCallable = Annotated[Callable, Depends(PilotLogsAccessPolicy.check)]

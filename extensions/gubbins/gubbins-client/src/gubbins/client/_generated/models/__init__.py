@@ -16,6 +16,10 @@ from ._models import (  # type: ignore
     BodyAuthGetOidcTokenGrantType,
     BodyPilotManagementAddPilotStamps,
     BodyPilotManagementAssociatePilotWithJobs,
+<<<<<<< HEAD
+=======
+    BodyPilotManagementAssociatePilotsWithSecrets,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     BodyPilotManagementCreatePilotSecrets,
     BodyPilotManagementUpdatePilotFields,
     BodyPilotsPilotLogin,
@@ -30,10 +34,15 @@ from ._models import (  # type: ignore
     JobStatusUpdate,
     JobSummaryParams,
     JobSummaryParamsSearchItem,
+    LogLine,
+    LogMessage,
     OpenIDConfiguration,
     PilotCredentialsInfo,
     PilotFieldsMapping,
+<<<<<<< HEAD
     PilotSecretConstraints,
+=======
+>>>>>>> e3b1128b (feat: Add pilot logging)
     PilotSecretsInfo,
     PilotStampInfo,
     ResponsePilotManagementAddPilotStamps,
@@ -76,6 +85,10 @@ __all__ = [
     "BodyAuthGetOidcTokenGrantType",
     "BodyPilotManagementAddPilotStamps",
     "BodyPilotManagementAssociatePilotWithJobs",
+<<<<<<< HEAD
+=======
+    "BodyPilotManagementAssociatePilotsWithSecrets",
+>>>>>>> e3b1128b (feat: Add pilot logging)
     "BodyPilotManagementCreatePilotSecrets",
     "BodyPilotManagementUpdatePilotFields",
     "BodyPilotsPilotLogin",
@@ -90,10 +103,15 @@ __all__ = [
     "JobStatusUpdate",
     "JobSummaryParams",
     "JobSummaryParamsSearchItem",
+    "LogLine",
+    "LogMessage",
     "OpenIDConfiguration",
     "PilotCredentialsInfo",
     "PilotFieldsMapping",
+<<<<<<< HEAD
     "PilotSecretConstraints",
+=======
+>>>>>>> e3b1128b (feat: Add pilot logging)
     "PilotSecretsInfo",
     "PilotStampInfo",
     "ResponsePilotManagementAddPilotStamps",

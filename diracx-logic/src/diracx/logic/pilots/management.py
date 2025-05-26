@@ -52,7 +52,7 @@ async def get_pilot_jobs_ids_by_stamp(
     return await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
 
 
-async def search(
+async def search_pilots(
     pilot_db: PilotAgentsDB,
     user_vo: str,
     page: int = 1,

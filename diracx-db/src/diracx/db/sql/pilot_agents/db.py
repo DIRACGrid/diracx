@@ -22,6 +22,7 @@ from diracx.core.models import (
     SearchSpec,
     SortSpec,
 )
+from diracx.db.exceptions import DBInBadStateError
 
 from ..utils import (
     BaseSQLDB,
@@ -442,7 +443,7 @@ class PilotAgentsDB(BaseSQLDB):
         *,
         distinct: bool = False,
         per_page: int = 100,
-        page: int | None = None,
+        page: int | None = 1,
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for pilots in the database."""
         # TODO: Refactorize with the search function for jobs.
@@ -466,7 +467,6 @@ class PilotAgentsDB(BaseSQLDB):
         total_count_stmt = select(func.count()).select_from(total_count_subquery)
         total = (await self.conn.execute(total_count_stmt)).scalar_one()
 
-        # Apply pagination
         if page is not None:
             if page < 1:
                 raise InvalidQueryError("Page must be a positive integer")

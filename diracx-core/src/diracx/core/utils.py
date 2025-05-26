@@ -280,7 +280,6 @@ def extract_timestamp_from_uuid7(uuid_str: str) -> datetime:
     # Convert into seconds then to datetime
     return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)
 
-
 T_DICTS = TypeVar("T_DICTS", bound=Mapping[str, Any])
 
 

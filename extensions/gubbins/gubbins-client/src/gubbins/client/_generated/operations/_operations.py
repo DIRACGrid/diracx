@@ -643,10 +643,21 @@ def build_lollygag_get_gubbins_secrets_request(**kwargs: Any) -> HttpRequest:  #
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilot_management_add_pilot_stamps_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+def build_pilot_management_add_pilot_stamps_request(
+    **kwargs: Any,
+) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -654,7 +665,13 @@ def build_pilot_management_add_pilot_stamps_request(**kwargs: Any) -> HttpReques
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -685,15 +702,32 @@ def build_pilot_management_clear_pilots_request(  # pylint: disable=name-too-lon
     # Construct parameters
     _params["age_in_days"] = _SERIALIZER.query("age_in_days", age_in_days, "int")
     if delete_only_aborted is not None:
+<<<<<<< HEAD
         _params["delete_only_aborted"] = _SERIALIZER.query("delete_only_aborted", delete_only_aborted, "bool")
+=======
+        _params["delete_only_aborted"] = _SERIALIZER.query(
+            "delete_only_aborted", delete_only_aborted, "bool"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
     return HttpRequest(method="DELETE", url=_url, params=_params, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilot_management_create_pilot_secrets_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+def build_pilot_management_create_pilot_secrets_request(
+    **kwargs: Any,
+) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -701,38 +735,77 @@ def build_pilot_management_create_pilot_secrets_request(**kwargs: Any) -> HttpRe
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilot_management_update_secrets_constraints_request(  # pylint: disable=name-too-long
+=======
+def build_pilot_management_associate_pilots_with_secrets_request(  # pylint: disable=name-too-long
+>>>>>>> e3b1128b (feat: Add pilot logging)
     **kwargs: Any,
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
+<<<<<<< HEAD
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     # Construct URL
     _url = "/api/pilot_management/fields/secrets"
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilot_management_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+def build_pilot_management_update_pilot_fields_request(
+    **kwargs: Any,
+) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     # Construct URL
     _url = "/api/pilot_management/fields"
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
@@ -742,17 +815,30 @@ def build_pilot_management_associate_pilot_with_jobs_request(  # pylint: disable
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
+<<<<<<< HEAD
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     # Construct URL
     _url = "/api/pilot_management/fields/jobs"
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilot_management_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -762,6 +848,21 @@ def build_pilot_management_search_request(*, page: int = 1, per_page: int = 100,
 
     # Construct URL
     _url = "/api/pilot_management/search"
+=======
+def build_pilot_management_search_pilots_request(  # pylint: disable=name-too-long
+    *, page: int = 1, per_page: int = 100, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilot_management/search/pilots"
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
     # Construct parameters
     if page is not None:
@@ -771,16 +872,65 @@ def build_pilot_management_search_request(*, page: int = 1, per_page: int = 100,
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
+
+
+def build_pilot_management_search_logs_request(  # pylint: disable=name-too-long
+    *, page: int = 1, per_page: int = 100, **kwargs: Any
+) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/pilot_management/search/logs"
+
+    # Construct parameters
+    if page is not None:
+        _params["page"] = _SERIALIZER.query("page", page, "int")
+    if per_page is not None:
+        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(
+        method="POST", url=_url, params=_params, headers=_headers, **kwargs
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
 
 def build_pilots_pilot_login_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
+<<<<<<< HEAD
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -788,16 +938,33 @@ def build_pilots_pilot_login_request(**kwargs: Any) -> HttpRequest:
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
 def build_pilots_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+def build_pilots_refresh_pilot_tokens_request(
+    **kwargs: Any,
+) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -805,12 +972,39 @@ def build_pilots_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:  # 
 
     # Construct headers
     if content_type is not None:
+<<<<<<< HEAD
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+=======
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
+<<<<<<< HEAD
+=======
+def build_pilots_send_message_request(**kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop(
+        "content_type", _headers.pop("Content-Type", None)
+    )
+    # Construct URL
+    _url = "/api/pilots/message"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header(
+            "content_type", content_type, "str"
+        )
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
+>>>>>>> e3b1128b (feat: Add pilot logging)
 class WellKnownOperations:
     """
     .. warning::
@@ -3089,6 +3283,7 @@ class PilotOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
+<<<<<<< HEAD
         self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
         self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
         self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
@@ -3097,6 +3292,28 @@ class PilotOperations:
     @overload
     def management_add_pilot_stamps(
         self, body: _models.BodyPilotManagementAddPilotStamps, *, content_type: str = "application/json", **kwargs: Any
+=======
+        self._client: PipelineClient = (
+            input_args.pop(0) if input_args else kwargs.pop("client")
+        )
+        self._config: DiracConfiguration = (
+            input_args.pop(0) if input_args else kwargs.pop("config")
+        )
+        self._serialize: Serializer = (
+            input_args.pop(0) if input_args else kwargs.pop("serializer")
+        )
+        self._deserialize: Deserializer = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
+        )
+
+    @overload
+    def management_add_pilot_stamps(
+        self,
+        body: _models.BodyPilotManagementAddPilotStamps,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> _models.ResponsePilotManagementAddPilotStamps:
         """Add Pilot Stamps.
 
@@ -3138,7 +3355,13 @@ class PilotOperations:
 
     @distributed_trace
     def management_add_pilot_stamps(
+<<<<<<< HEAD
         self, body: Union[_models.BodyPilotManagementAddPilotStamps, IO[bytes]], **kwargs: Any
+=======
+        self,
+        body: Union[_models.BodyPilotManagementAddPilotStamps, IO[bytes]],
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> _models.ResponsePilotManagementAddPilotStamps:
         """Add Pilot Stamps.
 
@@ -3164,8 +3387,17 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.ResponsePilotManagementAddPilotStamps] = kwargs.pop("cls", None)
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[_models.ResponsePilotManagementAddPilotStamps] = kwargs.pop(
+            "cls", None
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         content_type = content_type or "application/json"
         _json = None
@@ -3185,17 +3417,35 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("ResponsePilotManagementAddPilotStamps", pipeline_response.http_response)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "ResponsePilotManagementAddPilotStamps", pipeline_response.http_response
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3239,14 +3489,27 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3293,14 +3556,27 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3348,7 +3624,13 @@ class PilotOperations:
 
     @distributed_trace
     def management_create_pilot_secrets(
+<<<<<<< HEAD
         self, body: Union[_models.BodyPilotManagementCreatePilotSecrets, IO[bytes]], **kwargs: Any
+=======
+        self,
+        body: Union[_models.BodyPilotManagementCreatePilotSecrets, IO[bytes]],
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> List[_models.PilotSecretsInfo]:
         """Create Pilot Secrets.
 
@@ -3372,7 +3654,13 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[List[_models.PilotSecretsInfo]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3393,17 +3681,35 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[PilotSecretsInfo]", pipeline_response.http_response)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "[PilotSecretsInfo]", pipeline_response.http_response
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3411,15 +3717,30 @@ class PilotOperations:
         return deserialized  # type: ignore
 
     @overload
+<<<<<<< HEAD
     def management_update_secrets_constraints(
         self, body: Dict[str, _models.PilotSecretConstraints], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
         """Update Secrets Constraints.
+=======
+    def management_associate_pilots_with_secrets(
+        self,
+        body: _models.BodyPilotManagementAssociatePilotsWithSecrets,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> None:
+        """Associate Pilots With Secrets.
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         Endpoint to associate pilots with secrets.
 
         :param body: Required.
+<<<<<<< HEAD
         :type body: dict[str, ~_generated.models.PilotSecretConstraints]
+=======
+        :type body: ~_generated.models.BodyPilotManagementAssociatePilotsWithSecrets
+>>>>>>> e3b1128b (feat: Add pilot logging)
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3429,10 +3750,17 @@ class PilotOperations:
         """
 
     @overload
+<<<<<<< HEAD
     def management_update_secrets_constraints(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
         """Update Secrets Constraints.
+=======
+    def management_associate_pilots_with_secrets(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Associate Pilots With Secrets.
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         Endpoint to associate pilots with secrets.
 
@@ -3447,6 +3775,7 @@ class PilotOperations:
         """
 
     @distributed_trace
+<<<<<<< HEAD
     def management_update_secrets_constraints(  # pylint: disable=inconsistent-return-statements
         self, body: Union[Dict[str, _models.PilotSecretConstraints], IO[bytes]], **kwargs: Any
     ) -> None:
@@ -3456,6 +3785,20 @@ class PilotOperations:
 
         :param body: Is either a {str: PilotSecretConstraints} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.PilotSecretConstraints] or IO[bytes]
+=======
+    def management_associate_pilots_with_secrets(  # pylint: disable=inconsistent-return-statements
+        self,
+        body: Union[_models.BodyPilotManagementAssociatePilotsWithSecrets, IO[bytes]],
+        **kwargs: Any,
+    ) -> None:
+        """Associate Pilots With Secrets.
+
+        Endpoint to associate pilots with secrets.
+
+        :param body: Is either a BodyPilotManagementAssociatePilotsWithSecrets type or a IO[bytes]
+         type. Required.
+        :type body: ~_generated.models.BodyPilotManagementAssociatePilotsWithSecrets or IO[bytes]
+>>>>>>> e3b1128b (feat: Add pilot logging)
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3471,7 +3814,13 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3480,9 +3829,17 @@ class PilotOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
+<<<<<<< HEAD
             _json = self._serialize.body(body, "{PilotSecretConstraints}")
 
         _request = build_pilot_management_update_secrets_constraints_request(
+=======
+            _json = self._serialize.body(
+                body, "BodyPilotManagementAssociatePilotsWithSecrets"
+            )
+
+        _request = build_pilot_management_associate_pilots_with_secrets_request(
+>>>>>>> e3b1128b (feat: Add pilot logging)
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3492,14 +3849,27 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3551,7 +3921,13 @@ class PilotOperations:
 
     @distributed_trace
     def management_update_pilot_fields(  # pylint: disable=inconsistent-return-statements
+<<<<<<< HEAD
         self, body: Union[_models.BodyPilotManagementUpdatePilotFields, IO[bytes]], **kwargs: Any
+=======
+        self,
+        body: Union[_models.BodyPilotManagementUpdatePilotFields, IO[bytes]],
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """Update Pilot Fields.
 
@@ -3577,7 +3953,13 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3598,14 +3980,27 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3653,7 +4048,13 @@ class PilotOperations:
 
     @distributed_trace
     def management_associate_pilot_with_jobs(  # pylint: disable=inconsistent-return-statements
+<<<<<<< HEAD
         self, body: Union[_models.BodyPilotManagementAssociatePilotWithJobs, IO[bytes]], **kwargs: Any
+=======
+        self,
+        body: Union[_models.BodyPilotManagementAssociatePilotWithJobs, IO[bytes]],
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """Associate Pilot With Jobs.
 
@@ -3677,7 +4078,13 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3686,7 +4093,13 @@ class PilotOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
+<<<<<<< HEAD
             _json = self._serialize.body(body, "BodyPilotManagementAssociatePilotWithJobs")
+=======
+            _json = self._serialize.body(
+                body, "BodyPilotManagementAssociatePilotWithJobs"
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         _request = build_pilot_management_associate_pilot_with_jobs_request(
             content_type=content_type,
@@ -3698,21 +4111,38 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         if cls:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @overload
+<<<<<<< HEAD
     def management_search(
+=======
+    def management_search_pilots(
+>>>>>>> e3b1128b (feat: Add pilot logging)
         self,
         body: Optional[_models.SearchParams] = None,
         *,
@@ -3721,7 +4151,11 @@ class PilotOperations:
         content_type: str = "application/json",
         **kwargs: Any,
     ) -> List[Dict[str, Any]]:
+<<<<<<< HEAD
         """Search.
+=======
+        """Search Pilots.
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         Retrieve information about pilots.
 
@@ -3740,7 +4174,11 @@ class PilotOperations:
         """
 
     @overload
+<<<<<<< HEAD
     def management_search(
+=======
+    def management_search_pilots(
+>>>>>>> e3b1128b (feat: Add pilot logging)
         self,
         body: Optional[IO[bytes]] = None,
         *,
@@ -3749,7 +4187,11 @@ class PilotOperations:
         content_type: str = "application/json",
         **kwargs: Any,
     ) -> List[Dict[str, Any]]:
+<<<<<<< HEAD
         """Search.
+=======
+        """Search Pilots.
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         Retrieve information about pilots.
 
@@ -3768,7 +4210,11 @@ class PilotOperations:
         """
 
     @distributed_trace
+<<<<<<< HEAD
     def management_search(
+=======
+    def management_search_pilots(
+>>>>>>> e3b1128b (feat: Add pilot logging)
         self,
         body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
         *,
@@ -3776,7 +4222,11 @@ class PilotOperations:
         per_page: int = 100,
         **kwargs: Any,
     ) -> List[Dict[str, Any]]:
+<<<<<<< HEAD
         """Search.
+=======
+        """Search Pilots.
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         Retrieve information about pilots.
 
@@ -3801,7 +4251,13 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3815,7 +4271,11 @@ class PilotOperations:
             else:
                 _json = None
 
+<<<<<<< HEAD
         _request = build_pilot_management_search_request(
+=======
+        _request = build_pilot_management_search_pilots_request(
+>>>>>>> e3b1128b (feat: Add pilot logging)
             page=page,
             per_page=per_page,
             content_type=content_type,
@@ -3827,19 +4287,183 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200, 206]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
             raise HttpResponseError(response=response)
 
         response_headers = {}
         if response.status_code == 206:
+<<<<<<< HEAD
             response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
+=======
+            response_headers["Content-Range"] = self._deserialize(
+                "str", response.headers.get("Content-Range")
+            )
+
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, response_headers)  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
+    def management_search_logs(
+        self,
+        body: Optional[_models.SearchParams] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Default value is None.
+        :type body: ~_generated.models.SearchParams
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def management_search_logs(
+        self,
+        body: Optional[IO[bytes]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Default value is None.
+        :type body: IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def management_search_logs(
+        self,
+        body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
+        :type body: ~_generated.models.SearchParams or IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "SearchParams")
+            else:
+                _json = None
+
+        _request = build_pilot_management_search_logs_request(
+            page=page,
+            per_page=per_page,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200, 206]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        response_headers = {}
+        if response.status_code == 206:
+            response_headers["Content-Range"] = self._deserialize(
+                "str", response.headers.get("Content-Range")
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
@@ -3863,6 +4487,7 @@ class PilotsOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
+<<<<<<< HEAD
         self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
         self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
         self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
@@ -3871,6 +4496,28 @@ class PilotsOperations:
     @overload
     def pilot_login(
         self, body: _models.BodyPilotsPilotLogin, *, content_type: str = "application/json", **kwargs: Any
+=======
+        self._client: PipelineClient = (
+            input_args.pop(0) if input_args else kwargs.pop("client")
+        )
+        self._config: DiracConfiguration = (
+            input_args.pop(0) if input_args else kwargs.pop("config")
+        )
+        self._serialize: Serializer = (
+            input_args.pop(0) if input_args else kwargs.pop("serializer")
+        )
+        self._deserialize: Deserializer = (
+            input_args.pop(0) if input_args else kwargs.pop("deserializer")
+        )
+
+    @overload
+    def pilot_login(
+        self,
+        body: _models.BodyPilotsPilotLogin,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> _models.TokenResponse:
         """Pilot Login.
 
@@ -3905,7 +4552,13 @@ class PilotsOperations:
         """
 
     @distributed_trace
+<<<<<<< HEAD
     def pilot_login(self, body: Union[_models.BodyPilotsPilotLogin, IO[bytes]], **kwargs: Any) -> _models.TokenResponse:
+=======
+    def pilot_login(
+        self, body: Union[_models.BodyPilotsPilotLogin, IO[bytes]], **kwargs: Any
+    ) -> _models.TokenResponse:
+>>>>>>> e3b1128b (feat: Add pilot logging)
         """Pilot Login.
 
         This endpoint is used by the pilot to exchange a secret for a token.
@@ -3927,7 +4580,13 @@ class PilotsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3948,17 +4607,35 @@ class PilotsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3967,7 +4644,15 @@ class PilotsOperations:
 
     @overload
     def refresh_pilot_tokens(
+<<<<<<< HEAD
         self, body: _models.BodyPilotsRefreshPilotTokens, *, content_type: str = "application/json", **kwargs: Any
+=======
+        self,
+        body: _models.BodyPilotsRefreshPilotTokens,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
@@ -4003,7 +4688,13 @@ class PilotsOperations:
 
     @distributed_trace
     def refresh_pilot_tokens(
+<<<<<<< HEAD
         self, body: Union[_models.BodyPilotsRefreshPilotTokens, IO[bytes]], **kwargs: Any
+=======
+        self,
+        body: Union[_models.BodyPilotsRefreshPilotTokens, IO[bytes]],
+        **kwargs: Any,
+>>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
@@ -4026,7 +4717,13 @@ class PilotsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+<<<<<<< HEAD
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+=======
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -4047,19 +4744,145 @@ class PilotsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
+<<<<<<< HEAD
         pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
             _request, stream=_stream, **kwargs
+=======
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+>>>>>>> e3b1128b (feat: Add pilot logging)
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
+<<<<<<< HEAD
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
+=======
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize(
+            "TokenResponse", pipeline_response.http_response
+        )
+>>>>>>> e3b1128b (feat: Add pilot logging)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
+<<<<<<< HEAD
+=======
+
+    @overload
+    def send_message(
+        self,
+        body: _models.LogMessage,
+        *,
+        content_type: str = "application/json",
+        **kwargs: Any,
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: ~_generated.models.LogMessage
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def send_message(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def send_message(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[_models.LogMessage, IO[bytes]], **kwargs: Any
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Is either a LogMessage type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.LogMessage or IO[bytes]
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop(
+            "content_type", _headers.pop("Content-Type", None)
+        )
+        cls: ClsType[None] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "LogMessage")
+
+        _request = build_pilots_send_message_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = (
+            self._client._pipeline.run(  # pylint: disable=protected-access
+                _request, stream=_stream, **kwargs
+            )
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(
+                status_code=response.status_code, response=response, error_map=error_map
+            )
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore
+>>>>>>> e3b1128b (feat: Add pilot logging)

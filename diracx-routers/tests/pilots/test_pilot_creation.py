@@ -14,6 +14,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "BaseAccessPolicy",
         "PilotAgentsDB",
         "PilotManagementAccessPolicy",
+        "PilotLogsDB",
     ]
 )
 
@@ -134,6 +135,7 @@ async def test_create_pilots_with_credentials(normal_test_client):
 
 
 async def test_create_secrets_and_login(normal_test_client):
+
     pilot_stamps = [f"stamps_{i}" for i in range(N)]
 
     #  -------------- Create N secrets. --------------
@@ -201,6 +203,7 @@ async def test_create_secrets_and_login(normal_test_client):
     #  -------------- Login with the right credentials --------------
 
     for stamp, secret in zip(pilot_stamps, secrets):
+
         body = {"pilot_secret": secret, "pilot_stamp": stamp}
 
         r = normal_test_client.post(
@@ -332,7 +335,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
         "distinct": True,
     }
 
-    r = normal_test_client.post("/api/pilot_management/search", json=body)
+    r = normal_test_client.post("/api/pilot_management/search/pilots", json=body)
     assert r.status_code == 200, r.json()
     pilot1 = r.json()[0]
     pilot2 = r.json()[1]

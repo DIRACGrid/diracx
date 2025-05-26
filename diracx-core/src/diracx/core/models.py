@@ -350,7 +350,6 @@ class PilotSecretConstraints(TypedDict, total=False):
     Sites: list[str]  # Authorize only a list of sites
     # ...
 
-
 class PilotStatus(str, Enum):
     """Pilot statuses from Dirac."""
 
@@ -385,3 +384,14 @@ class PilotFieldsMapping(BaseModel):
     GridType: Optional[str] = None
     AccountingSent: Optional[bool] = None
     CurrentJobID: Optional[int] = None
+
+class LogLine(BaseModel):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str
+
+
+class LogMessage(BaseModel):
+    pilot_stamp: str
+    lines: list[LogLine]

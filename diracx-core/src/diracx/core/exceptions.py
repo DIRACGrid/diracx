@@ -139,6 +139,10 @@ class BadPilotCredentialsError(DiracFormattedError):
     pattern = "Bad secret/pilot_stamp %s "
 
 
+class BadPilotVOError(DiracFormattedError):
+    pattern = "Bad VO %s "
+
+
 class SecretNotFoundError(DiracFormattedError):
     pattern = "Secret %s not found"
 
