@@ -28,7 +28,12 @@ from diracx.logic.auth.token import (
 )
 from diracx.routers.access_policies import BaseAccessPolicy
 
-from ..dependencies import AuthDB, AuthSettings, AvailableSecurityProperties, Config
+from ..dependencies import (
+    AuthDB,
+    AuthSettings,
+    AvailableSecurityProperties,
+    Config,
+)
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)

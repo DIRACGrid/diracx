@@ -77,9 +77,7 @@ async def get_oidc_token(
             legacy_exchange,
             refresh_token_expire_minutes,
             include_refresh_token,
-        ) = await get_oidc_token_info_from_refresh_flow(
-            refresh_token, auth_db, settings
-        )
+        ) = await get_token_info_from_refresh_flow(refresh_token, auth_db, settings)
     else:
         raise NotImplementedError(f"Grant type not implemented {grant_type}")
 
@@ -161,7 +159,7 @@ async def get_oidc_token_info_from_authorization_flow(
     return (oidc_token_info, scope)
 
 
-async def get_oidc_token_info_from_refresh_flow(
+async def get_token_info_from_refresh_flow(
     refresh_token: str, auth_db: AuthDB, settings: AuthSettings
 ) -> tuple[dict, str, bool, float, bool]:
     """Get OIDC token information from the refresh token DB and check few parameters before returning it."""

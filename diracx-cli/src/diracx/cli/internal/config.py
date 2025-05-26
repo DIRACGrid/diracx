@@ -59,7 +59,7 @@ def generate_cs(config_repo: str):
     update_config_and_commit(
         repo_path=repo_path, config=config, message="Initial commit"
     )
-    typer.echo(f"Successfully created repo in {config_repo}", err=True)
+    typer.echo(f"Successfully created repo in {config_repo}")
 
 
 @app.command()
@@ -99,7 +99,7 @@ def add_vo(
         config=config,
         message=f"Added vo {vo} registry (default group {default_group} and idp {idp_url})",
     )
-    typer.echo(f"Successfully added vo to {config_repo}", err=True)
+    typer.echo(f"Successfully added vo to {config_repo}")
 
 
 @app.command()
@@ -130,7 +130,7 @@ def add_group(
     update_config_and_commit(
         repo_path=repo_path, config=config, message=f"Added group {group} in {vo}"
     )
-    typer.echo(f"Successfully added group to {config_repo}", err=True)
+    typer.echo(f"Successfully added group to {config_repo}")
 
 
 @app.command()
@@ -177,7 +177,7 @@ def add_user(
         config=config,
         message=f"Added user {sub} ({preferred_username}) to vo {vo} and groups {groups}",
     )
-    typer.echo(f"Successfully added user to {config_repo}", err=True)
+    typer.echo(f"Successfully added user to {config_repo}")
 
 
 def update_config_and_commit(repo_path: Path, config: Config, message: str):
