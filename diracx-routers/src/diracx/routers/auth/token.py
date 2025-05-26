@@ -7,7 +7,7 @@ import os
 from typing import Annotated, Literal
 
 from fastapi import Depends, Form, Header, HTTPException, status
-from joserfc.errors import JoseError
+from joserfc.errors import DecodeError, ExpiredTokenError, InvalidKeyIdError
 
 from diracx.core.exceptions import (
     DiracHttpResponseError,
@@ -141,8 +141,7 @@ async def get_oidc_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             data={"error": "authorization_pending"},
         ) from e
-    except ValueError as e:
-        logger.exception("ValueError in /token")
+    except (ValueError, InvalidKeyIdError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -158,7 +157,7 @@ async def get_oidc_token(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
-    except JoseError as e:
+    except (DecodeError, ExpiredTokenError) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid JWT: {e}",

@@ -361,8 +361,9 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
     """Create a JWT token with the given payload and settings."""
     signing_key = None
     for key in settings.token_keystore.jwks.keys:
-        # TODO: https://github.com/authlib/joserfc/issues/52
-        key_ops = cast(list[str] | None, key.get("key_ops"))
+        key_ops = key.get("key_ops")
+        if key_ops and not isinstance(key_ops, list):
+            key_ops = [key_ops]
         if key_ops and "sign" in key_ops:
             signing_key = key
             break

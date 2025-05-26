@@ -16,13 +16,13 @@ __all__ = (
 import contextlib
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar, cast
 
 from aiobotocore.session import get_session
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
-from joserfc.jwk import KeySet, RSAKey
+from joserfc.jwk import KeySet, KeySetSerialization, RSAKey
 from pydantic import (
     AliasChoices,
     AnyUrl,
@@ -67,7 +67,14 @@ class _TokenSigningKeyStore(SecretStr):
             raise ValueError("Invalid JSON string") from e
         if not isinstance(keys, dict):
             raise ValueError("Invalid JSON string")
-        self.jwks = KeySet.import_key_set(keys)  # type: ignore
+        if "keys" not in keys:
+            raise ValueError("Invalid JSON string, missing 'keys' field")
+        if not isinstance(keys["keys"], list):
+            raise ValueError("Invalid JSON string, 'keys' field must be a list")
+        if not keys["keys"]:
+            raise ValueError("Invalid JSON string, 'keys' field is empty")
+
+        self.jwks = KeySet.import_key_set(cast(KeySetSerialization, keys))
 
 
 def _maybe_load_keys_from_file(value: Any) -> Any:
