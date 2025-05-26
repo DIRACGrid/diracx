@@ -8,7 +8,6 @@ __all__ = [
     "TwoLevelCache",
     "batched_async",
 ]
-
 import fcntl
 import json
 import os
@@ -22,6 +21,7 @@ from pathlib import Path
 from typing import Any, AsyncIterable, TypeVar
 
 from cachetools import Cache, TTLCache
+from uuid_utils import UUID
 
 from diracx.core.exceptions import NotReadyError
 from diracx.core.models import TokenResponse
@@ -271,3 +271,11 @@ async def batched_async(
         if strict and len(batch) != n:
             raise ValueError("batched(): incomplete batch")
         yield tuple(batch)
+
+
+def extract_timestamp_from_uuid7(uuid_str: str) -> datetime:
+    u = UUID(uuid_str)
+    ts_bytes = u.bytes[0:6]  # First 48 bits = timestamp in ms
+    timestamp_ms = int.from_bytes(ts_bytes, byteorder="big")
+    # Convert into seconds then to datetime
+    return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)

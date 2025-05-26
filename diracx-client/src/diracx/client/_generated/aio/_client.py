@@ -15,7 +15,18 @@ from azure.core.rest import AsyncHttpResponse, HttpRequest
 from .. import models as _models
 from .._utils.serialization import Deserializer, Serializer
 from ._configuration import DiracConfiguration
+<<<<<<< HEAD
 from .operations import AuthOperations, ConfigOperations, JobsOperations, WellKnownOperations
+=======
+from .operations import (
+    AuthOperations,
+    ConfigOperations,
+    JobsOperations,
+    PilotOperations,
+    PilotsOperations,
+    WellKnownOperations,
+)
+>>>>>>> a9574802 (feat: Adding pilot registrations, with secret management)
 
 
 class Dirac:  # pylint: disable=client-accepts-api-version-keyword
@@ -29,6 +40,10 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype config: _generated.aio.operations.ConfigOperations
     :ivar jobs: JobsOperations operations
     :vartype jobs: _generated.aio.operations.JobsOperations
+    :ivar pilot: PilotOperations operations
+    :vartype pilot: _generated.aio.operations.PilotOperations
+    :ivar pilots: PilotsOperations operations
+    :vartype pilots: _generated.aio.operations.PilotsOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -61,10 +76,31 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
+<<<<<<< HEAD
         self.well_known = WellKnownOperations(self._client, self._config, self._serialize, self._deserialize)
         self.auth = AuthOperations(self._client, self._config, self._serialize, self._deserialize)
         self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
         self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
+=======
+        self.well_known = WellKnownOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.auth = AuthOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.config = ConfigOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.jobs = JobsOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.pilot = PilotOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+        self.pilots = PilotsOperations(
+            self._client, self._config, self._serialize, self._deserialize
+        )
+>>>>>>> a9574802 (feat: Adding pilot registrations, with secret management)
 
     def send_request(
         self, request: HttpRequest, *, stream: bool = False, **kwargs: Any
