@@ -161,7 +161,7 @@ jobs:
 
       - name: Start demo
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          git clone --branch main_FEAT_remove-loaded-images https://github.com/aldbr/diracx-charts.git ../diracx-charts
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")
