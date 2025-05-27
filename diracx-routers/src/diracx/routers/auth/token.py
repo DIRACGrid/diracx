@@ -11,7 +11,6 @@ from joserfc.errors import DecodeError, ExpiredTokenError, InvalidKeyIdError
 
 from diracx.core.exceptions import (
     DiracHttpResponseError,
-    ExpiredFlowError,
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
@@ -141,26 +140,21 @@ async def get_oidc_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             data={"error": "authorization_pending"},
         ) from e
-    except (ValueError, InvalidKeyIdError) as e:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
-    except ExpiredFlowError as e:
-        raise DiracHttpResponseError(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            data={"error": "expired_token"},
-        ) from e
-    except InvalidCredentialsError as e:
+    except (
+        InvalidCredentialsError,
+        DecodeError,
+        ExpiredTokenError,
+        InvalidKeyIdError,
+    ) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except (DecodeError, ExpiredTokenError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid JWT: {e}",
         ) from e
     except PermissionError as e:
         raise HTTPException(

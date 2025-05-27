@@ -595,7 +595,7 @@ async def test_refresh_token_expired(
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
-    assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
+    assert data["detail"] == "expired_token: The token is expired"
 
 
 async def test_access_token_expired(
@@ -724,7 +724,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     # The server should detect that it is not encoded properly
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
-    assert r.status_code == 400, data
+    assert r.status_code == 401, data
     assert "No key for kid" in data["detail"]
 
 

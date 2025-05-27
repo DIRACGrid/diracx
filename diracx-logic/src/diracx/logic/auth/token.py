@@ -15,7 +15,6 @@ from uuid_utils import UUID, uuid7
 from diracx.core.config import Config
 from diracx.core.exceptions import (
     AuthorizationError,
-    ExpiredFlowError,
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
@@ -407,7 +406,7 @@ async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
     if res["CreationTime"].replace(tzinfo=timezone.utc) < substract_date(
         seconds=max_validity
     ):
-        raise ExpiredFlowError()
+        raise InvalidCredentialsError("Device code expired")
 
     if res["Status"] == FlowStatus.READY:
         await auth_db.update_device_flow_status(device_code, FlowStatus.DONE)
