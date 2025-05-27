@@ -5,12 +5,13 @@ IFS=$'\n\t'
 
 tmp_dir=$(mktemp -d)
 echo "Using temp dir: ${tmp_dir}"
-mkdir -p "${tmp_dir}/signing-key" "${tmp_dir}/cs_store/"
-
-signing_key="${tmp_dir}/signing-key/rsa256.key"
-ssh-keygen -P "" -t rsa -b 4096 -m PEM -f "${signing_key}"
+mkdir -p "${tmp_dir}/keystore" "${tmp_dir}/cs_store/"
 
 state_key="$(head -c 32 /dev/urandom | base64)"
+
+# Make a keystore
+keystore="${tmp_dir}/keystore/jwks.json"
+python -m diracx.logic rotate-jwk --jwks-path "${keystore}"
 
 # Make a fake CS
 dirac internal generate-cs "${tmp_dir}/cs_store/initialRepo"
@@ -35,7 +36,7 @@ export DIRACX_DB_URL_TASKQUEUEDB="sqlite+aiosqlite:///${tmp_dir}/taskqueuedb.db"
 # This script monkey patches the parameter db to use a sqlite database rather
 # than requiring a full opensearch instance so we use a sqlalchmey dsn here
 export DIRACX_OS_DB_JOBPARAMETERSDB='{"sqlalchemy_dsn": "sqlite+aiosqlite:///'${tmp_dir}'/jobparametersdb.db"}'
-export DIRACX_SERVICE_AUTH_TOKEN_KEY="file://${signing_key}"
+export DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE="file://${keystore}"
 export DIRACX_SERVICE_AUTH_STATE_KEY="${state_key}"
 hostname_lower=$(hostname | tr -s '[:upper:]' '[:lower:]')
 export DIRACX_SERVICE_AUTH_TOKEN_ISSUER="http://${hostname_lower}:8000"
@@ -71,7 +72,9 @@ echo ""
 echo "1. Use the CLI:"
 echo ""
 echo "    export DIRACX_URL=http://localhost:8000"
-echo "    env DIRACX_SERVICE_AUTH_STATE_KEY='${state_key}' tests/make_token_local.py ${signing_key}"
+echo "    export DIRACX_SERVICE_AUTH_TOKEN_ISSUER=http://localhost:8000"
+echo "    export DIRACX_SERVICE_AUTH_STATE_KEY='${state_key}'"
+echo "    tests/make_token_local.py ${keystore}"
 echo ""
 echo "2. Using swagger: http://localhost:8000/api/docs"
 
@@ -79,7 +82,7 @@ function cleanup(){
   trap - SIGTERM
   kill $moto_pid
   kill $diracx_pid
-  echo "Waiting for proccesses to exit"
+  echo "Waiting for processes to exit"
   wait $moto_pid $diracx_pid
   echo "Cleaning up"
   rm -rf "${tmp_dir}"

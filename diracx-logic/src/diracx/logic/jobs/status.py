@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 from unittest.mock import MagicMock
 
-from DIRAC.Core.Utilities import TimeUtilities
 from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
 from DIRAC.Core.Utilities.ReturnValues import SErrorException, returnValueOrRaise
 from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
@@ -47,6 +46,7 @@ from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
+from diracx.db.sql.utils.functions import utcnow
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
 
@@ -110,6 +110,7 @@ async def set_job_statuses(
     failed: dict[int, Any] = {}
     deletable_killable_jobs = set()
     job_attribute_updates: dict[int, dict[str, str]] = {}
+    skipped_job_attribute_updates: set[int] = set()
     job_logging_updates: list[JobLoggingRecord] = []
     status_dicts: dict[int, dict[datetime, dict[str, str]]] = defaultdict(dict)
 
@@ -124,7 +125,7 @@ async def set_job_statuses(
 
     # search all jobs at once
     _, results = await job_db.search(
-        parameters=["Status", "StartExecTime", "EndExecTime", "JobID"],
+        parameters=["Status", "StartExecTime", "EndExecTime", "JobID", "VO"],
         search=[
             {
                 "parameter": "JobID",
@@ -165,16 +166,22 @@ async def set_job_statuses(
         #####################################################################################################
         status_dict = status_dicts[job_id]
         # This is more precise than "LastTime". time_stamps is a sorted list of tuples...
-        time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
-        last_time = TimeUtilities.fromEpoch(time_stamps[-1][0]).replace(
-            tzinfo=timezone.utc
-        )
+        # time_stamps = sorted((float(t), s) for s, t in wms_time_stamps[job_id].items())
+        first_status = min(
+            wms_time_stamps[job_id].items(), key=lambda x: x[1], default=("", 0)
+        )[0]
+        last_time = max(wms_time_stamps[job_id].values())
 
         # Get chronological order of new updates
         update_times = sorted(status_dict)
 
         new_start_time, new_end_time = getStartAndEndTime(
-            start_time, end_time, update_times, time_stamps, status_dict
+            start_time,
+            end_time,
+            update_times,
+            # Use a type ignore hint here as it exists solely to use the DIRAC API
+            defaultdict(lambda x=first_status: x),  # type: ignore[misc]
+            status_dict,
         )
 
         job_data: dict[str, str] = {}
@@ -203,14 +210,11 @@ async def set_job_statuses(
             if new_application:
                 job_data["ApplicationStatus"] = new_application
 
-            # TODO: implement elasticJobParametersDB ?
-            # if cls.elasticJobParametersDB:
-            #     result = cls.elasticJobParametersDB.setJobParameter(int(jobID), "Status", status)
-            #     if not result["OK"]:
-            #         return result
+            await job_parameters_db.upsert(res["VO"], job_id, {"Status": new_status})
 
         for upd_time in update_times:
-            if status_dict[upd_time]["Source"].startswith("Job"):
+            source = status_dict[upd_time]["Source"]
+            if source.startswith("Job") or source == "Heartbeat":
                 job_data["HeartBeatTime"] = str(upd_time)
 
         if not start_time and new_start_time:
@@ -227,6 +231,8 @@ async def set_job_statuses(
         # Update database tables
         if job_data:
             job_attribute_updates[job_id] = job_data
+        else:
+            skipped_job_attribute_updates.add(job_id)
 
         for upd_time in update_times:
             s_dict = status_dict[upd_time]
@@ -261,7 +267,7 @@ async def set_job_statuses(
     await job_logging_db.insert_records(job_logging_updates)
 
     return SetJobStatusReturn(
-        success=job_attribute_updates,
+        success=job_attribute_updates | {j: {} for j in skipped_job_attribute_updates},
         failed=failed,
     )
 
@@ -580,6 +586,13 @@ async def add_heartbeat(
                     job_parameters_db=job_parameters_db,
                 )
             )
+
+        if other_ids := set(data) - set(status_changes):
+            # If there are no status changes, we still need to update the heartbeat time
+            heartbeat_updates = {
+                job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
+            }
+            tg.create_task(job_db.set_job_attributes(heartbeat_updates))
 
         os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
         for job_id, job_data in data.items():

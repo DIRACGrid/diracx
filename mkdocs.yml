@@ -1,0 +1,144 @@
+extra_css:
+  - assets/css/extra.css
+
+site_name: DiracX
+repo_url: https://github.com/DIRACGrid/diracx
+site_url: https://diracx.io/
+site_description: >-
+  Write your documentation in Markdown and create a professional static site in
+  minutes – searchable, customizable, in 60+ languages, for all devices
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/theme-light-dark
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
+  font:
+    text: Roboto
+    code: Roboto Mono
+  logo: assets/images/logo.svg
+  icon:
+    logo: logo
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - header.autohide
+    - navigation.tabs
+    - navigation.tabs.sticky
+
+nav:
+  - Home: index.md
+
+  - Security Policy: SECURITY.md
+
+  - Roadmap: roadmap.md
+
+  - Users:
+    - Reference:
+      - Client Config: user/reference/client-configuration.md
+
+  - Administrators:
+    - Explanations:
+      - Configuration: admin/explanations/configuration.md
+      - OpenTelemetry: admin/explanations/opentelemetry.md
+      - Chart structure: admin/explanations/chart-structure.md
+
+    - How-To:
+      - Convert CS: admin/how-to/convert-cs.md
+      - Register a VO: admin/how-to/register-a-vo.md
+      - Register the admin VO: admin/how-to/register-the-admin-vo.md
+      - Debugging: admin/how-to/debugging.md
+      - Install kubernetes: admin/how-to/install-kubernetes.md
+      - Installing: admin/how-to/installing.md
+      - Upgrading: admin/how-to/upgrading.md
+
+    - Reference:
+      - Security Model: admin/reference/security_model.md
+      - Charts values: admin/reference/values.md
+
+    - Tutorials:
+      - Run locally: admin/tutorials/run_locally.md
+
+  - Developers:
+    - Explanations:
+      - Components:
+        - Introduction: dev/explanations/components/index.md
+        - API: dev/explanations/components/api.md
+        - CLI: dev/explanations/components/cli.md
+        - DataBases: dev/explanations/components/db.md
+        - Routes: dev/explanations/components/routes.md
+
+      - Client: dev/explanations/client.md
+      - Testing: dev/explanations/testing.md
+      - Run demo: dev/explanations/run_demo.md
+
+    - How-To:
+      - Add a DB: dev/how-to/add-a-db.md
+      - Add a router: dev/how-to/add-a-route.md
+      - Add settings: dev/how-to/add-a-setting.md
+      - Client customization: dev/how-to/client-customization.md
+      - Client generation: dev/how-to/client-generation.md
+      - Write docs: dev/how-to/write-docs.md
+
+    - Reference:
+      - Coding conventions: dev/reference/coding-conventions.md
+      - Configuration: dev/reference/configuration.md
+      - Dependency injection: dev/reference/dependency-injection.md
+
+    - Tutorials:
+      - Getting started: dev/tutorials/getting-started.md
+      - Play with auth: dev/tutorials/play-with-auth.md
+      - Run locally: dev/tutorials/run-locally.md
+
+  - Project:
+    - Introduction: project/index.md
+    - Consortium: project/consortium.md
+
+markdown_extensions:
+  - admonition
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - tables
+
+plugins:
+  - diracx:
+      repos:
+        - url: https://github.com/DIRACGrid/diracx-charts.git
+          branch: master
+          include:
+            - docs
+            - diracx
+        - url: https://github.com/chaen/diracx-web.git
+          branch: mkdoc
+          include:
+            - docs
+  - search

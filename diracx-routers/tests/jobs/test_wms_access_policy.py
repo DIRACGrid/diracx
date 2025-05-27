@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 from fastapi import HTTPException, status
+from uuid_utils import uuid7
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers.jobs.access_policies import (
@@ -18,7 +17,7 @@ base_payload = {
     "preferred_username": "preferred_username",
     "dirac_group": "test_group",
     "vo": "lhcb",
-    "token_id": str(uuid4()),
+    "token_id": str(uuid7()),
     "bearer_token": "my_secret_token",
 }
 

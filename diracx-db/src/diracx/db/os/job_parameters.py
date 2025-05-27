@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from DIRAC.Core.Utilities import TimeUtilities
+from datetime import UTC, datetime
 
 from diracx.db.os.utils import BaseOSDB
 
@@ -25,12 +25,13 @@ class JobParametersDB(BaseOSDB):
 
     def index_name(self, vo, doc_id: int) -> str:
         split = int(int(doc_id) // 1e6)
-        return f"{self.index_prefix}_{vo}_{split}m"
+        # The index name must be lowercase or opensearchpy will throw.
+        return f"{self.index_prefix}_{vo.lower()}_{split}m"
 
     def upsert(self, vo, doc_id, document):
         document = {
             "JobID": doc_id,
-            "timestamp": TimeUtilities.toEpochMilliSeconds(),
+            "timestamp": int(datetime.now(tz=UTC).timestamp() * 1000),
             **document,
         }
         return super().upsert(vo, doc_id, document)

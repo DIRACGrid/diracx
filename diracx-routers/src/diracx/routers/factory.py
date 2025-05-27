@@ -19,7 +19,7 @@ from typing import (
 import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.models import Dependant  # codespell:ignore dependant
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,7 +31,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponseError
+from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
 from diracx.core.extensions import select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
@@ -110,7 +110,7 @@ def create_app_inner(
 ) -> DiracFastAPI:
     """This method does the heavy lifting work of putting all the pieces together.
 
-    When starting the application normaly, this method is called by create_app,
+    When starting the application normally, this method is called by create_app,
     and the values of the parameters are taken from environment variables or
     entrypoints.
 
@@ -155,7 +155,10 @@ def create_app_inner(
         app.dependency_overrides[cls.create] = partial(lambda x: x, service_settings)
 
     # Override the ConfigSource.create by the actual reading of the config
-    app.dependency_overrides[ConfigSource.create] = config_source.read_config
+    # Mark it as non-blocking so we can serve 503 errors while waiting for the config
+    app.dependency_overrides[ConfigSource.create] = (
+        config_source.read_config_non_blocking
+    )
 
     all_access_policies_used = {}
 
@@ -170,7 +173,7 @@ def create_app_inner(
         # This means vanilla DiracX routers get an instance of the extension's AccessPolicy
         for access_policy_class in access_policy_classes:
             # Here we do not check that access_policy_class.check is
-            # not already in the dependency_overrides becaue the same
+            # not already in the dependency_overrides because the same
             # policy could be used for multiple purpose
             # (e.g. open access)
             # assert access_policy_class.check not in app.dependency_overrides
@@ -299,6 +302,9 @@ def create_app_inner(
     app.add_exception_handler(
         RequestValidationError, cast(handler_signature, validation_error_handler)
     )
+    app.add_exception_handler(
+        NotReadyError, cast(handler_signature, route_unavailable_error_hander)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -315,6 +321,7 @@ def create_app_inner(
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Range"],
     )
 
     configure_logger()
@@ -405,7 +412,7 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
-        content={"detail": str(exc.args)},
+        content={"detail": str(exc)},
     )
 
 
@@ -430,14 +437,16 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 def find_dependents(
-    obj: APIRouter | Iterable[Dependant], cls: type[T]
+    obj: APIRouter | Iterable[Dependant], cls: type[T]  # codespell:ignore dependant
 ) -> Iterable[type[T]]:
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
         for route in obj.routes:
             if isinstance(route, APIRoute):
-                yield from find_dependents(route.dependant.dependencies, cls)
+                yield from find_dependents(
+                    route.dependant.dependencies, cls  # codespell:ignore dependant
+                )
         return
 
     for dependency in obj:
@@ -452,7 +461,7 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
     """Cache the result of pinging the DB
-    (exceptions are not cachable).
+    (exceptions are not cacheable).
     """
     if db not in _db_alive_cache:
         try:

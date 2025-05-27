@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from diracx.core.properties import SecurityProperty
 from diracx.core.s3 import s3_bucket_exists
 
@@ -14,14 +16,15 @@ __all__ = (
 import contextlib
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar, cast
 
 from aiobotocore.session import get_session
-from authlib.jose import JsonWebKey
 from botocore.config import Config
 from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
+from joserfc.jwk import KeySet, KeySetSerialization, RSAKey
 from pydantic import (
+    AliasChoices,
     AnyUrl,
     BeforeValidator,
     Field,
@@ -52,28 +55,59 @@ class SqlalchemyDsn(AnyUrl):
     )
 
 
-class _TokenSigningKey(SecretStr):
-    jwk: JsonWebKey
+class _TokenSigningKeyStore(SecretStr):
+    jwks: KeySet
 
     def __init__(self, data: str):
         super().__init__(data)
-        self.jwk = JsonWebKey.import_key(self.get_secret_value())
+
+        # Load the keys from the JSON string
+        try:
+            keys = json.loads(self.get_secret_value())
+        except json.JSONDecodeError as e:
+            raise ValueError("Invalid JSON string") from e
+        if not isinstance(keys, dict):
+            raise ValueError("Invalid JSON string")
+        if "keys" not in keys:
+            raise ValueError("Invalid JSON string, missing 'keys' field")
+        if not isinstance(keys["keys"], list):
+            raise ValueError("Invalid JSON string, 'keys' field must be a list")
+        if not keys["keys"]:
+            raise ValueError("Invalid JSON string, 'keys' field is empty")
+
+        self.jwks = KeySet.import_key_set(cast(KeySetSerialization, keys))
 
 
-def _maybe_load_key_from_file(value: Any) -> Any:
-    """Load private keys from files if needed."""
-    if isinstance(value, str) and not value.strip().startswith("-----BEGIN"):
-        url = TypeAdapter(LocalFileUrl).validate_python(value)
-        if not url.scheme == "file":
-            raise ValueError("Only file:// URLs are supported")
-        if url.path is None:
-            raise ValueError("No path specified")
-        value = Path(url.path).read_text()
+def _maybe_load_keys_from_file(value: Any) -> Any:
+    """Load jwks from files if needed."""
+    if isinstance(value, str):
+        # If the value is a string, we need to check if it is a JSON string or a file URL
+        if not (value.strip().startswith("{") or value.startswith("[")):
+            # If it is not a JSON string, we assume it is a file URL
+            url = TypeAdapter(LocalFileUrl).validate_python(value)
+            if not url.scheme == "file":
+                raise ValueError("Only file:// URLs are supported")
+            if url.path is None:
+                raise ValueError("No path specified")
+            value = Path(url.path).read_text()
+
+    if isinstance(value, str) and value.strip().startswith("-----BEGIN"):
+        return json.dumps(
+            KeySet(
+                keys=[
+                    RSAKey.import_key(
+                        value,  # type: ignore
+                        parameters={"key_ops": ["sign", "verify"], "alg": "RS256"},  # type: ignore
+                    )
+                ]
+            ).as_dict(private=True)
+        )
     return value
 
 
-TokenSigningKey = Annotated[
-    _TokenSigningKey, BeforeValidator(_maybe_load_key_from_file)
+TokenSigningKeyStore = Annotated[
+    _TokenSigningKeyStore,
+    BeforeValidator(_maybe_load_keys_from_file),
 ]
 
 
@@ -125,7 +159,9 @@ class DevelopmentSettings(ServiceSettingsBase):
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
 
-    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_SERVICE_AUTH_", validate_by_name=True
+    )
 
     dirac_client_id: str = "myDIRACClientID"
     # TODO: This should be taken dynamically
@@ -138,8 +174,14 @@ class AuthSettings(ServiceSettingsBase):
     state_key: FernetKey
 
     token_issuer: str
-    token_key: TokenSigningKey
-    token_algorithm: str = "RS256"  # noqa: S105
+    token_keystore: TokenSigningKeyStore = Field(
+        validation_alias=AliasChoices(
+            "token_keystore",
+            "DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE",
+            "DIRACX_SERVICE_AUTH_TOKEN_KEY",
+        )
+    )
+    token_allowed_algorithms: list[str] = ["RS256", "EdDSA"]  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
 

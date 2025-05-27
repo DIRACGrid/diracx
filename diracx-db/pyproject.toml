@@ -18,13 +18,12 @@ dependencies = [
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "asyncpg",
+    "uuid-utils",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = [
-    "diracx-testing",
-]
+testing = ["diracx-testing", "freezegun"]
 
 [project.entry-points."diracx.dbs.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
@@ -37,16 +36,18 @@ TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 [project.entry-points."diracx.dbs.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
 root = ".."
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/diracx"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

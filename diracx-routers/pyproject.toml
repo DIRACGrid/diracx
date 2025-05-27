@@ -13,7 +13,6 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "authlib",
     "cachetools",
     "diracx-core",
     "diracx-logic",
@@ -22,6 +21,7 @@ dependencies = [
     "python-multipart",
     "fastapi",
     "httpx",
+    "joserfc",
     "pydantic >=2.10",
     "uvicorn",
     "opentelemetry-api",
@@ -41,10 +41,11 @@ types = [
 ]
 
 [project.entry-points."diracx.services"]
-jobs = "diracx.routers.jobs:router"
-config = "diracx.routers.configuration:router"
-auth = "diracx.routers.auth:router"
 ".well-known" = "diracx.routers.auth.well_known:router"
+auth = "diracx.routers.auth:router"
+config = "diracx.routers.configuration:router"
+health = "diracx.routers.health:router"
+jobs = "diracx.routers.jobs:router"
 
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
@@ -54,15 +55,18 @@ SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 [project.entry-points."diracx.min_client_version"]
 diracx = "diracx.routers:DIRACX_MIN_CLIENT_VERSION"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
 root = ".."
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/diracx"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

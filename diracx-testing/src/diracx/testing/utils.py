@@ -6,6 +6,7 @@ from __future__ import annotations
 # are the enabled_dependencies markers
 import asyncio
 import contextlib
+import json
 import os
 import re
 import ssl
@@ -16,10 +17,11 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 from urllib.parse import parse_qs, urljoin, urlparse
-from uuid import uuid4
 
 import httpx
 import pytest
+from joserfc.jwk import KeySet, OKPKey
+from uuid_utils import uuid7
 
 from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
 
@@ -43,8 +45,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 def pytest_addoption(parser):
     parser.addoption(
         "--regenerate-client",
-        action="store_true",
-        default=False,
         help="Regenerate the AutoREST client",
     )
     parser.addoption(
@@ -55,28 +55,15 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_collection_modifyitems(config, items):
-    """Disable the test_regenerate_client if not explicitly asked for."""
-    if config.getoption("--regenerate-client"):
-        # --regenerate-client given in cli: allow client re-generation
-        return
-    skip_regen = pytest.mark.skip(reason="need --regenerate-client option to run")
-    for item in items:
-        if item.name == "test_regenerate_client":
-            item.add_marker(skip_regen)
-
-
 @pytest.fixture(scope="session")
-def private_key_pem() -> str:
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-    private_key = Ed25519PrivateKey.generate()
-    return private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+def private_key() -> OKPKey:
+    return OKPKey.generate_key(
+        parameters={
+            "key_ops": ["sign", "verify"],
+            "alg": "EdDSA",
+            "kid": uuid7().hex,
+        }
+    )
 
 
 @pytest.fixture(scope="session")
@@ -94,15 +81,12 @@ def test_dev_settings() -> Generator[DevelopmentSettings, None, None]:
 
 
 @pytest.fixture(scope="session")
-def test_auth_settings(
-    private_key_pem, fernet_key
-) -> Generator[AuthSettings, None, None]:
+def test_auth_settings(private_key, fernet_key) -> Generator[AuthSettings, None, None]:
     from diracx.core.settings import AuthSettings
 
     yield AuthSettings(
         token_issuer=ISSUER,
-        token_algorithm="EdDSA",
-        token_key=private_key_pem,
+        token_keystore=json.dumps(KeySet([private_key]).as_dict(private_keys=True)),
         state_key=fernet_key,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
@@ -184,7 +168,8 @@ class ClientFactory:
 
             @staticmethod
             def enrich_tokens(
-                access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload
+                access_payload: AccessTokenPayload,
+                refresh_payload: RefreshTokenPayload | None,
             ):
 
                 return {"PolicySpecific": "OpenAccessForTest"}, {}
@@ -218,6 +203,12 @@ class ClientFactory:
             for e in select_from_extension(group="diracx.access_policies")
         }
 
+        config_source = ConfigSource.create_from_url(
+            backend_url=f"git+file://{with_config_repo}"
+        )
+        # Warm the cache to avoid 503 errors
+        config_source.read_config()
+
         self.app = create_app_inner(
             enabled_systems=enabled_systems,
             all_service_settings=[
@@ -227,9 +218,7 @@ class ClientFactory:
             ],
             database_urls=database_urls,
             os_database_conn_kwargs=os_database_conn_kwargs,
-            config_source=ConfigSource.create_from_url(
-                backend_url=f"git+file://{with_config_repo}"
-            ),
+            config_source=config_source,
             all_access_policies=all_access_policies,
         )
 
@@ -366,7 +355,7 @@ class ClientFactory:
                 + timedelta(self.test_auth_settings.access_token_expire_minutes),
                 "iss": ISSUER,
                 "dirac_properties": [NORMAL_USER],
-                "jti": str(uuid4()),
+                "jti": str(uuid7()),
                 "preferred_username": "preferred_username",
                 "dirac_group": "test_group",
                 "vo": "lhcb",
@@ -387,7 +376,7 @@ class ClientFactory:
                 "sub": "testingVO:yellow-sub",
                 "iss": ISSUER,
                 "dirac_properties": [JOB_ADMINISTRATOR],
-                "jti": str(uuid4()),
+                "jti": str(uuid7()),
                 "preferred_username": "preferred_username",
                 "dirac_group": "test_group",
                 "vo": "lhcb",

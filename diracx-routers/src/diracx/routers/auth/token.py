@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated, Literal
 
-from authlib.jose import JoseError
 from fastapi import Depends, Form, Header, HTTPException, status
+from joserfc.errors import DecodeError, ExpiredTokenError, InvalidKeyIdError
 
 from diracx.core.exceptions import (
     DiracHttpResponseError,
-    ExpiredFlowError,
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
@@ -31,15 +31,23 @@ from ..dependencies import AuthDB, AuthSettings, AvailableSecurityProperties, Co
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)
+logger = logging.getLogger(__name__)
 
 
 async def mint_token(
     access_payload: AccessTokenPayload,
-    refresh_payload: RefreshTokenPayload,
+    refresh_payload: RefreshTokenPayload | None,
+    existing_refresh_token: str | None,
     all_access_policies: dict[str, BaseAccessPolicy],
     settings: AuthSettings,
 ) -> TokenResponse:
     """Enrich the token with policy specific content and mint it."""
+    if not refresh_payload and not existing_refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Refresh token is not set and no refresh token was provided",
+        )
+
     # Enrich the token with policy specific content
     dirac_access_policies = {}
     dirac_refresh_policies = {}
@@ -53,12 +61,16 @@ async def mint_token(
         if refresh_extra:
             dirac_refresh_policies[policy_name] = refresh_extra
 
+    # Create the access token
     access_payload["dirac_policies"] = dirac_access_policies
-    refresh_payload["dirac_policies"] = dirac_refresh_policies
-
-    # Generate the token: encode the payloads
     access_token = create_token(access_payload, settings)
-    refresh_token = create_token(refresh_payload, settings)
+
+    # Create the refresh token
+    if refresh_payload:
+        refresh_payload["dirac_policies"] = dirac_refresh_policies
+        refresh_token = create_token(refresh_payload, settings)
+    elif existing_refresh_token:
+        refresh_token = existing_refresh_token
 
     return TokenResponse(
         access_token=access_token,
@@ -133,21 +145,16 @@ async def get_oidc_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
-    except ExpiredFlowError as e:
-        raise DiracHttpResponseError(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            data={"error": "expired_token"},
-        ) from e
-    except InvalidCredentialsError as e:
+    except (
+        InvalidCredentialsError,
+        DecodeError,
+        ExpiredTokenError,
+        InvalidKeyIdError,
+    ) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except JoseError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid JWT: {e}",
         ) from e
     except PermissionError as e:
         raise HTTPException(
@@ -155,7 +162,7 @@ async def get_oidc_token(
             detail=str(e),
         ) from e
     return await mint_token(
-        access_payload, refresh_payload, all_access_policies, settings
+        access_payload, refresh_payload, refresh_token, all_access_policies, settings
     )
 
 
@@ -237,5 +244,5 @@ async def perform_legacy_exchange(
             detail=str(e),
         ) from e
     return await mint_token(
-        access_payload, refresh_payload, all_access_policies, settings
+        access_payload, refresh_payload, None, all_access_policies, settings
     )

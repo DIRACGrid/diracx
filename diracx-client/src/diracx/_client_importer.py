@@ -241,12 +241,12 @@ class DiracXPatchLoader(DiracXAliasLoader):
     def exec_module(self, module):
         """Import an autorest generated module with two layers of patches."""
         # Import the real module and set its __name__ to the alias. This will
-        # then corrospond to the __init__.py file + the _patch.py file from
+        # then correspond to the __init__.py file + the _patch.py file from
         # plain DiracX. When calling self.original_loader.exec_module it will:
         # 1. Import the real module (e.g. aio/__init__.py)
         # 2. Import any submodules (e.g. _operations)
         # 3. Import the patch module from plain DiracX (e.g. _patch.py,
-        #    overriden by the DiracXPathFinder)
+        #    overridden by the DiracXPathFinder)
         # 4. Replace the submodules module's objects with anything in ._patch.__all__
         super().exec_module(module)
 

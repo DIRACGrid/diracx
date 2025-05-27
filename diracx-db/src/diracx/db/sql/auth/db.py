@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import secrets
-from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import (
     AuthorizationError,
@@ -126,7 +126,7 @@ class AuthDB(BaseSQLDB):
         code_challenge_method: str,
         redirect_uri: str,
     ) -> str:
-        uuid = str(uuid4())
+        uuid = str(uuid7())
 
         stmt = insert(AuthorizationFlows).values(
             uuid=uuid,
@@ -199,7 +199,6 @@ class AuthDB(BaseSQLDB):
         self,
         jti: UUID,
         subject: str,
-        preferred_username: str,
         scope: str,
     ) -> None:
         """Insert a refresh token in the DB as well as user attributes
@@ -209,7 +208,6 @@ class AuthDB(BaseSQLDB):
         stmt = insert(RefreshTokens).values(
             jti=str(jti),
             sub=subject,
-            preferred_username=preferred_username,
             scope=scope,
         )
         await self.conn.execute(stmt)

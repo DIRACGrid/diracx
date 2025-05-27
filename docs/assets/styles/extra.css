@@ -1,0 +1,13 @@
+/* Light Mode */
+[data-md-color-scheme="default"] {
+    --my-primary-color: #85d633;
+
+    --md-primary-fg-color: var(--my-primary-color);
+}
+
+/* Dark Mode */
+[data-md-color-scheme="slate"] {
+    --my-primary-color: #1f330a;
+
+    --md-primary-fg-color: var(--my-primary-color);
+}

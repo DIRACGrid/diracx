@@ -1,0 +1,146 @@
+<!DOCTYPE HTML>
+<!--
+	Landed by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>DiracX – The Next-Generation Distributed Computing Platform</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="css/main.css" />
+		<link rel="icon" type="image/svg+xml" href="images/diracx-logo-square.svg" />
+	</head>
+	<body class="landing">
+		<div id="page-wrapper">
+
+			<!-- Banner -->
+				<section id="banner" style="position:relative;overflow:hidden;">
+					<video autoplay muted loop playsinline playload="auto" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;min-height:100%;min-width:100%;">
+						<source src="https://diracx-docs-static.s3.cern.ch/assets/video/bg-720p-2pass.webm" type="video/webm" />
+						Your browser does not support the video tag.
+					</video>
+					<div class="content" style="position:relative;z-index:1;">
+						<header>
+							<h2>DiracX</h2>
+							<p>The next-generation distributed computing platform<br />
+							for scalable, secure, and user-friendly scientific workflows.</p>
+						</header>
+						<span class="image"><img src="images/diracx-logo-square.svg" alt="DiracX Logo" style="background:#fff;padding:1em;border-radius:1em;" /></span>
+					</div>
+					<a href="#about" class="goto-next scrolly">Learn More</a>
+				</section>
+
+			<!-- About / Overview -->
+				<section id="about" class="spotlight style1 bottom">
+					<span class="image fit main"><img src="images/pic02.jpg" alt="" /></span>
+					<div class="content">
+						<div class="container">
+							<div class="row">
+								<div class="col-12">
+									<header>
+										<h2>What is DiracX?</h2>
+									</header>
+									<p><strong>DiracX</strong> is the modern successor to the battle-tested <strong>DIRAC</strong> distributed computing framework, originally developed by LHCb at CERN for large-scale scientific workloads. DiracX reimagines distributed infrastructure with a microservices architecture, token-based authentication, and a focus on usability, extensibility, and easy deployment.</p>
+									<ul>
+										<li><strong>Modern Identity:</strong> OAuth2-style tokens replace legacy X.509 certificates for seamless, secure access.</li>
+										<li><strong>Microservices:</strong> Modular Python packages (API, core, CLI, logic, routers, etc.) for workflow and data management.</li>
+										<li><strong>FastAPI & Celery:</strong> RESTful APIs and robust background task management.</li>
+										<li><strong>Easy Deployment:</strong> Turn-key with Helm charts for Kubernetes and first-class multi-VO support.</li>
+										<li><strong>Migration Ready:</strong> Dual-stack operation and legacy adapters for smooth transition from DIRAC.</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>
+					<a href="#getstarted" class="goto-next scrolly">Next</a>
+				</section>
+
+			<!-- Four -->
+			<section id="getstarted" class="wrapper style1 special fade-up">
+				<div class="container">
+					<header class="major">
+						<h2>Get started</h2>
+						<p>What are you looking for?</p>
+					</header>
+					<div class="box alt">
+						<div class="row gtr-uniform">
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-chart-area"></span>
+								<h3>User documentation</h3>
+								<p>Find out out to submit jobs, access data and generally use a DiracX installation!</p>
+							</section>
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-comment"></span>
+								<h3>Administrator documentation</h3>
+								<p>Find out how to install and manage a DiracX installation.</p>
+							</section>
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-paper-plane"></span>
+								<h3>Developer</h3>
+								<p>Help make DiracX even better!</p>
+							</section>
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-flask"></span>
+								<h3>How does this work?</h3>
+								<p>Find out .</p>
+							</section>
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-file"></span>
+								<h3>Develop DiracX itself</h3>
+								<p>Feugiat accumsan lorem eu ac lorem amet accumsan donec. Blandit orci porttitor.</p>
+							</section>
+							<section class="col-4 col-6-medium col-12-xsmall">
+								<span class="icon solid alt major fa-lock"></span>
+								<h3>Develop DiracX web</h3>
+								<p>Feugiat accumsan lorem eu ac lorem amet accumsan donec. Blandit orci porttitor.</p>
+							</section>
+						</div>
+					</div>
+				</div>
+			</section>
+
+
+			<!-- Comparison -->
+				<section id="comparison" class="spotlight style2 right" style="min-height: 100vh; height: auto;">
+					<span class="image fit"><img src="https://cds.cern.ch/record/1489958/files/1209226_01.jpg?subformat=icon-1440" alt="" /></span>
+					<div class="content" style="overflow: auto;">
+						<header>
+							<h2>DIRAC vs DiracX</h2>
+						</header>
+						<div style="overflow-x:auto;">
+							<table>
+								<thead>
+									<tr><th>Feature</th><th>DIRAC</th><th>DiracX</th></tr>
+								</thead>
+								<tbody>
+									<tr><td>Authentication</td><td>X.509 Certificates</td><td>OAuth2 Tokens</td></tr>
+									<tr><td>Architecture</td><td>Monolithic, Service-Oriented</td><td>Microservices, Modular</td></tr>
+									<tr><td>APIs</td><td>XML-RPC</td><td>REST (FastAPI)</td></tr>
+									<tr><td>Task Management</td><td>Python Agents</td><td>Celery Workers</td></tr>
+									<tr><td>Deployment</td><td>Manual, Complex</td><td>Helm Charts, Kubernetes</td></tr>
+									<tr><td>Multi-VO Support</td><td>Limited</td><td>First-Class</td></tr>
+									<tr><td>Migration</td><td>Legacy Only</td><td>Dual-Stack, Adapters</td></tr>
+								</tbody>
+							</table>
+						</div>
+						<p><strong>DiracX</strong> is designed for the future of distributed scientific computing—secure, scalable, and easy to use.</p>
+					</div>
+					<a href="#footer" class="goto-next scrolly">Get Started</a>
+				</section>
+
+			<!-- Footer -->
+				<footer id="footer" style="padding: 1.5em;">
+					<ul class="icons">
+						<li><a href="https://github.com/DIRACGrid" class="icon brands alt fa-github" target="_blank" rel="noopener noreferrer"><span class="label">GitHub</span></a></li>
+					</ul>
+					<ul class="copyright">
+						<li>&copy; DiracX</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+					</ul>
+				</footer>
+
+		</div>
+
+	</body>
+</html>

@@ -96,7 +96,7 @@ def _apply_fixes(raw):
     raw["DIRAC"].pop("Framework", None)
     raw["DIRAC"].pop("Security", None)
 
-    # This is VOMS specific and no longer reqired
+    # This is VOMS specific and no longer required
     raw["DIRAC"].pop("ConnConf", None)
 
     # Setups are no longer supported

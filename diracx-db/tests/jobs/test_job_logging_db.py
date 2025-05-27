@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -18,11 +18,11 @@ async def job_logging_db():
 
 
 async def test_insert_records(job_logging_db: JobLoggingDB):
-    async with job_logging_db as job_logging_db:
-        # Arrange
-        date = datetime.now(timezone.utc)
+    date_1 = datetime.now(timezone.utc) - timedelta(minutes=1)
+    date_2 = datetime.now(timezone.utc) - timedelta(seconds=1)
+    date_3 = datetime.now(timezone.utc)
 
-        # Act
+    async with job_logging_db as job_logging_db:
         records = []
         for i in range(50):
             records.append(
@@ -31,7 +31,7 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
                     status=JobStatus.RECEIVED,
                     minor_status="received_minor_status",
                     application_status="application_status",
-                    date=date,
+                    date=date_1,
                     source="pytest",
                 )
             )
@@ -41,7 +41,7 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
                     status=JobStatus.SUBMITTING,
                     minor_status="submitted_minor_status",
                     application_status="application_status",
-                    date=date,
+                    date=date_2,
                     source="pytest",
                 )
             )
@@ -51,13 +51,13 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
                     status=JobStatus.RUNNING,
                     minor_status="running_minor_status",
                     application_status="application_status",
-                    date=date,
+                    date=date_3,
                     source="pytest",
                 )
             )
         await job_logging_db.insert_records(records)
 
-        # Assert
+    async with job_logging_db as job_logging_db:
         res = await job_logging_db.get_records([i for i in range(50)])
 
         assert len(res) == 50
@@ -65,26 +65,32 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
         assert res[0][0].Status == JobStatus.RECEIVED.value
         assert res[0][0].MinorStatus == "received_minor_status"
         assert res[0][0].ApplicationStatus == "application_status"
-        assert res[0][0].StatusTime == date
+        assert res[0][0].StatusTime == date_1
         assert res[0][0].Source == "pytest"
 
         # Check the first job - second record
         assert res[0][1].Status == JobStatus.SUBMITTING.value
         assert res[0][1].MinorStatus == "submitted_minor_status"
         assert res[0][1].ApplicationStatus == "application_status"
-        assert res[0][1].StatusTime == date
+        assert res[0][1].StatusTime == date_2
         assert res[0][1].Source == "pytest"
 
         # Check the first job - third record
         assert res[0][2].Status == JobStatus.RUNNING.value
         assert res[0][2].MinorStatus == "running_minor_status"
         assert res[0][2].ApplicationStatus == "application_status"
-        assert res[0][2].StatusTime == date
+        assert res[0][2].StatusTime == date_3
         assert res[0][2].Source == "pytest"
 
         # Check the last job - third record
         assert res[49][2].Status == JobStatus.RUNNING.value
         assert res[49][2].MinorStatus == "running_minor_status"
         assert res[49][2].ApplicationStatus == "application_status"
-        assert res[49][2].StatusTime == date
+        assert res[49][2].StatusTime == date_3
         assert res[49][2].Source == "pytest"
+
+    async with job_logging_db as job_logging_db:
+        res = await job_logging_db.get_wms_time_stamps([1])
+        assert abs(res[1]["Received"] - date_1) < timedelta(microseconds=1000)
+        assert abs(res[1]["Submitting"] - date_2) < timedelta(microseconds=1000)
+        assert abs(res[1]["Running"] - date_3) < timedelta(microseconds=1000)

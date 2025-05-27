@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from uuid import UUID, uuid4
-
 import pytest
+from uuid_utils import UUID, uuid7
 
 from diracx.db.sql.auth.db import AuthDB
 from diracx.db.sql.auth.schema import RefreshTokenStatus
@@ -20,22 +19,20 @@ async def auth_db(tmp_path):
 async def test_insert(auth_db: AuthDB):
     """Insert two refresh tokens in the DB and check that they don't share the same JWT ID."""
     # Insert a first refresh token
-    jti1 = uuid4()
+    jti1 = uuid7()
     async with auth_db as auth_db:
         await auth_db.insert_refresh_token(
             jti1,
             "subject",
-            "username",
             "vo:lhcb property:NormalUser",
         )
 
     # Insert a second refresh token
-    jti2 = uuid4()
+    jti2 = uuid7()
     async with auth_db as auth_db:
         await auth_db.insert_refresh_token(
             jti2,
             "subject",
-            "username",
             "vo:lhcb property:NormalUser",
         )
 
@@ -48,17 +45,15 @@ async def test_get(auth_db: AuthDB):
     # Refresh token details we want to insert
     refresh_token_details = {
         "sub": "12345",
-        "preferred_username": "John Doe",
         "scope": "vo:lhcb property:NormalUser",
     }
 
     # Insert refresh token details
-    jti = uuid4()
+    jti = uuid7()
     async with auth_db as auth_db:
         await auth_db.insert_refresh_token(
             jti,
             refresh_token_details["sub"],
-            refresh_token_details["preferred_username"],
             refresh_token_details["scope"],
         )
         creation_time = (await auth_db.get_refresh_token(jti))["CreationTime"]
@@ -66,7 +61,6 @@ async def test_get(auth_db: AuthDB):
     # Enrich the dict with the generated refresh token attributes
     expected_refresh_token = {
         "Sub": refresh_token_details["sub"],
-        "PreferredUsername": refresh_token_details["preferred_username"],
         "Scope": refresh_token_details["scope"],
         "JTI": jti,
         "Status": RefreshTokenStatus.CREATED,
@@ -78,7 +72,7 @@ async def test_get(auth_db: AuthDB):
         result = await auth_db.get_refresh_token(jti)
 
     # Make sure they are identical
-    result["JTI"] = UUID(result["JTI"], version=4)
+    result["JTI"] = UUID(result["JTI"])
     assert result == expected_refresh_token
 
 
@@ -97,9 +91,8 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid4(),
+                uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 
@@ -123,11 +116,10 @@ async def test_revoke(auth_db: AuthDB):
     """Insert a refresh token in the DB, revoke it, and make sure it appears as REVOKED in the db."""
     # Insert a refresh token details
     async with auth_db as auth_db:
-        jti = uuid4()
+        jti = uuid7()
         await auth_db.insert_refresh_token(
             jti,
             "subject",
-            "username",
             "scope",
         )
 
@@ -155,9 +147,8 @@ async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid4(),
+                uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 
@@ -198,11 +189,10 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
     jtis = []
     async with auth_db as auth_db:
         for _ in range(nb_tokens):
-            jti = uuid4()
+            jti = uuid7()
             await auth_db.insert_refresh_token(
                 jti,
                 sub,
-                "username",
                 "scope",
             )
             jtis.append(jti)
@@ -248,9 +238,8 @@ async def test_get_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid4(),
+                uuid7(),
                 sub,
-                "username",
                 "scope",
             )
 

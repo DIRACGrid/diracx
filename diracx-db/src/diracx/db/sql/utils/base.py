@@ -52,7 +52,7 @@ class BaseSQLDB(metaclass=ABCMeta):
     of the same database. To list the available implementations use
     `BaseSQLDB.available_implementations(db_name)`. The first entry in this list
     will be the preferred implementation and it can be initialized by calling
-    it's `__init__` function with a URL perviously obtained from
+    it's `__init__` function with a URL previously obtained from
     `BaseSQLDB.available_urls`.
 
     To control the lifetime of the SQLAlchemy engine used for connecting to the

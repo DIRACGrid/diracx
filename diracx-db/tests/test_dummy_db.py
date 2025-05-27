@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from uuid import uuid4
 
 import pytest
+from uuid_utils import uuid7
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.sql.dummy.db import DummyDB
@@ -38,7 +38,7 @@ async def test_insert_and_summary(dummy_db: DummyDB):
 
         # Add cars, belonging to the same guy
         result = await asyncio.gather(
-            *(dummy_db.insert_car(uuid4(), f"model_{i}", owner_id) for i in range(10))
+            *(dummy_db.insert_car(uuid7(), f"model_{i}", owner_id) for i in range(10))
         )
         assert result
 
@@ -100,7 +100,7 @@ async def test_successful_transaction(dummy_db):
         owner_id = await dummy_db.insert_owner(name="Magnum")
         assert owner_id
         result = await asyncio.gather(
-            *(dummy_db.insert_car(uuid4(), f"model_{i}", owner_id) for i in range(10))
+            *(dummy_db.insert_car(uuid7(), f"model_{i}", owner_id) for i in range(10))
         )
         assert result
 
@@ -142,7 +142,7 @@ async def test_failed_transaction(dummy_db):
             assert owner_id
             result = await asyncio.gather(
                 *(
-                    dummy_db.insert_car(uuid4(), f"model_{i}", owner_id)
+                    dummy_db.insert_car(uuid7(), f"model_{i}", owner_id)
                     for i in range(10)
                 )
             )
@@ -211,7 +211,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             assert owner_id
             result = await asyncio.gather(
                 *(
-                    dummy_db.insert_car(uuid4(), f"model_{i}", owner_id)
+                    dummy_db.insert_car(uuid7(), f"model_{i}", owner_id)
                     for i in range(10)
                 )
             )
@@ -248,7 +248,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             assert owner_id
             result = await asyncio.gather(
                 *(
-                    dummy_db.insert_car(uuid4(), f"model_{i}", owner_id)
+                    dummy_db.insert_car(uuid7(), f"model_{i}", owner_id)
                     for i in range(10)
                 )
             )

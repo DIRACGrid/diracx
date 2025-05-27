@@ -10,6 +10,8 @@ async def get_openid_configuration(
     userinfo_endpoint: str,
     authorization_endpoint: str,
     device_authorization_endpoint: str,
+    revoke_refresh_token_endpoint: str,
+    jwks_endpoint: str,
     config: Config,
     settings: AuthSettings,
 ) -> OpenIDConfiguration:
@@ -26,16 +28,25 @@ async def get_openid_configuration(
         "userinfo_endpoint": userinfo_endpoint,
         "authorization_endpoint": authorization_endpoint,
         "device_authorization_endpoint": device_authorization_endpoint,
+        "revocation_endpoint": revoke_refresh_token_endpoint,
+        "jwks_uri": jwks_endpoint,
         "grant_types_supported": [
             "authorization_code",
             "urn:ietf:params:oauth:grant-type:device_code",
         ],
         "scopes_supported": scopes_supported,
         "response_types_supported": ["code"],
-        "token_endpoint_auth_signing_alg_values_supported": [settings.token_algorithm],
+        "token_endpoint_auth_signing_alg_values_supported": settings.token_allowed_algorithms,
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
     }
+
+
+async def get_jwks(settings: AuthSettings) -> dict:
+    """Get the JWKs (public keys)."""
+    return settings.token_keystore.jwks.as_dict(  # type: ignore[return-value]
+        private=False,
+    )
 
 
 async def get_installation_metadata(

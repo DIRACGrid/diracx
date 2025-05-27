@@ -1,7 +1,8 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import base64
 import hashlib
+import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,9 +12,14 @@ import httpx
 import jwt
 import pytest
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from joserfc.jwk import RSAKey, OKPKey, KeySet
+from joserfc.errors import (
+    UnsupportedKeyOperationError,
+    UnsupportedAlgorithmError,
+    InvalidKeyIdError,
+)
 from pytest_httpx import HTTPXMock
+from uuid_utils import uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import AuthorizationError
@@ -27,6 +33,7 @@ from diracx.logic.auth.utils import (
     encrypt_state,
     get_server_metadata,
     parse_and_validate_scope,
+    verify_dirac_refresh_token,
 )
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
@@ -588,7 +595,86 @@ async def test_refresh_token_expired(
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
-    assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
+    assert data["detail"] == "expired_token: The token is expired"
+
+
+async def test_access_token_expired(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test the expiration date of the passed access token.
+    - get an access token
+    - decode it and change the expiration time
+    - recode it (with the JWK of the server).
+    """
+    # Get access token
+    initial_access_token = _get_tokens(test_client)["access_token"]
+
+    # Decode it
+    access_payload = jwt.decode(
+        initial_access_token, options={"verify_signature": False}
+    )
+
+    # Modify the expiration time (utc now - 5 hours)
+    access_payload["exp"] = int(
+        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
+    )
+
+    # Encode it differently
+    new_access_token = create_token(access_payload, test_auth_settings)
+
+    headers = {"Authorization": f"Bearer {new_access_token}"}
+
+    # Try to get the userinfo using the invalid access token
+    # The server should detect that it is not encoded properly
+    r = test_client.get("/api/auth/userinfo", headers=headers)
+    data = r.json()
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
+
+
+async def test_refresh_token_rotated_expiration_time(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test the expiration date of the newly generated refresh token is similar to the previous one.
+    - get a refresh token
+    - decode it and change the expiration time
+    - recode it (with the JWK of the server)
+    - get a new refresh token using the old one
+    - check that the new refresh token is not expired but has a similar expiration time.
+    """
+    # Get refresh token
+    initial_refresh_token = _get_tokens(test_client)["refresh_token"]
+
+    # Decode it
+    refresh_payload = jwt.decode(
+        initial_refresh_token, options={"verify_signature": False}
+    )
+
+    # Modify the expiration time (utc now + 5 hours)
+    refresh_payload["exp"] = int(
+        (datetime.now(tz=timezone.utc) + timedelta(hours=5)).timestamp()
+    )
+
+    # Encode it differently
+    new_refresh_token = create_token(refresh_payload, test_auth_settings)
+
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": new_refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
+
+    # Try to get a new access token using the invalid refresh token
+    # The server should detect that it is not encoded properly
+    r = test_client.post("/api/auth/token", data=request_data)
+    data = r.json()
+    assert r.status_code == 200, data
+
+    # Check that the new refresh token expiration time is similar to the previous one (modified)
+    new_refresh_payload = jwt.decode(
+        data["refresh_token"], options={"verify_signature": False}
+    )
+    assert abs(new_refresh_payload["exp"] - refresh_payload["exp"]) <= 2
 
 
 async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
@@ -605,17 +691,19 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     )
 
     # Encode it differently (using another algorithm)
-    private_key = Ed25519PrivateKey.generate()
-    pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+    key = RSAKey.generate_key(
+        2048,
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "RS256",
+            "kid": uuid7().hex,
+        },
+    )
 
     new_auth_settings = AuthSettings(
         token_issuer="https://iam-auth.web.cern.ch/",
-        token_algorithm="EdDSA",
-        token_key=pem,
+        token_allowed_algorithms=["EdDSA", "RS256"],
+        token_keystore=json.dumps(KeySet(keys=[key]).as_dict(private=True)),
         state_key=Fernet.generate_key(),
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
@@ -637,7 +725,144 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
-    assert data["detail"] == "Invalid JWT: bad_signature: "
+    assert "No key for kid" in data["detail"]
+
+
+async def test_keystore(test_client):
+    """Test the keystore."""
+    # Basic Auth params
+    issuer = "https://iam-auth.web.cern.ch/"
+    state_key = Fernet.generate_key()
+    allowed_redirects = [
+        "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
+    ]
+
+    payload = {
+        "jti": "49ecc171-20be-5b88-0d65-26012c07f397",
+        "exp": (datetime.now(tz=timezone.utc) + timedelta(hours=1)).timestamp(),
+        "legacy_exchange": False,
+    }
+
+    # Generate keys
+    rsa_key = RSAKey.generate_key(
+        2048,
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "RS256",
+            "kid": uuid7().hex,
+        },
+    )
+    eddsa_key = OKPKey.generate_key(
+        "Ed25519",
+        {
+            "key_ops": ["sign", "verify"],
+            "alg": "EdDSA",
+            "kid": uuid7().hex,
+        },
+    )
+
+    # Generate the keystore with eddsa key only first
+    jwks = KeySet(keys=[eddsa_key])
+
+    # Generate the keystore with rsa key only first
+    auth_settings = AuthSettings(
+        token_issuer=issuer,
+        token_allowed_algorithms=["RS256"],  # We purposefully remove EdDSA
+        token_keystore=json.dumps(jwks.as_dict(private=True)),
+        state_key=state_key,
+        allowed_redirects=allowed_redirects,
+    )
+
+    # Encode/Decode with the keystore: should not work
+    # because EdDSA is not part of the allowed algorithms
+    with pytest.raises(UnsupportedAlgorithmError):
+        token = create_token(payload, auth_settings)
+
+    # Add EdDSA to the allowed algorithms
+    auth_settings.token_allowed_algorithms.append("EdDSA")
+
+    # Encode/Decode with the keystore: should work
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Add the rsa key to the keystore
+    jwks.keys.append(rsa_key)
+
+    auth_settings = AuthSettings(
+        token_issuer=issuer,
+        token_allowed_algorithms=["RS256", "EdDSA"],  # We purposefully remove EdDSA
+        token_keystore=json.dumps(jwks.as_dict(private=True)),
+        state_key=state_key,
+        allowed_redirects=allowed_redirects,
+    )
+
+    # Encode/Decode with the keystore: should work
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove 'sign' operation from the RSA key:
+    # should still work because eddsa_key is still there
+    auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("sign")
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove 'verify' operation from the RSA key:
+    # should still work because RSA key is still in the keystore
+    auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("verify")
+    token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(token, auth_settings)
+
+    # Remove RSA key from the keystore:
+    # should still work except decoding the token signed with the RSA key
+    auth_settings.token_keystore.jwks.keys.pop(1)
+    ed_signed_token = create_token(payload, auth_settings)
+    await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove 'sign' operation from the OPK key:
+    # Should not work
+    auth_settings.token_keystore.jwks.keys[0].get("key_ops").remove("sign")
+
+    with pytest.raises(ValueError):
+        create_token(payload, auth_settings)
+
+    # But we can still verify the token
+    await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove 'verify' operation from the OPK key:
+    # Verification should still not work anymore
+    auth_settings.token_keystore.jwks.keys[0].get("key_ops").remove("verify")
+
+    with pytest.raises(ValueError):
+        # This should raise an error because the key is not usable for verifying
+        create_token(payload, auth_settings)
+
+    with pytest.raises(UnsupportedKeyOperationError):
+        await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+    # Remove the key from the keystore:
+    auth_settings.token_keystore.jwks.keys.pop(0)
+
+    with pytest.raises(ValueError):
+        # This should raise an error because there is no key in the keystore
+        create_token(payload, auth_settings)
+
+    # This should raise an error because there is no key in the keystore
+    with pytest.raises(InvalidKeyIdError):
+        await verify_dirac_refresh_token(ed_signed_token, auth_settings)
+
+
+async def test_bad_access_token(test_client):
+    """Test accessing a resource with a bad token."""
+    # From https://github.com/DIRACGrid/diracx/pull/496
+    r = test_client.get(
+        "/api/auth/userinfo", headers={"Authorization": "Bearer thisisabadbearer"}
+    )
+    data = r.json()
+
+    # Should raise a 401, with "Invalid JWT"
+    # Not Invalid Authorization Header because raised when decoding the token
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
 
 
 async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
@@ -704,7 +929,7 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
     assert len(data) == 3
 
 
-async def test_revoke_refresh_tokens_normal_user(
+async def test_revoke_refresh_tokens_normal_user_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
@@ -764,7 +989,7 @@ async def test_revoke_refresh_tokens_normal_user(
     assert r.status_code == 200, data
 
 
-async def test_revoke_refresh_tokens_token_manager(
+async def test_revoke_refresh_tokens_token_manager_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
     """Test the refresh token revokation with 2 users, a normal one and token manager:
@@ -805,6 +1030,62 @@ async def test_revoke_refresh_tokens_token_manager(
     )
     data = r.json()
     assert r.status_code == 200, data
+
+
+async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXMock):
+    """Test if a user can revoke its token by the "traditional" endpoint, then try to refresh it."""
+    # Normal user gets a pair of tokens
+    normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
+    normal_user_access_token = normal_user_tokens["access_token"]
+    normal_user_refresh_token = normal_user_tokens["refresh_token"]
+
+    # Get all refresh tokens, expect one refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert len(r.json()) == 1
+
+    # See: https://datatracker.ietf.org/doc/html/rfc7009#section-2.2
+    # Normal user tries to delete a random and non-existing RT: should respond with a 200
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": "does-not-exist",
+            "client_id": DIRAC_CLIENT_ID,
+        },
+    )
+    assert r.status_code == 200
+
+    # Normal user tries to delete his/her RT: should work
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": normal_user_refresh_token,
+            "client_id": DIRAC_CLIENT_ID,
+        },
+    )
+    assert r.status_code == 200
+
+    # Get all refresh tokens, expect no refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert r.json() == []
+
+    # Normal user tries to delete a valid RT using the wrong client id
+    r = test_client.post(
+        "/api/auth/revoke",
+        params={
+            "refresh_token": normal_user_refresh_token,
+            "client_id": "a_wrong_dirac_client_id",
+        },
+    )
+    assert r.status_code == 403
+    assert r.json()["detail"] == "Unrecognised client_id"
 
 
 def _get_tokens(

@@ -124,7 +124,9 @@ async def logout():
 
             # Revoke refresh token
             try:
-                await api.auth.revoke_refresh_token(credentials.refresh_token)
+                await api.auth.revoke_refresh_token_by_refresh_token(
+                    client_id=api.client_id, refresh_token=credentials.refresh_token
+                )
             except Exception as e:
                 print(f"Error revoking the refresh token {e!r}")
                 pass
@@ -132,6 +134,9 @@ async def logout():
             # Remove credentials
             credentials_path.unlink(missing_ok=True)
             print(f"Removed credentials from {credentials_path}")
+        else:
+            print("You are not connected to DiracX, or your credentials are missing.")
+            return
     print("\nLogout successful!")
 
 

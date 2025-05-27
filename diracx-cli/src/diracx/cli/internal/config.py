@@ -24,14 +24,27 @@ from ..utils import AsyncTyper
 app = AsyncTyper()
 
 
+def get_repo_path(config_repo_str: str) -> Path:
+    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo_str)
+    if config_repo.scheme != "git+file" or config_repo.path is None:
+        raise NotImplementedError("Only git+file:// URLs are supported")
+
+    repo_path = Path(config_repo.path)
+
+    return repo_path
+
+
+def get_config_from_repo_path(repo_path: Path) -> Config:
+    return ConfigSource.create_from_url(backend_url=repo_path).read_config()
+
+
 @app.command()
 def generate_cs(config_repo: str):
     """Generate a minimal DiracX configuration repository."""
     # TODO: The use of TypeAdapter should be moved in to typer itself
-    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
-    if config_repo.scheme != "git+file" or config_repo.path is None:
-        raise NotImplementedError("Only git+file:// URLs are supported")
-    repo_path = Path(config_repo.path)
+
+    repo_path = get_repo_path(config_repo)
+
     if repo_path.exists() and list(repo_path.iterdir()):
         typer.echo(f"ERROR: Directory {repo_path} already exists", err=True)
         raise typer.Exit(1)
@@ -60,10 +73,8 @@ def add_vo(
 ):
     """Add a registry entry (vo) to an existing configuration repository."""
     # TODO: The use of TypeAdapter should be moved in to typer itself
-    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
-    if config_repo.scheme != "git+file" or config_repo.path is None:
-        raise NotImplementedError("Only git+file:// URLs are supported")
-    repo_path = Path(config_repo.path)
+    repo_path = get_repo_path(config_repo)
+    config = get_config_from_repo_path(repo_path)
 
     # A VO should at least contain a default group
     new_registry = RegistryConfig(
@@ -76,8 +87,6 @@ def add_vo(
             )
         },
     )
-
-    config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
     if vo in config.Registry:
         typer.echo(f"ERROR: VO {vo} already exists", err=True)
@@ -103,14 +112,10 @@ def add_group(
 ):
     """Add a group to an existing vo in the configuration repository."""
     # TODO: The use of TypeAdapter should be moved in to typer itself
-    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
-    if config_repo.scheme != "git+file" or config_repo.path is None:
-        raise NotImplementedError("Only git+file:// URLs are supported")
-    repo_path = Path(config_repo.path)
+    repo_path = get_repo_path(config_repo)
+    config = get_config_from_repo_path(repo_path)
 
     new_group = GroupConfig(Properties=set(properties), Quota=None, Users=set())
-
-    config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
     if vo not in config.Registry:
         typer.echo(f"ERROR: Virtual Organization {vo} does not exist", err=True)
@@ -139,15 +144,10 @@ def add_user(
 ):
     """Add a user to an existing vo and group."""
     # TODO: The use of TypeAdapter should be moved in to typer itself
-    config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo)
-    if config_repo.scheme != "git+file" or config_repo.path is None:
-        raise NotImplementedError("Only git+file:// URLs are supported")
-
-    repo_path = Path(config_repo.path)
+    repo_path = get_repo_path(config_repo)
+    config = get_config_from_repo_path(repo_path)
 
     new_user = UserConfig(PreferedUsername=preferred_username)
-
-    config = ConfigSource.create_from_url(backend_url=repo_path).read_config()
 
     if vo not in config.Registry:
         typer.echo(f"ERROR: Virtual Organization {vo} does not exist", err=True)

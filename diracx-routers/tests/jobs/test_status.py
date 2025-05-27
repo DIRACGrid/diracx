@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
+from time import sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -394,7 +395,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     }
 
 
-## test edge case for rescheduling
+# test edge case for rescheduling
 
 
 def test_reschedule_job_attr_update(normal_user_client: TestClient):
@@ -1048,3 +1049,90 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     assert (
         r.status_code == 400
     ), "PATCH metadata should 400 Bad Request if an attribute column's case is incorrect"
+
+
+def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
+    """Test fix for https://github.com/DIRACGrid/diracx/issues/476."""
+    inner_payload = {"Status": JobStatus.FAILED.value, "MinorStatus": "Payload failed"}
+    time = datetime.now(tz=timezone.utc)
+
+    payload = {valid_job_id: {time.isoformat(): inner_payload}}
+    r = normal_user_client.patch(
+        "/api/jobs/status", json=payload, params={"force": True}
+    )
+    assert r.status_code == 200, r.json()
+
+    body = {"search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]}
+    r = normal_user_client.post("/api/jobs/search", json=body)
+    assert r.status_code == 200, r.json()
+    result = r.json()
+    assert len(result) == 1, result
+    assert result[0]["JobID"] == valid_job_id
+    assert result[0]["Status"] == "Failed", result
+
+    payload = {valid_job_id: {(time - timedelta(minutes=2)).isoformat(): inner_payload}}
+    r = normal_user_client.patch("/api/jobs/status", json={valid_job_id: payload})
+    assert r.status_code == 200, r.json()
+
+
+def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
+    search_body = {
+        "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
+    }
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    old_data = r.json()[0]
+    assert old_data["HeartBeatTime"] is None
+
+    payload = {valid_job_id: {"Vsize": 1234}}
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r.raise_for_status()
+
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    r.raise_for_status()
+    new_data = r.json()[0]
+
+    hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
+    # TODO: This should be timezone aware
+    assert hbt.tzinfo is None
+    hbt = hbt.replace(tzinfo=timezone.utc)
+    assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
+
+    # Kill the job by setting the status on it
+    r = normal_user_client.patch(
+        "/api/jobs/status",
+        json={
+            valid_job_id: {
+                str(datetime.now(timezone.utc)): {
+                    "Status": JobStatus.KILLED,
+                    "MinorStatus": "Marked for termination",
+                }
+            }
+        },
+    )
+    r.raise_for_status()
+
+    sleep(1)
+    # Send another heartbeat and check that a Kill job command was set
+    payload = {valid_job_id: {"Vsize": 1235}}
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r.raise_for_status()
+
+    commands = r.json()
+    assert len(commands) == 1, "Exactly one job command should be returned"
+    assert commands[0]["job_id"] == valid_job_id, (
+        "Wrong job id," f" should be '{valid_job_id}' but got {commands[0]['job_id']=}"
+    )
+    assert commands[0]["command"] == "Kill", (
+        "Wrong job command received," f" should be 'Kill' but got {commands[0]=}"
+    )
+    sleep(1)
+
+    # Send another heartbeat and check the job commands are empty
+    payload = {valid_job_id: {"Vsize": 1234}}
+    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r.raise_for_status()
+    commands = r.json()
+    assert (
+        len(commands) == 0
+    ), "Exactly zero job commands should be returned after heartbeat commands are sent"

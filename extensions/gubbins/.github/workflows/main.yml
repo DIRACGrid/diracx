@@ -1,0 +1,69 @@
+name: Gubbins Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  unittest:
+    name: Unit test - ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - gubbins-core
+          - gubbins-db
+          - gubbins-logic
+          - gubbins-routers
+          - gubbins-client
+          - gubbins-api
+          - gubbins-cli
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          environments: ${{ matrix.package }}
+      - name: Run pytest
+        run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v5.4.2
+
+  client-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Add annotations to github actions
+          pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
+          # Show any changes
+          git diff
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          environments: generate-client
+      - name: Run autorest
+        run: pixi run generate-client

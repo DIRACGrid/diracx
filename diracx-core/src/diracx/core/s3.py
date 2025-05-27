@@ -4,10 +4,12 @@ from __future__ import annotations
 
 __all__ = (
     "s3_bucket_exists",
+    "s3_bulk_delete_with_retry",
     "s3_object_exists",
     "generate_presigned_upload",
 )
 
+import asyncio
 import base64
 from typing import TYPE_CHECKING, TypedDict, cast
 
@@ -78,3 +80,24 @@ async def generate_presigned_upload(
 def b16_to_b64(hex_string: str) -> str:
     """Convert hexadecimal encoded data to base64 encoded data."""
     return base64.b64encode(base64.b16decode(hex_string.upper())).decode()
+
+
+async def s3_bulk_delete_with_retry(
+    s3_client, bucket: str, objects: list[dict[str, str]]
+) -> None:
+    max_attempts = 5
+    delay = 1.0
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = await s3_client.delete_objects(
+                Bucket=bucket,
+                Delete={"Objects": objects, "Quiet": True},
+            )
+            if "Errors" in response and response["Errors"]:
+                raise RuntimeError(f"S3 deletion error: {response['Errors']}")
+            return
+        except (ClientError, RuntimeError) as e:
+            if attempt == max_attempts:
+                raise RuntimeError(f"Failed to delete objects in {bucket}") from e
+            await asyncio.sleep(delay)
+            delay *= 2
