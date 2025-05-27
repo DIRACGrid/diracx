@@ -1,0 +1,11 @@
+# values specific to testing gubbins
+global:
+  # Needed to be able to force pre-load the image in kind
+  # see https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster
+  # and https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
+  imagePullPolicy: IfNotPresent
+  images:
+    services: diracx/services
+
+developer:
+  enabled: true
