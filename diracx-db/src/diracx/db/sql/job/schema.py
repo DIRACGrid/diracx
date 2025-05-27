@@ -179,7 +179,7 @@ class JobsHistorySummary(JobDBBase):
             "Status",
             "Site",
             "Owner",
-            "OwnerGroup", # TODO: OwnerGroup(32)
+            "OwnerGroup",  # TODO: OwnerGroup(32)
             "VO",
             "JobGroup",
             "JobType",
