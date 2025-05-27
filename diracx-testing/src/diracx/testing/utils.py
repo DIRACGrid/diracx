@@ -367,6 +367,26 @@ class ClientFactory:
             yield client
 
     @contextlib.contextmanager
+    def pilot(self):
+        from diracx.routers.auth.token import create_token
+
+        with self.unauthenticated() as client:
+            payload = {
+                "sub": "testingVO:yellow-sub",
+                "exp": datetime.now(tz=timezone.utc)
+                + timedelta(self.test_auth_settings.access_token_expire_minutes),
+                "iss": ISSUER,
+                "jti": str(uuid7()),
+                "pilot_stamp": "stamp_0",
+                "vo": "lhcb",
+            }
+            token = create_token(payload, self.test_auth_settings)
+
+            client.headers["Authorization"] = f"Bearer {token}"
+            client.dirac_token_payload = payload
+            yield client
+
+    @contextlib.contextmanager
     def admin_user(self):
         from diracx.core.properties import JOB_ADMINISTRATOR
         from diracx.routers.auth.token import create_token
@@ -449,6 +469,10 @@ def with_config_repo(tmp_path_factory):
                             "PreferedUsername": "albdr",
                             "Email": None,
                         },
+                        "3a2fb203-9db1-46b1-b097-25039eeeee5c": {
+                            "PreferedUsername": "lbpilot",
+                            "Email": None,
+                        },
                     },
                     "Groups": {
                         "lhcb_user": {
@@ -466,10 +490,22 @@ def with_config_repo(tmp_path_factory):
                             "Properties": ["NormalUser", "ProxyManagement"],
                             "Users": ["c935e5ed-2g0e-5ff9-9eg6-d1bf66e57152"],
                         },
+                        "lhcb_pilot_group": {
+                            "Properties": ["GenericPilot", "LimitedDelegation"],
+                            "Users": ["3a2fb203-9db1-46b1-b097-25039eeeee5c"],
+                        },
                     },
                 }
             },
-            "Operations": {"Defaults": {}},
+            "Operations": {
+                "Defaults": {},
+                "lhcb": {
+                    "Pilot": {
+                        "GenericPilotGroup": "lhcb_pilot_group",
+                        "GenericPilotUser": "lhcb_pilot",
+                    }
+                },
+            },
             "Systems": {
                 "WorkloadManagement": {
                     "Databases": {
