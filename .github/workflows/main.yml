@@ -161,7 +161,7 @@ jobs:
 
       - name: Start demo
         run: |
-          git clone --branch main_FEAT_remove-loaded-images https://github.com/aldbr/diracx-charts.git ../diracx-charts
+          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")
@@ -169,7 +169,6 @@ jobs:
           demo_args+=("--exit-when-done")
           demo_args+=("--set-value" "developer.autoReload=false")
           demo_args+=("--ci-values" "../diracx-charts/demo/ci_values.yaml")
-          demo_args+=("--prune-loaded-images")
 
           declare -a demo_source_dirs=("$PWD")
 
@@ -187,6 +186,7 @@ jobs:
             demo_args+=("--load-docker-image" "gubbins/services:dev")
             demo_source_dirs+=("/tmp/gubbins/")
           elif [ ${{ matrix.extension }} == 'diracx' ]; then
+            demo_args+=("--ci-values" "./diracx_values.yaml")
             demo_args+=("--load-docker-image" "diracx/services:dev")
           else
             echo "Unknown extension: ${{ matrix.extension }}"
