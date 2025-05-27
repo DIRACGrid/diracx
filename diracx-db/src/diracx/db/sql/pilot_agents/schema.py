@@ -26,7 +26,7 @@ class PilotAgents(PilotAgentsDBBase):
     destination_site = Column("DestinationSite", String(128), default="NotAssigned")
     queue = Column("Queue", String(128), default="Unknown")
     grid_site = Column("GridSite", String(128), default="Unknown")
-    vo = Column("VO", String(128))
+    vo = Column("VO", String(64))
     grid_type = Column("GridType", String(32), default="LCG")
     benchmark = Column("BenchMark", Double, default=0.0)
     submission_time = NullColumn("SubmissionTime", DateTime)
