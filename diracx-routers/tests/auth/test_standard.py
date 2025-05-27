@@ -13,7 +13,11 @@ import jwt
 import pytest
 from cryptography.fernet import Fernet
 from joserfc.jwk import RSAKey, OKPKey, KeySet
-from joserfc.errors import UnsupportedKeyOperationError
+from joserfc.errors import (
+    UnsupportedKeyOperationError,
+    UnsupportedAlgorithmError,
+    InvalidKeyIdError,
+)
 from pytest_httpx import HTTPXMock
 from uuid_utils import uuid7
 
@@ -591,7 +595,7 @@ async def test_refresh_token_expired(
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
-    assert data["detail"] == "Invalid JWT: expired_token: The token is expired"
+    assert data["detail"] == "expired_token: The token is expired"
 
 
 async def test_access_token_expired(
@@ -720,7 +724,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     # The server should detect that it is not encoded properly
     r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
-    assert r.status_code == 400, data
+    assert r.status_code == 401, data
     assert "No key for kid" in data["detail"]
 
 
@@ -757,10 +761,10 @@ async def test_keystore(test_client):
         },
     )
 
-    # Generate the keystore with rsa key only first
+    # Generate the keystore with eddsa key only first
     jwks = KeySet(keys=[eddsa_key])
 
-    # Generate the keystore with eddsa key only first
+    # Generate the keystore with rsa key only first
     auth_settings = AuthSettings(
         token_issuer=issuer,
         token_allowed_algorithms=["RS256"],  # We purposefully remove EdDSA
@@ -771,7 +775,7 @@ async def test_keystore(test_client):
 
     # Encode/Decode with the keystore: should not work
     # because EdDSA is not part of the allowed algorithms
-    with pytest.raises(ValueError):
+    with pytest.raises(UnsupportedAlgorithmError):
         token = create_token(payload, auth_settings)
 
     # Add EdDSA to the allowed algorithms
@@ -843,7 +847,7 @@ async def test_keystore(test_client):
         create_token(payload, auth_settings)
 
     # This should raise an error because there is no key in the keystore
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidKeyIdError):
         await verify_dirac_refresh_token(ed_signed_token, auth_settings)
 
 

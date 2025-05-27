@@ -15,7 +15,6 @@ from uuid_utils import UUID, uuid7
 from diracx.core.config import Config
 from diracx.core.exceptions import (
     AuthorizationError,
-    ExpiredFlowError,
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
@@ -361,8 +360,9 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
     """Create a JWT token with the given payload and settings."""
     signing_key = None
     for key in settings.token_keystore.jwks.keys:
-        # TODO: https://github.com/authlib/joserfc/issues/52
-        key_ops = cast(list[str] | None, key.get("key_ops"))
+        key_ops = key.get("key_ops")
+        if key_ops and not isinstance(key_ops, list):
+            key_ops = [key_ops]
         if key_ops and "sign" in key_ops:
             signing_key = key
             break
@@ -406,7 +406,7 @@ async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
     if res["CreationTime"].replace(tzinfo=timezone.utc) < substract_date(
         seconds=max_validity
     ):
-        raise ExpiredFlowError()
+        raise InvalidCredentialsError("Device code expired")
 
     if res["Status"] == FlowStatus.READY:
         await auth_db.update_device_flow_status(device_code, FlowStatus.DONE)
