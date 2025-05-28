@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    PrimaryKeyConstraint,
     String,
     Text,
 )
@@ -156,3 +157,29 @@ class JobCommands(JobDBBase):
     status = Column("Status", String(64), default="Received")
     reception_time = Column("ReceptionTime", DateTime, primary_key=True)
     execution_time = NullColumn("ExecutionTime", DateTime)
+
+
+class JobsHistorySummary(JobDBBase):
+    __tablename__ = "JobsHistorySummary"
+    status = Column("Status", String(32))
+    site = Column("Site", String(100))
+    owner = Column("Owner", String(32))
+    owner_group = Column("OwnerGroup", String(128))
+    job_group = Column("JobGroup", String(32))
+    job_type = Column("JobType", String(32))
+    application_status = Column("ApplicationStatus", String(255))
+    minor_status = Column("MinorStatus", String(128))
+    job_count = Column("JobCount", Integer)
+    reschedule_sum = Column("RescheduleSum", Integer)
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "Status",
+            "Site",
+            "Owner",
+            "OwnerGroup",
+            "JobGroup",
+            "JobType",
+            "ApplicationStatus",
+            "MinorStatus",
+        ),
+    )
