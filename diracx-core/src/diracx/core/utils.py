@@ -249,12 +249,12 @@ async def batched_async(
         ValueError: If strict is True and the last batch is not of size n.
 
     Example:
-        >>> async for batch in batched(aiter('ABCDEFG'), 3):
+        >>> async for batch in batched(aiter("ABCDEFG"), 3):
         ...     print(batch)
         ('A', 'B', 'C')
         ('D', 'E', 'F')
         ('G',)
-        >>> async for batch in batched(aiter('ABCDEFG'), 3, strict=True):
+        >>> async for batch in batched(aiter("ABCDEFG"), 3, strict=True):
         ...     print(batch)
         ValueError: batched(): incomplete batch
 

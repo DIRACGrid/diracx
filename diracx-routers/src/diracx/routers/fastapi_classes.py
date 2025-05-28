@@ -94,7 +94,6 @@ class DiracxRouter(APIRouter):
     # https://github.com/tiangolo/fastapi/discussions/8489
 
     def add_api_route(self, path: str, endpoint: Callable[..., Any], **kwargs):
-
         route_index = self._get_route_index_by_path_and_methods(
             path, set(kwargs.get("methods", []))
         )

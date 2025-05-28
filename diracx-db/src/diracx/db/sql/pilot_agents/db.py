@@ -20,7 +20,6 @@ class PilotAgentsDB(BaseSQLDB):
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
     ) -> None:
-
         if pilot_stamps is None:
             pilot_stamps = {}
 

@@ -138,7 +138,6 @@ class UnavailableDependency:
 
 
 class ClientFactory:
-
     def __init__(
         self,
         tmp_path_factory,
@@ -171,7 +170,6 @@ class ClientFactory:
                 access_payload: AccessTokenPayload,
                 refresh_payload: RefreshTokenPayload | None,
             ):
-
                 return {"PolicySpecific": "OpenAccessForTest"}, {}
 
         enabled_systems = {
@@ -245,13 +243,11 @@ class ClientFactory:
 
     @contextlib.contextmanager
     def configure(self, enabled_dependencies):
-
         assert (
             self.app.dependency_overrides == {} and self.app.lifetime_functions == []
         ), "configure cannot be nested"
 
         for k, v in self.all_dependency_overrides.items():
-
             class_name = k.__self__.__name__
 
             if class_name in enabled_dependencies:
@@ -292,7 +288,6 @@ class ClientFactory:
                 BaseSQLDB.transaction.__func__,
                 BaseOSDB.session.__func__,
             ):
-
                 continue
 
             # The first argument of the overridden BaseSQLDB.transaction is the DB object

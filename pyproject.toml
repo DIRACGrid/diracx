@@ -34,10 +34,9 @@ source = "vcs"
 bypass-selection = true
 
 [tool.ruff]
-line-length = 120
 src = ["diracx-*/src", "diracx-*/tests"]
 exclude = [
-    "diracx-client/src/diracx/client/",
+    "diracx-client/src/diracx/client",
 ]
 
 [tool.ruff.lint]
@@ -96,9 +95,29 @@ extend-immutable-calls = [
     "fastapi.Header",
 ]
 
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
 
 [tool.isort]
 profile = "black"
+
+
+[tool.codespell]
+skip = [
+    "diracx-client/src/diracx/client/_generated/*",
+    "diracx-[a-z]*/tests/*",
+    "diracx-testing/*",
+    "extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*",
+    "extensions/gubbins/gubbins-*/tests/*",
+]
+ignore-words-list = [
+    "CheckIn",
+    "dependant",
+]
 
 
 [tool.mypy]

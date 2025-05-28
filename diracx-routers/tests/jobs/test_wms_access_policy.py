@@ -69,7 +69,6 @@ async def test_wms_access_policy_weird_user(job_db):
 
 
 async def test_wms_access_policy_create(job_db):
-
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
 
@@ -231,7 +230,6 @@ OTHER_USER_SANDBOX_PFN = (
 
 
 async def test_sandbox_access_policy_create(sandbox_metadata_db):
-
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
 
@@ -266,7 +264,6 @@ async def test_sandbox_access_policy_create(sandbox_metadata_db):
 
 
 async def test_sandbox_access_policy_read(sandbox_metadata_db, monkeypatch):
-
     admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
     normal_user = AuthorizedUserInfo(properties=[NORMAL_USER], **base_payload)
 

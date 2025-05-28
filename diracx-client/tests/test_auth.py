@@ -56,9 +56,9 @@ def test_get_token_accessing_lock_file(monkeypatch, tmp_path):
 
     # Verify that flock was called with LOCK_EX
     assert len(flock_calls) == 1, "fcntl.flock was not called"
-    assert (
-        flock_calls[-1][1] == fcntl.LOCK_EX
-    ), f"Expected LOCK_SH, got {flock_calls[-1][1]}"
+    assert flock_calls[-1][1] == fcntl.LOCK_EX, (
+        f"Expected LOCK_SH, got {flock_calls[-1][1]}"
+    )
     assert "File is locked" in str(exc_info.value)
 
 

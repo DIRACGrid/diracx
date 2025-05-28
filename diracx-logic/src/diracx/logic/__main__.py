@@ -44,7 +44,10 @@ def new_key(
         "kid": uuid7().hex,
     }
     return JWKRegistry.generate_key(
-        key_type=kty, crv_or_size=crv_or_size, private=True, parameters=parameters  # type: ignore[arg-type]
+        key_type=kty,
+        crv_or_size=crv_or_size,
+        private=True,
+        parameters=parameters,  # type: ignore[arg-type]
     )
 
 

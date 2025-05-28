@@ -31,7 +31,6 @@ async def init_sql():
     from diracx.db.sql.utils import BaseSQLDB
 
     for db_name, db_url in BaseSQLDB.available_urls().items():
-
         logger.info("Initialising %s", db_name)
         db = BaseSQLDB.available_implementations(db_name)[0](db_url)
         async with db.engine_context():

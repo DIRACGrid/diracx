@@ -124,7 +124,6 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
 
         if action == ActionType.CREATE:
-
             if NORMAL_USER not in user_info.properties:
                 raise HTTPException(status.HTTP_403_FORBIDDEN)
             return

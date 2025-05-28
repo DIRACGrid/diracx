@@ -10,16 +10,12 @@ from functools import partial
 from http import HTTPStatus
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from logging import Formatter, StreamHandler
-from typing import (
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import Any, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
-from fastapi.dependencies.models import Dependant  # codespell:ignore dependant
+from fastapi.dependencies.models import Dependant
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -163,7 +159,6 @@ def create_app_inner(
     all_access_policies_used = {}
 
     for access_policy_name, access_policy_classes in all_access_policies.items():
-
         # The first AccessPolicy is the highest priority one
         access_policy_used = access_policy_classes[0].policy
         all_access_policies_used[access_policy_name] = access_policy_classes[0]
@@ -192,7 +187,6 @@ def create_app_inner(
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
 
     for db_name, db_url in database_urls.items():
-
         try:
             sql_db_classes = BaseSQLDB.available_implementations(db_name)
 
@@ -380,7 +374,6 @@ def create_app() -> DiracFastAPI:
     all_access_policies = {}
 
     for access_policy_name in available_access_policy_names:
-
         access_policy_classes = BaseAccessPolicy.available_implementations(
             access_policy_name
         )
@@ -437,16 +430,14 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 
 def find_dependents(
-    obj: APIRouter | Iterable[Dependant], cls: type[T]  # codespell:ignore dependant
+    obj: APIRouter | Iterable[Dependant], cls: type[T]
 ) -> Iterable[type[T]]:
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
         for route in obj.routes:
             if isinstance(route, APIRoute):
-                yield from find_dependents(
-                    route.dependant.dependencies, cls  # codespell:ignore dependant
-                )
+                yield from find_dependents(route.dependant.dependencies, cls)
         return
 
     for dependency in obj:
