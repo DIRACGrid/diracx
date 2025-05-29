@@ -12,7 +12,6 @@ from .functions import utcnow
 
 Column: partial[RawColumn] = partial(RawColumn, nullable=False)
 NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
-DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
 
 
 def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
@@ -41,7 +40,6 @@ class EnumBackedBool(types.TypeDecorator):
         else:
             raise NotImplementedError(f"Unknown {value=}")
 
-
 class SmarterDateTime(types.TypeDecorator):
     """A DateTime type that also accepts ISO8601 strings.
 
@@ -59,12 +57,12 @@ class SmarterDateTime(types.TypeDecorator):
         returned_tz: ZoneInfo = ZoneInfo("UTC"),
         stored_naive_sqlite=True,
         stored_naive_mysql=True,
-        stored_naive_postgres=False,  # Forces timezone-awareness
+        stored_naive_postgres=True,
     ):
         self._stored_naive_dialect = {
             "sqlite": stored_naive_sqlite,
             "mysql": stored_naive_mysql,
-            "postgres": stored_naive_postgres,
+            "postgresql": stored_naive_postgres,
         }
         self._stored_tz: ZoneInfo | None = stored_tz  # None = Local timezone
         self._returned_tz: ZoneInfo = returned_tz
@@ -135,3 +133,12 @@ class SmarterDateTime(types.TypeDecorator):
 
         # phew...
         return value
+
+DateNowColumn = partial(
+    Column, 
+    type_=SmarterDateTime(
+        stored_tz = ZoneInfo("UTC"), 
+        returned_tz = ZoneInfo("UTC"),
+    ), 
+    server_default=utcnow()
+)
