@@ -91,10 +91,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - dbName: "MySQL"
+        db:
+          - name: MySQL
             cliOption: ""
-          - dbName: "PostgreSQL"
+          - name: PostgreSQL
             cliOption: "--postgres"
         extension:
           - diracx
@@ -156,7 +156,7 @@ jobs:
         run: |
           docker load --input /tmp/gubbins_services_image.tar
           docker image ls -a
-      - name: Start demo using ${{ matrix.dbName }}
+      - name: Start demo using ${{ matrix.db.name }}
         run: |
           git clone -b diracx-issue-147-postgres-integration https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
 
@@ -189,7 +189,7 @@ jobs:
 
           # Run the demo with the provided arguments
           set -x
-          ../diracx-charts/run_demo.sh ${{ matrix.cliOption }} "${demo_args[@]}" "${demo_source_dirs[@]}"
+          ../diracx-charts/run_demo.sh ${{ matrix.db.cliOption }} "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
