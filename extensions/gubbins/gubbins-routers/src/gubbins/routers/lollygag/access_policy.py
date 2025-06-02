@@ -18,7 +18,6 @@ from gubbins.core.properties import GUBBINS_SENSEI
 
 
 class ActionType(StrEnum):
-
     CREATE = auto()
 
     READ = auto()
@@ -27,7 +26,6 @@ class ActionType(StrEnum):
 
 
 class LollygagAccessPolicy(BaseAccessPolicy):
-
     @staticmethod
     async def policy(
         policy_name: str,
