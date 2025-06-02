@@ -40,6 +40,7 @@ class EnumBackedBool(types.TypeDecorator):
         else:
             raise NotImplementedError(f"Unknown {value=}")
 
+
 class SmarterDateTime(types.TypeDecorator):
     """A DateTime type that also accepts ISO8601 strings.
 
@@ -134,11 +135,12 @@ class SmarterDateTime(types.TypeDecorator):
         # phew...
         return value
 
+
 DateNowColumn = partial(
-    Column, 
+    Column,
     type_=SmarterDateTime(
-        stored_tz = ZoneInfo("UTC"), 
-        returned_tz = ZoneInfo("UTC"),
-    ), 
-    server_default=utcnow()
+        stored_tz=ZoneInfo("UTC"),
+        returned_tz=ZoneInfo("UTC"),
+    ),
+    server_default=utcnow(),
 )
