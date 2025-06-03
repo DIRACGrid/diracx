@@ -16,8 +16,7 @@ dependencies = [
     "diracx-core",
     "opensearch-py[async]",
     "pydantic >=2.10",
-    "sqlalchemy[aiomysql,aiosqlite] >= 2",
-    "asyncpg",
+    "sqlalchemy[aiomysql,aiosqlite,postgresql-asyncpg] >= 2",
     "uuid-utils",
 ]
 dynamic = ["version"]
