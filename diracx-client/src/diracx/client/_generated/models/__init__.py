@@ -103,6 +103,5 @@ _patch_sdk()
 if TYPE_CHECKING:
     __all__.extend(
         [
-            "DeviceFlowErrorResponse",
-        ]
+            "DeviceFlowErrorResponse",        ]
     )

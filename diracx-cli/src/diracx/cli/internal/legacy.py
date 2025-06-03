@@ -265,7 +265,6 @@ def generate_helm_values(
     from diracx.core.extensions import select_from_extension
 
     for entry_point in select_from_extension(group="diracx.db.sql"):
-
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
 
@@ -284,9 +283,9 @@ def generate_helm_values(
         if "Password" in db_config:
             sql_dbs["dbs"][db_name]["password"] = db_config.get("Password")
         if "Host" in db_config or "Port" in db_config:
-            sql_dbs["dbs"][db_name][
-                "host"
-            ] = f"{db_config.get('Host', default_db_host)}:{db_config.get('Port', default_db_port)}"
+            sql_dbs["dbs"][db_name]["host"] = (
+                f"{db_config.get('Host', default_db_host)}:{db_config.get('Port', default_db_port)}"
+            )
         if not sql_dbs["dbs"][db_name]:
             sql_dbs["dbs"][db_name] = None
 

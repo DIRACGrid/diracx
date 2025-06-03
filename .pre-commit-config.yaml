@@ -1,9 +1,22 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
 default_language_version:
   python: python3
 
+default_stages: [pre-commit]
+
 repos:
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: ["--verbose"]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -14,18 +27,14 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.11.10'
+    rev: 'v0.11.12'
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
-
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 25.1.0
-    hooks:
-      - id: black
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.16.0
     hooks:
       - id: mypy
         additional_dependencies:
@@ -51,7 +60,4 @@ repos:
     rev: v2.4.1
     hooks:
     - id: codespell
-      args:
-        - "--skip=diracx-client/src/diracx/client/_generated/*, diracx-[a-z]*/tests/*, diracx-testing/*, build/*, extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*, extensions/gubbins/gubbins-*/tests/*"
-        - "--ignore-words-list=CheckIn"
-        - "-w"
+      args: ["-w"]

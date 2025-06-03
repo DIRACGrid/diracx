@@ -69,9 +69,9 @@ async def main():
     print(f"{{TestClass.__mro__=}}")
     print(f"{{mro=}}")
 
-    a = 'gubbins.client._generated{'.aio' if is_async else ''}._patch'
+    a = 'gubbins.client._generated{".aio" if is_async else ""}._patch'
     b = 'diracx.client.patches.client.{aio_or_sync}'
-    c = 'gubbins.client._generated{'.aio' if is_async else ''}._client'
+    c = 'gubbins.client._generated{".aio" if is_async else ""}._client'
     d = 'builtins'
 
     assert mro[0] == "gubbins.client.{aio_or_sync}", mro
@@ -79,7 +79,7 @@ async def main():
     assert mro.index(b) < mro.index(c)
     assert mro.index(c) < mro.index(d)
 
-    {'async ' if is_async else ''}with TestClass() as api:
+    {"async " if is_async else ""}with TestClass() as api:
         print(f"{{api.jobs=}}")
         print(f"{{api.lollygag=}}")
 

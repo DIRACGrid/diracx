@@ -15,13 +15,7 @@ from azure.core.rest import AsyncHttpResponse, HttpRequest
 from .. import models as _models
 from .._utils.serialization import Deserializer, Serializer
 from ._configuration import DiracConfiguration
-from .operations import (
-    AuthOperations,
-    ConfigOperations,
-    JobsOperations,
-    LollygagOperations,
-    WellKnownOperations,
-)
+from .operations import AuthOperations, ConfigOperations, JobsOperations, LollygagOperations, WellKnownOperations
 
 
 class Dirac:  # pylint: disable=client-accepts-api-version-keyword
@@ -60,38 +54,20 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
                 self._config.custom_hook_policy,
                 self._config.logging_policy,
                 policies.DistributedTracingPolicy(**kwargs),
-                (
-                    policies.SensitiveHeaderCleanupPolicy(**kwargs)
-                    if self._config.redirect_policy
-                    else None
-                ),
+                policies.SensitiveHeaderCleanupPolicy(**kwargs) if self._config.redirect_policy else None,
                 self._config.http_logging_policy,
             ]
-        self._client: AsyncPipelineClient = AsyncPipelineClient(
-            base_url=endpoint, policies=_policies, **kwargs
-        )
+        self._client: AsyncPipelineClient = AsyncPipelineClient(base_url=endpoint, policies=_policies, **kwargs)
 
-        client_models = {
-            k: v for k, v in _models.__dict__.items() if isinstance(v, type)
-        }
+        client_models = {k: v for k, v in _models.__dict__.items() if isinstance(v, type)}
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
-        self.well_known = WellKnownOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.auth = AuthOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.config = ConfigOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.jobs = JobsOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.lollygag = LollygagOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
+        self.well_known = WellKnownOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.auth = AuthOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.lollygag = LollygagOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(
         self, request: HttpRequest, *, stream: bool = False, **kwargs: Any

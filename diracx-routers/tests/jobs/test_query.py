@@ -500,7 +500,7 @@ def test_search_pagination(normal_user_client):
     assert "Content-Range" in r.headers
     assert (
         r.headers["Content-Range"]
-        == f"jobs 0-{len(listed_jobs) -1}/{len(job_definitions)}"
+        == f"jobs 0-{len(listed_jobs) - 1}/{len(job_definitions)}"
     )
 
     # Get the next 10 jobs

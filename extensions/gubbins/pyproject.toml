@@ -37,9 +37,11 @@ root = "../.."
 bypass-selection = true
 
 [tool.ruff]
-line-length = 120
 src = ["gubbins-*/src", "gubbins-*/tests"]
 exclude = ["gubbins-client/src/gubbins/client/_generated"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
 
 [tool.isort]
 profile = "black"

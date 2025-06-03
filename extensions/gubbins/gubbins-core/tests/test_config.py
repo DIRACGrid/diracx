@@ -24,7 +24,6 @@ def github_is_down():
 
 @pytest.mark.skipif(github_is_down(), reason="Github unavailble")
 def test_remote_git_config_source(monkeypatch):
-
     monkeypatch.setattr(
         "diracx.core.config.sources.DEFAULT_CONFIG_FILE",
         "k3s/examples/cs.yaml",
