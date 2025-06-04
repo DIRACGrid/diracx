@@ -124,14 +124,7 @@ class BodyPilotManagementAddPilotStamps(_serialization.Model):
         "grid_type": {"key": "grid_type", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{object}"},
         "generate_secrets": {"key": "generate_secrets", "type": "bool"},
-<<<<<<< HEAD
         "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
-=======
-        "pilot_secret_use_count_max": {
-            "key": "pilot_secret_use_count_max",
-            "type": "int",
-        },
->>>>>>> e3b1128b (feat: Add pilot logging)
     }
 
     def __init__(
@@ -143,11 +136,7 @@ class BodyPilotManagementAddPilotStamps(_serialization.Model):
         pilot_references: Optional[Dict[str, Any]] = None,
         generate_secrets: bool = True,
         pilot_secret_use_count_max: int = 1,
-<<<<<<< HEAD
         **kwargs: Any
-=======
-        **kwargs: Any,
->>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """
         :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
@@ -172,52 +161,7 @@ class BodyPilotManagementAddPilotStamps(_serialization.Model):
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
 
 
-<<<<<<< HEAD
 class BodyPilotManagementAssociatePilotWithJobs(_serialization.Model):  # pylint: disable=name-too-long
-=======
-class BodyPilotManagementAssociatePilotsWithSecrets(
-    _serialization.Model
-):  # pylint: disable=name-too-long
-    """Body_pilot_management_associate_pilots_with_secrets.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamps: List of all pilot stamps. Required.
-    :vartype pilot_stamps: list[str]
-    :ivar pilot_secrets: List of all secrets.Possibility of providing only one (1) secret, it will
-     apply it to all pilots. Required.
-    :vartype pilot_secrets: list[str]
-    """
-
-    _validation = {
-        "pilot_stamps": {"required": True},
-        "pilot_secrets": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
-        "pilot_secrets": {"key": "pilot_secrets", "type": "[str]"},
-    }
-
-    def __init__(
-        self, *, pilot_stamps: List[str], pilot_secrets: List[str], **kwargs: Any
-    ) -> None:
-        """
-        :keyword pilot_stamps: List of all pilot stamps. Required.
-        :paramtype pilot_stamps: list[str]
-        :keyword pilot_secrets: List of all secrets.Possibility of providing only one (1) secret, it
-         will apply it to all pilots. Required.
-        :paramtype pilot_secrets: list[str]
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamps = pilot_stamps
-        self.pilot_secrets = pilot_secrets
-
-
-class BodyPilotManagementAssociatePilotWithJobs(
-    _serialization.Model
-):  # pylint: disable=name-too-long
->>>>>>> e3b1128b (feat: Add pilot logging)
     """Body_pilot_management_associate_pilot_with_jobs.
 
     All required parameters must be populated in order to send to server.
@@ -238,13 +182,7 @@ class BodyPilotManagementAssociatePilotWithJobs(
         "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
     }
 
-<<<<<<< HEAD
     def __init__(self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any) -> None:
-=======
-    def __init__(
-        self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any
-    ) -> None:
->>>>>>> e3b1128b (feat: Add pilot logging)
         """
         :keyword pilot_stamp: The stamp of the pilot. Required.
         :paramtype pilot_stamp: str
@@ -282,28 +220,11 @@ class BodyPilotManagementCreatePilotSecrets(_serialization.Model):
         "n": {"key": "n", "type": "int"},
         "vo": {"key": "vo", "type": "str"},
         "expiration_minutes": {"key": "expiration_minutes", "type": "int"},
-<<<<<<< HEAD
         "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
     }
 
     def __init__(
         self, *, n: int, vo: str, expiration_minutes: int, pilot_secret_use_count_max: int, **kwargs: Any
-=======
-        "pilot_secret_use_count_max": {
-            "key": "pilot_secret_use_count_max",
-            "type": "int",
-        },
-    }
-
-    def __init__(
-        self,
-        *,
-        n: int,
-        vo: str,
-        expiration_minutes: int,
-        pilot_secret_use_count_max: int,
-        **kwargs: Any,
->>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """
         :keyword n: Number of secrets to create. Required.
@@ -336,25 +257,10 @@ class BodyPilotManagementUpdatePilotFields(_serialization.Model):
     }
 
     _attribute_map = {
-<<<<<<< HEAD
         "pilot_stamps_to_fields_mapping": {"key": "pilot_stamps_to_fields_mapping", "type": "[PilotFieldsMapping]"},
     }
 
     def __init__(self, *, pilot_stamps_to_fields_mapping: List["_models.PilotFieldsMapping"], **kwargs: Any) -> None:
-=======
-        "pilot_stamps_to_fields_mapping": {
-            "key": "pilot_stamps_to_fields_mapping",
-            "type": "[PilotFieldsMapping]",
-        },
-    }
-
-    def __init__(
-        self,
-        *,
-        pilot_stamps_to_fields_mapping: List["_models.PilotFieldsMapping"],
-        **kwargs: Any,
-    ) -> None:
->>>>>>> e3b1128b (feat: Add pilot logging)
         """
         :keyword pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change.
          Required.
@@ -804,9 +710,7 @@ class LogLine(_serialization.Model):
         "scope": {"key": "scope", "type": "str"},
     }
 
-    def __init__(
-        self, *, timestamp: str, severity: str, message: str, scope: str, **kwargs: Any
-    ) -> None:
+    def __init__(self, *, timestamp: str, severity: str, message: str, scope: str, **kwargs: Any) -> None:
         """
         :keyword timestamp: Timestamp. Required.
         :paramtype timestamp: str
@@ -845,9 +749,7 @@ class LogMessage(_serialization.Model):
         "lines": {"key": "lines", "type": "[LogLine]"},
     }
 
-    def __init__(
-        self, *, pilot_stamp: str, lines: List["_models.LogLine"], **kwargs: Any
-    ) -> None:
+    def __init__(self, *, pilot_stamp: str, lines: List["_models.LogLine"], **kwargs: Any) -> None:
         """
         :keyword pilot_stamp: Pilot Stamp. Required.
         :paramtype pilot_stamp: str
@@ -1043,18 +945,7 @@ class PilotCredentialsInfo(_serialization.Model):
         "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
     }
 
-<<<<<<< HEAD
     def __init__(self, *, pilot_stamp: str, pilot_secret: str, pilot_secret_expires_in: int, **kwargs: Any) -> None:
-=======
-    def __init__(
-        self,
-        *,
-        pilot_stamp: str,
-        pilot_secret: str,
-        pilot_secret_expires_in: int,
-        **kwargs: Any,
-    ) -> None:
->>>>>>> e3b1128b (feat: Add pilot logging)
         """
         :keyword pilot_stamp: Pilot Stamp. Required.
         :paramtype pilot_stamp: str
@@ -1127,11 +1018,7 @@ class PilotFieldsMapping(_serialization.Model):
         grid_type: Optional[str] = None,
         accounting_sent: Optional[bool] = None,
         current_job_id: Optional[int] = None,
-<<<<<<< HEAD
         **kwargs: Any
-=======
-        **kwargs: Any,
->>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """
         :keyword pilot_stamp: Pilotstamp. Required.
@@ -1169,7 +1056,6 @@ class PilotFieldsMapping(_serialization.Model):
         self.current_job_id = current_job_id
 
 
-<<<<<<< HEAD
 class PilotSecretConstraints(_serialization.Model):
     """PilotSecretConstraints.
 
@@ -1209,8 +1095,6 @@ class PilotSecretConstraints(_serialization.Model):
         self.sites = sites
 
 
-=======
->>>>>>> e3b1128b (feat: Add pilot logging)
 class PilotSecretsInfo(_serialization.Model):
     """PilotSecretsInfo.
 
@@ -1232,13 +1116,7 @@ class PilotSecretsInfo(_serialization.Model):
         "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
     }
 
-<<<<<<< HEAD
     def __init__(self, *, pilot_secret: str, pilot_secret_expires_in: int, **kwargs: Any) -> None:
-=======
-    def __init__(
-        self, *, pilot_secret: str, pilot_secret_expires_in: int, **kwargs: Any
-    ) -> None:
->>>>>>> e3b1128b (feat: Add pilot logging)
         """
         :keyword pilot_secret: Pilot Secret. Required.
         :paramtype pilot_secret: str
@@ -1488,11 +1366,7 @@ class SearchParams(_serialization.Model):
         search: List["_models.SearchParamsSearchItem"] = [],
         sort: List["_models.SortSpec"] = [],
         distinct: bool = False,
-<<<<<<< HEAD
         **kwargs: Any
-=======
-        **kwargs: Any,
->>>>>>> e3b1128b (feat: Add pilot logging)
     ) -> None:
         """
         :keyword parameters: Parameters.

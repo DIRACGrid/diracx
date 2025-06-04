@@ -131,7 +131,6 @@ class MockOSDBMixin:
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
         async with self._sql_db:
-
             # Apply selection
             if parameters:
                 columns = []

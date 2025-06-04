@@ -72,33 +72,12 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
-<<<<<<< HEAD
         self.well_known = WellKnownOperations(self._client, self._config, self._serialize, self._deserialize)
         self.auth = AuthOperations(self._client, self._config, self._serialize, self._deserialize)
         self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
         self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilot = PilotOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
-=======
-        self.well_known = WellKnownOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.auth = AuthOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.config = ConfigOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.jobs = JobsOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.pilot = PilotOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
-        self.pilots = PilotsOperations(
-            self._client, self._config, self._serialize, self._deserialize
-        )
->>>>>>> e3b1128b (feat: Add pilot logging)
 
     def send_request(self, request: HttpRequest, *, stream: bool = False, **kwargs: Any) -> HttpResponse:
         """Runs the network request through the client's chained policies.

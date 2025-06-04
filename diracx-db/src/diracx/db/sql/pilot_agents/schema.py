@@ -5,7 +5,6 @@ from sqlalchemy import (
     JSON,
     DateTime,
     Double,
-    ForeignKey,
     Index,
     Integer,
     SmallInteger,
@@ -71,7 +70,7 @@ class PilotSecrets(PilotAgentsDBBase):
     __tablename__ = "PilotSecrets"
 
     secret_uuid = Column("SecretUUID", Uuid(as_uuid=False), primary_key=True)
-    
+
     hashed_secret = Column("HashedSecret", BINARY(32))
     # Global count
     # Null: Infinite use

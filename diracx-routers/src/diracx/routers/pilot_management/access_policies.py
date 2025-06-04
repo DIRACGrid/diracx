@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
->>>>>>> e3b1128b (feat: Add pilot logging)
 from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import Annotated
@@ -146,7 +145,6 @@ class PilotLogsAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
         pilot_db: PilotAgentsDB | None = None,
     ):
-
         assert pilot_db
         if action == ActionType.QUERY_LOGS:
             # TODO: See if we move this elsewhere to separate from pilots

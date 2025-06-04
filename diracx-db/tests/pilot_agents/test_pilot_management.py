@@ -297,7 +297,6 @@ async def test_insert_and_delete_recent(
 
 @pytest.mark.asyncio
 async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgentsDB):
-
     async with pilot_agents_db as pilot_agents_db:
         pilot_stamp = "stamp-test"
         await pilot_agents_db.add_pilots_bulk(

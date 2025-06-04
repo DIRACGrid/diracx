@@ -22,7 +22,6 @@ from diracx.core.models import (
     SearchSpec,
     SortSpec,
 )
-from diracx.db.exceptions import DBInBadStateError
 
 from ..utils import (
     BaseSQLDB,

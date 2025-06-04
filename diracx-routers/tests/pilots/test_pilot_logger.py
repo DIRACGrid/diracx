@@ -93,7 +93,6 @@ async def search(create_logs, normal_test_client):
     async def _search(
         parameters, conditions, sorts, distinct=False, page=1, per_page=100
     ):
-
         body = {
             "parameters": parameters,
             "search": conditions,
@@ -117,7 +116,6 @@ async def search(create_logs, normal_test_client):
 
 
 async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
-
     # Add a pilot stamps
     pilot_stamp = ["stamp_1"]
 
@@ -147,7 +145,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
 
     access_token = r.json()["access_token"]
 
-    msg = "JSON file loaded: pilot.json\n" "JSON file analysed: pilot.json"
+    msg = "JSON file loaded: pilot.json\nJSON file analysed: pilot.json"
     # message dict
     lines = []
     for line in msg.split("\n"):
@@ -190,7 +188,6 @@ async def test_query_invalid_stamp(create_logs, normal_test_client):
 
 
 async def test_query_each_length(create_logs, normal_test_client):
-
     for stamp in create_logs:
         data = {
             "search": [{"parameter": "PilotStamp", "operator": "eq", "value": stamp}]
@@ -201,7 +198,6 @@ async def test_query_each_length(create_logs, normal_test_client):
 
 
 async def test_query_each_field(create_logs, normal_test_client):
-
     for i, stamp in enumerate(create_logs):
         data = {
             "search": [{"parameter": "PilotStamp", "operator": "eq", "value": stamp}],
