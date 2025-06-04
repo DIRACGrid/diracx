@@ -16,8 +16,12 @@ from diracx.core.exceptions import (
     SecretAlreadyExistsError,
     SecretNotFoundError,
 )
-from diracx.core.models import PilotFieldsMapping, SearchSpec, SortSpec
-from diracx.db.exceptions import DBInBadStateError
+from diracx.core.models import (
+    PilotFieldsMapping,
+    PilotSecretConstraints,
+    SearchSpec,
+    SortSpec,
+)
 
 from ..utils import (
     BaseSQLDB,
@@ -40,7 +44,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     metadata = PilotAgentsDBBase.metadata
 
-    async def update_pilot_secret_use_time(self, pilot_stamp: str) -> None:
+    async def update_pilot_secret_use_time(self, secret_uuid: str) -> None:
         """Update when a pilot used a secret.
 
         Raises:
@@ -50,11 +54,12 @@ class PilotAgentsDB(BaseSQLDB):
         """
         #  Prepare the update statement
         stmt = (
-            update(PilotAgents)
+            update(PilotSecrets)
             .values(
-                pilot_secret_use_time=utcnow(),
+                pilot_secret_use_date=utcnow(),
+                secret_remaining_use_count=PilotSecrets.secret_remaining_use_count - 1,
             )
-            .where(PilotAgents.pilot_stamp == pilot_stamp)
+            .where(PilotSecrets.secret_uuid == secret_uuid)
         )
 
         # Execute the update using the connection
@@ -63,40 +68,8 @@ class PilotAgentsDB(BaseSQLDB):
         if res.rowcount == 0:
             raise PilotNotFoundError(
                 data={
-                    "pilot_stamp": pilot_stamp,
+                    "secret_uuid": str(secret_uuid),
                 }
-            )
-        if res.rowcount != 1:
-            raise DBInBadStateError(
-                detail="This should not happen. Pilot should have a unique stamp, but multiple were found."
-            )
-
-    async def increment_global_secret_use(
-        self,
-        secret_uuid: str,
-    ) -> None:
-        """Increment the global secret count.
-
-        Raises:
-        - SecretNotFoundError if the secret does not exist
-        - DBInBadStateError if we updated more that one secret
-
-        """
-        #  Prepare the update statement
-        stmt = (
-            update(PilotSecrets)
-            .values(secret_global_use_count=PilotSecrets.secret_global_use_count + 1)
-            .where(PilotSecrets.secret_uuid == secret_uuid)
-        )
-
-        # Execute the update using the connection
-        res = await self.conn.execute(stmt)
-
-        if res.rowcount == 0:
-            raise SecretNotFoundError(data={"secret_uuid": secret_uuid})
-        if res.rowcount != 1:
-            raise DBInBadStateError(
-                detail="This should not happen. Pilot should have a secret, but is not found."
             )
 
     async def add_pilots_bulk(
@@ -164,8 +137,8 @@ class PilotAgentsDB(BaseSQLDB):
     async def insert_unique_secrets_bulk(
         self,
         hashed_secrets: list[bytes],
-        vo: str | None,
         secret_global_use_count_max: int | None = 1,
+        secret_constraints: dict[bytes, PilotSecretConstraints] = {},
     ):
         """Bulk insert secrets.
 
@@ -177,9 +150,9 @@ class PilotAgentsDB(BaseSQLDB):
         values = [
             {
                 "SecretUUID": str(uuid7()),
-                "SecretGlobalUseCountMax": secret_global_use_count_max,
+                "SecretRemainingUseCount": secret_global_use_count_max,
                 "HashedSecret": hashed_secret,
-                "SecretVO": vo,
+                "SecretConstraints": secret_constraints.get(hashed_secret, {}),
             }
             for hashed_secret in hashed_secrets
         ]
@@ -203,10 +176,12 @@ class PilotAgentsDB(BaseSQLDB):
                 "Engine Specific error not caught" + str(e)
             ) from e
 
-    async def associate_pilots_with_secrets_bulk(
-        self, pilot_to_secret_uuid_mapping_values: list[dict[str, Any]]
+    async def update_pilot_secrets_constraints_bulk(
+        self, hashed_secrets_to_pilot_stamps_mapping: list[dict[str, Any]]
     ):
-        """Bulk associate pilots with secrets.
+        """Bulk associate pilots with secrets by updating theirs constraints.
+
+        Important: We have to provide the updated constraints.
 
         Raises:
         - PilotNotFoundError if one of the pilot does not exist
@@ -216,18 +191,18 @@ class PilotAgentsDB(BaseSQLDB):
         # Better to give as a parameter pilot to secret associations, rather than associating here.
 
         stmt = (
-            update(PilotAgents)
-            .where(PilotAgents.pilot_stamp == bindparam("b_PilotStamp"))
-            .values({"PilotSecretUUID": bindparam("b_PilotSecretUUID")})
+            update(PilotSecrets)
+            .where(PilotSecrets.hashed_secret == bindparam("PilotHashedSecret"))
+            .values({"SecretConstraints": bindparam("PilotSecretConstraints")})
         )
 
         try:
-            await self.conn.execute(stmt, pilot_to_secret_uuid_mapping_values)
+            await self.conn.execute(stmt, hashed_secrets_to_pilot_stamps_mapping)
         except (IntegrityError, OperationalError) as e:
             if "foreign key" in str(e.orig).lower():
-                raise PilotNotFoundError(
-                    data={"pilot_stamps": str(pilot_to_secret_uuid_mapping_values)},
-                    detail="at least one of these pilots or secrets does not exist",
+                raise SecretNotFoundError(
+                    data={"mapping": str(hashed_secrets_to_pilot_stamps_mapping)},
+                    detail="at least one of these secrets does not exist",
                 ) from e
             raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
 

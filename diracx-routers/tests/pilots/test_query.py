@@ -87,7 +87,6 @@ async def search(populated_pilot_client):
     async def _search(
         parameters, conditions, sorts, distinct=False, page=1, per_page=100
     ):
-
         body = {
             "parameters": parameters,
             "search": conditions,

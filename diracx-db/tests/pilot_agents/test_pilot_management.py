@@ -53,12 +53,10 @@ async def create_timed_pilots(pilot_agents_db, add_stamps):
     async def _create_timed_pilots(
         old_date: datetime, aborted: bool = False, start_n=0
     ):
-
         # Get pilots
         pilots = await add_stamps(start_n)
 
         async with pilot_agents_db as db:
-
             # Update manually their age
             # Collect PilotStamps
             pilot_stamps = [pilot["PilotStamp"] for pilot in pilots]
@@ -127,7 +125,6 @@ async def create_old_pilots_environment(pilot_agents_db, create_timed_pilots):
 
 @pytest.mark.asyncio
 async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
-
     async with pilot_agents_db as pilot_agents_db:
         # Add pilots
         refs = [f"ref_{i}" for i in range(10)]
@@ -146,7 +143,6 @@ async def test_insert_and_select(pilot_agents_db: PilotAgentsDB):
 
 @pytest.mark.asyncio
 async def test_insert_and_delete(pilot_agents_db: PilotAgentsDB):
-
     async with pilot_agents_db as pilot_agents_db:
         # Add pilots
         refs = [f"ref_{i}" for i in range(2)]
@@ -175,7 +171,6 @@ async def test_insert_and_delete(pilot_agents_db: PilotAgentsDB):
 async def test_insert_and_delete_only_old_aborted(
     pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
 ):
-
     non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
         create_old_pilots_environment
     )
@@ -209,7 +204,6 @@ async def test_insert_and_delete_only_old_aborted(
 async def test_insert_and_delete_old(
     pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
 ):
-
     non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
         create_old_pilots_environment
     )
@@ -245,7 +239,6 @@ async def test_insert_and_delete_old(
 async def test_insert_and_delete_recent_only_aborted(
     pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
 ):
-
     non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
         create_old_pilots_environment
     )
@@ -278,7 +271,6 @@ async def test_insert_and_delete_recent_only_aborted(
 async def test_insert_and_delete_recent(
     pilot_agents_db: PilotAgentsDB, create_old_pilots_environment
 ):
-
     non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
         create_old_pilots_environment
     )
@@ -305,7 +297,6 @@ async def test_insert_and_delete_recent(
 
 @pytest.mark.asyncio
 async def test_insert_and_select_single_then_modify(pilot_agents_db: PilotAgentsDB):
-
     async with pilot_agents_db as pilot_agents_db:
         pilot_stamp = "stamp-test"
         await pilot_agents_db.add_pilots_bulk(

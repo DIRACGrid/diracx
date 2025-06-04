@@ -12,11 +12,15 @@ from diracx.core.exceptions import (
     PilotNotFoundError,
     SecretNotFoundError,
 )
-from diracx.core.models import PilotFieldsMapping, PilotSecretsInfo
-from diracx.logic.pilots.auth import (
-    associate_pilots_with_secrets as associate_pilots_with_secrets_bl,
+from diracx.core.models import (
+    PilotFieldsMapping,
+    PilotSecretConstraints,
+    PilotSecretsInfo,
 )
 from diracx.logic.pilots.auth import create_secrets
+from diracx.logic.pilots.auth import (
+    update_secrets_constraints as update_secrets_constraints_bl,
+)
 from diracx.logic.pilots.management import (
     associate_pilot_with_jobs as associate_pilot_with_jobs_bl,
 )
@@ -68,50 +72,42 @@ async def create_pilot_secrets(
         )
 
     credentials = await create_secrets(
-        n, pilot_db, settings, vo, pilot_secret_use_count_max, expiration_minutes
+        n, pilot_db, settings, pilot_secret_use_count_max, expiration_minutes
     )
 
     logger.info(
-        f"{user_info.preferred_username} created {n} secrets that will last in {expiration_minutes} minute(s)."
+        f"{user_info.preferred_username} created {n} secrets that will expire in {expiration_minutes} minute(s)."
     )
 
     return credentials
 
 
 @router.patch("/fields/secrets", status_code=HTTPStatus.NO_CONTENT)
-async def associate_pilots_with_secrets(
-    pilot_stamps: Annotated[list[str], Body(description="List of all pilot stamps.")],
-    pilot_secrets: Annotated[
-        list[str],
-        Body(
-            description=(
-                "List of all secrets."
-                "Possibility of providing only one (1) secret, it will apply it to all pilots."
-            )
-        ),
+async def update_secrets_constraints(
+    secrets_to_constraints_dict: Annotated[
+        dict[str, PilotSecretConstraints],
+        Body(description="Mapping between secrets and pilots.", embed=False),
     ],
     pilot_agents_db: PilotAgentsDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
     """Endpoint to associate pilots with secrets."""
+    pilot_stamps = set()
+    for constraints in secrets_to_constraints_dict.values():
+        if "PilotStamps" in constraints:
+            pilot_stamps.update(constraints["PilotStamps"])
+
     await check_permissions(
         action=ActionType.CHANGE_PILOT_FIELD,
         pilot_stamps=pilot_stamps,
         pilot_db=pilot_agents_db,
     )
 
-    if len(pilot_secrets) != 1 and len(pilot_secrets) != len(pilot_stamps):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="pilot_secrets length must be one (1) or the same length as pilot_stamps",
-        )
-
     try:
-        await associate_pilots_with_secrets_bl(
+        await update_secrets_constraints_bl(
             pilot_db=pilot_agents_db,
-            pilot_secrets=pilot_secrets,
-            pilot_stamps=pilot_stamps,
+            secrets_to_constraints_dict=secrets_to_constraints_dict,
         )
     except CredentialsAlreadyExistError as e:
         raise HTTPException(
@@ -132,7 +128,7 @@ async def associate_pilots_with_secrets(
 
     logger.info(
         f"{user_info.preferred_username} associated {len(pilot_stamps)} pilots"
-        f"with {len(pilot_secrets)} secrets."
+        f"with {len(secrets_to_constraints_dict)} secrets."
     )
 
 

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from time import sleep
 
 import pytest
 from fastapi.testclient import TestClient
 from pytest_httpx import HTTPXMock
 
-from diracx.core.utils import extract_timestamp_from_uuid7
+from diracx.core.models import PilotSecretConstraints
 from diracx.db.sql.pilot_agents.db import PilotAgentsDB
 from diracx.db.sql.utils.functions import raw_hash
 
@@ -48,11 +48,9 @@ def non_mocked_hosts(test_client) -> list[str]:
 
 @pytest.fixture
 async def add_stamps(test_client):
-
     db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db as pilot_agents_db:
-
         # Add pilots
         refs = [f"ref_{i}" for i in range(N)]
         stamps = [f"stamp_{i}" for i in range(N)]
@@ -71,19 +69,23 @@ async def add_stamps(test_client):
 
 @pytest.fixture
 async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
-
     db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db as pilot_agents_db:
         # Retrieve the stamps from the add_stamps fixture
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
+        # Add a VO restriction as well as association with a specific pilot
         secrets = [f"AW0nd3rfulS3cr3t_{str(i)}" for i in range(len(stamps))]
         hashed_secrets = [raw_hash(secret) for secret in secrets]
+        constraints = {
+            hashed_secret: PilotSecretConstraints(VOs=[MAIN_VO], PilotStamps=[stamp])
+            for hashed_secret, stamp in zip(hashed_secrets, stamps)
+        }
 
         # Add creds
         await pilot_agents_db.insert_unique_secrets_bulk(
-            hashed_secrets=hashed_secrets, vo=MAIN_VO
+            hashed_secrets=hashed_secrets, secret_constraints=constraints
         )
 
         # Associate with pilot
@@ -93,21 +95,10 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
 
         assert len(secrets_obj) == len(hashed_secrets) == len(stamps)
 
-        # Associate pilot with its secret
-        pilot_to_secret_uuid_mapping_values = [
-            {
-                "b_PilotSecretUUID": secret["SecretUUID"],
-                "b_PilotStamp": stamp,
-            }
-            for secret, stamp in zip(secrets_obj, stamps)
-        ]
-        await pilot_agents_db.associate_pilots_with_secrets_bulk(
-            pilot_to_secret_uuid_mapping_values
-        )
-
+        # extract_timestamp_from_uuid7(secret_obj["SecretUUID"]) does not work here
+        # See #548
         expiration_date = [
-            extract_timestamp_from_uuid7(secret_obj["SecretUUID"])
-            + timedelta(seconds=secret_duration_sec)
+            datetime.now(timezone.utc) + timedelta(seconds=secret_duration_sec)
             for secret_obj in secrets_obj
         ]
 
@@ -122,7 +113,6 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
 async def test_verify_secret(test_client, add_secrets_and_time):
-
     # Add pilots
     result = add_secrets_and_time
     stamps = result["stamps"]
@@ -213,7 +203,6 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
 @pytest.mark.parametrize("secret_duration_sec", [2])
 async def test_expired_secret(test_client, add_secrets_and_time):
-
     # Add pilots
     result = add_secrets_and_time
     stamps = result["stamps"]
@@ -273,7 +262,8 @@ async def test_access_user_info_with_pilot_token(test_client, add_secrets_and_ti
 
 
 async def test_refresh_pilot_token_with_user_token(
-    normal_test_client: TestClient, auth_httpx_mock: HTTPXMock  # noqa: F811
+    normal_test_client: TestClient,
+    auth_httpx_mock: HTTPXMock,  # noqa: F811
 ):
     # ----------------- Exchange for new tokens but with a user token -----------------
     # This will test that a user can't access a pilot endpoint *by default*

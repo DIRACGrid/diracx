@@ -226,7 +226,7 @@ def build_auth_initiate_authorization_flow_request(  # pylint: disable=name-too-
     redirect_uri: str,
     scope: str,
     state: str,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -277,7 +277,7 @@ def build_config_serve_config_request(
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
     match_condition: Optional[MatchConditions] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
@@ -594,14 +594,10 @@ def build_jobs_submit_jdl_jobs_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilot_management_add_pilot_stamps_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilot_management_add_pilot_stamps_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -609,9 +605,7 @@ def build_pilot_management_add_pilot_stamps_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -642,21 +636,15 @@ def build_pilot_management_clear_pilots_request(  # pylint: disable=name-too-lon
     # Construct parameters
     _params["age_in_days"] = _SERIALIZER.query("age_in_days", age_in_days, "int")
     if delete_only_aborted is not None:
-        _params["delete_only_aborted"] = _SERIALIZER.query(
-            "delete_only_aborted", delete_only_aborted, "bool"
-        )
+        _params["delete_only_aborted"] = _SERIALIZER.query("delete_only_aborted", delete_only_aborted, "bool")
 
     return HttpRequest(method="DELETE", url=_url, params=_params, **kwargs)
 
 
-def build_pilot_management_create_pilot_secrets_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilot_management_create_pilot_secrets_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -664,50 +652,38 @@ def build_pilot_management_create_pilot_secrets_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilot_management_associate_pilots_with_secrets_request(  # pylint: disable=name-too-long
+def build_pilot_management_update_secrets_constraints_request(  # pylint: disable=name-too-long
     **kwargs: Any,
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     # Construct URL
     _url = "/api/pilot_management/fields/secrets"
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilot_management_update_pilot_fields_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilot_management_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     # Construct URL
     _url = "/api/pilot_management/fields"
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
@@ -717,30 +693,22 @@ def build_pilot_management_associate_pilot_with_jobs_request(  # pylint: disable
 ) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     # Construct URL
     _url = "/api/pilot_management/fields/jobs"
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilot_management_search_request(
-    *, page: int = 1, per_page: int = 100, **kwargs: Any
-) -> HttpRequest:
+def build_pilot_management_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -754,22 +722,16 @@ def build_pilot_management_search_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(
-        method="POST", url=_url, params=_params, headers=_headers, **kwargs
-    )
+    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_pilots_pilot_login_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -777,22 +739,16 @@ def build_pilots_pilot_login_request(**kwargs: Any) -> HttpRequest:
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_refresh_pilot_tokens_request(
-    **kwargs: Any,
-) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilots_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop(
-        "content_type", _headers.pop("Content-Type", None)
-    )
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
@@ -800,9 +756,7 @@ def build_pilots_refresh_pilot_tokens_request(
 
     # Construct headers
     if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header(
-            "content_type", content_type, "str"
-        )
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
@@ -1441,7 +1395,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         redirect_uri: str,
         scope: str,
         state: str,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Any:
         """Initiate Authorization Flow.
 
@@ -1620,7 +1574,7 @@ class ConfigOperations:
         if_modified_since: Optional[str] = None,
         etag: Optional[str] = None,
         match_condition: Optional[MatchConditions] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Any:
         """Serve Config.
 
@@ -2203,7 +2157,7 @@ class JobsOperations:
         *,
         force: bool = False,
         content_type: str = "application/json",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
@@ -2247,7 +2201,7 @@ class JobsOperations:
         body: Union[Dict[str, Dict[str, _models.JobStatusUpdate]], IO[bytes]],
         *,
         force: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
@@ -2582,7 +2536,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2612,7 +2566,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         content_type: str = "application/json",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2641,7 +2595,7 @@ class JobsOperations:
         *,
         page: int = 1,
         per_page: int = 100,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
         """Search.
 
@@ -2922,26 +2876,14 @@ class PilotOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @overload
     def management_add_pilot_stamps(
-        self,
-        body: _models.BodyPilotManagementAddPilotStamps,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: _models.BodyPilotManagementAddPilotStamps, *, content_type: str = "application/json", **kwargs: Any
     ) -> _models.ResponsePilotManagementAddPilotStamps:
         """Add Pilot Stamps.
 
@@ -2983,9 +2925,7 @@ class PilotOperations:
 
     @distributed_trace
     def management_add_pilot_stamps(
-        self,
-        body: Union[_models.BodyPilotManagementAddPilotStamps, IO[bytes]],
-        **kwargs: Any,
+        self, body: Union[_models.BodyPilotManagementAddPilotStamps, IO[bytes]], **kwargs: Any
     ) -> _models.ResponsePilotManagementAddPilotStamps:
         """Add Pilot Stamps.
 
@@ -3011,12 +2951,8 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
-        cls: ClsType[_models.ResponsePilotManagementAddPilotStamps] = kwargs.pop(
-            "cls", None
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[_models.ResponsePilotManagementAddPilotStamps] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -3036,23 +2972,17 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "ResponsePilotManagementAddPilotStamps", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("ResponsePilotManagementAddPilotStamps", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3096,18 +3026,14 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3154,18 +3080,14 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3213,9 +3135,7 @@ class PilotOperations:
 
     @distributed_trace
     def management_create_pilot_secrets(
-        self,
-        body: Union[_models.BodyPilotManagementCreatePilotSecrets, IO[bytes]],
-        **kwargs: Any,
+        self, body: Union[_models.BodyPilotManagementCreatePilotSecrets, IO[bytes]], **kwargs: Any
     ) -> List[_models.PilotSecretsInfo]:
         """Create Pilot Secrets.
 
@@ -3239,9 +3159,7 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[List[_models.PilotSecretsInfo]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3262,23 +3180,17 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "[PilotSecretsInfo]", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("[PilotSecretsInfo]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3286,19 +3198,15 @@ class PilotOperations:
         return deserialized  # type: ignore
 
     @overload
-    def management_associate_pilots_with_secrets(
-        self,
-        body: _models.BodyPilotManagementAssociatePilotsWithSecrets,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+    def management_update_secrets_constraints(
+        self, body: Dict[str, _models.PilotSecretConstraints], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Associate Pilots With Secrets.
+        """Update Secrets Constraints.
 
         Endpoint to associate pilots with secrets.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotManagementAssociatePilotsWithSecrets
+        :type body: dict[str, ~_generated.models.PilotSecretConstraints]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3308,10 +3216,10 @@ class PilotOperations:
         """
 
     @overload
-    def management_associate_pilots_with_secrets(
+    def management_update_secrets_constraints(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Associate Pilots With Secrets.
+        """Update Secrets Constraints.
 
         Endpoint to associate pilots with secrets.
 
@@ -3326,18 +3234,15 @@ class PilotOperations:
         """
 
     @distributed_trace
-    def management_associate_pilots_with_secrets(  # pylint: disable=inconsistent-return-statements
-        self,
-        body: Union[_models.BodyPilotManagementAssociatePilotsWithSecrets, IO[bytes]],
-        **kwargs: Any,
+    def management_update_secrets_constraints(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[Dict[str, _models.PilotSecretConstraints], IO[bytes]], **kwargs: Any
     ) -> None:
-        """Associate Pilots With Secrets.
+        """Update Secrets Constraints.
 
         Endpoint to associate pilots with secrets.
 
-        :param body: Is either a BodyPilotManagementAssociatePilotsWithSecrets type or a IO[bytes]
-         type. Required.
-        :type body: ~_generated.models.BodyPilotManagementAssociatePilotsWithSecrets or IO[bytes]
+        :param body: Is either a {str: PilotSecretConstraints} type or a IO[bytes] type. Required.
+        :type body: dict[str, ~_generated.models.PilotSecretConstraints] or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3353,9 +3258,7 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3364,11 +3267,9 @@ class PilotOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(
-                body, "BodyPilotManagementAssociatePilotsWithSecrets"
-            )
+            _json = self._serialize.body(body, "{PilotSecretConstraints}")
 
-        _request = build_pilot_management_associate_pilots_with_secrets_request(
+        _request = build_pilot_management_update_secrets_constraints_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3378,18 +3279,14 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3441,9 +3338,7 @@ class PilotOperations:
 
     @distributed_trace
     def management_update_pilot_fields(  # pylint: disable=inconsistent-return-statements
-        self,
-        body: Union[_models.BodyPilotManagementUpdatePilotFields, IO[bytes]],
-        **kwargs: Any,
+        self, body: Union[_models.BodyPilotManagementUpdatePilotFields, IO[bytes]], **kwargs: Any
     ) -> None:
         """Update Pilot Fields.
 
@@ -3469,9 +3364,7 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3492,18 +3385,14 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3551,9 +3440,7 @@ class PilotOperations:
 
     @distributed_trace
     def management_associate_pilot_with_jobs(  # pylint: disable=inconsistent-return-statements
-        self,
-        body: Union[_models.BodyPilotManagementAssociatePilotWithJobs, IO[bytes]],
-        **kwargs: Any,
+        self, body: Union[_models.BodyPilotManagementAssociatePilotWithJobs, IO[bytes]], **kwargs: Any
     ) -> None:
         """Associate Pilot With Jobs.
 
@@ -3577,9 +3464,7 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[None] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3588,9 +3473,7 @@ class PilotOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(
-                body, "BodyPilotManagementAssociatePilotWithJobs"
-            )
+            _json = self._serialize.body(body, "BodyPilotManagementAssociatePilotWithJobs")
 
         _request = build_pilot_management_associate_pilot_with_jobs_request(
             content_type=content_type,
@@ -3602,18 +3485,14 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [204]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         if cls:
@@ -3709,9 +3588,7 @@ class PilotOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3737,25 +3614,19 @@ class PilotOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200, 206]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
         response_headers = {}
         if response.status_code == 206:
-            response_headers["Content-Range"] = self._deserialize(
-                "str", response.headers.get("Content-Range")
-            )
+            response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
 
         deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
@@ -3779,26 +3650,14 @@ class PilotsOperations:
 
     def __init__(self, *args, **kwargs) -> None:
         input_args = list(args)
-        self._client: PipelineClient = (
-            input_args.pop(0) if input_args else kwargs.pop("client")
-        )
-        self._config: DiracConfiguration = (
-            input_args.pop(0) if input_args else kwargs.pop("config")
-        )
-        self._serialize: Serializer = (
-            input_args.pop(0) if input_args else kwargs.pop("serializer")
-        )
-        self._deserialize: Deserializer = (
-            input_args.pop(0) if input_args else kwargs.pop("deserializer")
-        )
+        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @overload
     def pilot_login(
-        self,
-        body: _models.BodyPilotsPilotLogin,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: _models.BodyPilotsPilotLogin, *, content_type: str = "application/json", **kwargs: Any
     ) -> _models.TokenResponse:
         """Pilot Login.
 
@@ -3833,9 +3692,7 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def pilot_login(
-        self, body: Union[_models.BodyPilotsPilotLogin, IO[bytes]], **kwargs: Any
-    ) -> _models.TokenResponse:
+    def pilot_login(self, body: Union[_models.BodyPilotsPilotLogin, IO[bytes]], **kwargs: Any) -> _models.TokenResponse:
         """Pilot Login.
 
         This endpoint is used by the pilot to exchange a secret for a token.
@@ -3857,9 +3714,7 @@ class PilotsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3880,23 +3735,17 @@ class PilotsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "TokenResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3905,11 +3754,7 @@ class PilotsOperations:
 
     @overload
     def refresh_pilot_tokens(
-        self,
-        body: _models.BodyPilotsRefreshPilotTokens,
-        *,
-        content_type: str = "application/json",
-        **kwargs: Any,
+        self, body: _models.BodyPilotsRefreshPilotTokens, *, content_type: str = "application/json", **kwargs: Any
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
@@ -3945,9 +3790,7 @@ class PilotsOperations:
 
     @distributed_trace
     def refresh_pilot_tokens(
-        self,
-        body: Union[_models.BodyPilotsRefreshPilotTokens, IO[bytes]],
-        **kwargs: Any,
+        self, body: Union[_models.BodyPilotsRefreshPilotTokens, IO[bytes]], **kwargs: Any
     ) -> _models.TokenResponse:
         """Refresh Pilot Tokens.
 
@@ -3970,9 +3813,7 @@ class PilotsOperations:
         _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: Optional[str] = kwargs.pop(
-            "content_type", _headers.pop("Content-Type", None)
-        )
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
@@ -3993,23 +3834,17 @@ class PilotsOperations:
         _request.url = self._client.format_url(_request.url)
 
         _stream = False
-        pipeline_response: PipelineResponse = (
-            self._client._pipeline.run(  # pylint: disable=protected-access
-                _request, stream=_stream, **kwargs
-            )
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
         )
 
         response = pipeline_response.http_response
 
         if response.status_code not in [200]:
-            map_error(
-                status_code=response.status_code, response=response, error_map=error_map
-            )
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize(
-            "TokenResponse", pipeline_response.http_response
-        )
+        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

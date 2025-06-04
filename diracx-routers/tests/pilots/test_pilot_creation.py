@@ -134,7 +134,6 @@ async def test_create_pilots_with_credentials(normal_test_client):
 
 
 async def test_create_secrets_and_login(normal_test_client):
-
     pilot_stamps = [f"stamps_{i}" for i in range(N)]
 
     #  -------------- Create N secrets. --------------
@@ -174,7 +173,7 @@ async def test_create_secrets_and_login(normal_test_client):
 
     #  -------------- Associate pilot with bad secrets --------------
 
-    body = {"pilot_stamps": pilot_stamps, "pilot_secrets": ["bad_secret"]}
+    body = {"bad_secret": {"PilotStamps": pilot_stamps}}
 
     r = normal_test_client.patch(
         "/api/pilot_management/fields/secrets",
@@ -182,12 +181,15 @@ async def test_create_secrets_and_login(normal_test_client):
         headers={"Content-Type": "application/json"},
     )
 
-    assert r.status_code == 400
+    assert r.status_code == 400, r.json()
     assert r.json()["detail"] == "one of the secrets does not exist"
 
     #  -------------- Associate pilot with secrets --------------
 
-    body = {"pilot_stamps": pilot_stamps, "pilot_secrets": secrets}
+    body = {
+        pilot_secret: {"PilotStamps": [pilot_stamp]}
+        for pilot_secret, pilot_stamp in zip(secrets, pilot_stamps)
+    }
 
     r = normal_test_client.patch(
         "/api/pilot_management/fields/secrets",
@@ -199,7 +201,6 @@ async def test_create_secrets_and_login(normal_test_client):
     #  -------------- Login with the right credentials --------------
 
     for stamp, secret in zip(pilot_stamps, secrets):
-
         body = {"pilot_secret": secret, "pilot_stamp": stamp}
 
         r = normal_test_client.post(
@@ -222,13 +223,10 @@ async def test_create_secrets_and_login(normal_test_client):
 
     assert r.status_code == 401, r.json()
 
-    #  -------------- Associate everyone to secret[1] --------------
+    #  -------------- Associate everyone to secrets[1] --------------
 
     # Allowed by the router to avoid sending thousands of the same secret, if we want bunch of pilots to share a secret
-    body = {
-        "pilot_stamps": pilot_stamps,
-        "pilot_secrets": [secrets[1]],
-    }
+    body = {secrets[1]: {"PilotStamps": pilot_stamps}}
 
     r = normal_test_client.patch(
         "/api/pilot_management/fields/secrets",
@@ -240,7 +238,6 @@ async def test_create_secrets_and_login(normal_test_client):
 
     #  -------------- Login with the right credentials --------------
     for stamp in pilot_stamps:
-
         body = {"pilot_secret": secrets[1], "pilot_stamp": stamp}
 
         r = normal_test_client.post(

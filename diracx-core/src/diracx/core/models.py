@@ -344,6 +344,11 @@ class PilotCredentialsInfo(PilotSecretsInfo, PilotStampInfo):
 
 
 # -----------------------
+class PilotSecretConstraints(TypedDict, total=False):
+    VOs: list[str]  # Authorize only a list of VOs
+    PilotStamps: list[str]  # Authorize only a list of stamps
+    Sites: list[str]  # Authorize only a list of sites
+    # ...
 
 
 class PilotStatus(str, Enum):

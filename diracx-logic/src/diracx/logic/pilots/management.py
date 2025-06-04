@@ -24,7 +24,6 @@ async def update_pilots_fields(
 async def associate_pilot_with_jobs(
     pilot_db: PilotAgentsDB, pilot_stamp: str, pilot_jobs_ids: list[int]
 ):
-
     pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
     # Semantic assured by fetch_records_bulk_or_raises
     pilot_id = pilot_ids[0]

@@ -18,7 +18,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, AsyncIterable, TypeVar
+from typing import Any, AsyncIterable, Mapping, TypeVar, cast
 
 from cachetools import Cache, TTLCache
 from uuid_utils import UUID
@@ -279,3 +279,23 @@ def extract_timestamp_from_uuid7(uuid_str: str) -> datetime:
     timestamp_ms = int.from_bytes(ts_bytes, byteorder="big")
     # Convert into seconds then to datetime
     return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)
+
+
+T_DICTS = TypeVar("T_DICTS", bound=Mapping[str, Any])
+
+
+def recursive_dict_merge(x: T_DICTS, y: T_DICTS) -> T_DICTS:
+    result: dict[str, Any] = dict(x)
+
+    for k, v in y.items():
+        if k in result:
+            if isinstance(result[k], dict) and isinstance(v, dict):
+                result[k] = recursive_dict_merge(result[k], v)
+            elif isinstance(result[k], list) and isinstance(v, list):
+                result[k] = result[k] + v
+            else:
+                result[k] = v
+        else:
+            result[k] = v
+
+    return cast(T_DICTS, result)

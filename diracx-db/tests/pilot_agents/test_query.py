@@ -42,8 +42,8 @@ PILOT_STATUSES = list(PilotStatus)
 async def populated_pilot_db(pilot_agents_db):
     async with pilot_agents_db as pilot_agents_db:
         # Add pilots
-        refs = [f"ref_{i+1}" for i in range(N)]
-        stamps = [f"stamp_{i+1}" for i in range(N)]
+        refs = [f"ref_{i + 1}" for i in range(N)]
+        stamps = [f"stamp_{i + 1}" for i in range(N)]
         pilot_references = dict(zip(stamps, refs))
 
         vo = MAIN_VO
