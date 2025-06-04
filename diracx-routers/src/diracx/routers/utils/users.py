@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OpenIdConnect
-from joserfc.errors import DecodeError, ExpiredTokenError
+from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
 from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
@@ -98,7 +98,7 @@ async def verify_dirac_access_token(
                 iss={"essential": True, "value": settings.token_issuer},
             ),
         )
-    except (DecodeError, ExpiredTokenError) as e:
+    except JoseError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",
