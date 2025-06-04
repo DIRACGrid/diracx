@@ -22,8 +22,6 @@ class ActionType(StrEnum):
     MANAGE = auto()
     # Search
     QUERY = auto()
-    # Actions from a pilot (e.g. heartbeat)
-    PILOT = auto()
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
@@ -46,11 +44,6 @@ class WMSAccessPolicy(BaseAccessPolicy):
     ):
         assert action, "action is a mandatory parameter"
         assert job_db, "job_db is a mandatory parameter"
-
-        if action == ActionType.PILOT:
-            # TODO: For now we map this to MANAGE but it should be changed once
-            # we have pilot credentials
-            action = ActionType.MANAGE
 
         if action == ActionType.CREATE:
             if job_ids is not None:

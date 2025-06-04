@@ -22,6 +22,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "WMSAccessPolicy",
         "DevelopmentSettings",
         "JobParametersDB",
+        "PilotAgentsDB",
     ]
 )
 
@@ -52,7 +53,7 @@ def test_set_job_status(normal_user_client: TestClient, valid_job_id: int):
     new_status = JobStatus.CHECKING.value
     new_minor_status = "JobPath"
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 datetime.now(tz=timezone.utc).isoformat(): {
@@ -92,7 +93,7 @@ def test_set_job_status_invalid_job(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             invalid_job_id: {
                 datetime.now(tz=timezone.utc).isoformat(): {
@@ -120,7 +121,7 @@ def test_set_job_status_offset_naive_datetime_return_bad_request(
     # Act
     date = datetime.now(tz=timezone.utc).isoformat(sep=" ").split("+")[0]
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 date: {
@@ -164,7 +165,7 @@ def test_set_job_status_cannot_make_impossible_transitions(
     new_status = JobStatus.RUNNING.value
     new_minor_status = "JobPath"
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 datetime.now(tz=timezone.utc).isoformat(): {
@@ -224,7 +225,7 @@ def test_set_job_status_force(normal_user_client: TestClient, valid_job_id: int)
     new_status = JobStatus.RUNNING.value
     new_minor_status = "JobPath"
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 datetime.now(tz=timezone.utc).isoformat(): {
@@ -286,7 +287,7 @@ def test_set_job_status_bulk(normal_user_client: TestClient, valid_job_ids):
     new_status = JobStatus.CHECKING.value
     new_minor_status = "JobPath"
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 datetime.now(timezone.utc).isoformat(): {
@@ -330,7 +331,7 @@ def test_set_job_status_with_invalid_job_id(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             invalid_job_id: {
                 datetime.now(tz=timezone.utc).isoformat(): {
@@ -475,7 +476,7 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
 def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 str(datetime.now(tz=timezone.utc)): {
@@ -510,7 +511,7 @@ def test_delete_job_valid_job_id(normal_user_client: TestClient, valid_job_id: i
 def test_delete_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             invalid_job_id: {
                 str(datetime.now(tz=timezone.utc)): {
@@ -532,7 +533,7 @@ def test_delete_bulk_jobs_valid_job_ids(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(tz=timezone.utc)): {
@@ -569,7 +570,7 @@ def test_delete_bulk_jobs_invalid_job_ids(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(tz=timezone.utc)): {
@@ -599,7 +600,7 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
 
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(tz=timezone.utc)): {
@@ -647,7 +648,7 @@ def test_delete_bulk_jobs_mix_of_valid_and_invalid_job_ids(
 def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 str(datetime.now(timezone.utc)): {
@@ -685,7 +686,7 @@ def test_kill_job_valid_job_id(normal_user_client: TestClient, valid_job_id: int
 def test_kill_job_invalid_job_id(normal_user_client: TestClient, invalid_job_id: int):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             int(invalid_job_id): {
                 str(datetime.now(timezone.utc)): {
@@ -709,7 +710,7 @@ def test_kill_bulk_jobs_valid_job_ids(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(timezone.utc)): {
@@ -751,7 +752,7 @@ def test_kill_bulk_jobs_invalid_job_ids(
 ):
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(timezone.utc)): {
@@ -783,7 +784,7 @@ def test_kill_bulk_jobs_mix_of_valid_and_invalid_job_ids(
 
     # Act
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             job_id: {
                 str(datetime.now(timezone.utc)): {
@@ -970,7 +971,7 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     # Act
     hbt = str(datetime.now(timezone.utc))
     r = normal_user_client.patch(
-        "/api/jobs/metadata",
+        "/api/pilots/metadata",
         json={
             valid_job_id: {
                 "UserPriority": 2,
@@ -1034,7 +1035,7 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     # Act
     hbt = str(datetime.now(timezone.utc))
     r = normal_user_client.patch(
-        "/api/jobs/metadata",
+        "/api/pilots/metadata",
         json={
             valid_job_id: {
                 "UserPriority": 2,
@@ -1058,7 +1059,7 @@ def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
 
     payload = {valid_job_id: {time.isoformat(): inner_payload}}
     r = normal_user_client.patch(
-        "/api/jobs/status", json=payload, params={"force": True}
+        "/api/pilots/status", json=payload, params={"force": True}
     )
     assert r.status_code == 200, r.json()
 
@@ -1071,7 +1072,7 @@ def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
     assert result[0]["Status"] == "Failed", result
 
     payload = {valid_job_id: {(time - timedelta(minutes=2)).isoformat(): inner_payload}}
-    r = normal_user_client.patch("/api/jobs/status", json={valid_job_id: payload})
+    r = normal_user_client.patch("/api/pilots/status", json={valid_job_id: payload})
     assert r.status_code == 200, r.json()
 
 
@@ -1085,7 +1086,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     assert old_data["HeartBeatTime"] is None
 
     payload = {valid_job_id: {"Vsize": 1234}}
-    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r = normal_user_client.patch("/api/pilots/heartbeat", json=payload)
     r.raise_for_status()
 
     r = normal_user_client.post("/api/jobs/search", json=search_body)
@@ -1100,7 +1101,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
 
     # Kill the job by setting the status on it
     r = normal_user_client.patch(
-        "/api/jobs/status",
+        "/api/pilots/status",
         json={
             valid_job_id: {
                 str(datetime.now(timezone.utc)): {
@@ -1115,7 +1116,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     sleep(1)
     # Send another heartbeat and check that a Kill job command was set
     payload = {valid_job_id: {"Vsize": 1235}}
-    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r = normal_user_client.patch("/api/pilots/heartbeat", json=payload)
     r.raise_for_status()
 
     commands = r.json()
@@ -1130,7 +1131,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
 
     # Send another heartbeat and check the job commands are empty
     payload = {valid_job_id: {"Vsize": 1234}}
-    r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
+    r = normal_user_client.patch("/api/pilots/heartbeat", json=payload)
     r.raise_for_status()
     commands = r.json()
     assert len(commands) == 0, (
