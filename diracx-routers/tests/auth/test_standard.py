@@ -632,6 +632,79 @@ async def test_access_token_expired(
     assert data["detail"] == "Invalid JWT"
 
 
+async def test_invalid_access_token_signature(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test the signature of a token.
+    - get an access token
+    - decode it and change the signature
+    - recode it (with the JWK of the server).
+    """
+    # Get access token
+    initial_access_token = _get_tokens(test_client)["access_token"]
+
+    # Decode it
+    access_payload = jwt.decode(
+        initial_access_token, options={"verify_signature": False}
+    )
+
+    # Encode it differently
+    new_access_token = create_token(access_payload, test_auth_settings)
+
+    # JWT tokens are structured as: header.payload.signature
+    parts = new_access_token.split(".")
+    parts[2] = "invalidsig"  # Replace the signature with garbage
+    new_access_token = ".".join(parts)
+
+    headers = {"Authorization": f"Bearer {new_access_token}"}
+
+    # Try to get the userinfo using the invalid access token
+    # The server should detect that it is not encoded properly
+    r = test_client.get("/api/auth/userinfo", headers=headers)
+    data = r.json()
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
+
+
+async def test_invalid_access_token_alg_none(
+    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+):
+    """Test token with 'alg': 'none' header (alg:none attack).
+    - get a valid token
+    - decode payload
+    - craft a JWT with alg=none and no signature
+    - verify that the server rejects it.
+    """
+    # Get a valid token
+    initial_access_token = _get_tokens(test_client)["access_token"]
+
+    # Decode payload (skip verifying signature)
+    access_payload = jwt.decode(
+        initial_access_token, options={"verify_signature": False}
+    )
+
+    # Manually build JWT with alg=none (no signature)
+    # Compared to test_invalid_access_token_signature, the signature is adapted to the alg
+    header = {"alg": "none", "typ": "JWT"}
+    encoded_header = (
+        base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+    )
+    encoded_payload = (
+        base64.urlsafe_b64encode(json.dumps(access_payload).encode())
+        .rstrip(b"=")
+        .decode()
+    )
+    tampered_token = f"{encoded_header}.{encoded_payload}."  # No signature
+
+    headers = {"Authorization": f"Bearer {tampered_token}"}
+
+    # Expect 401 due to disabled alg=none
+    r = test_client.get("/api/auth/userinfo", headers=headers)
+    data = r.json()
+    assert r.status_code == 401, data
+    assert data["detail"] == "Invalid JWT"
+
+
 async def test_refresh_token_rotated_expiration_time(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):

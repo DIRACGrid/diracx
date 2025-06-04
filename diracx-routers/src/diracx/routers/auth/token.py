@@ -7,7 +7,7 @@ import os
 from typing import Annotated, Literal
 
 from fastapi import Depends, Form, Header, HTTPException, status
-from joserfc.errors import DecodeError, ExpiredTokenError, InvalidKeyIdError
+from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
     DiracHttpResponseError,
@@ -146,9 +146,7 @@ async def get_oidc_token(
         ) from e
     except (
         InvalidCredentialsError,
-        DecodeError,
-        ExpiredTokenError,
-        InvalidKeyIdError,
+        JoseError,
     ) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
