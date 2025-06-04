@@ -41,17 +41,6 @@ async def associate_pilot_with_jobs(
     )
 
 
-async def get_pilot_jobs_ids_by_stamp(
-    pilot_db: PilotAgentsDB, pilot_stamp: str
-) -> list[int]:
-    """Fetch pilot jobs by stamp."""
-    pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
-    # Semantic assured by fetch_records_bulk_or_raises
-    pilot_id = pilot_ids[0]
-
-    return await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
-
-
 async def search(
     pilot_db: PilotAgentsDB,
     user_vo: str,

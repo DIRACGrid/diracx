@@ -165,3 +165,7 @@ class PilotJobsNotFoundError(DiracFormattedError):
 
 class PilotAlreadyAssociatedWithJobError(DiracFormattedError):
     pattern = "Pilot is already associated with a job %s "
+
+
+class PilotCantAccessJobError(DiracFormattedError):
+    pattern = "Pilot can't access some jobs %s "

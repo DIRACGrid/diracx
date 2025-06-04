@@ -355,73 +355,6 @@ class GroupInfo(_serialization.Model):
         self.properties = properties
 
 
-class HeartbeatData(_serialization.Model):
-    """HeartbeatData.
-
-    :ivar load_average: Loadaverage.
-    :vartype load_average: float
-    :ivar memory_used: Memoryused.
-    :vartype memory_used: float
-    :ivar vsize: Vsize.
-    :vartype vsize: float
-    :ivar available_disk_space: Availablediskspace.
-    :vartype available_disk_space: float
-    :ivar cpu_consumed: Cpuconsumed.
-    :vartype cpu_consumed: float
-    :ivar wall_clock_time: Wallclocktime.
-    :vartype wall_clock_time: float
-    :ivar standard_output: Standardoutput.
-    :vartype standard_output: str
-    """
-
-    _attribute_map = {
-        "load_average": {"key": "LoadAverage", "type": "float"},
-        "memory_used": {"key": "MemoryUsed", "type": "float"},
-        "vsize": {"key": "Vsize", "type": "float"},
-        "available_disk_space": {"key": "AvailableDiskSpace", "type": "float"},
-        "cpu_consumed": {"key": "CPUConsumed", "type": "float"},
-        "wall_clock_time": {"key": "WallClockTime", "type": "float"},
-        "standard_output": {"key": "StandardOutput", "type": "str"},
-    }
-
-    def __init__(
-        self,
-        *,
-        load_average: Optional[float] = None,
-        memory_used: Optional[float] = None,
-        vsize: Optional[float] = None,
-        available_disk_space: Optional[float] = None,
-        cpu_consumed: Optional[float] = None,
-        wall_clock_time: Optional[float] = None,
-        standard_output: Optional[str] = None,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword load_average: Loadaverage.
-        :paramtype load_average: float
-        :keyword memory_used: Memoryused.
-        :paramtype memory_used: float
-        :keyword vsize: Vsize.
-        :paramtype vsize: float
-        :keyword available_disk_space: Availablediskspace.
-        :paramtype available_disk_space: float
-        :keyword cpu_consumed: Cpuconsumed.
-        :paramtype cpu_consumed: float
-        :keyword wall_clock_time: Wallclocktime.
-        :paramtype wall_clock_time: float
-        :keyword standard_output: Standardoutput.
-        :paramtype standard_output: str
-        """
-        super().__init__(**kwargs)
-        self.load_average = load_average
-        self.memory_used = memory_used
-        self.vsize = vsize
-        self.available_disk_space = available_disk_space
-        self.cpu_consumed = cpu_consumed
-        self.wall_clock_time = wall_clock_time
-        self.standard_output = standard_output
-
-
 class HTTPValidationError(_serialization.Model):
     """HTTPValidationError.
 
@@ -552,45 +485,6 @@ class InsertedJob(_serialization.Model):
         self.status = status
         self.minor_status = minor_status
         self.time_stamp = time_stamp
-
-
-class JobCommand(_serialization.Model):
-    """JobCommand.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar job_id: Job Id. Required.
-    :vartype job_id: int
-    :ivar command: Command. Required.
-    :vartype command: str
-    :ivar arguments: Arguments.
-    :vartype arguments: str
-    """
-
-    _validation = {
-        "job_id": {"required": True},
-        "command": {"required": True},
-    }
-
-    _attribute_map = {
-        "job_id": {"key": "job_id", "type": "int"},
-        "command": {"key": "command", "type": "str"},
-        "arguments": {"key": "arguments", "type": "str"},
-    }
-
-    def __init__(self, *, job_id: int, command: str, arguments: Optional[str] = None, **kwargs: Any) -> None:
-        """
-        :keyword job_id: Job Id. Required.
-        :paramtype job_id: int
-        :keyword command: Command. Required.
-        :paramtype command: str
-        :keyword arguments: Arguments.
-        :paramtype arguments: str
-        """
-        super().__init__(**kwargs)
-        self.job_id = job_id
-        self.command = command
-        self.arguments = arguments
 
 
 class JobStatusUpdate(_serialization.Model):

@@ -7,13 +7,9 @@ from typing import Annotated, Any
 from fastapi import HTTPException, Query
 
 from diracx.core.models import (
-    HeartbeatData,
-    JobCommand,
     JobStatusUpdate,
     SetJobStatusReturn,
 )
-from diracx.logic.jobs.status import add_heartbeat as add_heartbeat_bl
-from diracx.logic.jobs.status import get_job_commands as get_job_commands_bl
 from diracx.logic.jobs.status import remove_jobs as remove_jobs_bl
 from diracx.logic.jobs.status import reschedule_jobs as reschedule_jobs_bl
 from diracx.logic.jobs.status import (
@@ -101,32 +97,6 @@ async def set_job_statuses(
         )
 
     return result
-
-
-@router.patch("/heartbeat")
-async def add_heartbeat(
-    data: dict[int, HeartbeatData],
-    config: Config,
-    job_db: JobDB,
-    job_logging_db: JobLoggingDB,
-    task_queue_db: TaskQueueDB,
-    job_parameters_db: JobParametersDB,
-    check_permissions: CheckWMSPolicyCallable,
-) -> list[JobCommand]:
-    """Register a heartbeat from the job.
-
-    This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-    receive job commands from the WMS. It also results in stalled jobs being
-    restored to the RUNNING status.
-
-    The `data` parameter and return value are mappings keyed by job ID.
-    """
-    await check_permissions(action=ActionType.PILOT, job_db=job_db, job_ids=list(data))
-
-    await add_heartbeat_bl(
-        data, config, job_db, job_logging_db, task_queue_db, job_parameters_db
-    )
-    return await get_job_commands_bl(data, job_db)
 
 
 @router.post("/reschedule")
