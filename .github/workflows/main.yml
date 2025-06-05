@@ -86,10 +86,16 @@ jobs:
         uses: codecov/codecov-action@v5.4.3
 
   pytest-integration:
+    name: Integration test - ${{ matrix.db.name }} & ${{matrix.extension}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        db:
+          - name: MySQL
+            cliOption: ""
+          - name: PostgreSQL
+            cliOption: "--postgres"
         extension:
           - diracx
           - gubbins
@@ -150,9 +156,9 @@ jobs:
         run: |
           docker load --input /tmp/gubbins_services_image.tar
           docker image ls -a
-      - name: Start demo
+      - name: Start demo using ${{ matrix.db.name }}
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          git clone -b diracx-issue-147-postgres-integration https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")
@@ -183,14 +189,14 @@ jobs:
 
           # Run the demo with the provided arguments
           set -x
-          ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
+          ../diracx-charts/run_demo.sh ${{ matrix.db.cliOption }} "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
         run: |
           DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
           export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
           export PATH=${DIRACX_DEMO_DIR}:$PATH
           kubectl get pods
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|postgres|rabbitmq|opensearch)'); do
             echo "${pod_name}"
             kubectl describe pod/"${pod_name}" || true
             for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
