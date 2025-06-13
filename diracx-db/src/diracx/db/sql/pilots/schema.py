@@ -37,6 +37,7 @@ class PilotAgents(PilotAgentsDBBase):
 
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
+        Index("PilotStamp", "PilotStamp"),
         Index("Status", "Status"),
         Index("Statuskey", "GridSite", "DestinationSite", "Status"),
     )

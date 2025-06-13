@@ -6,20 +6,28 @@ from .base import (
     apply_search_filters,
     apply_sort_constraints,
 )
-from .functions import hash, substract_date, utcnow
+from .functions import (
+    _get_columns,
+    fetch_records_bulk_or_raises,
+    hash,
+    substract_date,
+    utcnow,
+)
 from .types import Column, DateNowColumn, EnumBackedBool, EnumColumn, NullColumn
 
 __all__ = (
-    "utcnow",
-    "Column",
-    "NullColumn",
-    "DateNowColumn",
-    "BaseSQLDB",
-    "EnumBackedBool",
-    "EnumColumn",
+    "_get_columns",
     "apply_search_filters",
     "apply_sort_constraints",
-    "substract_date",
+    "BaseSQLDB",
+    "Column",
+    "DateNowColumn",
+    "EnumBackedBool",
+    "EnumColumn",
+    "fetch_records_bulk_or_raises",
     "hash",
+    "NullColumn",
+    "substract_date",
     "SQLDBUnavailableError",
+    "utcnow",
 )

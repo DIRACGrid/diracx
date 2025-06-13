@@ -6,8 +6,8 @@ from typing import Annotated, Any
 from fastapi import Body, Depends, Response
 
 from diracx.core.models import (
-    JobSearchParams,
     JobSummaryParams,
+    SearchParams,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR
 from diracx.logic.jobs.query import search as search_bl
@@ -135,7 +135,7 @@ async def search(
     page: int = 1,
     per_page: int = 100,
     body: Annotated[
-        JobSearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
+        SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
 ) -> list[dict[str, Any]]:
     """Retrieve information about jobs.
