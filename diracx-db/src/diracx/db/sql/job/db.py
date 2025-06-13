@@ -13,8 +13,7 @@ if TYPE_CHECKING:
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, _get_columns
-from ..utils.functions import utcnow
+from ..utils import BaseSQLDB, _get_columns, utcnow
 from .schema import (
     HeartBeatLoggingInfo,
     InputData,

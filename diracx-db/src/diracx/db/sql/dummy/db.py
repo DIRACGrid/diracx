@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import insert
 from uuid_utils import UUID
 
+from diracx.core.models import SearchSpec
 from diracx.db.sql.utils import BaseSQLDB
 
 from .schema import Base as DummyDBBase
@@ -21,8 +22,11 @@ class DummyDB(BaseSQLDB):
     # This needs to be here for the BaseSQLDB to create the engine
     metadata = DummyDBBase.metadata
 
-    async def summary(self, group_by, search) -> list[dict[str, str | int]]:
-        return await self._summary(Cars, group_by, search)
+    async def summary(
+        self, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
+        """Get a summary of the pilots."""
+        return await self._summary(table=Cars, group_by=group_by, search=search)
 
     async def insert_owner(self, name: str) -> int:
         stmt = insert(Owners).values(name=name)
