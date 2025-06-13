@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -65,7 +65,7 @@ class JobSummaryParams(BaseModel):
     # TODO: Add more validation
 
 
-class JobSearchParams(BaseModel):
+class SearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []
@@ -272,3 +272,28 @@ class JobCommand(BaseModel):
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
+
+
+class PilotInfo(BaseModel):
+    sub: str
+    pilot_stamp: str
+    vo: str
+
+
+class PilotStampInfo(BaseModel):
+    pilot_stamp: str
+
+
+class PilotFieldsMapping(BaseModel):
+    """All the fields that a user can modify on a Pilot (except PilotStamp)."""
+
+    PilotStamp: str
+    StatusReason: Optional[str] = None
+    Status: Optional[str] = None
+    BenchMark: Optional[float] = None
+    DestinationSite: Optional[str] = None
+    Queue: Optional[str] = None
+    GridSite: Optional[str] = None
+    GridType: Optional[str] = None
+    AccountingSent: Optional[bool] = None
+    CurrentJobID: Optional[int] = None
