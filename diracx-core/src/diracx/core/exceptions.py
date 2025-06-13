@@ -99,6 +99,9 @@ class JobError(DiracError):
         )
 
 
+class BadTokenError(DiracError): ...
+
+
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
 
@@ -113,3 +116,15 @@ class PilotAlreadyExistsError(DiracError):
 
 class PilotAlreadyAssociatedWithJobError(DiracError):
     """We can't associate a pilot with the same job twice."""
+
+
+class SecretHasExpiredError(DiracError):
+    """If a secret expired."""
+
+
+class SecretNotFoundError(DiracError):
+    """If a secret not found."""
+
+
+class BadPilotCredentialsError(DiracError):
+    """If a pilot tries to auth with another pilot's credentials."""

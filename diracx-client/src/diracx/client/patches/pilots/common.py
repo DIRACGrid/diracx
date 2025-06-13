@@ -99,6 +99,8 @@ class AddPilotStampsBody(TypedDict, total=False):
     pilot_references: dict[str, str]
     pilot_status: PilotStatus
     vo: str
+    generate_secrets: bool
+    pilot_secret_use_count_max: int | None
 
 class AddPilotStampsKwargs(AddPilotStampsBody, ResponseExtra): ...
 
@@ -112,7 +114,7 @@ def make_add_pilot_stamps_body(**kwargs: Unpack[AddPilotStampsKwargs]) -> Underl
     for key in AddPilotStampsBody.__optional_keys__:
         if key not in kwargs:
             continue
-        key = cast(Literal["pilot_stamps", "grid_type", "grid_site", "pilot_references", "pilot_status", "vo"], key)
+        key = cast(Literal["pilot_stamps", "grid_type", "grid_site", "pilot_references", "pilot_status", "vo", "generate_secrets", "pilot_secret_use_count_max"], key)
         value = kwargs.pop(key)
         if value is not None:
             body[key] = value

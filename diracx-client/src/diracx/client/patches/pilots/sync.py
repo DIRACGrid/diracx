@@ -16,6 +16,7 @@ from typing import Any, Unpack
 from azure.core.tracing.decorator import distributed_trace
 
 from ..._generated.operations._operations import PilotsOperations as _PilotsOperations
+from ..._generated.models._models import PilotCredentialsInfo
 from .common import (
     make_search_body,
     make_summary_body,
@@ -43,7 +44,7 @@ class PilotsOperations(_PilotsOperations):
         return super().summary(**make_summary_body(**kwargs))
 
     @distributed_trace
-    def add_pilot_stamps(self, **kwargs: Unpack[AddPilotStampsKwargs]) -> None:
+    def add_pilot_stamps(self, **kwargs: Unpack[AddPilotStampsKwargs]) -> list[PilotCredentialsInfo] | None:
         """TODO"""
         return super().add_pilot_stamps(**make_add_pilot_stamps_body(**kwargs))
 

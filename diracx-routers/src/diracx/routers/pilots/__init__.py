@@ -8,6 +8,6 @@ from .query import router as query_router
 
 logger = logging.getLogger(__name__)
 
-router = DiracxRouter()
+router = DiracxRouter(require_auth=True)
 router.include_router(management_router)
 router.include_router(query_router)
