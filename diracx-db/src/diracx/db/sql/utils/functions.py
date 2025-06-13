@@ -2,14 +2,28 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Sequence, Type
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, RowMapping, asc, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import ColumnElement, expression
+
+from diracx.core.exceptions import DiracFormattedError, InvalidQueryError
 
 if TYPE_CHECKING:
     from sqlalchemy.types import TypeEngine
+
+
+def _get_columns(table, parameters):
+    columns = [x for x in table.columns]
+    if parameters:
+        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
+            raise InvalidQueryError(
+                f"Unrecognised parameters requested {unrecognised_parameters}"
+            )
+        columns = [c for c in columns if c.name in parameters]
+    return columns
 
 
 class utcnow(expression.FunctionElement):  # noqa: N801
@@ -140,3 +154,73 @@ def substract_date(**kwargs: float) -> datetime:
 
 def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
+
+
+def raw_hash(code: str):
+    return hashlib.sha256(code.encode()).digest()
+
+
+async def fetch_records_bulk_or_raises(
+    conn: AsyncConnection,
+    model: Any,  # Here, we currently must use `Any` because `declarative_base()` returns any
+    missing_elements_error_cls: Type[DiracFormattedError],
+    column_attribute_name: str,
+    column_name: str,
+    elements_to_fetch: list,
+    order_by: tuple[str, str] | None = None,
+    allow_more_than_one_result_per_input: bool = False,
+    allow_no_result: bool = False,
+) -> Sequence[RowMapping]:
+    """Fetches a list of elements in a table, returns a list of elements.
+    All elements from the `element_to_fetch` **must** be present.
+    Raises the specified error if at least one is missing.
+
+    Example:
+    fetch_records_bulk_or_raises(
+        self.conn,
+        PilotAgents,
+        PilotNotFound,
+        "pilot_id",
+        "PilotID",
+        [1,2,3]
+    )
+
+    """
+    assert elements_to_fetch
+
+    # Get the column that needs to be in elements_to_fetch
+    column = getattr(model, column_attribute_name)
+
+    # Create the request
+    stmt = select(model).with_for_update().where(column.in_(elements_to_fetch))
+
+    if order_by:
+        column_name_to_order_by, direction = order_by
+        column_to_order_by = getattr(model, column_name_to_order_by)
+
+        operator: ColumnElement = (
+            asc(column_to_order_by) if direction == "asc" else desc(column_to_order_by)
+        )
+
+        stmt = stmt.order_by(operator)
+
+    # Transform into dictionaries
+    raw_results = await conn.execute(stmt)
+    results = raw_results.mappings().all()
+
+    # Detects duplicates
+    if not allow_more_than_one_result_per_input:
+        if len(results) > len(elements_to_fetch):
+            raise RuntimeError("Seems to have duplicates in the database.")
+
+    if not allow_no_result:
+        # Checks if we have every elements we wanted
+        found_keys = {row[column_name] for row in results}
+        missing = set(elements_to_fetch) - found_keys
+
+        if missing:
+            raise missing_elements_error_cls(
+                data={column_name: str(missing)}, detail=str(missing)
+            )
+
+    return results
