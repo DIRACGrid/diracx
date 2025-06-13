@@ -51,10 +51,12 @@ from ...operations._operations import (
     build_jobs_summary_request,
     build_jobs_unassign_bulk_jobs_sandboxes_request,
     build_jobs_unassign_job_sandboxes_request,
-    build_rss_get_compute_status_request,
-    build_rss_get_fts_status_request,
-    build_rss_get_site_status_request,
-    build_rss_get_storage_status_request,
+    build_pilots_add_pilot_stamps_request,
+    build_pilots_delete_pilots_request,
+    build_pilots_get_pilot_jobs_request,
+    build_pilots_search_request,
+    build_pilots_summary_request,
+    build_pilots_update_pilot_fields_request,
     build_well_known_get_installation_metadata_request,
     build_well_known_get_jwks_request,
     build_well_known_get_openid_configuration_request,
@@ -2325,14 +2327,14 @@ class JobsOperations:
         return deserialized  # type: ignore
 
 
-class RssOperations:
+class PilotsOperations:
     """
     .. warning::
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
         :class:`~_generated.aio.Dirac`'s
-        :attr:`rss` attribute.
+        :attr:`pilots` attribute.
     """
 
     models = _models
@@ -2344,28 +2346,56 @@ class RssOperations:
         self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
         self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
+    @overload
+    async def add_pilot_stamps(
+        self, body: _models.BodyPilotsAddPilotStamps, *, content_type: str = "application/json", **kwargs: Any
+    ) -> Any:
+        """Add Pilot Stamps.
+
+        Endpoint where a you can create pilots with their references.
+
+        If a pilot stamp already exists, it will block the insertion.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyPilotsAddPilotStamps
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def add_pilot_stamps(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
+        """Add Pilot Stamps.
+
+        Endpoint where a you can create pilots with their references.
+
+        If a pilot stamp already exists, it will block the insertion.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
     @distributed_trace_async
-    async def get_storage_status(
-        self,
-        *,
-        if_modified_since: Optional[str] = None,
-        etag: Optional[str] = None,
-        match_condition: Optional[MatchConditions] = None,
-        **kwargs: Any
-    ) -> dict[str, _models.StorageElementStatus]:
-        """Get Storage Status.
+    async def add_pilot_stamps(self, body: Union[_models.BodyPilotsAddPilotStamps, IO[bytes]], **kwargs: Any) -> Any:
+        """Add Pilot Stamps.
 
-        Get the latest status of storage elements, scoped to the caller's VO.
+        Endpoint where a you can create pilots with their references.
 
-        :keyword if_modified_since: Default value is None.
-        :paramtype if_modified_since: str
-        :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
-         None.
-        :paramtype etag: str
-        :keyword match_condition: The match condition to use upon the etag. Default value is None.
-        :paramtype match_condition: ~azure.core.MatchConditions
-        :return: dict mapping str to StorageElementStatus
-        :rtype: dict[str, ~_generated.models.StorageElementStatus]
+        If a pilot stamp already exists, it will block the insertion.
+
+        :param body: Is either a BodyPilotsAddPilotStamps type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsAddPilotStamps or IO[bytes]
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2374,23 +2404,26 @@ class RssOperations:
             409: ResourceExistsError,
             304: ResourceNotModifiedError,
         }
-        if match_condition == MatchConditions.IfNotModified:
-            error_map[412] = ResourceModifiedError
-        elif match_condition == MatchConditions.IfPresent:
-            error_map[412] = ResourceNotFoundError
-        elif match_condition == MatchConditions.IfMissing:
-            error_map[412] = ResourceExistsError
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[dict[str, _models.StorageElementStatus]] = kwargs.pop("cls", None)
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_storage_status_request(
-            if_modified_since=if_modified_since,
-            etag=etag,
-            match_condition=match_condition,
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyPilotsAddPilotStamps")
+
+        _request = build_pilots_add_pilot_stamps_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2407,7 +2440,7 @@ class RssOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("{StorageElementStatus}", pipeline_response.http_response)
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -2415,27 +2448,38 @@ class RssOperations:
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def get_compute_status(
+    async def delete_pilots(
         self,
         *,
-        if_modified_since: Optional[str] = None,
-        etag: Optional[str] = None,
-        match_condition: Optional[MatchConditions] = None,
+        pilot_stamps: Optional[List[str]] = None,
+        age_in_days: Optional[int] = None,
+        delete_only_aborted: bool = False,
         **kwargs: Any
-    ) -> dict[str, _models.ComputeElementStatus]:
-        """Get Compute Status.
+    ) -> None:
+        """Delete Pilots.
 
-        Get the latest status of compute elements, scoped to the caller's VO.
+        Endpoint to delete a pilot.
 
-        :keyword if_modified_since: Default value is None.
-        :paramtype if_modified_since: str
-        :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
-         None.
-        :paramtype etag: str
-        :keyword match_condition: The match condition to use upon the etag. Default value is None.
-        :paramtype match_condition: ~azure.core.MatchConditions
-        :return: dict mapping str to ComputeElementStatus
-        :rtype: dict[str, ~_generated.models.ComputeElementStatus]
+        Two features:
+
+
+        #. Or you provide pilot_stamps, so you can delete pilots by their stamp
+        #. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
+
+        Note: If you delete a pilot, its logs and its associations with jobs WILL be deleted.
+
+        :keyword pilot_stamps: Stamps of the pilots we want to delete. Default value is None.
+        :paramtype pilot_stamps: list[str]
+        :keyword age_in_days: The number of days that define the maximum age of pilots to be
+         deleted.Pilots older than this age will be considered for deletion. Default value is None.
+        :paramtype age_in_days: int
+        :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
+         'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
+         default as True to avoid any mistake.This flag is only used for deletion by time. Default value
+         is False.
+        :paramtype delete_only_aborted: bool
+        :return: None
+        :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2444,23 +2488,169 @@ class RssOperations:
             409: ResourceExistsError,
             304: ResourceNotModifiedError,
         }
-        if match_condition == MatchConditions.IfNotModified:
-            error_map[412] = ResourceModifiedError
-        elif match_condition == MatchConditions.IfPresent:
-            error_map[412] = ResourceNotFoundError
-        elif match_condition == MatchConditions.IfMissing:
-            error_map[412] = ResourceExistsError
         error_map.update(kwargs.pop("error_map", {}) or {})
 
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[dict[str, _models.ComputeElementStatus]] = kwargs.pop("cls", None)
+        cls: ClsType[None] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_compute_status_request(
-            if_modified_since=if_modified_since,
-            etag=etag,
-            match_condition=match_condition,
+        _request = build_pilots_delete_pilots_request(
+            pilot_stamps=pilot_stamps,
+            age_in_days=age_in_days,
+            delete_only_aborted=delete_only_aborted,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore
+
+    @overload
+    async def update_pilot_fields(
+        self, body: _models.BodyPilotsUpdatePilotFields, *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Update Pilot Fields.
+
+        Modify a field of a pilot.
+
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyPilotsUpdatePilotFields
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def update_pilot_fields(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Update Pilot Fields.
+
+        Modify a field of a pilot.
+
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def update_pilot_fields(
+        self, body: Union[_models.BodyPilotsUpdatePilotFields, IO[bytes]], **kwargs: Any
+    ) -> None:
+        """Update Pilot Fields.
+
+        Modify a field of a pilot.
+
+        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+
+        :param body: Is either a BodyPilotsUpdatePilotFields type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsUpdatePilotFields or IO[bytes]
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[None] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyPilotsUpdatePilotFields")
+
+        _request = build_pilots_update_pilot_fields_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore
+
+    @distributed_trace_async
+    async def get_pilot_jobs(
+        self, *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
+    ) -> List[int]:
+        """Get Pilot Jobs.
+
+        Endpoint only for admins, to get jobs of a pilot.
+
+        :keyword pilot_stamp: The stamp of the pilot. Default value is None.
+        :paramtype pilot_stamp: str
+        :keyword job_id: The ID of the job. Default value is None.
+        :paramtype job_id: int
+        :return: list of int
+        :rtype: list[int]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[List[int]] = kwargs.pop("cls", None)
+
+        _request = build_pilots_get_pilot_jobs_request(
+            pilot_stamp=pilot_stamp,
+            job_id=job_id,
             headers=_headers,
             params=_params,
         )
@@ -2477,35 +2667,90 @@ class RssOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("{ComputeElementStatus}", pipeline_response.http_response)
+        deserialized = self._deserialize("[int]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
 
-    @distributed_trace_async
-    async def get_site_status(
+    @overload
+    async def search(
         self,
+        body: Optional[_models.SearchParams] = None,
         *,
-        if_modified_since: Optional[str] = None,
-        etag: Optional[str] = None,
-        match_condition: Optional[MatchConditions] = None,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
         **kwargs: Any
-    ) -> dict[str, _models.SiteStatus]:
-        """Get Site Status.
+    ) -> List[Dict[str, Any]]:
+        """Search.
 
-        Get the latest status of sites, scoped to the caller's VO.
+        Retrieve information about pilots.
 
-        :keyword if_modified_since: Default value is None.
-        :paramtype if_modified_since: str
-        :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
-         None.
-        :paramtype etag: str
-        :keyword match_condition: The match condition to use upon the etag. Default value is None.
-        :paramtype match_condition: ~azure.core.MatchConditions
-        :return: dict mapping str to SiteStatus
-        :rtype: dict[str, ~_generated.models.SiteStatus]
+        :param body: Default value is None.
+        :type body: ~_generated.models.SearchParams
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def search(
+        self,
+        body: Optional[IO[bytes]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """Search.
+
+        Retrieve information about pilots.
+
+        :param body: Default value is None.
+        :type body: IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def search(
+        self,
+        body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """Search.
+
+        Retrieve information about pilots.
+
+        :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
+        :type body: ~_generated.models.SearchParams or IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2514,23 +2759,31 @@ class RssOperations:
             409: ResourceExistsError,
             304: ResourceNotModifiedError,
         }
-        if match_condition == MatchConditions.IfNotModified:
-            error_map[412] = ResourceModifiedError
-        elif match_condition == MatchConditions.IfPresent:
-            error_map[412] = ResourceNotFoundError
-        elif match_condition == MatchConditions.IfMissing:
-            error_map[412] = ResourceExistsError
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[dict[str, _models.SiteStatus]] = kwargs.pop("cls", None)
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_site_status_request(
-            if_modified_since=if_modified_since,
-            etag=etag,
-            match_condition=match_condition,
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "SearchParams")
+            else:
+                _json = None
+
+        _request = build_pilots_search_request(
+            page=page,
+            per_page=per_page,
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2543,39 +2796,65 @@ class RssOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [200]:
+        if response.status_code not in [200, 206]:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("{SiteStatus}", pipeline_response.http_response)
+        response_headers = {}
+        if response.status_code == 206:
+            response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
+
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
         if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
+            return cls(pipeline_response, deserialized, response_headers)  # type: ignore
 
         return deserialized  # type: ignore
 
+    @overload
+    async def summary(
+        self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any
+    ) -> Any:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: ~_generated.models.SummaryParams
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
+        """Summary.
+
+        Show information suitable for plotting.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
     @distributed_trace_async
-    async def get_fts_status(
-        self,
-        *,
-        if_modified_since: Optional[str] = None,
-        etag: Optional[str] = None,
-        match_condition: Optional[MatchConditions] = None,
-        **kwargs: Any
-    ) -> dict[str, _models.FTSStatus]:
-        """Get Fts Status.
+    async def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
+        """Summary.
 
-        Get the latest status of FTS servers, scoped to the caller's VO.
+        Show information suitable for plotting.
 
-        :keyword if_modified_since: Default value is None.
-        :paramtype if_modified_since: str
-        :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
-         None.
-        :paramtype etag: str
-        :keyword match_condition: The match condition to use upon the etag. Default value is None.
-        :paramtype match_condition: ~azure.core.MatchConditions
-        :return: dict mapping str to FTSStatus
-        :rtype: dict[str, ~_generated.models.FTSStatus]
+        :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.SummaryParams or IO[bytes]
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2584,23 +2863,26 @@ class RssOperations:
             409: ResourceExistsError,
             304: ResourceNotModifiedError,
         }
-        if match_condition == MatchConditions.IfNotModified:
-            error_map[412] = ResourceModifiedError
-        elif match_condition == MatchConditions.IfPresent:
-            error_map[412] = ResourceNotFoundError
-        elif match_condition == MatchConditions.IfMissing:
-            error_map[412] = ResourceExistsError
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[dict[str, _models.FTSStatus]] = kwargs.pop("cls", None)
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_fts_status_request(
-            if_modified_since=if_modified_since,
-            etag=etag,
-            match_condition=match_condition,
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "SummaryParams")
+
+        _request = build_pilots_summary_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2617,7 +2899,7 @@ class RssOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("{FTSStatus}", pipeline_response.http_response)
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

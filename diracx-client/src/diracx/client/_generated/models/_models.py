@@ -16,70 +16,6 @@ if TYPE_CHECKING:
 JSON = MutableMapping[str, Any]
 
 
-class AllowedStatus(_serialization.Model):
-    """AllowedStatus.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar allowed: Allowed. Required.
-    :vartype allowed: bool
-    :ivar warnings: Warnings.
-    :vartype warnings: str
-    """
-
-    _validation = {
-        "allowed": {"required": True},
-    }
-
-    _attribute_map = {
-        "allowed": {"key": "allowed", "type": "bool"},
-        "warnings": {"key": "warnings", "type": "str"},
-    }
-
-    def __init__(self, *, allowed: bool, warnings: Optional[str] = None, **kwargs: Any) -> None:
-        """
-        :keyword allowed: Allowed. Required.
-        :paramtype allowed: bool
-        :keyword warnings: Warnings.
-        :paramtype warnings: str
-        """
-        super().__init__(**kwargs)
-        self.allowed = allowed
-        self.warnings = warnings
-
-
-class BannedStatus(_serialization.Model):
-    """BannedStatus.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar allowed: Allowed. Required.
-    :vartype allowed: bool
-    :ivar reason: Reason.
-    :vartype reason: str
-    """
-
-    _validation = {
-        "allowed": {"required": True},
-    }
-
-    _attribute_map = {
-        "allowed": {"key": "allowed", "type": "bool"},
-        "reason": {"key": "reason", "type": "str"},
-    }
-
-    def __init__(self, *, allowed: bool, reason: str = "Unknown", **kwargs: Any) -> None:
-        """
-        :keyword allowed: Allowed. Required.
-        :paramtype allowed: bool
-        :keyword reason: Reason.
-        :paramtype reason: str
-        """
-        super().__init__(**kwargs)
-        self.allowed = allowed
-        self.reason = reason
-
-
 class BodyAuthGetOidcToken(_serialization.Model):
     """Body_auth_get_oidc_token.
 
@@ -248,64 +184,107 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
-class ComputeElementStatus(_serialization.Model):
-    """ComputeElementStatus.
+class BodyPilotsAddPilotStamps(_serialization.Model):
+    """Body_pilots_add_pilot_stamps.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar all: All. Required.
-    :vartype all: ~_generated.models.ComputeElementStatusAll
+    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+    :vartype pilot_stamps: list[str]
+    :ivar vo: Pilot virtual organization. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilots.
+    :vartype grid_type: str
+    :ivar grid_site: Pilots grid site.
+    :vartype grid_site: str
+    :ivar destination_site: Pilots destination site.
+    :vartype destination_site: str
+    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
+    :vartype pilot_references: dict[str, str]
+    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
     """
 
     _validation = {
-        "all": {"required": True},
+        "pilot_stamps": {"required": True},
+        "vo": {"required": True},
     }
 
     _attribute_map = {
-        "all": {"key": "all", "type": "ComputeElementStatusAll"},
+        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "destination_site": {"key": "destination_site", "type": "str"},
+        "pilot_references": {"key": "pilot_references", "type": "{str}"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
     }
 
-    def __init__(self, *, all: "_models.ComputeElementStatusAll", **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *,
+        pilot_stamps: List[str],
+        vo: str,
+        grid_type: str = "Dirac",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
+        pilot_references: Optional[Dict[str, str]] = None,
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        **kwargs: Any
+    ) -> None:
         """
-        :keyword all: All. Required.
-        :paramtype all: ~_generated.models.ComputeElementStatusAll
+        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+        :paramtype pilot_stamps: list[str]
+        :keyword vo: Pilot virtual organization. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilots.
+        :paramtype grid_type: str
+        :keyword grid_site: Pilots grid site.
+        :paramtype grid_site: str
+        :keyword destination_site: Pilots destination site.
+        :paramtype destination_site: str
+        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
+        :paramtype pilot_references: dict[str, str]
+        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
         """
         super().__init__(**kwargs)
-        self.all = all
+        self.pilot_stamps = pilot_stamps
+        self.vo = vo
+        self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.destination_site = destination_site
+        self.pilot_references = pilot_references
+        self.pilot_status = pilot_status
 
 
-class ComputeElementStatusAll(_serialization.Model):
-    """All."""
-
-
-class FTSStatus(_serialization.Model):
-    """FTSStatus.
+class BodyPilotsUpdatePilotFields(_serialization.Model):
+    """Body_pilots_update_pilot_fields.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar all: All. Required.
-    :vartype all: ~_generated.models.FTSStatusAll
+    :ivar pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change. Required.
+    :vartype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
     """
 
     _validation = {
-        "all": {"required": True},
+        "pilot_stamps_to_fields_mapping": {"required": True},
     }
 
     _attribute_map = {
-        "all": {"key": "all", "type": "FTSStatusAll"},
+        "pilot_stamps_to_fields_mapping": {"key": "pilot_stamps_to_fields_mapping", "type": "[PilotFieldsMapping]"},
     }
 
-    def __init__(self, *, all: "_models.FTSStatusAll", **kwargs: Any) -> None:
+    def __init__(self, *, pilot_stamps_to_fields_mapping: List["_models.PilotFieldsMapping"], **kwargs: Any) -> None:
         """
-        :keyword all: All. Required.
-        :paramtype all: ~_generated.models.FTSStatusAll
+        :keyword pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change.
+         Required.
+        :paramtype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
         """
         super().__init__(**kwargs)
-        self.all = all
-
-
-class FTSStatusAll(_serialization.Model):
-    """All."""
+        self.pilot_stamps_to_fields_mapping = pilot_stamps_to_fields_mapping
 
 
 class GroupInfo(_serialization.Model):
@@ -1053,6 +1032,102 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
+class PilotFieldsMapping(_serialization.Model):
+    """All the fields that a user can modify on a Pilot (except PilotStamp).
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilotstamp. Required.
+    :vartype pilot_stamp: str
+    :ivar status_reason: Statusreason.
+    :vartype status_reason: str
+    :ivar status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+     "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype status: str or ~_generated.models.PilotStatus
+    :ivar bench_mark: Benchmark.
+    :vartype bench_mark: float
+    :ivar destination_site: Destinationsite.
+    :vartype destination_site: str
+    :ivar queue: Queue.
+    :vartype queue: str
+    :ivar grid_site: Gridsite.
+    :vartype grid_site: str
+    :ivar grid_type: Gridtype.
+    :vartype grid_type: str
+    :ivar accounting_sent: Accountingsent.
+    :vartype accounting_sent: bool
+    :ivar current_job_id: Currentjobid.
+    :vartype current_job_id: int
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "PilotStamp", "type": "str"},
+        "status_reason": {"key": "StatusReason", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "bench_mark": {"key": "BenchMark", "type": "float"},
+        "destination_site": {"key": "DestinationSite", "type": "str"},
+        "queue": {"key": "Queue", "type": "str"},
+        "grid_site": {"key": "GridSite", "type": "str"},
+        "grid_type": {"key": "GridType", "type": "str"},
+        "accounting_sent": {"key": "AccountingSent", "type": "bool"},
+        "current_job_id": {"key": "CurrentJobID", "type": "int"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        status_reason: Optional[str] = None,
+        status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        bench_mark: Optional[float] = None,
+        destination_site: Optional[str] = None,
+        queue: Optional[str] = None,
+        grid_site: Optional[str] = None,
+        grid_type: Optional[str] = None,
+        accounting_sent: Optional[bool] = None,
+        current_job_id: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: Pilotstamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword status_reason: Statusreason.
+        :paramtype status_reason: str
+        :keyword status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+         "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype status: str or ~_generated.models.PilotStatus
+        :keyword bench_mark: Benchmark.
+        :paramtype bench_mark: float
+        :keyword destination_site: Destinationsite.
+        :paramtype destination_site: str
+        :keyword queue: Queue.
+        :paramtype queue: str
+        :keyword grid_site: Gridsite.
+        :paramtype grid_site: str
+        :keyword grid_type: Gridtype.
+        :paramtype grid_type: str
+        :keyword accounting_sent: Accountingsent.
+        :paramtype accounting_sent: bool
+        :keyword current_job_id: Currentjobid.
+        :paramtype current_job_id: int
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.status_reason = status_reason
+        self.status = status
+        self.bench_mark = bench_mark
+        self.destination_site = destination_site
+        self.queue = queue
+        self.grid_site = grid_site
+        self.grid_type = grid_type
+        self.accounting_sent = accounting_sent
+        self.current_job_id = current_job_id
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 
@@ -1385,36 +1460,6 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         self.last_update_time = last_update_time
 
 
-class SiteStatus(_serialization.Model):
-    """SiteStatus.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar all: All. Required.
-    :vartype all: ~_generated.models.SiteStatusAll
-    """
-
-    _validation = {
-        "all": {"required": True},
-    }
-
-    _attribute_map = {
-        "all": {"key": "all", "type": "SiteStatusAll"},
-    }
-
-    def __init__(self, *, all: "_models.SiteStatusAll", **kwargs: Any) -> None:
-        """
-        :keyword all: All. Required.
-        :paramtype all: ~_generated.models.SiteStatusAll
-        """
-        super().__init__(**kwargs)
-        self.all = all
-
-
-class SiteStatusAll(_serialization.Model):
-    """All."""
-
-
 class SortSpec(_serialization.Model):
     """SortSpec.
 
@@ -1446,77 +1491,6 @@ class SortSpec(_serialization.Model):
         super().__init__(**kwargs)
         self.parameter = parameter
         self.direction = direction
-
-
-class StorageElementStatus(_serialization.Model):
-    """StorageElementStatus.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar read: Read. Required.
-    :vartype read: ~_generated.models.StorageElementStatusRead
-    :ivar write: Write. Required.
-    :vartype write: ~_generated.models.StorageElementStatusWrite
-    :ivar check: Check. Required.
-    :vartype check: ~_generated.models.StorageElementStatusCheck
-    :ivar remove: Remove. Required.
-    :vartype remove: ~_generated.models.StorageElementStatusRemove
-    """
-
-    _validation = {
-        "read": {"required": True},
-        "write": {"required": True},
-        "check": {"required": True},
-        "remove": {"required": True},
-    }
-
-    _attribute_map = {
-        "read": {"key": "read", "type": "StorageElementStatusRead"},
-        "write": {"key": "write", "type": "StorageElementStatusWrite"},
-        "check": {"key": "check", "type": "StorageElementStatusCheck"},
-        "remove": {"key": "remove", "type": "StorageElementStatusRemove"},
-    }
-
-    def __init__(
-        self,
-        *,
-        read: "_models.StorageElementStatusRead",
-        write: "_models.StorageElementStatusWrite",
-        check: "_models.StorageElementStatusCheck",
-        remove: "_models.StorageElementStatusRemove",
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword read: Read. Required.
-        :paramtype read: ~_generated.models.StorageElementStatusRead
-        :keyword write: Write. Required.
-        :paramtype write: ~_generated.models.StorageElementStatusWrite
-        :keyword check: Check. Required.
-        :paramtype check: ~_generated.models.StorageElementStatusCheck
-        :keyword remove: Remove. Required.
-        :paramtype remove: ~_generated.models.StorageElementStatusRemove
-        """
-        super().__init__(**kwargs)
-        self.read = read
-        self.write = write
-        self.check = check
-        self.remove = remove
-
-
-class StorageElementStatusCheck(_serialization.Model):
-    """Check."""
-
-
-class StorageElementStatusRead(_serialization.Model):
-    """Read."""
-
-
-class StorageElementStatusRemove(_serialization.Model):
-    """Remove."""
-
-
-class StorageElementStatusWrite(_serialization.Model):
-    """Write."""
 
 
 class SummaryParams(_serialization.Model):

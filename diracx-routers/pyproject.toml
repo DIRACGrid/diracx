@@ -6,11 +6,11 @@ requires-python = ">=3.11"
 keywords = []
 license = { text = "GPL-3.0-only" }
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering",
-    "Topic :: System :: Distributed Computing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+  "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
     "cachetools",
@@ -48,11 +48,13 @@ config = "diracx.routers.configuration:router"
 health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
 rss = "diracx.routers.rss:router"
+pilots = "diracx.routers.pilots:router"
 
 [project.entry-points."diracx.access_policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 rss = "diracx.routers.rss.access_policies:RSSAccessPolicy"
+pilot = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
@@ -77,16 +79,16 @@ packages = ["src/diracx"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
-    "-v",
-    "--cov=diracx.routers",
-    "--cov-report=term-missing",
-    "-pdiracx.testing",
-    "-pdiracx.testing.osdb",
-    "--import-mode=importlib",
+  "-v",
+  "--cov=diracx.routers",
+  "--cov-report=term-missing",
+  "-pdiracx.testing",
+  "-pdiracx.testing.osdb",
+  "--import-mode=importlib",
 ]
 asyncio_mode = "auto"
 markers = [
-    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+  "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
 ]
 
 asyncio_default_fixture_loop_scope = "function"
