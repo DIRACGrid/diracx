@@ -15,8 +15,7 @@ from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models.job import JobCommand
 from diracx.core.models.search import SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, _get_columns
-from ..utils.functions import utcnow
+from ..utils import BaseSQLDB, _get_columns, utcnow
 from .schema import (
     HeartBeatLoggingInfo,
     InputData,
