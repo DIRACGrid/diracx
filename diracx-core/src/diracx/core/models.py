@@ -274,17 +274,7 @@ class JobCommand(BaseModel):
     arguments: str | None = None
 
 
-class PilotInfo(BaseModel):
-    sub: str
-    pilot_stamp: str
-    vo: str
-
-
-class PilotStampInfo(BaseModel):
-    pilot_stamp: str
-
-
-class PilotFieldsMapping(BaseModel):
+class PilotFieldsMapping(BaseModel, extra="forbid"):
     """All the fields that a user can modify on a Pilot (except PilotStamp)."""
 
     PilotStamp: str
