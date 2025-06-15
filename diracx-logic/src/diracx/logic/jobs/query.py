@@ -59,7 +59,7 @@ async def search(
             }
         )
 
-    total, jobs = await job_db.search(
+    total, jobs = await job_db.search_jobs(
         body.parameters,
         body.search,
         body.sort,
