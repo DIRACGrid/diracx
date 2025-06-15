@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 import pytest
 from sqlalchemy.sql import update
@@ -9,7 +10,13 @@ from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
     PilotNotFoundError,
 )
-from diracx.core.models import PilotFieldsMapping
+from diracx.core.models import (
+    PilotFieldsMapping,
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
 
@@ -24,6 +31,57 @@ async def pilot_db(tmp_path):
         async with agents_db.engine.begin() as conn:
             await conn.run_sync(agents_db.metadata.create_all)
         yield agents_db
+
+
+async def get_pilot_jobs_ids_by_pilot_id(
+    pilot_db: PilotAgentsDB, pilot_id: int
+) -> list[int]:
+    _, jobs = await pilot_db.search_pilot_to_job_mapping(
+        parameters=["JobID"],
+        search=[
+            ScalarSearchSpec(
+                parameter="PilotID",
+                operator=ScalarSearchOperator.EQUAL,
+                value=pilot_id,
+            )
+        ],
+        sorts=[],
+        distinct=True,
+        per_page=10000,
+    )
+
+    return [job["JobID"] for job in jobs]
+
+
+async def get_pilots_by_stamp_bulk(
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str], parameters: list[str] = []
+) -> list[dict[Any, Any]]:
+    _, pilots = await pilot_db.search_pilots(
+        parameters=parameters,
+        search=[
+            VectorSearchSpec(
+                parameter="PilotStamp",
+                operator=VectorSearchOperator.IN,
+                values=pilot_stamps,
+            )
+        ],
+        sorts=[],
+        distinct=True,
+        per_page=1000,
+    )
+
+    # Custom handling, to see which pilot_stamp does not exist (if so, say which one)
+    found_keys = {row["PilotStamp"] for row in pilots}
+    missing = set(pilot_stamps) - found_keys
+
+    if missing:
+        raise PilotNotFoundError(
+            data={"pilot_stamp": str(missing)},
+            detail=str(missing),
+            non_existing_pilots=missing,
+        )
+
+    return pilots
 
 
 @pytest.fixture
@@ -41,7 +99,7 @@ async def add_stamps(pilot_db):
                 stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
             )
 
-            pilots = await db.get_pilots_by_stamp_bulk(stamps)
+            pilots = await get_pilots_by_stamp_bulk(db, stamps)
 
             return pilots
 
@@ -73,7 +131,7 @@ async def create_timed_pilots(pilot_db, add_stamps):
             res = await db.conn.execute(stmt)
             assert res.rowcount == len(pilot_stamps)
 
-            pilots = await db.get_pilots_by_stamp_bulk(pilot_stamps)
+            pilots = await get_pilots_by_stamp_bulk(db, pilot_stamps)
             return pilots
 
     return _create_timed_pilots
@@ -107,10 +165,12 @@ async def create_old_pilots_environment(pilot_db, create_timed_pilots):
     # Phase 0. Verify that we have the right environment
     async with pilot_db as pilot_db:
         # Ensure that we can get every pilot (only get first of each group)
-        await pilot_db.get_pilots_by_stamp_bulk([non_aborted_recent[0]["PilotStamp"]])
-        await pilot_db.get_pilots_by_stamp_bulk([aborted_recent[0]["PilotStamp"]])
-        await pilot_db.get_pilots_by_stamp_bulk([aborted_very_old[0]["PilotStamp"]])
-        await pilot_db.get_pilots_by_stamp_bulk([non_aborted_very_old[0]["PilotStamp"]])
+        await get_pilots_by_stamp_bulk(pilot_db, [non_aborted_recent[0]["PilotStamp"]])
+        await get_pilots_by_stamp_bulk(pilot_db, [aborted_recent[0]["PilotStamp"]])
+        await get_pilots_by_stamp_bulk(pilot_db, [aborted_very_old[0]["PilotStamp"]])
+        await get_pilots_by_stamp_bulk(
+            pilot_db, [non_aborted_very_old[0]["PilotStamp"]]
+        )
 
     return non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old
 
@@ -146,17 +206,17 @@ async def test_insert_and_delete(pilot_db: PilotAgentsDB):
         )
 
         # Works, the pilots exists
-        await pilot_db.get_pilots_by_stamp_bulk([stamps[0]])
-        await pilot_db.get_pilots_by_stamp_bulk([stamps[0]])
+        await get_pilots_by_stamp_bulk(pilot_db, [stamps[0]])
+        await get_pilots_by_stamp_bulk(pilot_db, [stamps[0]])
 
         # We delete the first pilot
         await pilot_db.delete_pilots_by_stamps_bulk([stamps[0]])
 
         # We get the 2nd pilot that is not delete (no error)
-        await pilot_db.get_pilots_by_stamp_bulk([stamps[1]])
+        await get_pilots_by_stamp_bulk(pilot_db, [stamps[1]])
         # We get the 1st pilot that is delete (error)
         with pytest.raises(PilotNotFoundError):
-            await pilot_db.get_pilots_by_stamp_bulk([stamps[0]])
+            await get_pilots_by_stamp_bulk(pilot_db, [stamps[0]])
 
 
 @pytest.mark.asyncio
@@ -182,14 +242,14 @@ async def test_insert_and_delete_only_old_aborted(
         ]:
             stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
 
-            await pilot_db.get_pilots_by_stamp_bulk(stamps)
+            await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
         # Assert who normally does not live
         for normally_deleted_pilot_list in [aborted_very_old]:
             stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
 
             with pytest.raises(PilotNotFoundError):
-                await pilot_db.get_pilots_by_stamp_bulk(stamps)
+                await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
 
 @pytest.mark.asyncio
@@ -214,7 +274,7 @@ async def test_insert_and_delete_old(
         ]:
             stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
 
-            await pilot_db.get_pilots_by_stamp_bulk(stamps)
+            await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
         # Assert who normally does not live
         for normally_deleted_pilot_list in [
@@ -224,7 +284,7 @@ async def test_insert_and_delete_old(
             stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
 
             with pytest.raises(PilotNotFoundError):
-                await pilot_db.get_pilots_by_stamp_bulk(stamps)
+                await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
 
 @pytest.mark.asyncio
@@ -246,7 +306,7 @@ async def test_insert_and_delete_recent_only_aborted(
         for normally_exiting_pilot_list in [non_aborted_recent, non_aborted_very_old]:
             stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
 
-            await pilot_db.get_pilots_by_stamp_bulk(stamps)
+            await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
         # Assert who normally does not live
         for normally_deleted_pilot_list in [
@@ -256,7 +316,7 @@ async def test_insert_and_delete_recent_only_aborted(
             stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
 
             with pytest.raises(PilotNotFoundError):
-                await pilot_db.get_pilots_by_stamp_bulk(stamps)
+                await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
 
 @pytest.mark.asyncio
@@ -284,7 +344,7 @@ async def test_insert_and_delete_recent(
             stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
 
             with pytest.raises(PilotNotFoundError):
-                await pilot_db.get_pilots_by_stamp_bulk(stamps)
+                await get_pilots_by_stamp_bulk(pilot_db, stamps)
 
 
 @pytest.mark.asyncio
@@ -297,7 +357,7 @@ async def test_insert_and_select_single_then_modify(pilot_db: PilotAgentsDB):
             grid_type="grid-type",
         )
 
-        res = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
+        res = await get_pilots_by_stamp_bulk(pilot_db, [pilot_stamp])
         assert len(res) == 1
         pilot = res[0]
 
@@ -325,7 +385,7 @@ async def test_insert_and_select_single_then_modify(pilot_db: PilotAgentsDB):
             ]
         )
 
-        res = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
+        res = await get_pilots_by_stamp_bulk(pilot_db, [pilot_stamp])
         assert len(res) == 1
         pilot = res[0]
 
@@ -359,13 +419,13 @@ async def test_associate_pilot_with_job_and_get_it(pilot_db: PilotAgentsDB):
             grid_type="grid-type",
         )
 
-        res = await pilot_db.get_pilots_by_stamp_bulk([pilot_stamp])
+        res = await get_pilots_by_stamp_bulk(pilot_db, [pilot_stamp])
         assert len(res) == 1
         pilot = res[0]
         pilot_id = pilot["PilotID"]
 
         # Verify that he has no jobs
-        assert len(await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)) == 0
+        assert len(await get_pilot_jobs_ids_by_pilot_id(pilot_db, pilot_id)) == 0
 
         now = datetime.now(tz=timezone.utc)
 
@@ -379,7 +439,7 @@ async def test_associate_pilot_with_job_and_get_it(pilot_db: PilotAgentsDB):
         await pilot_db.associate_pilot_with_jobs(job_to_pilot_mapping)
 
         # Verify that he has all jobs
-        db_jobs = await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
+        db_jobs = await get_pilot_jobs_ids_by_pilot_id(pilot_db, pilot_id)
         # We test both length and if every job is included if for any reason we have duplicates
         assert all(job in db_jobs for job in pilot_jobs)
         assert len(pilot_jobs) == len(db_jobs)

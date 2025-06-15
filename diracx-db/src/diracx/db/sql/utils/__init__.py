@@ -3,12 +3,11 @@ from __future__ import annotations
 from .base import (
     BaseSQLDB,
     SQLDBUnavailableError,
+    _get_columns,
     apply_search_filters,
     apply_sort_constraints,
 )
 from .functions import (
-    _get_columns,
-    fetch_records_bulk_or_raises,
     hash,
     substract_date,
     utcnow,
@@ -24,7 +23,6 @@ __all__ = (
     "DateNowColumn",
     "EnumBackedBool",
     "EnumColumn",
-    "fetch_records_bulk_or_raises",
     "hash",
     "NullColumn",
     "substract_date",
