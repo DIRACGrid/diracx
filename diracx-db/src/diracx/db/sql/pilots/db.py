@@ -32,6 +32,8 @@ class PilotAgentsDB(BaseSQLDB):
 
     metadata = PilotAgentsDBBase.metadata
 
+    # ----------------------------- Insert Functions -----------------------------
+
     async def add_pilots_bulk(
         self,
         pilot_stamps: list[str],
@@ -66,18 +68,6 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = insert(PilotAgents).values(values)  # Assuming 'id' is the primary key
 
         await self.conn.execute(stmt)
-
-    async def delete_pilots_by_stamps_bulk(self, pilot_stamps: list[str]):
-        """Bulk delete pilots.
-
-        Raises PilotNotFound if one of the pilot was not found.
-        """
-        stmt = delete(PilotAgents).where(PilotAgents.pilot_stamp.in_(pilot_stamps))
-
-        res = await self.conn.execute(stmt)
-
-        if res.rowcount != len(pilot_stamps):
-            raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
 
     async def associate_pilot_with_jobs(
         self, job_to_pilot_mapping: list[dict[str, Any]]
@@ -123,6 +113,40 @@ class PilotAgentsDB(BaseSQLDB):
             raise NotImplementedError(
                 "Engine Specific error not caught" + str(e)
             ) from e
+
+    # ----------------------------- Delete Functions -----------------------------
+
+    async def delete_pilots_by_stamps_bulk(self, pilot_stamps: list[str]):
+        """Bulk delete pilots.
+
+        Raises PilotNotFound if one of the pilot was not found.
+        """
+        stmt = delete(PilotAgents).where(PilotAgents.pilot_stamp.in_(pilot_stamps))
+
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount != len(pilot_stamps):
+            raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
+
+    async def clear_pilots_bulk(
+        self, cutoff_date: datetime, delete_only_aborted: bool
+    ) -> int:
+        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
+        Returns the number of deletion.
+        """
+        # TODO: Add test (Millisec?)
+        stmt = delete(PilotAgents).where(PilotAgents.submission_time < cutoff_date)
+
+        # If delete_only_aborted is True, add the condition for 'Status' being 'Aborted'
+        if delete_only_aborted:
+            stmt = stmt.where(PilotAgents.status == "Aborted")
+
+        # Execute the statement
+        res = await self.conn.execute(stmt)
+
+        return res.rowcount
+
+    # ----------------------------- Update Functions -----------------------------
 
     async def update_pilot_fields_bulk(
         self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
@@ -178,6 +202,8 @@ class PilotAgentsDB(BaseSQLDB):
                 data={"mapping": str(pilot_stamps_to_fields_mapping)}
             )
 
+    # ----------------------------- Search Functions -----------------------------
+
     async def search_pilots(
         self,
         parameters: list[str] | None,
@@ -219,21 +245,3 @@ class PilotAgentsDB(BaseSQLDB):
             per_page=per_page,
             page=page,
         )
-
-    async def clear_pilots_bulk(
-        self, cutoff_date: datetime, delete_only_aborted: bool
-    ) -> int:
-        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
-        Returns the number of deletion.
-        """
-        # TODO: Add test (Millisec?)
-        stmt = delete(PilotAgents).where(PilotAgents.submission_time < cutoff_date)
-
-        # If delete_only_aborted is True, add the condition for 'Status' being 'Aborted'
-        if delete_only_aborted:
-            stmt = stmt.where(PilotAgents.status == "Aborted")
-
-        # Execute the statement
-        res = await self.conn.execute(stmt)
-
-        return res.rowcount
