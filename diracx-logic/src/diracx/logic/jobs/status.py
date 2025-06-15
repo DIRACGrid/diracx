@@ -124,7 +124,7 @@ async def set_job_statuses(
     }
 
     # search all jobs at once
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=["Status", "StartExecTime", "EndExecTime", "JobID", "VO"],
         search=[
             {
@@ -291,7 +291,7 @@ async def reschedule_jobs(
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
     jdl_changes = {}
 
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=[
             "Status",
             "MinorStatus",
@@ -558,7 +558,7 @@ async def add_heartbeat(
         "operator": VectorSearchOperator.IN,
         "values": list(data),
     }
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=["Status", "JobID"], search=[search_query], sorts=[]
     )
     if len(results) != len(data):

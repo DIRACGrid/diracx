@@ -6,6 +6,12 @@ from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models import PilotFieldsMapping
 from diracx.db.sql import PilotAgentsDB
 
+from .query import (
+    get_pilot_ids_by_stamps,
+    get_pilot_jobs_ids_by_pilot_id,
+    get_pilots_by_stamp_bulk,
+)
+
 
 async def register_new_pilots(
     pilot_db: PilotAgentsDB,
@@ -17,7 +23,7 @@ async def register_new_pilots(
     # [IMPORTANT] Check unicity of pilot references
     # If a pilot already exists, it will undo everything and raise an error
     try:
-        await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps=pilot_stamps)
+        await get_pilots_by_stamp_bulk(pilot_db=pilot_db, pilot_stamps=pilot_stamps)
         raise PilotAlreadyExistsError(data={"pilot_stamps": str(pilot_stamps)})
     except PilotNotFoundError as e:
         # e.non_existing_pilots is set of the pilot that are not found
@@ -67,8 +73,9 @@ async def update_pilots_fields(
 async def associate_pilot_with_jobs(
     pilot_db: PilotAgentsDB, pilot_stamp: str, pilot_jobs_ids: list[int]
 ):
-    pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
-    # Semantic assured by fetch_records_bulk_or_raises
+    pilot_ids = await get_pilot_ids_by_stamps(
+        pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+    )
     pilot_id = pilot_ids[0]
 
     now = datetime.now(tz=timezone.utc)
@@ -88,8 +95,9 @@ async def get_pilot_jobs_ids_by_stamp(
     pilot_db: PilotAgentsDB, pilot_stamp: str
 ) -> list[int]:
     """Fetch pilot jobs by stamp."""
-    pilot_ids = await pilot_db.get_pilot_ids_by_stamps([pilot_stamp])
-    # Semantic assured by fetch_records_bulk_or_raises
+    pilot_ids = await get_pilot_ids_by_stamps(
+        pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+    )
     pilot_id = pilot_ids[0]
 
-    return await pilot_db.get_pilot_jobs_ids_by_pilot_id(pilot_id)
+    return await get_pilot_jobs_ids_by_pilot_id(pilot_db=pilot_db, pilot_id=pilot_id)

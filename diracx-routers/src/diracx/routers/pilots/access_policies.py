@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, status
 from diracx.core.exceptions import PilotNotFoundError
 from diracx.core.properties import NORMAL_USER, TRUSTED_HOST
 from diracx.db.sql import PilotAgentsDB
+from diracx.logic.pilots.query import get_pilots_by_stamp_bulk
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
@@ -57,7 +58,11 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
             )
 
             try:
-                pilots = await pilot_db.get_pilots_by_stamp_bulk(pilot_stamps)
+                pilots = await get_pilots_by_stamp_bulk(
+                    pilot_db=pilot_db,
+                    pilot_stamps=pilot_stamps,
+                    parameters=["VO"],  # For efficiency
+                )
             except PilotNotFoundError as e:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
