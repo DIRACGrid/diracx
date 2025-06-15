@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Sequence
+from typing import Any
 
-from sqlalchemy import RowMapping, bindparam, func
+from sqlalchemy import bindparam
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql import delete, insert, select, update
+from sqlalchemy.sql import delete, insert, update
 
 from diracx.core.exceptions import (
-    InvalidQueryError,
     PilotAlreadyAssociatedWithJobError,
-    PilotJobsNotFoundError,
     PilotNotFoundError,
 )
 from diracx.core.models import (
@@ -21,10 +19,6 @@ from diracx.core.models import (
 
 from ..utils import (
     BaseSQLDB,
-    _get_columns,
-    apply_search_filters,
-    apply_sort_constraints,
-    fetch_records_bulk_or_raises,
 )
 from .schema import (
     JobToPilotMapping,
@@ -43,7 +37,7 @@ class PilotAgentsDB(BaseSQLDB):
         pilot_stamps: list[str],
         vo: str,
         grid_type: str = "DIRAC",
-        pilot_references: dict | None = None,
+        pilot_references: dict[str, str] | None = None,
     ):
         """Bulk add pilots in the DB.
 
@@ -85,7 +79,9 @@ class PilotAgentsDB(BaseSQLDB):
         if res.rowcount != len(pilot_stamps):
             raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
 
-    async def associate_pilot_with_jobs(self, job_to_pilot_mapping: list[dict]):
+    async def associate_pilot_with_jobs(
+        self, job_to_pilot_mapping: list[dict[str, Any]]
+    ):
         """Associate a pilot with jobs.
 
         job_to_pilot_mapping format:
@@ -182,61 +178,7 @@ class PilotAgentsDB(BaseSQLDB):
                 data={"mapping": str(pilot_stamps_to_fields_mapping)}
             )
 
-    async def get_pilots_by_stamp_bulk(
-        self, pilot_stamps: list[str]
-    ) -> Sequence[RowMapping]:
-        """Bulk fetch pilots.
-
-        Raises PilotNotFoundError if one of the stamp is not associated with a pilot.
-
-        """
-        results = await fetch_records_bulk_or_raises(
-            self.conn,
-            PilotAgents,
-            PilotNotFoundError,
-            "pilot_stamp",
-            "PilotStamp",
-            pilot_stamps,
-            allow_no_result=True,
-        )
-
-        # Custom handling, to see which pilot_stamp does not exist (if so, say which one)
-        found_keys = {row["PilotStamp"] for row in results}
-        missing = set(pilot_stamps) - found_keys
-
-        if missing:
-            raise PilotNotFoundError(
-                data={"pilot_stamp": str(missing)},
-                detail=str(missing),
-                non_existing_pilots=missing,
-            )
-
-        return results
-
-    async def get_pilot_jobs_ids_by_pilot_id(self, pilot_id: int) -> list[int]:
-        """Fetch pilot jobs."""
-        job_to_pilot_mapping = await fetch_records_bulk_or_raises(
-            self.conn,
-            JobToPilotMapping,
-            PilotJobsNotFoundError,
-            "pilot_id",
-            "PilotID",
-            [pilot_id],
-            allow_more_than_one_result_per_input=True,
-            allow_no_result=True,
-        )
-
-        return [mapping["JobID"] for mapping in job_to_pilot_mapping]
-
-    async def get_pilot_ids_by_stamps(self, pilot_stamps: list[str]) -> list[int]:
-        """Get pilot ids."""
-        # This function is currently needed while we are relying on pilot_ids instead of pilot_stamps
-        # (Ex: JobToPilotMapping)
-        pilots = await self.get_pilots_by_stamp_bulk(pilot_stamps)
-
-        return [pilot["PilotID"] for pilot in pilots]
-
-    async def search(
+    async def search_pilots(
         self,
         parameters: list[str] | None,
         search: list[SearchSpec],
@@ -247,39 +189,36 @@ class PilotAgentsDB(BaseSQLDB):
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for pilots in the database."""
-        # TODO: Refactorize with the search function for jobs.
-        # Find which columns to select
-        columns = _get_columns(PilotAgents.__table__, parameters)
-
-        stmt = select(*columns)
-
-        stmt = apply_search_filters(
-            PilotAgents.__table__.columns.__getitem__, stmt, search
-        )
-        stmt = apply_sort_constraints(
-            PilotAgents.__table__.columns.__getitem__, stmt, sorts
+        return await self.search(
+            model=PilotAgents,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
         )
 
-        if distinct:
-            stmt = stmt.distinct()
-
-        # Calculate total count before applying pagination
-        total_count_subquery = stmt.alias()
-        total_count_stmt = select(func.count()).select_from(total_count_subquery)
-        total = (await self.conn.execute(total_count_stmt)).scalar_one()
-
-        # Apply pagination
-        if page is not None:
-            if page < 1:
-                raise InvalidQueryError("Page must be a positive integer")
-            if per_page < 1:
-                raise InvalidQueryError("Per page must be a positive integer")
-            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
-
-        # Execute the query
-        return total, [
-            dict(row._mapping) async for row in (await self.conn.stream(stmt))
-        ]
+    async def search_pilot_to_job_mapping(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        """Search for pilots in the database."""
+        return await self.search(
+            model=JobToPilotMapping,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
 
     async def clear_pilots_bulk(
         self, cutoff_date: datetime, delete_only_aborted: bool

@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from diracx.core.models import ScalarSearchOperator, SearchParams
+from diracx.core.exceptions import PilotNotFoundError
+from diracx.core.models import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    SearchParams,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)
 from diracx.db.sql import PilotAgentsDB
 
 MAX_PER_PAGE = 10000
@@ -24,10 +31,12 @@ async def search(
         body = SearchParams()
 
     body.search.append(
-        {"parameter": "VO", "operator": ScalarSearchOperator.EQUAL, "value": user_vo}
+        ScalarSearchSpec(
+            parameter="VO", operator=ScalarSearchOperator.EQUAL, value=user_vo
+        )
     )
 
-    total, pilots = await pilot_db.search(
+    total, pilots = await pilot_db.search_pilots(
         body.parameters,
         body.search,
         body.sort,
@@ -37,3 +46,64 @@ async def search(
     )
 
     return total, pilots
+
+
+async def get_pilots_by_stamp_bulk(
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str], parameters: list[str] = []
+) -> list[dict[Any, Any]]:
+    _, pilots = await pilot_db.search_pilots(
+        parameters=parameters,
+        search=[
+            VectorSearchSpec(
+                parameter="PilotStamp",
+                operator=VectorSearchOperator.IN,
+                values=pilot_stamps,
+            )
+        ],
+        sorts=[],
+        distinct=True,
+        per_page=MAX_PER_PAGE,
+    )
+
+    # Custom handling, to see which pilot_stamp does not exist (if so, say which one)
+    found_keys = {row["PilotStamp"] for row in pilots}
+    missing = set(pilot_stamps) - found_keys
+
+    if missing:
+        raise PilotNotFoundError(
+            data={"pilot_stamp": str(missing)},
+            detail=str(missing),
+            non_existing_pilots=missing,
+        )
+
+    return pilots
+
+
+async def get_pilot_ids_by_stamps(
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str]
+) -> list[int]:
+    pilots = await get_pilots_by_stamp_bulk(
+        pilot_db=pilot_db, pilot_stamps=pilot_stamps, parameters=["PilotID"]
+    )
+
+    return [pilot["PilotID"] for pilot in pilots]
+
+
+async def get_pilot_jobs_ids_by_pilot_id(
+    pilot_db: PilotAgentsDB, pilot_id: int
+) -> list[int]:
+    _, jobs = await pilot_db.search_pilot_to_job_mapping(
+        parameters=["JobID"],
+        search=[
+            ScalarSearchSpec(
+                parameter="PilotID",
+                operator=ScalarSearchOperator.EQUAL,
+                value=pilot_id,
+            )
+        ],
+        sorts=[],
+        distinct=True,
+        per_page=MAX_PER_PAGE,
+    )
+
+    return [job["JobID"] for job in jobs]

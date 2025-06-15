@@ -51,8 +51,6 @@ async def populated_pilot_db(pilot_db):
             stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
         )
 
-        await pilot_db.get_pilots_by_stamp_bulk(stamps)
-
         await pilot_db.update_pilot_fields_bulk(
             [
                 PilotFieldsMapping(
@@ -75,34 +73,34 @@ async def test_search_parameters(populated_pilot_db):
     """Test that we can search specific parameters for pilots in the database."""
     async with populated_pilot_db as pilot_db:
         # Search a specific parameter: PilotID
-        total, result = await pilot_db.search(["PilotID"], [], [])
+        total, result = await pilot_db.search_pilots(["PilotID"], [], [])
         assert total == N
         assert result
         for r in result:
             assert r.keys() == {"PilotID"}
 
         # Search a specific parameter: Status
-        total, result = await pilot_db.search(["Status"], [], [])
+        total, result = await pilot_db.search_pilots(["Status"], [], [])
         assert total == N
         assert result
         for r in result:
             assert r.keys() == {"Status"}
 
         # Search for multiple parameters: PilotID, Status
-        total, result = await pilot_db.search(["PilotID", "Status"], [], [])
+        total, result = await pilot_db.search_pilots(["PilotID", "Status"], [], [])
         assert total == N
         assert result
         for r in result:
             assert r.keys() == {"PilotID", "Status"}
 
         # Search for a specific parameter but use distinct: Status
-        total, result = await pilot_db.search(["Status"], [], [], distinct=True)
+        total, result = await pilot_db.search_pilots(["Status"], [], [], distinct=True)
         assert total == len(PILOT_STATUSES)
         assert result
 
         # Search for a non-existent parameter: Dummy
         with pytest.raises(InvalidQueryError):
-            total, result = await pilot_db.search(["Dummy"], [], [])
+            total, result = await pilot_db.search_pilots(["Dummy"], [], [])
 
 
 async def test_search_conditions(populated_pilot_db):
@@ -112,7 +110,7 @@ async def test_search_conditions(populated_pilot_db):
         condition = ScalarSearchSpec(
             parameter="PilotID", operator=ScalarSearchOperator.EQUAL, value=3
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 1
         assert result
         assert len(result) == 1
@@ -122,7 +120,7 @@ async def test_search_conditions(populated_pilot_db):
         condition = ScalarSearchSpec(
             parameter="PilotID", operator=ScalarSearchOperator.LESS_THAN, value=3
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 2
         assert result
         assert len(result) == 2
@@ -133,7 +131,7 @@ async def test_search_conditions(populated_pilot_db):
         condition = ScalarSearchSpec(
             parameter="PilotID", operator=ScalarSearchOperator.NOT_EQUAL, value=3
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 99
         assert result
         assert len(result) == 99
@@ -143,14 +141,14 @@ async def test_search_conditions(populated_pilot_db):
         condition = ScalarSearchSpec(
             parameter="PilotID", operator=ScalarSearchOperator.EQUAL, value=5873
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert not result
 
         # Search a specific vector condition: PilotID in 1,2,3
         condition = VectorSearchSpec(
             parameter="PilotID", operator=VectorSearchOperator.IN, values=[1, 2, 3]
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 3
         assert result
         assert len(result) == 3
@@ -160,7 +158,7 @@ async def test_search_conditions(populated_pilot_db):
         condition = VectorSearchSpec(
             parameter="PilotID", operator=VectorSearchOperator.IN, values=[1, 2, 5873]
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 2
         assert result
         assert len(result) == 2
@@ -170,7 +168,7 @@ async def test_search_conditions(populated_pilot_db):
         condition = VectorSearchSpec(
             parameter="PilotID", operator=VectorSearchOperator.NOT_IN, values=[1, 2, 3]
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 97
         assert result
         assert len(result) == 97
@@ -182,7 +180,7 @@ async def test_search_conditions(populated_pilot_db):
             operator=VectorSearchOperator.NOT_IN,
             values=[1, 2, 5873],
         )
-        total, result = await pilot_db.search([], [condition], [])
+        total, result = await pilot_db.search_pilots([], [condition], [])
         assert total == 98
         assert result
         assert len(result) == 98
@@ -195,7 +193,7 @@ async def test_search_conditions(populated_pilot_db):
         condition2 = VectorSearchSpec(
             parameter="PilotID", operator=VectorSearchOperator.IN, values=[4, 5, 6]
         )
-        total, result = await pilot_db.search([], [condition1, condition2], [])
+        total, result = await pilot_db.search_pilots([], [condition1, condition2], [])
         assert total == 1
         assert result
         assert len(result) == 1
@@ -209,7 +207,7 @@ async def test_search_conditions(populated_pilot_db):
         condition2 = VectorSearchSpec(
             parameter="PilotID", operator=VectorSearchOperator.IN, values=[4, 5, 6]
         )
-        total, result = await pilot_db.search([], [condition1, condition2], [])
+        total, result = await pilot_db.search_pilots([], [condition1, condition2], [])
         assert total == 0
         assert not result
 
@@ -219,7 +217,7 @@ async def test_search_sorts(populated_pilot_db):
     async with populated_pilot_db as pilot_db:
         # Search and sort by PilotID in ascending order
         sort = SortSpec(parameter="PilotID", direction=SortDirection.ASC)
-        total, result = await pilot_db.search([], [], [sort])
+        total, result = await pilot_db.search_pilots([], [], [sort])
         assert total == N
         assert result
         for i, r in enumerate(result):
@@ -227,7 +225,7 @@ async def test_search_sorts(populated_pilot_db):
 
         # Search and sort by PilotID in descending order
         sort = SortSpec(parameter="PilotID", direction=SortDirection.DESC)
-        total, result = await pilot_db.search([], [], [sort])
+        total, result = await pilot_db.search_pilots([], [], [sort])
         assert total == N
         assert result
         for i, r in enumerate(result):
@@ -235,7 +233,7 @@ async def test_search_sorts(populated_pilot_db):
 
         # Search and sort by PilotStamp in ascending order
         sort = SortSpec(parameter="PilotStamp", direction=SortDirection.ASC)
-        total, result = await pilot_db.search([], [], [sort])
+        total, result = await pilot_db.search_pilots([], [], [sort])
         assert total == N
         assert result
         # Assert that stamp_10 is before stamp_2 because of the lexicographical order
@@ -244,7 +242,7 @@ async def test_search_sorts(populated_pilot_db):
 
         # Search and sort by PilotStamp in descending order
         sort = SortSpec(parameter="PilotStamp", direction=SortDirection.DESC)
-        total, result = await pilot_db.search([], [], [sort])
+        total, result = await pilot_db.search_pilots([], [], [sort])
         assert total == N
         assert result
         # Assert that stamp_10 is before stamp_2 because of the lexicographical order
@@ -254,7 +252,7 @@ async def test_search_sorts(populated_pilot_db):
         # Search and sort by PilotStamp in ascending order and PilotID in descending order
         sort1 = SortSpec(parameter="PilotStamp", direction=SortDirection.ASC)
         sort2 = SortSpec(parameter="PilotID", direction=SortDirection.DESC)
-        total, result = await pilot_db.search([], [], [sort1, sort2])
+        total, result = await pilot_db.search_pilots([], [], [sort1, sort2])
         assert total == N
         assert result
         assert result[0]["PilotStamp"] == "stamp_1"
@@ -287,9 +285,9 @@ async def test_search_pagination(
     async with populated_pilot_db as pilot_db:
         if expect_exception:
             with pytest.raises(expect_exception):
-                await pilot_db.search([], [], [], per_page=per_page, page=page)
+                await pilot_db.search_pilots([], [], [], per_page=per_page, page=page)
         else:
-            total, result = await pilot_db.search(
+            total, result = await pilot_db.search_pilots(
                 [], [], [], per_page=per_page, page=page
             )
             assert total == N
