@@ -97,7 +97,7 @@ async def refresh_pilot_tokens(
             pilot_db=pilot_db,
             refresh_token=refresh_token,
         )
-    except (InvalidCredentialsError, PilotNotFoundError, BadTokenError) as e:
+    except (InvalidCredentialsError, PilotNotFoundError) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
         ) from e
