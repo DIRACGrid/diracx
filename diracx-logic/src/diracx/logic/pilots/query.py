@@ -51,6 +51,9 @@ async def search(
 async def get_pilots_by_stamp_bulk(
     pilot_db: PilotAgentsDB, pilot_stamps: list[str], parameters: list[str] = []
 ) -> list[dict[Any, Any]]:
+    if parameters:
+        parameters.append("PilotStamp")
+
     _, pilots = await pilot_db.search_pilots(
         parameters=parameters,
         search=[
