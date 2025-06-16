@@ -235,6 +235,92 @@ async def update_secrets_constraints(
         ) from e
 
 
+@router.post("/secrets")
+async def create_pilot_secrets(
+    n: Annotated[int, Body(description="Number of secrets to create.")],
+    expiration_minutes: Annotated[
+        int | None, Body(description="Time in minutes before expiring.")
+    ],
+    pilot_secret_use_count_max: Annotated[
+        int | None, Body(description="Number of times that we can use a secret.")
+    ],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: CheckPilotManagementPolicyCallable,
+    pilot_db: PilotAgentsDB,
+    settings: AuthSettings,
+) -> list[PilotSecretsInfo]:
+    """Endpoint to create secrets."""
+    await check_permissions(action=ActionType.MANAGE_PILOTS)
+
+    if expiration_minutes and expiration_minutes <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="expiration_minutes must be strictly positive.",
+        )
+    if pilot_secret_use_count_max and pilot_secret_use_count_max <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="pilot_secret_use_count_max is either None or a positive number.",
+        )
+
+    credentials = await create_secrets(
+        n=n,
+        pilot_db=pilot_db,
+        settings=settings,
+        secret_constraint=PilotSecretConstraints(VOs=[user_info.vo]),
+        pilot_secret_use_count_max=pilot_secret_use_count_max,
+        expiration_minutes=expiration_minutes,
+    )
+
+    logger.info(
+        f"{user_info.preferred_username} created {n} secrets that will expire in {expiration_minutes} minute(s)."
+    )
+
+    return credentials
+
+
+@router.patch("/secrets", status_code=HTTPStatus.NO_CONTENT)
+async def update_secrets_constraints(
+    secrets_to_constraints_dict: Annotated[
+        dict[str, PilotSecretConstraints],
+        Body(description="Mapping between secrets and pilots.", embed=False),
+    ],
+    pilot_agents_db: PilotAgentsDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: CheckPilotManagementPolicyCallable,
+):
+    """Endpoint to associate pilots with secrets."""
+    pilot_stamps = set()
+    for constraints in secrets_to_constraints_dict.values():
+        if "PilotStamps" in constraints:
+            pilot_stamps.update(constraints["PilotStamps"])
+
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS,
+    )
+
+    try:
+        await update_secrets_constraints_bl(
+            pilot_db=pilot_agents_db,
+            secrets_to_constraints_dict=secrets_to_constraints_dict,
+        )
+    except SecretNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="one of the secrets does not exist",
+        ) from e
+    except PilotNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="one of the pilots does not exist",
+        ) from e
+
+    logger.info(
+        f"{user_info.preferred_username} associated {len(pilot_stamps)} pilots"
+        f"with {len(secrets_to_constraints_dict)} secrets."
+    )
+
+
 EXAMPLE_UPDATE_FIELDS = {
     "Update the BenchMark field": {
         "summary": "Update BenchMark",

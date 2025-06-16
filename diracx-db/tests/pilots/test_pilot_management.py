@@ -11,7 +11,9 @@ from diracx.core.models import (
     PilotFieldsMapping,
     PilotStatus,
 )
+
 from diracx.db.sql.pilots.db import PilotAgentsDB
+
 
 from .utils import (
     add_stamps,  # noqa: F401
@@ -32,6 +34,7 @@ async def pilot_db(tmp_path):
         async with agents_db.engine.begin() as conn:
             await conn.run_sync(agents_db.metadata.create_all)
         yield agents_db
+
 
 
 @pytest.mark.asyncio

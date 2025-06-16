@@ -16,6 +16,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
     PilotSecretConstraints,
     SearchSpec,
     SortSpec,
@@ -187,6 +188,21 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
 
         await self.conn.execute(stmt)
+
+    async def delete_secrets(self, secret_uuids: list[str]):
+        """Bulk delete secrets.
+
+        Raises SecretNotFoundError if one of the secret was not found.
+        """
+        stmt = delete(PilotSecrets).where(PilotSecrets.secret_uuid.in_(secret_uuids))
+
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount != len(secret_uuids):
+            raise SecretNotFoundError(data={"secrets": str(secret_uuids)})
+
+        # We NEED to commit here, because we will raise an error after this function
+        await self.conn.commit()
 
     async def delete_secrets(self, secret_uuids: list[str]):
         """Bulk delete secrets.
