@@ -7,11 +7,7 @@ from .base import (
     apply_search_filters,
     apply_sort_constraints,
 )
-from .functions import (
-    hash,
-    substract_date,
-    utcnow,
-)
+from .functions import hash, raw_hash, substract_date, utcnow
 from .types import Column, DateNowColumn, EnumBackedBool, EnumColumn, NullColumn
 
 __all__ = (
@@ -25,6 +21,7 @@ __all__ = (
     "EnumColumn",
     "hash",
     "NullColumn",
+    "raw_hash",
     "substract_date",
     "SQLDBUnavailableError",
     "utcnow",
