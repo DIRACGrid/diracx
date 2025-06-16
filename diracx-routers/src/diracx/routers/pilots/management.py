@@ -10,9 +10,18 @@ from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
     PilotAlreadyExistsError,
     PilotNotFoundError,
+    SecretNotFoundError,
 )
 from diracx.core.models import (
+    PilotCredentialsInfo,
     PilotFieldsMapping,
+    PilotInfo,
+    PilotSecretConstraints,
+    PilotSecretsInfo,
+)
+from diracx.logic.pilots.auth import create_secrets
+from diracx.logic.pilots.auth import (
+    update_secrets_constraints as update_secrets_constraints_bl,
 )
 from diracx.logic.pilots.management import (
     add_jobs_to_pilot as add_jobs_to_pilot_bl,
@@ -26,8 +35,12 @@ from diracx.logic.pilots.management import (
     update_pilots_fields,
 )
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
+from diracx.routers.utils.pilots import (
+    AuthorizedPilotInfo,
+    verify_dirac_pilot_access_token,
+)
 
-from ..dependencies import PilotAgentsDB
+from ..dependencies import AuthSettings, PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import (
@@ -51,6 +64,7 @@ async def add_pilot_stamps(
         str,
         Body(description="Virtual Organisation associated with the inserted pilots."),
     ],
+    settings: AuthSettings,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
     grid_type: Annotated[str, Body(description="Grid type of the pilots.")] = "Dirac",
@@ -65,7 +79,15 @@ async def add_pilot_stamps(
     status_reason: Annotated[
         str, Body(description="Status reason of the pilots.")
     ] = "Unknown",
-):
+    generate_secrets: Annotated[
+        bool,
+        Body(description="If we want to create secrets with the pilots."),
+    ] = True,
+    pilot_secret_use_count_max: Annotated[
+        int | None,
+        Body(description="How much time can a secret be used."),
+    ] = 1,
+) -> list[PilotCredentialsInfo] | None:
     """Endpoint where a you can create pilots with their references.
 
     If a pilot stamp already exists, it will block the insertion.
@@ -74,21 +96,26 @@ async def add_pilot_stamps(
     await check_permissions(action=ActionType.MANAGE_PILOTS)
 
     try:
-        await register_new_pilots(
+        response = await register_new_pilots(
             pilot_db=pilot_db,
             pilot_stamps=pilot_stamps,
             vo=vo,
+            settings=settings,
             grid_type=grid_type,
             grid_site=grid_site,
             destination_site=destination_site,
             pilot_job_references=pilot_references,
             status_reason=status_reason,
+            generate_secrets=generate_secrets,
+            pilot_secret_use_count_max=pilot_secret_use_count_max,
         )
 
         # Logs credentials creation
         logger.debug(
             f"{user_info.preferred_username} added {len(pilot_stamps)} pilots."
         )
+
+        return response
     except PilotAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
@@ -145,6 +172,92 @@ async def delete_pilots(
         pilot_stamps=pilot_stamps,
         age_in_days=age_in_days,
         delete_only_aborted=delete_only_aborted,
+    )
+
+
+@router.post("/secrets")
+async def create_pilot_secrets(
+    n: Annotated[int, Body(description="Number of secrets to create.")],
+    expiration_minutes: Annotated[
+        int | None, Body(description="Time in minutes before expiring.")
+    ],
+    pilot_secret_use_count_max: Annotated[
+        int | None, Body(description="Number of times that we can use a secret.")
+    ],
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: CheckPilotManagementPolicyCallable,
+    pilot_db: PilotAgentsDB,
+    settings: AuthSettings,
+) -> list[PilotSecretsInfo]:
+    """Endpoint to create secrets."""
+    await check_permissions(action=ActionType.MANAGE_PILOTS)
+
+    if expiration_minutes and expiration_minutes <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="expiration_minutes must be strictly positive.",
+        )
+    if pilot_secret_use_count_max and pilot_secret_use_count_max <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="pilot_secret_use_count_max is either None or a positive number.",
+        )
+
+    credentials = await create_secrets(
+        n=n,
+        pilot_db=pilot_db,
+        settings=settings,
+        secret_constraint=PilotSecretConstraints(VOs=[user_info.vo]),
+        pilot_secret_use_count_max=pilot_secret_use_count_max,
+        expiration_minutes=expiration_minutes,
+    )
+
+    logger.info(
+        f"{user_info.preferred_username} created {n} secrets that will expire in {expiration_minutes} minute(s)."
+    )
+
+    return credentials
+
+
+@router.patch("/secrets", status_code=HTTPStatus.NO_CONTENT)
+async def update_secrets_constraints(
+    secrets_to_constraints_dict: Annotated[
+        dict[str, PilotSecretConstraints],
+        Body(description="Mapping between secrets and pilots.", embed=False),
+    ],
+    pilot_agents_db: PilotAgentsDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: CheckPilotManagementPolicyCallable,
+):
+    """Endpoint to associate pilots with secrets."""
+    pilot_stamps = set()
+    for constraints in secrets_to_constraints_dict.values():
+        if "PilotStamps" in constraints:
+            pilot_stamps.update(constraints["PilotStamps"])
+
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS,
+    )
+
+    try:
+        await update_secrets_constraints_bl(
+            pilot_db=pilot_agents_db,
+            secrets_to_constraints_dict=secrets_to_constraints_dict,
+        )
+    except SecretNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="one of the secrets does not exist",
+        ) from e
+    except PilotNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="one of the pilots does not exist",
+        ) from e
+
+    logger.info(
+        f"{user_info.preferred_username} associated {len(pilot_stamps)} pilots"
+        f"with {len(secrets_to_constraints_dict)} secrets."
     )
 
 
@@ -250,3 +363,15 @@ async def add_jobs_to_pilot(
             status_code=status.HTTP_409_CONFLICT,
             detail="This pilot is already associated with this job.",
         ) from e
+
+
+@router.get("/pilotinfo")
+async def userinfo(
+    pilot_info: Annotated[
+        AuthorizedPilotInfo, Depends(verify_dirac_pilot_access_token)
+    ],
+) -> PilotInfo:
+    """Get information about the user's identity."""
+    return PilotInfo(
+        sub=pilot_info.sub, vo=pilot_info.vo, pilot_stamp=pilot_info.pilot_stamp
+    )

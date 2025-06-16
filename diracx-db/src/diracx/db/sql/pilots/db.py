@@ -3,19 +3,24 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import bindparam
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import DateTime, bindparam
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.sql import delete, insert, update
+from uuid_utils import uuid7
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
     PilotNotFoundError,
+    SecretAlreadyExistsError,
+    SecretNotFoundError,
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotSecretConstraints,
     SearchSpec,
     SortSpec,
 )
+from diracx.db.sql.utils.functions import utcnow
 
 from ..utils import (
     BaseSQLDB,
@@ -25,6 +30,7 @@ from .schema import (
     PilotAgents,
     PilotAgentsDBBase,
     PilotOutput,
+    PilotSecrets,
 )
 
 
@@ -119,6 +125,48 @@ class PilotAgentsDB(BaseSQLDB):
                 "Engine Specific error not caught" + str(e)
             ) from e
 
+    async def insert_unique_secrets(
+        self,
+        hashed_secrets: list[bytes],
+        secret_global_use_count_max: int | None = 1,
+        secret_constraints: dict[bytes, PilotSecretConstraints] = {},
+    ):
+        """Bulk insert secrets.
+
+        Raises:
+        - SecretAlreadyExists if the secret already exists
+        - NotImplementedError if we have an IntegrityError not caught
+
+        """
+        values = [
+            {
+                "SecretUUID": str(uuid7()),
+                "SecretRemainingUseCount": secret_global_use_count_max,
+                "HashedSecret": hashed_secret,
+                "SecretConstraints": secret_constraints.get(hashed_secret, {}),
+            }
+            for hashed_secret in hashed_secrets
+        ]
+
+        stmt = insert(PilotSecrets).values(values)
+
+        try:
+            await self.conn.execute(stmt)
+        except IntegrityError as e:
+            if (
+                "duplicate entry" in str(e.orig).lower()
+                or "unique constraint" in str(e.orig).lower()
+            ):
+                raise SecretAlreadyExistsError(
+                    data={"hashed_secrets": str(hashed_secrets)},
+                    detail="at least one of these secrets already exists",
+                ) from e
+
+            # Other errors to catch
+            raise NotImplementedError(
+                "Engine Specific error not caught" + str(e)
+            ) from e
+
     # ----------------------------- Delete Functions -----------------------------
 
     async def delete_pilots(self, pilot_ids: list[int]):
@@ -140,6 +188,21 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
 
         await self.conn.execute(stmt)
+
+    async def delete_secrets(self, secret_uuids: list[str]):
+        """Bulk delete secrets.
+
+        Raises SecretNotFoundError if one of the secret was not found.
+        """
+        stmt = delete(PilotSecrets).where(PilotSecrets.secret_uuid.in_(secret_uuids))
+
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount != len(secret_uuids):
+            raise SecretNotFoundError(data={"secrets": str(secret_uuids)})
+
+        # We NEED to commit here, because we will raise an error after this function
+        await self.conn.commit()
 
     # ----------------------------- Update Functions -----------------------------
 
@@ -197,6 +260,97 @@ class PilotAgentsDB(BaseSQLDB):
                 data={"mapping": str(pilot_stamps_to_fields_mapping)}
             )
 
+    async def update_pilot_secret_use_time(self, secret_uuid: str) -> None:
+        """Updates when a pilot uses a secret.
+
+        Raises PilotNotFoundError if the pilot does not exist
+
+        """
+        #  Prepare the update statement
+        stmt = (
+            update(PilotSecrets)
+            .values(
+                pilot_secret_use_date=utcnow(),
+                secret_remaining_use_count=PilotSecrets.secret_remaining_use_count - 1,
+            )
+            .where(PilotSecrets.secret_uuid == secret_uuid)
+        )
+
+        # Execute the update using the connection
+        res = await self.conn.execute(stmt)
+
+        if res.rowcount == 0:
+            raise PilotNotFoundError(
+                data={
+                    "secret_uuid": str(secret_uuid),
+                }
+            )
+
+    async def update_pilot_secrets_constraints(
+        self, hashed_secrets_to_pilot_stamps_mapping: list[dict[str, Any]]
+    ):
+        """Bulk associate pilots with secrets by updating theirs constraints.
+
+        Important: We have to provide the updated constraints.
+
+        Raises:
+        - PilotNotFoundError if one of the pilot does not exist
+        - NotImplementedError if at least of the pilot
+
+        """
+        # Better to give as a parameter pilot to secret associations, rather than associating here.
+
+        stmt = (
+            update(PilotSecrets)
+            .where(PilotSecrets.hashed_secret == bindparam("PilotHashedSecret"))
+            .values({"SecretConstraints": bindparam("PilotSecretConstraints")})
+        )
+
+        try:
+            await self.conn.execute(stmt, hashed_secrets_to_pilot_stamps_mapping)
+        except (IntegrityError, OperationalError) as e:
+            if "foreign key" in str(e.orig).lower():
+                raise SecretNotFoundError(
+                    data={"mapping": str(hashed_secrets_to_pilot_stamps_mapping)},
+                    detail="at least one of these secrets does not exist",
+                ) from e
+            raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
+
+    async def set_secret_expirations(
+        self, secret_uuids: list[str], pilot_secret_expiration_dates: list[DateTime]
+    ):
+        """Bulk set expiration dates to secrets.
+
+        Raises:
+        - SecretNotFoundError if one of the secret_uuid is not associated with a secret.
+        - NotImplementedError if a integrity error is not caught.
+        -
+
+        """
+        values = [
+            {"b_SecretUUID": secret_uuid, "SecretExpirationDate": pilot_secret}
+            for secret_uuid, pilot_secret in zip(
+                secret_uuids, pilot_secret_expiration_dates
+            )
+        ]
+
+        #  Prepare the update statement
+        stmt = (
+            update(PilotSecrets)
+            .where(PilotSecrets.secret_uuid == bindparam("b_SecretUUID"))
+            .values({"SecretExpirationDate": bindparam("SecretExpirationDate")})
+        )
+
+        try:
+            await self.conn.execute(stmt, values)
+        except IntegrityError as e:
+            if "foreign key" in str(e.orig).lower():
+                raise SecretNotFoundError(
+                    data={"secret_uuids": str(secret_uuids)},
+                    detail="at least one of these secrets does not exist",
+                ) from e
+            raise NotImplementedError(f"This error is not caught: {str(e.orig)}") from e
+
     # ----------------------------- Search Functions -----------------------------
 
     async def search_pilots(
@@ -233,6 +387,27 @@ class PilotAgentsDB(BaseSQLDB):
         """Search for jobs that are associated with pilots."""
         return await self.search(
             model=JobToPilotMapping,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
+
+    async def search_secrets(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        """Search for secrets in the database."""
+        return await self.search(
+            model=PilotSecrets,
             parameters=parameters,
             search=search,
             sorts=sorts,

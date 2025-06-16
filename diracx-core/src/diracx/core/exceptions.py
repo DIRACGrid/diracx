@@ -141,3 +141,19 @@ class PilotJobsNotFoundError(DiracFormattedError):
 
 class PilotAlreadyAssociatedWithJobError(DiracFormattedError):
     pattern = "Pilot is already associated with a job %s "
+
+
+class BadPilotCredentialsError(DiracFormattedError):
+    pattern = "Bad secret/pilot_stamp %s "
+
+
+class SecretNotFoundError(DiracFormattedError):
+    pattern = "Secret %s not found"
+
+
+class SecretHasExpiredError(DiracFormattedError):
+    pattern = "Secret %s has expired"
+
+
+class SecretAlreadyExistsError(DiracFormattedError):
+    pattern = "Secret %s already exists"

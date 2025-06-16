@@ -4,8 +4,16 @@ from datetime import datetime, timedelta, timezone
 
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models import PilotFieldsMapping
+from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
+from diracx.core.models import (
+    PilotCredentialsInfo,
+    PilotFieldsMapping,
+    PilotSecretConstraints,
+)
+from diracx.core.settings import AuthSettings
 from diracx.db.sql import PilotAgentsDB
 
+from .auth import create_raw_secrets, update_secrets_constraints
 from .query import (
     get_outdated_pilots,
     get_pilot_ids_by_stamps,
@@ -23,7 +31,10 @@ async def register_new_pilots(
     destination_site: str,
     status_reason: str,
     pilot_job_references: dict[str, str] | None,
-):
+    settings: AuthSettings,
+    generate_secrets: bool = True,
+    pilot_secret_use_count_max: int | None = None,
+) -> list[PilotCredentialsInfo] | None:
     # [IMPORTANT] Check unicity of pilot references
     # If a pilot already exists, we raise an error (transaction will rollback)
     existing_pilots = await get_pilots_by_stamp(
@@ -45,6 +56,37 @@ async def register_new_pilots(
         pilot_references=pilot_job_references,
         status_reason=status_reason,
     )
+
+    if not generate_secrets:
+        return None
+
+    pilot_secrets, expiration_dates_timestamps = await create_raw_secrets(
+        n=len(pilot_stamps),
+        pilot_db=pilot_db,
+        settings=settings,
+        pilot_secret_use_count_max=pilot_secret_use_count_max,
+        secret_constraint=PilotSecretConstraints(VOs=[vo]),
+    )
+
+    constraints = {
+        pilot_secret: PilotSecretConstraints(PilotStamps=[pilot_stamp], VOs=[vo])
+        for pilot_secret, pilot_stamp in zip(pilot_secrets, pilot_stamps)
+    }
+
+    await update_secrets_constraints(
+        pilot_db=pilot_db, secrets_to_constraints_dict=constraints
+    )
+
+    return [
+        PilotCredentialsInfo(
+            pilot_stamp=pilot_stamp,
+            pilot_secret=secret,
+            pilot_secret_expires_in=expires_in,
+        )
+        for pilot_stamp, secret, expires_in in zip(
+            pilot_stamps, pilot_secrets, expiration_dates_timestamps
+        )
+    ]
 
 
 async def delete_pilots(

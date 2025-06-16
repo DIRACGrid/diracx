@@ -52,6 +52,21 @@ async def test_create_pilots(normal_test_client):
 
     assert r.status_code == 200, r.json()
 
+    #  -------------- Logins --------------
+    pilot_credentials_list = r.json()
+    for credentials in pilot_credentials_list:
+        pilot_stamp, secret = (credentials["pilot_stamp"], credentials["pilot_secret"])
+
+        body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
+
+        r = normal_test_client.post(
+            "/api/pilots/token",
+            json=body,
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert r.status_code == 200, r.json()
+
     #  -------------- Register a pilot that already exists, and one that does not --------------
 
     body = {
@@ -87,6 +102,156 @@ async def test_create_pilots(normal_test_client):
     )
 
     assert r.status_code == 200
+    secret = r.json()[0]["pilot_secret"]
+
+    #  -------------- Login with a pilot that does not exist **but** was called before in an error --------------
+
+    body = {
+        "pilot_stamp": pilot_stamps[0] + "_new_one",
+        "pilot_secret": secret,
+    }
+
+    r = normal_test_client.post(
+        "/api/pilots/token",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 200, r.json()
+
+    #  -------------- Login with a pilot credentials of another pilot --------------
+
+    body = {
+        "pilot_stamp": pilot_stamps[0] + "_new_one",
+        "pilot_secret": pilot_credentials_list[0][
+            "pilot_secret"
+        ],  # [0] = first pilot from the list before, [1] = the secret
+    }
+
+    r = normal_test_client.post(
+        "/api/pilots/token",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 401, r.json()
+    assert r.json()["detail"] == "bad pilot_secret"
+
+
+async def test_create_secrets_and_login(normal_test_client):
+    pilot_stamps = [f"stamps_{i}" for i in range(N)]
+
+    #  -------------- Create N secrets. --------------
+
+    body = {
+        "n": N,
+        "vo": MAIN_VO,
+        "expiration_minutes": 1,
+        "pilot_secret_use_count_max": 2 * N,  # Used later
+    }
+
+    r = normal_test_client.post(
+        "/api/pilots/secrets",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 200, r.json()
+
+    # Format : {"pilot_secret": "...", "pilot_secret_expires_in": ..., "pilot_stamps": None}
+    secrets_mapping = r.json()
+
+    secrets = [el["pilot_secret"] for el in secrets_mapping]
+
+    assert len(secrets) == N
+
+    #  -------------- Create pilot *without* secrets --------------
+
+    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps, "generate_secrets": False}
+
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+    #  -------------- Associate pilot with bad secrets --------------
+
+    body = {"bad_secret": {"PilotStamps": pilot_stamps}}
+
+    r = normal_test_client.patch(
+        "/api/pilots/secrets",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 400, r.json()
+    assert r.json()["detail"] == "one of the secrets does not exist"
+
+    #  -------------- Associate pilot with secrets --------------
+
+    body = {
+        pilot_secret: {"PilotStamps": [pilot_stamp]}
+        for pilot_secret, pilot_stamp in zip(secrets, pilot_stamps)
+    }
+
+    r = normal_test_client.patch(
+        "/api/pilots/secrets",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 204
+    #  -------------- Login with the right credentials --------------
+
+    for stamp, secret in zip(pilot_stamps, secrets):
+        body = {"pilot_secret": secret, "pilot_stamp": stamp}
+
+        r = normal_test_client.post(
+            "/api/pilots/token",
+            json=body,
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert r.status_code == 200, r.json()
+
+    #  -------------- Login with the wrong credentials --------------
+
+    body = {"pilot_secret": secrets[1], "pilot_stamp": pilot_stamps[0]}
+
+    r = normal_test_client.post(
+        "/api/pilots/token",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 401, r.json()
+
+    #  -------------- Associate everyone to secrets[1] --------------
+
+    # Allowed by the router to avoid sending thousands of the same secret, if we want bunch of pilots to share a secret
+    body = {secrets[1]: {"PilotStamps": pilot_stamps}}
+
+    r = normal_test_client.patch(
+        "/api/pilots/secrets",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert r.status_code == 204
+
+    #  -------------- Login with the right credentials --------------
+    for stamp in pilot_stamps:
+        body = {"pilot_secret": secrets[1], "pilot_stamp": stamp}
+
+        r = normal_test_client.post(
+            "/api/pilots/token",
+            json=body,
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert r.status_code == 200, r.json()
 
 
 async def test_create_pilot_and_delete_it(normal_test_client):
