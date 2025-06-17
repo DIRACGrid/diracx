@@ -390,3 +390,14 @@ class VacuumPilotAuth(PilotAuthCredentials):
     grid_type: str
     grid_site: str
     status: str
+
+class LogLine(BaseModel):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str
+
+
+class LogMessage(BaseModel):
+    pilot_stamp: str
+    lines: list[LogLine]

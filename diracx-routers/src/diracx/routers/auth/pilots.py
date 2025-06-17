@@ -8,7 +8,6 @@ from fastapi import Body, HTTPException, status
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
-    BadTokenError,
     InvalidCredentialsError,
     PilotNotFoundError,
     SecretHasExpiredError,
