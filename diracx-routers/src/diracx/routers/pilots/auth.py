@@ -76,7 +76,7 @@ async def pilot_login(
 async def refresh_pilot_tokens(
     auth_db: AuthDB,
     settings: AuthSettings,
-    pilot_agents_db: PilotAgentsDB,
+    pilot_db: PilotAgentsDB,
     refresh_token: Annotated[
         str, Body(description="Refresh Token given at login by DiracX.")
     ],
@@ -88,7 +88,7 @@ async def refresh_pilot_tokens(
             pilot_stamp=pilot_stamp,
             auth_db=auth_db,
             settings=settings,
-            pilot_db=pilot_agents_db,
+            pilot_db=pilot_db,
             refresh_token=refresh_token,
         )
     except (InvalidCredentialsError, PilotNotFoundError) as e:

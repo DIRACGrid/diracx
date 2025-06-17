@@ -225,7 +225,7 @@ async def update_secrets_constraints(
         dict[str, PilotSecretConstraints],
         Body(description="Mapping between secrets and pilots.", embed=False),
     ],
-    pilot_agents_db: PilotAgentsDB,
+    pilot_db: PilotAgentsDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
@@ -241,7 +241,7 @@ async def update_secrets_constraints(
 
     try:
         await update_secrets_constraints_bl(
-            pilot_db=pilot_agents_db,
+            pilot_db=pilot_db,
             secrets_to_constraints_dict=secrets_to_constraints_dict,
         )
     except SecretNotFoundError as e:
