@@ -60,7 +60,7 @@ def non_mocked_hosts(test_client) -> list[str]:
 async def add_stamps(test_client):
     db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
-    async with db as pilot_agents_db:
+    async with db as pilot_db:
         # Add pilots
         refs = [f"ref_{i}" for i in range(N)]
         stamps = [f"stamp_{i}" for i in range(N)]
@@ -68,7 +68,7 @@ async def add_stamps(test_client):
 
         vo = MAIN_VO
 
-        await pilot_agents_db.add_pilots(
+        await pilot_db.add_pilots(
             stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
         )
 
@@ -81,7 +81,7 @@ async def add_stamps(test_client):
 async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
     db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
-    async with db as pilot_agents_db:
+    async with db as pilot_db:
         # Retrieve the stamps from the add_stamps fixture
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
@@ -94,7 +94,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
         }
 
         # Add creds
-        await pilot_agents_db.insert_unique_secrets(
+        await pilot_db.insert_unique_secrets(
             hashed_secrets=hashed_secrets, secret_constraints=constraints
         )
 
@@ -110,7 +110,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
             for secret_obj in secrets_obj
         ]
 
-        await pilot_agents_db.set_secret_expirations(
+        await pilot_db.set_secret_expirations(
             secret_uuids=[secret_obj["SecretUUID"] for secret_obj in secrets_obj],
             pilot_secret_expiration_dates=expiration_date,
         )
