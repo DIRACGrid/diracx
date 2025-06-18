@@ -238,7 +238,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for pilots in the database."""
+        """Search in a SQL database, with filters."""
         # Find which columns to select
         columns = _get_columns(model.__table__, parameters)
 
