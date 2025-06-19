@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -62,7 +63,7 @@ class Jobs(JobDBBase):
     job_name = Column("JobName", String(128), default="Unknown")
     owner = Column("Owner", String(64), default="Unknown")
     owner_group = Column("OwnerGroup", String(128), default="Unknown")
-    vo = Column("VO", String(32))
+    vo = Column("VO", String(64))
     submission_time = NullColumn("SubmissionTime", DateTime)
     reschedule_time = NullColumn("RescheduleTime", DateTime)
     last_update_time = NullColumn("LastUpdateTime", DateTime)
@@ -153,6 +154,132 @@ class JobCommands(JobDBBase):
     )
     command = Column("Command", String(100))
     arguments = Column("Arguments", String(100))
-    status = Column("Status", String(64), default="Received")
+    status = Column("Status", String(32), default="Received")
     reception_time = Column("ReceptionTime", DateTime, primary_key=True)
     execution_time = NullColumn("ExecutionTime", DateTime)
+
+
+class JobsHistorySummary(JobDBBase):
+    __tablename__ = "JobsHistorySummary"
+    id = Column("ID", Integer, primary_key=True, autoincrement=True)
+    status = Column("Status", String(32))
+    site = Column("Site", String(100))
+    owner = Column("Owner", String(64))
+    owner_group = Column("OwnerGroup", String(128))
+    vo = Column("VO", String(64))
+    job_group = Column("JobGroup", String(32))
+    job_type = Column("JobType", String(32))
+    application_status = Column("ApplicationStatus", String(255))
+    minor_status = Column("MinorStatus", String(128))
+    job_count = Column("JobCount", Integer, default=0)
+    reschedule_sum = Column("RescheduleSum", Integer, default=0)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "Status",
+            "Site",
+            "Owner",
+            "OwnerGroup",  # TODO: OwnerGroup(32)
+            "VO",
+            "JobGroup",
+            "JobType",
+            "ApplicationStatus",  # TODO: ApplicationStatus(128)
+            "MinorStatus",
+            name="uq_summary",
+        ),
+    )
+
+
+# TODO:
+
+# DELIMITER //
+
+# CREATE TRIGGER trg_Jobs_insert
+# AFTER INSERT ON Jobs
+# FOR EACH ROW
+# BEGIN
+#   INSERT INTO JobsHistorySummary (
+#       Status, Site, Owner, OwnerGroup, VO, JobGroup, JobType,
+#       ApplicationStatus, MinorStatus, JobCount, RescheduleSum
+#   )
+#   VALUES (
+#       NEW.Status, NEW.Site, NEW.Owner, NEW.OwnerGroup, NEW.VO,
+#       NEW.JobGroup, NEW.JobType, NEW.ApplicationStatus,
+#       NEW.MinorStatus, 1, NEW.RescheduleCounter
+#   )
+#   ON DUPLICATE KEY UPDATE JobCount = JobCount + 1,
+#       RescheduleSum = RescheduleSum + NEW.RescheduleCounter;
+# END;
+# //
+
+# CREATE TRIGGER trg_Jobs_delete
+# AFTER DELETE ON Jobs
+# FOR EACH ROW
+# BEGIN
+#   UPDATE JobsHistorySummary
+#   SET JobCount = JobCount - 1, RescheduleSum = RescheduleSum - OLD.RescheduleCounter
+#   WHERE Status = OLD.Status
+#     AND Site = OLD.Site
+#     AND Owner = OLD.Owner
+#     AND OwnerGroup = OLD.OwnerGroup
+#     AND VO = OLD.VO
+#     AND JobGroup = OLD.JobGroup
+#     AND JobType = OLD.JobType
+#     AND ApplicationStatus = OLD.ApplicationStatus
+#     AND MinorStatus = OLD.MinorStatus;
+
+#   -- Remove zero rows
+#   DELETE FROM JobsHistorySummary
+#   WHERE JobCount = 0
+#     AND Status = OLD.Status
+#     AND Site = OLD.Site
+#     AND Owner = OLD.Owner
+#     AND OwnerGroup = OLD.OwnerGroup
+#     AND VO = OLD.VO
+#     AND JobGroup = OLD.JobGroup
+#     AND JobType = OLD.JobType
+#     AND ApplicationStatus = OLD.ApplicationStatus
+#     AND MinorStatus = OLD.MinorStatus;
+# END;
+# //
+
+# CREATE TRIGGER trg_Jobs_update_status
+# AFTER UPDATE ON Jobs
+# FOR EACH ROW
+# BEGIN
+#   IF OLD.Status != NEW.Status THEN
+
+#     -- Decrease count from old status
+#     UPDATE JobsHistorySummary
+#     SET JobCount = JobCount - 1, RescheduleSum = RescheduleSum - OLD.RescheduleCounter
+#     WHERE Status = OLD.Status
+#       AND Site = OLD.Site
+#       AND Owner = OLD.Owner
+#       AND OwnerGroup = OLD.OwnerGroup
+#       AND VO = OLD.VO
+#       AND JobGroup = OLD.JobGroup
+#       AND JobType = OLD.JobType
+#       AND ApplicationStatus = OLD.ApplicationStatus
+#       AND MinorStatus = OLD.MinorStatus;
+
+#     -- Delete row if count drops to zero
+#     DELETE FROM JobsHistorySummary WHERE JobCount = 0;
+
+#     -- Increase count for new status
+#     INSERT INTO JobsHistorySummary (
+#           Status, Site, Owner, OwnerGroup, JobGroup, VO,
+#           JobType, ApplicationStatus, MinorStatus, JobCount, RescheduleSum
+#     )
+#     VALUES (
+#           NEW.Status, NEW.Site, NEW.Owner, NEW.OwnerGroup, NEW.JobGroup,
+#           NEW.VO, NEW.JobType, NEW.ApplicationStatus, NEW.MinorStatus,
+#           1, NEW.RescheduleCounter
+#     )
+#     ON DUPLICATE KEY UPDATE JobCount = JobCount + 1,
+#           RescheduleSum = RescheduleSum + NEW.RescheduleCounter;
+
+#   END IF;
+# END;
+# //
+
+# DELIMITER ;
