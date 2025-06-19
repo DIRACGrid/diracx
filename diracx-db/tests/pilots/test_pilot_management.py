@@ -12,6 +12,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
     ScalarSearchOperator,
     ScalarSearchSpec,
     VectorSearchOperator,
@@ -126,7 +127,7 @@ async def create_timed_pilots(pilot_db, add_stamps):
             )
 
             if aborted:
-                stmt = stmt.values(Status="Aborted")
+                stmt = stmt.values(Status=PilotStatus.ABORTED)
 
             res = await db.conn.execute(stmt)
             assert res.rowcount == len(pilot_stamps)
@@ -366,7 +367,7 @@ async def test_insert_and_select_single_then_modify(pilot_db: PilotAgentsDB):
         assert pilot["PilotStamp"] == pilot_stamp
         assert pilot["GridType"] == "grid-type"
         assert pilot["BenchMark"] == 0.0
-        assert pilot["Status"] == "Submitted"
+        assert pilot["Status"] == PilotStatus.SUBMITTED
         assert pilot["StatusReason"] == "Unknown"
         assert not pilot["AccountingSent"]
 
@@ -380,7 +381,7 @@ async def test_insert_and_select_single_then_modify(pilot_db: PilotAgentsDB):
                     BenchMark=1.0,
                     StatusReason="NewReason",
                     AccountingSent=True,
-                    Status="WAITING",
+                    Status=PilotStatus.WAITING,
                 )
             ]
         )
@@ -394,7 +395,7 @@ async def test_insert_and_select_single_then_modify(pilot_db: PilotAgentsDB):
         assert pilot["PilotStamp"] == pilot_stamp
         assert pilot["GridType"] == "grid-type"
         assert pilot["BenchMark"] == 1.0
-        assert pilot["Status"] == "WAITING"
+        assert pilot["Status"] == PilotStatus.WAITING
         assert pilot["StatusReason"] == "NewReason"
         assert pilot["AccountingSent"]
 
