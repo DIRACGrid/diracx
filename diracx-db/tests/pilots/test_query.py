@@ -5,6 +5,7 @@ import pytest
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
     ScalarSearchOperator,
     ScalarSearchSpec,
     SortDirection,
@@ -34,7 +35,7 @@ PILOT_REASONS = [
     "I was sleeping",
 ]
 
-PILOT_STATUSES = ["Started", "Stopped", "Waiting"]
+PILOT_STATUSES = list(PilotStatus)
 
 
 @pytest.fixture
