@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from diracx.core.models import PilotFieldsMapping
+from diracx.core.models import PilotFieldsMapping, PilotStatus
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -151,7 +151,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
                 BenchMark=1.0,
                 StatusReason="NewReason",
                 AccountingSent=True,
-                Status="Waiting",
+                Status=PilotStatus.WAITING,
             ).model_dump(exclude_unset=True)
         ]
     }
@@ -175,7 +175,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     assert pilot1["BenchMark"] == 1.0
     assert pilot1["StatusReason"] == "NewReason"
     assert pilot1["AccountingSent"]
-    assert pilot1["Status"] == "Waiting"
+    assert pilot1["Status"] == PilotStatus.WAITING
 
     assert pilot2["BenchMark"] != pilot1["BenchMark"]
     assert pilot2["StatusReason"] != pilot1["StatusReason"]
