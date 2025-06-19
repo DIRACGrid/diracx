@@ -129,7 +129,7 @@ async def clear_pilots(
                 "It is set by default as True to avoid any mistake."
             )
         ),
-    ] = True,
+    ] = False,
 ):
     """Endpoint for DIRAC to delete all pilots that lived more than age_in_days."""
     await check_permissions()

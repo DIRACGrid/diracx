@@ -279,7 +279,7 @@ class PilotFieldsMapping(BaseModel, extra="forbid"):
 
     PilotStamp: str
     StatusReason: Optional[str] = None
-    Status: Optional[str] = None
+    Status: Optional[PilotStatus] = None
     BenchMark: Optional[float] = None
     DestinationSite: Optional[str] = None
     Queue: Optional[str] = None
@@ -287,3 +287,22 @@ class PilotFieldsMapping(BaseModel, extra="forbid"):
     GridType: Optional[str] = None
     AccountingSent: Optional[bool] = None
     CurrentJobID: Optional[int] = None
+
+
+class PilotStatus(StrEnum):
+    #: The pilot has been generated and is transferred to a remote site:
+    SUBMITTED = "Submitted"
+    #: The pilot is waiting for a computing resource in a batch queue:
+    WAITING = "Waiting"
+    #: The pilot is running a payload on a worker node:
+    RUNNING = "Running"
+    #: The pilot finished its execution:
+    DONE = "Done"
+    #: The pilot execution failed:
+    FAILED = "Failed"
+    #: The pilot was deleted:
+    DELETED = "Deleted"
+    #: The pilot execution was aborted:
+    ABORTED = "Aborted"
+    #: Cannot get information about the pilot status:
+    UNKNOWN = "Unknown"

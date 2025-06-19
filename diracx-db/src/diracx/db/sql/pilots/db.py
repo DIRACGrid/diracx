@@ -98,7 +98,7 @@ class PilotAgentsDB(BaseSQLDB):
             if "foreign key" in str(e.orig).lower():
                 raise PilotNotFoundError(
                     data={"pilot_stamps": str(job_to_pilot_mapping)},
-                    detail="at least one of these pilots does not exist",
+                    detail="at least one of these pilots do not exist",
                 ) from e
 
             if (
@@ -129,7 +129,7 @@ class PilotAgentsDB(BaseSQLDB):
             raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
 
     async def clear_pilots_bulk(
-        self, cutoff_date: datetime, delete_only_aborted: bool
+        self, cutoff_date: datetime, delete_only_aborted: bool = False
     ) -> int:
         """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
         Returns the number of deletion.
