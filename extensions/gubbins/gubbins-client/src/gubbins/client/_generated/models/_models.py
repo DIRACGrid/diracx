@@ -94,6 +94,39 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyPilotsAddJobsToPilot(_serialization.Model):
+    """Body_pilots_add_jobs_to_pilot.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: The stamp of the pilot. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+    :vartype pilot_jobs_ids: list[int]
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_jobs_ids": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
+    }
+
+    def __init__(self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamp: The stamp of the pilot. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_jobs_ids: The jobs we want to add to the pilot. Required.
+        :paramtype pilot_jobs_ids: list[int]
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_jobs_ids = pilot_jobs_ids
+
+
 class BodyPilotsAddPilotStamps(_serialization.Model):
     """Body_pilots_add_pilot_stamps.
 
@@ -145,39 +178,6 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self.vo = vo
         self.grid_type = grid_type
         self.pilot_references = pilot_references
-
-
-class BodyPilotsAssociatePilotWithJobs(_serialization.Model):
-    """Body_pilots_associate_pilot_with_jobs.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: The stamp of the pilot. Required.
-    :vartype pilot_stamp: str
-    :ivar pilot_jobs_ids: The jobs we want to add to the pilot. Required.
-    :vartype pilot_jobs_ids: list[int]
-    """
-
-    _validation = {
-        "pilot_stamp": {"required": True},
-        "pilot_jobs_ids": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
-    }
-
-    def __init__(self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any) -> None:
-        """
-        :keyword pilot_stamp: The stamp of the pilot. Required.
-        :paramtype pilot_stamp: str
-        :keyword pilot_jobs_ids: The jobs we want to add to the pilot. Required.
-        :paramtype pilot_jobs_ids: list[int]
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
-        self.pilot_jobs_ids = pilot_jobs_ids
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):
@@ -748,8 +748,9 @@ class PilotFieldsMapping(_serialization.Model):
     :vartype pilot_stamp: str
     :ivar status_reason: Statusreason.
     :vartype status_reason: str
-    :ivar status: Status.
-    :vartype status: str
+    :ivar status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+     "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype status: str or ~_generated.models.PilotStatus
     :ivar bench_mark: Benchmark.
     :vartype bench_mark: float
     :ivar destination_site: Destinationsite.
@@ -788,7 +789,7 @@ class PilotFieldsMapping(_serialization.Model):
         *,
         pilot_stamp: str,
         status_reason: Optional[str] = None,
-        status: Optional[str] = None,
+        status: Optional[Union[str, "_models.PilotStatus"]] = None,
         bench_mark: Optional[float] = None,
         destination_site: Optional[str] = None,
         queue: Optional[str] = None,
@@ -803,8 +804,9 @@ class PilotFieldsMapping(_serialization.Model):
         :paramtype pilot_stamp: str
         :keyword status_reason: Statusreason.
         :paramtype status_reason: str
-        :keyword status: Status.
-        :paramtype status: str
+        :keyword status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+         "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype status: str or ~_generated.models.PilotStatus
         :keyword bench_mark: Benchmark.
         :paramtype bench_mark: float
         :keyword destination_site: Destinationsite.

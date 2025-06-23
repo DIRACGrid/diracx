@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
+    BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
-    BodyPilotsAssociatePilotWithJobs,
     BodyPilotsUpdatePilotFields,
     ExtendedMetadata,
     GroupInfo,
@@ -52,6 +52,7 @@ from ._models import (  # type: ignore
 from ._enums import (  # type: ignore
     ChecksumAlgorithm,
     JobStatus,
+    PilotStatus,
     SandboxFormat,
     SandboxType,
     ScalarSearchOperator,
@@ -65,8 +66,8 @@ from diracx.client._generated.models._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
+    "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",
-    "BodyPilotsAssociatePilotWithJobs",
     "BodyPilotsUpdatePilotFields",
     "ExtendedMetadata",
     "GroupInfo",
@@ -100,6 +101,7 @@ __all__ = [
     "VectorSearchSpecValues",
     "ChecksumAlgorithm",
     "JobStatus",
+    "PilotStatus",
     "SandboxFormat",
     "SandboxType",
     "ScalarSearchOperator",

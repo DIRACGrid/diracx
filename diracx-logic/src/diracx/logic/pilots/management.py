@@ -70,7 +70,7 @@ async def update_pilots_fields(
     await pilot_db.update_pilot_fields_bulk(pilot_stamps_to_fields_mapping)
 
 
-async def associate_pilot_with_jobs(
+async def add_jobs_to_pilot(
     pilot_db: PilotAgentsDB, pilot_stamp: str, pilot_jobs_ids: list[int]
 ):
     pilot_ids = await get_pilot_ids_by_stamps(
@@ -86,7 +86,7 @@ async def associate_pilot_with_jobs(
         for job_id in pilot_jobs_ids
     ]
 
-    await pilot_db.associate_pilot_with_jobs(
+    await pilot_db.add_jobs_to_pilot_bulk(
         job_to_pilot_mapping=job_to_pilot_mapping,
     )
 

@@ -53,8 +53,8 @@ from ...operations._operations import (
     build_jobs_summary_request,
     build_jobs_unassign_bulk_jobs_sandboxes_request,
     build_jobs_unassign_job_sandboxes_request,
+    build_pilots_add_jobs_to_pilot_request,
     build_pilots_add_pilot_stamps_request,
-    build_pilots_associate_pilot_with_jobs_request,
     build_pilots_clear_pilots_request,
     build_pilots_delete_pilots_request,
     build_pilots_search_request,
@@ -2443,7 +2443,7 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @distributed_trace_async
-    async def clear_pilots(self, *, age_in_days: int, delete_only_aborted: bool = True, **kwargs: Any) -> None:
+    async def clear_pilots(self, *, age_in_days: int, delete_only_aborted: bool = False, **kwargs: Any) -> None:
         """Clear Pilots.
 
         Endpoint for DIRAC to delete all pilots that lived more than age_in_days.
@@ -2453,7 +2453,7 @@ class PilotsOperations:
         :paramtype age_in_days: int
         :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
          'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
-         default as True to avoid any mistake. Default value is True.
+         default as True to avoid any mistake. Default value is False.
         :paramtype delete_only_aborted: bool
         :return: None
         :rtype: None
@@ -2495,15 +2495,15 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @overload
-    async def associate_pilot_with_jobs(
-        self, body: _models.BodyPilotsAssociatePilotWithJobs, *, content_type: str = "application/json", **kwargs: Any
+    async def add_jobs_to_pilot(
+        self, body: _models.BodyPilotsAddJobsToPilot, *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Associate Pilot With Jobs.
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs
+        :type body: ~_generated.models.BodyPilotsAddJobsToPilot
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -2513,10 +2513,10 @@ class PilotsOperations:
         """
 
     @overload
-    async def associate_pilot_with_jobs(
+    async def add_jobs_to_pilot(
         self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Associate Pilot With Jobs.
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
@@ -2531,15 +2531,13 @@ class PilotsOperations:
         """
 
     @distributed_trace_async
-    async def associate_pilot_with_jobs(
-        self, body: Union[_models.BodyPilotsAssociatePilotWithJobs, IO[bytes]], **kwargs: Any
-    ) -> None:
-        """Associate Pilot With Jobs.
+    async def add_jobs_to_pilot(self, body: Union[_models.BodyPilotsAddJobsToPilot, IO[bytes]], **kwargs: Any) -> None:
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
-        :param body: Is either a BodyPilotsAssociatePilotWithJobs type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs or IO[bytes]
+        :param body: Is either a BodyPilotsAddJobsToPilot type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsAddJobsToPilot or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2564,9 +2562,9 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsAssociatePilotWithJobs")
+            _json = self._serialize.body(body, "BodyPilotsAddJobsToPilot")
 
-        _request = build_pilots_associate_pilot_with_jobs_request(
+        _request = build_pilots_add_jobs_to_pilot_request(
             content_type=content_type,
             json=_json,
             content=_content,

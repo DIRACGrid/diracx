@@ -15,7 +15,7 @@ from diracx.core.models import (
     PilotFieldsMapping,
 )
 from diracx.logic.pilots.management import (
-    associate_pilot_with_jobs as associate_pilot_with_jobs_bl,
+    add_jobs_to_pilot as add_jobs_to_pilot_bl,
 )
 from diracx.logic.pilots.management import (
     clear_pilots_bulk,
@@ -204,7 +204,7 @@ async def update_pilot_fields(
 
 
 @router.patch("/management/jobs", status_code=HTTPStatus.NO_CONTENT)
-async def associate_pilot_with_jobs(
+async def add_jobs_to_pilot(
     pilot_db: PilotAgentsDB,
     pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
     pilot_jobs_ids: Annotated[
@@ -216,7 +216,7 @@ async def associate_pilot_with_jobs(
     await check_permissions()
 
     try:
-        await associate_pilot_with_jobs_bl(
+        await add_jobs_to_pilot_bl(
             pilot_db=pilot_db,
             pilot_stamp=pilot_stamp,
             pilot_jobs_ids=pilot_jobs_ids,
