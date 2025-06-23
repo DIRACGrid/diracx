@@ -16,8 +16,8 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
-    PilotStatus,
     PilotSecretConstraints,
+    PilotStatus,
     SearchSpec,
     SortSpec,
 )

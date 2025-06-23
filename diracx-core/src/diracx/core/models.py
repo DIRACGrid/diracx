@@ -319,6 +319,7 @@ class PilotFieldsMapping(BaseModel, extra="forbid"):
     AccountingSent: Optional[bool] = None
     CurrentJobID: Optional[int] = None
 
+
 class PilotStatus(StrEnum):
     #: The pilot has been generated and is transferred to a remote site:
     SUBMITTED = "Submitted"
@@ -336,6 +337,7 @@ class PilotStatus(StrEnum):
     ABORTED = "Aborted"
     #: Cannot get information about the pilot status:
     UNKNOWN = "Unknown"
+
 
 class PilotSecretConstraints(TypedDict, total=False):
     VOs: list[str]  # Authorize only a list of VOs
