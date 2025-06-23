@@ -687,7 +687,7 @@ def build_pilots_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:
 
 
 def build_pilots_clear_pilots_request(
-    *, age_in_days: int, delete_only_aborted: bool = True, **kwargs: Any
+    *, age_in_days: int, delete_only_aborted: bool = False, **kwargs: Any
 ) -> HttpRequest:
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
@@ -702,7 +702,7 @@ def build_pilots_clear_pilots_request(
     return HttpRequest(method="DELETE", url=_url, params=_params, **kwargs)
 
 
-def build_pilots_associate_pilot_with_jobs_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
+def build_pilots_add_jobs_to_pilot_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
@@ -3275,7 +3275,7 @@ class PilotsOperations:
 
     @distributed_trace
     def clear_pilots(  # pylint: disable=inconsistent-return-statements
-        self, *, age_in_days: int, delete_only_aborted: bool = True, **kwargs: Any
+        self, *, age_in_days: int, delete_only_aborted: bool = False, **kwargs: Any
     ) -> None:
         """Clear Pilots.
 
@@ -3286,7 +3286,7 @@ class PilotsOperations:
         :paramtype age_in_days: int
         :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
          'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
-         default as True to avoid any mistake. Default value is True.
+         default as True to avoid any mistake. Default value is False.
         :paramtype delete_only_aborted: bool
         :return: None
         :rtype: None
@@ -3328,15 +3328,15 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @overload
-    def associate_pilot_with_jobs(
-        self, body: _models.BodyPilotsAssociatePilotWithJobs, *, content_type: str = "application/json", **kwargs: Any
+    def add_jobs_to_pilot(
+        self, body: _models.BodyPilotsAddJobsToPilot, *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Associate Pilot With Jobs.
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs
+        :type body: ~_generated.models.BodyPilotsAddJobsToPilot
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3346,10 +3346,8 @@ class PilotsOperations:
         """
 
     @overload
-    def associate_pilot_with_jobs(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
-        """Associate Pilot With Jobs.
+    def add_jobs_to_pilot(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
@@ -3364,15 +3362,15 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def associate_pilot_with_jobs(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[_models.BodyPilotsAssociatePilotWithJobs, IO[bytes]], **kwargs: Any
+    def add_jobs_to_pilot(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[_models.BodyPilotsAddJobsToPilot, IO[bytes]], **kwargs: Any
     ) -> None:
-        """Associate Pilot With Jobs.
+        """Add Jobs To Pilot.
 
         Endpoint only for DIRAC services, to associate a pilot with a job.
 
-        :param body: Is either a BodyPilotsAssociatePilotWithJobs type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsAssociatePilotWithJobs or IO[bytes]
+        :param body: Is either a BodyPilotsAddJobsToPilot type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsAddJobsToPilot or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3397,9 +3395,9 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsAssociatePilotWithJobs")
+            _json = self._serialize.body(body, "BodyPilotsAddJobsToPilot")
 
-        _request = build_pilots_associate_pilot_with_jobs_request(
+        _request = build_pilots_add_jobs_to_pilot_request(
             content_type=content_type,
             json=_json,
             content=_content,
