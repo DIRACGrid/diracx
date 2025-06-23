@@ -13,6 +13,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
     SearchSpec,
     SortSpec,
 )
@@ -69,9 +70,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def associate_pilot_with_jobs(
-        self, job_to_pilot_mapping: list[dict[str, Any]]
-    ):
+    async def add_jobs_to_pilot_bulk(self, job_to_pilot_mapping: list[dict[str, Any]]):
         """Associate a pilot with jobs.
 
         job_to_pilot_mapping format:
@@ -83,7 +82,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         Raises:
         - PilotNotFoundError if a pilot_id is not associated with a pilot.
-        - PilotAlreadyAssociatedWithJobError if the pilot is already associated with a job.
+        - PilotAlreadyAssociatedWithJobError if the pilot is already associated with one of the given jobs.
         - NotImplementedError if the integrity error is not caught.
 
         **Important note**: We assume that a job exists.
@@ -139,7 +138,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         # If delete_only_aborted is True, add the condition for 'Status' being 'Aborted'
         if delete_only_aborted:
-            stmt = stmt.where(PilotAgents.status == "Aborted")
+            stmt = stmt.where(PilotAgents.status == PilotStatus.ABORTED)
 
         # Execute the statement
         res = await self.conn.execute(stmt)
