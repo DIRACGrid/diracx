@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid as std_uuid
 from datetime import datetime
-from enum import StrEnum
+from enum import StrEnum, auto
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, GetCoreSchemaHandler, GetJsonSchemaHandler
@@ -319,6 +319,7 @@ class PilotFieldsMapping(BaseModel, extra="forbid"):
     AccountingSent: Optional[bool] = None
     CurrentJobID: Optional[int] = None
 
+
 class PilotStatus(StrEnum):
     #: The pilot has been generated and is transferred to a remote site:
     SUBMITTED = "Submitted"
@@ -337,12 +338,20 @@ class PilotStatus(StrEnum):
     #: Cannot get information about the pilot status:
     UNKNOWN = "Unknown"
 
+
 class PilotSecretConstraints(TypedDict, total=False):
     VOs: list[str]  # Authorize only a list of VOs
     PilotStamps: list[str]  # Authorize only a list of stamps
     Sites: list[str]  # Authorize only a list of sites
     # ...
     # We can add constraints here
+
+
+class TokenType(StrEnum):
+    # Pilot token
+    PILOT_TOKEN = auto()
+    # User token
+    USER_TOKEN = auto()
 
 
 class PilotSecretsInfo(BaseModel):

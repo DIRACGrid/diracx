@@ -30,7 +30,7 @@ async def verify_dirac_pilot_access_token(
     settings: AuthSettings,
     authorization: Annotated[str | None, Header()] = None,
 ) -> AuthorizedPilotInfo:
-    """Verify dirac user token and return a UserInfo class
+    """Verify dirac pilot token and return a AuthorizedPilotInfo class
     Used for each API endpoint.
     """
     if not authorization:

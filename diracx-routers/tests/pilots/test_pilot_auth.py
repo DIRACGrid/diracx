@@ -20,6 +20,7 @@ from ..auth.test_standard import _get_tokens, auth_httpx_mock  # noqa: F401
 pytestmark = pytest.mark.enabled_dependencies(
     [
         "PilotCredentialsAccessPolicy",
+        "PilotManagementAccessPolicy",
         "DevelopmentSettings",
         "AuthDB",
         "AuthSettings",
@@ -30,6 +31,7 @@ pytestmark = pytest.mark.enabled_dependencies(
 )
 
 MAIN_VO = "lhcb"
+DIRAC_CLIENT_ID = "myDIRACClientID"
 N = 100
 
 
@@ -135,7 +137,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
         "pilot_secret": "My 1ncr3d1bl3 t0k3n",
     }
 
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 401, r.json()
     assert r.json()["detail"] == "bad pilot_secret"
@@ -144,7 +146,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -158,7 +160,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     body = {"pilot_stamp": "It is a stamp", "pilot_secret": secret}
 
     r = test_client.post(
-        "/api/pilots/token",
+        "/api/pilots/secret-exchange",
         json=body,
     )
 
@@ -168,12 +170,11 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # ----------------- Exchange for new tokens -----------------
     body = {"refresh_token": refresh_token, "pilot_stamp": pilot_stamp}
     r = test_client.post(
-        "/api/pilots/refresh-token",
+        "/api/pilots/token",
         json=body,
-        headers={"Authorization": f"Bearer {access_token}"},
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, r.json()
 
     new_access_token = r.json()["access_token"]
     new_refresh_token = r.json()["refresh_token"]
@@ -181,7 +182,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # ----------------- Exchange token with old token -----------------
     body = {"refresh_token": refresh_token, "pilot_stamp": pilot_stamp}
     r = test_client.post(
-        "/api/pilots/refresh-token",
+        "/api/pilots/token",
         json=body,
         headers={"Authorization": f"Bearer {access_token}"},
     )
@@ -191,7 +192,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # ----------------- Exchange token with new token -----------------
     body = {"refresh_token": new_refresh_token, "pilot_stamp": pilot_stamp}
     r = test_client.post(
-        "/api/pilots/refresh-token",
+        "/api/pilots/token",
         json=body,
         headers={"Authorization": f"Bearer {new_access_token}"},
     )
@@ -203,7 +204,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # ----------------- Overused Secret -----------------
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_secret"
@@ -224,7 +225,7 @@ async def test_expired_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "secret expired"
@@ -234,7 +235,7 @@ async def test_expired_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_secret"
@@ -251,7 +252,7 @@ async def test_access_user_info_with_pilot_token(test_client, add_secrets_and_ti
     pilot_stamp = stamps[0]
     secret = secrets[0]
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
-    r = test_client.post("/api/pilots/token", json=body)
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -282,14 +283,39 @@ async def test_refresh_pilot_token_with_user_token(
     assert access_token
     assert refresh_token
 
+    # ----------------- First, with a pilot that does not exist -----------------
     body = {"refresh_token": refresh_token, "pilot_stamp": "stamp_0"}
     r = normal_test_client.post(
-        "/api/pilots/refresh-token",
+        "/api/pilots/token",
         json=body,
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
     assert r.status_code == 401
+    assert "not found" in r.json()["detail"]
+
+    # ----------------- Then, with a pilot that does exist -----------------
+    # First, we need to create this pilot
+
+    pilot_stamp = "stamp_1"
+    body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamp]}
+
+    # Create a pilot
+    r = normal_test_client.post(
+        "/api/pilots/management/pilot",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+    body = {"refresh_token": refresh_token, "pilot_stamp": "stamp_1"}
+    r = normal_test_client.post(
+        "/api/pilots/token",
+        json=body,
+    )
+
+    assert r.status_code == 401
+    assert r.json()["detail"] == "This is not a pilot token."
 
 
 async def test_get_pilot_info_with_user_token(
@@ -302,11 +328,33 @@ async def test_get_pilot_info_with_user_token(
     assert r.status_code == 401
 
 
-async def test_get_pilot_info_with_pilot_token(
-    diracx_pilot_client: TestClient,
-):
-    r = diracx_pilot_client.get(
-        "/api/pilots/pilotinfo",
-    )
+@pytest.mark.parametrize("secret_duration_sec", [10])
+async def test_refresh_user_token_with_pilot_token(test_client, add_secrets_and_time):
+    # Add pilots
+    result = add_secrets_and_time
+    stamps = result["stamps"]
+    secrets = result["secrets"]
 
-    assert r.status_code == 200
+    pilot_stamp = stamps[0]
+    secret = secrets[0]
+
+    # ----------------- Good password  -----------------
+
+    body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
+
+    r = test_client.post("/api/pilots/secret-exchange", json=body)
+
+    assert r.status_code == 200, r.json()
+
+    refresh_token = r.json()["refresh_token"]
+
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
+
+    r = test_client.post("/api/auth/token", data=request_data)
+
+    assert r.status_code == 403, r.json()
+    assert r.json()["detail"] == "This is not a user token."
