@@ -16,6 +16,7 @@ from diracx.core.models import (
     PilotSecretConstraints,
     PilotSecretsInfo,
     TokenResponse,
+    TokenType,
 )
 from diracx.core.settings import AuthSettings
 from diracx.core.utils import extract_timestamp_from_uuid7, recursive_dict_merge
@@ -359,7 +360,10 @@ async def generate_pilot_tokens(
             _,
             include_refresh_token,
         ) = await get_token_info_from_refresh_flow(
-            refresh_token=refresh_token, auth_db=auth_db, settings=settings
+            refresh_token=refresh_token,
+            auth_db=auth_db,
+            settings=settings,
+            token_type=TokenType.PILOT_TOKEN,
         )
 
         sub = f"{vo}:{pilot_info['sub']}"

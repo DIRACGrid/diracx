@@ -11,7 +11,6 @@ from diracx.core.models import (
     PilotFieldsMapping,
     PilotStatus,
 )
-
 from diracx.db.sql.pilots.db import PilotAgentsDB
 
 

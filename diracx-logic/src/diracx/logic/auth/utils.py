@@ -15,8 +15,13 @@ from typing_extensions import TypedDict
 from uuid_utils import UUID
 
 from diracx.core.config.schema import Config
-from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
-from diracx.core.models import GrantType
+from diracx.core.exceptions import (
+    AuthorizationError,
+    BadTokenError,
+    IAMClientError,
+    IAMServerError,
+)
+from diracx.core.models import GrantType, TokenType
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
 
@@ -208,6 +213,7 @@ def read_token(
 async def verify_dirac_refresh_token(
     refresh_token: str,
     settings: AuthSettings,
+    token_type: TokenType = TokenType.USER_TOKEN,
 ) -> tuple[UUID, float, bool]:
     """Verify dirac user token and return a UserInfo class
     Used for each API endpoint.
@@ -215,6 +221,12 @@ async def verify_dirac_refresh_token(
     claims = read_token(
         refresh_token, settings.token_keystore.jwks, settings.token_allowed_algorithms
     )
+
+    if token_type == TokenType.USER_TOKEN and "dirac_policies" not in claims:
+        raise BadTokenError("This is not a user token.")
+
+    if token_type == TokenType.PILOT_TOKEN and "dirac_policies" in claims:
+        raise BadTokenError("This is not a pilot token.")
 
     return (
         UUID(claims["jti"]),

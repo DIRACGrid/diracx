@@ -23,6 +23,7 @@ from diracx.core.models import (
     BaseTokenPayload,
     GrantType,
     RefreshTokenPayload,
+    TokenType,
 )
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
@@ -159,12 +160,15 @@ async def get_oidc_token_info_from_authorization_flow(
 
 
 async def get_token_info_from_refresh_flow(
-    refresh_token: str, auth_db: AuthDB, settings: AuthSettings
+    refresh_token: str,
+    auth_db: AuthDB,
+    settings: AuthSettings,
+    token_type: TokenType = TokenType.USER_TOKEN,
 ) -> tuple[dict, str, bool, float, bool]:
     """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
     # Decode the refresh token to get the JWT ID
     jti, exp, legacy_exchange = await verify_dirac_refresh_token(
-        refresh_token, settings
+        refresh_token, settings, token_type
     )
 
     # Get some useful user information from the refresh token entry in the DB
