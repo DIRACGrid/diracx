@@ -99,6 +99,9 @@ class JobError(DiracError):
         )
 
 
+class BadTokenError(DiracError): ...
+
+
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
 

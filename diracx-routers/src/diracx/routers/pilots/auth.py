@@ -8,6 +8,7 @@ from fastapi import Body, HTTPException, status
 
 from diracx.core.exceptions import (
     BadPilotCredentialsError,
+    BadTokenError,
     InvalidCredentialsError,
     PilotNotFoundError,
     SecretHasExpiredError,
@@ -28,8 +29,8 @@ from ..fastapi_classes import DiracxRouter
 router = DiracxRouter(require_auth=False)
 
 
-@router.post("/token")
-async def pilot_login(
+@router.post("/secret-exchange")
+async def perform_secret_exchange(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
     pilot_stamp: Annotated[str, Body(description="Stamp used by a pilot to login.")],
@@ -72,7 +73,7 @@ async def pilot_login(
         ) from e
 
 
-@router.post("/refresh-token")
+@router.post("/token")
 async def refresh_pilot_tokens(
     auth_db: AuthDB,
     settings: AuthSettings,
@@ -82,7 +83,8 @@ async def refresh_pilot_tokens(
     ],
     pilot_stamp: Annotated[str, Body(description="Pilot stamp")],
 ) -> TokenResponse:
-    """Endpoint where a pilot can exchange a refresh token for a token."""
+    """Endpoint where *only* pilots can exchange a refresh token for a token."""
+    # Refresh it
     try:
         return await refresh_pilot_token(
             pilot_stamp=pilot_stamp,
@@ -91,7 +93,7 @@ async def refresh_pilot_tokens(
             pilot_db=pilot_db,
             refresh_token=refresh_token,
         )
-    except (InvalidCredentialsError, PilotNotFoundError) as e:
+    except (InvalidCredentialsError, PilotNotFoundError, BadTokenError) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
         ) from e
