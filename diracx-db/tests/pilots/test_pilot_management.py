@@ -437,7 +437,7 @@ async def test_associate_pilot_with_job_and_get_it(pilot_db: PilotAgentsDB):
             {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
             for job_id in pilot_jobs
         ]
-        await pilot_db.associate_pilot_with_jobs(job_to_pilot_mapping)
+        await pilot_db.add_jobs_to_pilot_bulk(job_to_pilot_mapping)
 
         # Verify that he has all jobs
         db_jobs = await get_pilot_jobs_ids_by_pilot_id(pilot_db, pilot_id)
@@ -453,7 +453,7 @@ async def test_associate_pilot_with_job_and_get_it(pilot_db: PilotAgentsDB):
                 {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
                 for job_id in pilot_jobs
             ]
-            await pilot_db.associate_pilot_with_jobs(job_to_pilot_mapping)
+            await pilot_db.add_jobs_to_pilot_bulk(job_to_pilot_mapping)
 
         # Associate pilot with jobs that he has not, but was previously in an error
         # To test that the rollback worked
@@ -463,4 +463,4 @@ async def test_associate_pilot_with_job_and_get_it(pilot_db: PilotAgentsDB):
             {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
             for job_id in pilot_jobs
         ]
-        await pilot_db.associate_pilot_with_jobs(job_to_pilot_mapping)
+        await pilot_db.add_jobs_to_pilot_bulk(job_to_pilot_mapping)
