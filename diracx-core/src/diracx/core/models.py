@@ -319,6 +319,7 @@ class PilotFieldsMapping(BaseModel, extra="forbid"):
     AccountingSent: Optional[bool] = None
     CurrentJobID: Optional[int] = None
 
+
 class PilotStatus(StrEnum):
     #: The pilot has been generated and is transferred to a remote site:
     SUBMITTED = "Submitted"
