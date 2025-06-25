@@ -20,13 +20,6 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.core.exceptions import (
-    BadPilotCredentialsError,
-    PilotNotFoundError,
-    SecretHasExpiredError,
-    SecretNotFoundError,
-)
-
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
 from diracx.db.sql.utils.functions import raw_hash
