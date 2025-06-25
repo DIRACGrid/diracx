@@ -138,8 +138,14 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
     :vartype vo: str
     :ivar grid_type: Grid type of the pilots.
     :vartype grid_type: str
+    :ivar grid_site: Pilots grid site.
+    :vartype grid_site: str
+    :ivar destination_site: Pilots destination site.
+    :vartype destination_site: str
     :ivar pilot_references: Association of a pilot reference with a pilot stamp.
     :vartype pilot_references: dict[str, str]
+    :ivar status_reason: Status reason of the pilots.
+    :vartype status_reason: str
     """
 
     _validation = {
@@ -151,7 +157,10 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
         "vo": {"key": "vo", "type": "str"},
         "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "destination_site": {"key": "destination_site", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{str}"},
+        "status_reason": {"key": "status_reason", "type": "str"},
     }
 
     def __init__(
@@ -160,7 +169,10 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         pilot_stamps: List[str],
         vo: str,
         grid_type: str = "Dirac",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
         pilot_references: Optional[Dict[str, str]] = None,
+        status_reason: str = "Unknown",
         **kwargs: Any
     ) -> None:
         """
@@ -170,14 +182,23 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         :paramtype vo: str
         :keyword grid_type: Grid type of the pilots.
         :paramtype grid_type: str
+        :keyword grid_site: Pilots grid site.
+        :paramtype grid_site: str
+        :keyword destination_site: Pilots destination site.
+        :paramtype destination_site: str
         :keyword pilot_references: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_references: dict[str, str]
+        :keyword status_reason: Status reason of the pilots.
+        :paramtype status_reason: str
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
         self.vo = vo
         self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.destination_site = destination_site
         self.pilot_references = pilot_references
+        self.status_reason = status_reason
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):
