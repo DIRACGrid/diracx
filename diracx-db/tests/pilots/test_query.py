@@ -48,11 +48,11 @@ async def populated_pilot_db(pilot_db):
 
         vo = MAIN_VO
 
-        await pilot_db.add_pilots_bulk(
+        await pilot_db.add_pilots(
             stamps, vo, grid_type="DIRAC", pilot_references=pilot_references
         )
 
-        await pilot_db.update_pilot_fields_bulk(
+        await pilot_db.update_pilot_fields(
             [
                 PilotFieldsMapping(
                     PilotStamp=pilot_stamp,
