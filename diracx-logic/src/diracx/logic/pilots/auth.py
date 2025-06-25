@@ -181,7 +181,7 @@ async def verify_pilot_credentials(
         pilot_db=pilot_db,
         pilot_stamps=[pilot_stamp],
         parameters=["VO"],
-        allow_missing=False
+        allow_missing=False,
     )
     pilot = dict(pilots[0])
 
@@ -246,7 +246,10 @@ async def refresh_pilot_token(
     refresh_token: str | None = None,
 ) -> TokenResponse:
     pilots = await get_pilots_by_stamp(
-        pilot_db=pilot_db, pilot_stamps=[pilot_stamp], parameters=["VO"], allow_missing=False
+        pilot_db=pilot_db,
+        pilot_stamps=[pilot_stamp],
+        parameters=["VO"],
+        allow_missing=False,
     )
     pilot = pilots[0]  # Semantic
     vo = pilot["VO"]
