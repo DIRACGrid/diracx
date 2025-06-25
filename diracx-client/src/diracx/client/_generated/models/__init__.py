@@ -16,6 +16,12 @@ from ._models import (  # type: ignore
     BodyAuthGetOidcTokenGrantType,
     BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
+<<<<<<< HEAD
+=======
+    BodyPilotsCreatePilotSecrets,
+    BodyPilotsPerformSecretExchange,
+    BodyPilotsRefreshPilotTokens,
+>>>>>>> 2099d7ba (fix: Generate client)
     BodyPilotsUpdatePilotFields,
     GroupInfo,
     HTTPValidationError,
@@ -68,6 +74,12 @@ __all__ = [
     "BodyAuthGetOidcTokenGrantType",
     "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",
+<<<<<<< HEAD
+=======
+    "BodyPilotsCreatePilotSecrets",
+    "BodyPilotsPerformSecretExchange",
+    "BodyPilotsRefreshPilotTokens",
+>>>>>>> 2099d7ba (fix: Generate client)
     "BodyPilotsUpdatePilotFields",
     "GroupInfo",
     "HTTPValidationError",
