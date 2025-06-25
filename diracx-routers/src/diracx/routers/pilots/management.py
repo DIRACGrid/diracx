@@ -95,42 +95,20 @@ async def add_pilot_stamps(
 
 @router.delete("/", status_code=HTTPStatus.NO_CONTENT)
 async def delete_pilots(
-    pilot_stamps: Annotated[
-        list[str], Query(description="Stamps of the pilots we want to delete.")
-    ],
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
-):
-    """Endpoint to delete a pilot.
-
-    If at least one pilot is not found, it WILL rollback.
-    """
-    await check_permissions(
-        action=ActionType.MANAGE_PILOTS,
-    )
-
-    try:
-        await delete_pilots_by_stamps(pilot_db=pilot_db, pilot_stamps=pilot_stamps)
-    except PilotNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one pilot has not been found.",
-        ) from e
-
-
-@router.delete("/management/pilot/interval", status_code=HTTPStatus.NO_CONTENT)
-async def clear_pilots(
-    pilot_db: PilotAgentsDB,
+    pilot_stamps: Annotated[
+        list[str] | None, Query(description="Stamps of the pilots we want to delete.")
+    ] = None,
     age_in_days: Annotated[
-        int,
+        int | None,
         Query(
             description=(
                 "The number of days that define the maximum age of pilots to be deleted."
                 "Pilots older than this age will be considered for deletion."
             )
         ),
-    ],
-    check_permissions: CheckPilotManagementPolicyCallable,
+    ] = None,
     delete_only_aborted: Annotated[
         bool,
         Query(
@@ -138,24 +116,44 @@ async def clear_pilots(
                 "Flag indicating whether to only delete pilots whose status is 'Aborted'."
                 "If set to True, only pilots with the 'Aborted' status will be deleted."
                 "It is set by default as True to avoid any mistake."
+                "This flag is only used for deletion by time."
             )
         ),
     ] = False,
 ):
-    """Endpoint for DIRAC to delete all pilots that lived more than age_in_days."""
-    await check_permissions(ActionType.MANAGE_PILOTS)
+    """Endpoint to delete a pilot.
 
-    if age_in_days < 0:
+    Two features:
+
+    1. Or you provide pilot_stamps, so you can delete pilots by their stamp
+    2. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
+
+    If deleting by stamps, if at least one pilot is not found, it WILL rollback.
+    """
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS,
+    )
+
+    if pilot_stamps:
+        try:
+            await delete_pilots_by_stamps(pilot_db=pilot_db, pilot_stamps=pilot_stamps)
+        except PilotNotFoundError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one pilot has not been found.",
+            ) from e
+
+    elif age_in_days:
+        await clear_pilots_bl(
+            pilot_db=pilot_db,
+            age_in_days=age_in_days,
+            delete_only_aborted=delete_only_aborted,
+        )
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="age_in_days must be positive.",
+            detail="You must provide either age_in_days or pilot_stamps.",
         )
-
-    await clear_pilots_bl(
-        pilot_db=pilot_db,
-        age_in_days=age_in_days,
-        delete_only_aborted=delete_only_aborted,
-    )
 
 
 EXAMPLE_UPDATE_FIELDS = {
