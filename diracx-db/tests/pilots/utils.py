@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
 import freezegun
 import pytest
 from sqlalchemy import update
 
+from diracx.core.exceptions import (
+    BadPilotCredentialsError,
+    PilotNotFoundError,
+    SecretHasExpiredError,
+    SecretNotFoundError,
+)
 from diracx.core.models import (
     PilotSecretConstraints,
     ScalarSearchOperator,
@@ -13,13 +20,6 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.core.exceptions import (
-    BadPilotCredentialsError,
-    PilotNotFoundError,
-    SecretHasExpiredError,
-    SecretNotFoundError,
-)
-
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
 from diracx.db.sql.utils.functions import raw_hash
@@ -90,6 +90,7 @@ async def get_secrets_by_hashed_secrets(
     )
 
     return secrets
+
 
 async def get_secrets_by_uuid(
     pilot_db: PilotAgentsDB, secret_uuids: list[str], parameters: list[str] = []
@@ -212,6 +213,7 @@ async def create_old_pilots_environment(pilot_db, create_timed_pilots):
 
     return non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old
 
+
 @pytest.fixture
 async def add_secrets_and_time(
     pilot_db, add_stamps, secret_duration_sec, frozen_time: freezegun.FreezeGun
@@ -253,7 +255,9 @@ async def add_secrets_and_time(
         # Return both non-hashed secrets and stamps
         return {"stamps": stamps, "secrets": secrets}
 
+
 # ------------ Verifying data ------------
+
 
 async def verify_pilot_secret(
     pilot_stamp: str,
@@ -268,7 +272,7 @@ async def verify_pilot_secret(
         parameters=["VO", "PilotStamp"],
     )
     if len(pilots) == 0:
-        raise PilotNotFoundError(data={"pilot_stamp":pilot_stamp})
+        raise PilotNotFoundError(data={"pilot_stamp": pilot_stamp})
     pilot = dict(pilots[0])
 
     # 2. Get the secret itself
@@ -310,6 +314,7 @@ async def verify_pilot_secret(
         if secret["SecretRemainingUseCount"] == 1:
             await pilot_db.delete_secrets([secret_uuid])
 
+
 async def check_pilot_constraints(
     pilot: dict[str, Any], secret_constraints: PilotSecretConstraints
 ):
@@ -326,4 +331,3 @@ async def check_pilot_constraints(
                         "secret_constraints": str(secret_constraints),
                     }
                 )
-
