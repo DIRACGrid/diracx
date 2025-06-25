@@ -54,8 +54,8 @@ from ...operations._operations import (
     build_jobs_unassign_job_sandboxes_request,
     build_pilots_add_jobs_to_pilot_request,
     build_pilots_add_pilot_stamps_request,
-    build_pilots_clear_pilots_request,
     build_pilots_delete_pilots_request,
+    build_pilots_get_pilot_jobs_request,
     build_pilots_search_request,
     build_pilots_update_pilot_fields_request,
     build_well_known_get_installation_metadata_request,
@@ -2286,15 +2286,36 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def delete_pilots(self, *, pilot_stamps: List[str], **kwargs: Any) -> None:
+    async def delete_pilots(
+        self,
+        *,
+        pilot_stamps: Optional[List[str]] = None,
+        age_in_days: Optional[int] = None,
+        delete_only_aborted: bool = False,
+        **kwargs: Any
+    ) -> None:
         """Delete Pilots.
 
         Endpoint to delete a pilot.
 
-        If at least one pilot is not found, it WILL rollback.
+        Two features:
 
-        :keyword pilot_stamps: Stamps of the pilots we want to delete. Required.
+
+        #. Or you provide pilot_stamps, so you can delete pilots by their stamp
+        #. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
+
+        If deleting by stamps, if at least one pilot is not found, it WILL rollback.
+
+        :keyword pilot_stamps: Stamps of the pilots we want to delete. Default value is None.
         :paramtype pilot_stamps: list[str]
+        :keyword age_in_days: The number of days that define the maximum age of pilots to be
+         deleted.Pilots older than this age will be considered for deletion. Default value is None.
+        :paramtype age_in_days: int
+        :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
+         'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
+         default as True to avoid any mistake.This flag is only used for deletion by time. Default value
+         is False.
+        :paramtype delete_only_aborted: bool
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2314,6 +2335,8 @@ class PilotsOperations:
 
         _request = build_pilots_delete_pilots_request(
             pilot_stamps=pilot_stamps,
+            age_in_days=age_in_days,
+            delete_only_aborted=delete_only_aborted,
             headers=_headers,
             params=_params,
         )
@@ -2435,20 +2458,15 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @distributed_trace_async
-    async def clear_pilots(self, *, age_in_days: int, delete_only_aborted: bool = False, **kwargs: Any) -> None:
-        """Clear Pilots.
+    async def get_pilot_jobs(self, body: str, **kwargs: Any) -> List[int]:
+        """Get Pilot Jobs.
 
-        Endpoint for DIRAC to delete all pilots that lived more than age_in_days.
+        Endpoint only for DIRAC services, to get jobs of a pilot.
 
-        :keyword age_in_days: The number of days that define the maximum age of pilots to be
-         deleted.Pilots older than this age will be considered for deletion. Required.
-        :paramtype age_in_days: int
-        :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
-         'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
-         default as True to avoid any mistake. Default value is False.
-        :paramtype delete_only_aborted: bool
-        :return: None
-        :rtype: None
+        :param body: Required.
+        :type body: str
+        :return: list of int
+        :rtype: list[int]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2459,14 +2477,17 @@ class PilotsOperations:
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[None] = kwargs.pop("cls", None)
+        content_type: str = kwargs.pop("content_type", _headers.pop("Content-Type", "application/json"))
+        cls: ClsType[List[int]] = kwargs.pop("cls", None)
 
-        _request = build_pilots_clear_pilots_request(
-            age_in_days=age_in_days,
-            delete_only_aborted=delete_only_aborted,
+        _content = self._serialize.body(body, "str")
+
+        _request = build_pilots_get_pilot_jobs_request(
+            content_type=content_type,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2479,12 +2500,16 @@ class PilotsOperations:
 
         response = pipeline_response.http_response
 
-        if response.status_code not in [204]:
+        if response.status_code not in [200]:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
+        deserialized = self._deserialize("[int]", pipeline_response.http_response)
+
         if cls:
-            return cls(pipeline_response, None, {})  # type: ignore
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
 
     @overload
     async def add_jobs_to_pilot(
