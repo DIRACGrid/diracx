@@ -54,7 +54,7 @@ async def populated_pilot_client(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -75,7 +75,7 @@ async def populated_pilot_client(normal_test_client):
         ]
     }
 
-    r = normal_test_client.patch("/api/pilots/management/pilot", json=body)
+    r = normal_test_client.patch("/api/pilots/metadata", json=body)
 
     assert r.status_code == 204
 
