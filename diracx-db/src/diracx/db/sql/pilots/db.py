@@ -35,12 +35,15 @@ class PilotAgentsDB(BaseSQLDB):
 
     # ----------------------------- Insert Functions -----------------------------
 
-    async def add_pilots_bulk(
+    async def add_pilots(
         self,
         pilot_stamps: list[str],
         vo: str,
         grid_type: str = "DIRAC",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
         pilot_references: dict[str, str] | None = None,
+        status_reason: str = "Unknown",
     ):
         """Bulk add pilots in the DB.
 
@@ -57,9 +60,12 @@ class PilotAgentsDB(BaseSQLDB):
                 "PilotJobReference": pilot_references.get(stamp, stamp),
                 "VO": vo,
                 "GridType": grid_type,
+                "GridSite": grid_site,
+                "DestinationSite": destination_site,
                 "SubmissionTime": now,
                 "LastUpdateTime": now,
                 "Status": "Submitted",
+                "StatusReason": status_reason,
                 "PilotStamp": stamp,
             }
             for stamp in pilot_stamps
@@ -70,7 +76,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def add_jobs_to_pilot_bulk(self, job_to_pilot_mapping: list[dict[str, Any]]):
+    async def add_jobs_to_pilot(self, job_to_pilot_mapping: list[dict[str, Any]]):
         """Associate a pilot with jobs.
 
         job_to_pilot_mapping format:
@@ -115,7 +121,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     # ----------------------------- Delete Functions -----------------------------
 
-    async def delete_pilots_by_stamps_bulk(self, pilot_stamps: list[str]):
+    async def delete_pilots_by_stamps(self, pilot_stamps: list[str]):
         """Bulk delete pilots.
 
         Raises PilotNotFound if one of the pilot was not found.
@@ -127,7 +133,7 @@ class PilotAgentsDB(BaseSQLDB):
         if res.rowcount != len(pilot_stamps):
             raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
 
-    async def clear_pilots_bulk(
+    async def clear_pilots(
         self, cutoff_date: datetime, delete_only_aborted: bool = False
     ) -> int:
         """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
@@ -147,7 +153,7 @@ class PilotAgentsDB(BaseSQLDB):
 
     # ----------------------------- Update Functions -----------------------------
 
-    async def update_pilot_fields_bulk(
+    async def update_pilot_fields(
         self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
     ):
         """Bulk update pilots with a mapping.
@@ -213,7 +219,7 @@ class PilotAgentsDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for pilots in the database."""
+        """Search for pilot information in the database."""
         return await self.search(
             model=PilotAgents,
             parameters=parameters,
@@ -234,7 +240,7 @@ class PilotAgentsDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for pilots in the database."""
+        """Search for jobs that are associated with pilots."""
         return await self.search(
             model=JobToPilotMapping,
             parameters=parameters,

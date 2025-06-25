@@ -48,9 +48,16 @@ async def search(
     return total, pilots
 
 
-async def get_pilots_by_stamp_bulk(
-    pilot_db: PilotAgentsDB, pilot_stamps: list[str], parameters: list[str] = []
+async def get_pilots_by_stamp(
+    pilot_db: PilotAgentsDB,
+    pilot_stamps: list[str],
+    parameters: list[str] = [],
+    allow_missing: bool = True,
 ) -> list[dict[Any, Any]]:
+    """Get pilots by their stamp.
+
+    If `allow_missing` is set to False, if a pilot is missing, PilotNotFoundError will be raised.
+    """
     if parameters:
         parameters.append("PilotStamp")
 
@@ -68,16 +75,18 @@ async def get_pilots_by_stamp_bulk(
         per_page=MAX_PER_PAGE,
     )
 
-    # Custom handling, to see which pilot_stamp does not exist (if so, say which one)
-    found_keys = {row["PilotStamp"] for row in pilots}
-    missing = set(pilot_stamps) - found_keys
+    # allow_missing is set as True by default to mark explicitly when we allow or not
+    if not allow_missing:
+        # Custom handling, to see which pilot_stamp does not exist (if so, say which one)
+        found_keys = {row["PilotStamp"] for row in pilots}
+        missing = set(pilot_stamps) - found_keys
 
-    if missing:
-        raise PilotNotFoundError(
-            data={"pilot_stamp": str(missing)},
-            detail=str(missing),
-            non_existing_pilots=missing,
-        )
+        if missing:
+            raise PilotNotFoundError(
+                data={"pilot_stamp": str(missing)},
+                detail=str(missing),
+                non_existing_pilots=missing,
+            )
 
     return pilots
 
@@ -85,8 +94,11 @@ async def get_pilots_by_stamp_bulk(
 async def get_pilot_ids_by_stamps(
     pilot_db: PilotAgentsDB, pilot_stamps: list[str]
 ) -> list[int]:
-    pilots = await get_pilots_by_stamp_bulk(
-        pilot_db=pilot_db, pilot_stamps=pilot_stamps, parameters=["PilotID"]
+    pilots = await get_pilots_by_stamp(
+        pilot_db=pilot_db,
+        pilot_stamps=pilot_stamps,
+        parameters=["PilotID"],
+        allow_missing=False,
     )
 
     return [pilot["PilotID"] for pilot in pilots]

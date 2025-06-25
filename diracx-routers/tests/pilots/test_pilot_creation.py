@@ -22,12 +22,6 @@ N = 100
 
 
 @pytest.fixture
-def test_client(client_factory):
-    with client_factory.unauthenticated() as client:
-        yield client
-
-
-@pytest.fixture
 def normal_test_client(client_factory):
     with client_factory.normal_user() as client:
         yield client
@@ -41,7 +35,7 @@ async def test_create_pilots(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -55,7 +49,7 @@ async def test_create_pilots(normal_test_client):
     }
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -74,7 +68,7 @@ async def test_create_pilots(normal_test_client):
     body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamps[0] + "_new_one"]}
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
         headers={
             "Content-Type": "application/json",
@@ -92,7 +86,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
 
     # Create a pilot
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -101,7 +95,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
     #  -------------- Duplicate --------------
     # Duplicate because it exists, should have 409
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -112,7 +106,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
 
     # We delete the pilot
     r = normal_test_client.delete(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         params=params,
     )
 
@@ -121,7 +115,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
     #  -------------- Insert --------------
     # Create a the same pilot, but works because it does not exist anymore
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -136,7 +130,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
 
     # Create pilots
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -156,7 +150,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
         ]
     }
 
-    r = normal_test_client.patch("/api/pilots/management/pilot", json=body)
+    r = normal_test_client.patch("/api/pilots/metadata", json=body)
 
     assert r.status_code == 204
 
@@ -181,3 +175,20 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     assert pilot2["StatusReason"] != pilot1["StatusReason"]
     assert pilot2["AccountingSent"] != pilot1["AccountingSent"]
     assert pilot2["Status"] != pilot1["Status"]
+
+
+async def test_associate_job_with_pilot_and_get_it(normal_test_client):
+    pilot_stamps = ["stamps_1", "stamp_2"]
+
+    #  -------------- Insert --------------
+    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+
+    # Create pilots
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json=body,
+    )
+
+    assert r.status_code == 200, r.json()
+
+    # --------------- As DIRAC, associate a job with a pilot --------
