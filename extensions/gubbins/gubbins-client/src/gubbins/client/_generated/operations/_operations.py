@@ -693,21 +693,27 @@ def build_pilots_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_get_pilot_jobs_request(*, content: str, **kwargs: Any) -> HttpRequest:
+def build_pilots_get_pilot_jobs_request(
+    *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
+) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
     _url = "/api/pilots/jobs"
 
+    # Construct parameters
+    if pilot_stamp is not None:
+        _params["pilot_stamp"] = _SERIALIZER.query("pilot_stamp", pilot_stamp, "str")
+    if job_id is not None:
+        _params["job_id"] = _SERIALIZER.query("job_id", job_id, "int")
+
     # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="GET", url=_url, headers=_headers, content=content, **kwargs)
+    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_pilots_add_jobs_to_pilot_request(**kwargs: Any) -> HttpRequest:
@@ -3295,13 +3301,17 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @distributed_trace
-    def get_pilot_jobs(self, body: str, **kwargs: Any) -> List[int]:
+    def get_pilot_jobs(
+        self, *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
+    ) -> List[int]:
         """Get Pilot Jobs.
 
         Endpoint only for DIRAC services, to get jobs of a pilot.
 
-        :param body: Required.
-        :type body: str
+        :keyword pilot_stamp: The stamp of the pilot. Default value is None.
+        :paramtype pilot_stamp: str
+        :keyword job_id: The ID of the job. Default value is None.
+        :paramtype job_id: int
         :return: list of int
         :rtype: list[int]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3314,17 +3324,14 @@ class PilotsOperations:
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: str = kwargs.pop("content_type", _headers.pop("Content-Type", "application/json"))
         cls: ClsType[List[int]] = kwargs.pop("cls", None)
 
-        _content = self._serialize.body(body, "str")
-
         _request = build_pilots_get_pilot_jobs_request(
-            content_type=content_type,
-            content=_content,
+            pilot_stamp=pilot_stamp,
+            job_id=job_id,
             headers=_headers,
             params=_params,
         )

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
-from diracx.core.models import PilotFieldsMapping, PilotStatus
+from diracx.core.models import (
+    PilotFieldsMapping,
+    PilotStatus,
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+)
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -177,7 +183,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     assert pilot2["Status"] != pilot1["Status"]
 
 
-async def test_associate_job_with_pilot_and_get_it(normal_test_client):
+async def test_associate_job_with_pilot_and_get_it(normal_test_client: TestClient):
     pilot_stamps = ["stamps_1", "stamp_2"]
 
     #  -------------- Insert --------------
@@ -192,3 +198,86 @@ async def test_associate_job_with_pilot_and_get_it(normal_test_client):
     assert r.status_code == 200, r.json()
 
     # --------------- As DIRAC, associate a job with a pilot --------
+    job_ids = [1, 2]
+    body = {"pilot_stamp": pilot_stamps[0], "job_ids": job_ids}
+
+    # Create pilots
+    r = normal_test_client.patch(
+        "/api/pilots/jobs",
+        json=body,
+    )
+
+    assert r.status_code == 204
+
+    # -------------- Redo it, expect 409 (Conflict) ---------------------
+    job_ids = [1, 2, 3]  # Note for next test : add 3
+    body = {"pilot_stamp": pilot_stamps[0], "job_ids": job_ids}
+
+    # Create pilots
+    r = normal_test_client.patch(
+        "/api/pilots/jobs",
+        json=body,
+    )
+
+    assert r.status_code == 409
+
+    # -------------- Add 3 ---------------------
+    body = {"pilot_stamp": pilot_stamps[0], "job_ids": [3]}
+
+    # Create pilots
+    r = normal_test_client.patch(
+        "/api/pilots/jobs",
+        json=body,
+    )
+
+    assert r.status_code == 204
+
+    # -------------- Add with unknown pilot ---------------------
+    body = {"pilot_stamp": "stampounet", "job_ids": job_ids}
+
+    # Create pilots
+    r = normal_test_client.patch(
+        "/api/pilots/jobs",
+        json=body,
+    )
+
+    assert r.status_code == 400
+
+    # -------------- Get its jobs ---------------------
+    r = normal_test_client.get(
+        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[0]}
+    )
+
+    assert r.status_code == 200
+    assert r.json() == job_ids
+
+    # -------------- Get the other pilot's jobs ---------------------
+    r = normal_test_client.get(
+        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[1]}
+    )
+
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # -------------- Get pilots associated to job 1 ---------------------
+    r = normal_test_client.get("/api/pilots/jobs", params={"job_id": job_ids[0]})
+
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == 1
+    expected_pilot_id = r.json()[0]
+
+    # -------------- Get pilot info to verify that its id is expected_pilot_id ---------------------
+    condition = ScalarSearchSpec(
+        parameter="PilotID",
+        operator=ScalarSearchOperator.EQUAL,
+        value=expected_pilot_id,
+    )
+
+    r = normal_test_client.post(
+        "/api/pilots/management/search",
+        json={"parameters": [], "search": [condition], "sorts": []},
+    )
+
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == 1
+    assert r.json()[0]["PilotStamp"] == pilot_stamps[0]

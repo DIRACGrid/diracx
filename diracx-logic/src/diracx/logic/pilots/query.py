@@ -122,3 +122,21 @@ async def get_pilot_jobs_ids_by_pilot_id(
     )
 
     return [job["JobID"] for job in jobs]
+
+
+async def get_pilot_ids_by_job_id(pilot_db: PilotAgentsDB, job_id: int) -> list[int]:
+    _, pilots = await pilot_db.search_pilot_to_job_mapping(
+        parameters=["PilotID"],
+        search=[
+            ScalarSearchSpec(
+                parameter="JobID",
+                operator=ScalarSearchOperator.EQUAL,
+                value=job_id,
+            )
+        ],
+        sorts=[],
+        distinct=True,
+        per_page=MAX_PER_PAGE,
+    )
+
+    return [pilot["PilotID"] for pilot in pilots]
