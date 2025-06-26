@@ -2633,13 +2633,17 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @distributed_trace_async
-    async def get_pilot_jobs(self, body: str, **kwargs: Any) -> List[int]:
+    async def get_pilot_jobs(
+        self, *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
+    ) -> List[int]:
         """Get Pilot Jobs.
 
         Endpoint only for DIRAC services, to get jobs of a pilot.
 
-        :param body: Required.
-        :type body: str
+        :keyword pilot_stamp: The stamp of the pilot. Default value is None.
+        :paramtype pilot_stamp: str
+        :keyword job_id: The ID of the job. Default value is None.
+        :paramtype job_id: int
         :return: list of int
         :rtype: list[int]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2652,17 +2656,14 @@ class PilotsOperations:
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        content_type: str = kwargs.pop("content_type", _headers.pop("Content-Type", "application/json"))
         cls: ClsType[List[int]] = kwargs.pop("cls", None)
 
-        _content = self._serialize.body(body, "str")
-
         _request = build_pilots_get_pilot_jobs_request(
-            content_type=content_type,
-            content=_content,
+            pilot_stamp=pilot_stamp,
+            job_id=job_id,
             headers=_headers,
             params=_params,
         )

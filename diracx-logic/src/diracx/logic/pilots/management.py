@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from diracx.core.exceptions import PilotAlreadyExistsError
+from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models import PilotFieldsMapping
 from diracx.db.sql import PilotAgentsDB
 
@@ -68,7 +68,7 @@ async def update_pilots_fields(
 
 
 async def add_jobs_to_pilot(
-    pilot_db: PilotAgentsDB, pilot_stamp: str, pilot_jobs_ids: list[int]
+    pilot_db: PilotAgentsDB, pilot_stamp: str, job_ids: list[int]
 ):
     pilot_ids = await get_pilot_ids_by_stamps(
         pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
@@ -79,8 +79,7 @@ async def add_jobs_to_pilot(
 
     # Prepare the list of dictionaries for bulk insertion
     job_to_pilot_mapping = [
-        {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
-        for job_id in pilot_jobs_ids
+        {"PilotID": pilot_id, "JobID": job_id, "StartTime": now} for job_id in job_ids
     ]
 
     await pilot_db.add_jobs_to_pilot(
@@ -92,9 +91,12 @@ async def get_pilot_jobs_ids_by_stamp(
     pilot_db: PilotAgentsDB, pilot_stamp: str
 ) -> list[int]:
     """Fetch pilot jobs by stamp."""
-    pilot_ids = await get_pilot_ids_by_stamps(
-        pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
-    )
-    pilot_id = pilot_ids[0]
+    try:
+        pilot_ids = await get_pilot_ids_by_stamps(
+            pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+        )
+        pilot_id = pilot_ids[0]
+    except PilotNotFoundError:
+        return []
 
     return await get_pilot_jobs_ids_by_pilot_id(pilot_db=pilot_db, pilot_id=pilot_id)
