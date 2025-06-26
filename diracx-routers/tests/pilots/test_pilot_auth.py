@@ -302,7 +302,7 @@ async def test_refresh_pilot_token_with_user_token(
 
     # Create a pilot
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
