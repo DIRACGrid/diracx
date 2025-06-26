@@ -101,30 +101,30 @@ class BodyPilotsAddJobsToPilot(_serialization.Model):
 
     :ivar pilot_stamp: The stamp of the pilot. Required.
     :vartype pilot_stamp: str
-    :ivar pilot_jobs_ids: The jobs we want to add to the pilot. Required.
-    :vartype pilot_jobs_ids: list[int]
+    :ivar job_ids: The jobs we want to add to the pilot. Required.
+    :vartype job_ids: list[int]
     """
 
     _validation = {
         "pilot_stamp": {"required": True},
-        "pilot_jobs_ids": {"required": True},
+        "job_ids": {"required": True},
     }
 
     _attribute_map = {
         "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "pilot_jobs_ids": {"key": "pilot_jobs_ids", "type": "[int]"},
+        "job_ids": {"key": "job_ids", "type": "[int]"},
     }
 
-    def __init__(self, *, pilot_stamp: str, pilot_jobs_ids: List[int], **kwargs: Any) -> None:
+    def __init__(self, *, pilot_stamp: str, job_ids: List[int], **kwargs: Any) -> None:
         """
         :keyword pilot_stamp: The stamp of the pilot. Required.
         :paramtype pilot_stamp: str
-        :keyword pilot_jobs_ids: The jobs we want to add to the pilot. Required.
-        :paramtype pilot_jobs_ids: list[int]
+        :keyword job_ids: The jobs we want to add to the pilot. Required.
+        :paramtype job_ids: list[int]
         """
         super().__init__(**kwargs)
         self.pilot_stamp = pilot_stamp
-        self.pilot_jobs_ids = pilot_jobs_ids
+        self.job_ids = job_ids
 
 
 class BodyPilotsAddPilotStamps(_serialization.Model):

@@ -26,6 +26,7 @@ from diracx.logic.pilots.management import (
     register_new_pilots,
     update_pilots_fields,
 )
+from diracx.logic.pilots.query import get_pilot_ids_by_job_id
 
 from ..dependencies import PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
@@ -208,47 +209,46 @@ async def update_pilot_fields(
 @router.get("/jobs")
 async def get_pilot_jobs(
     pilot_db: PilotAgentsDB,
-    pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
     check_permissions: CheckPilotManagementPolicyCallable,
+    pilot_stamp: Annotated[
+        str | None, Query(description="The stamp of the pilot.")
+    ] = None,
+    job_id: Annotated[int | None, Query(description="The ID of the job.")] = None,
 ) -> list[int]:
     """Endpoint only for DIRAC services, to get jobs of a pilot."""
-    # FIXME: To be tested
     await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
-    try:
+    if pilot_stamp:
         return await get_pilot_jobs_ids_by_stamp(
             pilot_db=pilot_db,
             pilot_stamp=pilot_stamp,
         )
-    except PilotNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="This pilot does not exist."
-        ) from e
-    except PilotAlreadyAssociatedWithJobError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This pilot is already associated with this job.",
-        ) from e
+    elif job_id:
+        return await get_pilot_ids_by_job_id(pilot_db=pilot_db, job_id=job_id)
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="You must provide either pilot_stamp or job_id",
+    )
 
 
 @router.patch("/jobs", status_code=HTTPStatus.NO_CONTENT)
 async def add_jobs_to_pilot(
     pilot_db: PilotAgentsDB,
     pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
-    pilot_jobs_ids: Annotated[
+    job_ids: Annotated[
         list[int], Body(description="The jobs we want to add to the pilot.")
     ],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
     """Endpoint only for DIRAC services, to associate a pilot with a job."""
-    # FIXME: To be tested
-    await check_permissions(ActionType.MANAGE_PILOTS)
+    await check_permissions(action=ActionType.MANAGE_PILOTS)
 
     try:
         await add_jobs_to_pilot_bl(
             pilot_db=pilot_db,
             pilot_stamp=pilot_stamp,
-            pilot_jobs_ids=pilot_jobs_ids,
+            job_ids=job_ids,
         )
     except PilotNotFoundError as e:
         raise HTTPException(
