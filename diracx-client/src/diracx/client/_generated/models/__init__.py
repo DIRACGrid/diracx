@@ -16,12 +16,9 @@ from ._models import (  # type: ignore
     BodyAuthGetOidcTokenGrantType,
     BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
-<<<<<<< HEAD
-=======
     BodyPilotsCreatePilotSecrets,
     BodyPilotsPerformSecretExchange,
     BodyPilotsRefreshPilotTokens,
->>>>>>> 2099d7ba (fix: Generate client)
     BodyPilotsUpdatePilotFields,
     GroupInfo,
     HTTPValidationError,
@@ -34,7 +31,11 @@ from ._models import (  # type: ignore
     JobSummaryParamsSearchItem,
     Metadata,
     OpenIDConfiguration,
+    PilotCredentialsInfo,
     PilotFieldsMapping,
+    PilotInfo,
+    PilotSecretConstraints,
+    PilotSecretsInfo,
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxUploadResponse,
@@ -74,12 +75,9 @@ __all__ = [
     "BodyAuthGetOidcTokenGrantType",
     "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",
-<<<<<<< HEAD
-=======
     "BodyPilotsCreatePilotSecrets",
     "BodyPilotsPerformSecretExchange",
     "BodyPilotsRefreshPilotTokens",
->>>>>>> 2099d7ba (fix: Generate client)
     "BodyPilotsUpdatePilotFields",
     "GroupInfo",
     "HTTPValidationError",
@@ -92,7 +90,11 @@ __all__ = [
     "JobSummaryParamsSearchItem",
     "Metadata",
     "OpenIDConfiguration",
+    "PilotCredentialsInfo",
     "PilotFieldsMapping",
+    "PilotInfo",
+    "PilotSecretConstraints",
+    "PilotSecretsInfo",
     "SandboxDownloadResponse",
     "SandboxInfo",
     "SandboxUploadResponse",
