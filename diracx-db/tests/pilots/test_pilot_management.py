@@ -65,137 +65,17 @@ async def test_insert_and_delete(pilot_db: PilotAgentsDB):
         )
 
         # Works, the pilots exists
-        await get_pilots_by_stamp(pilot_db, [stamps[0]])
+        res = await get_pilots_by_stamp(pilot_db, [stamps[0]])
         await get_pilots_by_stamp(pilot_db, [stamps[0]])
 
         # We delete the first pilot
-        await pilot_db.delete_pilots_by_stamps([stamps[0]])
+        await pilot_db.delete_pilots([res[0]["PilotID"]])
 
         # We get the 2nd pilot that is not delete (no error)
         await get_pilots_by_stamp(pilot_db, [stamps[1]])
         # We get the 1st pilot that is delete (error)
 
         assert not await get_pilots_by_stamp(pilot_db, [stamps[0]])
-
-
-@pytest.mark.asyncio
-async def test_insert_and_delete_only_old_aborted(
-    pilot_db: PilotAgentsDB,
-    create_old_pilots_environment,  # noqa: F811
-):
-    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
-        create_old_pilots_environment
-    )
-
-    async with pilot_db as pilot_db:
-        # Delete all aborted that were born before 2020
-        # Every aborted that are old may be delete
-        await pilot_db.clear_pilots(datetime(2020, 1, 1, tzinfo=timezone.utc), True)
-
-        # Assert who still live
-        for normally_exiting_pilot_list in [
-            non_aborted_recent,
-            aborted_recent,
-            non_aborted_very_old,
-        ]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
-
-            await get_pilots_by_stamp(pilot_db, stamps)
-
-        # Assert who normally does not live
-        for normally_deleted_pilot_list in [aborted_very_old]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
-
-            assert not await get_pilots_by_stamp(pilot_db, stamps)
-
-
-@pytest.mark.asyncio
-async def test_insert_and_delete_old(
-    pilot_db: PilotAgentsDB,
-    create_old_pilots_environment,  # noqa: F811
-):
-    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
-        create_old_pilots_environment
-    )
-
-    async with pilot_db as pilot_db:
-        # Delete all aborted that were born before 2020
-        # Every aborted that are old may be delete
-        await pilot_db.clear_pilots(datetime(2020, 1, 1, tzinfo=timezone.utc), False)
-
-        # Assert who still live
-        for normally_exiting_pilot_list in [
-            non_aborted_recent,
-            aborted_recent,
-        ]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
-
-            await get_pilots_by_stamp(pilot_db, stamps)
-
-        # Assert who normally does not live
-        for normally_deleted_pilot_list in [
-            aborted_very_old,
-            non_aborted_very_old,
-        ]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
-
-            assert not await get_pilots_by_stamp(pilot_db, stamps)
-
-
-@pytest.mark.asyncio
-async def test_insert_and_delete_recent_only_aborted(
-    pilot_db: PilotAgentsDB,
-    create_old_pilots_environment,  # noqa: F811
-):
-    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
-        create_old_pilots_environment
-    )
-
-    async with pilot_db as pilot_db:
-        # Delete all aborted that were born before 2020
-        # Every aborted that are old may be delete
-        await pilot_db.clear_pilots(datetime(2025, 3, 10, tzinfo=timezone.utc), True)
-
-        # Assert who still live
-        for normally_exiting_pilot_list in [non_aborted_recent, non_aborted_very_old]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_exiting_pilot_list]
-
-            await get_pilots_by_stamp(pilot_db, stamps)
-
-        # Assert who normally does not live
-        for normally_deleted_pilot_list in [
-            aborted_very_old,
-            aborted_recent,
-        ]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
-
-            assert not await get_pilots_by_stamp(pilot_db, stamps)
-
-
-@pytest.mark.asyncio
-async def test_insert_and_delete_recent(
-    pilot_db: PilotAgentsDB,
-    create_old_pilots_environment,  # noqa: F811
-):
-    non_aborted_recent, aborted_recent, non_aborted_very_old, aborted_very_old = (
-        create_old_pilots_environment
-    )
-
-    async with pilot_db as pilot_db:
-        # Delete all aborted that were born before 2020
-        # Every aborted that are old may be delete
-        await pilot_db.clear_pilots(datetime(2025, 3, 10, tzinfo=timezone.utc), False)
-
-        # Assert who normally does not live
-        for normally_deleted_pilot_list in [
-            aborted_very_old,
-            aborted_recent,
-            non_aborted_recent,
-            non_aborted_very_old,
-        ]:
-            stamps = [pilot["PilotStamp"] for pilot in normally_deleted_pilot_list]
-
-            assert not await get_pilots_by_stamp(pilot_db, stamps)
 
 
 @pytest.mark.asyncio
