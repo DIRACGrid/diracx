@@ -16,6 +16,7 @@ class PilotLogsDB(BaseOSDB):
     index_prefix = "pilot_logs"
 
     def index_name(self, vo: str, doc_id: int) -> str:
-        # TODO decide how to define the index name
-        # use pilot ID
-        return f"{self.index_prefix}_{doc_id}"
+        split = int(int(doc_id) // 1e6)
+        # We split docs into smaller one (grouped by 1 million pilot)
+        # Ex: pilot_logs_dteam_1030m
+        return f"{self.index_prefix}_{vo.lower()}_{split}m"

@@ -396,8 +396,3 @@ class LogLine(BaseModel):
     severity: str
     message: str
     scope: str
-
-
-class LogMessage(BaseModel):
-    pilot_stamp: str
-    lines: list[LogLine]

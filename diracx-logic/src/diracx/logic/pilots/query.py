@@ -10,6 +10,7 @@ from diracx.core.models import (
     ScalarSearchSpec,
     SearchParams,
     SearchSpec,
+    SortDirection,
     VectorSearchOperator,
     VectorSearchSpec,
 )

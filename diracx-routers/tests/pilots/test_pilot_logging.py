@@ -40,7 +40,7 @@ def create_pilots_and_get_secrets(normal_test_client: TestClient):
     body = {"vo": "lhcb", "pilot_stamps": pilot_stamps}
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
     assert r.status_code == 200, r.json()
@@ -54,7 +54,7 @@ def create_pilots_and_get_secrets(normal_test_client: TestClient):
         body = {"pilot_stamp": stamp, "pilot_secret": secret}
 
         r = normal_test_client.post(
-            "/api/pilots/token",
+            "/api/pilots/secret-exchange",
             json=body,
             headers={"Content-Type": "application/json"},
         )
@@ -124,7 +124,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
     body = {"vo": "lhcb", "pilot_stamps": pilot_stamp}
 
     r = normal_test_client.post(
-        "/api/pilots/management/pilot",
+        "/api/pilots/",
         json=body,
     )
 
@@ -138,7 +138,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
     r = normal_test_client.post(
-        "/api/pilots/token",
+        "/api/pilots/secret-exchange",
         json=body,
         headers={"Content-Type": "application/json"},
     )
