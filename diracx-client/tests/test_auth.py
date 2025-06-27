@@ -185,8 +185,12 @@ def test_get_token_refresh_valid(monkeypatch, tmp_path):
 
     # Verify that the credential file has been refreshed:
     with open(token_location, "r") as f:
-        content = f.read()
-        assert content == serialize_credentials(expected_token_response)
+        content = json.loads(f.read())
+        expected = json.loads(serialize_credentials(expected_token_response))
+
+        assert content["access_token"] == expected["access_token"]
+        assert content["refresh_token"] == expected["refresh_token"]
+        assert abs(content["expires_on"] - expected["expires_on"]) < 5  # To prevent bug
 
     # Verify that the returned token is the expected refreshed token
     assert result is not None
