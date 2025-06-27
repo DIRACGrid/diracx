@@ -13,7 +13,6 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
-    PilotStatus,
     SearchSpec,
     SortSpec,
 )
@@ -25,6 +24,7 @@ from .schema import (
     JobToPilotMapping,
     PilotAgents,
     PilotAgentsDBBase,
+    PilotOutput,
 )
 
 
@@ -121,35 +121,25 @@ class PilotAgentsDB(BaseSQLDB):
 
     # ----------------------------- Delete Functions -----------------------------
 
-    async def delete_pilots_by_stamps(self, pilot_stamps: list[str]):
-        """Bulk delete pilots.
+    async def delete_pilots(self, pilot_ids: list[int]):
+        """Destructive function. Delete pilots."""
+        stmt = delete(PilotAgents).where(PilotAgents.pilot_id.in_(pilot_ids))
 
-        Raises PilotNotFound if one of the pilot was not found.
-        """
-        stmt = delete(PilotAgents).where(PilotAgents.pilot_stamp.in_(pilot_stamps))
+        await self.conn.execute(stmt)
 
-        res = await self.conn.execute(stmt)
+    async def remove_jobs_to_pilots(self, pilot_ids: list[int]):
+        """Destructive function. De-associate jobs and pilots."""
+        stmt = delete(JobToPilotMapping).where(
+            JobToPilotMapping.pilot_id.in_(pilot_ids)
+        )
 
-        if res.rowcount != len(pilot_stamps):
-            raise PilotNotFoundError(data={"pilot_stamps": str(pilot_stamps)})
+        await self.conn.execute(stmt)
 
-    async def clear_pilots(
-        self, cutoff_date: datetime, delete_only_aborted: bool = False
-    ) -> int:
-        """Bulk delete pilots that have SubmissionTime before the 'cutoff_date'.
-        Returns the number of deletion.
-        """
-        # TODO: Add test (Millisec?)
-        stmt = delete(PilotAgents).where(PilotAgents.submission_time < cutoff_date)
+    async def delete_pilot_logs(self, pilot_ids: list[int]):
+        """Destructive function. Remove logs from pilots."""
+        stmt = delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
 
-        # If delete_only_aborted is True, add the condition for 'Status' being 'Aborted'
-        if delete_only_aborted:
-            stmt = stmt.where(PilotAgents.status == PilotStatus.ABORTED)
-
-        # Execute the statement
-        res = await self.conn.execute(stmt)
-
-        return res.rowcount
+        await self.conn.execute(stmt)
 
     # ----------------------------- Update Functions -----------------------------
 

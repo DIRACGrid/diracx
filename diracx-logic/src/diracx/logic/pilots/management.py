@@ -7,6 +7,7 @@ from diracx.core.models import PilotFieldsMapping
 from diracx.db.sql import PilotAgentsDB
 
 from .query import (
+    get_outdated_pilots,
     get_pilot_ids_by_stamps,
     get_pilot_jobs_ids_by_pilot_id,
     get_pilots_by_stamp,
@@ -46,19 +47,33 @@ async def register_new_pilots(
     )
 
 
-async def clear_pilots(
-    pilot_db: PilotAgentsDB, age_in_days: int, delete_only_aborted: bool
+async def delete_pilots(
+    pilot_db: PilotAgentsDB,
+    pilot_stamps: list[str] | None = None,
+    age_in_days: int | None = None,
+    delete_only_aborted: bool = True,
 ):
-    """Delete pilots that have been submitted before interval_in_days."""
-    cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)
+    if pilot_stamps:
+        pilot_ids = await get_pilot_ids_by_stamps(
+            pilot_db=pilot_db, pilot_stamps=pilot_stamps, allow_missing=True
+        )
+    else:
+        assert age_in_days
 
-    await pilot_db.clear_pilots(
-        cutoff_date=cutoff_date, delete_only_aborted=delete_only_aborted
-    )
+        cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)
 
+        pilots = await get_outdated_pilots(
+            pilot_db=pilot_db,
+            cutoff_date=cutoff_date,
+            only_aborted=delete_only_aborted,
+            parameters=["PilotID"],
+        )
 
-async def delete_pilots_by_stamps(pilot_db: PilotAgentsDB, pilot_stamps: list[str]):
-    await pilot_db.delete_pilots_by_stamps(pilot_stamps)
+        pilot_ids = [pilot["PilotID"] for pilot in pilots]
+
+    await pilot_db.remove_jobs_to_pilots(pilot_ids)
+    await pilot_db.delete_pilot_logs(pilot_ids)
+    await pilot_db.delete_pilots(pilot_ids)
 
 
 async def update_pilots_fields(

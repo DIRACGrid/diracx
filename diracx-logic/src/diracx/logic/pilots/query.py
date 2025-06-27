@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from diracx.core.exceptions import PilotNotFoundError
 from diracx.core.models import (
+    PilotStatus,
     ScalarSearchOperator,
     ScalarSearchSpec,
     SearchParams,
+    SearchSpec,
     VectorSearchOperator,
     VectorSearchSpec,
 )
@@ -92,13 +95,13 @@ async def get_pilots_by_stamp(
 
 
 async def get_pilot_ids_by_stamps(
-    pilot_db: PilotAgentsDB, pilot_stamps: list[str]
+    pilot_db: PilotAgentsDB, pilot_stamps: list[str], allow_missing=False
 ) -> list[int]:
     pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db,
         pilot_stamps=pilot_stamps,
         parameters=["PilotID"],
-        allow_missing=False,
+        allow_missing=allow_missing,
     )
 
     return [pilot["PilotID"] for pilot in pilots]
@@ -140,3 +143,33 @@ async def get_pilot_ids_by_job_id(pilot_db: PilotAgentsDB, job_id: int) -> list[
     )
 
     return [pilot["PilotID"] for pilot in pilots]
+
+
+async def get_outdated_pilots(
+    pilot_db: PilotAgentsDB,
+    cutoff_date: datetime,
+    only_aborted: bool = True,
+    parameters: list[str] = [],
+):
+    query: list[SearchSpec] = [
+        ScalarSearchSpec(
+            parameter="SubmissionTime",
+            operator=ScalarSearchOperator.LESS_THAN,
+            value=cutoff_date,
+        )
+    ]
+
+    if only_aborted:
+        query.append(
+            ScalarSearchSpec(
+                parameter="Status",
+                operator=ScalarSearchOperator.EQUAL,
+                value=PilotStatus.ABORTED,
+            )
+        )
+
+    _, pilots = await pilot_db.search_pilots(
+        parameters=parameters, search=query, sorts=[]
+    )
+
+    return pilots

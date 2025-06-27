@@ -29,7 +29,7 @@ class VectorSearchOperator(StrEnum):
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
-    value: str | int
+    value: str | int | datetime
 
 
 class VectorSearchSpec(TypedDict):
