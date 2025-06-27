@@ -18,10 +18,9 @@ from diracx.logic.pilots.management import (
     add_jobs_to_pilot as add_jobs_to_pilot_bl,
 )
 from diracx.logic.pilots.management import (
-    clear_pilots as clear_pilots_bl,
+    delete_pilots as delete_pilots_bl,
 )
 from diracx.logic.pilots.management import (
-    delete_pilots_by_stamps,
     get_pilot_jobs_ids_by_stamp,
     register_new_pilots,
     update_pilots_fields,
@@ -129,32 +128,24 @@ async def delete_pilots(
     1. Or you provide pilot_stamps, so you can delete pilots by their stamp
     2. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
 
-    If deleting by stamps, if at least one pilot is not found, it WILL rollback.
+    Note: If you delete a pilot, its logs and its associations with jobs WILL be deleted.
     """
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
     )
 
-    if pilot_stamps:
-        try:
-            await delete_pilots_by_stamps(pilot_db=pilot_db, pilot_stamps=pilot_stamps)
-        except PilotNotFoundError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one pilot has not been found.",
-            ) from e
-
-    elif age_in_days:
-        await clear_pilots_bl(
-            pilot_db=pilot_db,
-            age_in_days=age_in_days,
-            delete_only_aborted=delete_only_aborted,
-        )
-    else:
+    if not pilot_stamps and not age_in_days:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You must provide either age_in_days or pilot_stamps.",
+            detail="pilot_stamps or age_in_days have to be provided.",
         )
+
+    await delete_pilots_bl(
+        pilot_db=pilot_db,
+        pilot_stamps=pilot_stamps,
+        age_in_days=age_in_days,
+        delete_only_aborted=delete_only_aborted,
+    )
 
 
 EXAMPLE_UPDATE_FIELDS = {
