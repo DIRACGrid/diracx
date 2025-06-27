@@ -127,7 +127,7 @@ class PilotAgentsDB(BaseSQLDB):
 
         await self.conn.execute(stmt)
 
-    async def remove_jobs_to_pilots(self, pilot_ids: list[int]):
+    async def remove_jobs_from_pilots(self, pilot_ids: list[int]):
         """Destructive function. De-associate jobs and pilots."""
         stmt = delete(JobToPilotMapping).where(
             JobToPilotMapping.pilot_id.in_(pilot_ids)
