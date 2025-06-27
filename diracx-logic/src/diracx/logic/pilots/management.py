@@ -71,7 +71,7 @@ async def delete_pilots(
 
         pilot_ids = [pilot["PilotID"] for pilot in pilots]
 
-    await pilot_db.remove_jobs_to_pilots(pilot_ids)
+    await pilot_db.remove_jobs_from_pilots(pilot_ids)
     await pilot_db.delete_pilot_logs(pilot_ids)
     await pilot_db.delete_pilots(pilot_ids)
 
