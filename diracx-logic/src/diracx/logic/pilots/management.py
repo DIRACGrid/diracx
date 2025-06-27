@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from diracx.core.models import PilotFieldsMapping
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models import (
     PilotCredentialsInfo,
