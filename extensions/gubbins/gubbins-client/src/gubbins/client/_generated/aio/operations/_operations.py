@@ -2471,7 +2471,7 @@ class PilotsOperations:
         #. Or you provide pilot_stamps, so you can delete pilots by their stamp
         #. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
 
-        If deleting by stamps, if at least one pilot is not found, it WILL rollback.
+        Note: If you delete a pilot, its logs and its associations with jobs WILL be deleted.
 
         :keyword pilot_stamps: Stamps of the pilots we want to delete. Default value is None.
         :paramtype pilot_stamps: list[str]
