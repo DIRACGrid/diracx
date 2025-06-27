@@ -145,7 +145,6 @@ async def get_pilot_ids_by_job_id(pilot_db: PilotAgentsDB, job_id: int) -> list[
     return [pilot["PilotID"] for pilot in pilots]
 
 
-
 async def get_outdated_pilots(
     pilot_db: PilotAgentsDB,
     cutoff_date: datetime,
