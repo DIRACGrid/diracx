@@ -683,6 +683,46 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
+class PilotCredentialsInfo(_serialization.Model):
+    """PilotCredentialsInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    :ivar pilot_secret_expires_in: Pilot Secret Expires In. Required.
+    :vartype pilot_secret_expires_in: int
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    """
+
+    _validation = {
+        "pilot_secret": {"required": True},
+        "pilot_secret_expires_in": {"required": True},
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+        "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+    }
+
+    def __init__(self, *, pilot_secret: str, pilot_secret_expires_in: int, pilot_stamp: str, **kwargs: Any) -> None:
+        """
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        :keyword pilot_secret_expires_in: Pilot Secret Expires In. Required.
+        :paramtype pilot_secret_expires_in: int
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_secret = pilot_secret
+        self.pilot_secret_expires_in = pilot_secret_expires_in
+        self.pilot_stamp = pilot_stamp
+
+
 class PilotFieldsMapping(_serialization.Model):
     """All the fields that a user can modify on a Pilot (except PilotStamp).
 
@@ -777,6 +817,118 @@ class PilotFieldsMapping(_serialization.Model):
         self.grid_type = grid_type
         self.accounting_sent = accounting_sent
         self.current_job_id = current_job_id
+
+
+class PilotInfo(_serialization.Model):
+    """PilotInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    :ivar vo: Vo. Required.
+    :vartype vo: str
+    :ivar sub: Sub. Required.
+    :vartype sub: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "vo": {"required": True},
+        "sub": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "sub": {"key": "sub", "type": "str"},
+    }
+
+    def __init__(self, *, pilot_stamp: str, vo: str, sub: str, **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword vo: Vo. Required.
+        :paramtype vo: str
+        :keyword sub: Sub. Required.
+        :paramtype sub: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.vo = vo
+        self.sub = sub
+
+
+class PilotSecretConstraints(_serialization.Model):
+    """PilotSecretConstraints.
+
+    :ivar v_os: Vos.
+    :vartype v_os: list[str]
+    :ivar pilot_stamps: Pilotstamps.
+    :vartype pilot_stamps: list[str]
+    :ivar sites: Sites.
+    :vartype sites: list[str]
+    """
+
+    _attribute_map = {
+        "v_os": {"key": "VOs", "type": "[str]"},
+        "pilot_stamps": {"key": "PilotStamps", "type": "[str]"},
+        "sites": {"key": "Sites", "type": "[str]"},
+    }
+
+    def __init__(
+        self,
+        *,
+        v_os: Optional[List[str]] = None,
+        pilot_stamps: Optional[List[str]] = None,
+        sites: Optional[List[str]] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword v_os: Vos.
+        :paramtype v_os: list[str]
+        :keyword pilot_stamps: Pilotstamps.
+        :paramtype pilot_stamps: list[str]
+        :keyword sites: Sites.
+        :paramtype sites: list[str]
+        """
+        super().__init__(**kwargs)
+        self.v_os = v_os
+        self.pilot_stamps = pilot_stamps
+        self.sites = sites
+
+
+class PilotSecretsInfo(_serialization.Model):
+    """PilotSecretsInfo.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    :ivar pilot_secret_expires_in: Pilot Secret Expires In. Required.
+    :vartype pilot_secret_expires_in: int
+    """
+
+    _validation = {
+        "pilot_secret": {"required": True},
+        "pilot_secret_expires_in": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+        "pilot_secret_expires_in": {"key": "pilot_secret_expires_in", "type": "int"},
+    }
+
+    def __init__(self, *, pilot_secret: str, pilot_secret_expires_in: int, **kwargs: Any) -> None:
+        """
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        :keyword pilot_secret_expires_in: Pilot Secret Expires In. Required.
+        :paramtype pilot_secret_expires_in: int
+        """
+        super().__init__(**kwargs)
+        self.pilot_secret = pilot_secret
+        self.pilot_secret_expires_in = pilot_secret_expires_in
 
 
 class SandboxDownloadResponse(_serialization.Model):

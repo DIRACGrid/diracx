@@ -15,12 +15,9 @@ from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
     BodyPilotsAddPilotStamps,
-<<<<<<< HEAD
-=======
     BodyPilotsCreatePilotSecrets,
     BodyPilotsPerformSecretExchange,
     BodyPilotsRefreshPilotTokens,
->>>>>>> 2099d7ba (fix: Generate client)
     BodyPilotsUpdatePilotFields,
     ExtendedMetadata,
     GroupInfo,
@@ -31,7 +28,11 @@ from ._models import (  # type: ignore
     JobCommand,
     JobStatusUpdate,
     OpenIDConfiguration,
+    PilotCredentialsInfo,
     PilotFieldsMapping,
+    PilotInfo,
+    PilotSecretConstraints,
+    PilotSecretsInfo,
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxUploadResponse,
@@ -72,12 +73,9 @@ __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
     "BodyPilotsAddPilotStamps",
-<<<<<<< HEAD
-=======
     "BodyPilotsCreatePilotSecrets",
     "BodyPilotsPerformSecretExchange",
     "BodyPilotsRefreshPilotTokens",
->>>>>>> 2099d7ba (fix: Generate client)
     "BodyPilotsUpdatePilotFields",
     "ExtendedMetadata",
     "GroupInfo",
@@ -88,7 +86,11 @@ __all__ = [
     "JobCommand",
     "JobStatusUpdate",
     "OpenIDConfiguration",
+    "PilotCredentialsInfo",
     "PilotFieldsMapping",
+    "PilotInfo",
+    "PilotSecretConstraints",
+    "PilotSecretsInfo",
     "SandboxDownloadResponse",
     "SandboxInfo",
     "SandboxUploadResponse",
