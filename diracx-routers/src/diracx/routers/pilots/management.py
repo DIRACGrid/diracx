@@ -3,7 +3,8 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, HTTPException, Query, status
+from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from fastapi import Body, Depends, HTTPException, Query, status
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
@@ -168,7 +169,9 @@ async def create_pilot_secrets(
     pilot_secret_use_count_max: Annotated[
         int | None, Body(description="Number of times that we can use a secret.")
     ],
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    vo: Annotated[
+        str, Body(description="Only VO that can access a secret.")
+    ],
     check_permissions: CheckPilotManagementPolicyCallable,
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
@@ -187,20 +190,14 @@ async def create_pilot_secrets(
             detail="pilot_secret_use_count_max is either None or a positive number.",
         )
 
-    credentials = await create_secrets(
+    return await create_secrets(
         n=n,
         pilot_db=pilot_db,
         settings=settings,
-        secret_constraint=PilotSecretConstraints(VOs=[user_info.vo]),
+        secret_constraint=PilotSecretConstraints(VOs=[vo]),
         pilot_secret_use_count_max=pilot_secret_use_count_max,
         expiration_minutes=expiration_minutes,
     )
-
-    logger.info(
-        f"{user_info.preferred_username} created {n} secrets that will expire in {expiration_minutes} minute(s)."
-    )
-
-    return credentials
 
 
 @router.patch("/secrets", status_code=HTTPStatus.NO_CONTENT)
@@ -210,7 +207,6 @@ async def update_secrets_constraints(
         Body(description="Mapping between secrets and pilots.", embed=False),
     ],
     pilot_db: PilotAgentsDB,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
     """Endpoint to associate pilots with secrets."""
@@ -238,11 +234,6 @@ async def update_secrets_constraints(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="one of the pilots does not exist",
         ) from e
-
-    logger.info(
-        f"{user_info.preferred_username} associated {len(pilot_stamps)} pilots"
-        f"with {len(secrets_to_constraints_dict)} secrets."
-    )
 
 
 EXAMPLE_UPDATE_FIELDS = {
