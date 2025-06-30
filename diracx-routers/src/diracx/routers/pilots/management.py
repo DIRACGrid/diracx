@@ -196,7 +196,9 @@ async def create_pilot_secrets(
     pilot_secret_use_count_max: Annotated[
         int | None, Body(description="Number of times that we can use a secret.")
     ],
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    vo: Annotated[
+        str, Body(description="Only VO that can access a secret.")
+    ],
     check_permissions: CheckPilotManagementPolicyCallable,
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
@@ -219,7 +221,7 @@ async def create_pilot_secrets(
         n=n,
         pilot_db=pilot_db,
         settings=settings,
-        secret_constraint=PilotSecretConstraints(VOs=[user_info.vo]),
+        secret_constraint=PilotSecretConstraints(VOs=[vo]),
         pilot_secret_use_count_max=pilot_secret_use_count_max,
         expiration_minutes=expiration_minutes,
     )
