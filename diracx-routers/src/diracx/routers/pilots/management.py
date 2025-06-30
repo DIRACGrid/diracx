@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from http import HTTPStatus
 from typing import Annotated
 
@@ -37,8 +36,6 @@ from .access_policies import (
 
 router = DiracxRouter()
 
-logger = logging.getLogger(__name__)
-
 
 @router.post("/")
 async def add_pilot_stamps(
@@ -51,7 +48,6 @@ async def add_pilot_stamps(
         str,
         Body(description="Virtual Organisation associated with the inserted pilots."),
     ],
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckPilotManagementPolicyCallable,
     grid_type: Annotated[str, Body(description="Grid type of the pilots.")] = "Dirac",
     grid_site: Annotated[str, Body(description="Pilots grid site.")] = "Unknown",
@@ -83,11 +79,6 @@ async def add_pilot_stamps(
             destination_site=destination_site,
             pilot_job_references=pilot_references,
             status_reason=status_reason,
-        )
-
-        # Logs credentials creation
-        logger.debug(
-            f"{user_info.preferred_username} added {len(pilot_stamps)} pilots."
         )
     except PilotAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
