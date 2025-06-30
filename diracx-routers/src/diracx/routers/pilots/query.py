@@ -104,7 +104,7 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-@router.post("/management/search", responses=EXAMPLE_RESPONSES)
+@router.post("/search", responses=EXAMPLE_RESPONSES)
 async def search(
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
