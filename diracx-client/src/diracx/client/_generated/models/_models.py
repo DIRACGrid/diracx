@@ -94,6 +94,42 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+<<<<<<< HEAD
+=======
+class BodyAuthPerformSecretExchange(_serialization.Model):
+    """Body_auth_perform_secret_exchange.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Stamp used by a pilot to login. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_secret: Pilot secret given by Dirac/DiracX. Required.
+    :vartype pilot_secret: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_secret": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+    }
+
+    def __init__(self, *, pilot_stamp: str, pilot_secret: str, **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamp: Stamp used by a pilot to login. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_secret: Pilot secret given by Dirac/DiracX. Required.
+        :paramtype pilot_secret: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_secret = pilot_secret
+
+
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 class BodyAuthRefreshPilotTokens(_serialization.Model):
     """Body_auth_refresh_pilot_tokens.
 
@@ -296,7 +332,10 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
         self.n = n
         self.expiration_minutes = expiration_minutes
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
+<<<<<<< HEAD
         self.vo = vo
+=======
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):

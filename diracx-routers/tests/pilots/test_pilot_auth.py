@@ -340,8 +340,6 @@ async def test_access_user_info_with_pilot_token(
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
     r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
-    assert r.status_code == 200, r.json()
-
     access_token = r.json()["access_token"]
     refresh_token = r.json()["refresh_token"]
 

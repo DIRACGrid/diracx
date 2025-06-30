@@ -811,22 +811,6 @@ def build_pilots_add_jobs_to_pilot_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_userinfo_request(*, authorization: Optional[str] = None, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/pilots/pilotinfo"
-
-    # Construct headers
-    if authorization is not None:
-        _headers["authorization"] = _SERIALIZER.header("authorization", authorization, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
-
-
 def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -1654,16 +1638,25 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     @overload
     def perform_secret_exchange(
+<<<<<<< HEAD
         self, body: _models.PilotCredentials, *, content_type: str = "application/json", **kwargs: Any
+=======
+        self, body: _models.BodyAuthPerformSecretExchange, *, content_type: str = "application/json", **kwargs: Any
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     ) -> _models.TokenResponse:
         """Perform Secret Exchange.
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
+<<<<<<< HEAD
         This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
 
         :param body: Required.
         :type body: ~_generated.models.PilotCredentials
+=======
+        :param body: Required.
+        :type body: ~_generated.models.BodyAuthPerformSecretExchange
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1680,8 +1673,11 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
+<<<<<<< HEAD
         This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
 
+=======
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
@@ -1694,16 +1690,25 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     @distributed_trace
     def perform_secret_exchange(
+<<<<<<< HEAD
         self, body: Union[_models.PilotCredentials, IO[bytes]], **kwargs: Any
+=======
+        self, body: Union[_models.BodyAuthPerformSecretExchange, IO[bytes]], **kwargs: Any
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     ) -> _models.TokenResponse:
         """Perform Secret Exchange.
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
+<<<<<<< HEAD
         This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
 
         :param body: Is either a PilotCredentials type or a IO[bytes] type. Required.
         :type body: ~_generated.models.PilotCredentials or IO[bytes]
+=======
+        :param body: Is either a BodyAuthPerformSecretExchange type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyAuthPerformSecretExchange or IO[bytes]
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
         :return: TokenResponse
         :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1728,7 +1733,11 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
+<<<<<<< HEAD
             _json = self._serialize.body(body, "PilotCredentials")
+=======
+            _json = self._serialize.body(body, "BodyAuthPerformSecretExchange")
+>>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 
         _request = build_auth_perform_secret_exchange_request(
             content_type=content_type,
@@ -4016,56 +4025,6 @@ class PilotsOperations:
 
         if cls:
             return cls(pipeline_response, None, {})  # type: ignore
-
-    @distributed_trace
-    def userinfo(self, *, authorization: Optional[str] = None, **kwargs: Any) -> _models.PilotInfo:
-        """Userinfo.
-
-        Get information about the user's identity.
-
-        :keyword authorization: Default value is None.
-        :paramtype authorization: str
-        :return: PilotInfo
-        :rtype: ~_generated.models.PilotInfo
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[_models.PilotInfo] = kwargs.pop("cls", None)
-
-        _request = build_pilots_userinfo_request(
-            authorization=authorization,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("PilotInfo", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
 
     @overload
     def search(
