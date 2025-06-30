@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, Depends, HTTPException, Query, status
+from fastapi import Body, HTTPException, Query, status
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
@@ -28,7 +28,6 @@ from diracx.logic.pilots.query import get_pilot_ids_by_job_id
 
 from ..dependencies import PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import (
     ActionType,
     CheckPilotManagementPolicyCallable,

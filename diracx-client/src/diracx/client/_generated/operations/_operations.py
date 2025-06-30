@@ -689,7 +689,7 @@ def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs:
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/pilots/management/search"
+    _url = "/api/pilots/search"
 
     # Construct parameters
     if page is not None:

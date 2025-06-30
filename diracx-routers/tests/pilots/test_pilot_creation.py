@@ -172,7 +172,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
         "distinct": True,
     }
 
-    r = normal_test_client.post("/api/pilots/management/search", json=body)
+    r = normal_test_client.post("/api/pilots/search", json=body)
     assert r.status_code == 200, r.json()
     pilot1 = r.json()[0]
     pilot2 = r.json()[1]
@@ -279,7 +279,7 @@ async def test_associate_job_with_pilot_and_get_it(normal_test_client: TestClien
     )
 
     r = normal_test_client.post(
-        "/api/pilots/management/search",
+        "/api/pilots/search",
         json={"parameters": [], "search": [condition], "sorts": []},
     )
 
@@ -335,7 +335,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
 
     # -------------- Verify all 100 pilots exist --------------
     search_body = {"parameters": [], "search": [], "sort": [], "distinct": True}
-    r = normal_test_client.post("/api/pilots/management/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json=search_body)
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 100
 
@@ -347,7 +347,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     )
     assert r.status_code == 204
     # Expect 75 remaining
-    r = normal_test_client.post("/api/pilots/management/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json=search_body)
     assert len(r.json()) == 75
 
     # -------------- 2) Delete all old pilots (remaining 25 old) --------------
@@ -358,7 +358,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     assert r.status_code == 204
 
     # Expect 50 remaining
-    r = normal_test_client.post("/api/pilots/management/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json=search_body)
     assert len(r.json()) == 50
 
     # -------------- 3) Delete one recent pilot by stamp --------------
@@ -366,7 +366,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     r = normal_test_client.delete("/api/pilots/", params={"pilot_stamps": [one_stamp]})
     assert r.status_code == 204
     # Expect 49 remaining
-    r = normal_test_client.post("/api/pilots/management/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json=search_body)
     assert len(r.json()) == 49
 
     # -------------- 4) Delete all remaining pilots --------------
@@ -375,7 +375,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     r = normal_test_client.delete("/api/pilots/", params={"pilot_stamps": remaining})
     assert r.status_code == 204
     # Expect none remaining
-    r = normal_test_client.post("/api/pilots/management/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json=search_body)
     assert r.status_code == 200
     assert len(r.json()) == 0
 
