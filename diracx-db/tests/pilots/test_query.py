@@ -13,7 +13,7 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql import PilotAgentsDB
+from diracx.db.sql.pilots.db import PilotAgentsDB
 
 MAIN_VO = "lhcb"
 N = 100

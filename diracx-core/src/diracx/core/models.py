@@ -34,7 +34,7 @@ class VectorSearchOperator(StrEnum):
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
-    value: str | int | datetime
+    value: str | int | datetime | bytes
 
 
 class VectorSearchSpec(TypedDict):
@@ -443,3 +443,10 @@ class VacuumPilotAuth(PilotAuthCredentials):
     grid_type: str
     grid_site: str
     status: str
+
+
+class LogLine(BaseModel):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str

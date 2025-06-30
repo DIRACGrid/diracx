@@ -12,7 +12,7 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql import PilotAgentsDB
+from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
 
 MAIN_VO = "lhcb"
@@ -24,8 +24,6 @@ N = 100
 async def get_pilots_by_stamp(
     pilot_db: PilotAgentsDB, pilot_stamps: list[str], parameters: list[str] = []
 ) -> list[dict[Any, Any]]:
-    if parameters:
-        parameters.append("PilotStamp")
     _, pilots = await pilot_db.search_pilots(
         parameters=parameters,
         search=[

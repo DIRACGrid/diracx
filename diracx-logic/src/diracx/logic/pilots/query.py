@@ -10,10 +10,12 @@ from diracx.core.models import (
     ScalarSearchSpec,
     SearchParams,
     SearchSpec,
+    SortDirection,
     SummaryParams,
     VectorSearchOperator,
     VectorSearchSpec,
 )
+from diracx.db.os.pilot_logs import PilotLogsDB
 from diracx.db.sql import AuthDB, PilotAgentsDB
 
 MAX_PER_PAGE = 10000
@@ -250,3 +252,40 @@ async def get_secrets_by_uuid(
         raise SecretNotFoundError(detail=str(missing))
 
     return secrets
+
+
+async def search_logs(
+    vo: str,
+    body: SearchParams | None,
+    per_page: int,
+    page: int,
+    pilot_logs_db: PilotLogsDB,
+) -> tuple[int, list[dict]]:
+    """Retrieve logs from OpenSearch for a given PilotStamp."""
+    # Apply a limit to per_page to prevent abuse of the API
+    if per_page > MAX_PER_PAGE:
+        per_page = MAX_PER_PAGE
+
+    if body is None:
+        body = SearchParams()
+
+    search = body.search
+    parameters = body.parameters
+    sorts = body.sort
+
+    # Add the vo to make sure that we filter for pilots we can see
+    # TODO: Test it
+    search = search + [
+        {
+            "parameter": "VO",
+            "operator": "eq",
+            "value": vo,
+        }
+    ]
+
+    if not sorts:
+        sorts = [{"parameter": "TimeStamp", "direction": SortDirection("asc")}]
+
+    return await pilot_logs_db.search(
+        parameters=parameters, search=search, sorts=sorts, per_page=per_page, page=page
+    )

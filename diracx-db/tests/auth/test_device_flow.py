@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import AuthorizationError
-from diracx.db.sql import AuthDB
+from diracx.db.sql.auth.db import AuthDB
 from diracx.db.sql.auth.schema import USER_CODE_LENGTH
 from diracx.db.sql.utils.functions import substract_date
 
