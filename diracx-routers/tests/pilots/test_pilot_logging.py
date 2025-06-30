@@ -54,7 +54,7 @@ def create_pilots_and_get_secrets(normal_test_client: TestClient):
         body = {"pilot_stamp": stamp, "pilot_secret": secret}
 
         r = normal_test_client.post(
-            "/api/pilots/secret-exchange",
+            "/api/auth/secret-exchange",
             json=body,
             headers={"Content-Type": "application/json"},
         )
@@ -79,7 +79,7 @@ async def create_logs(create_pilots_and_get_secrets, normal_test_client):
         ]
         msg_dict = {"lines": lines, "pilot_stamp": stamp}
         r = normal_test_client.post(
-            "/api/pilots/message",
+            "/api/pilots/internal/message",
             json=msg_dict,
             headers={"Authorization": f"Bearer {access_token}"},
         )
@@ -138,7 +138,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
     r = normal_test_client.post(
-        "/api/pilots/secret-exchange",
+        "/api/auth/secret-exchange",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -163,7 +163,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
 
     # send message
     r = normal_test_client.post(
-        "/api/pilots/message",
+        "/api/pilots/internal/message",
         json=msg_dict,
         headers={"Authorization": f"Bearer {access_token}"},
     )

@@ -9,6 +9,7 @@ from diracx.routers.utils.pilots import (
 )
 
 from ..fastapi_classes import DiracxRouter
+from .logs import router as logs_router
 from .util import router as util_router
 
 logger = logging.getLogger(__name__)
@@ -21,3 +22,4 @@ router = DiracxRouter(
 )
 
 router.include_router(util_router)
+router.include_router(logs_router)
