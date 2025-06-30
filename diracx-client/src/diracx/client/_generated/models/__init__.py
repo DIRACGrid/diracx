@@ -14,10 +14,14 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
+<<<<<<< HEAD
+=======
+    BodyAuthPerformSecretExchange,
+    BodyAuthRefreshPilotTokens,
+    BodyPilotsAddJobsToPilot,
+>>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     BodyPilotsAddPilotStamps,
     BodyPilotsCreatePilotSecrets,
-    BodyPilotsPerformSecretExchange,
-    BodyPilotsRefreshPilotTokens,
     BodyPilotsUpdatePilotFields,
     GroupInfo,
     HTTPValidationError,
@@ -72,10 +76,14 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
+<<<<<<< HEAD
+=======
+    "BodyAuthPerformSecretExchange",
+    "BodyAuthRefreshPilotTokens",
+    "BodyPilotsAddJobsToPilot",
+>>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     "BodyPilotsAddPilotStamps",
     "BodyPilotsCreatePilotSecrets",
-    "BodyPilotsPerformSecretExchange",
-    "BodyPilotsRefreshPilotTokens",
     "BodyPilotsUpdatePilotFields",
     "GroupInfo",
     "HTTPValidationError",

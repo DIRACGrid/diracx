@@ -73,7 +73,7 @@ async def perform_secret_exchange(
         ) from e
 
 
-@router.post("/token")
+@router.post("/pilot-token")
 async def refresh_pilot_tokens(
     auth_db: AuthDB,
     settings: AuthSettings,

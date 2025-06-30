@@ -58,7 +58,7 @@ async def test_create_pilots(normal_test_client):
         body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
         r = normal_test_client.post(
-            "/api/pilots/secret-exchange",
+            "/api/auth/secret-exchange",
             json=body,
             headers={"Content-Type": "application/json"},
         )
@@ -109,7 +109,7 @@ async def test_create_pilots(normal_test_client):
     }
 
     r = normal_test_client.post(
-        "/api/pilots/secret-exchange",
+        "/api/auth/secret-exchange",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -126,7 +126,7 @@ async def test_create_pilots(normal_test_client):
     }
 
     r = normal_test_client.post(
-        "/api/pilots/secret-exchange",
+        "/api/auth/secret-exchange",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -206,7 +206,7 @@ async def test_create_secrets_and_login(normal_test_client):
         body = {"pilot_secret": secret, "pilot_stamp": stamp}
 
         r = normal_test_client.post(
-            "/api/pilots/secret-exchange",
+            "/api/auth/secret-exchange",
             json=body,
             headers={"Content-Type": "application/json"},
         )
@@ -218,7 +218,7 @@ async def test_create_secrets_and_login(normal_test_client):
     body = {"pilot_secret": secrets[1], "pilot_stamp": pilot_stamps[0]}
 
     r = normal_test_client.post(
-        "/api/pilots/secret-exchange",
+        "/api/auth/secret-exchange",
         json=body,
         headers={"Content-Type": "application/json"},
     )
@@ -243,7 +243,7 @@ async def test_create_secrets_and_login(normal_test_client):
         body = {"pilot_secret": secrets[1], "pilot_stamp": stamp}
 
         r = normal_test_client.post(
-            "/api/pilots/secret-exchange",
+            "/api/auth/secret-exchange",
             json=body,
             headers={"Content-Type": "application/json"},
         )

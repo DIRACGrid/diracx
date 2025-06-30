@@ -33,11 +33,14 @@ from diracx.logic.pilots.management import (
     update_pilots_fields,
 )
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
+<<<<<<< HEAD
 
 from diracx.routers.utils.pilots import (
     AuthorizedPilotInfo,
     verify_dirac_pilot_access_token,
 )
+=======
+>>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 
 from ..dependencies import AuthSettings, JobDB, PilotAgentsDB
 
@@ -359,6 +362,7 @@ async def get_pilot_jobs(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="You must provide either pilot_stamp or job_id",
     )
+
 
 @router.get("/pilotinfo")
 async def userinfo(
