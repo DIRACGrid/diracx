@@ -15,7 +15,6 @@ from diracx.core.exceptions import (
 from diracx.core.models import (
     PilotCredentialsInfo,
     PilotFieldsMapping,
-    PilotInfo,
     PilotSecretConstraints,
     PilotSecretsInfo,
 )
@@ -35,10 +34,6 @@ from diracx.logic.pilots.management import (
     update_pilots_fields,
 )
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
-from diracx.routers.utils.pilots import (
-    AuthorizedPilotInfo,
-    verify_dirac_pilot_access_token,
-)
 
 from ..dependencies import AuthSettings, PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
@@ -363,15 +358,3 @@ async def add_jobs_to_pilot(
             status_code=status.HTTP_409_CONFLICT,
             detail="This pilot is already associated with this job.",
         ) from e
-
-
-@router.get("/pilotinfo")
-async def userinfo(
-    pilot_info: Annotated[
-        AuthorizedPilotInfo, Depends(verify_dirac_pilot_access_token)
-    ],
-) -> PilotInfo:
-    """Get information about the user's identity."""
-    return PilotInfo(
-        sub=pilot_info.sub, vo=pilot_info.vo, pilot_stamp=pilot_info.pilot_stamp
-    )

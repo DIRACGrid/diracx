@@ -47,6 +47,7 @@ config = "diracx.routers.configuration:router"
 health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
 pilots = "diracx.routers.pilots:router"
+"pilots/internal" = "diracx.routers.pilot_resources:router"
 
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
