@@ -8,9 +8,12 @@ from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
 from pydantic import BaseModel
 
+from diracx.core.exceptions import PilotCantAccessJobError
 from diracx.core.models import UUID, PilotInfo
 from diracx.logic.auth.utils import read_token
-from diracx.routers.dependencies import AuthSettings
+from diracx.logic.pilots.management import get_pilot_jobs_ids_by_stamp
+
+from ..dependencies import AuthSettings, PilotAgentsDB
 
 
 class AuthInfo(BaseModel):
@@ -71,3 +74,23 @@ async def verify_dirac_pilot_access_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",
         ) from e
+
+
+async def verify_that_pilot_can_access_jobs(
+    pilot_db: PilotAgentsDB, pilot_stamp: str, job_ids: list[int]
+):
+    # Get its jobs
+    pilot_jobs = await get_pilot_jobs_ids_by_stamp(
+        pilot_db=pilot_db, pilot_stamp=pilot_stamp
+    )
+
+    # Equivalent of issubset, but cleaner
+    if set(job_ids) <= set(pilot_jobs):
+        return
+
+    forbidden_jobs_ids = set(job_ids) - set(pilot_jobs)
+
+    if forbidden_jobs_ids:
+        return PilotCantAccessJobError(
+            data={"forbidden_jobs_ids": str(forbidden_jobs_ids)}
+        )

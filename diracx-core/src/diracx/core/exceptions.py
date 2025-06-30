@@ -160,3 +160,7 @@ class SecretHasExpiredError(DiracFormattedError):
 
 class SecretAlreadyExistsError(DiracFormattedError):
     pattern = "Secret %s already exists"
+
+
+class PilotCantAccessJobError(DiracFormattedError):
+    pattern = "Pilot can't access jobs. %s"
