@@ -1577,14 +1577,16 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     @overload
     def perform_secret_exchange(
-        self, body: _models.BodyAuthPerformSecretExchange, *, content_type: str = "application/json", **kwargs: Any
+        self, body: _models.PilotCredentials, *, content_type: str = "application/json", **kwargs: Any
     ) -> _models.TokenResponse:
         """Perform Secret Exchange.
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
+        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
+
         :param body: Required.
-        :type body: ~_generated.models.BodyAuthPerformSecretExchange
+        :type body: ~_generated.models.PilotCredentials
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -1601,6 +1603,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
+        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
+
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
@@ -1613,14 +1617,16 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
     @distributed_trace
     def perform_secret_exchange(
-        self, body: Union[_models.BodyAuthPerformSecretExchange, IO[bytes]], **kwargs: Any
+        self, body: Union[_models.PilotCredentials, IO[bytes]], **kwargs: Any
     ) -> _models.TokenResponse:
         """Perform Secret Exchange.
 
         This endpoint is used by the pilot to exchange a secret for a token.
 
-        :param body: Is either a BodyAuthPerformSecretExchange type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyAuthPerformSecretExchange or IO[bytes]
+        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
+
+        :param body: Is either a PilotCredentials type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.PilotCredentials or IO[bytes]
         :return: TokenResponse
         :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1645,7 +1651,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyAuthPerformSecretExchange")
+            _json = self._serialize.body(body, "PilotCredentials")
 
         _request = build_auth_perform_secret_exchange_request(
             content_type=content_type,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
-from typing import Any
+from typing import Any, cast
 
 from uuid_utils import uuid7
 
@@ -12,11 +12,13 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotAccessTokenPayload,
+    PilotAuthCredentials,
     PilotRefreshTokenPayload,
     PilotSecretConstraints,
     PilotSecretsInfo,
     TokenResponse,
     TokenType,
+    VacuumPilotAuth,
 )
 from diracx.core.settings import AuthSettings
 from diracx.core.utils import extract_timestamp_from_uuid7, recursive_dict_merge
@@ -170,16 +172,28 @@ async def update_secrets_constraints(
 async def verify_pilot_credentials(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
-    pilot_stamp: str,
-    pilot_secret: str,
     settings: AuthSettings,
+    credentials: PilotAuthCredentials | VacuumPilotAuth,
 ) -> TokenResponse:
-    hashed_secret = raw_hash(pilot_secret)
+    hashed_secret = raw_hash(credentials["pilot_secret"])
+
+    if "vo" in credentials and "grid_type" in credentials:
+        credentials = cast(VacuumPilotAuth, credentials)
+        # 1-bis. DIRAC's `dirac-admin-add-pilot` mechanic:
+        # If a pilot does not exist yet (vacuum case), we add it in the db
+        # In that special case, we need a VO, grid_type, etc.
+        await pilot_db.add_pilots(
+            pilot_stamps=[credentials["pilot_stamp"]],
+            vo=credentials["vo"],
+            grid_type=credentials["grid_type"],
+            grid_site=credentials["grid_site"],
+            # FIXME: Add status
+        )
 
     # 1. Get the pilot
     pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db,
-        pilot_stamps=[pilot_stamp],
+        pilot_stamps=[credentials["pilot_stamp"]],
         parameters=["VO"],
         allow_missing=False,
     )
@@ -225,7 +239,7 @@ async def verify_pilot_credentials(
     # Get token, and serialize
     access_token_payload, refresh_token_payload = await generate_pilot_tokens(
         vo=pilot["VO"],
-        pilot_stamp=pilot_stamp,
+        pilot_stamp=credentials["pilot_stamp"],
         auth_db=auth_db,
         settings=settings,
         refresh_token=None,

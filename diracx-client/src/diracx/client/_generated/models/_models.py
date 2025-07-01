@@ -94,39 +94,6 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
-class BodyAuthPerformSecretExchange(_serialization.Model):
-    """Body_auth_perform_secret_exchange.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: Stamp used by a pilot to login. Required.
-    :vartype pilot_stamp: str
-    :ivar pilot_secret: Pilot secret given by Dirac/DiracX. Required.
-    :vartype pilot_secret: str
-    """
-
-    _validation = {
-        "pilot_stamp": {"required": True},
-        "pilot_secret": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "pilot_secret": {"key": "pilot_secret", "type": "str"},
-    }
-
-    def __init__(self, *, pilot_stamp: str, pilot_secret: str, **kwargs: Any) -> None:
-        """
-        :keyword pilot_stamp: Stamp used by a pilot to login. Required.
-        :paramtype pilot_stamp: str
-        :keyword pilot_secret: Pilot secret given by Dirac/DiracX. Required.
-        :paramtype pilot_secret: str
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
-        self.pilot_secret = pilot_secret
-
-
 class BodyAuthRefreshPilotTokens(_serialization.Model):
     """Body_auth_refresh_pilot_tokens.
 
@@ -304,21 +271,27 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
     :vartype expiration_minutes: int
     :ivar pilot_secret_use_count_max: Number of times that we can use a secret. Required.
     :vartype pilot_secret_use_count_max: int
+    :ivar vo: Only VO that can access a secret. Required.
+    :vartype vo: str
     """
 
     _validation = {
         "n": {"required": True},
         "expiration_minutes": {"required": True},
         "pilot_secret_use_count_max": {"required": True},
+        "vo": {"required": True},
     }
 
     _attribute_map = {
         "n": {"key": "n", "type": "int"},
         "expiration_minutes": {"key": "expiration_minutes", "type": "int"},
         "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
+        "vo": {"key": "vo", "type": "str"},
     }
 
-    def __init__(self, *, n: int, expiration_minutes: int, pilot_secret_use_count_max: int, **kwargs: Any) -> None:
+    def __init__(
+        self, *, n: int, expiration_minutes: int, pilot_secret_use_count_max: int, vo: str, **kwargs: Any
+    ) -> None:
         """
         :keyword n: Number of secrets to create. Required.
         :paramtype n: int
@@ -326,11 +299,14 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
         :paramtype expiration_minutes: int
         :keyword pilot_secret_use_count_max: Number of times that we can use a secret. Required.
         :paramtype pilot_secret_use_count_max: int
+        :keyword vo: Only VO that can access a secret. Required.
+        :paramtype vo: str
         """
         super().__init__(**kwargs)
         self.n = n
         self.expiration_minutes = expiration_minutes
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
+        self.vo = vo
 
 
 class BodyPilotsPerformSecretExchange(_serialization.Model):
@@ -937,6 +913,43 @@ class OpenIDConfiguration(_serialization.Model):
         self.token_endpoint_auth_signing_alg_values_supported = token_endpoint_auth_signing_alg_values_supported
         self.token_endpoint_auth_methods_supported = token_endpoint_auth_methods_supported
         self.code_challenge_methods_supported = code_challenge_methods_supported
+
+
+class PilotAuthCredentials(_serialization.Model):
+    """PilotAuthCredentials.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_secret": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+    }
+
+    def __init__(self, *, pilot_stamp: str, pilot_secret: str, **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_secret = pilot_secret
+
+
+class PilotCredentials(_serialization.Model):
+    """Pilot credentials (stamp and secret)."""
 
 
 class PilotCredentialsInfo(_serialization.Model):
@@ -1723,6 +1736,77 @@ class UserInfoResponse(_serialization.Model):
         self.policies = policies
         self.properties = properties
         self.preferred_username = preferred_username
+
+
+class VacuumPilotAuth(_serialization.Model):
+    """VacuumPilotAuth.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilot Stamp. Required.
+    :vartype pilot_stamp: str
+    :ivar pilot_secret: Pilot Secret. Required.
+    :vartype pilot_secret: str
+    :ivar vo: Vo. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid Type. Required.
+    :vartype grid_type: str
+    :ivar grid_site: Grid Site. Required.
+    :vartype grid_site: str
+    :ivar status: Status. Required.
+    :vartype status: str
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+        "pilot_secret": {"required": True},
+        "vo": {"required": True},
+        "grid_type": {"required": True},
+        "grid_site": {"required": True},
+        "status": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "pilot_secret": {"key": "pilot_secret", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "status": {"key": "status", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        pilot_secret: str,
+        vo: str,
+        grid_type: str,
+        grid_site: str,
+        status: str,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: Pilot Stamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword pilot_secret: Pilot Secret. Required.
+        :paramtype pilot_secret: str
+        :keyword vo: Vo. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid Type. Required.
+        :paramtype grid_type: str
+        :keyword grid_site: Grid Site. Required.
+        :paramtype grid_site: str
+        :keyword status: Status. Required.
+        :paramtype status: str
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.pilot_secret = pilot_secret
+        self.vo = vo
+        self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.status = status
 
 
 class ValidationError(_serialization.Model):

@@ -36,12 +36,6 @@ N = 100
 
 
 @pytest.fixture
-def test_client(client_factory):
-    with client_factory.unauthenticated() as client:
-        yield client
-
-
-@pytest.fixture
 def normal_test_client(client_factory):
     with client_factory.normal_user() as client:
         yield client
@@ -54,13 +48,13 @@ def diracx_pilot_client(client_factory):
 
 
 @pytest.fixture
-def non_mocked_hosts(test_client) -> list[str]:
-    return [test_client.base_url.host]
+def non_mocked_hosts(normal_test_client) -> list[str]:
+    return [normal_test_client.base_url.host]
 
 
 @pytest.fixture
-async def add_stamps(test_client):
-    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+async def add_stamps(normal_test_client):
+    db = normal_test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db as pilot_db:
         # Add pilots
@@ -80,8 +74,8 @@ async def add_stamps(test_client):
 
 
 @pytest.fixture
-async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
-    db = test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+async def add_secrets_and_time(normal_test_client, add_stamps, secret_duration_sec):
+    db = normal_test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
 
     async with db as pilot_db:
         # Retrieve the stamps from the add_stamps fixture
@@ -122,7 +116,7 @@ async def add_secrets_and_time(test_client, add_stamps, secret_duration_sec):
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
-async def test_verify_secret(test_client, add_secrets_and_time):
+async def test_verify_secret(normal_test_client, add_secrets_and_time):
     # Add pilots
     result = add_secrets_and_time
     stamps = result["stamps"]
@@ -137,7 +131,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
         "pilot_secret": "My 1ncr3d1bl3 t0k3n",
     }
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 401, r.json()
     assert r.json()["detail"] == "bad pilot_secret"
@@ -146,7 +140,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -159,7 +153,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # -----------------  Wrong ID  -----------------
     body = {"pilot_stamp": "It is a stamp", "pilot_secret": secret}
 
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/secret-exchange",
         json=body,
     )
@@ -169,7 +163,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
     # ----------------- Exchange for new tokens -----------------
     body = {"refresh_token": refresh_token, "pilot_stamp": pilot_stamp}
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/pilot-token",
         json=body,
     )
@@ -181,7 +175,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
     # ----------------- Exchange token with old token -----------------
     body = {"refresh_token": refresh_token, "pilot_stamp": pilot_stamp}
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/pilot-token",
         json=body,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -191,7 +185,7 @@ async def test_verify_secret(test_client, add_secrets_and_time):
 
     # ----------------- Exchange token with new token -----------------
     body = {"refresh_token": new_refresh_token, "pilot_stamp": pilot_stamp}
-    r = test_client.post(
+    r = normal_test_client.post(
         "/api/auth/pilot-token",
         json=body,
         headers={"Authorization": f"Bearer {new_access_token}"},
@@ -204,14 +198,104 @@ async def test_verify_secret(test_client, add_secrets_and_time):
     # ----------------- Overused Secret -----------------
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_secret"
 
 
+@pytest.mark.parametrize("secret_duration_sec", [10])
+async def test_vacuum_case(normal_test_client, add_secrets_and_time):
+    result = add_secrets_and_time
+    secrets = result["secrets"]
+
+    pilot_stamp = "this_might_be_totally_unknown"
+    secret = secrets[0]
+
+    # ----------------- Good password but unknown stamp -----------------
+
+    body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
+
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
+
+    assert r.status_code == 401
+    assert r.json()["detail"] == "bad pilot_stamp"
+
+    # ----------------- Good password and vacuum case but wrong stamp for the secret -----------------
+    # add_secrets_and_time associates secret_n with stamp_n.
+    #  Because our pilot_stamp does not have a secret associated to it
+    # (or at least one where it can't access), we have to create an "opened" secret (for every stamp)
+    # This will be done in the next section
+
+    body = {
+        "pilot_stamp": pilot_stamp,
+        "pilot_secret": secret,
+        "vo": MAIN_VO,
+        "grid_type": "test",
+        "grid_site": "test",
+        "status": "Waiting",
+    }
+
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
+
+    assert r.status_code == 401, r.json()
+    assert r.json()["detail"] == "bad credentials"
+
+    # ----------------- Add secret without restricting it to a certain stamp -----------------
+    body = {
+        "n": 1,
+        "vo": MAIN_VO,
+        "expiration_minutes": 1,
+        "pilot_secret_use_count_max": 1,
+    }
+
+    r = normal_test_client.post(
+        "/api/pilots/secrets",
+        json=body,
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.json()
+
+    # Format : {"pilot_secret": "...", "pilot_secret_expires_in": ..., "pilot_stamps": None}
+    secrets_mapping = r.json()
+    secrets = [el["pilot_secret"] for el in secrets_mapping]
+
+    assert len(secrets) == 1
+
+    secret = secrets[0]
+
+    # ----------------- Good password and vacuum case -----------------
+
+    body = {
+        "pilot_stamp": pilot_stamp,
+        "pilot_secret": secret,
+        "vo": MAIN_VO,
+        "grid_type": "test",
+        "grid_site": "test",
+        "status": "Waiting",
+    }
+
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
+
+    assert r.status_code == 200, r.json()
+
+    access_token = r.json()["access_token"]
+    refresh_token = r.json()["refresh_token"]
+
+    assert access_token is not None
+    assert refresh_token is not None
+
+    # Get a pilot token, and try to access a pilot endpoint
+    r = normal_test_client.get(
+        "/api/pilots/internal/pilotinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert r.status_code == 200
+
+
 @pytest.mark.parametrize("secret_duration_sec", [2])
-async def test_expired_secret(test_client, add_secrets_and_time):
+async def test_expired_secret(normal_test_client, add_secrets_and_time):
     # Add pilots
     result = add_secrets_and_time
     stamps = result["stamps"]
@@ -225,7 +309,7 @@ async def test_expired_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "secret expired"
@@ -235,14 +319,16 @@ async def test_expired_secret(test_client, add_secrets_and_time):
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 401
     assert r.json()["detail"] == "bad pilot_secret"
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
-async def test_access_user_info_with_pilot_token(test_client, add_secrets_and_time):
+async def test_access_user_info_with_pilot_token(
+    normal_test_client, add_secrets_and_time
+):
     # ----------------- Access user info but with a pilot token -----------------
     # Add pilots
     result = add_secrets_and_time
@@ -252,7 +338,7 @@ async def test_access_user_info_with_pilot_token(test_client, add_secrets_and_ti
     pilot_stamp = stamps[0]
     secret = secrets[0]
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -263,11 +349,19 @@ async def test_access_user_info_with_pilot_token(test_client, add_secrets_and_ti
     assert refresh_token is not None
 
     # Get a pilot token, and try to access a user endpoint
-    r = test_client.get(
+    r = normal_test_client.get(
         "/api/auth/userinfo", headers={"Authorization": f"Bearer {access_token}"}
     )
 
     assert r.status_code == 401
+
+    # Get a pilot token, and try to access a pilot endpoint
+    r = normal_test_client.get(
+        "/api/pilots/internal/pilotinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert r.status_code == 200
 
 
 async def test_refresh_pilot_token_with_user_token(
@@ -329,7 +423,9 @@ async def test_get_pilot_info_with_user_token(
 
 
 @pytest.mark.parametrize("secret_duration_sec", [10])
-async def test_refresh_user_token_with_pilot_token(test_client, add_secrets_and_time):
+async def test_refresh_user_token_with_pilot_token(
+    normal_test_client, add_secrets_and_time
+):
     # Add pilots
     result = add_secrets_and_time
     stamps = result["stamps"]
@@ -342,7 +438,7 @@ async def test_refresh_user_token_with_pilot_token(test_client, add_secrets_and_
 
     body = {"pilot_stamp": pilot_stamp, "pilot_secret": secret}
 
-    r = test_client.post("/api/auth/secret-exchange", json=body)
+    r = normal_test_client.post("/api/auth/secret-exchange", json=body)
 
     assert r.status_code == 200, r.json()
 
@@ -354,7 +450,7 @@ async def test_refresh_user_token_with_pilot_token(test_client, add_secrets_and_
         "client_id": DIRAC_CLIENT_ID,
     }
 
-    r = test_client.post("/api/auth/token", data=request_data)
+    r = normal_test_client.post("/api/auth/token", data=request_data)
 
     assert r.status_code == 403, r.json()
     assert r.json()["detail"] == "This is not a user token."
