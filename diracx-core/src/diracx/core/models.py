@@ -378,3 +378,15 @@ class PilotRefreshTokenPayload(BaseTokenPayload):
 
 class PilotCredentialsInfo(PilotSecretsInfo):
     pilot_stamp: str
+
+
+class PilotAuthCredentials(TypedDict):
+    pilot_stamp: str
+    pilot_secret: str
+
+
+class VacuumPilotAuth(PilotAuthCredentials):
+    vo: str
+    grid_type: str
+    grid_site: str
+    status: str

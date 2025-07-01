@@ -15,7 +15,9 @@ from diracx.core.exceptions import (
     SecretNotFoundError,
 )
 from diracx.core.models import (
+    PilotAuthCredentials,
     TokenResponse,
+    VacuumPilotAuth,
 )
 from diracx.logic.pilots.auth import refresh_pilot_token, verify_pilot_credentials
 
@@ -33,19 +35,22 @@ router = DiracxRouter(require_auth=False)
 async def perform_secret_exchange(
     pilot_db: PilotAgentsDB,
     auth_db: AuthDB,
-    pilot_stamp: Annotated[str, Body(description="Stamp used by a pilot to login.")],
-    pilot_secret: Annotated[
-        str, Body(description="Pilot secret given by Dirac/DiracX.")
+    pilot_credentials: Annotated[
+        PilotAuthCredentials | VacuumPilotAuth,
+        Body(description="Pilot credentials (stamp and secret)"),
     ],
     settings: AuthSettings,
 ) -> TokenResponse:
-    """This endpoint is used by the pilot to exchange a secret for a token."""
+    """This endpoint is used by the pilot to exchange a secret for a token.
+
+    This endpoint also acts as DIRAC's `dirac-admin-add-pilot`.
+    """
     try:
+        # FIXME: Pilot not found
         return await verify_pilot_credentials(
             pilot_db=pilot_db,
             auth_db=auth_db,
-            pilot_stamp=pilot_stamp,
-            pilot_secret=pilot_secret,
+            credentials=pilot_credentials,
             settings=settings,
         )
     except BadPilotCredentialsError as e:

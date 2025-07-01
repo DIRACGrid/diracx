@@ -15,8 +15,11 @@ from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     BodyAuthPerformSecretExchange,
+=======
+>>>>>>> 4aeb541 (feat: Add vacuum case (equiv dirac-admin-add-pilot))
     BodyAuthRefreshPilotTokens,
     BodyPilotsAddJobsToPilot,
 >>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
@@ -32,6 +35,8 @@ from ._models import (  # type: ignore
     JobStatusUpdate,
     Metadata,
     OpenIDConfiguration,
+    PilotAuthCredentials,
+    PilotCredentials,
     PilotCredentialsInfo,
     PilotFieldsMapping,
     PilotInfo,
@@ -53,6 +58,7 @@ from ._models import (  # type: ignore
     TokenResponse,
     UserInfoResponse,
     VOInfo,
+    VacuumPilotAuth,
     ValidationError,
     ValidationErrorLocItem,
     VectorSearchSpec,
@@ -77,8 +83,11 @@ __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     "BodyAuthPerformSecretExchange",
+=======
+>>>>>>> 4aeb541 (feat: Add vacuum case (equiv dirac-admin-add-pilot))
     "BodyAuthRefreshPilotTokens",
     "BodyPilotsAddJobsToPilot",
 >>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
@@ -94,6 +103,8 @@ __all__ = [
     "JobStatusUpdate",
     "Metadata",
     "OpenIDConfiguration",
+    "PilotAuthCredentials",
+    "PilotCredentials",
     "PilotCredentialsInfo",
     "PilotFieldsMapping",
     "PilotInfo",
@@ -115,6 +126,7 @@ __all__ = [
     "TokenResponse",
     "UserInfoResponse",
     "VOInfo",
+    "VacuumPilotAuth",
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",

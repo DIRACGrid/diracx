@@ -3,8 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from fastapi import Body, Depends, HTTPException, Query, status
+from fastapi import Body, HTTPException, Query, status
 
 from diracx.core.exceptions import (
     PilotAlreadyExistsError,
@@ -196,9 +195,7 @@ async def create_pilot_secrets(
     pilot_secret_use_count_max: Annotated[
         int | None, Body(description="Number of times that we can use a secret.")
     ],
-    vo: Annotated[
-        str, Body(description="Only VO that can access a secret.")
-    ],
+    vo: Annotated[str, Body(description="Only VO that can access a secret.")],
     check_permissions: CheckPilotManagementPolicyCallable,
     pilot_db: PilotAgentsDB,
     settings: AuthSettings,
