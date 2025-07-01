@@ -13,6 +13,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
     SearchSpec,
     SortSpec,
 )
@@ -43,7 +44,7 @@ class PilotAgentsDB(BaseSQLDB):
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
         pilot_references: dict[str, str] | None = None,
-        status_reason: str = "Unknown",
+        status: str = PilotStatus.SUBMITTED,
     ):
         """Bulk add pilots in the DB.
 
@@ -64,8 +65,7 @@ class PilotAgentsDB(BaseSQLDB):
                 "DestinationSite": destination_site,
                 "SubmissionTime": now,
                 "LastUpdateTime": now,
-                "Status": "Submitted",
-                "StatusReason": status_reason,
+                "Status": status,
                 "PilotStamp": stamp,
             }
             for stamp in pilot_stamps
