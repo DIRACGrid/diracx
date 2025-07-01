@@ -177,16 +177,13 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
     :vartype destination_site: str
     :ivar pilot_references: Association of a pilot reference with a pilot stamp.
     :vartype pilot_references: dict[str, str]
-    :ivar status_reason: Status reason of the pilots.
-    :vartype status_reason: str
+    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
     :ivar generate_secrets: If we want to create secrets with the pilots.
     :vartype generate_secrets: bool
     :ivar pilot_secret_use_count_max: How much time can a secret be used.
     :vartype pilot_secret_use_count_max: int
->>>>>>> 2099d7ba (fix: Generate client)
-    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
-     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
-    :vartype pilot_status: str or ~_generated.models.PilotStatus
     """
 
     _validation = {
@@ -201,11 +198,9 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         "grid_site": {"key": "grid_site", "type": "str"},
         "destination_site": {"key": "destination_site", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{str}"},
-        "status_reason": {"key": "status_reason", "type": "str"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
         "generate_secrets": {"key": "generate_secrets", "type": "bool"},
         "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
->>>>>>> 2099d7ba (fix: Generate client)
-        "pilot_status": {"key": "pilot_status", "type": "str"},
     }
 
     def __init__(
@@ -217,11 +212,9 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
         pilot_references: Optional[Dict[str, str]] = None,
-        status_reason: str = "Unknown",
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
         generate_secrets: bool = True,
         pilot_secret_use_count_max: int = 1,
->>>>>>> 2099d7ba (fix: Generate client)
-        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
         **kwargs: Any
     ) -> None:
         """
@@ -237,16 +230,13 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         :paramtype destination_site: str
         :keyword pilot_references: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_references: dict[str, str]
-        :keyword status_reason: Status reason of the pilots.
-        :paramtype status_reason: str
+        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
         :keyword generate_secrets: If we want to create secrets with the pilots.
         :paramtype generate_secrets: bool
         :keyword pilot_secret_use_count_max: How much time can a secret be used.
         :paramtype pilot_secret_use_count_max: int
->>>>>>> 2099d7ba (fix: Generate client)
-        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
-         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
-        :paramtype pilot_status: str or ~_generated.models.PilotStatus
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
@@ -255,7 +245,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self.grid_site = grid_site
         self.destination_site = destination_site
         self.pilot_references = pilot_references
-        self.status_reason = status_reason
+        self.pilot_status = pilot_status
         self.generate_secrets = generate_secrets
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
 
@@ -307,74 +297,6 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
         self.expiration_minutes = expiration_minutes
         self.pilot_secret_use_count_max = pilot_secret_use_count_max
         self.vo = vo
-
-
-class BodyPilotsPerformSecretExchange(_serialization.Model):
-    """Body_pilots_perform_secret_exchange.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: Stamp used by a pilot to login. Required.
-    :vartype pilot_stamp: str
-    :ivar pilot_secret: Pilot secret given by Dirac/DiracX. Required.
-    :vartype pilot_secret: str
-    """
-
-    _validation = {
-        "pilot_stamp": {"required": True},
-        "pilot_secret": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "pilot_secret": {"key": "pilot_secret", "type": "str"},
-    }
-
-    def __init__(self, *, pilot_stamp: str, pilot_secret: str, **kwargs: Any) -> None:
-        """
-        :keyword pilot_stamp: Stamp used by a pilot to login. Required.
-        :paramtype pilot_stamp: str
-        :keyword pilot_secret: Pilot secret given by Dirac/DiracX. Required.
-        :paramtype pilot_secret: str
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
-        self.pilot_secret = pilot_secret
-
-
-class BodyPilotsRefreshPilotTokens(_serialization.Model):
-    """Body_pilots_refresh_pilot_tokens.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar refresh_token: Refresh Token given at login by DiracX. Required.
-    :vartype refresh_token: str
-    :ivar pilot_stamp: Pilot stamp. Required.
-    :vartype pilot_stamp: str
-    """
-
-    _validation = {
-        "refresh_token": {"required": True},
-        "pilot_stamp": {"required": True},
-    }
-
-    _attribute_map = {
-        "refresh_token": {"key": "refresh_token", "type": "str"},
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-    }
-
-    def __init__(self, *, refresh_token: str, pilot_stamp: str, **kwargs: Any) -> None:
-        """
-        :keyword refresh_token: Refresh Token given at login by DiracX. Required.
-        :paramtype refresh_token: str
-        :keyword pilot_stamp: Pilot stamp. Required.
-        :paramtype pilot_stamp: str
-        """
-        super().__init__(**kwargs)
-        self.refresh_token = refresh_token
-        self.pilot_stamp = pilot_stamp
->>>>>>> 2099d7ba (fix: Generate client)
-        self.pilot_status = pilot_status
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):
