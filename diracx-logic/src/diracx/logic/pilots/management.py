@@ -21,7 +21,7 @@ async def register_new_pilots(
     grid_type: str,
     grid_site: str,
     destination_site: str,
-    status_reason: str,
+    status: str,
     pilot_job_references: dict[str, str] | None,
 ):
     # [IMPORTANT] Check unicity of pilot references
@@ -43,7 +43,7 @@ async def register_new_pilots(
         grid_site=grid_site,
         destination_site=destination_site,
         pilot_references=pilot_job_references,
-        status_reason=status_reason,
+        status=status,
     )
 
 

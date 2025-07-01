@@ -144,8 +144,9 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
     :vartype destination_site: str
     :ivar pilot_references: Association of a pilot reference with a pilot stamp.
     :vartype pilot_references: dict[str, str]
-    :ivar status_reason: Status reason of the pilots.
-    :vartype status_reason: str
+    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
     """
 
     _validation = {
@@ -160,7 +161,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         "grid_site": {"key": "grid_site", "type": "str"},
         "destination_site": {"key": "destination_site", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{str}"},
-        "status_reason": {"key": "status_reason", "type": "str"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
     }
 
     def __init__(
@@ -172,7 +173,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
         pilot_references: Optional[Dict[str, str]] = None,
-        status_reason: str = "Unknown",
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
         **kwargs: Any
     ) -> None:
         """
@@ -188,8 +189,9 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         :paramtype destination_site: str
         :keyword pilot_references: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_references: dict[str, str]
-        :keyword status_reason: Status reason of the pilots.
-        :paramtype status_reason: str
+        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
@@ -198,7 +200,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self.grid_site = grid_site
         self.destination_site = destination_site
         self.pilot_references = pilot_references
-        self.status_reason = status_reason
+        self.pilot_status = pilot_status
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):

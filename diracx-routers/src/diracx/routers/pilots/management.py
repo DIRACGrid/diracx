@@ -12,6 +12,7 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models import (
     PilotFieldsMapping,
+    PilotStatus,
 )
 from diracx.logic.pilots.management import (
     add_jobs_to_pilot as add_jobs_to_pilot_bl,
@@ -57,9 +58,9 @@ async def add_pilot_stamps(
         dict[str, str] | None,
         Body(description="Association of a pilot reference with a pilot stamp."),
     ] = None,
-    status_reason: Annotated[
-        str, Body(description="Status reason of the pilots.")
-    ] = "Unknown",
+    pilot_status: Annotated[
+        PilotStatus, Body(description="Status of the pilots.")
+    ] = PilotStatus.SUBMITTED,
 ):
     """Endpoint where a you can create pilots with their references.
 
@@ -77,7 +78,7 @@ async def add_pilot_stamps(
             grid_site=grid_site,
             destination_site=destination_site,
             pilot_job_references=pilot_references,
-            status_reason=status_reason,
+            status=pilot_status,
         )
     except PilotAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
