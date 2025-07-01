@@ -217,6 +217,10 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
     :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
      "Done", "Failed", "Deleted", "Aborted", and "Unknown".
     :vartype pilot_status: str or ~_generated.models.PilotStatus
+    :ivar generate_secrets: If we want to create secrets with the pilots.
+    :vartype generate_secrets: bool
+    :ivar pilot_secret_use_count_max: How much time can a secret be used.
+    :vartype pilot_secret_use_count_max: int
     """
 
     _validation = {
@@ -230,6 +234,8 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         "destination_site": {"key": "destination_site", "type": "str"},
         "pilot_references": {"key": "pilot_references", "type": "{str}"},
         "pilot_status": {"key": "pilot_status", "type": "str"},
+        "generate_secrets": {"key": "generate_secrets", "type": "bool"},
+        "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
     }
 
     def __init__(
@@ -241,6 +247,8 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         destination_site: str = "NotAssigned",
         pilot_references: Optional[Dict[str, str]] = None,
         pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        generate_secrets: bool = True,
+        pilot_secret_use_count_max: int = 1,
         **kwargs: Any
     ) -> None:
         """
@@ -257,6 +265,10 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
          "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
         :paramtype pilot_status: str or ~_generated.models.PilotStatus
+        :keyword generate_secrets: If we want to create secrets with the pilots.
+        :paramtype generate_secrets: bool
+        :keyword pilot_secret_use_count_max: How much time can a secret be used.
+        :paramtype pilot_secret_use_count_max: int
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
@@ -265,6 +277,57 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self.destination_site = destination_site
         self.pilot_references = pilot_references
         self.pilot_status = pilot_status
+        self.generate_secrets = generate_secrets
+        self.pilot_secret_use_count_max = pilot_secret_use_count_max
+
+
+class BodyPilotsCreatePilotSecrets(_serialization.Model):
+    """Body_pilots_create_pilot_secrets.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar n: Number of secrets to create. Required.
+    :vartype n: int
+    :ivar expiration_minutes: Time in minutes before expiring. Required.
+    :vartype expiration_minutes: int
+    :ivar pilot_secret_use_count_max: Number of times that we can use a secret. Required.
+    :vartype pilot_secret_use_count_max: int
+    :ivar vo: Only VO that can access a secret. Required.
+    :vartype vo: str
+    """
+
+    _validation = {
+        "n": {"required": True},
+        "expiration_minutes": {"required": True},
+        "pilot_secret_use_count_max": {"required": True},
+        "vo": {"required": True},
+    }
+
+    _attribute_map = {
+        "n": {"key": "n", "type": "int"},
+        "expiration_minutes": {"key": "expiration_minutes", "type": "int"},
+        "pilot_secret_use_count_max": {"key": "pilot_secret_use_count_max", "type": "int"},
+        "vo": {"key": "vo", "type": "str"},
+    }
+
+    def __init__(
+        self, *, n: int, expiration_minutes: int, pilot_secret_use_count_max: int, vo: str, **kwargs: Any
+    ) -> None:
+        """
+        :keyword n: Number of secrets to create. Required.
+        :paramtype n: int
+        :keyword expiration_minutes: Time in minutes before expiring. Required.
+        :paramtype expiration_minutes: int
+        :keyword pilot_secret_use_count_max: Number of times that we can use a secret. Required.
+        :paramtype pilot_secret_use_count_max: int
+        :keyword vo: Only VO that can access a secret. Required.
+        :paramtype vo: str
+        """
+        super().__init__(**kwargs)
+        self.n = n
+        self.expiration_minutes = expiration_minutes
+        self.pilot_secret_use_count_max = pilot_secret_use_count_max
+        self.vo = vo
 
 
 class BodyPilotsUpdatePilotFields(_serialization.Model):

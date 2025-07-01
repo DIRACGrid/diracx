@@ -187,7 +187,7 @@ async def verify_pilot_credentials(
             vo=credentials["vo"],
             grid_type=credentials["grid_type"],
             grid_site=credentials["grid_site"],
-            # FIXME: Add status
+            status=credentials["status"],
         )
 
     # 1. Get the pilot

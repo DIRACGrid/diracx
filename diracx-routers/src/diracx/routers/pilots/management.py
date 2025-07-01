@@ -16,7 +16,7 @@ from diracx.core.models import (
     PilotInfo,
     PilotSecretConstraints,
     PilotSecretsInfo,
-    PilotStatus
+    PilotStatus,
 )
 from diracx.logic.pilots.auth import create_secrets
 from diracx.logic.pilots.auth import (

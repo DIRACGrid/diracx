@@ -46,7 +46,6 @@ async def perform_secret_exchange(
     This endpoint also acts as DIRAC's `dirac-admin-add-pilot`.
     """
     try:
-        # FIXME: Pilot not found
         return await verify_pilot_credentials(
             pilot_db=pilot_db,
             auth_db=auth_db,
