@@ -57,7 +57,7 @@ def serialize_credentials(token_response: TokenResponse) -> str:
     return json.dumps(credential_data)
 
 
-def read_credentials(location: Path) -> TokenResponse:
+def read_credentials(location: Path | None) -> TokenResponse:
     """Read credentials from a file."""
     from diracx.core.preferences import get_diracx_preferences
 
