@@ -189,6 +189,7 @@ class JobsHistorySummary(JobDBBase):
         ),
     )
 
+
 ###########################################################
 # Triggers defined for SqlAlchemy
 ###########################################################
@@ -293,16 +294,16 @@ class JobsHistorySummary(JobDBBase):
 ###########################################################
 # Triggers defined for Alembic
 ###########################################################
-# If we use Alembic, we need a class prepared for it to 
+# If we use Alembic, we need a class prepared for it to
 #  understand, using ReplaceableObjects.
 # This creates the triggers at SQL level, inside the db.
 ###########################################################
 
 trg_Jobs_insert = Trigger(
     name="trg_Jobs_insert",
-    when="AFTER", 
-    action="INSERT", 
-    table="Jobs", 
+    when="AFTER",
+    action="INSERT",
+    table="Jobs",
     time="FOR EACH ROW",
     body="""\
         INSERT INTO JobsHistorySummary (
@@ -315,13 +316,14 @@ trg_Jobs_insert = Trigger(
             NEW.MinorStatus, 1, NEW.RescheduleCounter
         )
         ON DUPLICATE KEY UPDATE JobCount = JobCount + 1,
-            RescheduleSum = RescheduleSum + NEW.RescheduleCounter;""")
+            RescheduleSum = RescheduleSum + NEW.RescheduleCounter;""",
+)
 
 trg_Jobs_delete = Trigger(
     name="trg_Jobs_delete",
-    when="AFTER", 
-    action="DELETE", 
-    table="Jobs", 
+    when="AFTER",
+    action="DELETE",
+    table="Jobs",
     time="FOR EACH ROW",
     body="""\
         UPDATE JobsHistorySummary
@@ -347,13 +349,14 @@ trg_Jobs_delete = Trigger(
             AND JobGroup = OLD.JobGroup
             AND JobType = OLD.JobType
             AND ApplicationStatus = OLD.ApplicationStatus
-            AND MinorStatus = OLD.MinorStatus;""")
+            AND MinorStatus = OLD.MinorStatus;""",
+)
 
 trg_Jobs_update = Trigger(
     name="trg_Jobs_update_status",
-    when="AFTER", 
-    action="UPDATE", 
-    table="Jobs", 
+    when="AFTER",
+    action="UPDATE",
+    table="Jobs",
     time="FOR EACH ROW",
     body="""\
         IF OLD.Status != NEW.Status THEN
@@ -387,7 +390,8 @@ trg_Jobs_update = Trigger(
         ON DUPLICATE KEY UPDATE JobCount = JobCount + 1,
             RescheduleSum = RescheduleSum + NEW.RescheduleCounter;
 
-        END IF;""")
+        END IF;""",
+)
 
 trg_Jobs_insert.register_trigger(JobDBBase.metadata)
 trg_Jobs_delete.register_trigger(JobDBBase.metadata)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from logging.config import fileConfig
 
@@ -7,14 +9,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from diracx.db.sql.job.schema import JobDBBase as Base
-from diracx.db.sql.utils.base import BaseSQLDB
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-url = "mysql+aiomysql://user:password@localhost:3306/JobDB" 
-#url = BaseSQLDB.available_urls()["JobDB"] #! This Env Variable refers to a non root user, which doesn't have enough permissions
+url = "mysql+aiomysql://user:password@localhost:3306/JobDB"
+# url = BaseSQLDB.available_urls()["JobDB"] #! This Env Variable refers to a non root user, which doesn't have enough permissions
 config.set_main_option("sqlalchemy.url", url)
 
 # Interpret the config file for Python logging.
@@ -32,6 +33,7 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -59,10 +61,10 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
-        connection=connection, 
-        target_metadata=target_metadata, 
-        # The mutable_structure lets store some extra information for future rendering 
-        template_args={"mutable_structure": {"triggers": []}}
+        connection=connection,
+        target_metadata=target_metadata,
+        # The mutable_structure lets store some extra information for future rendering
+        template_args={"mutable_structure": {"triggers": []}},
     )
 
     with context.begin_transaction():

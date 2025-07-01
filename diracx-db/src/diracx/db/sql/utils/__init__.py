@@ -23,5 +23,5 @@ __all__ = (
     "substract_date",
     "hash",
     "SQLDBUnavailableError",
-    "Trigger"
+    "Trigger",
 )
