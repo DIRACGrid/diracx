@@ -14,10 +14,6 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
-<<<<<<< HEAD
-=======
-    BodyAuthPerformSecretExchange,
->>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     BodyAuthRefreshPilotTokens,
     BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
@@ -81,10 +77,6 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
-<<<<<<< HEAD
-=======
-    "BodyAuthPerformSecretExchange",
->>>>>>> 4507b79 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     "BodyAuthRefreshPilotTokens",
     "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",

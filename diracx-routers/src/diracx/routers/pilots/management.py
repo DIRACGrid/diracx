@@ -100,8 +100,6 @@ async def add_pilot_stamps(
             generate_secrets=generate_secrets,
             pilot_secret_use_count_max=pilot_secret_use_count_max,
         )
-
-        return response
     except PilotAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 

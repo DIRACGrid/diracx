@@ -391,6 +391,7 @@ class VacuumPilotAuth(PilotAuthCredentials):
     grid_site: str
     status: str
 
+
 class LogLine(BaseModel):
     timestamp: str
     severity: str
