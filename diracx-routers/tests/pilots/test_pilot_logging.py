@@ -103,9 +103,7 @@ async def search(create_logs, normal_test_client):
 
         params = {"per_page": per_page, "page": page}
 
-        r = normal_test_client.post(
-            "/api/pilots/management/search/logs", json=body, params=params
-        )
+        r = normal_test_client.post("/api/pilots/search/logs", json=body, params=params)
 
         if r.status_code == 400:
             # If we have a status_code 400, that means that the query failed
@@ -173,7 +171,7 @@ async def test_single_send_and_retrieve_logs(normal_test_client: TestClient):
     data = {
         "search": [{"parameter": "PilotStamp", "operator": "eq", "value": "stamp_1"}]
     }
-    r = normal_test_client.post("/api/pilots/management/search/logs", json=data)
+    r = normal_test_client.post("/api/pilots/search/logs", json=data)
     assert r.status_code == 200, r.text
     assert [hit["Message"] for hit in r.json()] == msg.split("\n")
 
@@ -184,7 +182,7 @@ async def test_query_invalid_stamp(create_logs, normal_test_client):
             {"parameter": "PilotStamp", "operator": "eq", "value": "not_a_stamp"}
         ]
     }
-    r = normal_test_client.post("/api/pilots/management/search/logs", json=data)
+    r = normal_test_client.post("/api/pilots/search/logs", json=data)
     assert r.status_code == 200, r.text
     assert len(r.json()) == 0
 
@@ -194,7 +192,7 @@ async def test_query_each_length(create_logs, normal_test_client):
         data = {
             "search": [{"parameter": "PilotStamp", "operator": "eq", "value": stamp}]
         }
-        r = normal_test_client.post("/api/pilots/management/search/logs", json=data)
+        r = normal_test_client.post("/api/pilots/search/logs", json=data)
         assert r.status_code == 200, r.text
         assert len(r.json()) == 1
 
@@ -205,7 +203,7 @@ async def test_query_each_field(create_logs, normal_test_client):
             "search": [{"parameter": "PilotStamp", "operator": "eq", "value": stamp}],
             "sort": [{"parameter": "PilotStamp", "direction": "asc"}],
         }
-        r = normal_test_client.post("/api/pilots/management/search/logs", json=data)
+        r = normal_test_client.post("/api/pilots/search/logs", json=data)
         assert r.status_code == 200, r.text
         assert len(r.json()) == 1
 

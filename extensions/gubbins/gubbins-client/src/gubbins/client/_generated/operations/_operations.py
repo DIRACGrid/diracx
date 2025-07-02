@@ -831,7 +831,7 @@ def build_pilots_search_logs_request(*, page: int = 1, per_page: int = 100, **kw
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/pilots/management/search/logs"
+    _url = "/api/pilots/search/logs"
 
     # Construct parameters
     if page is not None:

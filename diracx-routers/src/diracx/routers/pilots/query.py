@@ -224,7 +224,7 @@ EXAMPLE_RESPONSES_LOGS: dict[int | str, dict[str, Any]] = {
 }
 
 
-@router.post("/management/search/logs", responses=EXAMPLE_RESPONSES_LOGS)
+@router.post("/search/logs", responses=EXAMPLE_RESPONSES_LOGS)
 async def search_logs(
     pilot_logs_db: PilotLogsDB,
     pilot_db: PilotAgentsDB,
