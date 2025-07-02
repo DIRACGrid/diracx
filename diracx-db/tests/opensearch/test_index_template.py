@@ -37,13 +37,15 @@ async def _get_test_index_mappings(dummy_opensearch_db: DummyOSDB):
 
     # At this point the index should not exist yet
     with pytest.raises(opensearchpy.exceptions.NotFoundError):
-        await dummy_opensearch_db.client.indices.get_mapping(index_name)
+        await dummy_opensearch_db.client.indices.get_mapping(index=index_name)
 
     # Insert document which will automatically create the index based on the template
     await dummy_opensearch_db.upsert(vo, document_id, DUMMY_DOCUMENT)
 
     # Ensure the result looks as expected and return the mappings
-    index_mapping = await dummy_opensearch_db.client.indices.get_mapping(index_name)
+    index_mapping = await dummy_opensearch_db.client.indices.get_mapping(
+        index=index_name
+    )
     assert list(index_mapping) == [index_name]
     assert list(index_mapping[index_name]) == ["mappings"]
     return index_mapping[index_name]["mappings"]
