@@ -10,6 +10,7 @@ from fastapi import Depends, Form, Header, HTTPException, status
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
+    BadTokenError,
     DiracHttpResponseError,
     InvalidCredentialsError,
     PendingAuthorizationError,
@@ -153,7 +154,7 @@ async def get_oidc_token(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
-    except PermissionError as e:
+    except (BadTokenError, PermissionError) as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e),
