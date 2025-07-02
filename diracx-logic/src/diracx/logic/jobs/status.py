@@ -490,7 +490,7 @@ async def remove_jobs_from_task_queue(
         # TODO: move to Celery
 
         # If the task queue is not empty, do not remove it
-        if not task_queue_db.is_task_queue_empty(tq_id):
+        if not await task_queue_db.is_task_queue_empty(tq_id):
             continue
 
         await task_queue_db.delete_task_queue(tq_id)
