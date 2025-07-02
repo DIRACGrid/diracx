@@ -12,7 +12,9 @@ from typing import Annotated, Optional
 import typer
 
 from diracx.client.aio import AsyncDiracClient
-from diracx.client.models import DeviceFlowErrorResponse
+
+# See https://github.com/DIRACGrid/diracx/issues/578
+from diracx.client.models import DeviceFlowErrorResponse  # type: ignore [attr-defined]
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.utils import read_credentials, write_credentials
 

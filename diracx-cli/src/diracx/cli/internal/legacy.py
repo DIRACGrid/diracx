@@ -95,6 +95,7 @@ def _apply_fixes(raw):
     raw["DIRAC"].pop("Extensions", None)
     raw["DIRAC"].pop("Framework", None)
     raw["DIRAC"].pop("Security", None)
+    raw["DIRAC"].pop("PreferredURLPatterns", None)
 
     # This is VOMS specific and no longer required
     raw["DIRAC"].pop("ConnConf", None)
