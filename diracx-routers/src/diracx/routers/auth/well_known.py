@@ -52,3 +52,12 @@ async def get_installation_metadata(
 ) -> Metadata:
     """Get metadata about the dirac installation."""
     return await get_installation_metadata_bl(config)
+
+
+@router.get("/.well-known/security.txt")
+async def get_security_txt() -> str:
+    """Get the security.txt file."""
+    return """Contact: https://github.com/DIRACGrid/diracx/security/advisories/new
+Expires: 2026-07-02T23:59:59.000Z
+Preferred-Languages: en
+"""
