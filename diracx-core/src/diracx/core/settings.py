@@ -106,7 +106,7 @@ class FernetKey(SecretStr):
         self.fernet = Fernet(self.get_secret_value())
 
 
-def _apply_default_scheme(value: str) -> str:
+def _apply_default_scheme(value: Any) -> Any:
     """Applies the default file:// scheme if not present."""
     if isinstance(value, str) and "://" not in value:
         value = f"file://{value}"
