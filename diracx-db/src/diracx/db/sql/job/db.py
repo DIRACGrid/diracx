@@ -9,6 +9,7 @@ from sqlalchemy import bindparam, case, delete, literal, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
+from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
@@ -149,7 +150,9 @@ class JobDB(BaseSQLDB):
                         Jobs.__table__.c.JobID == job_id,
                         # Since the setting of the new column value is obscured by the CASE statement,
                         # ensure that SQLAlchemy renders the new column value with the correct type
-                        literal(attrs[column], type_=Jobs.__table__.c[column].type),
+                        literal(attrs[column], type_=Jobs.__table__.c[column].type)
+                        if not isinstance(attrs[column], expression.FunctionElement)
+                        else attrs[column],
                     )
                     for job_id, attrs in job_data.items()
                     if column in attrs
