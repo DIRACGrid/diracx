@@ -33,6 +33,7 @@ SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 
 [project.entry-points."diracx.dbs.os"]
+PilotLogsDB = "diracx.db.os:PilotLogsDB"
 JobParametersDB = "diracx.db.os:JobParametersDB"
 
 [build-system]

@@ -140,3 +140,7 @@ def substract_date(**kwargs: float) -> datetime:
 
 def hash(code: str):
     return hashlib.sha256(code.encode()).hexdigest()
+
+
+def raw_hash(code: str):
+    return hashlib.sha256(code.encode()).digest()
