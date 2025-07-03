@@ -30,6 +30,14 @@ See the DiracX helm chart for more details about configuring access to databases
 
 See the services/tasks documentation for details about how the database classes should be used.
 
+### Aside on datetimes in MySQL
+
+Dates and times in MySQL (`DATETIME` type) are stored as naive UTC timestamps. They are returned as UTC.
+
+MySQL `TIMESTAMP` types should be treated with caution as they are stored as naive UTC timestamps but returned in the local timezone according to the server's timezone setting. https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_time_zone
+
+See MySQL docs: https://dev.mysql.com/doc/refman/8.4/en/datetime.html
+
 ### API
 
 TODO: Document the basic API for SQL databases once things settle
