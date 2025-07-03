@@ -191,7 +191,7 @@ class JobDB(BaseSQLDB):
                         # ensure that SQLAlchemy renders the new column value with the correct type
                         literal(attrs[column], type_=Jobs.__table__.c[column].type)
                         if not isinstance(attrs[column], expression.FunctionElement)
-                        else attrs[column]
+                        else attrs[column],
                     )
                     for job_id, attrs in job_data.items()
                     if column in attrs
