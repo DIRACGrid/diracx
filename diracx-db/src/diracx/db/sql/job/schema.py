@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from zoneinfo import ZoneInfo
-
 import sqlalchemy.types as types
 from sqlalchemy import (
     ForeignKey,
@@ -65,51 +63,27 @@ class Jobs(JobDBBase):
     vo = Column("VO", String(32))
     submission_time = NullColumn(
         "SubmissionTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     reschedule_time = NullColumn(
         "RescheduleTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     last_update_time = NullColumn(
         "LastUpdateTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     start_exec_time = NullColumn(
         "StartExecTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     heart_beat_time = NullColumn(
         "HeartBeatTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     end_exec_time = NullColumn(
         "EndExecTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
     status = Column("Status", String(32), default="Received")
     minor_status = Column("MinorStatus", String(128), default="Unknown")
@@ -187,11 +161,7 @@ class HeartBeatLoggingInfo(JobDBBase):
     value = Column("Value", Text)
     heart_beat_time = Column(
         "HeartBeatTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
         primary_key=True,
     )
 
@@ -206,18 +176,10 @@ class JobCommands(JobDBBase):
     status = Column("Status", String(64), default="Received")
     reception_time = Column(
         "ReceptionTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
         primary_key=True,
     )
     execution_time = NullColumn(
         "ExecutionTime",
-        SmarterDateTime(
-            stored_tz=ZoneInfo("UTC"),
-            returned_tz=ZoneInfo("UTC"),
-            stored_naive_mysql=True,
-        ),
+        SmarterDateTime(),
     )
