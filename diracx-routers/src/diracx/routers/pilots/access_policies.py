@@ -39,7 +39,7 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         pilot_stamps: list[str] | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
-        allow_legacy_pilots: bool = False
+        allow_legacy_pilots: bool = False,
     ):
         assert action, "action is a mandatory parameter"
 
@@ -48,10 +48,11 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         # To manage pilots, user have to be an admin
         # In some special cases (described with allow_legacy_pilots), we can allow pilots
         if action == ActionType.MANAGE_PILOTS:
-
             # To make it clear, we separate
             is_an_admin = SERVICE_ADMINISTRATOR in user_info.properties
-            is_a_pilot_if_allowed = allow_legacy_pilots and GENERIC_PILOT in user_info.properties
+            is_a_pilot_if_allowed = (
+                allow_legacy_pilots and GENERIC_PILOT in user_info.properties
+            )
 
             if not is_an_admin and not is_a_pilot_if_allowed:
                 raise HTTPException(
@@ -63,7 +64,7 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
             if GENERIC_PILOT in user_info.properties:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Pilots can't read other pilots info."
+                    detail="Pilots can't read other pilots info.",
                 )
 
         #
