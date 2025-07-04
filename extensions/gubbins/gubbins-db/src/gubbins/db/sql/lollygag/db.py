@@ -21,7 +21,7 @@ class LollygagDB(BaseSQLDB):
     # This needs to be here for the BaseSQLDB to create the engine
     metadata = LollygagDBBase.metadata
 
-    async def summary(self, group_by, search) -> list[dict[str, str | int]]:
+    async def lollygag_summary(self, group_by, search) -> list[dict[str, str | int]]:
         columns = [Cars.__table__.columns[x] for x in group_by]
 
         stmt = select(*columns, func.count(Cars.license_plate).label("count"))

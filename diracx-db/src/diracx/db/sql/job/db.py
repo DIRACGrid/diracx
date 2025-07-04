@@ -5,7 +5,7 @@ __all__ = ["JobDB"]
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import bindparam, case, delete, func, insert, select, update
+from sqlalchemy import bindparam, case, delete, insert, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, _get_columns, apply_search_filters, utcnow
+from ..utils import BaseSQLDB, _get_columns, utcnow
 from .schema import (
     HeartBeatLoggingInfo,
     InputData,
@@ -42,20 +42,11 @@ class JobDB(BaseSQLDB):
     # to find a way to make it dynamic
     jdl_2_db_parameters = ["JobName", "JobType", "JobGroup"]
 
-    async def summary(self, group_by, search) -> list[dict[str, str | int]]:
+    async def job_summary(
+        self, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
         """Get a summary of the jobs."""
-        columns = _get_columns(Jobs.__table__, group_by)
-
-        stmt = select(*columns, func.count(Jobs.job_id).label("count"))
-        stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
-        stmt = stmt.group_by(*columns)
-
-        # Execute the query
-        return [
-            dict(row._mapping)
-            async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
-        ]
+        return await self.summary(Jobs, group_by=group_by, search=search)
 
     async def search_jobs(
         self,

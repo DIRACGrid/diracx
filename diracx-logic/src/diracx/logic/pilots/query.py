@@ -10,6 +10,7 @@ from diracx.core.models import (
     ScalarSearchSpec,
     SearchParams,
     SearchSpec,
+    SummaryParams,
     VectorSearchOperator,
     VectorSearchSpec,
 )
@@ -178,3 +179,15 @@ async def get_outdated_pilots(
     )
 
     return pilots
+
+
+async def summary(pilot_db: PilotAgentsDB, body: SummaryParams, vo: str):
+    """Show information suitable for plotting."""
+    body.search.append(
+        {
+            "parameter": "VO",
+            "operator": ScalarSearchOperator.EQUAL,
+            "value": vo,
+        }
+    )
+    return await pilot_db.pilot_summary(body.grouping, body.search)

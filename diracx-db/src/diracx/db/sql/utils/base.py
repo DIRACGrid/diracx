@@ -268,6 +268,30 @@ class BaseSQLDB(metaclass=ABCMeta):
             dict(row._mapping) async for row in (await self.conn.stream(stmt))
         ]
 
+    async def summary(
+        self, model: Any, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
+        """Get a summary of a table."""
+        columns = _get_columns(model.__table__, group_by)
+
+        pk_columns = list(model.__table__.primary_key.columns)
+        if not pk_columns:
+            raise ValueError(
+                "Model has no primary key and no count_column was provided."
+            )
+        count_col = pk_columns[0]
+
+        stmt = select(*columns, func.count(count_col).label("count"))
+        stmt = apply_search_filters(model.__table__.columns.__getitem__, stmt, search)
+        stmt = stmt.group_by(*columns)
+
+        # Execute the query
+        return [
+            dict(row._mapping)
+            async for row in (await self.conn.stream(stmt))
+            if row.count > 0  # type: ignore
+        ]
+
 
 def find_time_resolution(value):
     if isinstance(value, datetime):
