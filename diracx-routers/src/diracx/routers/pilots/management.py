@@ -28,7 +28,7 @@ from diracx.logic.pilots.management import (
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
-from ..dependencies import PilotAgentsDB
+from ..dependencies import JobDB, PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
 from .access_policies import (
     ActionType,
@@ -203,6 +203,7 @@ async def update_pilot_fields(
 @router.get("/jobs")
 async def get_pilot_jobs(
     pilot_db: PilotAgentsDB,
+    job_db: JobDB,
     check_permissions: CheckPilotManagementPolicyCallable,
     pilot_stamp: Annotated[
         str | None, Query(description="The stamp of the pilot.")
@@ -211,14 +212,23 @@ async def get_pilot_jobs(
 ) -> list[int]:
     """Endpoint only for admins, to get jobs of a pilot."""
     if pilot_stamp:
-        await check_permissions(action=ActionType.READ_PILOT_FIELDS)
+        # Check VO
+        await check_permissions(
+            action=ActionType.READ_PILOT_FIELDS,
+            pilot_db=pilot_db,
+            pilot_stamps=[pilot_stamp],
+        )
 
         return await get_pilot_jobs_ids_by_stamp(
             pilot_db=pilot_db,
             pilot_stamp=pilot_stamp,
         )
     elif job_id:
-        # FIXME: Add some policy, verify that it's the user's job?
+        # Check job owner
+        await check_permissions(
+            action=ActionType.READ_PILOT_FIELDS, job_db=job_db, job_ids=[job_id]
+        )
+
         return await get_pilot_ids_by_job_id(pilot_db=pilot_db, job_id=job_id)
 
     raise HTTPException(
@@ -230,6 +240,7 @@ async def get_pilot_jobs(
 @router.patch("/jobs", status_code=HTTPStatus.NO_CONTENT)
 async def add_jobs_to_pilot(
     pilot_db: PilotAgentsDB,
+    job_db: JobDB,
     pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
     job_ids: Annotated[
         list[int], Body(description="The jobs we want to add to the pilot.")
@@ -238,9 +249,12 @@ async def add_jobs_to_pilot(
 ):
     """Endpoint only for admins, to associate a pilot with a job."""
     await check_permissions(
-        action=ActionType.MANAGE_PILOTS, pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+        action=ActionType.MANAGE_PILOTS,
+        pilot_db=pilot_db,
+        pilot_stamps=[pilot_stamp],
+        job_db=job_db,
+        job_ids=job_ids,
     )
-    # FIXME: Also verify job_ids
 
     try:
         await add_jobs_to_pilot_bl(
