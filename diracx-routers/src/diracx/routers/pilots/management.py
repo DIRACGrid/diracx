@@ -3,21 +3,16 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from diracx.core.properties import GENERIC_PILOT
 from fastapi import Body, Depends, HTTPException, Query, status
 
 from diracx.core.exceptions import (
-    PilotAlreadyAssociatedWithJobError,
     PilotAlreadyExistsError,
-    PilotNotFoundError,
 )
 from diracx.core.models import (
     PilotFieldsMapping,
     PilotStatus,
 )
-from diracx.logic.pilots.management import (
-    add_jobs_to_pilot as add_jobs_to_pilot_bl,
-)
+from diracx.core.properties import GENERIC_PILOT
 from diracx.logic.pilots.management import (
     delete_pilots as delete_pilots_bl,
 )
@@ -68,7 +63,7 @@ async def add_pilot_stamps(
     # TODO: Verify that grid types, sites, destination sites, etc. are valids
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
-        allow_legacy_pilots=True # dirac-admin-add-pilot
+        allow_legacy_pilots=True,  # dirac-admin-add-pilot
     )
 
     # Prevent someone who stole a pilot X509 to create thousands of pilots at a time
@@ -77,7 +72,7 @@ async def add_pilot_stamps(
         if len(pilot_stamps) != 1:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="As a pilot, you can only create yourself."
+                detail="As a pilot, you can only create yourself.",
             )
 
     try:
@@ -205,10 +200,10 @@ async def update_pilot_fields(
     # Ensures stamps validity
     pilot_stamps = [mapping.PilotStamp for mapping in pilot_stamps_to_fields_mapping]
     await check_permissions(
-        action=ActionType.MANAGE_PILOTS, 
-        pilot_db=pilot_db, 
+        action=ActionType.MANAGE_PILOTS,
+        pilot_db=pilot_db,
         pilot_stamps=pilot_stamps,
-        allow_legacy_pilots=True # dirac-admin-add-pilot
+        allow_legacy_pilots=True,  # dirac-admin-add-pilot
     )
 
     # Prevent someone who stole a pilot X509 to modify thousands of pilots at a time
@@ -218,9 +213,8 @@ async def update_pilot_fields(
         if len(pilot_stamps) != 1:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="As a pilot, you can only modify yourself."
+                detail="As a pilot, you can only modify yourself.",
             )
-
 
     await update_pilots_fields(
         pilot_db=pilot_db,
