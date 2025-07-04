@@ -263,39 +263,3 @@ async def get_pilot_jobs(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="You must provide either pilot_stamp or job_id",
     )
-
-
-@router.patch("/jobs", status_code=HTTPStatus.NO_CONTENT)
-async def add_jobs_to_pilot(
-    pilot_db: PilotAgentsDB,
-    job_db: JobDB,
-    pilot_stamp: Annotated[str, Body(description="The stamp of the pilot.")],
-    job_ids: Annotated[
-        list[int], Body(description="The jobs we want to add to the pilot.")
-    ],
-    check_permissions: CheckPilotManagementPolicyCallable,
-):
-    """Endpoint only for admins, to associate a pilot with a job."""
-    await check_permissions(
-        action=ActionType.MANAGE_PILOTS,
-        pilot_db=pilot_db,
-        pilot_stamps=[pilot_stamp],
-        job_db=job_db,
-        job_ids=job_ids,
-    )
-
-    try:
-        await add_jobs_to_pilot_bl(
-            pilot_db=pilot_db,
-            pilot_stamp=pilot_stamp,
-            job_ids=job_ids,
-        )
-    except PilotNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="This pilot does not exist."
-        ) from e
-    except PilotAlreadyAssociatedWithJobError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This pilot is already associated with this job.",
-        ) from e
