@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
+from diracx.core.models import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import SERVICE_ADMINISTRATOR
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.pilots.db import PilotAgentsDB
@@ -59,9 +60,15 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
 
         # First, if job_ids are provided, we check who is the owner
         if job_db and job_ids:
-            job_owners = await job_db.summary(
+            job_owners = await job_db.job_summary(
                 ["Owner", "VO"],
-                [{"parameter": "JobID", "operator": "in", "values": job_ids}],
+                [
+                    VectorSearchSpec(
+                        parameter="JobID",
+                        operator=VectorSearchOperator.IN,
+                        values=job_ids,
+                    )
+                ],
             )
 
             expected_owner = {

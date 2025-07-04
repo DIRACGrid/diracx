@@ -25,6 +25,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "BaseAccessPolicy",
         "PilotAgentsDB",
         "PilotManagementAccessPolicy",
+        "JobDB"
     ]
 )
 

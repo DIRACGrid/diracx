@@ -5,8 +5,9 @@ from typing import Annotated, Any
 
 from fastapi import Body, Depends, Response
 
-from diracx.core.models import SearchParams
+from diracx.core.models import SearchParams, SummaryParams
 from diracx.logic.pilots.query import search as search_bl
+from diracx.logic.pilots.query import summary as summary_bl
 
 from ..dependencies import PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
@@ -145,3 +146,21 @@ async def search(
         response.headers["Content-Range"] = f"pilots {first_idx}-{last_idx}/{total}"
         response.status_code = HTTPStatus.PARTIAL_CONTENT
     return pilots
+
+
+@router.post("/summary")
+async def summary(
+    pilot_db: PilotAgentsDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    body: SummaryParams,
+    check_permissions: CheckPilotManagementPolicyCallable,
+):
+    """Show information suitable for plotting."""
+    # TODO: Test me.
+    await check_permissions(action=ActionType.READ_PILOT_FIELDS)
+
+    return await summary_bl(
+        pilot_db=pilot_db,
+        body=body,
+        vo=user_info.vo,
+    )

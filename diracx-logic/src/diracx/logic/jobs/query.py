@@ -5,9 +5,9 @@ from typing import Any
 
 from diracx.core.config.schema import Config
 from diracx.core.models import (
-    JobSummaryParams,
     ScalarSearchOperator,
     SearchParams,
+    SummaryParams,
 )
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
@@ -85,7 +85,7 @@ async def summary(
     config: Config,
     job_db: JobDB,
     preferred_username: str,
-    body: JobSummaryParams,
+    body: SummaryParams,
 ):
     """Show information suitable for plotting."""
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
@@ -100,4 +100,4 @@ async def summary(
                 "value": preferred_username,
             }
         )
-    return await job_db.summary(body.grouping, body.search)
+    return await job_db.job_summary(body.grouping, body.search)

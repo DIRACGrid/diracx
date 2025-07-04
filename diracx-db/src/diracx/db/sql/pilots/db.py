@@ -240,3 +240,9 @@ class PilotAgentsDB(BaseSQLDB):
             per_page=per_page,
             page=page,
         )
+
+    async def pilot_summary(
+        self, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
+        """Get a summary of the pilots."""
+        return await self.summary(PilotAgents, group_by=group_by, search=search)

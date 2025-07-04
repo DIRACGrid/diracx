@@ -583,44 +583,6 @@ class JobStatusUpdate(_serialization.Model):
         self.source = source
 
 
-class JobSummaryParams(_serialization.Model):
-    """JobSummaryParams.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar grouping: Grouping. Required.
-    :vartype grouping: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSummaryParamsSearchItem]
-    """
-
-    _validation = {
-        "grouping": {"required": True},
-    }
-
-    _attribute_map = {
-        "grouping": {"key": "grouping", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSummaryParamsSearchItem]"},
-    }
-
-    def __init__(
-        self, *, grouping: List[str], search: List["_models.JobSummaryParamsSearchItem"] = [], **kwargs: Any
-    ) -> None:
-        """
-        :keyword grouping: Grouping. Required.
-        :paramtype grouping: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSummaryParamsSearchItem]
-        """
-        super().__init__(**kwargs)
-        self.grouping = grouping
-        self.search = search
-
-
-class JobSummaryParamsSearchItem(_serialization.Model):
-    """JobSummaryParamsSearchItem."""
-
-
 class OpenIDConfiguration(_serialization.Model):
     """OpenIDConfiguration.
 
@@ -1222,6 +1184,44 @@ class SortSpec(_serialization.Model):
         super().__init__(**kwargs)
         self.parameter = parameter
         self.direction = direction
+
+
+class SummaryParams(_serialization.Model):
+    """SummaryParams.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar grouping: Grouping. Required.
+    :vartype grouping: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SummaryParamsSearchItem]
+    """
+
+    _validation = {
+        "grouping": {"required": True},
+    }
+
+    _attribute_map = {
+        "grouping": {"key": "grouping", "type": "[str]"},
+        "search": {"key": "search", "type": "[SummaryParamsSearchItem]"},
+    }
+
+    def __init__(
+        self, *, grouping: List[str], search: List["_models.SummaryParamsSearchItem"] = [], **kwargs: Any
+    ) -> None:
+        """
+        :keyword grouping: Grouping. Required.
+        :paramtype grouping: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SummaryParamsSearchItem]
+        """
+        super().__init__(**kwargs)
+        self.grouping = grouping
+        self.search = search
+
+
+class SummaryParamsSearchItem(_serialization.Model):
+    """SummaryParamsSearchItem."""
 
 
 class SupportInfo(_serialization.Model):
