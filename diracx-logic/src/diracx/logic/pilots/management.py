@@ -52,6 +52,7 @@ async def delete_pilots(
     pilot_stamps: list[str] | None = None,
     age_in_days: int | None = None,
     delete_only_aborted: bool = True,
+    vo_constraint: str | None = None,
 ):
     if pilot_stamps:
         pilot_ids = await get_pilot_ids_by_stamps(
@@ -59,6 +60,7 @@ async def delete_pilots(
         )
     else:
         assert age_in_days
+        assert vo_constraint
 
         cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)
 
@@ -67,6 +69,7 @@ async def delete_pilots(
             cutoff_date=cutoff_date,
             only_aborted=delete_only_aborted,
             parameters=["PilotID"],
+            vo_constraint=vo_constraint,
         )
 
         pilot_ids = [pilot["PilotID"] for pilot in pilots]

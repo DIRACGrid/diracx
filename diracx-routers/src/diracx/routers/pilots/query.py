@@ -113,18 +113,16 @@ async def search(
     page: int = 1,
     per_page: int = 100,
     body: Annotated[
-        SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
+        SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)  # type: ignore
     ] = None,
 ) -> list[dict[str, Any]]:
     """Retrieve information about pilots."""
     # Inspired by /api/jobs/query
     await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
-    user_vo = user_info.vo
-
     total, pilots = await search_bl(
         pilot_db=pilot_db,
-        user_vo=user_vo,
+        user_vo=user_info.vo,
         page=page,
         per_page=per_page,
         body=body,
