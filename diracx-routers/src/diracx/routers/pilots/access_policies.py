@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.properties import SERVICE_ADMINISTRATOR
+from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.logic.pilots.query import get_pilots_by_stamp
 from diracx.routers.access_policies import BaseAccessPolicy
@@ -35,26 +36,50 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
         pilot_db: PilotAgentsDB | None = None,
         pilot_stamps: list[str] | None = None,
+        job_db: JobDB | None = None,
+        job_ids: list[int] | None = None,
     ):
         assert action, "action is a mandatory parameter"
 
         # Users can query
         # NOTE: Add into queries a VO constraint
-        if action == ActionType.READ_PILOT_FIELDS:
-            return
+        # To manage pilots, user have to be an admin
+        if (
+            action == ActionType.MANAGE_PILOTS
+            and SERVICE_ADMINISTRATOR not in user_info.properties
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have the permission to manage pilots.",
+            )
 
-        # If we want to modify pilots, we allow only admins
-        # TODO: See if we add other types of admins
-        if SERVICE_ADMINISTRATOR in user_info.properties:
-            # If we don't provide pilot_db and pilot_stamps, we accept directly
-            # This is for example when we submit pilots, we use the user VO, so no need to verify
-            if not (pilot_db and pilot_stamps):
-                return
+        #
+        # Additional checks if job_ids or pilot_stamps are provided
+        #
 
+        # First, if job_ids are provided, we check who is the owner
+        if job_db and job_ids:
+            job_owners = await job_db.summary(
+                ["Owner", "VO"],
+                [{"parameter": "JobID", "operator": "in", "values": job_ids}],
+            )
+
+            expected_owner = {
+                "Owner": user_info.preferred_username,
+                "VO": user_info.vo,
+                "count": len(set(job_ids)),
+            }
+            # All the jobs belong to the user doing the query
+            # and all of them are present
+            if not job_owners == [expected_owner]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have the rights to modify a pilot.",
+                )
+
+        # This is for example when we submit pilots, we use the user VO, so no need to verify
+        if pilot_db and pilot_stamps:
             # Else, check its VO
-            assert pilot_db, "PilotDB is needed to determine pilot VO."
-            assert pilot_stamps, "PilotStamps are needed to determine pilot VO."
-
             pilots = await get_pilots_by_stamp(
                 pilot_db=pilot_db,
                 pilot_stamps=pilot_stamps,
@@ -73,13 +98,6 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="You don't have access to all pilots.",
                 )
-
-            return
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have the rights to modify a pilot.",
-        )
 
 
 CheckPilotManagementPolicyCallable = Annotated[
