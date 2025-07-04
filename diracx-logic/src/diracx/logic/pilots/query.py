@@ -148,6 +148,7 @@ async def get_pilot_ids_by_job_id(pilot_db: PilotAgentsDB, job_id: int) -> list[
 async def get_outdated_pilots(
     pilot_db: PilotAgentsDB,
     cutoff_date: datetime,
+    vo_constraint: str,
     only_aborted: bool = True,
     parameters: list[str] = [],
 ):
@@ -156,7 +157,11 @@ async def get_outdated_pilots(
             parameter="SubmissionTime",
             operator=ScalarSearchOperator.LESS_THAN,
             value=cutoff_date,
-        )
+        ),
+        # Add VO to avoid deleting other VO's pilots
+        ScalarSearchSpec(
+            parameter="VO", operator=ScalarSearchOperator.EQUAL, value=vo_constraint
+        ),
     ]
 
     if only_aborted:

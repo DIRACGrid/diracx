@@ -134,8 +134,6 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
 
     :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
     :vartype pilot_stamps: list[str]
-    :ivar vo: Virtual Organisation associated with the inserted pilots. Required.
-    :vartype vo: str
     :ivar grid_type: Grid type of the pilots.
     :vartype grid_type: str
     :ivar grid_site: Pilots grid site.
@@ -151,12 +149,10 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
 
     _validation = {
         "pilot_stamps": {"required": True},
-        "vo": {"required": True},
     }
 
     _attribute_map = {
         "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
-        "vo": {"key": "vo", "type": "str"},
         "grid_type": {"key": "grid_type", "type": "str"},
         "grid_site": {"key": "grid_site", "type": "str"},
         "destination_site": {"key": "destination_site", "type": "str"},
@@ -168,7 +164,6 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self,
         *,
         pilot_stamps: List[str],
-        vo: str,
         grid_type: str = "Dirac",
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
@@ -179,8 +174,6 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         """
         :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
         :paramtype pilot_stamps: list[str]
-        :keyword vo: Virtual Organisation associated with the inserted pilots. Required.
-        :paramtype vo: str
         :keyword grid_type: Grid type of the pilots.
         :paramtype grid_type: str
         :keyword grid_site: Pilots grid site.
@@ -195,7 +188,6 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         """
         super().__init__(**kwargs)
         self.pilot_stamps = pilot_stamps
-        self.vo = vo
         self.grid_type = grid_type
         self.grid_site = grid_site
         self.destination_site = destination_site

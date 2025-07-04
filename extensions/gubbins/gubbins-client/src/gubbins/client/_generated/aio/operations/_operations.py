@@ -2630,7 +2630,7 @@ class PilotsOperations:
     ) -> List[int]:
         """Get Pilot Jobs.
 
-        Endpoint only for DIRAC services, to get jobs of a pilot.
+        Endpoint only for admins, to get jobs of a pilot.
 
         :keyword pilot_stamp: The stamp of the pilot. Default value is None.
         :paramtype pilot_stamp: str
@@ -2685,7 +2685,7 @@ class PilotsOperations:
     ) -> None:
         """Add Jobs To Pilot.
 
-        Endpoint only for DIRAC services, to associate a pilot with a job.
+        Endpoint only for admins, to associate a pilot with a job.
 
         :param body: Required.
         :type body: ~_generated.models.BodyPilotsAddJobsToPilot
@@ -2703,7 +2703,7 @@ class PilotsOperations:
     ) -> None:
         """Add Jobs To Pilot.
 
-        Endpoint only for DIRAC services, to associate a pilot with a job.
+        Endpoint only for admins, to associate a pilot with a job.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2719,7 +2719,7 @@ class PilotsOperations:
     async def add_jobs_to_pilot(self, body: Union[_models.BodyPilotsAddJobsToPilot, IO[bytes]], **kwargs: Any) -> None:
         """Add Jobs To Pilot.
 
-        Endpoint only for DIRAC services, to associate a pilot with a job.
+        Endpoint only for admins, to associate a pilot with a job.
 
         :param body: Is either a BodyPilotsAddJobsToPilot type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsAddJobsToPilot or IO[bytes]

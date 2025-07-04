@@ -43,7 +43,7 @@ async def test_create_pilots(normal_test_client):
     pilot_stamps = [f"stamps_{i}" for i in range(N)]
 
     #  -------------- Bulk insert --------------
-    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps}
 
     r = normal_test_client.post(
         "/api/pilots/",
@@ -55,7 +55,6 @@ async def test_create_pilots(normal_test_client):
     #  -------------- Register a pilot that already exists, and one that does not --------------
 
     body = {
-        "vo": MAIN_VO,
         "pilot_stamps": [pilot_stamps[0], pilot_stamps[0] + "_new_one"],
     }
 
@@ -76,7 +75,7 @@ async def test_create_pilots(normal_test_client):
     #  -------------- Register a pilot that does not exists **but** was called before in an error --------------
     # To prove that, if I tried to register a pilot that does not exist with one that already exists,
     # i can normally add the one that did not exist before (it should not have added it before)
-    body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamps[0] + "_new_one"]}
+    body = {"pilot_stamps": [pilot_stamps[0] + "_new_one"]}
 
     r = normal_test_client.post(
         "/api/pilots/",
@@ -93,7 +92,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
     pilot_stamp = "stamps_1"
 
     #  -------------- Insert --------------
-    body = {"vo": MAIN_VO, "pilot_stamps": [pilot_stamp]}
+    body = {"pilot_stamps": [pilot_stamp]}
 
     # Create a pilot
     r = normal_test_client.post(
@@ -137,7 +136,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     pilot_stamps = ["stamps_1", "stamp_2"]
 
     #  -------------- Insert --------------
-    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps}
 
     # Create pilots
     r = normal_test_client.post(
@@ -192,7 +191,7 @@ async def test_associate_job_with_pilot_and_get_it(normal_test_client: TestClien
     pilot_stamps = ["stamps_1", "stamp_2"]
 
     #  -------------- Insert --------------
-    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps}
 
     # Create pilots
     r = normal_test_client.post(
@@ -294,7 +293,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     pilot_stamps = [f"stamp_{i}" for i in range(100)]
 
     # -------------- Insert all pilots --------------
-    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps}
     r = normal_test_client.post("/api/pilots/", json=body)
     assert r.status_code == 200, r.json()
 
@@ -390,7 +389,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
 async def test_associate_two_pilots_share_jobs_and_delete_first(normal_test_client):
     # 1) Create two pilots
     pilot_stamps = ["stamp_1", "stamp_2"]
-    body = {"vo": MAIN_VO, "pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps}
     r = normal_test_client.post("/api/pilots/", json=body)
     assert r.status_code == 200, r.json()
 

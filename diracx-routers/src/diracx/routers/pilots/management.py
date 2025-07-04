@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, HTTPException, Query, status
+from fastapi import Body, Depends, HTTPException, Query, status
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
@@ -26,6 +26,7 @@ from diracx.logic.pilots.management import (
     update_pilots_fields,
 )
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
+from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 from ..dependencies import PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
@@ -44,11 +45,8 @@ async def add_pilot_stamps(
         list[str],
         Body(description="List of the pilot stamps we want to add to the db."),
     ],
-    vo: Annotated[
-        str,
-        Body(description="Virtual Organisation associated with the inserted pilots."),
-    ],
     check_permissions: CheckPilotManagementPolicyCallable,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     grid_type: Annotated[str, Body(description="Grid type of the pilots.")] = "Dirac",
     grid_site: Annotated[str, Body(description="Pilots grid site.")] = "Unknown",
     destination_site: Annotated[
@@ -73,7 +71,7 @@ async def add_pilot_stamps(
         await register_new_pilots(
             pilot_db=pilot_db,
             pilot_stamps=pilot_stamps,
-            vo=vo,
+            vo=user_info.vo,
             grid_type=grid_type,
             grid_site=grid_site,
             destination_site=destination_site,
@@ -88,6 +86,7 @@ async def add_pilot_stamps(
 async def delete_pilots(
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     pilot_stamps: Annotated[
         list[str] | None, Query(description="Stamps of the pilots we want to delete.")
     ] = None,
@@ -121,9 +120,18 @@ async def delete_pilots(
 
     Note: If you delete a pilot, its logs and its associations with jobs WILL be deleted.
     """
-    await check_permissions(
-        action=ActionType.MANAGE_PILOTS,
-    )
+    vo_constraint: str | None = None
+
+    # If we delete by pilot_stamps, we check that we can access them
+    # Else, we add a constraint to the request, to avoid deleting pilots from another VO
+    if pilot_stamps:
+        await check_permissions(
+            action=ActionType.MANAGE_PILOTS,
+            pilot_db=pilot_db,
+            pilot_stamps=pilot_stamps,
+        )
+    else:
+        vo_constraint = user_info.vo
 
     if not pilot_stamps and not age_in_days:
         raise HTTPException(
@@ -136,6 +144,7 @@ async def delete_pilots(
         pilot_stamps=pilot_stamps,
         age_in_days=age_in_days,
         delete_only_aborted=delete_only_aborted,
+        vo_constraint=vo_constraint,
     )
 
 
@@ -169,7 +178,7 @@ async def update_pilot_fields(
         Body(
             description="(pilot_stamp, pilot_fields) mapping to change.",
             embed=True,
-            openapi_examples=EXAMPLE_UPDATE_FIELDS,
+            openapi_examples=EXAMPLE_UPDATE_FIELDS,  # type: ignore
         ),
     ],
     pilot_db: PilotAgentsDB,
@@ -180,7 +189,10 @@ async def update_pilot_fields(
     Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
     """
     # Ensures stamps validity
-    await check_permissions(action=ActionType.MANAGE_PILOTS)
+    pilot_stamps = [mapping.PilotStamp for mapping in pilot_stamps_to_fields_mapping]
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS, pilot_db=pilot_db, pilot_stamps=pilot_stamps
+    )
 
     await update_pilots_fields(
         pilot_db=pilot_db,
@@ -197,15 +209,16 @@ async def get_pilot_jobs(
     ] = None,
     job_id: Annotated[int | None, Query(description="The ID of the job.")] = None,
 ) -> list[int]:
-    """Endpoint only for DIRAC services, to get jobs of a pilot."""
-    await check_permissions(action=ActionType.READ_PILOT_FIELDS)
-
+    """Endpoint only for admins, to get jobs of a pilot."""
     if pilot_stamp:
+        await check_permissions(action=ActionType.READ_PILOT_FIELDS)
+
         return await get_pilot_jobs_ids_by_stamp(
             pilot_db=pilot_db,
             pilot_stamp=pilot_stamp,
         )
     elif job_id:
+        # FIXME: Add some policy, verify that it's the user's job?
         return await get_pilot_ids_by_job_id(pilot_db=pilot_db, job_id=job_id)
 
     raise HTTPException(
@@ -223,8 +236,11 @@ async def add_jobs_to_pilot(
     ],
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
-    """Endpoint only for DIRAC services, to associate a pilot with a job."""
-    await check_permissions(action=ActionType.MANAGE_PILOTS)
+    """Endpoint only for admins, to associate a pilot with a job."""
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS, pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+    )
+    # FIXME: Also verify job_ids
 
     try:
         await add_jobs_to_pilot_bl(
