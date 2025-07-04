@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 
 from diracx.core.models import VectorSearchOperator, VectorSearchSpec
-from diracx.core.properties import SERVICE_ADMINISTRATOR
+from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.logic.pilots.query import get_pilots_by_stamp
@@ -39,20 +39,32 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         pilot_stamps: list[str] | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
+        allow_legacy_pilots: bool = False
     ):
         assert action, "action is a mandatory parameter"
 
         # Users can query
         # NOTE: Add into queries a VO constraint
         # To manage pilots, user have to be an admin
-        if (
-            action == ActionType.MANAGE_PILOTS
-            and SERVICE_ADMINISTRATOR not in user_info.properties
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have the permission to manage pilots.",
-            )
+        # In some special cases (described with allow_legacy_pilots), we can allow pilots
+        if action == ActionType.MANAGE_PILOTS:
+
+            # To make it clear, we separate
+            is_an_admin = SERVICE_ADMINISTRATOR in user_info.properties
+            is_a_pilot_if_allowed = allow_legacy_pilots and GENERIC_PILOT in user_info.properties
+
+            if not is_an_admin and not is_a_pilot_if_allowed:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have the permission to manage pilots.",
+                )
+
+        if action == ActionType.READ_PILOT_FIELDS:
+            if GENERIC_PILOT in user_info.properties:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Pilots can't read other pilots info."
+                )
 
         #
         # Additional checks if job_ids or pilot_stamps are provided

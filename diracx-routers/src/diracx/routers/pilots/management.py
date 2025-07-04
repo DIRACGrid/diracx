@@ -3,6 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
+from diracx.core.properties import GENERIC_PILOT
 from fastapi import Body, Depends, HTTPException, Query, status
 
 from diracx.core.exceptions import (
@@ -65,7 +66,19 @@ async def add_pilot_stamps(
     If a pilot stamp already exists, it will block the insertion.
     """
     # TODO: Verify that grid types, sites, destination sites, etc. are valids
-    await check_permissions(action=ActionType.MANAGE_PILOTS)
+    await check_permissions(
+        action=ActionType.MANAGE_PILOTS,
+        allow_legacy_pilots=True # dirac-admin-add-pilot
+    )
+
+    # Prevent someone who stole a pilot X509 to create thousands of pilots at a time
+    # (It would be still able to create thousands of pilots, but slower)
+    if GENERIC_PILOT in user_info.properties:
+        if len(pilot_stamps) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="As a pilot, you can only create yourself."
+            )
 
     try:
         await register_new_pilots(
@@ -183,6 +196,7 @@ async def update_pilot_fields(
     ],
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
     """Modify a field of a pilot.
 
@@ -191,8 +205,22 @@ async def update_pilot_fields(
     # Ensures stamps validity
     pilot_stamps = [mapping.PilotStamp for mapping in pilot_stamps_to_fields_mapping]
     await check_permissions(
-        action=ActionType.MANAGE_PILOTS, pilot_db=pilot_db, pilot_stamps=pilot_stamps
+        action=ActionType.MANAGE_PILOTS, 
+        pilot_db=pilot_db, 
+        pilot_stamps=pilot_stamps,
+        allow_legacy_pilots=True # dirac-admin-add-pilot
     )
+
+    # Prevent someone who stole a pilot X509 to modify thousands of pilots at a time
+    # (It would be still able to modify thousands of pilots, but slower)
+    # We are not able to affirm that this pilots modifies itself
+    if GENERIC_PILOT in user_info.properties:
+        if len(pilot_stamps) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="As a pilot, you can only modify yourself."
+            )
+
 
     await update_pilots_fields(
         pilot_db=pilot_db,
