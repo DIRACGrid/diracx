@@ -623,9 +623,15 @@ async def _insert_parameters(
     if not updates:
         return
     # Get the VOs for the job IDs (required for the index template)
-    job_vos = await job_db.summary(
+    job_vos = await job_db.job_summary(
         ["JobID", "VO"],
-        [{"parameter": "JobID", "operator": "in", "values": list(updates)}],
+        [
+            VectorSearchSpec(
+                parameter="JobID",
+                operator=VectorSearchOperator.IN,
+                values=list(updates),
+            )
+        ],
     )
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
     # Upsert the parameters into the JobParametersDB

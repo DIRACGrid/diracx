@@ -23,7 +23,7 @@ base_payload = {
 
 
 class FakeJobDB:
-    async def summary(self, *args): ...
+    async def job_summary(self, *args): ...
 
 
 class FakeSBMetadataDB:
@@ -159,7 +159,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
         async def summary_matching(*args):
             return [{"Owner": "preferred_username", "VO": "lhcb", "count": 3}]
 
-        monkeypatch.setattr(job_db, "summary", summary_matching)
+        monkeypatch.setattr(job_db, "job_summary", summary_matching)
 
         await WMSAccessPolicy.policy(
             WMS_POLICY_NAME,
@@ -182,7 +182,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
         async def summary_other_owner(*args):
             return [{"Owner": "other_owner", "VO": "lhcb", "count": 3}]
 
-        monkeypatch.setattr(job_db, "summary", summary_other_owner)
+        monkeypatch.setattr(job_db, "job_summary", summary_other_owner)
         with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,
@@ -196,7 +196,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
         async def summary_other_vo(*args):
             return [{"Owner": "preferred_username", "VO": "gridpp", "count": 3}]
 
-        monkeypatch.setattr(job_db, "summary", summary_other_vo)
+        monkeypatch.setattr(job_db, "job_summary", summary_other_vo)
         with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,
@@ -210,7 +210,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
         async def summary_other_vo(*args):
             return [{"Owner": "preferred_username", "VO": "lhcb", "count": 2}]
 
-        monkeypatch.setattr(job_db, "summary", summary_other_vo)
+        monkeypatch.setattr(job_db, "job_summary", summary_other_vo)
         with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,

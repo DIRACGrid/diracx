@@ -6,8 +6,8 @@ from typing import Annotated, Any
 from fastapi import Body, Depends, Response
 
 from diracx.core.models import (
-    JobSummaryParams,
     SearchParams,
+    SummaryParams,
 )
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
@@ -178,7 +178,7 @@ async def summary(
     config: Config,
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    body: JobSummaryParams,
+    body: SummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Show information suitable for plotting."""
