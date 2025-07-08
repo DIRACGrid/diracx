@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
-    BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
     BodyPilotsUpdatePilotFields,
     ExtendedMetadata,
@@ -66,7 +65,6 @@ from diracx.client._generated.models._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
-    "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",
     "BodyPilotsUpdatePilotFields",
     "ExtendedMetadata",

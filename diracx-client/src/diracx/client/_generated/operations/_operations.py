@@ -667,20 +667,6 @@ def build_pilots_get_pilot_jobs_request(
     return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_pilots_add_jobs_to_pilot_request(**kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    # Construct URL
-    _url = "/api/pilots/jobs"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-
-    return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
-
-
 def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -3158,99 +3144,6 @@ class PilotsOperations:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
-
-    @overload
-    def add_jobs_to_pilot(
-        self, body: _models.BodyPilotsAddJobsToPilot, *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Required.
-        :type body: ~_generated.models.BodyPilotsAddJobsToPilot
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def add_jobs_to_pilot(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def add_jobs_to_pilot(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[_models.BodyPilotsAddJobsToPilot, IO[bytes]], **kwargs: Any
-    ) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Is either a BodyPilotsAddJobsToPilot type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsAddJobsToPilot or IO[bytes]
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[None] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "BodyPilotsAddJobsToPilot")
-
-        _request = build_pilots_add_jobs_to_pilot_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [204]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        if cls:
-            return cls(pipeline_response, None, {})  # type: ignore
 
     @overload
     def search(

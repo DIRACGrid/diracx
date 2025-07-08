@@ -3,14 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import update
 
 from diracx.core.models import (
     PilotFieldsMapping,
     PilotStatus,
-    ScalarSearchOperator,
-    ScalarSearchSpec,
 )
 from diracx.db.sql import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
@@ -188,106 +185,6 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     assert pilot2["Status"] != pilot1["Status"]
 
 
-async def test_associate_job_with_pilot_and_get_it(normal_test_client: TestClient):
-    pilot_stamps = ["stamps_1", "stamp_2"]
-
-    #  -------------- Insert --------------
-    body = {"pilot_stamps": pilot_stamps}
-
-    # Create pilots
-    r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
-    )
-
-    assert r.status_code == 200, r.json()
-
-    # --------------- As DIRAC, associate a job with a pilot --------
-    job_ids = [1, 2]
-    body = {"pilot_stamp": pilot_stamps[0], "job_ids": job_ids}
-
-    # Create pilots
-    r = normal_test_client.patch(
-        "/api/pilots/jobs",
-        json=body,
-    )
-
-    assert r.status_code == 204
-
-    # -------------- Redo it, expect 409 (Conflict) ---------------------
-    job_ids = [1, 2, 3]  # Note for next test : add 3
-    body = {"pilot_stamp": pilot_stamps[0], "job_ids": job_ids}
-
-    # Create pilots
-    r = normal_test_client.patch(
-        "/api/pilots/jobs",
-        json=body,
-    )
-
-    assert r.status_code == 409
-
-    # -------------- Add 3 ---------------------
-    body = {"pilot_stamp": pilot_stamps[0], "job_ids": [3]}
-
-    # Create pilots
-    r = normal_test_client.patch(
-        "/api/pilots/jobs",
-        json=body,
-    )
-
-    assert r.status_code == 204
-
-    # -------------- Add with unknown pilot ---------------------
-    body = {"pilot_stamp": "stampounet", "job_ids": job_ids}
-
-    # Create pilots
-    r = normal_test_client.patch(
-        "/api/pilots/jobs",
-        json=body,
-    )
-
-    assert r.status_code == 400
-
-    # -------------- Get its jobs ---------------------
-    r = normal_test_client.get(
-        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[0]}
-    )
-
-    assert r.status_code == 200
-    assert r.json() == job_ids
-
-    # -------------- Get the other pilot's jobs ---------------------
-    r = normal_test_client.get(
-        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[1]}
-    )
-
-    assert r.status_code == 200
-    assert r.json() == []
-
-    # -------------- Get pilots associated to job 1 ---------------------
-    r = normal_test_client.get("/api/pilots/jobs", params={"job_id": job_ids[0]})
-
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    expected_pilot_id = r.json()[0]
-
-    # -------------- Get pilot info to verify that its id is expected_pilot_id ---------------------
-    condition = ScalarSearchSpec(
-        parameter="PilotID",
-        operator=ScalarSearchOperator.EQUAL,
-        value=expected_pilot_id,
-    )
-
-    r = normal_test_client.post(
-        "/api/pilots/search",
-        json={"parameters": [], "search": [condition], "sorts": []},
-    )
-
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 1
-    assert r.json()[0]["PilotStamp"] == pilot_stamps[0]
-
-
 @pytest.mark.asyncio
 async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     # Generate 100 pilot stamps
@@ -384,43 +281,3 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
         "/api/pilots/", params={"pilot_stamps": ["unknown_stamp"]}
     )
     assert r.status_code == 204
-
-
-@pytest.mark.asyncio
-async def test_associate_two_pilots_share_jobs_and_delete_first(normal_test_client):
-    # 1) Create two pilots
-    pilot_stamps = ["stamp_1", "stamp_2"]
-    body = {"pilot_stamps": pilot_stamps}
-    r = normal_test_client.post("/api/pilots/", json=body)
-    assert r.status_code == 200, r.json()
-
-    # 2) Associate first pilot with jobs 1-10
-    job_ids = list(range(1, 11))
-    body = {"pilot_stamp": pilot_stamps[0], "job_ids": job_ids}
-    r = normal_test_client.patch("/api/pilots/jobs", json=body)
-    assert r.status_code == 204
-
-    # 3) Associate second pilot with the same jobs
-    body = {"pilot_stamp": pilot_stamps[1], "job_ids": job_ids}
-    r = normal_test_client.patch("/api/pilots/jobs", json=body)
-    assert r.status_code == 204
-
-    # 4) Delete first pilot
-    r = normal_test_client.delete(
-        "/api/pilots/", params={"pilot_stamps": [pilot_stamps[0]]}
-    )
-    assert r.status_code == 204
-
-    # 5) Get jobs for pilot_1: expect empty list
-    r = normal_test_client.get(
-        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[0]}
-    )
-    assert r.status_code == 200
-    assert r.json() == []
-
-    # 6) Get jobs for pilot_2: expect original job_ids
-    r = normal_test_client.get(
-        "/api/pilots/jobs", params={"pilot_stamp": pilot_stamps[1]}
-    )
-    assert r.status_code == 200
-    assert r.json() == job_ids
