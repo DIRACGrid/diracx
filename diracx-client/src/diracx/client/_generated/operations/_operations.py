@@ -272,40 +272,6 @@ def build_auth_complete_authorization_flow_request(  # pylint: disable=name-too-
     return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_auth_perform_secret_exchange_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/auth/secret-exchange"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_auth_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/auth/pilot-token"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
 def build_config_serve_config_request(
     *,
     if_modified_since: Optional[str] = None,
@@ -668,37 +634,6 @@ def build_pilots_delete_pilots_request(
     return HttpRequest(method="DELETE", url=_url, params=_params, **kwargs)
 
 
-def build_pilots_create_pilot_secrets_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/pilots/secrets"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-def build_pilots_update_secrets_constraints_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    # Construct URL
-    _url = "/api/pilots/secrets"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-
-    return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
-
-
 def build_pilots_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
@@ -736,42 +671,6 @@ def build_pilots_get_pilot_jobs_request(
     return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-<<<<<<< HEAD
-=======
-def build_pilots_add_jobs_to_pilot_request(**kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-    # Construct URL
-    _url = "/api/pilots/jobs"
-
-    # Construct headers
-    if content_type is not None:
-        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
-
-    return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
-
-
-<<<<<<< HEAD
-def build_pilots_userinfo_request(*, authorization: Optional[str] = None, **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/pilots/pilotinfo"
-
-    # Construct headers
-    if authorization is not None:
-        _headers["authorization"] = _SERIALIZER.header("authorization", authorization, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
-
-
->>>>>>> 6040be1 (fix: Generate-client)
-=======
->>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -796,54 +695,14 @@ def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs:
     return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 def build_pilots_summary_request(**kwargs: Any) -> HttpRequest:
-=======
-<<<<<<< HEAD
-=======
-=======
->>>>>>> d7af881 (fix: Generate-client)
-def build_pilots_perform_secret_exchange_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
->>>>>>> 2e7e688 (fix: Generate client)
-=======
-def build_pilots_internal_userinfo_request(*, authorization: Optional[str] = None, **kwargs: Any) -> HttpRequest:
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-<<<<<<< HEAD
-<<<<<<< HEAD
-    _url = "/api/pilots/summary"
-=======
-    _url = "/api/pilots/secret-exchange"
->>>>>>> 2e7e688 (fix: Generate client)
-=======
-    _url = "/api/pilots/internal/pilotinfo"
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
-
-    # Construct headers
-    if authorization is not None:
-        _headers["authorization"] = _SERIALIZER.header("authorization", authorization, "str")
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-<<<<<<< HEAD
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-
-
-<<<<<<< HEAD
-=======
-def build_pilots_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/pilots/token"
+    _url = "/api/pilots/summary"
 
     # Construct headers
     if content_type is not None:
@@ -851,16 +710,8 @@ def build_pilots_refresh_pilot_tokens_request(**kwargs: Any) -> HttpRequest:  # 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
-=======
-    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
 
 
-<<<<<<< HEAD
->>>>>>> 2099d7ba (fix: Generate client)
->>>>>>> 2e7e688 (fix: Generate client)
-=======
->>>>>>> d7af881 (fix: Generate-client)
 class WellKnownOperations:
     """
     .. warning::
@@ -1640,210 +1491,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("object", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @overload
-    def perform_secret_exchange(
-        self, body: _models.PilotCredentials, *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Perform Secret Exchange.
-
-        This endpoint is used by the pilot to exchange a secret for a token.
-
-        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
-
-        :param body: Required.
-        :type body: ~_generated.models.PilotCredentials
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def perform_secret_exchange(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Perform Secret Exchange.
-
-        This endpoint is used by the pilot to exchange a secret for a token.
-
-        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def perform_secret_exchange(
-        self, body: Union[_models.PilotCredentials, IO[bytes]], **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Perform Secret Exchange.
-
-        This endpoint is used by the pilot to exchange a secret for a token.
-
-        This endpoint also acts as DIRAC's ``dirac-admin-add-pilot``.
-
-        :param body: Is either a PilotCredentials type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.PilotCredentials or IO[bytes]
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "PilotCredentials")
-
-        _request = build_auth_perform_secret_exchange_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @overload
-    def refresh_pilot_tokens(
-        self, body: _models.BodyAuthRefreshPilotTokens, *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Required.
-        :type body: ~_generated.models.BodyAuthRefreshPilotTokens
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def refresh_pilot_tokens(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def refresh_pilot_tokens(
-        self, body: Union[_models.BodyAuthRefreshPilotTokens, IO[bytes]], **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Is either a BodyAuthRefreshPilotTokens type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyAuthRefreshPilotTokens or IO[bytes]
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "BodyAuthRefreshPilotTokens")
-
-        _request = build_auth_refresh_pilot_tokens_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3187,7 +2834,7 @@ class PilotsOperations:
     @overload
     def add_pilot_stamps(
         self, body: _models.BodyPilotsAddPilotStamps, *, content_type: str = "application/json", **kwargs: Any
-    ) -> Optional[List[_models.PilotCredentialsInfo]]:
+    ) -> Any:
         """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
@@ -3199,15 +2846,13 @@ class PilotsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of PilotCredentialsInfo or None
-        :rtype: list[~_generated.models.PilotCredentialsInfo] or None
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
-    def add_pilot_stamps(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> Optional[List[_models.PilotCredentialsInfo]]:
+    def add_pilot_stamps(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
@@ -3219,15 +2864,13 @@ class PilotsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of PilotCredentialsInfo or None
-        :rtype: list[~_generated.models.PilotCredentialsInfo] or None
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-    def add_pilot_stamps(
-        self, body: Union[_models.BodyPilotsAddPilotStamps, IO[bytes]], **kwargs: Any
-    ) -> Optional[List[_models.PilotCredentialsInfo]]:
+    def add_pilot_stamps(self, body: Union[_models.BodyPilotsAddPilotStamps, IO[bytes]], **kwargs: Any) -> Any:
         """Add Pilot Stamps.
 
         Endpoint where a you can create pilots with their references.
@@ -3236,8 +2879,8 @@ class PilotsOperations:
 
         :param body: Is either a BodyPilotsAddPilotStamps type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyPilotsAddPilotStamps or IO[bytes]
-        :return: list of PilotCredentialsInfo or None
-        :rtype: list[~_generated.models.PilotCredentialsInfo] or None
+        :return: any
+        :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -3252,7 +2895,7 @@ class PilotsOperations:
         _params = kwargs.pop("params", {}) or {}
 
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[Optional[List[_models.PilotCredentialsInfo]]] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -3282,7 +2925,7 @@ class PilotsOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("[PilotCredentialsInfo]", pipeline_response.http_response)
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
@@ -3341,200 +2984,6 @@ class PilotsOperations:
             pilot_stamps=pilot_stamps,
             age_in_days=age_in_days,
             delete_only_aborted=delete_only_aborted,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [204]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        if cls:
-            return cls(pipeline_response, None, {})  # type: ignore
-
-    @overload
-    def create_pilot_secrets(
-        self, body: _models.BodyPilotsCreatePilotSecrets, *, content_type: str = "application/json", **kwargs: Any
-    ) -> List[_models.PilotSecretsInfo]:
-        """Create Pilot Secrets.
-
-        Endpoint to create secrets.
-
-        :param body: Required.
-        :type body: ~_generated.models.BodyPilotsCreatePilotSecrets
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: list of PilotSecretsInfo
-        :rtype: list[~_generated.models.PilotSecretsInfo]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def create_pilot_secrets(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> List[_models.PilotSecretsInfo]:
-        """Create Pilot Secrets.
-
-        Endpoint to create secrets.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: list of PilotSecretsInfo
-        :rtype: list[~_generated.models.PilotSecretsInfo]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def create_pilot_secrets(
-        self, body: Union[_models.BodyPilotsCreatePilotSecrets, IO[bytes]], **kwargs: Any
-    ) -> List[_models.PilotSecretsInfo]:
-        """Create Pilot Secrets.
-
-        Endpoint to create secrets.
-
-        :param body: Is either a BodyPilotsCreatePilotSecrets type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsCreatePilotSecrets or IO[bytes]
-        :return: list of PilotSecretsInfo
-        :rtype: list[~_generated.models.PilotSecretsInfo]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[List[_models.PilotSecretsInfo]] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "BodyPilotsCreatePilotSecrets")
-
-        _request = build_pilots_create_pilot_secrets_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("[PilotSecretsInfo]", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @overload
-    def update_secrets_constraints(
-        self, body: Dict[str, _models.PilotSecretConstraints], *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
-        """Update Secrets Constraints.
-
-        Endpoint to associate pilots with secrets.
-
-        :param body: Required.
-        :type body: dict[str, ~_generated.models.PilotSecretConstraints]
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def update_secrets_constraints(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
-        """Update Secrets Constraints.
-
-        Endpoint to associate pilots with secrets.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def update_secrets_constraints(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[Dict[str, _models.PilotSecretConstraints], IO[bytes]], **kwargs: Any
-    ) -> None:
-        """Update Secrets Constraints.
-
-        Endpoint to associate pilots with secrets.
-
-        :param body: Is either a {str: PilotSecretConstraints} type or a IO[bytes] type. Required.
-        :type body: dict[str, ~_generated.models.PilotSecretConstraints] or IO[bytes]
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[None] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "{PilotSecretConstraints}")
-
-        _request = build_pilots_update_secrets_constraints_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -3709,106 +3158,6 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
     @overload
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2099d7ba (fix: Generate client)
-=======
->>>>>>> 6040be1 (fix: Generate-client)
-    def add_jobs_to_pilot(
-        self, body: _models.BodyPilotsAddJobsToPilot, *, content_type: str = "application/json", **kwargs: Any
-    ) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Required.
-        :type body: ~_generated.models.BodyPilotsAddJobsToPilot
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def add_jobs_to_pilot(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def add_jobs_to_pilot(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[_models.BodyPilotsAddJobsToPilot, IO[bytes]], **kwargs: Any
-    ) -> None:
-        """Add Jobs To Pilot.
-
-        Endpoint only for admins, to associate a pilot with a job.
-
-        :param body: Is either a BodyPilotsAddJobsToPilot type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsAddJobsToPilot or IO[bytes]
-        :return: None
-        :rtype: None
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-        _params = kwargs.pop("params", {}) or {}
-
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[None] = kwargs.pop("cls", None)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-            _json = self._serialize.body(body, "BodyPilotsAddJobsToPilot")
-
-        _request = build_pilots_add_jobs_to_pilot_request(
-            content_type=content_type,
-            json=_json,
-            content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [204]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        if cls:
-            return cls(pipeline_response, None, {})  # type: ignore
-
-    @overload
->>>>>>> a6aa84b (fix: Generate client)
     def search(
         self,
         body: Optional[_models.SearchParams] = None,
@@ -3944,8 +3293,6 @@ class PilotsOperations:
             return cls(pipeline_response, deserialized, response_headers)  # type: ignore
 
         return deserialized  # type: ignore
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     @overload
     def summary(self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any) -> Any:
@@ -3960,62 +3307,26 @@ class PilotsOperations:
         :paramtype content_type: str
         :return: any
         :rtype: any
-=======
-<<<<<<< HEAD
-=======
-=======
->>>>>>> d7af881 (fix: Generate-client)
-
-
-class PilotsInternalOperations:
-    """
-    .. warning::
-        **DO NOT** instantiate this class directly.
-
-<<<<<<< HEAD
-        :param body: Required.
-        :type body: ~_generated.models.BodyPilotsPerformSecretExchange
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
->>>>>>> 2e7e688 (fix: Generate client)
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @overload
-<<<<<<< HEAD
     def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
         Show information suitable for plotting.
-=======
-    def perform_secret_exchange(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Perform Secret Exchange.
-
-        This endpoint is used by the pilot to exchange a secret for a token.
->>>>>>> 2e7e688 (fix: Generate client)
 
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-<<<<<<< HEAD
         :return: any
         :rtype: any
-=======
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
->>>>>>> 2e7e688 (fix: Generate client)
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
     @distributed_trace
-<<<<<<< HEAD
     def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
@@ -4025,168 +3336,6 @@ class PilotsInternalOperations:
         :type body: ~_generated.models.SummaryParams or IO[bytes]
         :return: any
         :rtype: any
-=======
-    def perform_secret_exchange(
-        self, body: Union[_models.BodyPilotsPerformSecretExchange, IO[bytes]], **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Perform Secret Exchange.
-=======
-        Instead, you should access the following operations through
-        :class:`~_generated.Dirac`'s
-        :attr:`pilots_internal` attribute.
-    """
-
-    models = _models
-
-    def __init__(self, *args, **kwargs) -> None:
-        input_args = list(args)
-        self._client: PipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
-        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
-        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
-        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
-
-    @distributed_trace
-    def userinfo(self, *, authorization: Optional[str] = None, **kwargs: Any) -> _models.PilotInfo:
-        """Userinfo.
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
-
-        Get information about the user's identity.
-
-<<<<<<< HEAD
-        :param body: Is either a BodyPilotsPerformSecretExchange type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsPerformSecretExchange or IO[bytes]
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
->>>>>>> 2e7e688 (fix: Generate client)
-=======
-        :keyword authorization: Default value is None.
-        :paramtype authorization: str
-        :return: PilotInfo
-        :rtype: ~_generated.models.PilotInfo
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-<<<<<<< HEAD
-        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-<<<<<<< HEAD
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-=======
-        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
->>>>>>> 2e7e688 (fix: Generate client)
-
-        content_type = content_type or "application/json"
-        _json = None
-        _content = None
-        if isinstance(body, (IOBase, bytes)):
-            _content = body
-        else:
-<<<<<<< HEAD
-            _json = self._serialize.body(body, "SummaryParams")
-
-        _request = build_pilots_summary_request(
-=======
-            _json = self._serialize.body(body, "BodyPilotsPerformSecretExchange")
-
-        _request = build_pilots_perform_secret_exchange_request(
->>>>>>> 2e7e688 (fix: Generate client)
-            content_type=content_type,
-            json=_json,
-            content=_content,
-=======
-        cls: ClsType[_models.PilotInfo] = kwargs.pop("cls", None)
-
-        _request = build_pilots_internal_userinfo_request(
-            authorization=authorization,
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-        deserialized = self._deserialize("object", pipeline_response.http_response)
-=======
-        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
->>>>>>> 2e7e688 (fix: Generate client)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-<<<<<<< HEAD
-=======
-
-    @overload
-    def refresh_pilot_tokens(
-        self, body: _models.BodyPilotsRefreshPilotTokens, *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Required.
-        :type body: ~_generated.models.BodyPilotsRefreshPilotTokens
-        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @overload
-    def refresh_pilot_tokens(
-        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Required.
-        :type body: IO[bytes]
-        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
-         Default value is "application/json".
-        :paramtype content_type: str
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-
-    @distributed_trace
-    def refresh_pilot_tokens(
-        self, body: Union[_models.BodyPilotsRefreshPilotTokens, IO[bytes]], **kwargs: Any
-    ) -> _models.TokenResponse:
-        """Refresh Pilot Tokens.
-
-        Endpoint where *only* pilots can exchange a refresh token for a token.
-
-        :param body: Is either a BodyPilotsRefreshPilotTokens type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsRefreshPilotTokens or IO[bytes]
-        :return: TokenResponse
-        :rtype: ~_generated.models.TokenResponse
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -4201,7 +3350,7 @@ class PilotsInternalOperations:
         _params = kwargs.pop("params", {}) or {}
 
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[_models.TokenResponse] = kwargs.pop("cls", None)
+        cls: ClsType[Any] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -4209,9 +3358,9 @@ class PilotsInternalOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsRefreshPilotTokens")
+            _json = self._serialize.body(body, "SummaryParams")
 
-        _request = build_pilots_refresh_pilot_tokens_request(
+        _request = build_pilots_summary_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -4231,17 +3380,9 @@ class PilotsInternalOperations:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response)
 
-        deserialized = self._deserialize("TokenResponse", pipeline_response.http_response)
-=======
-        deserialized = self._deserialize("PilotInfo", pipeline_response.http_response)
->>>>>>> ce99e58 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
-<<<<<<< HEAD
->>>>>>> 2099d7ba (fix: Generate client)
->>>>>>> 2e7e688 (fix: Generate client)
-=======
->>>>>>> d7af881 (fix: Generate-client)

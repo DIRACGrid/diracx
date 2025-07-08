@@ -14,17 +14,7 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    BodyAuthPerformSecretExchange,
-=======
->>>>>>> 4aeb541 (feat: Add vacuum case (equiv dirac-admin-add-pilot))
-    BodyAuthRefreshPilotTokens,
-    BodyPilotsAddJobsToPilot,
->>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     BodyPilotsAddPilotStamps,
-    BodyPilotsCreatePilotSecrets,
     BodyPilotsUpdatePilotFields,
     GroupInfo,
     HTTPValidationError,
@@ -35,13 +25,7 @@ from ._models import (  # type: ignore
     JobStatusUpdate,
     Metadata,
     OpenIDConfiguration,
-    PilotAuthCredentials,
-    PilotCredentials,
-    PilotCredentialsInfo,
     PilotFieldsMapping,
-    PilotInfo,
-    PilotSecretConstraints,
-    PilotSecretsInfo,
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxUploadResponse,
@@ -58,7 +42,6 @@ from ._models import (  # type: ignore
     TokenResponse,
     UserInfoResponse,
     VOInfo,
-    VacuumPilotAuth,
     ValidationError,
     ValidationErrorLocItem,
     VectorSearchSpec,
@@ -82,17 +65,7 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    "BodyAuthPerformSecretExchange",
-=======
->>>>>>> 4aeb541 (feat: Add vacuum case (equiv dirac-admin-add-pilot))
-    "BodyAuthRefreshPilotTokens",
-    "BodyPilotsAddJobsToPilot",
->>>>>>> 6377962 (refactor: Splitted endpoints into /pilots and /pilots/internal WITH auth in both)
     "BodyPilotsAddPilotStamps",
-    "BodyPilotsCreatePilotSecrets",
     "BodyPilotsUpdatePilotFields",
     "GroupInfo",
     "HTTPValidationError",
@@ -103,13 +76,7 @@ __all__ = [
     "JobStatusUpdate",
     "Metadata",
     "OpenIDConfiguration",
-    "PilotAuthCredentials",
-    "PilotCredentials",
-    "PilotCredentialsInfo",
     "PilotFieldsMapping",
-    "PilotInfo",
-    "PilotSecretConstraints",
-    "PilotSecretsInfo",
     "SandboxDownloadResponse",
     "SandboxInfo",
     "SandboxUploadResponse",
@@ -126,7 +93,6 @@ __all__ = [
     "TokenResponse",
     "UserInfoResponse",
     "VOInfo",
-    "VacuumPilotAuth",
     "ValidationError",
     "ValidationErrorLocItem",
     "VectorSearchSpec",

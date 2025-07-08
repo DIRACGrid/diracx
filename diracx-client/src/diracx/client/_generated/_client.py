@@ -15,14 +15,7 @@ from azure.core.rest import HttpRequest, HttpResponse
 from . import models as _models
 from ._configuration import DiracConfiguration
 from ._utils.serialization import Deserializer, Serializer
-from .operations import (
-    AuthOperations,
-    ConfigOperations,
-    JobsOperations,
-    PilotsInternalOperations,
-    PilotsOperations,
-    WellKnownOperations,
-)
+from .operations import AuthOperations, ConfigOperations, JobsOperations, PilotsOperations, WellKnownOperations
 
 
 class Dirac:  # pylint: disable=client-accepts-api-version-keyword
@@ -38,8 +31,6 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype jobs: _generated.operations.JobsOperations
     :ivar pilots: PilotsOperations operations
     :vartype pilots: _generated.operations.PilotsOperations
-    :ivar pilots_internal: PilotsInternalOperations operations
-    :vartype pilots_internal: _generated.operations.PilotsInternalOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -77,7 +68,6 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
         self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.pilots_internal = PilotsInternalOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(self, request: HttpRequest, *, stream: bool = False, **kwargs: Any) -> HttpResponse:
         """Runs the network request through the client's chained policies.
