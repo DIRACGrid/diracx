@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 from ._models import (  # type: ignore
     BodyAuthGetOidcToken,
     BodyAuthGetOidcTokenGrantType,
-    BodyPilotsAddJobsToPilot,
     BodyPilotsAddPilotStamps,
     BodyPilotsUpdatePilotFields,
     GroupInfo,
@@ -66,7 +65,6 @@ from ._patch import patch_sdk as _patch_sdk
 __all__ = [
     "BodyAuthGetOidcToken",
     "BodyAuthGetOidcTokenGrantType",
-    "BodyPilotsAddJobsToPilot",
     "BodyPilotsAddPilotStamps",
     "BodyPilotsUpdatePilotFields",
     "GroupInfo",
