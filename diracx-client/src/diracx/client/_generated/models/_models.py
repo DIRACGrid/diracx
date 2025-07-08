@@ -94,39 +94,6 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
-class BodyPilotsAddJobsToPilot(_serialization.Model):
-    """Body_pilots_add_jobs_to_pilot.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: The stamp of the pilot. Required.
-    :vartype pilot_stamp: str
-    :ivar job_ids: The jobs we want to add to the pilot. Required.
-    :vartype job_ids: list[int]
-    """
-
-    _validation = {
-        "pilot_stamp": {"required": True},
-        "job_ids": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "job_ids": {"key": "job_ids", "type": "[int]"},
-    }
-
-    def __init__(self, *, pilot_stamp: str, job_ids: List[int], **kwargs: Any) -> None:
-        """
-        :keyword pilot_stamp: The stamp of the pilot. Required.
-        :paramtype pilot_stamp: str
-        :keyword job_ids: The jobs we want to add to the pilot. Required.
-        :paramtype job_ids: list[int]
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
-        self.job_ids = job_ids
-
-
 class BodyPilotsAddPilotStamps(_serialization.Model):
     """Body_pilots_add_pilot_stamps.
 
