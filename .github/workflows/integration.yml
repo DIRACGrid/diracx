@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         dirac-branch:
-          - integration
+          - robin-improve-ci # FIXME: Change me
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,13 +37,21 @@ jobs:
       - name: Clone DIRAC
         run: |
           pip install typer pyyaml gitpython packaging
-          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          # FIXME: Change me
+          git clone https://github.com/Robin-Van-de-Merghel/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
           # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment
-        run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --diracx-dist-dir "${GITHUB_WORKSPACE}/dist"
+        run: |
+          cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment \
+            "TEST_DIRACX=Yes" \
+            --diracx-dist-dir "${GITHUB_WORKSPACE}/dist" \
+            --legacy-adapted-services WorkloadManagement/JobMonitoring \
+            --legacy-adapted-services WorkloadManagement/JobStateUpdate
       - name: Install server
         run:  cd /tmp/DIRACRepo && ./integration_tests.py install-server
+      - name: Get legacy adaptors
+        run: cd /tmp/DIRACRepo && ./integration_tests.py list-legacy-adapted-services
       - name: Install client
         run: cd /tmp/DIRACRepo && ./integration_tests.py install-client
       - name: Install pilot
