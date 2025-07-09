@@ -18,7 +18,12 @@ from botocore.errorfactory import ClientError
 from .models import ChecksumAlgorithm
 
 if TYPE_CHECKING:
+    from typing import TypedDict
+
     from types_aiobotocore_s3.client import S3Client
+
+    class S3Object(TypedDict):
+        Key: str
 
 
 class S3PresignedPostInfo(TypedDict):
@@ -83,7 +88,7 @@ def b16_to_b64(hex_string: str) -> str:
 
 
 async def s3_bulk_delete_with_retry(
-    s3_client, bucket: str, objects: list[dict[str, str]]
+    s3_client, bucket: str, objects: list[S3Object]
 ) -> None:
     max_attempts = 5
     delay = 1.0
