@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pyparsing import Any
 
@@ -21,6 +22,9 @@ from diracx.core.s3 import (
 from diracx.core.settings import SandboxStoreSettings
 from diracx.core.utils import batched_async
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
+
+if TYPE_CHECKING:
+    from diracx.core.s3 import S3Object
 
 MAX_SANDBOX_SIZE_BYTES = 100 * 1024 * 1024
 
@@ -197,18 +201,37 @@ async def insert_sandbox(
 
 
 async def clean_sandboxes(
-    sandbox_metadata_db: SandboxMetadataDB, settings: SandboxStoreSettings
-) -> None:
+    sandbox_metadata_db: SandboxMetadataDB,
+    settings: SandboxStoreSettings,
+    *,
+    limit: int = 10_000,
+    max_concurrent_batches: int = 10,
+) -> int:
     """Delete sandboxes that are not assigned to any job."""
-    async with sandbox_metadata_db.delete_unused_sandboxes(limit=10_000) as generator:
+    semaphore = asyncio.Semaphore(max_concurrent_batches)
+    n_deleted = 0
+    async with (
+        sandbox_metadata_db.delete_unused_sandboxes(limit=limit) as generator,
+        asyncio.TaskGroup() as tg,
+    ):
         async for batch in batched_async(generator, 500):
-            objects = []
-            for pfn in batch:
-                logger.debug("Deleting sandbox %s from S3", pfn)
-                objects.append({"Key": pfn_to_key(pfn)})
-            await s3_bulk_delete_with_retry(
-                settings.s3_client, settings.bucket_name, objects
-            )
-            logger.info(
-                "Deleted %d sandboxes from %s", len(batch), settings.bucket_name
-            )
+            objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in batch]
+            if logger.isEnabledFor(logging.DEBUG):
+                for pfn in batch:
+                    logger.debug("Deleting sandbox %s from S3", pfn)
+            tg.create_task(delete_batch_and_log(settings, objects, semaphore))
+            n_deleted += len(objects)
+    return n_deleted
+
+
+async def delete_batch_and_log(
+    settings: SandboxStoreSettings,
+    objects: list[S3Object],
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """Helper function to delete a batch of objects and log the result."""
+    async with semaphore:
+        await s3_bulk_delete_with_retry(
+            settings.s3_client, settings.bucket_name, objects
+        )
+        logger.info("Deleted %d sandboxes from %s", len(objects), settings.bucket_name)

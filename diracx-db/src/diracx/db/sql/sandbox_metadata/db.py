@@ -13,6 +13,7 @@ from sqlalchemy import (
     Table,
     and_,
     delete,
+    exists,
     insert,
     literal,
     or_,
@@ -236,7 +237,10 @@ class SandboxMetadataDB(BaseSQLDB):
         """
         conditions = [
             # If it has assigned to a job but is no longer mapped it can be removed
-            # and_(SandBoxes.Assigned, ~exists(SandBoxes.SBId == SBEntityMapping.SBId)),
+            and_(
+                SandBoxes.Assigned,
+                ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
+            ),
             # If the sandbox is still unassigned after 15 days, remove it
             and_(~SandBoxes.Assigned, days_since(SandBoxes.LastAccessTime) >= 15),
         ]
