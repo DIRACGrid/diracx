@@ -124,7 +124,7 @@ async def set_job_statuses(
     }
 
     # search all jobs at once
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=["Status", "StartExecTime", "EndExecTime", "JobID", "VO"],
         search=[
             {
@@ -291,7 +291,7 @@ async def reschedule_jobs(
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
     jdl_changes = {}
 
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=[
             "Status",
             "MinorStatus",
@@ -558,7 +558,7 @@ async def add_heartbeat(
         "operator": VectorSearchOperator.IN,
         "values": list(data),
     }
-    _, results = await job_db.search(
+    _, results = await job_db.search_jobs(
         parameters=["Status", "JobID"], search=[search_query], sorts=[]
     )
     if len(results) != len(data):
@@ -623,9 +623,15 @@ async def _insert_parameters(
     if not updates:
         return
     # Get the VOs for the job IDs (required for the index template)
-    job_vos = await job_db.summary(
+    job_vos = await job_db.job_summary(
         ["JobID", "VO"],
-        [{"parameter": "JobID", "operator": "in", "values": list(updates)}],
+        [
+            VectorSearchSpec(
+                parameter="JobID",
+                operator=VectorSearchOperator.IN,
+                values=list(updates),
+            )
+        ],
     )
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
     # Upsert the parameters into the JobParametersDB

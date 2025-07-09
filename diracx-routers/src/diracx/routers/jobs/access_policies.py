@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
+from diracx.core.models import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
@@ -82,9 +83,13 @@ class WMSAccessPolicy(BaseAccessPolicy):
         # Now we know we are either in READ/MODIFY for a NORMAL_USER
         # so just make sure that whatever job_id was given belongs
         # to the current user
-        job_owners = await job_db.summary(
+        job_owners = await job_db.job_summary(
             ["Owner", "VO"],
-            [{"parameter": "JobID", "operator": "in", "values": job_ids}],
+            [
+                VectorSearchSpec(
+                    parameter="JobID", operator=VectorSearchOperator.IN, values=job_ids
+                )
+            ],
         )
 
         expected_owner = {
