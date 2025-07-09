@@ -163,6 +163,8 @@ class AuthSettings(ServiceSettingsBase):
     token_allowed_algorithms: list[str] = ["RS256", "EdDSA"]  # noqa: S105
     access_token_expire_minutes: int = 20
     refresh_token_expire_minutes: int = 60
+    pilot_secret_expire_seconds: int = 3600
+    pilot_refresh_token_expire_hours: int = 168
 
     available_properties: set[SecurityProperty] = Field(
         default_factory=SecurityProperty.available_properties
