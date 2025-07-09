@@ -272,3 +272,14 @@ class JobCommand(BaseModel):
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
+
+
+class LogLine(BaseModel):
+    line_no: int
+    line: str
+
+
+class LogMessage(BaseModel):
+    pilot_stamp: str
+    lines: list[LogLine]
+    vo: str
