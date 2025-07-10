@@ -45,8 +45,7 @@ jobs:
         run: |
           cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment \
             "TEST_DIRACX=Yes" \
-            --diracx-dist-dir "${GITHUB_WORKSPACE}/dist" \
-            --legacy-adapted-services WorkloadManagement/JobStateUpdate
+            --diracx-dist-dir "${GITHUB_WORKSPACE}/dist"
       - name: Install server
         run:  cd /tmp/DIRACRepo && ./integration_tests.py install-server
       - name: Get legacy adaptors
