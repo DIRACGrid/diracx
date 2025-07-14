@@ -11,10 +11,12 @@ from __future__ import annotations
 __all__ = [
     "AuthOperations",
     "JobsOperations",
+    "PilotsOperations"
 ]  # Add all objects you want publicly available to users at this package level
 
 from ...patches.auth.sync import AuthOperations
 from ...patches.jobs.sync import JobsOperations
+from ...patches.pilots.sync import PilotsOperations
 
 
 def patch_sdk():
