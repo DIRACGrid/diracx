@@ -156,7 +156,6 @@ async def summary(
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
     """Show information suitable for plotting."""
-    # TODO: Test me.
     await check_permissions(action=ActionType.READ_PILOT_FIELDS)
 
     return await summary_bl(

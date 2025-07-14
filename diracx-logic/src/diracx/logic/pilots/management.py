@@ -24,7 +24,7 @@ async def register_new_pilots(
     status: str,
     pilot_job_references: dict[str, str] | None,
 ):
-    # [IMPORTANT] Check unicity of pilot references
+    # [IMPORTANT] Check unicity of pilot stamps
     # If a pilot already exists, we raise an error (transaction will rollback)
     existing_pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db, pilot_stamps=pilot_stamps

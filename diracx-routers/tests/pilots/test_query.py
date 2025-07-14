@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import (
@@ -80,6 +81,48 @@ async def populated_pilot_client(normal_test_client):
     assert r.status_code == 204
 
     yield normal_test_client
+
+
+async def test_pilot_summary(populated_pilot_client: TestClient):
+    # Group by StatusReason
+    r = populated_pilot_client.post(
+        "/api/pilots/summary",
+        json={
+            "grouping": ["StatusReason"],
+        },
+    )
+
+    assert r.status_code == 200
+
+    assert sum([el["count"] for el in r.json()]) == N
+    assert len(r.json()) == len(PILOT_REASONS)
+
+    # Group by CurrentJobID
+    r = populated_pilot_client.post(
+        "/api/pilots/summary",
+        json={
+            "grouping": ["CurrentJobID"],
+        },
+    )
+
+    assert r.status_code == 200
+
+    assert all(el["count"] == 1 for el in r.json())
+    assert len(r.json()) == N
+
+    # Group by CurrentJobID where BenchMark < 10^2
+    r = populated_pilot_client.post(
+        "/api/pilots/summary",
+        json={
+            "grouping": ["CurrentJobID"],
+            "search": [{"parameter": "BenchMark", "operator": "lt", "value": 10**2}],
+        },
+    )
+
+    assert r.status_code == 200, r.json()
+
+    assert all(el["count"] == 1 for el in r.json())
+    assert len(r.json()) == 10
 
 
 @pytest.fixture
