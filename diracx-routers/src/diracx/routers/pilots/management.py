@@ -208,7 +208,7 @@ async def update_pilot_fields(
 
     # Prevent someone who stole a pilot X509 to modify thousands of pilots at a time
     # (It would be still able to modify thousands of pilots, but slower)
-    # We are not able to affirm that this pilots modifies itself
+    # We are not able to affirm that this pilot modifies itself
     if GENERIC_PILOT in user_info.properties:
         if len(pilot_stamps) != 1:
             raise HTTPException(
