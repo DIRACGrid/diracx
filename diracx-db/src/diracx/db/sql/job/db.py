@@ -90,6 +90,48 @@ class JobDB(BaseSQLDB):
             page=page,
         )
 
+    async def search_jdl(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        """Search for job JDL the database."""
+        return await self.search(
+            model=JobJDLs,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
+
+    async def search_heartbeat_logging_info(
+        self,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[Any, Any]]]:
+        """Search for heartbeat logging info in the database."""
+        return await self.search(
+            model=HeartBeatLoggingInfo,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
+
     async def create_job(self, compressed_original_jdl: str):
         """Used to insert a new job with original JDL. Returns inserted job id."""
         result = await self.conn.execute(

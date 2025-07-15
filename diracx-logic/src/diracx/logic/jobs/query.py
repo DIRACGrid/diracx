@@ -94,8 +94,10 @@ async def get_input_data(job_db: JobDB, job_id: int) -> list[dict[str, Any]]:
     return input_data
 
 
-async def get_job_parameters(job_parameters_db: JobParametersDB, job_id: int):
-    return await job_parameters_db.search(
+async def get_job_parameters(
+    job_parameters_db: JobParametersDB, job_id: int
+) -> list[dict[str, Any]]:
+    _, parameters = await job_parameters_db.search(
         [],
         [
             ScalarSearchSpec(
@@ -104,6 +106,43 @@ async def get_job_parameters(job_parameters_db: JobParametersDB, job_id: int):
         ],
         [],
     )
+
+    return parameters
+
+
+async def get_job_jdl(job_db: JobDB, job_id: int) -> dict[str, str | int]:
+    _, jdls = await job_db.search_jdl(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        sorts=[],
+    )
+
+    assert len(jdls) <= 1  # If not, there's a problem
+
+    if len(jdls) == 1:
+        return jdls[0]
+
+    return {}
+
+
+async def get_job_heartbeat_info(
+    job_db: JobDB, job_id: int
+) -> list[dict[str, str | int]]:
+    _, jdls = await job_db.search_heartbeat_logging_info(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        sorts=[],
+    )
+
+    return jdls
 
 
 async def summary(

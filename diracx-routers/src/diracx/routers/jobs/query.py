@@ -10,6 +10,8 @@ from diracx.core.models import (
     SummaryParams,
 )
 from diracx.logic.jobs.query import get_input_data as get_input_data_bl
+from diracx.logic.jobs.query import get_job_heartbeat_info as get_job_heartbeat_info_bl
+from diracx.logic.jobs.query import get_job_jdl as get_job_jdl_bl
 from diracx.logic.jobs.query import get_job_parameters as get_job_parameters_bl
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
@@ -193,13 +195,37 @@ async def get_job_parameters(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
-):
+) -> list[dict[str, Any]]:
     """Get job parameters."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     return await get_job_parameters_bl(
         job_parameters_db=job_parameters_db, job_id=job_id
     )
+
+
+@router.get("/{job_id}/jdl")
+async def get_job_jdl(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> dict[str, str | int]:
+    """Get job JDLs."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_jdl_bl(job_db=job_db, job_id=job_id)
+
+
+@router.get("/{job_id}/heartbeat")
+async def get_job_heartbeat_info(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> list[dict[str, str | int]]:
+    """Get job heartbeat info."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_heartbeat_info_bl(job_db=job_db, job_id=job_id)
 
 
 @router.post("/summary")
