@@ -389,3 +389,40 @@ async def test_set_job_commands_invalid_job_id(job_db: JobDB):
     async with job_db as job_db:
         with pytest.raises(IntegrityError):
             await job_db.set_job_commands([(123456, "test_command", "")])
+
+
+async def test_insert_input_data_with_unknown_job(job_db: JobDB):
+    async with job_db as job_db:
+        with pytest.raises(IntegrityError):
+            await job_db.insert_input_data(
+                {id: [f"lfn_{id}_{i}" for i in range(5)] for id in range(10)}
+            )
+
+
+async def test_insert_input_data_with_known_job(populated_job_db: JobDB):
+    async with populated_job_db as job_db:
+        _, jobs = await job_db.search(["JobID"], search=[], sorts=[])
+
+        job_ids = [job["JobID"] for job in jobs]
+
+        await job_db.insert_input_data(
+            {id: [f"lfn_{id}_{i}" for i in range(5)] for id in job_ids}
+        )
+
+        for job_id in job_ids:
+            _, jobs = await job_db.search_input_data(
+                parameters=[],
+                search=[
+                    ScalarSearchSpec(
+                        parameter="JobID",
+                        operator=ScalarSearchOperator.EQUAL,
+                        value=job_id,
+                    )
+                ],
+                sorts=[],
+            )
+
+            lfns = [job["LFN"] for job in jobs]
+
+            assert len(lfns) == 5
+            assert all(f"lfn_{job_id}_{i}" in lfns for i in range(5))

@@ -10,9 +10,10 @@ from datetime import datetime, timezone
 from functools import partial
 from typing import Any, AsyncIterator
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import SearchSpec, SortSpec
 from diracx.db.sql import utils as sql_utils
 
@@ -53,7 +54,11 @@ class MockOSDBMixin:
         for field, field_type in self.fields.items():
             match field_type["type"]:
                 case "date":
+                    # TODO: Warning, maybe this will crash? See date_nanos
+                    # I needed to set Varchar because it is sent as 2022-06-15T10:12:52.382719622Z, and not datetime
                     column_type = DateNowColumn
+                case "date_nanos":
+                    column_type = partial(Column, type_=String(32))
                 case "long":
                     column_type = partial(Column, type_=Integer)
                 case "keyword":
@@ -100,6 +105,21 @@ class MockOSDBMixin:
             stmt = stmt.on_conflict_do_update(index_elements=["doc_id"], set_=values)
             await self._sql_db.conn.execute(stmt)
 
+    async def bulk_insert(self, index_name: str, docs: list[dict[str, Any]]) -> None:
+        async with self._sql_db:
+            rows = []
+            for doc in docs:
+                # don't use doc_id column explicitly. This ensures that doc_id is unique.
+                values = {}
+                for key, value in doc.items():
+                    if key in self.fields:
+                        values[key] = value
+                    else:
+                        values.setdefault("extra", {})[key] = value
+                rows.append(values)
+            stmt = sqlite_insert(self._table).values(rows)
+            await self._sql_db.conn.execute(stmt)
+
     async def search(
         self,
         parameters: list[str] | None,
@@ -135,8 +155,17 @@ class MockOSDBMixin:
                 self._table.columns.__getitem__, stmt, sorts
             )
 
+            # Calculate total count before applying pagination
+            total_count_subquery = stmt.alias()
+            total_count_stmt = select(func.count()).select_from(total_count_subquery)
+            total = (await self._sql_db.conn.execute(total_count_stmt)).scalar_one()
+
             # Apply pagination
             if page is not None:
+                if page < 1:
+                    raise InvalidQueryError("Page must be a positive integer")
+                if per_page < 1:
+                    raise InvalidQueryError("Per page must be a positive integer")
                 stmt = stmt.offset((page - 1) * per_page).limit(per_page)
 
             results = []
@@ -151,7 +180,8 @@ class MockOSDBMixin:
                     if v is None:
                         result.pop(k)
                 results.append(result)
-        return results
+
+        return total, results
 
     async def ping(self):
         async with self._sql_db:
