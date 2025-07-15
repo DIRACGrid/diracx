@@ -94,6 +94,18 @@ async def get_input_data(job_db: JobDB, job_id: int) -> list[dict[str, Any]]:
     return input_data
 
 
+async def get_job_parameters(job_parameters_db: JobParametersDB, job_id: int):
+    return await job_parameters_db.search(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        [],
+    )
+
+
 async def summary(
     config: Config,
     job_db: JobDB,

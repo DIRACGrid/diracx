@@ -560,22 +560,42 @@ def build_jobs_search_request(*, page: int = 1, per_page: int = 100, **kwargs: A
     return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_jobs_get_input_data_request(*, job_id: int, **kwargs: Any) -> HttpRequest:
+def build_jobs_get_input_data_request(job_id: int, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/jobs/input-data"
+    _url = "/api/jobs/{job_id}/input-data"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
 
-    # Construct parameters
-    _params["job_id"] = _SERIALIZER.query("job_id", job_id, "int")
+    _url: str = _url.format(**path_format_arguments)  # type: ignore
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
+
+
+def build_jobs_get_job_parameters_request(job_id: int, **kwargs: Any) -> HttpRequest:
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    accept = _headers.pop("Accept", "application/json")
+
+    # Construct URL
+    _url = "/api/jobs/{job_id}/parameters"
+    path_format_arguments = {
+        "job_id": _SERIALIZER.url("job_id", job_id, "int"),
+    }
+
+    _url: str = _url.format(**path_format_arguments)  # type: ignore
+
+    # Construct headers
+    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
+
+    return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
 def build_jobs_summary_request(**kwargs: Any) -> HttpRequest:
@@ -2571,13 +2591,13 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def get_input_data(self, *, job_id: int, **kwargs: Any) -> List[Dict[str, Any]]:
+    def get_input_data(self, job_id: int, **kwargs: Any) -> List[Dict[str, Any]]:
         """Get Input Data.
 
         Fetches a job's input data.
 
-        :keyword job_id: ID of the job we want to get input-data. Required.
-        :paramtype job_id: int
+        :param job_id: Required.
+        :type job_id: int
         :return: list of dict mapping str to any
         :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2614,6 +2634,56 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace
+    def get_job_parameters(self, job_id: int, **kwargs: Any) -> Any:
+        """Get Job Parameters.
+
+        Get job parameters.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_jobs_get_job_parameters_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

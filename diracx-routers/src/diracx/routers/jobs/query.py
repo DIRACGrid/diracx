@@ -3,13 +3,14 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, Query, Response
+from fastapi import Body, Depends, Response
 
 from diracx.core.models import (
     SearchParams,
     SummaryParams,
 )
 from diracx.logic.jobs.query import get_input_data as get_input_data_bl
+from diracx.logic.jobs.query import get_job_parameters as get_job_parameters_bl
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
 
@@ -174,11 +175,9 @@ async def search(
     return jobs
 
 
-@router.get("/input-data")
+@router.get("/{job_id}/input-data")
 async def get_input_data(
-    job_id: Annotated[
-        int, Query(description="ID of the job we want to get input-data.")
-    ],
+    job_id: int,
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[dict[str, Any]]:
@@ -186,6 +185,21 @@ async def get_input_data(
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
 
     return await get_input_data_bl(job_db=job_db, job_id=job_id)
+
+
+@router.get("/{job_id}/parameters")
+async def get_job_parameters(
+    job_id: int,
+    job_db: JobDB,
+    job_parameters_db: JobParametersDB,
+    check_permissions: CheckWMSPolicyCallable,
+):
+    """Get job parameters."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_parameters_bl(
+        job_parameters_db=job_parameters_db, job_id=job_id
+    )
 
 
 @router.post("/summary")

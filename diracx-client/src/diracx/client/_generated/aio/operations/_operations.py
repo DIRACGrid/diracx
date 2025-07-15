@@ -41,6 +41,7 @@ from ...operations._operations import (
     build_jobs_add_heartbeat_request,
     build_jobs_assign_sandbox_to_job_request,
     build_jobs_get_input_data_request,
+    build_jobs_get_job_parameters_request,
     build_jobs_get_job_sandbox_request,
     build_jobs_get_job_sandboxes_request,
     build_jobs_get_sandbox_file_request,
@@ -1976,13 +1977,13 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace_async
-    async def get_input_data(self, *, job_id: int, **kwargs: Any) -> List[Dict[str, Any]]:
+    async def get_input_data(self, job_id: int, **kwargs: Any) -> List[Dict[str, Any]]:
         """Get Input Data.
 
         Fetches a job's input data.
 
-        :keyword job_id: ID of the job we want to get input-data. Required.
-        :paramtype job_id: int
+        :param job_id: Required.
+        :type job_id: int
         :return: list of dict mapping str to any
         :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2019,6 +2020,56 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @distributed_trace_async
+    async def get_job_parameters(self, job_id: int, **kwargs: Any) -> Any:
+        """Get Job Parameters.
+
+        Get job parameters.
+
+        :param job_id: Required.
+        :type job_id: int
+        :return: any
+        :rtype: any
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = kwargs.pop("headers", {}) or {}
+        _params = kwargs.pop("params", {}) or {}
+
+        cls: ClsType[Any] = kwargs.pop("cls", None)
+
+        _request = build_jobs_get_job_parameters_request(
+            job_id=job_id,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("object", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore
