@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from freezegun import freeze_time
 
 from diracx.core.models import JobStatus
+from diracx.routers.jobs.query import EXAMPLE_SUMMARY
 
 from .conftest import TEST_JDL, TEST_PARAMETRIC_JDL
 
@@ -859,3 +860,38 @@ def test_get_job_status_history_in_bulk(
     assert r.json()[str(valid_job_id)][0]["ApplicationStatus"] == "Unknown"
     assert datetime.fromisoformat(r.json()[str(valid_job_id)][0]["StatusTime"])
     assert r.json()[str(valid_job_id)][0]["Source"] == "JobManager"
+
+
+def test_patch_summary(normal_user_client: TestClient, valid_job_id: int):
+    """Test that the summary endpoint works as expected."""
+    r = normal_user_client.post(
+        "/api/jobs/summary",
+        json={
+            "grouping": ["Status", "OwnerGroup"],
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}],
+        },
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json() == [
+        {"Status": JobStatus.RECEIVED.value, "OwnerGroup": "test_group", "count": 1}
+    ]
+
+    r = normal_user_client.post(
+        "/api/jobs/summary",
+        json={
+            "grouping": ["Owner"],
+            "search": [],
+        },
+    )
+
+    assert r.status_code == 200, r.json()
+    assert r.json() == [{"Owner": "preferred_username", "count": 1}]
+
+
+def test_patch_summary_doc_example(normal_user_client: TestClient, valid_job_id: int):
+    """Test that the summary doc example is correct."""
+    payload = EXAMPLE_SUMMARY["Group by JobGroup"]["value"]
+    r = normal_user_client.post("/api/jobs/summary", json=payload)
+
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == 1

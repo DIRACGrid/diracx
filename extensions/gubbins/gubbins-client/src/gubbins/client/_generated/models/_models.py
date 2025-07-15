@@ -94,6 +94,58 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyJobsRescheduleJobs(_serialization.Model):
+    """Body_jobs_reschedule_jobs.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar job_ids: Job Ids. Required.
+    :vartype job_ids: list[int]
+    """
+
+    _validation = {
+        "job_ids": {"required": True},
+    }
+
+    _attribute_map = {
+        "job_ids": {"key": "job_ids", "type": "[int]"},
+    }
+
+    def __init__(self, *, job_ids: List[int], **kwargs: Any) -> None:
+        """
+        :keyword job_ids: Job Ids. Required.
+        :paramtype job_ids: list[int]
+        """
+        super().__init__(**kwargs)
+        self.job_ids = job_ids
+
+
+class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
+    """Body_jobs_unassign_bulk_jobs_sandboxes.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar job_ids: Job Ids. Required.
+    :vartype job_ids: list[int]
+    """
+
+    _validation = {
+        "job_ids": {"required": True},
+    }
+
+    _attribute_map = {
+        "job_ids": {"key": "job_ids", "type": "[int]"},
+    }
+
+    def __init__(self, *, job_ids: List[int], **kwargs: Any) -> None:
+        """
+        :keyword job_ids: Job Ids. Required.
+        :paramtype job_ids: list[int]
+        """
+        super().__init__(**kwargs)
+        self.job_ids = job_ids
+
+
 class ExtendedMetadata(_serialization.Model):
     """ExtendedMetadata.
 
@@ -403,6 +455,273 @@ class JobCommand(_serialization.Model):
         self.job_id = job_id
         self.command = command
         self.arguments = arguments
+
+
+class JobMetaData(_serialization.Model):
+    """A model that combines both JobAttributes and JobParameters.
+
+    :ivar timestamp: Timestamp.
+    :vartype timestamp: ~datetime.datetime
+    :ivar cpu_normalization_factor: Cpunormalizationfactor.
+    :vartype cpu_normalization_factor: int
+    :ivar norm_cpu_time_s: Normcputime(S).
+    :vartype norm_cpu_time_s: int
+    :ivar total_cpu_time_s: Totalcputime(S).
+    :vartype total_cpu_time_s: int
+    :ivar host_name: Hostname.
+    :vartype host_name: str
+    :ivar grid_ce: Gridce.
+    :vartype grid_ce: str
+    :ivar model_name: Modelname.
+    :vartype model_name: str
+    :ivar pilot_agent: Pilotagent.
+    :vartype pilot_agent: str
+    :ivar pilot_reference: Pilot Reference.
+    :vartype pilot_reference: str
+    :ivar memory_mb: Memory(Mb).
+    :vartype memory_mb: int
+    :ivar local_account: Localaccount.
+    :vartype local_account: str
+    :ivar payload_pid: Payloadpid.
+    :vartype payload_pid: int
+    :ivar ce_queue: Cequeue.
+    :vartype ce_queue: str
+    :ivar batch_system: Batchsystem.
+    :vartype batch_system: str
+    :ivar job_type: Jobtype.
+    :vartype job_type: str
+    :ivar job_status: Jobstatus.
+    :vartype job_status: str
+    :ivar job_group: Jobgroup.
+    :vartype job_group: str
+    :ivar site: Site.
+    :vartype site: str
+    :ivar job_name: Jobname.
+    :vartype job_name: str
+    :ivar owner: Owner.
+    :vartype owner: str
+    :ivar owner_group: Ownergroup.
+    :vartype owner_group: str
+    :ivar vo: Vo.
+    :vartype vo: str
+    :ivar submission_time: Submissiontime.
+    :vartype submission_time: ~datetime.datetime
+    :ivar reschedule_time: Rescheduletime.
+    :vartype reschedule_time: ~datetime.datetime
+    :ivar last_update_time: Lastupdatetime.
+    :vartype last_update_time: ~datetime.datetime
+    :ivar start_exec_time: Startexectime.
+    :vartype start_exec_time: ~datetime.datetime
+    :ivar heart_beat_time: Heartbeattime.
+    :vartype heart_beat_time: ~datetime.datetime
+    :ivar end_exec_time: Endexectime.
+    :vartype end_exec_time: ~datetime.datetime
+    :ivar status: Status.
+    :vartype status: str
+    :ivar minor_status: Minorstatus.
+    :vartype minor_status: str
+    :ivar application_status: Applicationstatus.
+    :vartype application_status: str
+    :ivar user_priority: Userpriority.
+    :vartype user_priority: int
+    :ivar reschedule_counter: Reschedulecounter.
+    :vartype reschedule_counter: int
+    :ivar verified_flag: Verifiedflag.
+    :vartype verified_flag: bool
+    :ivar accounted_flag: Accountedflag.
+    :vartype accounted_flag: ~_generated.models.JobMetaDataAccountedFlag
+    """
+
+    _attribute_map = {
+        "timestamp": {"key": "timestamp", "type": "iso-8601"},
+        "cpu_normalization_factor": {"key": "CPUNormalizationFactor", "type": "int"},
+        "norm_cpu_time_s": {"key": "NormCPUTime(s)", "type": "int"},
+        "total_cpu_time_s": {"key": "TotalCPUTime(s)", "type": "int"},
+        "host_name": {"key": "HostName", "type": "str"},
+        "grid_ce": {"key": "GridCE", "type": "str"},
+        "model_name": {"key": "ModelName", "type": "str"},
+        "pilot_agent": {"key": "PilotAgent", "type": "str"},
+        "pilot_reference": {"key": "Pilot_Reference", "type": "str"},
+        "memory_mb": {"key": "Memory(MB)", "type": "int"},
+        "local_account": {"key": "LocalAccount", "type": "str"},
+        "payload_pid": {"key": "PayloadPID", "type": "int"},
+        "ce_queue": {"key": "CEQueue", "type": "str"},
+        "batch_system": {"key": "BatchSystem", "type": "str"},
+        "job_type": {"key": "JobType", "type": "str"},
+        "job_status": {"key": "JobStatus", "type": "str"},
+        "job_group": {"key": "JobGroup", "type": "str"},
+        "site": {"key": "Site", "type": "str"},
+        "job_name": {"key": "JobName", "type": "str"},
+        "owner": {"key": "Owner", "type": "str"},
+        "owner_group": {"key": "OwnerGroup", "type": "str"},
+        "vo": {"key": "VO", "type": "str"},
+        "submission_time": {"key": "SubmissionTime", "type": "iso-8601"},
+        "reschedule_time": {"key": "RescheduleTime", "type": "iso-8601"},
+        "last_update_time": {"key": "LastUpdateTime", "type": "iso-8601"},
+        "start_exec_time": {"key": "StartExecTime", "type": "iso-8601"},
+        "heart_beat_time": {"key": "HeartBeatTime", "type": "iso-8601"},
+        "end_exec_time": {"key": "EndExecTime", "type": "iso-8601"},
+        "status": {"key": "Status", "type": "str"},
+        "minor_status": {"key": "MinorStatus", "type": "str"},
+        "application_status": {"key": "ApplicationStatus", "type": "str"},
+        "user_priority": {"key": "UserPriority", "type": "int"},
+        "reschedule_counter": {"key": "RescheduleCounter", "type": "int"},
+        "verified_flag": {"key": "VerifiedFlag", "type": "bool"},
+        "accounted_flag": {"key": "AccountedFlag", "type": "JobMetaDataAccountedFlag"},
+    }
+
+    def __init__(  # pylint: disable=too-many-locals
+        self,
+        *,
+        timestamp: Optional[datetime.datetime] = None,
+        cpu_normalization_factor: Optional[int] = None,
+        norm_cpu_time_s: Optional[int] = None,
+        total_cpu_time_s: Optional[int] = None,
+        host_name: Optional[str] = None,
+        grid_ce: Optional[str] = None,
+        model_name: Optional[str] = None,
+        pilot_agent: Optional[str] = None,
+        pilot_reference: Optional[str] = None,
+        memory_mb: Optional[int] = None,
+        local_account: Optional[str] = None,
+        payload_pid: Optional[int] = None,
+        ce_queue: Optional[str] = None,
+        batch_system: Optional[str] = None,
+        job_type: Optional[str] = None,
+        job_status: Optional[str] = None,
+        job_group: Optional[str] = None,
+        site: Optional[str] = None,
+        job_name: Optional[str] = None,
+        owner: Optional[str] = None,
+        owner_group: Optional[str] = None,
+        vo: Optional[str] = None,
+        submission_time: Optional[datetime.datetime] = None,
+        reschedule_time: Optional[datetime.datetime] = None,
+        last_update_time: Optional[datetime.datetime] = None,
+        start_exec_time: Optional[datetime.datetime] = None,
+        heart_beat_time: Optional[datetime.datetime] = None,
+        end_exec_time: Optional[datetime.datetime] = None,
+        status: Optional[str] = None,
+        minor_status: Optional[str] = None,
+        application_status: Optional[str] = None,
+        user_priority: Optional[int] = None,
+        reschedule_counter: Optional[int] = None,
+        verified_flag: Optional[bool] = None,
+        accounted_flag: Optional["_models.JobMetaDataAccountedFlag"] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword timestamp: Timestamp.
+        :paramtype timestamp: ~datetime.datetime
+        :keyword cpu_normalization_factor: Cpunormalizationfactor.
+        :paramtype cpu_normalization_factor: int
+        :keyword norm_cpu_time_s: Normcputime(S).
+        :paramtype norm_cpu_time_s: int
+        :keyword total_cpu_time_s: Totalcputime(S).
+        :paramtype total_cpu_time_s: int
+        :keyword host_name: Hostname.
+        :paramtype host_name: str
+        :keyword grid_ce: Gridce.
+        :paramtype grid_ce: str
+        :keyword model_name: Modelname.
+        :paramtype model_name: str
+        :keyword pilot_agent: Pilotagent.
+        :paramtype pilot_agent: str
+        :keyword pilot_reference: Pilot Reference.
+        :paramtype pilot_reference: str
+        :keyword memory_mb: Memory(Mb).
+        :paramtype memory_mb: int
+        :keyword local_account: Localaccount.
+        :paramtype local_account: str
+        :keyword payload_pid: Payloadpid.
+        :paramtype payload_pid: int
+        :keyword ce_queue: Cequeue.
+        :paramtype ce_queue: str
+        :keyword batch_system: Batchsystem.
+        :paramtype batch_system: str
+        :keyword job_type: Jobtype.
+        :paramtype job_type: str
+        :keyword job_status: Jobstatus.
+        :paramtype job_status: str
+        :keyword job_group: Jobgroup.
+        :paramtype job_group: str
+        :keyword site: Site.
+        :paramtype site: str
+        :keyword job_name: Jobname.
+        :paramtype job_name: str
+        :keyword owner: Owner.
+        :paramtype owner: str
+        :keyword owner_group: Ownergroup.
+        :paramtype owner_group: str
+        :keyword vo: Vo.
+        :paramtype vo: str
+        :keyword submission_time: Submissiontime.
+        :paramtype submission_time: ~datetime.datetime
+        :keyword reschedule_time: Rescheduletime.
+        :paramtype reschedule_time: ~datetime.datetime
+        :keyword last_update_time: Lastupdatetime.
+        :paramtype last_update_time: ~datetime.datetime
+        :keyword start_exec_time: Startexectime.
+        :paramtype start_exec_time: ~datetime.datetime
+        :keyword heart_beat_time: Heartbeattime.
+        :paramtype heart_beat_time: ~datetime.datetime
+        :keyword end_exec_time: Endexectime.
+        :paramtype end_exec_time: ~datetime.datetime
+        :keyword status: Status.
+        :paramtype status: str
+        :keyword minor_status: Minorstatus.
+        :paramtype minor_status: str
+        :keyword application_status: Applicationstatus.
+        :paramtype application_status: str
+        :keyword user_priority: Userpriority.
+        :paramtype user_priority: int
+        :keyword reschedule_counter: Reschedulecounter.
+        :paramtype reschedule_counter: int
+        :keyword verified_flag: Verifiedflag.
+        :paramtype verified_flag: bool
+        :keyword accounted_flag: Accountedflag.
+        :paramtype accounted_flag: ~_generated.models.JobMetaDataAccountedFlag
+        """
+        super().__init__(**kwargs)
+        self.timestamp = timestamp
+        self.cpu_normalization_factor = cpu_normalization_factor
+        self.norm_cpu_time_s = norm_cpu_time_s
+        self.total_cpu_time_s = total_cpu_time_s
+        self.host_name = host_name
+        self.grid_ce = grid_ce
+        self.model_name = model_name
+        self.pilot_agent = pilot_agent
+        self.pilot_reference = pilot_reference
+        self.memory_mb = memory_mb
+        self.local_account = local_account
+        self.payload_pid = payload_pid
+        self.ce_queue = ce_queue
+        self.batch_system = batch_system
+        self.job_type = job_type
+        self.job_status = job_status
+        self.job_group = job_group
+        self.site = site
+        self.job_name = job_name
+        self.owner = owner
+        self.owner_group = owner_group
+        self.vo = vo
+        self.submission_time = submission_time
+        self.reschedule_time = reschedule_time
+        self.last_update_time = last_update_time
+        self.start_exec_time = start_exec_time
+        self.heart_beat_time = heart_beat_time
+        self.end_exec_time = end_exec_time
+        self.status = status
+        self.minor_status = minor_status
+        self.application_status = application_status
+        self.user_priority = user_priority
+        self.reschedule_counter = reschedule_counter
+        self.verified_flag = verified_flag
+        self.accounted_flag = accounted_flag
+
+
+class JobMetaDataAccountedFlag(_serialization.Model):
+    """Accountedflag."""
 
 
 class JobStatusUpdate(_serialization.Model):

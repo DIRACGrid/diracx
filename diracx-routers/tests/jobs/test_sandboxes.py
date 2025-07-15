@@ -163,8 +163,8 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
 
     # Unassign sb to job:
     job_ids = [job_id]
-    r = normal_user_client.delete("/api/jobs/sandbox", params={"jobs_ids": job_ids})
-    assert r.status_code == 200
+    r = normal_user_client.post("/api/jobs/sandbox/unassign", json={"job_ids": job_ids})
+    assert r.status_code == 204  # No content expected
 
     # Get the sb again, it should'nt be there anymore:
     short_pfn = sandbox_pfn.split("|", 1)[-1]
