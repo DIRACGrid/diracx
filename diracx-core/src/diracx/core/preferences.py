@@ -50,7 +50,7 @@ class DiracxPreferences(BaseSettings):
 
     @field_validator("log_level", mode="before")
     @classmethod
-    def validate_log_level(cls, v: str):
+    def validate_log_level(cls, v: str | LogLevels):
         if isinstance(v, str):
             return getattr(LogLevels, v.upper())
         return v
