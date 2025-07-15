@@ -1,0 +1,88 @@
+name: Update Security.txt Expiry
+
+on:
+  schedule:
+    # Runs once a year
+    - cron: '15 2 1 1 *' # January 1st at 02:15 UTC
+  workflow_dispatch: # Allows manual triggering for testing.
+
+jobs:
+  update-expiry:
+    runs-on: ubuntu-latest
+    # Grant GITHUB_TOKEN permissions to create a pull request.
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Update expiry date in well_known.py
+        id: update_script
+        run: |
+          import re
+          from datetime import datetime, timedelta, timezone
+          import os
+
+          file_path = "diracx-routers/src/diracx/routers/auth/well_known.py"
+          changes_made = False
+
+          with open(file_path, "r") as f:
+              content = f.read()
+
+          # Using a robust regex to find the line and capture the date
+          pattern = re.compile(r'''(^\s*Expires: )(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)''', re.MULTILINE)
+          match = pattern.search(content)
+
+          if match:
+              old_date_str = match.group(2)
+              try:
+                  expiry_date = datetime.strptime(old_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+                  now = datetime.now(timezone.utc)
+
+                  # Update if the expiry is less than 45 days away
+                  if (expiry_date - now) < timedelta(days=45):
+                      # Set the new expiry to be 1 year from today
+                      new_expiry_date = now + timedelta(days=365)
+                      new_date_str = new_expiry_date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+                      new_content = pattern.sub(r'''\g<1>''' + new_date_str, content)
+
+                      with open(file_path, "w") as f:
+                          f.write(new_content)
+
+                      print(f"INFO: Updated expiry date to {new_date_str}")
+                      changes_made = True
+                  else:
+                      print(f"INFO: Expiry date {old_date_str} is not within the update window. No changes made.")
+              except (ValueError) as e:
+                  print(f"ERROR: Could not parse date string {old_date_str}. Error: {e}")
+
+          else:
+              print(f"ERROR: Could not find the 'Expires:' line in the specified format in {file_path}")
+
+          # Set output for subsequent steps
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as hf:
+              print(f'changes_made={str(changes_made).lower()}', file=hf)
+        shell: python
+
+      - name: Create Pull Request
+        if: steps.update_script.outputs.changes_made == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(security): Update security.txt expiry date"
+          title: "Automated Security.txt Expiry Update"
+          body: |
+            This is an automated PR to update the `Expires` field in the `security.txt` file.
+
+            The expiry date is automatically updated to one year from the current date to ensure it remains valid.
+          branch: "chore/update-security-txt-expiry"
+          base: "main"
+          delete-branch: true
