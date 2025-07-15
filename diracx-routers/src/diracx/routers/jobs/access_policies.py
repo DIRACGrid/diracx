@@ -82,9 +82,9 @@ class WMSAccessPolicy(BaseAccessPolicy):
         # Now we know we are either in READ/MODIFY for a NORMAL_USER
         # so just make sure that whatever job_id was given belongs
         # to the current user
-        job_owners = await job_db.summary(
+        job_owners = await job_db.job_summary(
             ["Owner", "VO"],
-            [{"parameter": "JobID", "operator": "in", "values": job_ids}],
+            [{"parameter": "JobID", "operator": "in", "values": job_ids}],  # type: ignore
         )
 
         expected_owner = {

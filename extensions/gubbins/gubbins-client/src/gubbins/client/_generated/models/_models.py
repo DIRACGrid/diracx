@@ -405,56 +405,6 @@ class JobCommand(_serialization.Model):
         self.arguments = arguments
 
 
-class JobSearchParams(_serialization.Model):
-    """JobSearchParams.
-
-    :ivar parameters: Parameters.
-    :vartype parameters: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSearchParamsSearchItem]
-    :ivar sort: Sort.
-    :vartype sort: list[~_generated.models.SortSpec]
-    :ivar distinct: Distinct.
-    :vartype distinct: bool
-    """
-
-    _attribute_map = {
-        "parameters": {"key": "parameters", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
-        "sort": {"key": "sort", "type": "[SortSpec]"},
-        "distinct": {"key": "distinct", "type": "bool"},
-    }
-
-    def __init__(
-        self,
-        *,
-        parameters: Optional[List[str]] = None,
-        search: List["_models.JobSearchParamsSearchItem"] = [],
-        sort: List["_models.SortSpec"] = [],
-        distinct: bool = False,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword parameters: Parameters.
-        :paramtype parameters: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSearchParamsSearchItem]
-        :keyword sort: Sort.
-        :paramtype sort: list[~_generated.models.SortSpec]
-        :keyword distinct: Distinct.
-        :paramtype distinct: bool
-        """
-        super().__init__(**kwargs)
-        self.parameters = parameters
-        self.search = search
-        self.sort = sort
-        self.distinct = distinct
-
-
-class JobSearchParamsSearchItem(_serialization.Model):
-    """JobSearchParamsSearchItem."""
-
-
 class JobStatusUpdate(_serialization.Model):
     """JobStatusUpdate.
 
@@ -503,44 +453,6 @@ class JobStatusUpdate(_serialization.Model):
         self.minor_status = minor_status
         self.application_status = application_status
         self.source = source
-
-
-class JobSummaryParams(_serialization.Model):
-    """JobSummaryParams.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar grouping: Grouping. Required.
-    :vartype grouping: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSummaryParamsSearchItem]
-    """
-
-    _validation = {
-        "grouping": {"required": True},
-    }
-
-    _attribute_map = {
-        "grouping": {"key": "grouping", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSummaryParamsSearchItem]"},
-    }
-
-    def __init__(
-        self, *, grouping: List[str], search: List["_models.JobSummaryParamsSearchItem"] = [], **kwargs: Any
-    ) -> None:
-        """
-        :keyword grouping: Grouping. Required.
-        :paramtype grouping: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSummaryParamsSearchItem]
-        """
-        super().__init__(**kwargs)
-        self.grouping = grouping
-        self.search = search
-
-
-class JobSummaryParamsSearchItem(_serialization.Model):
-    """JobSummaryParamsSearchItem."""
 
 
 class OpenIDConfiguration(_serialization.Model):
@@ -857,6 +769,56 @@ class ScalarSearchSpecValue(_serialization.Model):
     """Value."""
 
 
+class SearchParams(_serialization.Model):
+    """SearchParams.
+
+    :ivar parameters: Parameters.
+    :vartype parameters: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SearchParamsSearchItem]
+    :ivar sort: Sort.
+    :vartype sort: list[~_generated.models.SortSpec]
+    :ivar distinct: Distinct.
+    :vartype distinct: bool
+    """
+
+    _attribute_map = {
+        "parameters": {"key": "parameters", "type": "[str]"},
+        "search": {"key": "search", "type": "[SearchParamsSearchItem]"},
+        "sort": {"key": "sort", "type": "[SortSpec]"},
+        "distinct": {"key": "distinct", "type": "bool"},
+    }
+
+    def __init__(
+        self,
+        *,
+        parameters: Optional[List[str]] = None,
+        search: List["_models.SearchParamsSearchItem"] = [],
+        sort: List["_models.SortSpec"] = [],
+        distinct: bool = False,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword parameters: Parameters.
+        :paramtype parameters: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SearchParamsSearchItem]
+        :keyword sort: Sort.
+        :paramtype sort: list[~_generated.models.SortSpec]
+        :keyword distinct: Distinct.
+        :paramtype distinct: bool
+        """
+        super().__init__(**kwargs)
+        self.parameters = parameters
+        self.search = search
+        self.sort = sort
+        self.distinct = distinct
+
+
+class SearchParamsSearchItem(_serialization.Model):
+    """SearchParamsSearchItem."""
+
+
 class SetJobStatusReturn(_serialization.Model):
     """SetJobStatusReturn.
 
@@ -998,6 +960,44 @@ class SortSpec(_serialization.Model):
         super().__init__(**kwargs)
         self.parameter = parameter
         self.direction = direction
+
+
+class SummaryParams(_serialization.Model):
+    """SummaryParams.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar grouping: Grouping. Required.
+    :vartype grouping: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SummaryParamsSearchItem]
+    """
+
+    _validation = {
+        "grouping": {"required": True},
+    }
+
+    _attribute_map = {
+        "grouping": {"key": "grouping", "type": "[str]"},
+        "search": {"key": "search", "type": "[SummaryParamsSearchItem]"},
+    }
+
+    def __init__(
+        self, *, grouping: List[str], search: List["_models.SummaryParamsSearchItem"] = [], **kwargs: Any
+    ) -> None:
+        """
+        :keyword grouping: Grouping. Required.
+        :paramtype grouping: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SummaryParamsSearchItem]
+        """
+        super().__init__(**kwargs)
+        self.grouping = grouping
+        self.search = search
+
+
+class SummaryParamsSearchItem(_serialization.Model):
+    """SummaryParamsSearchItem."""
 
 
 class SupportInfo(_serialization.Model):

@@ -5,9 +5,10 @@ from typing import Any
 
 from diracx.core.config.schema import Config
 from diracx.core.models import (
-    JobSearchParams,
-    JobSummaryParams,
     ScalarSearchOperator,
+    ScalarSearchSpec,
+    SearchParams,
+    SummaryParams,
 )
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
@@ -27,7 +28,7 @@ async def search(
     preferred_username: str,
     page: int = 1,
     per_page: int = 100,
-    body: JobSearchParams | None = None,
+    body: SearchParams | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
     """Retrieve information about jobs."""
     # Apply a limit to per_page to prevent abuse of the API
@@ -35,7 +36,7 @@ async def search(
         per_page = MAX_PER_PAGE
 
     if body is None:
-        body = JobSearchParams()
+        body = SearchParams()
 
     if query_logging_info := ("LoggingInfo" in (body.parameters or [])):
         if body.parameters:
@@ -59,7 +60,7 @@ async def search(
             }
         )
 
-    total, jobs = await job_db.search(
+    total, jobs = await job_db.search_jobs(
         body.parameters,
         body.search,
         body.sort,
@@ -78,11 +79,26 @@ async def search(
     return total, jobs
 
 
+async def get_input_data(job_db: JobDB, job_id: int) -> list[dict[str, Any]]:
+    """Retrieve a job's input data."""
+    _, input_data = await job_db.search_input_data(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        [],
+    )
+
+    return input_data
+
+
 async def summary(
     config: Config,
     job_db: JobDB,
     preferred_username: str,
-    body: JobSummaryParams,
+    body: SummaryParams,
 ):
     """Show information suitable for plotting."""
     if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
@@ -97,4 +113,4 @@ async def summary(
                 "value": preferred_username,
             }
         )
-    return await job_db.summary(body.grouping, body.search)
+    return await job_db.job_summary(body.grouping, body.search)
