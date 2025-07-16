@@ -11,7 +11,7 @@ from __future__ import annotations
 __all__ = [
     "AuthOperations",
     "JobsOperations",
-    "PilotsOperations"
+    "PilotsOperations",
 ]  # Add all objects you want publicly available to users at this package level
 
 from ....patches.auth.aio import AuthOperations
