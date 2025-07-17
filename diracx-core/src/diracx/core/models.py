@@ -306,3 +306,10 @@ class PilotStatus(StrEnum):
     ABORTED = "Aborted"
     #: Cannot get information about the pilot status:
     UNKNOWN = "Unknown"
+
+
+class LogLine(BaseModel):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str

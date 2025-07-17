@@ -20,6 +20,8 @@ class ActionType(StrEnum):
     MANAGE_PILOTS = auto()
     # Read some pilot info
     READ_PILOT_FIELDS = auto()
+    # Legacy Pilot
+    LEGACY_PILOT = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
@@ -43,6 +45,19 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
     ):
         assert action, "action is a mandatory parameter"
 
+        is_a_pilot_if_allowed = (
+            allow_legacy_pilots and GENERIC_PILOT in user_info.properties
+        )
+
+        if action == ActionType.LEGACY_PILOT:
+            if is_a_pilot_if_allowed:
+                return
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must be a pilot to access this resource.",
+            )
+
         # Users can query
         # NOTE: Add into queries a VO constraint
         # To manage pilots, user have to be an admin
@@ -50,9 +65,6 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         if action == ActionType.MANAGE_PILOTS:
             # To make it clear, we separate
             is_an_admin = SERVICE_ADMINISTRATOR in user_info.properties
-            is_a_pilot_if_allowed = (
-                allow_legacy_pilots and GENERIC_PILOT in user_info.properties
-            )
 
             if not is_an_admin and not is_a_pilot_if_allowed:
                 raise HTTPException(

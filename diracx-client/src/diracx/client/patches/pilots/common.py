@@ -83,3 +83,33 @@ def make_summary_body(**kwargs: Unpack[SummaryKwargs]) -> UnderlyingSummaryArgs:
     result: UnderlyingSummaryArgs = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
     result.update(cast(ResponseExtra, kwargs))
     return result
+
+
+class LogLineDict(TypedDict):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str
+
+class MessageBody(TypedDict):
+    lines: list[LogLineDict]
+    pilot_stamp: str
+
+class MessageKwargs(MessageBody, ResponseExtra): ...
+
+class UnderlyingMessageArgs(ResponseExtra, total=False):
+    body: IO[bytes]
+
+def make_message_body(**kwargs: Unpack[MessageKwargs]) -> UnderlyingMessageArgs:
+    body: MessageBody = {
+        "lines": kwargs["lines"],
+        "pilot_stamp": kwargs["pilot_stamp"],
+    }
+    result: UnderlyingMessageArgs = {
+        "body": BytesIO(json.dumps(body).encode("utf-8"))
+    }
+    # Remove the keys that are now in body before updating?
+    # Usually, you want to update with only extra keys, so let's exclude the used keys
+    extras = {k: v for k, v in kwargs.items() if k not in ("lines", "pilot_stamp")}
+    result.update(cast(ResponseExtra, extras))
+    return result
