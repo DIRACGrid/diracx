@@ -983,9 +983,9 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     new_data = r.json()[0]
 
     hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
-    # TODO: This should be timezone aware
-    assert hbt.tzinfo is None
-    hbt = hbt.replace(tzinfo=timezone.utc)
+    # This should be timezone aware due to the enforced tzinfo from
+    # the SQLAlchemy type used for datetime fields in JobDB
+    assert hbt.tzinfo is not None
     assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
 
     # Kill the job by setting the status on it
