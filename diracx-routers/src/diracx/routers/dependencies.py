@@ -23,6 +23,7 @@ from diracx.core.settings import AuthSettings as _AuthSettings
 from diracx.core.settings import DevelopmentSettings as _DevelopmentSettings
 from diracx.core.settings import SandboxStoreSettings as _SandboxStoreSettings
 from diracx.db.os import JobParametersDB as _JobParametersDB
+from diracx.db.os import PilotLogsDB as _PilotLogsDB
 from diracx.db.sql import AuthDB as _AuthDB
 from diracx.db.sql import JobDB as _JobDB
 from diracx.db.sql import JobLoggingDB as _JobLoggingDB
@@ -50,6 +51,7 @@ TaskQueueDB = Annotated[_TaskQueueDB, Depends(_TaskQueueDB.transaction)]
 
 # Opensearch databases
 JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
+PilotLogsDB = Annotated[_PilotLogsDB, Depends(_PilotLogsDB.session)]
 
 
 # Miscellaneous
