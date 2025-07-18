@@ -51,34 +51,34 @@ async def test_search_parameters(populated_job_db):
     """Test that we can search specific parameters for jobs in the database."""
     async with populated_job_db as job_db:
         # Search a specific parameter: JobID
-        total, result = await job_db.search(["JobID"], [], [])
+        total, result = await job_db.search_jobs(["JobID"], [], [])
         assert total == 100
         assert result
         for r in result:
             assert r.keys() == {"JobID"}
 
         # Search a specific parameter: Status
-        total, result = await job_db.search(["Status"], [], [])
+        total, result = await job_db.search_jobs(["Status"], [], [])
         assert total == 100
         assert result
         for r in result:
             assert r.keys() == {"Status"}
 
         # Search for multiple parameters: JobID, Status
-        total, result = await job_db.search(["JobID", "Status"], [], [])
+        total, result = await job_db.search_jobs(["JobID", "Status"], [], [])
         assert total == 100
         assert result
         for r in result:
             assert r.keys() == {"JobID", "Status"}
 
         # Search for a specific parameter but use distinct: Status
-        total, result = await job_db.search(["Status"], [], [], distinct=True)
+        total, result = await job_db.search_jobs(["Status"], [], [], distinct=True)
         assert total == 1
         assert result
 
         # Search for a non-existent parameter: Dummy
         with pytest.raises(InvalidQueryError):
-            total, result = await job_db.search(["Dummy"], [], [])
+            total, result = await job_db.search_jobs(["Dummy"], [], [])
 
 
 async def test_search_conditions(populated_job_db):
@@ -88,7 +88,7 @@ async def test_search_conditions(populated_job_db):
         condition = ScalarSearchSpec(
             parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=3
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 1
         assert result
         assert len(result) == 1
@@ -98,7 +98,7 @@ async def test_search_conditions(populated_job_db):
         condition = ScalarSearchSpec(
             parameter="JobID", operator=ScalarSearchOperator.LESS_THAN, value=3
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 2
         assert result
         assert len(result) == 2
@@ -109,7 +109,7 @@ async def test_search_conditions(populated_job_db):
         condition = ScalarSearchSpec(
             parameter="JobID", operator=ScalarSearchOperator.NOT_EQUAL, value=3
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 99
         assert result
         assert len(result) == 99
@@ -119,14 +119,14 @@ async def test_search_conditions(populated_job_db):
         condition = ScalarSearchSpec(
             parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=5873
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert not result
 
         # Search a specific vector condition: JobID in 1,2,3
         condition = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.IN, values=[1, 2, 3]
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 3
         assert result
         assert len(result) == 3
@@ -136,7 +136,7 @@ async def test_search_conditions(populated_job_db):
         condition = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.IN, values=[1, 2, 5873]
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 2
         assert result
         assert len(result) == 2
@@ -146,7 +146,7 @@ async def test_search_conditions(populated_job_db):
         condition = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.NOT_IN, values=[1, 2, 3]
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 97
         assert result
         assert len(result) == 97
@@ -156,7 +156,7 @@ async def test_search_conditions(populated_job_db):
         condition = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.NOT_IN, values=[1, 2, 5873]
         )
-        total, result = await job_db.search([], [condition], [])
+        total, result = await job_db.search_jobs([], [condition], [])
         assert total == 98
         assert result
         assert len(result) == 98
@@ -169,7 +169,7 @@ async def test_search_conditions(populated_job_db):
         condition2 = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.IN, values=[4, 5, 6]
         )
-        total, result = await job_db.search([], [condition1, condition2], [])
+        total, result = await job_db.search_jobs([], [condition1, condition2], [])
         assert total == 1
         assert result
         assert len(result) == 1
@@ -183,7 +183,7 @@ async def test_search_conditions(populated_job_db):
         condition2 = VectorSearchSpec(
             parameter="JobID", operator=VectorSearchOperator.IN, values=[4, 5, 6]
         )
-        total, result = await job_db.search([], [condition1, condition2], [])
+        total, result = await job_db.search_jobs([], [condition1, condition2], [])
         assert total == 0
         assert not result
 
@@ -193,7 +193,7 @@ async def test_search_sorts(populated_job_db):
     async with populated_job_db as job_db:
         # Search and sort by JobID in ascending order
         sort = SortSpec(parameter="JobID", direction=SortDirection.ASC)
-        total, result = await job_db.search([], [], [sort])
+        total, result = await job_db.search_jobs([], [], [sort])
         assert total == 100
         assert result
         for i, r in enumerate(result):
@@ -201,7 +201,7 @@ async def test_search_sorts(populated_job_db):
 
         # Search and sort by JobID in descending order
         sort = SortSpec(parameter="JobID", direction=SortDirection.DESC)
-        total, result = await job_db.search([], [], [sort])
+        total, result = await job_db.search_jobs([], [], [sort])
         assert total == 100
         assert result
         for i, r in enumerate(result):
@@ -209,7 +209,7 @@ async def test_search_sorts(populated_job_db):
 
         # Search and sort by Owner in ascending order
         sort = SortSpec(parameter="Owner", direction=SortDirection.ASC)
-        total, result = await job_db.search([], [], [sort])
+        total, result = await job_db.search_jobs([], [], [sort])
         assert total == 100
         assert result
         # Assert that owner10 is before owner2 because of the lexicographical order
@@ -218,7 +218,7 @@ async def test_search_sorts(populated_job_db):
 
         # Search and sort by Owner in descending order
         sort = SortSpec(parameter="Owner", direction=SortDirection.DESC)
-        total, result = await job_db.search([], [], [sort])
+        total, result = await job_db.search_jobs([], [], [sort])
         assert total == 100
         assert result
         # Assert that owner10 is before owner2 because of the lexicographical order
@@ -228,7 +228,7 @@ async def test_search_sorts(populated_job_db):
         # Search and sort by OwnerGroup in ascending order and JobID in descending order
         sort1 = SortSpec(parameter="OwnerGroup", direction=SortDirection.ASC)
         sort2 = SortSpec(parameter="JobID", direction=SortDirection.DESC)
-        total, result = await job_db.search([], [], [sort1, sort2])
+        total, result = await job_db.search_jobs([], [], [sort1, sort2])
         assert total == 100
         assert result
         assert result[0]["OwnerGroup"] == "owner_group1"
@@ -241,45 +241,45 @@ async def test_search_pagination(populated_job_db):
     """Test that we can search for jobs in the database."""
     async with populated_job_db as job_db:
         # Search for the first 10 jobs
-        total, result = await job_db.search([], [], [], per_page=10, page=1)
+        total, result = await job_db.search_jobs([], [], [], per_page=10, page=1)
         assert total == 100
         assert result
         assert len(result) == 10
         assert result[0]["JobID"] == 1
 
         # Search for the second 10 jobs
-        total, result = await job_db.search([], [], [], per_page=10, page=2)
+        total, result = await job_db.search_jobs([], [], [], per_page=10, page=2)
         assert total == 100
         assert result
         assert len(result) == 10
         assert result[0]["JobID"] == 11
 
         # Search for the last 10 jobs
-        total, result = await job_db.search([], [], [], per_page=10, page=10)
+        total, result = await job_db.search_jobs([], [], [], per_page=10, page=10)
         assert total == 100
         assert result
         assert len(result) == 10
         assert result[0]["JobID"] == 91
 
         # Search for the second 50 jobs
-        total, result = await job_db.search([], [], [], per_page=50, page=2)
+        total, result = await job_db.search_jobs([], [], [], per_page=50, page=2)
         assert total == 100
         assert result
         assert len(result) == 50
         assert result[0]["JobID"] == 51
 
         # Invalid page number
-        total, result = await job_db.search([], [], [], per_page=10, page=11)
+        total, result = await job_db.search_jobs([], [], [], per_page=10, page=11)
         assert total == 100
         assert not result
 
         # Invalid page number
         with pytest.raises(InvalidQueryError):
-            result = await job_db.search([], [], [], per_page=10, page=0)
+            result = await job_db.search_jobs([], [], [], per_page=10, page=0)
 
         # Invalid per_page number
         with pytest.raises(InvalidQueryError):
-            result = await job_db.search([], [], [], per_page=0, page=1)
+            result = await job_db.search_jobs([], [], [], per_page=0, page=1)
 
 
 async def test_set_job_commands_invalid_job_id(job_db: JobDB):

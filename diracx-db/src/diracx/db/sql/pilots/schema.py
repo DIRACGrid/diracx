@@ -10,6 +10,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
+from diracx.core.models import PilotStatus
+
 from ..utils import Column, EnumBackedBool, NullColumn
 
 PilotAgentsDBBase = declarative_base()
@@ -31,12 +33,13 @@ class PilotAgents(PilotAgentsDBBase):
     benchmark = Column("BenchMark", Double, default=0.0)
     submission_time = NullColumn("SubmissionTime", DateTime)
     last_update_time = NullColumn("LastUpdateTime", DateTime)
-    status = Column("Status", String(32), default="Unknown")
+    status = Column("Status", String(32), default=PilotStatus.UNKNOWN)
     status_reason = Column("StatusReason", String(255), default="Unknown")
     accounting_sent = Column("AccountingSent", EnumBackedBool(), default=False)
 
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
+        Index("PilotStamp", "PilotStamp"),
         Index("Status", "Status"),
         Index("Statuskey", "GridSite", "DestinationSite", "Status"),
     )

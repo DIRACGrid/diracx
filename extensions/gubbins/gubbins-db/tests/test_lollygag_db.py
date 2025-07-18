@@ -31,7 +31,7 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
     # So it is important to write test this way
     async with lollygag_db as lollygag_db:
         # First we check that the DB is empty
-        result = await lollygag_db.summary(["Model"], [])
+        result = await lollygag_db.lollygag_summary(["Model"], [])
         assert not result
 
     # Now we add some data in the DB
@@ -51,13 +51,13 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
 
     # Check that there are now 10 cars assigned to a single driver
     async with lollygag_db as lollygag_db:
-        result = await lollygag_db.summary(["OwnerID"], [])
+        result = await lollygag_db.lollygag_summary(["OwnerID"], [])
 
         assert result[0]["count"] == 10
 
     # Test the selection
     async with lollygag_db as lollygag_db:
-        result = await lollygag_db.summary(
+        result = await lollygag_db.lollygag_summary(
             ["OwnerID"], [{"parameter": "Model", "operator": "eq", "value": "model_1"}]
         )
 
@@ -65,7 +65,7 @@ async def test_insert_and_summary(lollygag_db: LollygagDB):
 
     async with lollygag_db as lollygag_db:
         with pytest.raises(InvalidQueryError):
-            result = await lollygag_db.summary(
+            result = await lollygag_db.lollygag_summary(
                 ["OwnerID"],
                 [
                     {
