@@ -18,6 +18,7 @@ dependencies = [
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "uuid-utils",
+    "alembic"
 ]
 dynamic = ["version"]
 
