@@ -6,9 +6,13 @@ from typing import Annotated, Any
 from fastapi import Body, Depends, Response
 
 from diracx.core.models import (
-    JobSearchParams,
-    JobSummaryParams,
+    SearchParams,
+    SummaryParams,
 )
+from diracx.logic.jobs.query import get_input_data as get_input_data_bl
+from diracx.logic.jobs.query import get_job_heartbeat_info as get_job_heartbeat_info_bl
+from diracx.logic.jobs.query import get_job_jdl as get_job_jdl_bl
+from diracx.logic.jobs.query import get_job_parameters as get_job_parameters_bl
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
 
@@ -134,7 +138,7 @@ async def search(
     page: int = 1,
     per_page: int = 100,
     body: Annotated[
-        JobSearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
+        SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
 ) -> list[dict[str, Any]]:
     """Retrieve information about jobs.
@@ -173,12 +177,63 @@ async def search(
     return jobs
 
 
+@router.get("/{job_id}/input-data")
+async def get_input_data(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> list[dict[str, Any]]:
+    """Fetches a job's input data."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_input_data_bl(job_db=job_db, job_id=job_id)
+
+
+@router.get("/{job_id}/parameters")
+async def get_job_parameters(
+    job_id: int,
+    job_db: JobDB,
+    job_parameters_db: JobParametersDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> list[dict[str, Any]]:
+    """Get job parameters."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_parameters_bl(
+        job_parameters_db=job_parameters_db, job_id=job_id
+    )
+
+
+@router.get("/{job_id}/jdl")
+async def get_job_jdl(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> dict[str, str | int]:
+    """Get job JDLs."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_jdl_bl(job_db=job_db, job_id=job_id)
+
+
+@router.get("/{job_id}/heartbeat")
+async def get_job_heartbeat_info(
+    job_id: int,
+    job_db: JobDB,
+    check_permissions: CheckWMSPolicyCallable,
+) -> list[dict[str, str | int]]:
+    """Get job heartbeat info."""
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
+
+    return await get_job_heartbeat_info_bl(job_db=job_db, job_id=job_id)
+
+
 @router.post("/summary")
 async def summary(
     config: Config,
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    body: JobSummaryParams,
+    body: SummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Show information suitable for plotting."""
