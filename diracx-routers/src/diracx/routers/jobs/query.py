@@ -9,6 +9,7 @@ from diracx.core.models import (
     JobSearchParams,
     JobSummaryParams,
 )
+from diracx.core.properties import JOB_ADMINISTRATOR
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
 
@@ -143,12 +144,16 @@ async def search(
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 
+    preferred_username: str | None = user_info.preferred_username
+    if JOB_ADMINISTRATOR in user_info.properties:
+        preferred_username = None
+
     total, jobs = await search_bl(
         config=config,
         job_db=job_db,
         job_parameters_db=job_parameters_db,
         job_logging_db=job_logging_db,
-        preferred_username=user_info.preferred_username,
+        preferred_username=preferred_username,
         page=page,
         per_page=per_page,
         body=body,
