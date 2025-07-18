@@ -14,7 +14,6 @@ from diracx.core.models import (
 )
 from diracx.logic.jobs.status import add_heartbeat as add_heartbeat_bl
 from diracx.logic.jobs.status import get_job_commands as get_job_commands_bl
-from diracx.logic.jobs.status import remove_jobs as remove_jobs_bl
 from diracx.logic.jobs.status import reschedule_jobs as reschedule_jobs_bl
 from diracx.logic.jobs.status import (
     set_job_parameters_or_attributes as set_job_parameters_or_attributes_bl,
@@ -26,41 +25,12 @@ from ..dependencies import (
     JobDB,
     JobLoggingDB,
     JobParametersDB,
-    SandboxMetadataDB,
     TaskQueueDB,
 )
 from ..fastapi_classes import DiracxRouter
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 router = DiracxRouter()
-
-
-@router.delete("/")
-async def remove_jobs(
-    job_ids: Annotated[list[int], Query()],
-    config: Config,
-    job_db: JobDB,
-    job_logging_db: JobLoggingDB,
-    sandbox_metadata_db: SandboxMetadataDB,
-    task_queue_db: TaskQueueDB,
-    check_permissions: CheckWMSPolicyCallable,
-):
-    """Fully remove a list of jobs from the WMS databases.
-
-    WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
-    and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
-    be removed, and a status change to Deleted (PATCH /jobs/status) should be used instead for any other purpose.
-    """
-    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
-
-    return await remove_jobs_bl(
-        job_ids,
-        config,
-        job_db,
-        job_logging_db,
-        sandbox_metadata_db,
-        task_queue_db,
-    )
 
 
 @router.patch("/status")

@@ -459,24 +459,6 @@ def build_jobs_assign_sandbox_to_job_request(job_id: int, *, content: str, **kwa
     return HttpRequest(method="PATCH", url=_url, headers=_headers, content=content, **kwargs)
 
 
-def build_jobs_remove_jobs_request(*, job_ids: List[int], **kwargs: Any) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/"
-
-    # Construct parameters
-    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="DELETE", url=_url, params=_params, headers=_headers, **kwargs)
-
-
 def build_jobs_set_job_statuses_request(*, force: bool = False, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -1965,61 +1947,6 @@ class JobsOperations:
             job_id=job_id,
             content_type=content_type,
             content=_content,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @distributed_trace
-    def remove_jobs(self, *, job_ids: List[int], **kwargs: Any) -> Any:
-        """Remove Jobs.
-
-        Fully remove a list of jobs from the WMS databases.
-
-        WARNING: This endpoint has been implemented for the compatibility with the legacy DIRAC WMS
-        and the JobCleaningAgent. However, once this agent is ported to diracx, this endpoint should
-        be removed, and a status change to Deleted (PATCH /jobs/status) should be used instead for any
-        other purpose.
-
-        :keyword job_ids: Required.
-        :paramtype job_ids: list[int]
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        _request = build_jobs_remove_jobs_request(
-            job_ids=job_ids,
             headers=_headers,
             params=_params,
         )
