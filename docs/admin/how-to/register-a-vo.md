@@ -11,65 +11,63 @@
 
 1. Log in to your VO’s IdP instance.
 2. Create a new OIDC client with:
-   - **Client secret**: _none_
-   - **Redirect URIs**:
-     ```
-     https://<your‑diracx‑url>/api/auth/authorize/complete
-     ```
-   - **Grant type**: `authorization_code`
-   - **Scope**: at minimum `openid`, `profile` and `email`
+    - **Client secret**: _none_
+    - **Redirect URIs**:
+        ```
+        https://<your‑diracx‑url>/api/auth/authorize/complete
+        ```
+    - **Grant type**: `authorization_code`
+    - **Scope**: at minimum `openid`, `profile` and `email`
 
 ### 2. Configure DiracX
 
 1. In your DIRAC CS, add under `DiracX > CsSync > VOs > <VO> > IdP`:
 
-   ```yaml
-   DiracX
-   {
-     CsSync
-     {
-       VOs
-       {
-         <VO>
-         {
-           IdP
-           {
-             ClientID = "<OIDC‑client‑ID>"
-             URL = "https://<your‑idp‑instance>/"
-           }
-         }
-       }
-     }
-   }
-   ```
+    ```yaml
+    DiracX
+    {
+      CsSync
+      {
+        VOs
+        {
+          <VO>
+          {
+            IdP
+            {
+              ClientID = "<OIDC‑client‑ID>"
+              URL = "https://<your‑idp‑instance>/"
+            }
+          }
+        }
+      }
+    }
+    ```
 
 2. To add specific users, list their subject‑IDs under `UserSubjects`:
 
-   ```yaml
-   DiracX
-   {
-     CsSync
-     {
-       VOs
-       {
-         <VO>
-         {
-           UserSubjects
-           {
-             <username from dirac> = <user id from the IdP instance>
-             ...
-           }
-         }
-       }
-     }
-   }
-   ```
+    ```yaml
+    DiracX
+    {
+      CsSync
+      {
+        VOs
+        {
+          <VO>
+          {
+            UserSubjects
+            {
+              <username from dirac> = <user id from the IdP instance>
+              ...
+            }
+          }
+        }
+      }
+    }
+    ```
 
-   !!! note
+!!! note
 
-   ```
     User IDs are associated to the usernames that are defined in the `Registry > Users` section. This allows DiracX to retrieve the groups they belong to and their properties.
-   ```
 
 After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
 See [Convert CS](./convert-cs.md) for next steps.
