@@ -19,6 +19,8 @@ class ScalarSearchOperator(StrEnum):
     GREATER_THAN = "gt"
     LESS_THAN = "lt"
     LIKE = "like"
+    NOT_LIKE = "not like"
+    REGEX = "regex"
 
 
 class VectorSearchOperator(StrEnum):

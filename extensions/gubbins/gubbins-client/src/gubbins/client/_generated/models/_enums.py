@@ -55,6 +55,8 @@ class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     GT = "gt"
     LT = "lt"
     LIKE = "like"
+    NOT_LIKE = "not like"
+    REGEX = "regex"
 
 
 class SortDirection(str, Enum, metaclass=CaseInsensitiveEnumMeta):

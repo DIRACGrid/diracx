@@ -811,8 +811,8 @@ class ScalarSearchSpec(_serialization.Model):
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt", and
-     "like".
+    :ivar operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt",
+     "like", "not like", and "regex".
     :vartype operator: str or ~_generated.models.ScalarSearchOperator
     :ivar value: Value. Required.
     :vartype value: ~_generated.models.ScalarSearchSpecValue
@@ -842,7 +842,7 @@ class ScalarSearchSpec(_serialization.Model):
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
         :keyword operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt",
-         and "like".
+         "like", "not like", and "regex".
         :paramtype operator: str or ~_generated.models.ScalarSearchOperator
         :keyword value: Value. Required.
         :paramtype value: ~_generated.models.ScalarSearchSpecValue

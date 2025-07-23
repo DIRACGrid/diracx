@@ -300,6 +300,10 @@ def apply_search_filters(column_mapping, stmt, search):
             expr = column.like(query["value"])
         elif query["operator"] in "ilike":
             expr = column.ilike(query["value"])
+        elif query["operator"] == "not like":
+            expr = column.not_like(query["value"])
+        elif query["operator"] == "regex":
+            expr = column.regexp_match(query["value"])
         else:
             raise InvalidQueryError(f"Unknown filter {query=}")
         stmt = stmt.where(expr)
