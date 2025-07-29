@@ -8,6 +8,7 @@ import argparse
 import ast
 import importlib.util
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -164,6 +165,9 @@ def regenerate_client(openapi_spec: Path, client_module: str):
         "--namespace=_generated",
         f"--output-folder={client_root}",
     ]
+
+    if "AUTOREST_HOME" in os.environ:
+        os.makedirs(os.environ["AUTOREST_HOME"], exist_ok=True)
 
     # ruff: disable=S603
     subprocess.run(cmd, check=True)
