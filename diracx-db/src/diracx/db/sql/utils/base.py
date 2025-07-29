@@ -303,6 +303,11 @@ def apply_search_filters(column_mapping, stmt, search):
         elif query["operator"] == "not like":
             expr = column.not_like(query["value"])
         elif query["operator"] == "regex":
+            # We check the regex validity here
+            try:
+                re.compile(query["value"])
+            except re.error as e:
+                raise InvalidQueryError(f"Invalid regex {query['value']}") from e
             expr = column.regexp_match(query["value"])
         else:
             raise InvalidQueryError(f"Unknown filter {query=}")

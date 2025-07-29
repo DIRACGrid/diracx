@@ -218,14 +218,23 @@ async def test_search_conditions(populated_job_db):
         assert result
         assert len(result) == 100
 
-        # Search for a specific scalar condition: JobID regex '\d'
+        # Search for a specific scalar condition: JobID regex 'owner[0-3]+'
+        # owner0, owner1, owner2, owner3 (4 jobs)
+        # owner11 -> owner39 (30 jobs)
         condition = ScalarSearchSpec(
-            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="owner[0-9]+"
+            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="owner[0-3]+"
         )
         total, result = await job_db.search([], [condition], [])
-        assert total == 100
+        assert total == 34
         assert result
-        assert len(result) == 100
+        assert len(result) == 34
+
+        # Search for a specific scalar condition: JobID regex 'owner[1-'
+        condition = ScalarSearchSpec(
+            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="owner[1-"
+        )
+        with pytest.raises(InvalidQueryError):
+            await job_db.search([], [condition], [])
 
 
 async def test_search_sorts(populated_job_db):
