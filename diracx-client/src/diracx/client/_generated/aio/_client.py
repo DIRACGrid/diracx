@@ -15,7 +15,14 @@ from azure.core.rest import AsyncHttpResponse, HttpRequest
 from .. import models as _models
 from .._utils.serialization import Deserializer, Serializer
 from ._configuration import DiracConfiguration
-from .operations import AuthOperations, ConfigOperations, JobsOperations, PilotsOperations, WellKnownOperations
+from .operations import (
+    AuthOperations,
+    ConfigOperations,
+    JobsOperations,
+    PilotsLegacyOperations,
+    PilotsOperations,
+    WellKnownOperations,
+)
 
 
 class Dirac:  # pylint: disable=client-accepts-api-version-keyword
@@ -31,6 +38,8 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype jobs: _generated.aio.operations.JobsOperations
     :ivar pilots: PilotsOperations operations
     :vartype pilots: _generated.aio.operations.PilotsOperations
+    :ivar pilots_legacy: PilotsLegacyOperations operations
+    :vartype pilots_legacy: _generated.aio.operations.PilotsLegacyOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -68,6 +77,7 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
         self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.pilots_legacy = PilotsLegacyOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(
         self, request: HttpRequest, *, stream: bool = False, **kwargs: Any

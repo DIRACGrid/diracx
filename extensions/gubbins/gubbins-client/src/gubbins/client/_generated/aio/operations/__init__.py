@@ -16,6 +16,7 @@ from ._operations import ConfigOperations  # type: ignore
 from ._operations import JobsOperations  # type: ignore
 from ._operations import LollygagOperations  # type: ignore
 from ._operations import PilotsOperations  # type: ignore
+from ._operations import PilotsLegacyOperations  # type: ignore
 
 from ._patch import __all__ as _patch_all
 from ._patch import *
@@ -28,6 +29,7 @@ __all__ = [
     "JobsOperations",
     "LollygagOperations",
     "PilotsOperations",
+    "PilotsLegacyOperations",
 ]
 __all__.extend([p for p in _patch_all if p not in __all__])  # pyright: ignore
 _patch_sdk()
