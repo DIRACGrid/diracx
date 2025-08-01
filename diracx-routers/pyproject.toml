@@ -46,10 +46,14 @@ auth = "diracx.routers.auth:router"
 config = "diracx.routers.configuration:router"
 health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
+pilots = "diracx.routers.pilots:router"
+"pilots/legacy" = "diracx.routers.legacy_pilot_resources:router"
 
 [project.entry-points."diracx.access_policies"]
 WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
+PilotManagementAccessPolicy = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
+LegacyPilotAccessPolicy = "diracx.routers.legacy_pilot_resources.access_policies:LegacyPilotAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]

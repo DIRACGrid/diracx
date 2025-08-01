@@ -27,7 +27,7 @@ async def test_insert_and_summary(dummy_db: DummyDB):
     # So it is important to write test this way
     async with dummy_db as dummy_db:
         # First we check that the DB is empty
-        result = await dummy_db.summary(["Model"], [])
+        result = await dummy_db.dummy_summary(["Model"], [])
         assert not result
 
     # Now we add some data in the DB
@@ -44,13 +44,13 @@ async def test_insert_and_summary(dummy_db: DummyDB):
 
     # Check that there are now 10 cars assigned to a single driver
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
 
         assert result[0]["count"] == 10
 
     # Test the selection
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(
+        result = await dummy_db.dummy_summary(
             ["OwnerID"], [{"parameter": "Model", "operator": "eq", "value": "model_1"}]
         )
 
@@ -58,7 +58,7 @@ async def test_insert_and_summary(dummy_db: DummyDB):
 
     async with dummy_db as dummy_db:
         with pytest.raises(InvalidQueryError):
-            result = await dummy_db.summary(
+            result = await dummy_db.dummy_summary(
                 ["OwnerID"],
                 [
                     {
@@ -93,7 +93,7 @@ async def test_successful_transaction(dummy_db):
         assert dummy_db.conn
 
         # First we check that the DB is empty
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert not result
 
         # Add data
@@ -104,7 +104,7 @@ async def test_successful_transaction(dummy_db):
         )
         assert result
 
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert result[0]["count"] == 10
 
     # The connection is closed when the context manager is exited
@@ -114,7 +114,7 @@ async def test_successful_transaction(dummy_db):
     # Start a new transaction
     # The previous data should still be there because the transaction was committed (successful)
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert result[0]["count"] == 10
 
 
@@ -129,12 +129,12 @@ async def test_failed_transaction(dummy_db):
 
     # The connection is created when the context manager is entered
     # This is our transaction
-    with pytest.raises(KeyError):
+    with pytest.raises(InvalidQueryError):
         async with dummy_db as dummy_db:
             assert dummy_db.conn
 
             # First we check that the DB is empty
-            result = await dummy_db.summary(["OwnerID"], [])
+            result = await dummy_db.dummy_summary(["OwnerID"], [])
             assert not result
 
             # Add data
@@ -149,7 +149,8 @@ async def test_failed_transaction(dummy_db):
             assert result
 
             # This will raise an exception and the transaction will be rolled back
-            result = await dummy_db.summary(["unexistingfieldraisinganerror"], [])
+
+            result = await dummy_db.dummy_summary(["unexistingfieldraisinganerror"], [])
             assert result[0]["count"] == 10
 
     # The connection is closed when the context manager is exited
@@ -159,7 +160,7 @@ async def test_failed_transaction(dummy_db):
     # Start a new transaction
     # The previous data should not be there because the transaction was rolled back (failed)
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert not result
 
 
@@ -203,7 +204,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             assert dummy_db.conn
 
             # First we check that the DB is empty
-            result = await dummy_db.summary(["OwnerID"], [])
+            result = await dummy_db.dummy_summary(["OwnerID"], [])
             assert not result
 
             # Add data
@@ -217,7 +218,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             )
             assert result
 
-            result = await dummy_db.summary(["OwnerID"], [])
+            result = await dummy_db.dummy_summary(["OwnerID"], [])
             assert result[0]["count"] == 10
 
             # This will raise an exception but the transaction will be rolled back
@@ -231,7 +232,7 @@ async def test_successful_with_exception_transaction(dummy_db):
     # Start a new transaction
     # The previous data should not be there because the transaction was rolled back (failed)
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert not result
 
     # Start a new transaction, this time we commit it manually
@@ -240,7 +241,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             assert dummy_db.conn
 
             # First we check that the DB is empty
-            result = await dummy_db.summary(["OwnerID"], [])
+            result = await dummy_db.dummy_summary(["OwnerID"], [])
             assert not result
 
             # Add data
@@ -254,7 +255,7 @@ async def test_successful_with_exception_transaction(dummy_db):
             )
             assert result
 
-            result = await dummy_db.summary(["OwnerID"], [])
+            result = await dummy_db.dummy_summary(["OwnerID"], [])
             assert result[0]["count"] == 10
 
             # Manually commit the transaction, and then raise an exception
@@ -271,5 +272,5 @@ async def test_successful_with_exception_transaction(dummy_db):
     # Start a new transaction
     # The previous data should be there because the transaction was committed before the exception
     async with dummy_db as dummy_db:
-        result = await dummy_db.summary(["OwnerID"], [])
+        result = await dummy_db.dummy_summary(["OwnerID"], [])
         assert result[0]["count"] == 10

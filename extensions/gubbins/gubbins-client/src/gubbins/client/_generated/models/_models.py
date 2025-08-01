@@ -94,6 +94,144 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyPilotsAddPilotStamps(_serialization.Model):
+    """Body_pilots_add_pilot_stamps.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+    :vartype pilot_stamps: list[str]
+    :ivar vo: Pilot virtual organization. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilots.
+    :vartype grid_type: str
+    :ivar grid_site: Pilots grid site.
+    :vartype grid_site: str
+    :ivar destination_site: Pilots destination site.
+    :vartype destination_site: str
+    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
+    :vartype pilot_references: dict[str, str]
+    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
+    """
+
+    _validation = {
+        "pilot_stamps": {"required": True},
+        "vo": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "destination_site": {"key": "destination_site", "type": "str"},
+        "pilot_references": {"key": "pilot_references", "type": "{str}"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamps: List[str],
+        vo: str,
+        grid_type: str = "Dirac",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
+        pilot_references: Optional[Dict[str, str]] = None,
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+        :paramtype pilot_stamps: list[str]
+        :keyword vo: Pilot virtual organization. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilots.
+        :paramtype grid_type: str
+        :keyword grid_site: Pilots grid site.
+        :paramtype grid_site: str
+        :keyword destination_site: Pilots destination site.
+        :paramtype destination_site: str
+        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
+        :paramtype pilot_references: dict[str, str]
+        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamps = pilot_stamps
+        self.vo = vo
+        self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.destination_site = destination_site
+        self.pilot_references = pilot_references
+        self.pilot_status = pilot_status
+
+
+class BodyPilotsLegacySendMessage(_serialization.Model):
+    """Body_pilots/legacy_send_message.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar lines: Message from the pilot to the logging system. Required.
+    :vartype lines: list[~_generated.models.LogLine]
+    :ivar pilot_stamp: PilotStamp, required as legacy pilots do not have a token with stamp in it.
+     Required.
+    :vartype pilot_stamp: str
+    """
+
+    _validation = {
+        "lines": {"required": True},
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "lines": {"key": "lines", "type": "[LogLine]"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+    }
+
+    def __init__(self, *, lines: List["_models.LogLine"], pilot_stamp: str, **kwargs: Any) -> None:
+        """
+        :keyword lines: Message from the pilot to the logging system. Required.
+        :paramtype lines: list[~_generated.models.LogLine]
+        :keyword pilot_stamp: PilotStamp, required as legacy pilots do not have a token with stamp in
+         it. Required.
+        :paramtype pilot_stamp: str
+        """
+        super().__init__(**kwargs)
+        self.lines = lines
+        self.pilot_stamp = pilot_stamp
+
+
+class BodyPilotsUpdatePilotFields(_serialization.Model):
+    """Body_pilots_update_pilot_fields.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change. Required.
+    :vartype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
+    """
+
+    _validation = {
+        "pilot_stamps_to_fields_mapping": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamps_to_fields_mapping": {"key": "pilot_stamps_to_fields_mapping", "type": "[PilotFieldsMapping]"},
+    }
+
+    def __init__(self, *, pilot_stamps_to_fields_mapping: List["_models.PilotFieldsMapping"], **kwargs: Any) -> None:
+        """
+        :keyword pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change.
+         Required.
+        :paramtype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamps_to_fields_mapping = pilot_stamps_to_fields_mapping
+
+
 class ExtendedMetadata(_serialization.Model):
     """ExtendedMetadata.
 
@@ -405,56 +543,6 @@ class JobCommand(_serialization.Model):
         self.arguments = arguments
 
 
-class JobSearchParams(_serialization.Model):
-    """JobSearchParams.
-
-    :ivar parameters: Parameters.
-    :vartype parameters: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSearchParamsSearchItem]
-    :ivar sort: Sort.
-    :vartype sort: list[~_generated.models.SortSpec]
-    :ivar distinct: Distinct.
-    :vartype distinct: bool
-    """
-
-    _attribute_map = {
-        "parameters": {"key": "parameters", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSearchParamsSearchItem]"},
-        "sort": {"key": "sort", "type": "[SortSpec]"},
-        "distinct": {"key": "distinct", "type": "bool"},
-    }
-
-    def __init__(
-        self,
-        *,
-        parameters: Optional[List[str]] = None,
-        search: List["_models.JobSearchParamsSearchItem"] = [],
-        sort: List["_models.SortSpec"] = [],
-        distinct: bool = False,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword parameters: Parameters.
-        :paramtype parameters: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSearchParamsSearchItem]
-        :keyword sort: Sort.
-        :paramtype sort: list[~_generated.models.SortSpec]
-        :keyword distinct: Distinct.
-        :paramtype distinct: bool
-        """
-        super().__init__(**kwargs)
-        self.parameters = parameters
-        self.search = search
-        self.sort = sort
-        self.distinct = distinct
-
-
-class JobSearchParamsSearchItem(_serialization.Model):
-    """JobSearchParamsSearchItem."""
-
-
 class JobStatusUpdate(_serialization.Model):
     """JobStatusUpdate.
 
@@ -505,42 +593,51 @@ class JobStatusUpdate(_serialization.Model):
         self.source = source
 
 
-class JobSummaryParams(_serialization.Model):
-    """JobSummaryParams.
+class LogLine(_serialization.Model):
+    """LogLine.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar grouping: Grouping. Required.
-    :vartype grouping: list[str]
-    :ivar search: Search.
-    :vartype search: list[~_generated.models.JobSummaryParamsSearchItem]
+    :ivar timestamp: Timestamp. Required.
+    :vartype timestamp: str
+    :ivar severity: Severity. Required.
+    :vartype severity: str
+    :ivar message: Message. Required.
+    :vartype message: str
+    :ivar scope: Scope. Required.
+    :vartype scope: str
     """
 
     _validation = {
-        "grouping": {"required": True},
+        "timestamp": {"required": True},
+        "severity": {"required": True},
+        "message": {"required": True},
+        "scope": {"required": True},
     }
 
     _attribute_map = {
-        "grouping": {"key": "grouping", "type": "[str]"},
-        "search": {"key": "search", "type": "[JobSummaryParamsSearchItem]"},
+        "timestamp": {"key": "timestamp", "type": "str"},
+        "severity": {"key": "severity", "type": "str"},
+        "message": {"key": "message", "type": "str"},
+        "scope": {"key": "scope", "type": "str"},
     }
 
-    def __init__(
-        self, *, grouping: List[str], search: List["_models.JobSummaryParamsSearchItem"] = [], **kwargs: Any
-    ) -> None:
+    def __init__(self, *, timestamp: str, severity: str, message: str, scope: str, **kwargs: Any) -> None:
         """
-        :keyword grouping: Grouping. Required.
-        :paramtype grouping: list[str]
-        :keyword search: Search.
-        :paramtype search: list[~_generated.models.JobSummaryParamsSearchItem]
+        :keyword timestamp: Timestamp. Required.
+        :paramtype timestamp: str
+        :keyword severity: Severity. Required.
+        :paramtype severity: str
+        :keyword message: Message. Required.
+        :paramtype message: str
+        :keyword scope: Scope. Required.
+        :paramtype scope: str
         """
         super().__init__(**kwargs)
-        self.grouping = grouping
-        self.search = search
-
-
-class JobSummaryParamsSearchItem(_serialization.Model):
-    """JobSummaryParamsSearchItem."""
+        self.timestamp = timestamp
+        self.severity = severity
+        self.message = message
+        self.scope = scope
 
 
 class OpenIDConfiguration(_serialization.Model):
@@ -674,6 +771,102 @@ class OpenIDConfiguration(_serialization.Model):
         self.token_endpoint_auth_signing_alg_values_supported = token_endpoint_auth_signing_alg_values_supported
         self.token_endpoint_auth_methods_supported = token_endpoint_auth_methods_supported
         self.code_challenge_methods_supported = code_challenge_methods_supported
+
+
+class PilotFieldsMapping(_serialization.Model):
+    """All the fields that a user can modify on a Pilot (except PilotStamp).
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Pilotstamp. Required.
+    :vartype pilot_stamp: str
+    :ivar status_reason: Statusreason.
+    :vartype status_reason: str
+    :ivar status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+     "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype status: str or ~_generated.models.PilotStatus
+    :ivar bench_mark: Benchmark.
+    :vartype bench_mark: float
+    :ivar destination_site: Destinationsite.
+    :vartype destination_site: str
+    :ivar queue: Queue.
+    :vartype queue: str
+    :ivar grid_site: Gridsite.
+    :vartype grid_site: str
+    :ivar grid_type: Gridtype.
+    :vartype grid_type: str
+    :ivar accounting_sent: Accountingsent.
+    :vartype accounting_sent: bool
+    :ivar current_job_id: Currentjobid.
+    :vartype current_job_id: int
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "PilotStamp", "type": "str"},
+        "status_reason": {"key": "StatusReason", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "bench_mark": {"key": "BenchMark", "type": "float"},
+        "destination_site": {"key": "DestinationSite", "type": "str"},
+        "queue": {"key": "Queue", "type": "str"},
+        "grid_site": {"key": "GridSite", "type": "str"},
+        "grid_type": {"key": "GridType", "type": "str"},
+        "accounting_sent": {"key": "AccountingSent", "type": "bool"},
+        "current_job_id": {"key": "CurrentJobID", "type": "int"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        status_reason: Optional[str] = None,
+        status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        bench_mark: Optional[float] = None,
+        destination_site: Optional[str] = None,
+        queue: Optional[str] = None,
+        grid_site: Optional[str] = None,
+        grid_type: Optional[str] = None,
+        accounting_sent: Optional[bool] = None,
+        current_job_id: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: Pilotstamp. Required.
+        :paramtype pilot_stamp: str
+        :keyword status_reason: Statusreason.
+        :paramtype status_reason: str
+        :keyword status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
+         "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype status: str or ~_generated.models.PilotStatus
+        :keyword bench_mark: Benchmark.
+        :paramtype bench_mark: float
+        :keyword destination_site: Destinationsite.
+        :paramtype destination_site: str
+        :keyword queue: Queue.
+        :paramtype queue: str
+        :keyword grid_site: Gridsite.
+        :paramtype grid_site: str
+        :keyword grid_type: Gridtype.
+        :paramtype grid_type: str
+        :keyword accounting_sent: Accountingsent.
+        :paramtype accounting_sent: bool
+        :keyword current_job_id: Currentjobid.
+        :paramtype current_job_id: int
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.status_reason = status_reason
+        self.status = status
+        self.bench_mark = bench_mark
+        self.destination_site = destination_site
+        self.queue = queue
+        self.grid_site = grid_site
+        self.grid_type = grid_type
+        self.accounting_sent = accounting_sent
+        self.current_job_id = current_job_id
 
 
 class SandboxDownloadResponse(_serialization.Model):
@@ -857,6 +1050,56 @@ class ScalarSearchSpecValue(_serialization.Model):
     """Value."""
 
 
+class SearchParams(_serialization.Model):
+    """SearchParams.
+
+    :ivar parameters: Parameters.
+    :vartype parameters: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SearchParamsSearchItem]
+    :ivar sort: Sort.
+    :vartype sort: list[~_generated.models.SortSpec]
+    :ivar distinct: Distinct.
+    :vartype distinct: bool
+    """
+
+    _attribute_map = {
+        "parameters": {"key": "parameters", "type": "[str]"},
+        "search": {"key": "search", "type": "[SearchParamsSearchItem]"},
+        "sort": {"key": "sort", "type": "[SortSpec]"},
+        "distinct": {"key": "distinct", "type": "bool"},
+    }
+
+    def __init__(
+        self,
+        *,
+        parameters: Optional[List[str]] = None,
+        search: List["_models.SearchParamsSearchItem"] = [],
+        sort: List["_models.SortSpec"] = [],
+        distinct: bool = False,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword parameters: Parameters.
+        :paramtype parameters: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SearchParamsSearchItem]
+        :keyword sort: Sort.
+        :paramtype sort: list[~_generated.models.SortSpec]
+        :keyword distinct: Distinct.
+        :paramtype distinct: bool
+        """
+        super().__init__(**kwargs)
+        self.parameters = parameters
+        self.search = search
+        self.sort = sort
+        self.distinct = distinct
+
+
+class SearchParamsSearchItem(_serialization.Model):
+    """SearchParamsSearchItem."""
+
+
 class SetJobStatusReturn(_serialization.Model):
     """SetJobStatusReturn.
 
@@ -998,6 +1241,44 @@ class SortSpec(_serialization.Model):
         super().__init__(**kwargs)
         self.parameter = parameter
         self.direction = direction
+
+
+class SummaryParams(_serialization.Model):
+    """SummaryParams.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar grouping: Grouping. Required.
+    :vartype grouping: list[str]
+    :ivar search: Search.
+    :vartype search: list[~_generated.models.SummaryParamsSearchItem]
+    """
+
+    _validation = {
+        "grouping": {"required": True},
+    }
+
+    _attribute_map = {
+        "grouping": {"key": "grouping", "type": "[str]"},
+        "search": {"key": "search", "type": "[SummaryParamsSearchItem]"},
+    }
+
+    def __init__(
+        self, *, grouping: List[str], search: List["_models.SummaryParamsSearchItem"] = [], **kwargs: Any
+    ) -> None:
+        """
+        :keyword grouping: Grouping. Required.
+        :paramtype grouping: list[str]
+        :keyword search: Search.
+        :paramtype search: list[~_generated.models.SummaryParamsSearchItem]
+        """
+        super().__init__(**kwargs)
+        self.grouping = grouping
+        self.search = search
+
+
+class SummaryParamsSearchItem(_serialization.Model):
+    """SummaryParamsSearchItem."""
 
 
 class SupportInfo(_serialization.Model):

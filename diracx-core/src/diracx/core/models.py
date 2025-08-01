@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -29,7 +29,7 @@ class VectorSearchOperator(StrEnum):
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
-    value: str | int
+    value: str | int | datetime
 
 
 class VectorSearchSpec(TypedDict):
@@ -59,13 +59,13 @@ class InsertedJob(TypedDict):
     TimeStamp: datetime
 
 
-class JobSummaryParams(BaseModel):
+class SummaryParams(BaseModel):
     grouping: list[str]
     search: list[SearchSpec] = []
     # TODO: Add more validation
 
 
-class JobSearchParams(BaseModel):
+class SearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []
@@ -272,3 +272,44 @@ class JobCommand(BaseModel):
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
+
+
+class PilotFieldsMapping(BaseModel, extra="forbid"):
+    """All the fields that a user can modify on a Pilot (except PilotStamp)."""
+
+    PilotStamp: str
+    StatusReason: Optional[str] = None
+    Status: Optional[PilotStatus] = None
+    BenchMark: Optional[float] = None
+    DestinationSite: Optional[str] = None
+    Queue: Optional[str] = None
+    GridSite: Optional[str] = None
+    GridType: Optional[str] = None
+    AccountingSent: Optional[bool] = None
+    CurrentJobID: Optional[int] = None
+
+
+class PilotStatus(StrEnum):
+    #: The pilot has been generated and is transferred to a remote site:
+    SUBMITTED = "Submitted"
+    #: The pilot is waiting for a computing resource in a batch queue:
+    WAITING = "Waiting"
+    #: The pilot is running a payload on a worker node:
+    RUNNING = "Running"
+    #: The pilot finished its execution:
+    DONE = "Done"
+    #: The pilot execution failed:
+    FAILED = "Failed"
+    #: The pilot was deleted:
+    DELETED = "Deleted"
+    #: The pilot execution was aborted:
+    ABORTED = "Aborted"
+    #: Cannot get information about the pilot status:
+    UNKNOWN = "Unknown"
+
+
+class LogLine(BaseModel):
+    timestamp: str
+    severity: str
+    message: str
+    scope: str

@@ -15,10 +15,18 @@ from azure.core.rest import HttpRequest, HttpResponse
 from . import models as _models
 from ._configuration import DiracConfiguration
 from ._utils.serialization import Deserializer, Serializer
-from .operations import AuthOperations, ConfigOperations, JobsOperations, LollygagOperations, WellKnownOperations
+from .operations import (
+    AuthOperations,
+    ConfigOperations,
+    JobsOperations,
+    LollygagOperations,
+    PilotsLegacyOperations,
+    PilotsOperations,
+    WellKnownOperations,
+)
 
 
-class Dirac:  # pylint: disable=client-accepts-api-version-keyword
+class Dirac:  # pylint: disable=client-accepts-api-version-keyword,too-many-instance-attributes
     """Dirac.
 
     :ivar well_known: WellKnownOperations operations
@@ -31,6 +39,10 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
     :vartype jobs: _generated.operations.JobsOperations
     :ivar lollygag: LollygagOperations operations
     :vartype lollygag: _generated.operations.LollygagOperations
+    :ivar pilots: PilotsOperations operations
+    :vartype pilots: _generated.operations.PilotsOperations
+    :ivar pilots_legacy: PilotsLegacyOperations operations
+    :vartype pilots_legacy: _generated.operations.PilotsLegacyOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -68,6 +80,8 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword
         self.config = ConfigOperations(self._client, self._config, self._serialize, self._deserialize)
         self.jobs = JobsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.lollygag = LollygagOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.pilots_legacy = PilotsLegacyOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(self, request: HttpRequest, *, stream: bool = False, **kwargs: Any) -> HttpResponse:
         """Runs the network request through the client's chained policies.
