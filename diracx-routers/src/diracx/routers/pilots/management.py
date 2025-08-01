@@ -56,6 +56,7 @@ async def add_pilot_stamps(
     pilot_status: Annotated[
         PilotStatus, Body(description="Status of the pilots.")
     ] = PilotStatus.SUBMITTED,
+    vo: str | None = None,
 ):
     """Endpoint where a you can create pilots with their references.
 
