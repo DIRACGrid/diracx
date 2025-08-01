@@ -41,7 +41,7 @@ async def test_create_pilots(normal_test_client):
     pilot_stamps = [f"stamps_{i}" for i in range(N)]
 
     #  -------------- Bulk insert --------------
-    body = {"pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
 
     r = normal_test_client.post(
         "/api/pilots/",
@@ -54,6 +54,7 @@ async def test_create_pilots(normal_test_client):
 
     body = {
         "pilot_stamps": [pilot_stamps[0], pilot_stamps[0] + "_new_one"],
+        "vo": MAIN_VO,
     }
 
     r = normal_test_client.post(
@@ -73,7 +74,7 @@ async def test_create_pilots(normal_test_client):
     #  -------------- Register a pilot that does not exists **but** was called before in an error --------------
     # To prove that, if I tried to register a pilot that does not exist with one that already exists,
     # i can normally add the one that did not exist before (it should not have added it before)
-    body = {"pilot_stamps": [pilot_stamps[0] + "_new_one"]}
+    body = {"pilot_stamps": [pilot_stamps[0] + "_new_one"], "vo": MAIN_VO}
 
     r = normal_test_client.post(
         "/api/pilots/",
@@ -90,7 +91,7 @@ async def test_create_pilot_and_delete_it(normal_test_client):
     pilot_stamp = "stamps_1"
 
     #  -------------- Insert --------------
-    body = {"pilot_stamps": [pilot_stamp]}
+    body = {"pilot_stamps": [pilot_stamp], "vo": MAIN_VO}
 
     # Create a pilot
     r = normal_test_client.post(
@@ -134,7 +135,7 @@ async def test_create_pilot_and_modify_it(normal_test_client):
     pilot_stamps = ["stamps_1", "stamp_2"]
 
     #  -------------- Insert --------------
-    body = {"pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
 
     # Create pilots
     r = normal_test_client.post(
@@ -191,7 +192,7 @@ async def test_delete_pilots_by_age_and_stamp(normal_test_client):
     pilot_stamps = [f"stamp_{i}" for i in range(100)]
 
     # -------------- Insert all pilots --------------
-    body = {"pilot_stamps": pilot_stamps}
+    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
     r = normal_test_client.post("/api/pilots/", json=body)
     assert r.status_code == 200, r.json()
 

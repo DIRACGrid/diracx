@@ -41,6 +41,7 @@ async def add_pilot_stamps(
         list[str],
         Body(description="List of the pilot stamps we want to add to the db."),
     ],
+    vo: Annotated[str, Body(description="Pilot virtual organization.")],
     check_permissions: CheckPilotManagementPolicyCallable,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     grid_type: Annotated[str, Body(description="Grid type of the pilots.")] = "Dirac",
@@ -79,7 +80,7 @@ async def add_pilot_stamps(
         await register_new_pilots(
             pilot_db=pilot_db,
             pilot_stamps=pilot_stamps,
-            vo=user_info.vo,
+            vo=vo,
             grid_type=grid_type,
             grid_site=grid_site,
             destination_site=destination_site,
