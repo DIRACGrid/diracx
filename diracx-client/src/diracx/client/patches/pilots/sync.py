@@ -16,7 +16,16 @@ from typing import Any, Unpack
 from azure.core.tracing.decorator import distributed_trace
 
 from ..._generated.operations._operations import PilotsOperations as _PilotsOperations
-from .common import make_search_body, make_summary_body, SearchKwargs, SummaryKwargs
+from .common import (
+    make_search_body,
+    make_summary_body,
+    make_add_pilot_stamps_body,
+    make_update_pilot_fields_body,
+    SearchKwargs,
+    SummaryKwargs,
+    AddPilotStampsKwargs,
+    UpdatePilotFieldsKwargs
+)
 
 # We're intentionally ignoring overrides here because we want to change the interface.
 # mypy: disable-error-code=override
@@ -32,3 +41,13 @@ class PilotsOperations(_PilotsOperations):
     def summary(self, **kwargs: Unpack[SummaryKwargs]) -> list[dict[str, Any]]:
         """TODO"""
         return super().summary(**make_summary_body(**kwargs))
+
+    @distributed_trace
+    def add_pilot_stamps(self, **kwargs: Unpack[AddPilotStampsKwargs]) -> None:
+        """TODO"""
+        return super().add_pilot_stamps(**make_add_pilot_stamps_body(**kwargs))
+
+    @distributed_trace
+    def update_pilot_fields(self, **kwargs: Unpack[UpdatePilotFieldsKwargs]) -> None:
+        """TODO"""
+        return super().update_pilot_fields(**make_update_pilot_fields_body(**kwargs))
