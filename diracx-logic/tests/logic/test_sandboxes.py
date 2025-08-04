@@ -72,14 +72,14 @@ async def test_upload_and_clean(
     """
     data = secrets.token_bytes(256)
     data_digest = hashlib.sha256(data).hexdigest()
-    key = f"fakevo/fake_group/fakeuser/sha256:{data_digest}.tar.bz2"
+    key = f"fakevo/fake_group/fakeuser/sha256:{data_digest}.tar.zst"
     expected_pfn = f"SB:SandboxSE|/S3/sandboxes/{key}"
 
     sandbox_info = SandboxInfo(
         checksum_algorithm=ChecksumAlgorithm.SHA256,
         checksum=data_digest,
         size=len(data),
-        format=SandboxFormat.TAR_BZ2,
+        format=SandboxFormat.TAR_ZST,
     )
 
     # Test with a new sandbox

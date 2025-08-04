@@ -38,6 +38,7 @@ class SandboxFormat(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """SandboxFormat."""
 
     TAR_BZ2 = "tar.bz2"
+    TAR_ZST = "tar.zst"
 
 
 class SandboxType(str, Enum, metaclass=CaseInsensitiveEnumMeta):

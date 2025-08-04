@@ -720,7 +720,7 @@ class SandboxInfo(_serialization.Model):
     :vartype checksum: str
     :ivar size: Size. Required.
     :vartype size: int
-    :ivar format: SandboxFormat. Required. "tar.bz2"
+    :ivar format: SandboxFormat. Required. Known values are: "tar.bz2" and "tar.zst".
     :vartype format: str or ~_generated.models.SandboxFormat
     """
 
@@ -754,7 +754,7 @@ class SandboxInfo(_serialization.Model):
         :paramtype checksum: str
         :keyword size: Size. Required.
         :paramtype size: int
-        :keyword format: SandboxFormat. Required. "tar.bz2"
+        :keyword format: SandboxFormat. Required. Known values are: "tar.bz2" and "tar.zst".
         :paramtype format: str or ~_generated.models.SandboxFormat
         """
         super().__init__(**kwargs)

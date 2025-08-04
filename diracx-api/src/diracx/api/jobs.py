@@ -7,10 +7,12 @@ import logging
 import os
 import tarfile
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal
+from typing import BinaryIO, Literal
 
 import httpx
+import zstandard
 
 from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import SandboxInfo
@@ -20,8 +22,29 @@ from .utils import with_client
 logger = logging.getLogger(__name__)
 
 SANDBOX_CHECKSUM_ALGORITHM = "sha256"
-SANDBOX_COMPRESSION: Literal["bz2"] = "bz2"
-SANDBOX_OPEN_MODE: Literal["w|bz2"] = "w|bz2"
+SANDBOX_COMPRESSION: Literal["zst"] = "zst"
+
+
+@contextmanager
+def tarfile_open(fileobj: BinaryIO):
+    """Context manager to extend tarfile.open to support reading zstd compressed files.
+
+    This is only needed for Python <=3.13.
+    """
+    # Save current position and read magic bytes
+    current_pos = fileobj.tell()
+    magic = fileobj.read(4)
+    fileobj.seek(current_pos)
+
+    # Read magic bytes to determine compression format
+    if magic.startswith(b"\x28\xb5\x2f\xfd"):  # zstd magic number
+        dctx = zstandard.ZstdDecompressor()
+        with dctx.stream_reader(fileobj) as decompressor:
+            with tarfile.open(fileobj=decompressor, mode="r|") as tf:
+                yield tf
+    else:
+        with tarfile.open(fileobj=fileobj, mode="r") as tf:
+            yield tf
 
 
 @with_client
@@ -33,10 +56,18 @@ async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
     be used to submit jobs.
     """
     with tempfile.TemporaryFile(mode="w+b") as tar_fh:
-        with tarfile.open(fileobj=tar_fh, mode=SANDBOX_OPEN_MODE) as tf:
-            for path in paths:
-                logger.debug("Adding %s to sandbox as %s", path.resolve(), path.name)
-                tf.add(path.resolve(), path.name, recursive=True)
+        # Create zstd compressed tar with level 18 and long matching enabled
+        compression_params = zstandard.ZstdCompressionParameters.from_level(
+            18, enable_ldm=1
+        )
+        cctx = zstandard.ZstdCompressor(compression_params=compression_params)
+        with cctx.stream_writer(tar_fh, closefd=False) as compressor:
+            with tarfile.open(fileobj=compressor, mode="w|") as tf:
+                for path in paths:
+                    logger.debug(
+                        "Adding %s to sandbox as %s", path.resolve(), path.name
+                    )
+                    tf.add(path.resolve(), path.name, recursive=True)
         tar_fh.seek(0)
 
         hasher = getattr(hashlib, SANDBOX_CHECKSUM_ALGORITHM)()
@@ -89,6 +120,6 @@ async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracCli
         fh.seek(0)
         logger.debug("Sandbox downloaded for %s", pfn)
 
-        with tarfile.open(fileobj=fh) as tf:
+        with tarfile_open(fh) as tf:
             tf.extractall(path=destination, filter="data")
         logger.debug("Extracted %s to %s", pfn, destination)

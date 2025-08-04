@@ -16,6 +16,7 @@ dependencies = [
     "diracx-client",
     "diracx-core",
     "httpx",
+    "zstandard",
 ]
 dynamic = ["version"]
 
