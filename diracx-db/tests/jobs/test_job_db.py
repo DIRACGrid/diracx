@@ -187,6 +187,55 @@ async def test_search_conditions(populated_job_db):
         assert total == 0
         assert not result
 
+        # Search for a specific scalar condition: Owner not like 'owner1%'
+        condition = ScalarSearchSpec(
+            parameter="Owner", operator=ScalarSearchOperator.NOT_LIKE, value="owner1%"
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 100 - 11
+        assert result
+        assert len(result) == 100 - 11
+        assert all(not r["Owner"].startswith("owner1") for r in result)
+
+        # Search for a specific scalar condition: OwnerGroup not like 'owner_group2'
+        condition = ScalarSearchSpec(
+            parameter="OwnerGroup",
+            operator=ScalarSearchOperator.NOT_LIKE,
+            value="owner_group2",
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 100 - 50
+        assert result
+        assert len(result) == 100 - 50
+        assert all(not r["OwnerGroup"] == "owner_group2" for r in result)
+
+        # Search for a specific scalar condition: Owner regex '^owner\d+$'
+        condition = ScalarSearchSpec(
+            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="^owner\\d+$"
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 100
+        assert result
+        assert len(result) == 100
+
+        # Search for a specific scalar condition: JobID regex 'owner[0-3]+'
+        # owner0, owner1, owner2, owner3 (4 jobs)
+        # owner11 -> owner39 (30 jobs)
+        condition = ScalarSearchSpec(
+            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="owner[0-3]+"
+        )
+        total, result = await job_db.search([], [condition], [])
+        assert total == 34
+        assert result
+        assert len(result) == 34
+
+        # Search for a specific scalar condition: JobID regex 'owner[1-'
+        condition = ScalarSearchSpec(
+            parameter="Owner", operator=ScalarSearchOperator.REGEX, value="owner[1-"
+        )
+        with pytest.raises(InvalidQueryError):
+            await job_db.search([], [condition], [])
+
 
 async def test_search_sorts(populated_job_db):
     """Test that we can search for jobs in the database and sort the results."""
