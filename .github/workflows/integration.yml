@@ -58,9 +58,9 @@ jobs:
         run: |
           has_error=0
           # TODO: set has_error=1 when we are ready to really run the tests
-          if [ -f server-tests-failed ]; then has_error=0; echo "Server tests failed"; fi
-          if [ -f client-tests-failed ]; then has_error=0; echo "Client tests failed"; fi
-          if [ -f pilot-tests-failed ]; then has_error=0; echo "Pilot tests failed"; fi
+          if [ -f server-tests-failed ]; then has_error=1; echo "Server tests failed"; fi
+          if [ -f client-tests-failed ]; then has_error=1; echo "Client tests failed"; fi
+          if [ -f pilot-tests-failed ]; then has_error=1; echo "Pilot tests failed"; fi
           if [ ${has_error} = 1 ]; then exit 1; fi
       - name: diracx logs
         if: ${{ failure() }}
