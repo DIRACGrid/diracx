@@ -1,4 +1,4 @@
-from diracx.db.sql.job.db import JobDBBase
+from diracx.db.sql.job.schema import JobDBBase
 from diracx.db.sql.utils import Column
 from sqlalchemy import (
     ForeignKey,

@@ -2,9 +2,11 @@
 # in place of the SQLAlchemy one. Have a look at them
 from diracx.db.sql.utils import Column, DateNowColumn
 from sqlalchemy import ForeignKey, Integer, String, Uuid
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Owners(Base):

@@ -8,12 +8,15 @@ from abc import ABCMeta
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
-from typing import Any, Self, cast
+from typing import Any, Self, cast, TYPE_CHECKING
 
 from pydantic import TypeAdapter
 from sqlalchemy import DateTime, MetaData, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import DeclarativeBase
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
@@ -233,7 +236,7 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     async def _search(
         self,
-        table: Any,
+        table: type[DeclarativeBase],
         parameters: list[str] | None,
         search: list[SearchSpec],
         sorts: list[SortSpec],
@@ -273,7 +276,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         ]
 
     async def _summary(
-        self, table: Any, group_by: list[str], search: list[SearchSpec]
+        self, table: type[DeclarativeBase], group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
         """Get a summary of the elements of a table."""
         columns = _get_columns(table.__table__, group_by)

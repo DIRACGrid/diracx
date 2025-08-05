@@ -8,13 +8,15 @@ from sqlalchemy import (
     String,
     Uuid,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from diracx.db.sql.utils import Column, DateNowColumn, EnumColumn, NullColumn
 
 USER_CODE_LENGTH = 8
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class FlowStatus(Enum):

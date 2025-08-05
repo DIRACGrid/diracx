@@ -9,11 +9,13 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from ..utils import Column, EnumBackedBool, NullColumn
 
-JobDBBase = declarative_base()
+
+class JobDBBase(DeclarativeBase):
+    pass
 
 
 class AccountedFlagEnum(types.TypeDecorator):
