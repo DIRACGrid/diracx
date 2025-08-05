@@ -88,7 +88,10 @@ async def summary(
     body: SummaryParams,
 ):
     """Show information suitable for plotting."""
-    if not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo:
+    if (
+        not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo
+        and preferred_username
+    ):
         body.search.append(
             {
                 "parameter": "Owner",
