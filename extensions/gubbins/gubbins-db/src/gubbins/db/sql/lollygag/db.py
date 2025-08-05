@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from diracx.db.sql.utils import BaseSQLDB, apply_search_filters
-from sqlalchemy import func, insert, select
+from diracx.db.sql.utils import BaseSQLDB
+from sqlalchemy import insert, select
 from uuid_utils import UUID
 
 from .schema import Base as LollygagDBBase
@@ -22,18 +22,7 @@ class LollygagDB(BaseSQLDB):
     metadata = LollygagDBBase.metadata
 
     async def summary(self, group_by, search) -> list[dict[str, str | int]]:
-        columns = [Cars.__table__.columns[x] for x in group_by]
-
-        stmt = select(*columns, func.count(Cars.license_plate).label("count"))
-        stmt = apply_search_filters(Cars.__table__.columns.__getitem__, stmt, search)
-        stmt = stmt.group_by(*columns)
-
-        # Execute the query
-        return [
-            dict(row._mapping)
-            async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
-        ]
+        return await self._summary(Cars, group_by, search)
 
     async def insert_owner(self, name: str) -> int:
         stmt = insert(Owners).values(name=name)

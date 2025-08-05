@@ -5,7 +5,7 @@ __all__ = ["JobDB"]
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import bindparam, case, delete, func, insert, select, update
+from sqlalchemy import bindparam, case, delete, insert, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, apply_search_filters, apply_sort_constraints
+from ..utils import BaseSQLDB, _get_columns
 from ..utils.functions import utcnow
 from .schema import (
     HeartBeatLoggingInfo,
@@ -23,17 +23,6 @@ from .schema import (
     JobJDLs,
     Jobs,
 )
-
-
-def _get_columns(table, parameters):
-    columns = [x for x in table.columns]
-    if parameters:
-        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
-            raise InvalidQueryError(
-                f"Unrecognised parameters requested {unrecognised_parameters}"
-            )
-        columns = [c for c in columns if c.name in parameters]
-    return columns
 
 
 class JobDB(BaseSQLDB):
@@ -54,20 +43,11 @@ class JobDB(BaseSQLDB):
     # to find a way to make it dynamic
     jdl_2_db_parameters = ["JobName", "JobType", "JobGroup"]
 
-    async def summary(self, group_by, search) -> list[dict[str, str | int]]:
+    async def summary(
+        self, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
         """Get a summary of the jobs."""
-        columns = _get_columns(Jobs.__table__, group_by)
-
-        stmt = select(*columns, func.count(Jobs.job_id).label("count"))
-        stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
-        stmt = stmt.group_by(*columns)
-
-        # Execute the query
-        return [
-            dict(row._mapping)
-            async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
-        ]
+        return await self._summary(table=Jobs, group_by=group_by, search=search)
 
     async def search(
         self,
@@ -80,34 +60,15 @@ class JobDB(BaseSQLDB):
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
         """Search for jobs in the database."""
-        # Find which columns to select
-        columns = _get_columns(Jobs.__table__, parameters)
-
-        stmt = select(*columns)
-
-        stmt = apply_search_filters(Jobs.__table__.columns.__getitem__, stmt, search)
-        stmt = apply_sort_constraints(Jobs.__table__.columns.__getitem__, stmt, sorts)
-
-        if distinct:
-            stmt = stmt.distinct()
-
-        # Calculate total count before applying pagination
-        total_count_subquery = stmt.alias()
-        total_count_stmt = select(func.count()).select_from(total_count_subquery)
-        total = (await self.conn.execute(total_count_stmt)).scalar_one()
-
-        # Apply pagination
-        if page is not None:
-            if page < 1:
-                raise InvalidQueryError("Page must be a positive integer")
-            if per_page < 1:
-                raise InvalidQueryError("Per page must be a positive integer")
-            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
-
-        # Execute the query
-        return total, [
-            dict(row._mapping) async for row in (await self.conn.stream(stmt))
-        ]
+        return await self._search(
+            table=Jobs,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
 
     async def create_job(self, compressed_original_jdl: str):
         """Used to insert a new job with original JDL. Returns inserted job id."""
