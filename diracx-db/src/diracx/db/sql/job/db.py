@@ -3,12 +3,13 @@ from __future__ import annotations
 __all__ = ["JobDB"]
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, cast
 
 from sqlalchemy import bindparam, case, delete, insert, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
+    from sqlalchemy import Table
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
@@ -73,7 +74,7 @@ class JobDB(BaseSQLDB):
     async def create_job(self, compressed_original_jdl: str):
         """Used to insert a new job with original JDL. Returns inserted job id."""
         result = await self.conn.execute(
-            JobJDLs.__table__.insert().values(
+            cast("Table", JobJDLs.__table__).insert().values(
                 JDL="",
                 JobRequirements="",
                 OriginalJDL=compressed_original_jdl,
@@ -89,7 +90,7 @@ class JobDB(BaseSQLDB):
     async def insert_input_data(self, lfns: dict[int, list[str]]):
         """Insert input data for jobs."""
         await self.conn.execute(
-            InputData.__table__.insert(),
+            cast("Table", InputData.__table__).insert(),
             [
                 {
                     "JobID": job_id,
@@ -103,7 +104,7 @@ class JobDB(BaseSQLDB):
     async def insert_job_attributes(self, jobs_to_update: dict[int, dict]):
         """Insert the job attributes."""
         await self.conn.execute(
-            Jobs.__table__.insert(),
+            cast("Table", Jobs.__table__).insert(),
             [
                 {
                     "JobID": job_id,
@@ -116,7 +117,7 @@ class JobDB(BaseSQLDB):
     async def update_job_jdls(self, jdls_to_update: dict[int, str]):
         """Used to update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
         await self.conn.execute(
-            JobJDLs.__table__.update().where(
+            cast("Table", JobJDLs.__table__).update().where(
                 JobJDLs.__table__.c.JobID == bindparam("b_JobID")
             ),
             [
@@ -171,7 +172,7 @@ class JobDB(BaseSQLDB):
         }
 
         stmt = (
-            Jobs.__table__.update()
+            cast("Table", Jobs.__table__).update()
             .values(**case_expressions)
             .where(Jobs.__table__.c.JobID.in_(job_data.keys()))
         )
@@ -228,7 +229,7 @@ class JobDB(BaseSQLDB):
         required_parameters = list(required_parameters_set)[0]
         update_parameters = [{"job_id": k, **v} for k, v in properties.items()]
 
-        columns = _get_columns(Jobs.__table__, required_parameters)
+        columns = _get_columns(cast("Table", Jobs.__table__), list(required_parameters))
         values: dict[str, BindParameter[Any] | datetime] = {
             c.name: bindparam(c.name) for c in columns
         }
@@ -267,7 +268,7 @@ class JobDB(BaseSQLDB):
             }
             for key, value in dynamic_data.items()
         ]
-        await self.conn.execute(HeartBeatLoggingInfo.__table__.insert().values(values))
+        await self.conn.execute(cast("Table", HeartBeatLoggingInfo.__table__).insert().values(values))
 
     async def get_job_commands(self, job_ids: Iterable[int]) -> list[JobCommand]:
         """Get a command to be passed to the job together with the next heartbeat.

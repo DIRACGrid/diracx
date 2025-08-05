@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Self, cast, TYPE_CHECKING
 
 from pydantic import TypeAdapter
-from sqlalchemy import DateTime, MetaData, func, select
+from sqlalchemy import DateTime, MetaData, Table, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
@@ -247,12 +247,13 @@ class BaseSQLDB(metaclass=ABCMeta):
     ) -> tuple[int, list[dict[str, Any]]]:
         """Search for elements in a table."""
         # Find which columns to select
-        columns = _get_columns(table.__table__, parameters)
+        table_obj = cast(Table, table.__table__)
+        columns = _get_columns(table_obj, parameters)
 
         stmt = select(*columns)
 
-        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
-        stmt = apply_sort_constraints(table.__table__.columns.__getitem__, stmt, sorts)
+        stmt = apply_search_filters(table_obj.columns.__getitem__, stmt, search)
+        stmt = apply_sort_constraints(table_obj.columns.__getitem__, stmt, sorts)
 
         if distinct:
             stmt = stmt.distinct()
@@ -279,9 +280,10 @@ class BaseSQLDB(metaclass=ABCMeta):
         self, table: type[DeclarativeBase], group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
         """Get a summary of the elements of a table."""
-        columns = _get_columns(table.__table__, group_by)
+        table_obj = cast(Table, table.__table__)
+        columns = _get_columns(table_obj, group_by)
 
-        pk_columns = list(table.__table__.primary_key.columns)
+        pk_columns = list(table_obj.primary_key.columns)
         if not pk_columns:
             raise ValueError(
                 "Model has no primary key and no count_column was provided."
@@ -289,7 +291,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         count_col = pk_columns[0]
 
         stmt = select(*columns, func.count(count_col).label("count"))
-        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
+        stmt = apply_search_filters(table_obj.columns.__getitem__, stmt, search)
         stmt = stmt.group_by(*columns)
 
         # Execute the query
@@ -330,7 +332,7 @@ def find_time_resolution(value):
     raise InvalidQueryError(f"Cannot parse {value=}")
 
 
-def _get_columns(table, parameters):
+def _get_columns(table: Table, parameters: list[str] | None):
     columns = [x for x in table.columns]
     if parameters:
         if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
