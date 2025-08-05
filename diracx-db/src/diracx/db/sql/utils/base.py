@@ -241,7 +241,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         distinct: bool = False,
         per_page: int = 100,
         page: int | None = None,
-    ) -> tuple[int, list[dict[Any, Any]]]:
+    ) -> tuple[int, list[dict[str, Any]]]:
         """Search for elements in a table."""
         # Find which columns to select
         columns = _get_columns(table.__table__, parameters)
