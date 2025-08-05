@@ -9,7 +9,7 @@ from diracx.core.exceptions import (
     PilotAlreadyExistsError,
 )
 from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
-from diracx.core.properties import GENERIC_PILOT
+from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR
 from diracx.db.sql import JobDB, PilotAgentsDB
 from diracx.logic.pilots.management import (
     delete_pilots as delete_pilots_bl,
@@ -69,8 +69,15 @@ async def add_pilot_stamps(
     if GENERIC_PILOT in user_info.properties:
         if len(pilot_stamps) != 1:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail="As a pilot, you can only create yourself.",
+            )
+
+    if JOB_ADMINISTRATOR not in user_info.properties:
+        if not vo == user_info.vo:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can create pilots only for your VO.",
             )
 
     try:
