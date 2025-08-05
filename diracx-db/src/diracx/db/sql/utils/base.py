@@ -8,16 +8,20 @@ from abc import ABCMeta
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
-from typing import Self, cast
+from typing import Any, Self, cast
 
 from pydantic import TypeAdapter
-from sqlalchemy import DateTime, MetaData, select
+from sqlalchemy import DateTime, MetaData, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
-from diracx.core.models import SortDirection
+from diracx.core.models import (
+    SearchSpec,
+    SortDirection,
+    SortSpec,
+)
 from diracx.core.settings import SqlalchemyDsn
 from diracx.db.exceptions import DBUnavailableError
 
@@ -227,6 +231,71 @@ class BaseSQLDB(metaclass=ABCMeta):
         except OperationalError as e:
             raise SQLDBUnavailableError("Cannot ping the DB") from e
 
+    async def _search(
+        self,
+        table: Any,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
+        *,
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        """Search for elements in a table."""
+        # Find which columns to select
+        columns = _get_columns(table.__table__, parameters)
+
+        stmt = select(*columns)
+
+        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
+        stmt = apply_sort_constraints(table.__table__.columns.__getitem__, stmt, sorts)
+
+        if distinct:
+            stmt = stmt.distinct()
+
+        # Calculate total count before applying pagination
+        total_count_subquery = stmt.alias()
+        total_count_stmt = select(func.count()).select_from(total_count_subquery)
+        total = (await self.conn.execute(total_count_stmt)).scalar_one()
+
+        # Apply pagination
+        if page is not None:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+        # Execute the query
+        return total, [
+            dict(row._mapping) async for row in (await self.conn.stream(stmt))
+        ]
+
+    async def _summary(
+        self, table: Any, group_by: list[str], search: list[SearchSpec]
+    ) -> list[dict[str, str | int]]:
+        """Get a summary of the elements of a table."""
+        columns = _get_columns(table.__table__, group_by)
+
+        pk_columns = list(table.__table__.primary_key.columns)
+        if not pk_columns:
+            raise ValueError(
+                "Model has no primary key and no count_column was provided."
+            )
+        count_col = pk_columns[0]
+
+        stmt = select(*columns, func.count(count_col).label("count"))
+        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
+        stmt = stmt.group_by(*columns)
+
+        # Execute the query
+        return [
+            dict(row._mapping)
+            async for row in (await self.conn.stream(stmt))
+            if row.count > 0  # type: ignore
+        ]
+
 
 def find_time_resolution(value):
     if isinstance(value, datetime):
@@ -256,6 +325,17 @@ def find_time_resolution(value):
         )
 
     raise InvalidQueryError(f"Cannot parse {value=}")
+
+
+def _get_columns(table, parameters):
+    columns = [x for x in table.columns]
+    if parameters:
+        if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
+            raise InvalidQueryError(
+                f"Unrecognised parameters requested {unrecognised_parameters}"
+            )
+        columns = [c for c in columns if c.name in parameters]
+    return columns
 
 
 def apply_search_filters(column_mapping, stmt, search):

@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
+from diracx.core.models import VectorSearchOperator
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
@@ -88,7 +89,13 @@ class WMSAccessPolicy(BaseAccessPolicy):
         # to the current user
         job_owners = await job_db.summary(
             ["Owner", "VO"],
-            [{"parameter": "JobID", "operator": "in", "values": job_ids}],
+            [
+                {
+                    "parameter": "JobID",
+                    "operator": VectorSearchOperator.IN,
+                    "values": job_ids,
+                }
+            ],
         )
 
         expected_owner = {

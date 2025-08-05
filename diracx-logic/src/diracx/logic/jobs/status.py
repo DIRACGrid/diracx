@@ -41,11 +41,12 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.os.job_parameters import JobParametersDB
-from diracx.db.sql.job.db import JobDB, _get_columns
+from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
+from diracx.db.sql.utils import _get_columns
 from diracx.db.sql.utils.functions import utcnow
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
@@ -625,7 +626,13 @@ async def _insert_parameters(
     # Get the VOs for the job IDs (required for the index template)
     job_vos = await job_db.summary(
         ["JobID", "VO"],
-        [{"parameter": "JobID", "operator": "in", "values": list(updates)}],
+        [
+            {
+                "parameter": "JobID",
+                "operator": VectorSearchOperator.IN,
+                "values": list(updates),
+            }
+        ],
     )
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
     # Upsert the parameters into the JobParametersDB

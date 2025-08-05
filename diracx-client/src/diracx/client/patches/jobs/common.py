@@ -59,7 +59,7 @@ def make_search_body(**kwargs: Unpack[SearchKwargs]) -> UnderlyingSearchArgs:
 
 class SummaryBody(TypedDict, total=False):
     grouping: list[str]
-    search: list[str]
+    search: list[SearchSpec]
 
 
 class SummaryKwargs(SummaryBody, ResponseExtra): ...

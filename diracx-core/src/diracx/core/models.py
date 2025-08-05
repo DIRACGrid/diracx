@@ -61,13 +61,13 @@ class InsertedJob(TypedDict):
     TimeStamp: datetime
 
 
-class JobSummaryParams(BaseModel):
+class SummaryParams(BaseModel):
     grouping: list[str]
     search: list[SearchSpec] = []
     # TODO: Add more validation
 
 
-class JobSearchParams(BaseModel):
+class SearchParams(BaseModel):
     parameters: list[str] | None = None
     search: list[SearchSpec] = []
     sort: list[SortSpec] = []

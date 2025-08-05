@@ -129,7 +129,7 @@ async def test_failed_transaction(dummy_db):
 
     # The connection is created when the context manager is entered
     # This is our transaction
-    with pytest.raises(KeyError):
+    with pytest.raises(InvalidQueryError):
         async with dummy_db as dummy_db:
             assert dummy_db.conn
 
