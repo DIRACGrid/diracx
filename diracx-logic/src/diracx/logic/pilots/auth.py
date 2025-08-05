@@ -37,7 +37,7 @@ from diracx.logic.pilots.query import (
 
 async def create_raw_secrets(
     n: int,
-    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     settings: AuthSettings,
     secret_constraint: PilotSecretConstraints,
     pilot_secret_use_count_max: int | None = 1,
@@ -54,14 +54,14 @@ async def create_raw_secrets(
     }
 
     # Insert secrets
-    await pilot_db.insert_unique_secrets(
+    await auth_db.insert_unique_secrets(
         hashed_secrets=hashed_secrets,
         secret_global_use_count_max=pilot_secret_use_count_max,
         secret_constraints=secret_constraints,
     )
 
     secrets_added = await get_secrets_by_hashed_secrets(
-        pilot_db=pilot_db,
+        auth_db=auth_db,
         hashed_secrets=hashed_secrets,
         parameters=["SecretUUID"],  # For efficiency
     )
@@ -81,7 +81,7 @@ async def create_raw_secrets(
     secret_uuids = [secret["SecretUUID"] for secret in secrets_added]
 
     # Helps compatibility between sql engines
-    await pilot_db.set_secret_expirations(
+    await auth_db.set_secret_expirations(
         secret_uuids=secret_uuids,
         pilot_secret_expiration_dates=expiration_dates,  # type: ignore
     )
@@ -95,7 +95,7 @@ async def create_raw_secrets(
 
 async def create_secrets(
     n: int,
-    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     settings: AuthSettings,
     secret_constraint: PilotSecretConstraints,
     pilot_secret_use_count_max: int | None = 1,
@@ -103,7 +103,7 @@ async def create_secrets(
 ) -> list[PilotSecretsInfo]:
     pilot_secrets, expiration_dates_timestamps = await create_raw_secrets(
         n=n,
-        pilot_db=pilot_db,
+        auth_db=auth_db,
         settings=settings,
         pilot_secret_use_count_max=pilot_secret_use_count_max,
         expiration_minutes=expiration_minutes,
@@ -120,7 +120,7 @@ async def create_secrets(
 
 
 async def update_secrets_constraints(
-    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     secrets_to_constraints_dict: dict[str, PilotSecretConstraints],
 ):
     # 1. Create a mapping that uses hashed_secret
@@ -137,7 +137,7 @@ async def update_secrets_constraints(
     # 2. Get the secret ids to later associate them with pilots
     # It also verifies that all secrets exist
     secrets_obj = await get_secrets_by_hashed_secrets(
-        pilot_db=pilot_db,
+        auth_db=auth_db,
         hashed_secrets=list(hashed_secrets_to_pilot_stamps_dict.keys()),
         parameters=["SecretConstraints"],  # For efficiency, we don't need more info
     )
@@ -164,7 +164,7 @@ async def update_secrets_constraints(
             }
         )
 
-    await pilot_db.update_pilot_secrets_constraints(
+    await auth_db.update_pilot_secrets_constraints(
         hashed_secrets_to_pilot_stamps_mapping
     )
 
@@ -201,7 +201,7 @@ async def verify_pilot_credentials(
 
     # 2. Get the secret itself
     secrets = await get_secrets_by_hashed_secrets(
-        pilot_db=pilot_db, hashed_secrets=[hashed_secret]
+        auth_db=auth_db, hashed_secrets=[hashed_secret]
     )
     secret = secrets[0]
     secret_uuid = secret["SecretUUID"]
@@ -215,14 +215,14 @@ async def verify_pilot_credentials(
     # Convert the timezone, TODO: Change with #454: https://github.com/DIRACGrid/diracx/pull/454
     expiration = secret["SecretExpirationDate"].replace(tzinfo=timezone.utc)
     if expiration < now:
-        await pilot_db.delete_secrets([secret_uuid])
+        await auth_db.delete_secrets([secret_uuid])
 
         raise SecretHasExpiredError(
             detail=f"expiration_date{secret['SecretExpirationDate']}",
         )
 
     # 5. Now the pilot is authorized, change when the pilot used the secret.
-    await pilot_db.update_pilot_secret_use_time(
+    await auth_db.update_pilot_secret_use_time(
         secret_uuid=secret_uuid,
     )
 
@@ -230,7 +230,7 @@ async def verify_pilot_credentials(
     if secret["SecretRemainingUseCount"]:
         # If we use it another time, SecretRemainingUseCount will be equal to 0 so we can delete it
         if secret["SecretRemainingUseCount"] == 1:
-            await pilot_db.delete_secrets([secret_uuid])
+            await auth_db.delete_secrets([secret_uuid])
 
     # Get token, and serialize
     access_token_payload, refresh_token_payload = await generate_pilot_tokens(

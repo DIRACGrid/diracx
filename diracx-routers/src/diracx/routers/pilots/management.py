@@ -33,7 +33,7 @@ from diracx.logic.pilots.management import (
 from diracx.logic.pilots.query import get_pilot_ids_by_job_id
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
-from ..dependencies import AuthSettings, JobDB, PilotAgentsDB
+from ..dependencies import AuthDB, AuthSettings, JobDB, PilotAgentsDB
 from ..fastapi_classes import DiracxRouter
 from .access_policies import (
     ActionType,
@@ -46,6 +46,7 @@ router = DiracxRouter()
 @router.post("/")
 async def add_pilot_stamps(
     pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     pilot_stamps: Annotated[
         list[str],
         Body(description="List of the pilot stamps we want to add to the db."),
@@ -103,6 +104,7 @@ async def add_pilot_stamps(
 
     try:
         return await register_new_pilots(
+            auth_db=auth_db,
             pilot_db=pilot_db,
             pilot_stamps=pilot_stamps,
             vo=user_info.vo,
@@ -196,7 +198,7 @@ async def create_pilot_secrets(
     ],
     vo: Annotated[str, Body(description="Only VO that can access a secret.")],
     check_permissions: CheckPilotManagementPolicyCallable,
-    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     settings: AuthSettings,
 ) -> list[PilotSecretsInfo]:
     """Endpoint to create secrets."""
@@ -215,7 +217,7 @@ async def create_pilot_secrets(
 
     return await create_secrets(
         n=n,
-        pilot_db=pilot_db,
+        auth_db=auth_db,
         settings=settings,
         secret_constraint=PilotSecretConstraints(VOs=[vo]),
         pilot_secret_use_count_max=pilot_secret_use_count_max,
@@ -229,7 +231,7 @@ async def update_secrets_constraints(
         dict[str, PilotSecretConstraints],
         Body(description="Mapping between secrets and pilots.", embed=False),
     ],
-    pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
     """Endpoint to associate pilots with secrets."""
@@ -244,7 +246,7 @@ async def update_secrets_constraints(
 
     try:
         await update_secrets_constraints_bl(
-            pilot_db=pilot_db,
+            auth_db=auth_db,
             secrets_to_constraints_dict=secrets_to_constraints_dict,
         )
     except SecretNotFoundError as e:

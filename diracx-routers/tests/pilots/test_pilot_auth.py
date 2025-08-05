@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from pytest_httpx import HTTPXMock
 
 from diracx.core.models import PilotSecretConstraints
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql import AuthDB, PilotAgentsDB
 from diracx.db.sql.utils.functions import raw_hash
 from diracx.logic.pilots.query import (
     get_pilots_by_stamp,
@@ -70,14 +70,14 @@ async def add_stamps(normal_test_client):
 
         pilots = await get_pilots_by_stamp(db, stamps)
 
-        return pilots
+    return pilots
 
 
 @pytest.fixture
 async def add_secrets_and_time(normal_test_client, add_stamps, secret_duration_sec):
-    db = normal_test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+    db = normal_test_client.app.dependency_overrides[AuthDB.transaction].args[0]
 
-    async with db as pilot_db:
+    async with db as auth_db:
         # Retrieve the stamps from the add_stamps fixture
         stamps = [pilot["PilotStamp"] for pilot in add_stamps]
 
@@ -90,7 +90,7 @@ async def add_secrets_and_time(normal_test_client, add_stamps, secret_duration_s
         }
 
         # Add creds
-        await pilot_db.insert_unique_secrets(
+        await auth_db.insert_unique_secrets(
             hashed_secrets=hashed_secrets, secret_constraints=constraints
         )
 
@@ -106,7 +106,7 @@ async def add_secrets_and_time(normal_test_client, add_stamps, secret_duration_s
             for secret_obj in secrets_obj
         ]
 
-        await pilot_db.set_secret_expirations(
+        await auth_db.set_secret_expirations(
             secret_uuids=[secret_obj["SecretUUID"] for secret_obj in secrets_obj],
             pilot_secret_expiration_dates=expiration_date,
         )

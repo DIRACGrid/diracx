@@ -14,7 +14,7 @@ from diracx.core.models import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql import PilotAgentsDB
+from diracx.db.sql import AuthDB, PilotAgentsDB
 
 MAX_PER_PAGE = 10000
 
@@ -192,12 +192,12 @@ async def summary(pilot_db: PilotAgentsDB, body: SummaryParams, vo: str):
 
 
 async def get_secrets_by_hashed_secrets(
-    pilot_db: PilotAgentsDB, hashed_secrets: list[bytes], parameters: list[str] = []
+    auth_db: AuthDB, hashed_secrets: list[bytes], parameters: list[str] = []
 ) -> list[dict[Any, Any]]:
     if parameters:
         parameters.append("HashedSecret")
 
-    _, secrets = await pilot_db.search_secrets(
+    _, secrets = await auth_db.search_secrets(
         parameters=parameters,
         search=[
             VectorSearchSpec(
@@ -222,12 +222,12 @@ async def get_secrets_by_hashed_secrets(
 
 
 async def get_secrets_by_uuid(
-    pilot_db: PilotAgentsDB, secret_uuids: list[str], parameters: list[str] = []
+    auth_db: AuthDB, secret_uuids: list[str], parameters: list[str] = []
 ) -> list[dict[Any, Any]]:
     if parameters:
         parameters.append("SecretUUID")  # To avoid bug later on `found_keys = ...`
 
-    _, secrets = await pilot_db.search_secrets(
+    _, secrets = await auth_db.search_secrets(
         parameters=parameters,
         search=[
             VectorSearchSpec(

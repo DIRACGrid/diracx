@@ -9,7 +9,7 @@ from diracx.core.models import (
     PilotSecretConstraints,
 )
 from diracx.core.settings import AuthSettings
-from diracx.db.sql import PilotAgentsDB
+from diracx.db.sql import AuthDB, PilotAgentsDB
 
 from .auth import create_raw_secrets, update_secrets_constraints
 from .query import (
@@ -22,6 +22,7 @@ from .query import (
 
 async def register_new_pilots(
     pilot_db: PilotAgentsDB,
+    auth_db: AuthDB,
     pilot_stamps: list[str],
     vo: str,
     grid_type: str,
@@ -62,7 +63,7 @@ async def register_new_pilots(
 
     pilot_secrets, expiration_dates_timestamps = await create_raw_secrets(
         n=len(pilot_stamps),
-        pilot_db=pilot_db,
+        auth_db=auth_db,
         settings=settings,
         pilot_secret_use_count_max=pilot_secret_use_count_max,
         secret_constraint=PilotSecretConstraints(VOs=[vo]),
@@ -74,7 +75,7 @@ async def register_new_pilots(
     }
 
     await update_secrets_constraints(
-        pilot_db=pilot_db, secrets_to_constraints_dict=constraints
+        auth_db=auth_db, secrets_to_constraints_dict=constraints
     )
 
     return [

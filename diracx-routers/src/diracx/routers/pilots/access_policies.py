@@ -8,8 +8,8 @@ from fastapi import Depends, HTTPException, status
 
 from diracx.core.models import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
+from diracx.db.sql import PilotAgentsDB
 from diracx.db.sql.job.db import JobDB
-from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.logic.pilots.query import get_pilots_by_stamp
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo

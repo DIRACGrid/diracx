@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from uuid_utils import UUID, uuid7
 
-from diracx.db.sql.auth.db import AuthDB
+from diracx.db.sql import AuthDB
 from diracx.db.sql.auth.schema import RefreshTokenStatus
 
 

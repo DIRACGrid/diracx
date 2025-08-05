@@ -11,7 +11,7 @@ from diracx.core.models import (
     PilotFieldsMapping,
     PilotStatus,
 )
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql import PilotAgentsDB
 
 from .utils import (
     add_stamps,  # noqa: F401
