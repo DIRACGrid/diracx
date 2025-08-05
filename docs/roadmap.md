@@ -3,9 +3,9 @@
 ## Getting to 0.0.1
 
 - First release contains:
-  - All service/client underpinnings
-  - Extension support
-  - JobStateUpdateHandler can be replaced by DiracX
+    - All service/client underpinnings
+    - Extension support
+    - JobStateUpdateHandler can be replaced by DiracX
 - Prior to release: Install in LHCbDIRAC production to ensure full functionality.
 
 ### What do we need to get there?

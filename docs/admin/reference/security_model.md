@@ -6,39 +6,39 @@ Version: v0.9.0
 
 1. [Introduction](#introduction)
 
-   - [Terms and Definitions](#terms-and-definitions)
+    - [Terms and Definitions](#terms-and-definitions)
 
 2. [DiracX Authorisation and Authentication](#diracx-authorisation-and-authentication)
 
-   - [User and Group Management](#user-and-group-management)
-   - [Lifetime](#lifetime)
-   - [Token Profile](#token-profile)
-   - [Signature Verification](#signature-verification)
-   - [Issuance](#issuance)
-     - [Supported Authorisation Flows](#supported-authorisation-flows)
-   - [Pilot Jobs](#pilot-jobs)
-   - [Installation Administrators](#installation-administrators)
+    - [User and Group Management](#user-and-group-management)
+    - [Lifetime](#lifetime)
+    - [Token Profile](#token-profile)
+    - [Signature Verification](#signature-verification)
+    - [Issuance](#issuance)
+        - [Supported Authorisation Flows](#supported-authorisation-flows)
+    - [Pilot Jobs](#pilot-jobs)
+    - [Installation Administrators](#installation-administrators)
 
 3. [External Authorization and Authentication](#external-authorization-and-authentication)
 
-   - [Storage Access](#storage-access)
-   - [Computing Resources](#computing-resources)
+    - [Storage Access](#storage-access)
+    - [Computing Resources](#computing-resources)
 
 4. [Network Communication](#network-communication)
 
-   - [Certificate Signing](#certificate-signing)
+    - [Certificate Signing](#certificate-signing)
 
 5. [Threat Analysis](#threat-analysis)
 
-   - [Compromised External IdP](#compromised-external-idp)
-   - [Compromised Batch Submission System](#compromised-batch-submission-system)
-   - [Compromised Worker Node](#compromised-worker-node)
-   - [Compromised Refresh Token](#compromised-refresh-token)
-   - [Compromised User Identity](#compromised-user-identity)
-   - [Compromised JWK](#compromised-jwk)
-   - [Compromised DB](#compromised-db)
-   - [Compromised Hosts](#compromised-hosts)
-   - [Malicious Legitimate User](#malicious-legitimate-user)
+    - [Compromised External IdP](#compromised-external-idp)
+    - [Compromised Batch Submission System](#compromised-batch-submission-system)
+    - [Compromised Worker Node](#compromised-worker-node)
+    - [Compromised Refresh Token](#compromised-refresh-token)
+    - [Compromised User Identity](#compromised-user-identity)
+    - [Compromised JWK](#compromised-jwk)
+    - [Compromised DB](#compromised-db)
+    - [Compromised Hosts](#compromised-hosts)
+    - [Malicious Legitimate User](#malicious-legitimate-user)
 
 6. [Legacy Compatibility and Migration](#legacy-compatibility-and-migration)
 
@@ -275,14 +275,14 @@ In the event of malicious activity, refer to existing procedures in addition to 
 - v0.1.0 (2023-06-07): Initial draft for internal review.
 - v0.2.0 (2023-06-12): Add glossary of common terms.
 - v0.3.0 (2023-06-27):
-  - Define Identity
-  - Specify token issuer
-  - Change property to capability
-  - Add diagram of the role of the external IdP, DiracX and the user
+    - Define Identity
+    - Specify token issuer
+    - Change property to capability
+    - Add diagram of the role of the external IdP, DiracX and the user
 - v0.9.0 (2023-10-11):
-  - Specify traceability consideration
-  - Specify reference of the registered claim
-  - `vo` field in the token may change if it becomes a standard
-  - Better description of alternative mechanism to issue a token
-  - Explicit the reason for not needing to issue `id_token`
-  - Recommend to contact VO admins in case of compromission
+    - Specify traceability consideration
+    - Specify reference of the registered claim
+    - `vo` field in the token may change if it becomes a standard
+    - Better description of alternative mechanism to issue a token
+    - Explicit the reason for not needing to issue `id_token`
+    - Recommend to contact VO admins in case of compromission

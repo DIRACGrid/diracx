@@ -46,14 +46,14 @@ TODO: WRONG
 
 - Commands with subcommands (e.g., `dirac jobs submit`) should have their own modules in `src/diracx/<command>` and use `AsyncTyper`.
 
-  - To associate the command with `dirac`, import the module in `src/diracx/__init__.py`:
+    - To associate the command with `dirac`, import the module in `src/diracx/__init__.py`:
 
-  ```python
+    ```python
     from . import command
-  ...
+    ...
 
-  app.add_typer(<command name>.app, name="<command name>")
-  ```
+    app.add_typer(<command name>.app, name="<command name>")
+    ```
 
 Users can then call the CLI:
 
