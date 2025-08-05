@@ -30,7 +30,7 @@ async def register_new_pilots(
         pilot_db=pilot_db, pilot_stamps=pilot_stamps
     )
 
-    # If we found pilots from the list, this means some pilots already exists
+    # If we found pilots from the list, this means some pilots already exist
     if len(existing_pilots) > 0:
         found_keys = {pilot["PilotStamp"] for pilot in existing_pilots}
 
