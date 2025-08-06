@@ -263,6 +263,7 @@ def generate_helm_values(
         all_db_configs.update(system_config.get("Databases", {}))
 
     from diracx.core.extensions import select_from_extension
+
     for entry_point in select_from_extension(group="diracx.dbs.sql"):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
