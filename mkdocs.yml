@@ -97,6 +97,7 @@ nav:
       - Play with auth: dev/tutorials/play-with-auth.md
     - How-To:
       - Contribute: dev/how-to/contribute.md
+      - Write docs: dev/how-to/write-docs.md
       - Add functionality:
         - dev/how-to/add-functionality/index.md
         - New route or router: dev/how-to/add-a-route.md
@@ -105,14 +106,14 @@ nav:
         - New CLI command: dev/how-to/add-a-cli-command.md
         - New settings: dev/how-to/add-a-setting.md
       - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
-      - Client customization: dev/how-to/client-customization.md
-      - Client generation: dev/how-to/client-generation.md
       - Use the demo:
         - dev/how-to/use-the-demo/index.md
         - Accessing the client: dev/how-to/use-the-demo/swagger.md
         - Use swagger: dev/how-to/use-the-demo/swagger.md
         - Accessing DiracX Web: dev/how-to/use-the-demo/web.md
-      - Write docs: dev/how-to/write-docs.md
+      - Client customization: dev/how-to/client-customization.md
+      - Client generation: dev/how-to/client-generation.md
+      - Client extensions: dev/how-to/client-extension.md
     - Explanations:
       - Components:
         - Introduction: dev/explanations/components/index.md

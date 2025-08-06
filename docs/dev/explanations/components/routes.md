@@ -189,8 +189,9 @@ Implementing a new `AccessPolicy` is done by:
 3. For specific instructions, see `diracx-routers/src/diracx/routers/access_policies.py`
 4. Adding an entry to the `diracx.access_policies` entrypoint.
 
-> [!WARNING]
-> When running tests, no permission is checked. This is to allow testing the router behavior with respect to the policy behavior. For testing a policy, see for example `diracx-routers/tests/jobs/test_wms_access_policy.py`
+!!! warning
+
+    When running tests, no permission is checked. This is to allow testing the router behavior with respect to the policy behavior. For testing a policy, see for example `diracx-routers/tests/jobs/test_wms_access_policy.py`.
 
 ## Adding routes
 
