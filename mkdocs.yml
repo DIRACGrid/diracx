@@ -54,9 +54,9 @@ nav:
     - user/index.md
     - Getting started: user/tutorials/getting-started.md
     - Known installations: user/reference/known-installations.md
-    - DiracX Web:
+    - Web:
       - user/web/index.md
-      - Getting started: user/web/getting-started.md
+      - Logging in: user/web/login_out.md
     - Programmatic Usage:
       - user/reference/programmatic-usage/index.md
       - Command Line: user/reference/programmatic-usage/command-line-interface.md
@@ -130,9 +130,6 @@ nav:
       - Coding conventions: dev/reference/coding-conventions.md
       - Configuration: dev/reference/configuration.md
       - Dependency injection: dev/reference/dependency-injection.md
-  - Project Info:
-    - Introduction: project/index.md
-    - Consortium: project/consortium.md
 
 markdown_extensions:
   - admonition

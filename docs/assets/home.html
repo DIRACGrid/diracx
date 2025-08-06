@@ -58,8 +58,8 @@
 				</section>
 
 			<!-- Four -->
-			<section id="getstarted" class="wrapper style1 special fade-up">
-				<div class="container">
+			<section id="getstarted" class="wrapper style1 special fade-up" style="min-height: 100vh; height: auto; background-image: url('https://cds.cern.ch/record/1489958/files/1209226_01.jpg?subformat=icon-1440'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+				<div class="container" style="background: rgba(0, 0, 0, 0.8); padding: 2em; border-radius: 1em;">
 					<header class="major">
 						<h2>Get started</h2>
 						<p>What are you looking for?</p>
@@ -67,68 +67,30 @@
 					<div class="box alt">
 						<div class="row gtr-uniform">
 							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-chart-area"></span>
-								<h3>User documentation</h3>
-								<p>Find out out to submit jobs, access data and generally use a DiracX installation!</p>
+								<a href="/user/" target="_top" style="text-decoration: none; color: inherit;">
+									<span class="icon solid alt major fa-chart-area"></span>
+									<h3>User documentation</h3>
+									<p>Find out how to submit jobs, access data and generally use a DiracX installation!</p>
+								</a>
 							</section>
 							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-comment"></span>
-								<h3>Administrator documentation</h3>
-								<p>Find out how to install and manage a DiracX installation.</p>
+								<a href="/admin/" target="_top" style="text-decoration: none; color: inherit;">
+									<span class="icon solid alt major fa-comment"></span>
+									<h3>Administrator documentation</h3>
+									<p>Find out how to install and manage a DiracX installation.</p>
+								</a>
 							</section>
 							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-paper-plane"></span>
-								<h3>Developer</h3>
-								<p>Help make DiracX even better!</p>
-							</section>
-							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-flask"></span>
-								<h3>How does this work?</h3>
-								<p>Find out .</p>
-							</section>
-							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-file"></span>
-								<h3>Develop DiracX itself</h3>
-								<p>Feugiat accumsan lorem eu ac lorem amet accumsan donec. Blandit orci porttitor.</p>
-							</section>
-							<section class="col-4 col-6-medium col-12-xsmall">
-								<span class="icon solid alt major fa-lock"></span>
-								<h3>Develop DiracX web</h3>
-								<p>Feugiat accumsan lorem eu ac lorem amet accumsan donec. Blandit orci porttitor.</p>
+								<a href="/dev/" target="_top" style="text-decoration: none; color: inherit;">
+									<span class="icon solid alt major fa-file"></span>
+									<h3>Develop DiracX itself</h3>
+									<p>Contribute to the DiracX codebase, add new features, or extend existing functionality.</p>
+								</a>
 							</section>
 						</div>
 					</div>
 				</div>
 			</section>
-
-
-			<!-- Comparison -->
-				<section id="comparison" class="spotlight style2 right" style="min-height: 100vh; height: auto;">
-					<span class="image fit"><img src="https://cds.cern.ch/record/1489958/files/1209226_01.jpg?subformat=icon-1440" alt="" /></span>
-					<div class="content" style="overflow: auto;">
-						<header>
-							<h2>DIRAC vs DiracX</h2>
-						</header>
-						<div style="overflow-x:auto;">
-							<table>
-								<thead>
-									<tr><th>Feature</th><th>DIRAC</th><th>DiracX</th></tr>
-								</thead>
-								<tbody>
-									<tr><td>Authentication</td><td>X.509 Certificates</td><td>OAuth2 Tokens</td></tr>
-									<tr><td>Architecture</td><td>Monolithic, Service-Oriented</td><td>Microservices, Modular</td></tr>
-									<tr><td>APIs</td><td>XML-RPC</td><td>REST (FastAPI)</td></tr>
-									<tr><td>Task Management</td><td>Python Agents</td><td>Celery Workers</td></tr>
-									<tr><td>Deployment</td><td>Manual, Complex</td><td>Helm Charts, Kubernetes</td></tr>
-									<tr><td>Multi-VO Support</td><td>Limited</td><td>First-Class</td></tr>
-									<tr><td>Migration</td><td>Legacy Only</td><td>Dual-Stack, Adapters</td></tr>
-								</tbody>
-							</table>
-						</div>
-						<p><strong>DiracX</strong> is designed for the future of distributed scientific computing—secure, scalable, and easy to use.</p>
-					</div>
-					<a href="#footer" class="goto-next scrolly">Get Started</a>
-				</section>
 
 			<!-- Footer -->
 				<footer id="footer" style="padding: 1.5em;">
