@@ -211,7 +211,6 @@ def generate_helm_values(
         },
         "rabbitmq": {"enabled": False},
         "mysql": {"enabled": False},
-        "global": {"images": {"services": "FILL ME"}, "storageClassName": "FILL ME"},
     }
 
     cfg = diraccfg.CFG().loadFromBuffer(public_cfg.read_text())
@@ -265,7 +264,7 @@ def generate_helm_values(
 
     from diracx.core.extensions import select_from_extension
 
-    for entry_point in select_from_extension(group="diracx.db.sql"):
+    for entry_point in select_from_extension(group="diracx.dbs.sql"):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
 
@@ -311,7 +310,7 @@ def generate_helm_values(
         },
     }
 
-    for entry_point in select_from_extension(group="diracx.db.os"):
+    for entry_point in select_from_extension(group="diracx.dbs.os"):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
 

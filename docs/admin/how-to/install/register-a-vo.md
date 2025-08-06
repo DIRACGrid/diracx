@@ -70,7 +70,11 @@
     User IDs are associated to the usernames that are defined in the `Registry > Users` section. This allows DiracX to retrieve the groups they belong to and their properties.
 
 After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
-See [Convert CS](./convert-cs.md) for next steps.
+See the previous step [Convert CS](./convert-cs.md) for a refresher.
+
+### Automatic population of the UserSubjects
+
+The `DIRAC VOMS2CSAgent` can populate this list for you from an `IAM` server. For that you need to enable the `UseIAM` flag to True.
 
 ## Interact with Computing Elements
 

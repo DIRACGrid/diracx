@@ -70,11 +70,12 @@ nav:
     - Tutorials:
       - Run locally: admin/tutorials/run_locally.md
     - How-To:
-      - Install kubernetes: admin/how-to/install-kubernetes.md
-      - Installing: admin/how-to/installing.md
-      - Convert CS: admin/how-to/convert-cs.md
-      - Register a VO: admin/how-to/register-a-vo.md
-      - Register the admin VO: admin/how-to/register-the-admin-vo.md
+      - install:
+        - Install kubernetes: admin/how-to/install/install-kubernetes.md
+        - Installing DiracX: admin/how-to/install/installing.md
+        - Convert CS: admin/how-to/install/convert-cs.md
+        - Register a VO: admin/how-to/install/register-a-vo.md
+        - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
@@ -82,7 +83,8 @@ nav:
       - Configuration: admin/explanations/configuration.md
       - OpenTelemetry: admin/explanations/opentelemetry.md
       - Chart structure: admin/explanations/chart-structure.md
-      - Databases: docs/admin/explanations/database-management.md
+      - Databases: admin/explanations/database-management.md
+      - Sandbox Store: admin/explanations/sandbox-store.md
     - Reference:
       - Security Model: admin/reference/security_model.md
       - Charts values: admin/reference/values.md
