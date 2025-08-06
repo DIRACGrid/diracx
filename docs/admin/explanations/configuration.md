@@ -29,4 +29,4 @@ We foresee this will continue to be the case until the migration from DIRAC -> D
 During this time, the DiracX configuration is not intended to be edited directly.
 The DiracX `default.yml` file differs in structure and contents from the legacy DIRAC Configuration Service.
 
-See [how-to](../how-to/convert-cs.md) for how to convert.
+See [how-to](../how-to/install/convert-cs.md) for how to convert.
