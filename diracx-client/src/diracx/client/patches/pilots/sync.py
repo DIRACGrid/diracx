@@ -16,16 +16,18 @@ from typing import Any, Unpack
 from azure.core.tracing.decorator import distributed_trace
 
 from ..._generated.operations._operations import PilotsOperations as _PilotsOperations
-from ..._generated.models._models import PilotCredentialsInfo
+from ..._generated.models._models import PilotCredentialsInfo, PilotSecretsInfo
 from .common import (
     make_search_body,
     make_summary_body,
     make_add_pilot_stamps_body,
     make_update_pilot_fields_body,
+    make_create_pilot_secrets_body,
     SearchKwargs,
     SummaryKwargs,
     AddPilotStampsKwargs,
-    UpdatePilotFieldsKwargs
+    UpdatePilotFieldsKwargs,
+    CreatePilotSecretsKwargs,
 )
 
 # We're intentionally ignoring overrides here because we want to change the interface.
@@ -52,3 +54,8 @@ class PilotsOperations(_PilotsOperations):
     def update_pilot_fields(self, **kwargs: Unpack[UpdatePilotFieldsKwargs]) -> None:
         """TODO"""
         return super().update_pilot_fields(**make_update_pilot_fields_body(**kwargs))
+
+    @distributed_trace
+    def create_pilot_secrets(self, **kwargs: Unpack[CreatePilotSecretsKwargs]) -> list[PilotSecretsInfo]:
+        """TODO"""
+        return super().create_pilot_secrets(**make_create_pilot_secrets_body(**kwargs))

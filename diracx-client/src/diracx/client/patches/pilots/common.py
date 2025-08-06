@@ -11,6 +11,8 @@ __all__ = [
     "make_add_pilot_stamps_body",
     "UpdatePilotFieldsKwargs",
     "make_update_pilot_fields_body"
+    "CreatePilotSecretsKwargs",
+    "make_create_pilot_secrets_body"
 ]
 
 import json
@@ -144,5 +146,33 @@ def make_update_pilot_fields_body(**kwargs: Unpack[UpdatePilotFieldsKwargs]) -> 
         if value is not None:
             body[key] = value
     result: UnderlyingUpdatePilotFields = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
+    result.update(cast(ResponseExtra, kwargs))
+    return result
+
+# ------------------ CreatePilotSecrets ------------------
+
+class CreatePilotSecretsBody(TypedDict, total=False):
+    n: int
+    expiration_minutes: int | None
+    pilot_secret_use_count_max: int | None
+    vo: str
+
+class CreatePilotSecretsKwargs(CreatePilotSecretsBody, ResponseExtra): ...
+
+class UnderlyingCreatePilotSecrets(ResponseExtra, total=False):
+    # FIXME: The autorest-generated has a bug that it expected IO[bytes] despite
+    # the code being generated to support IO[bytes] | bytes.
+    body: IO[bytes]
+
+def make_create_pilot_secrets_body(**kwargs: Unpack[CreatePilotSecretsKwargs]) -> UnderlyingCreatePilotSecrets:
+    body: CreatePilotSecretsBody = {}
+    for key in CreatePilotSecretsBody.__optional_keys__:
+        if key not in kwargs:
+            continue
+        key = cast(Literal["n", "expiration_minutes", "pilot_secret_use_count_max", "vo"], key)
+        value = kwargs.pop(key)
+        if value is not None:
+            body[key] = value
+    result: UnderlyingCreatePilotSecrets = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
     result.update(cast(ResponseExtra, kwargs))
     return result
