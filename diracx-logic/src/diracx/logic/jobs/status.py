@@ -31,9 +31,12 @@ from DIRAC.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 from diracx.core.config.schema import Config
 from diracx.core.models import (
     HeartbeatData,
+    JobAttributes,
     JobCommand,
     JobLoggingRecord,
+    JobMetaData,
     JobMinorStatus,
+    JobParameters,
     JobStatus,
     JobStatusUpdate,
     SetJobStatusReturn,
@@ -42,16 +45,26 @@ from diracx.core.models import (
 )
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
-from diracx.db.sql.job.schema import Jobs
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
-from diracx.db.sql.utils import _get_columns
 from diracx.db.sql.utils.functions import utcnow
 from diracx.logic.jobs.utils import check_and_prepare_job
 from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
 
 logger = logging.getLogger(__name__)
+
+# Create alias mappings for performance
+JOB_ATTRIBUTES_ALIASES = {
+    field.alias: field_name
+    for field_name, field in JobAttributes.model_fields.items()
+    if field.alias
+}
+JOB_PARAMETERS_ALIASES = {
+    field.alias: field_name
+    for field_name, field in JobParameters.model_fields.items()
+    if field.alias
+}
 
 
 async def remove_jobs(
@@ -503,36 +516,29 @@ async def remove_jobs_from_task_queue(
 
 
 async def set_job_parameters_or_attributes(
-    updates: dict[int, dict[str, Any]],
+    updates: dict[int, JobMetaData],
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
 ):
     """Set job parameters or attributes for a list of jobs."""
-    attribute_columns: list[str] = [
-        col.name for col in _get_columns(Jobs.__table__, None)
-    ]
-    attribute_columns_lower: list[str] = [col.lower() for col in attribute_columns]
-
+    # Those dicts create a mapping of job_id -> {attribute_name: value}
     attr_updates: dict[int, dict[str, Any]] = {}
     param_updates: dict[int, dict[str, Any]] = {}
 
     for job_id, metadata in updates.items():
         attr_updates[job_id] = {}
         param_updates[job_id] = {}
-        for pname, pvalue in metadata.items():
-            # If the attribute exactly matches one of the allowed columns, treat it as an attribute.
-            if pname in attribute_columns:
+        for pname, pvalue in metadata.model_dump(
+            by_alias=True, exclude_none=True
+        ).items():
+            # An argument can be a job attribute and/or a job parameter
+
+            # Check if the argument is a valid job attribute (using alias)
+            if pname in JOB_ATTRIBUTES_ALIASES:
                 attr_updates[job_id][pname] = pvalue
-            # Otherwise, if the lower-case version is valid, the user likely mis-cased the key.
-            elif pname.lower() in attribute_columns_lower:
-                correct_name = attribute_columns[
-                    attribute_columns_lower.index(pname.lower())
-                ]
-                raise ValueError(
-                    f"Attribute column '{pname}' is mis-cased. Did you mean '{correct_name}'?"
-                )
-            # Otherwise, assume it should be routed to the parameters DB.
-            else:
+
+            # Check if the argument is a valid job parameter (using alias)
+            if pname in JOB_PARAMETERS_ALIASES:
                 param_updates[job_id][pname] = pvalue
 
     # Bulk set job attributes if required

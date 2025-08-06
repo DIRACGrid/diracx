@@ -355,26 +355,6 @@ def build_jobs_get_sandbox_file_request(*, pfn: str, **kwargs: Any) -> HttpReque
     return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
-def build_jobs_unassign_bulk_jobs_sandboxes_request(  # pylint: disable=name-too-long
-    *, jobs_ids: List[int], **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/jobs/sandbox"
-
-    # Construct parameters
-    _params["jobs_ids"] = _SERIALIZER.query("jobs_ids", jobs_ids, "[int]")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="DELETE", url=_url, params=_params, headers=_headers, **kwargs)
-
-
 def build_jobs_get_job_sandboxes_request(job_id: int, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
@@ -459,6 +439,20 @@ def build_jobs_assign_sandbox_to_job_request(job_id: int, *, content: str, **kwa
     return HttpRequest(method="PATCH", url=_url, headers=_headers, content=content, **kwargs)
 
 
+def build_jobs_unassign_bulk_jobs_sandboxes_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
+    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+    # Construct URL
+    _url = "/api/jobs/sandbox/unassign"
+
+    # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
+
+    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+
+
 def build_jobs_set_job_statuses_request(*, force: bool = False, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
@@ -498,21 +492,23 @@ def build_jobs_add_heartbeat_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
 
 
-def build_jobs_reschedule_jobs_request(*, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any) -> HttpRequest:
+def build_jobs_reschedule_jobs_request(*, reset_jobs: bool = False, **kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
+    content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
     _url = "/api/jobs/reschedule"
 
     # Construct parameters
-    _params["job_ids"] = _SERIALIZER.query("job_ids", job_ids, "[int]")
     if reset_jobs is not None:
         _params["reset_jobs"] = _SERIALIZER.query("reset_jobs", reset_jobs, "bool")
 
     # Construct headers
+    if content_type is not None:
+        _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
     return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
@@ -1760,56 +1756,6 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @distributed_trace
-    def unassign_bulk_jobs_sandboxes(self, *, jobs_ids: List[int], **kwargs: Any) -> Any:
-        """Unassign Bulk Jobs Sandboxes.
-
-        Delete bulk jobs sandbox mapping.
-
-        :keyword jobs_ids: Required.
-        :paramtype jobs_ids: list[int]
-        :return: any
-        :rtype: any
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[Any] = kwargs.pop("cls", None)
-
-        _request = build_jobs_unassign_bulk_jobs_sandboxes_request(
-            jobs_ids=jobs_ids,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("object", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @distributed_trace
     def get_job_sandboxes(self, job_id: int, **kwargs: Any) -> Dict[str, List[Any]]:
         """Get Job Sandboxes.
 
@@ -2020,6 +1966,101 @@ class JobsOperations:
         return deserialized  # type: ignore
 
     @overload
+    def unassign_bulk_jobs_sandboxes(
+        self, body: _models.BodyJobsUnassignBulkJobsSandboxes, *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Unassign Bulk Jobs Sandboxes.
+
+        Delete bulk jobs sandbox mapping.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def unassign_bulk_jobs_sandboxes(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> None:
+        """Unassign Bulk Jobs Sandboxes.
+
+        Delete bulk jobs sandbox mapping.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def unassign_bulk_jobs_sandboxes(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[_models.BodyJobsUnassignBulkJobsSandboxes, IO[bytes]], **kwargs: Any
+    ) -> None:
+        """Unassign Bulk Jobs Sandboxes.
+
+        Delete bulk jobs sandbox mapping.
+
+        :param body: Is either a BodyJobsUnassignBulkJobsSandboxes type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes or IO[bytes]
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[None] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyJobsUnassignBulkJobsSandboxes")
+
+        _request = build_jobs_unassign_bulk_jobs_sandboxes_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore
+
+    @overload
     def set_job_statuses(
         self,
         body: Dict[str, Dict[str, _models.JobStatusUpdate]],
@@ -2030,7 +2071,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set Job Statuses.
+        Set the status of a job or a list of jobs.
+
+        Body parameters:
+
+
+        * ``Status``\\ : The new status of the job.
+        * ``MinorStatus``\\ : The minor status of the job.
+        * ``ApplicationStatus``\\ : The application-specific status of the job.
+        * ``Source``\\ : The source of the status update (default is "Unknown").
 
         :param body: Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
@@ -2050,7 +2099,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set Job Statuses.
+        Set the status of a job or a list of jobs.
+
+        Body parameters:
+
+
+        * ``Status``\\ : The new status of the job.
+        * ``MinorStatus``\\ : The minor status of the job.
+        * ``ApplicationStatus``\\ : The application-specific status of the job.
+        * ``Source``\\ : The source of the status update (default is "Unknown").
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2074,7 +2131,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set Job Statuses.
+        Set the status of a job or a list of jobs.
+
+        Body parameters:
+
+
+        * ``Status``\\ : The new status of the job.
+        * ``MinorStatus``\\ : The minor status of the job.
+        * ``ApplicationStatus``\\ : The application-specific status of the job.
+        * ``Source``\\ : The source of the status update (default is "Unknown").
 
         :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
@@ -2251,14 +2316,79 @@ class JobsOperations:
 
         return deserialized  # type: ignore
 
-    @distributed_trace
-    def reschedule_jobs(self, *, job_ids: List[int], reset_jobs: bool = False, **kwargs: Any) -> Dict[str, Any]:
+    @overload
+    def reschedule_jobs(
+        self,
+        body: _models.BodyJobsRescheduleJobs,
+        *,
+        reset_jobs: bool = False,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> Dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule Jobs.
+        Reschedule a list of killed or failed jobs.
 
-        :keyword job_ids: Required.
-        :paramtype job_ids: list[int]
+        Body parameters:
+
+
+        * ``job_ids``\\ : List of job IDs to reschedule.
+        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyJobsRescheduleJobs
+        :keyword reset_jobs: Default value is False.
+        :paramtype reset_jobs: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: dict mapping str to any
+        :rtype: dict[str, any]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    def reschedule_jobs(
+        self, body: IO[bytes], *, reset_jobs: bool = False, content_type: str = "application/json", **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Reschedule Jobs.
+
+        Reschedule a list of killed or failed jobs.
+
+        Body parameters:
+
+
+        * ``job_ids``\\ : List of job IDs to reschedule.
+        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword reset_jobs: Default value is False.
+        :paramtype reset_jobs: bool
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: dict mapping str to any
+        :rtype: dict[str, any]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace
+    def reschedule_jobs(
+        self, body: Union[_models.BodyJobsRescheduleJobs, IO[bytes]], *, reset_jobs: bool = False, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Reschedule Jobs.
+
+        Reschedule a list of killed or failed jobs.
+
+        Body parameters:
+
+
+        * ``job_ids``\\ : List of job IDs to reschedule.
+        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+
+        :param body: Is either a BodyJobsRescheduleJobs type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyJobsRescheduleJobs or IO[bytes]
         :keyword reset_jobs: Default value is False.
         :paramtype reset_jobs: bool
         :return: dict mapping str to any
@@ -2273,14 +2403,25 @@ class JobsOperations:
         }
         error_map.update(kwargs.pop("error_map", {}) or {})
 
-        _headers = kwargs.pop("headers", {}) or {}
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
         _params = kwargs.pop("params", {}) or {}
 
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
         cls: ClsType[Dict[str, Any]] = kwargs.pop("cls", None)
 
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyJobsRescheduleJobs")
+
         _request = build_jobs_reschedule_jobs_request(
-            job_ids=job_ids,
             reset_jobs=reset_jobs,
+            content_type=content_type,
+            json=_json,
+            content=_content,
             headers=_headers,
             params=_params,
         )
@@ -2306,14 +2447,15 @@ class JobsOperations:
 
     @overload
     def patch_metadata(
-        self, body: Dict[str, Dict[str, Any]], *, content_type: str = "application/json", **kwargs: Any
+        self, body: Dict[str, _models.JobMetaData], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
         """Patch Metadata.
 
-        Patch Metadata.
+        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        The argument  are all the attributes/parameters of a job (except the ID).
 
         :param body: Required.
-        :type body: dict[str, dict[str, any]]
+        :type body: dict[str, ~_generated.models.JobMetaData]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -2326,7 +2468,8 @@ class JobsOperations:
     def patch_metadata(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
         """Patch Metadata.
 
-        Patch Metadata.
+        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        The argument  are all the attributes/parameters of a job (except the ID).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2340,14 +2483,15 @@ class JobsOperations:
 
     @distributed_trace
     def patch_metadata(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[Dict[str, Dict[str, Any]], IO[bytes]], **kwargs: Any
+        self, body: Union[Dict[str, _models.JobMetaData], IO[bytes]], **kwargs: Any
     ) -> None:
         """Patch Metadata.
 
-        Patch Metadata.
+        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        The argument  are all the attributes/parameters of a job (except the ID).
 
-        :param body: Is either a {str: {str: Any}} type or a IO[bytes] type. Required.
-        :type body: dict[str, dict[str, any]] or IO[bytes]
+        :param body: Is either a {str: JobMetaData} type or a IO[bytes] type. Required.
+        :type body: dict[str, ~_generated.models.JobMetaData] or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -2372,7 +2516,7 @@ class JobsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "{{object}}")
+            _json = self._serialize.body(body, "{JobMetaData}")
 
         _request = build_jobs_patch_metadata_request(
             content_type=content_type,
@@ -2409,9 +2553,18 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Retrieve information about jobs.
+        Creates a search query to the job database. This search can be based on
+        different parameters, such as jobID, status, owner, etc.
 
-        **TODO: Add more docs**.
+        **Possibilities**
+
+
+        * Use ``search`` to filter jobs based on various parameters (optional).
+        * Use ``parameters`` to specify which job parameters to return (optional).
+        * Use ``sort`` to order the results based on specific parameters (optional).
+
+        By default, the search will return all jobs the user has access to, and all the fields
+        of the job will be returned.
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -2439,9 +2592,18 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Retrieve information about jobs.
+        Creates a search query to the job database. This search can be based on
+        different parameters, such as jobID, status, owner, etc.
 
-        **TODO: Add more docs**.
+        **Possibilities**
+
+
+        * Use ``search`` to filter jobs based on various parameters (optional).
+        * Use ``parameters`` to specify which job parameters to return (optional).
+        * Use ``sort`` to order the results based on specific parameters (optional).
+
+        By default, the search will return all jobs the user has access to, and all the fields
+        of the job will be returned.
 
         :param body: Default value is None.
         :type body: IO[bytes]
@@ -2468,9 +2630,18 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Retrieve information about jobs.
+        Creates a search query to the job database. This search can be based on
+        different parameters, such as jobID, status, owner, etc.
 
-        **TODO: Add more docs**.
+        **Possibilities**
+
+
+        * Use ``search`` to filter jobs based on various parameters (optional).
+        * Use ``parameters`` to specify which job parameters to return (optional).
+        * Use ``sort`` to order the results based on specific parameters (optional).
+
+        By default, the search will return all jobs the user has access to, and all the fields
+        of the job will be returned.
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -2544,7 +2715,15 @@ class JobsOperations:
     def summary(self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
+        contains the
+        values of the grouping parameters and the number of jobs that match those values.
+
+        Body parameters:
+
+
+        * ``grouping``\\ : List of parameters to group the jobs by.
+        * ``search``\\ : List of search parameters to filter the jobs by (optional).
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -2560,7 +2739,15 @@ class JobsOperations:
     def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
+        contains the
+        values of the grouping parameters and the number of jobs that match those values.
+
+        Body parameters:
+
+
+        * ``grouping``\\ : List of parameters to group the jobs by.
+        * ``search``\\ : List of search parameters to filter the jobs by (optional).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2576,7 +2763,15 @@ class JobsOperations:
     def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
+        contains the
+        values of the grouping parameters and the number of jobs that match those values.
+
+        Body parameters:
+
+
+        * ``grouping``\\ : List of parameters to group the jobs by.
+        * ``search``\\ : List of search parameters to filter the jobs by (optional).
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]

@@ -75,6 +75,56 @@ class SearchParams(BaseModel):
     # TODO: Add more validation
 
 
+class JobParameters(BaseModel, extra="forbid"):
+    """All the parameters that can be set for a job."""
+
+    timestamp: datetime | None = None
+    cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
+    norm_cpu_time_s: int | None = Field(None, alias="NormCPUTime(s)")
+    total_cpu_time_s: int | None = Field(None, alias="TotalCPUTime(s)")
+    host_name: str | None = Field(None, alias="HostName")
+    grid_ce: str | None = Field(None, alias="GridCE")
+    model_name: str | None = Field(None, alias="ModelName")
+    pilot_agent: str | None = Field(None, alias="PilotAgent")
+    pilot_reference: str | None = Field(None, alias="Pilot_Reference")
+    memory_mb: int | None = Field(None, alias="Memory(MB)")
+    local_account: str | None = Field(None, alias="LocalAccount")
+    payload_pid: int | None = Field(None, alias="PayloadPID")
+    ce_queue: str | None = Field(None, alias="CEQueue")
+    batch_system: str | None = Field(None, alias="BatchSystem")
+    job_type: str | None = Field(None, alias="JobType")
+    job_status: str | None = Field(None, alias="JobStatus")
+
+
+class JobAttributes(BaseModel, extra="forbid"):
+    """All the attributes that can be set for a job."""
+
+    job_type: str | None = Field(None, alias="JobType")
+    job_group: str | None = Field(None, alias="JobGroup")
+    site: str | None = Field(None, alias="Site")
+    job_name: str | None = Field(None, alias="JobName")
+    owner: str | None = Field(None, alias="Owner")
+    owner_group: str | None = Field(None, alias="OwnerGroup")
+    vo: str | None = Field(None, alias="VO")
+    submission_time: datetime | None = Field(None, alias="SubmissionTime")
+    reschedule_time: datetime | None = Field(None, alias="RescheduleTime")
+    last_update_time: datetime | None = Field(None, alias="LastUpdateTime")
+    start_exec_time: datetime | None = Field(None, alias="StartExecTime")
+    heart_beat_time: datetime | None = Field(None, alias="HeartBeatTime")
+    end_exec_time: datetime | None = Field(None, alias="EndExecTime")
+    status: str | None = Field(None, alias="Status")
+    minor_status: str | None = Field(None, alias="MinorStatus")
+    application_status: str | None = Field(None, alias="ApplicationStatus")
+    user_priority: int | None = Field(None, alias="UserPriority")
+    reschedule_counter: int | None = Field(None, alias="RescheduleCounter")
+    verified_flag: bool | None = Field(None, alias="VerifiedFlag")
+    accounted_flag: bool | str | None = Field(None, alias="AccountedFlag")
+
+
+class JobMetaData(JobAttributes, JobParameters, extra="forbid"):
+    """A model that combines both JobAttributes and JobParameters."""
+
+
 class JobStatus(StrEnum):
     SUBMITTING = "Submitting"
     RECEIVED = "Received"

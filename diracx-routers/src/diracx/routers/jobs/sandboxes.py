@@ -164,13 +164,32 @@ async def unassign_job_sandboxes(
     await unassign_jobs_sandboxes_bl([job_id], sandbox_metadata_db)
 
 
-@router.delete("/sandbox")
+EXAMPLE_UNASSIGN = {
+    "Default": {
+        "value": {"job_ids": [1, 2, 3]},
+    },
+    "One job": {
+        "value": {"job_ids": [1]},
+    },
+}
+
+
+@router.post(
+    "/sandbox/unassign",
+    status_code=HTTPStatus.NO_CONTENT,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"examples": EXAMPLE_UNASSIGN}},
+        }
+    },
+)
 async def unassign_bulk_jobs_sandboxes(
-    jobs_ids: Annotated[list[int], Query()],
+    job_ids: Annotated[list[int], Body(embed=True)],
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Delete bulk jobs sandbox mapping."""
-    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=jobs_ids)
-    await unassign_jobs_sandboxes_bl(jobs_ids, sandbox_metadata_db)
+    await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
+    await unassign_jobs_sandboxes_bl(job_ids, sandbox_metadata_db)

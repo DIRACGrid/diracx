@@ -8,6 +8,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from diracx.core.models import JobStatus
+from diracx.routers.jobs.status import (
+    EXAMPLE_HEARTBEAT,
+    EXAMPLE_METADATA,
+    EXAMPLE_STATUS_UPDATES,
+)
 
 from .conftest import TEST_JDL
 
@@ -366,7 +371,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     for i in range(max_resched):
         r = normal_user_client.post(
             "/api/jobs/reschedule",
-            params={"job_ids": submitted_job_ids},
+            json={"job_ids": submitted_job_ids},
         )
         assert r.status_code == 200, r.json()
         result = r.json()
@@ -378,7 +383,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
 
     r = normal_user_client.post(
         "/api/jobs/reschedule",
-        params={"job_ids": submitted_job_ids},
+        json={"job_ids": submitted_job_ids},
     )
     assert r.status_code != 200, (
         f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
@@ -418,7 +423,7 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
     for i in range(max_resched):
         r = normal_user_client.post(
             "/api/jobs/reschedule",
-            params={"job_ids": fail_resched_ids},
+            json={"job_ids": fail_resched_ids},
         )
         assert r.status_code == 200, r.json()
         result = r.json()
@@ -432,7 +437,7 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
     for i in range(max_resched):
         r = normal_user_client.post(
             "/api/jobs/reschedule",
-            params={"job_ids": submitted_job_ids},
+            json={"job_ids": submitted_job_ids},
         )
         assert r.status_code == 200, r.json()
         result = r.json()
@@ -445,13 +450,14 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
             assert successful_results[str(jid)]["RescheduleCounter"] == i + 1
         for jid in fail_resched_ids:
             assert str(jid) in failed_results, result
+            # FIXME
             # assert successful_results[jid]["Status"] == JobStatus.RECEIVED
             # assert successful_results[jid]["MinorStatus"] == "Job Rescheduled"
             # assert successful_results[jid]["RescheduleCounter"] == i + 1
 
     r = normal_user_client.post(
         "/api/jobs/reschedule",
-        params={"job_ids": submitted_job_ids},
+        json={"job_ids": submitted_job_ids},
     )
     assert r.status_code != 200, (
         f"Rescheduling more than {max_resched} times should have failed by now {r.json()}"
@@ -851,7 +857,7 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
         assert j["ApplicationStatus"] == "Unknown"
 
     # Act
-    hbt = str(datetime.now(timezone.utc))
+    hbt = datetime.now(timezone.utc).isoformat()
     r = normal_user_client.patch(
         "/api/jobs/metadata",
         json={
@@ -883,11 +889,14 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
     assert r.status_code == 200, r.json()
 
+    # TODO: This should be timezone aware
+    hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
+    assert hbt1.tzinfo is None
+    hbt1 = hbt1.replace(tzinfo=timezone.utc)
+
     assert r.json()[0]["JobID"] == valid_job_id
     assert r.json()[0]["JobType"] == "VerySpecialIndeed"
-    assert datetime.fromisoformat(
-        r.json()[0]["HeartBeatTime"]
-    ) == datetime.fromisoformat(hbt)
+    assert hbt1 == datetime.fromisoformat(hbt)
     assert r.json()[0]["UserPriority"] == 2
 
 
@@ -929,9 +938,7 @@ def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
 
     # Assert
-    assert r.status_code == 400, (
-        "PATCH metadata should 400 Bad Request if an attribute column's case is incorrect"
-    )
+    assert r.status_code == 422, r.text
 
 
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
@@ -1019,3 +1026,170 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     assert len(commands) == 0, (
         "Exactly zero job commands should be returned after heartbeat commands are sent"
     )
+
+
+def test_patch_metadata_doc_example(normal_user_client: TestClient, valid_job_id: int):
+    # Arrange
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ],
+            "parameters": ["LoggingInfo"],
+        },
+    )
+
+    assert r.status_code == 200, r.json()
+    for j in r.json():
+        assert j["JobID"] == valid_job_id
+        assert j["Status"] == JobStatus.RECEIVED.value
+        assert j["MinorStatus"] == "Job accepted"
+        assert j["ApplicationStatus"] == "Unknown"
+
+    # Act
+    payload = EXAMPLE_METADATA["Default"]["value"][1]
+
+    r = normal_user_client.patch("/api/jobs/metadata", json={valid_job_id: payload})
+
+    # Assert
+    assert r.status_code == 204, (
+        "PATCH metadata should return 204 No Content on success"
+    )
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ],
+            "parameters": ["LoggingInfo"],
+        },
+    )
+    assert r.status_code == 200, r.json()
+
+    # TODO: This should be timezone aware
+    hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
+    assert hbt1.tzinfo is None
+    hbt1 = hbt1.replace(tzinfo=timezone.utc)
+
+    assert r.json()[0]["JobID"] == valid_job_id
+    assert r.json()[0]["Status"] == payload["Status"]
+    assert r.json()[0]["Site"] == payload["Site"]
+
+    # Act 2
+    payload = EXAMPLE_METADATA["Default"]["value"][2]
+
+    r = normal_user_client.patch("/api/jobs/metadata", json={valid_job_id: payload})
+
+    # Assert 2
+    assert r.status_code == 204, (
+        "PATCH metadata should return 204 No Content on success"
+    )
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ],
+            "parameters": ["LoggingInfo"],
+        },
+    )
+    assert r.status_code == 200, r.json()
+
+    assert r.json()[0]["JobID"] == valid_job_id
+    assert r.json()[0]["UserPriority"] == payload["UserPriority"]
+    assert r.json()[0]["JobType"] == payload["JobType"]
+
+
+def test_patch_heartbeat_doc_example(normal_user_client: TestClient, valid_job_id: int):
+    search_body = {
+        "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
+    }
+
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+
+    assert r.status_code == 200
+    assert r.json()[0]["HeartBeatTime"] is None
+
+    payload = EXAMPLE_HEARTBEAT["Default"]["value"][1]
+    r = normal_user_client.patch("/api/jobs/heartbeat", json={valid_job_id: payload})
+    # We attest that the payload is correct
+    assert r.status_code == 200
+
+    r = normal_user_client.post("/api/jobs/search", json=search_body)
+    assert r.status_code == 200, r.json()
+    new_data = r.json()[0]
+
+    hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
+    # TODO: This should be timezone aware
+    assert hbt.tzinfo is None
+    hbt = hbt.replace(tzinfo=timezone.utc)
+    assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
+
+
+def test_patch_status_doc_example(normal_user_client: TestClient, valid_job_id: int):
+    # Arrange
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "JobID",
+                    "operator": "eq",
+                    "value": valid_job_id,
+                }
+            ]
+        },
+    )
+
+    assert r.status_code == 200, r.json()
+    for j in r.json():
+        assert j["JobID"] == valid_job_id
+        assert j["Status"] == JobStatus.RECEIVED.value
+        assert j["MinorStatus"] == "Job accepted"
+        assert j["ApplicationStatus"] == "Unknown"
+
+    # Act
+    for date in EXAMPLE_STATUS_UPDATES["Default"]["value"][1]:
+        payload = EXAMPLE_STATUS_UPDATES["Default"]["value"][1][date]
+
+        print("Payload to be sent:", payload)
+
+        r = normal_user_client.patch(
+            "/api/jobs/status",
+            json={valid_job_id: {datetime.now(tz=timezone.utc).isoformat(): payload}},
+        )
+
+        # Assert
+        assert r.status_code == 200, r.json()
+
+        r = normal_user_client.post(
+            "/api/jobs/search",
+            json={
+                "search": [
+                    {
+                        "parameter": "JobID",
+                        "operator": "eq",
+                        "value": valid_job_id,
+                    }
+                ]
+            },
+        )
+        assert r.status_code == 200, r.json()
+        print("Response JSON:", r.json())
+        assert r.json()[0]["JobID"] == valid_job_id
+        assert r.json()[0]["Status"] == payload["Status"]
+        assert r.json()[0]["MinorStatus"] == payload["MinorStatus"]
+        assert r.json()[0]["ApplicationStatus"] == payload["ApplicationStatus"]
