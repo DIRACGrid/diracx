@@ -77,10 +77,12 @@ nav:
       - Register the admin VO: admin/how-to/register-the-admin-vo.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
+      - Rotate a secret: admin/how-to/rotate-a-secret.md
     - Explanations:
       - Configuration: admin/explanations/configuration.md
       - OpenTelemetry: admin/explanations/opentelemetry.md
       - Chart structure: admin/explanations/chart-structure.md
+      - Databases: docs/admin/explanations/database-management.md
     - Reference:
       - Security Model: admin/reference/security_model.md
       - Charts values: admin/reference/values.md
@@ -116,11 +118,12 @@ nav:
         - Introduction: dev/explanations/components/index.md
         - API: dev/explanations/components/api.md
         - CLI: dev/explanations/components/cli.md
-        - DataBases: dev/explanations/components/db.md
+        - Databases: dev/explanations/components/db.md
         - Routes: dev/explanations/components/routes.md
       - Client: dev/explanations/client.md
       - Testing: dev/explanations/testing.md
       - Run demo: dev/explanations/run_demo.md
+      - Extensions: dev/explanations/extensions.md
     - Reference:
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
