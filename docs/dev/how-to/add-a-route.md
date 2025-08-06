@@ -24,5 +24,6 @@ diracx.services =
 
 This will prefix the routes with `/parking/` and mark them with the `"parking"` tag in the OpenAPI spec.
 
-> [!WARNING]
-> Any modification in the `setup.cfg` requires to re-install install `diracx`, even if it is a developer installation (`pip install -e`)
+!!! warning
+
+    Any modification in the `pyproject.toml` requires to re-install install `diracx`, even if it is a developer installation (`pip install -e`)
