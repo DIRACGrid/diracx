@@ -23,6 +23,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "sh",
+    "uuid_utils"
 ]
 dynamic = ["version"]
 

@@ -287,15 +287,26 @@ T_DICTS = TypeVar("T_DICTS", bound=Mapping[str, Any])
 
 
 def recursive_dict_merge(x: T_DICTS, y: T_DICTS) -> T_DICTS:
+    """Used to merge two dictionaries with different types in it.
+
+    Use case: pilot secrets constraints that we update.
+    """
     result: dict[str, Any] = dict(x)
 
     for k, v in y.items():
         if k in result:
             if isinstance(result[k], dict) and isinstance(v, dict):
+                # If it's a dict, recursion
                 result[k] = recursive_dict_merge(result[k], v)
             elif isinstance(result[k], list) and isinstance(v, list):
-                result[k] = result[k] + v
+                # Prevent duplicates (costy operation, but done no that many times)
+                result[k] = list(set(result[k] + v))
+            elif isinstance(result[k], set) and isinstance(v, set):
+                # If it's a set, update values
+                result[k].update(v)
             else:
+                # Other types are: int, str, byte, float, bool
+                # No need to handle it differently, just replace the value
                 result[k] = v
         else:
             result[k] = v
