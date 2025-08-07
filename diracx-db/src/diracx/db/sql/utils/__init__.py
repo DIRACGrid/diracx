@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .alembic import Trigger
 from .base import (
     BaseSQLDB,
     SQLDBUnavailableError,
@@ -24,4 +25,5 @@ __all__ = (
     "substract_date",
     "hash",
     "SQLDBUnavailableError",
+    "Trigger",
 )
