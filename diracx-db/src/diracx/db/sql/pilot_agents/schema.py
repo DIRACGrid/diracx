@@ -26,7 +26,7 @@ class PilotAgents(PilotAgentsDBBase):
     destination_site = Column("DestinationSite", String(128), default="NotAssigned")
     queue = Column("Queue", String(128), default="Unknown")
     grid_site = Column("GridSite", String(128), default="Unknown")
-    vo = Column("VO", String(128))
+    vo = Column("VO", String(64))
     grid_type = Column("GridType", String(32), default="LCG")
     benchmark = Column("BenchMark", Double, default=0.0)
     submission_time = NullColumn("SubmissionTime", DateTime)
@@ -58,3 +58,76 @@ class PilotOutput(PilotAgentsDBBase):
     pilot_id = Column("PilotID", Integer, primary_key=True)
     std_output = Column("StdOutput", Text)
     std_error = Column("StdError", Text)
+
+
+class PilotsHistorySummary(PilotAgentsDBBase):
+    __tablename__ = "PilotsHistorySummary"
+    grid_site = Column("GridSite", String(128), primary_key=True)
+    destination_site = Column("DestinationSite", String(128), primary_key=True)
+    status = Column("Status", String(32), primary_key=True)
+    vo = Column("VO", String(64), primary_key=True)
+    pilot_count = Column("PilotCount", Integer, default=0)
+
+
+# TODO:
+
+# DELIMITER //
+
+# CREATE TRIGGER trg_PilotAgents_insert
+# AFTER INSERT ON PilotAgents
+# FOR EACH ROW
+# BEGIN
+#   INSERT INTO PilotsHistorySummary (GridSite, DestinationSite, Status, VO, PilotCount)
+#   VALUES (NEW.GridSite, NEW.DestinationSite, NEW.Status, NEW.VO, 1)
+#   ON DUPLICATE KEY UPDATE PilotCount = PilotCount + 1;
+# END;
+# //
+
+# CREATE TRIGGER trg_PilotAgents_delete
+# AFTER DELETE ON PilotAgents
+# FOR EACH ROW
+# BEGIN
+#   UPDATE PilotsHistorySummary
+#   SET PilotCount = PilotCount - 1
+#   WHERE GridSite = OLD.GridSite
+#     AND DestinationSite = OLD.DestinationSite
+#     AND Status = OLD.Status
+#     AND VO = OLD.VO;
+
+#   -- Remove zero rows
+#   DELETE FROM PilotsHistorySummary
+#   WHERE PilotCount = 0
+#     AND GridSite = OLD.GridSite
+#     AND DestinationSite = OLD.DestinationSite
+#     AND Status = OLD.Status
+#     AND VO = OLD.VO;
+# END;
+# //
+
+# CREATE TRIGGER trg_PilotAgents_update_status
+# AFTER UPDATE ON PilotAgents
+# FOR EACH ROW
+# BEGIN
+#   IF OLD.Status != NEW.Status THEN
+
+#     -- Decrease count from old status
+#     UPDATE PilotsHistorySummary
+#     SET PilotCount = PilotCount - 1
+#     WHERE GridSite = OLD.GridSite
+#       AND DestinationSite = OLD.DestinationSite
+#       AND Status = OLD.Status
+#       AND VO = OLD.VO;
+
+#     -- Delete row if count drops to zero
+#     DELETE FROM PilotsHistorySummary WHERE PilotCount = 0;
+
+#     -- Increase count for new status
+#     INSERT INTO PilotsHistorySummary (GridSite, DestinationSite, Status, VO, PilotCount)
+#     VALUES (NEW.GridSite, NEW.DestinationSite, NEW.Status, NEW.VO, 1)
+#     ON DUPLICATE KEY UPDATE PilotCount = PilotCount + 1;
+
+#   END IF;
+# END;
+# //
+
+# DELIMITER ;
