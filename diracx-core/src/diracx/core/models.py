@@ -204,6 +204,7 @@ class ChecksumAlgorithm(StrEnum):
 
 class SandboxFormat(StrEnum):
     TAR_BZ2 = "tar.bz2"
+    TAR_ZST = "tar.zst"
 
 
 class SandboxInfo(BaseModel):
