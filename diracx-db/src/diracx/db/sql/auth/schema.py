@@ -3,9 +3,13 @@ from __future__ import annotations
 from enum import Enum, auto
 
 from sqlalchemy import (
+    BINARY,
     JSON,
+    DateTime,
     Index,
+    SmallInteger,
     String,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import declarative_base
@@ -99,3 +103,28 @@ class RefreshTokens(Base):
     sub = Column("Sub", String(256), index=True)
 
     __table_args__ = (Index("index_status_sub", status, sub),)
+
+
+class PilotSecrets(Base):
+    __tablename__ = "PilotSecrets"
+
+    secret_uuid = Column("SecretUUID", Uuid(as_uuid=False), primary_key=True)
+
+    hashed_secret = Column("HashedSecret", BINARY(32))
+    # Global count
+    # Null: Infinite use
+    secret_remaining_use_count = NullColumn(
+        "SecretRemainingUseCount", SmallInteger, default=1
+    )
+    secret_expiration_date = NullColumn("SecretExpirationDate", DateTime(timezone=True))
+    # To authorize only specific pilots to access a secret
+    # The constraint format follows diracx.code.models.PilotSecretConstraints
+    secret_constraints = NullColumn("SecretConstraints", JSON)
+
+    # If a date is set, then it used a secret (acts also like a "PilotUsedSecret" field)
+    pilot_secret_use_date = NullColumn("PilotSecretUseDate", DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("HashedSecret", name="uq_hashed_secret"),
+        Index("HashedSecret", "HashedSecret"),
+    )

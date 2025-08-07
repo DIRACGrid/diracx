@@ -149,6 +149,7 @@ async def test_failed_transaction(dummy_db):
             assert result
 
             # This will raise an exception and the transaction will be rolled back
+
             result = await dummy_db.summary(["unexistingfieldraisinganerror"], [])
             assert result[0]["count"] == 10
 

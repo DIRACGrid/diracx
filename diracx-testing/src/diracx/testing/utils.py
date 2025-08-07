@@ -381,6 +381,27 @@ class ClientFactory:
             client.dirac_token_payload = payload
             yield client
 
+    @contextlib.contextmanager
+    def diracx_pilot(self):
+        """Pilot from DiracX: a specific token."""
+        from diracx.routers.auth.token import create_token
+
+        with self.unauthenticated() as client:
+            payload = {
+                "sub": "testingVO:yellow-sub",
+                "exp": datetime.now(tz=timezone.utc)
+                + timedelta(self.test_auth_settings.access_token_expire_minutes),
+                "iss": ISSUER,
+                "jti": str(uuid7()),
+                "pilot_stamp": "pilot_stamp",
+                "vo": "lhcb",
+            }
+            token = create_token(payload, self.test_auth_settings)
+
+            client.headers["Authorization"] = f"Bearer {token}"
+            client.dirac_token_payload = payload
+            yield client
+
 
 @pytest.fixture(scope="session")
 def session_client_factory(

@@ -39,6 +39,7 @@ dirac = "diracx.cli:app"
 [project.entry-points."diracx.cli"]
 jobs = "diracx.cli.jobs:app"
 config = "diracx.cli.config:app"
+pilots = "diracx.cli.pilots:app"
 
 [project.entry-points."diracx.cli.hidden"]
 internal = "diracx.cli.internal:app"
