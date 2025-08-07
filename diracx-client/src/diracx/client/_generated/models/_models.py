@@ -94,6 +94,39 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyAuthRefreshPilotTokens(_serialization.Model):
+    """Body_auth_refresh_pilot_tokens.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar refresh_token: Refresh Token given at login by DiracX. Required.
+    :vartype refresh_token: str
+    :ivar pilot_stamp: Pilot stamp. Required.
+    :vartype pilot_stamp: str
+    """
+
+    _validation = {
+        "refresh_token": {"required": True},
+        "pilot_stamp": {"required": True},
+    }
+
+    _attribute_map = {
+        "refresh_token": {"key": "refresh_token", "type": "str"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+    }
+
+    def __init__(self, *, refresh_token: str, pilot_stamp: str, **kwargs: Any) -> None:
+        """
+        :keyword refresh_token: Refresh Token given at login by DiracX. Required.
+        :paramtype refresh_token: str
+        :keyword pilot_stamp: Pilot stamp. Required.
+        :paramtype pilot_stamp: str
+        """
+        super().__init__(**kwargs)
+        self.refresh_token = refresh_token
+        self.pilot_stamp = pilot_stamp
+
+
 class BodyJobsRescheduleJobs(_serialization.Model):
     """Body_jobs_reschedule_jobs.
 
@@ -144,37 +177,6 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         """
         super().__init__(**kwargs)
         self.job_ids = job_ids
-class BodyAuthRefreshPilotTokens(_serialization.Model):
-    """Body_auth_refresh_pilot_tokens.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar refresh_token: Refresh Token given at login by DiracX. Required.
-    :vartype refresh_token: str
-    :ivar pilot_stamp: Pilot stamp. Required.
-    :vartype pilot_stamp: str
-    """
-
-    _validation = {
-        "refresh_token": {"required": True},
-        "pilot_stamp": {"required": True},
-    }
-
-    _attribute_map = {
-        "refresh_token": {"key": "refresh_token", "type": "str"},
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-    }
-
-    def __init__(self, *, refresh_token: str, pilot_stamp: str, **kwargs: Any) -> None:
-        """
-        :keyword refresh_token: Refresh Token given at login by DiracX. Required.
-        :paramtype refresh_token: str
-        :keyword pilot_stamp: Pilot stamp. Required.
-        :paramtype pilot_stamp: str
-        """
-        super().__init__(**kwargs)
-        self.refresh_token = refresh_token
-        self.pilot_stamp = pilot_stamp
 
 
 class BodyPilotsAddPilotStamps(_serialization.Model):
