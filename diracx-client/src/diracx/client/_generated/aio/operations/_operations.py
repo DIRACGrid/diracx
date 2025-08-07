@@ -58,7 +58,9 @@ from ...operations._operations import (
     build_pilots_create_pilot_secrets_request,
     build_pilots_delete_pilots_request,
     build_pilots_get_pilot_jobs_request,
+    build_pilots_internal_send_message_request,
     build_pilots_internal_userinfo_request,
+    build_pilots_search_logs_request,
     build_pilots_search_request,
     build_pilots_summary_request,
     build_pilots_update_pilot_fields_request,
@@ -3256,6 +3258,143 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
     @overload
+    async def search_logs(
+        self,
+        body: Optional[_models.SearchParams] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Default value is None.
+        :type body: ~_generated.models.SearchParams
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def search_logs(
+        self,
+        body: Optional[IO[bytes]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Default value is None.
+        :type body: IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def search_logs(
+        self,
+        body: Optional[Union[_models.SearchParams, IO[bytes]]] = None,
+        *,
+        page: int = 1,
+        per_page: int = 100,
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """Search Logs.
+
+        Search Logs.
+
+        :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
+        :type body: ~_generated.models.SearchParams or IO[bytes]
+        :keyword page: Default value is 1.
+        :paramtype page: int
+        :keyword per_page: Default value is 100.
+        :paramtype per_page: int
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            if body is not None:
+                _json = self._serialize.body(body, "SearchParams")
+            else:
+                _json = None
+
+        _request = build_pilots_search_logs_request(
+            page=page,
+            per_page=per_page,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [200, 206]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        response_headers = {}
+        if response.status_code == 206:
+            response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
+
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, response_headers)  # type: ignore
+
+        return deserialized  # type: ignore
+
+    @overload
     async def summary(
         self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any
     ) -> Any:
@@ -3419,3 +3558,119 @@ class PilotsInternalOperations:
             return cls(pipeline_response, deserialized, {})  # type: ignore
 
         return deserialized  # type: ignore
+
+    @overload
+    async def send_message(
+        self,
+        body: _models.BodyPilotsInternalSendMessage,
+        *,
+        authorization: Optional[str] = None,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: ~_generated.models.BodyPilotsInternalSendMessage
+        :keyword authorization: Default value is None.
+        :paramtype authorization: str
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def send_message(
+        self,
+        body: IO[bytes],
+        *,
+        authorization: Optional[str] = None,
+        content_type: str = "application/json",
+        **kwargs: Any
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword authorization: Default value is None.
+        :paramtype authorization: str
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def send_message(
+        self,
+        body: Union[_models.BodyPilotsInternalSendMessage, IO[bytes]],
+        *,
+        authorization: Optional[str] = None,
+        **kwargs: Any
+    ) -> None:
+        """Send Message.
+
+        Send Message.
+
+        :param body: Is either a BodyPilotsInternalSendMessage type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsInternalSendMessage or IO[bytes]
+        :keyword authorization: Default value is None.
+        :paramtype authorization: str
+        :return: None
+        :rtype: None
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[None] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "BodyPilotsInternalSendMessage")
+
+        _request = build_pilots_internal_send_message_request(
+            authorization=authorization,
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [204]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        if cls:
+            return cls(pipeline_response, None, {})  # type: ignore

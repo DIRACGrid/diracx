@@ -318,6 +318,32 @@ class BodyPilotsCreatePilotSecrets(_serialization.Model):
         self.vo = vo
 
 
+class BodyPilotsInternalSendMessage(_serialization.Model):
+    """Body_pilots/internal_send_message.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar lines: Message from the pilot to the logging system. Required.
+    :vartype lines: list[~_generated.models.LogLine]
+    """
+
+    _validation = {
+        "lines": {"required": True},
+    }
+
+    _attribute_map = {
+        "lines": {"key": "lines", "type": "[LogLine]"},
+    }
+
+    def __init__(self, *, lines: List["_models.LogLine"], **kwargs: Any) -> None:
+        """
+        :keyword lines: Message from the pilot to the logging system. Required.
+        :paramtype lines: list[~_generated.models.LogLine]
+        """
+        super().__init__(**kwargs)
+        self.lines = lines
+
+
 class BodyPilotsUpdatePilotFields(_serialization.Model):
     """Body_pilots_update_pilot_fields.
 
@@ -971,6 +997,53 @@ class JobStatusUpdate(_serialization.Model):
         self.minor_status = minor_status
         self.application_status = application_status
         self.source = source
+
+
+class LogLine(_serialization.Model):
+    """LogLine.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar timestamp: Timestamp. Required.
+    :vartype timestamp: str
+    :ivar severity: Severity. Required.
+    :vartype severity: str
+    :ivar message: Message. Required.
+    :vartype message: str
+    :ivar scope: Scope. Required.
+    :vartype scope: str
+    """
+
+    _validation = {
+        "timestamp": {"required": True},
+        "severity": {"required": True},
+        "message": {"required": True},
+        "scope": {"required": True},
+    }
+
+    _attribute_map = {
+        "timestamp": {"key": "timestamp", "type": "str"},
+        "severity": {"key": "severity", "type": "str"},
+        "message": {"key": "message", "type": "str"},
+        "scope": {"key": "scope", "type": "str"},
+    }
+
+    def __init__(self, *, timestamp: str, severity: str, message: str, scope: str, **kwargs: Any) -> None:
+        """
+        :keyword timestamp: Timestamp. Required.
+        :paramtype timestamp: str
+        :keyword severity: Severity. Required.
+        :paramtype severity: str
+        :keyword message: Message. Required.
+        :paramtype message: str
+        :keyword scope: Scope. Required.
+        :paramtype scope: str
+        """
+        super().__init__(**kwargs)
+        self.timestamp = timestamp
+        self.severity = severity
+        self.message = message
+        self.scope = scope
 
 
 class OpenIDConfiguration(_serialization.Model):
