@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 __all__ = [
     "dotenv_files_from_environment",
     "serialize_credentials",
@@ -19,7 +21,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, AsyncIterable, TypeVar
+from typing import Any, AsyncIterable, Mapping, TypeVar, cast
 
 from cachetools import Cache, TTLCache
 
@@ -271,3 +273,42 @@ async def batched_async(
         if strict and len(batch) != n:
             raise ValueError("batched(): incomplete batch")
         yield tuple(batch)
+
+
+def extract_timestamp_from_uuid7(uuid_str: str) -> datetime:
+    u = UUID(uuid_str)
+    ts_bytes = u.bytes[0:6]  # First 48 bits = timestamp in ms
+    timestamp_ms = int.from_bytes(ts_bytes, byteorder="big")
+    # Convert into seconds then to datetime
+    return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)
+
+
+T_DICTS = TypeVar("T_DICTS", bound=Mapping[str, Any])
+
+
+def recursive_dict_merge(x: T_DICTS, y: T_DICTS) -> T_DICTS:
+    """Used to merge two dictionaries with different types in it.
+
+    Use case: pilot secrets constraints that we update.
+    """
+    result: dict[str, Any] = dict(x)
+
+    for k, v in y.items():
+        if k in result:
+            if isinstance(result[k], dict) and isinstance(v, dict):
+                # If it's a dict, recursion
+                result[k] = recursive_dict_merge(result[k], v)
+            elif isinstance(result[k], list) and isinstance(v, list):
+                # Prevent duplicates (costy operation, but done no that many times)
+                result[k] = list(set(result[k] + v))
+            elif isinstance(result[k], set) and isinstance(v, set):
+                # If it's a set, update values
+                result[k].update(v)
+            else:
+                # Other types are: int, str, byte, float, bool
+                # No need to handle it differently, just replace the value
+                result[k] = v
+        else:
+            result[k] = v
+
+    return cast(T_DICTS, result)

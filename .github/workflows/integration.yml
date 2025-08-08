@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         dirac-branch:
-          - integration
+          - robin-pilot-registrations
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,7 +37,7 @@ jobs:
       - name: Clone DIRAC
         run: |
           pip install typer pyyaml gitpython packaging
-          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          git clone https://github.com/Robin-Van-de-Merghel/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
           # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment

@@ -814,6 +814,7 @@ async def test_keystore(test_client):
         "jti": "49ecc171-20be-5b88-0d65-26012c07f397",
         "exp": (datetime.now(tz=timezone.utc) + timedelta(hours=1)).timestamp(),
         "legacy_exchange": False,
+        "dirac_policies": {},
     }
 
     # Generate keys

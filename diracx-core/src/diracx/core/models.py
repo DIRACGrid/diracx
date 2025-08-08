@@ -5,12 +5,15 @@ services components (db, logic, routers).
 
 from __future__ import annotations
 
+import uuid as std_uuid
 from datetime import datetime
-from enum import StrEnum
-from typing import Literal
+from enum import StrEnum, auto
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypedDict
+from uuid_utils import UUID as _UUID
 
 
 class ScalarSearchOperator(StrEnum):
@@ -31,13 +34,13 @@ class VectorSearchOperator(StrEnum):
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
-    value: str | int
+    value: str | int | datetime
 
 
 class VectorSearchSpec(TypedDict):
     parameter: str
     operator: VectorSearchOperator
-    values: list[str] | list[int]
+    values: list[str] | list[int] | list[bytes]
 
 
 SearchSpec = ScalarSearchSpec | VectorSearchSpec
@@ -230,6 +233,29 @@ class SandboxUploadResponse(BaseModel):
     fields: dict[str, str] = {}
 
 
+class UUID(_UUID):
+    """Subclass of uuid_utils.UUID to add pydantic support."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Use the stdlib uuid.UUID schema for validation and serialization."""
+        std_schema = handler(std_uuid.UUID)
+
+        def to_uuid_utils(u: std_uuid.UUID) -> UUID:
+            return cls(str(u))
+
+        return core_schema.no_info_after_validator_function(to_uuid_utils, std_schema)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
+    ) -> dict[str, Any]:
+        """Return the stdlib uuid.UUID schema for JSON serialization."""
+        return handler(core_schema)
+
+
 class GrantType(StrEnum):
     """Grant types for OAuth2."""
 
@@ -264,9 +290,14 @@ class OpenIDConfiguration(TypedDict):
     code_challenge_methods_supported: list[str]
 
 
-class TokenPayload(TypedDict):
+class BaseTokenPayload(TypedDict):
+    """This class helps having pilot and user tokens without code duplication."""
+
     jti: str
     exp: datetime
+
+
+class TokenPayload(BaseTokenPayload):
     dirac_policies: dict
 
 
@@ -325,3 +356,90 @@ class JobCommand(BaseModel):
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
+
+
+class PilotFieldsMapping(BaseModel, extra="forbid"):
+    """All the fields that a user can modify on a Pilot (except PilotStamp)."""
+
+    PilotStamp: str
+    StatusReason: Optional[str] = None
+    Status: Optional[PilotStatus] = None
+    BenchMark: Optional[float] = None
+    DestinationSite: Optional[str] = None
+    Queue: Optional[str] = None
+    GridSite: Optional[str] = None
+    GridType: Optional[str] = None
+    AccountingSent: Optional[bool] = None
+    CurrentJobID: Optional[int] = None
+
+
+class PilotStatus(StrEnum):
+    #: The pilot has been generated and is transferred to a remote site:
+    SUBMITTED = "Submitted"
+    #: The pilot is waiting for a computing resource in a batch queue:
+    WAITING = "Waiting"
+    #: The pilot is running a payload on a worker node:
+    RUNNING = "Running"
+    #: The pilot finished its execution:
+    DONE = "Done"
+    #: The pilot execution failed:
+    FAILED = "Failed"
+    #: The pilot was deleted:
+    DELETED = "Deleted"
+    #: The pilot execution was aborted:
+    ABORTED = "Aborted"
+    #: Cannot get information about the pilot status:
+    UNKNOWN = "Unknown"
+
+
+class PilotSecretConstraints(TypedDict, total=False):
+    VOs: list[str]  # Authorize only a list of VOs
+    PilotStamps: list[str]  # Authorize only a list of stamps
+    Sites: list[str]  # Authorize only a list of sites
+    # ...
+    # We can add constraints here
+
+
+class TokenType(StrEnum):
+    # Pilot token
+    PILOT_TOKEN = auto()
+    # User token
+    USER_TOKEN = auto()
+
+
+class PilotSecretsInfo(BaseModel):
+    pilot_secret: str
+    pilot_secret_expires_in: int
+
+
+class PilotAccessTokenPayload(BaseTokenPayload):
+    sub: str
+    vo: str
+    iss: str
+    pilot_stamp: str
+
+
+class PilotInfo(BaseModel):
+    pilot_stamp: str
+    vo: str
+    sub: str
+
+
+class PilotRefreshTokenPayload(BaseTokenPayload):
+    legacy_exchange: bool
+
+
+class PilotCredentialsInfo(PilotSecretsInfo):
+    pilot_stamp: str
+
+
+class PilotAuthCredentials(TypedDict):
+    pilot_stamp: str
+    pilot_secret: str
+
+
+class VacuumPilotAuth(PilotAuthCredentials):
+    vo: str
+    grid_type: str
+    grid_site: str
+    status: str
