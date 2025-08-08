@@ -5,10 +5,11 @@ __all__ = ["JobDB"]
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import bindparam, case, delete, insert, select, update
+from sqlalchemy import bindparam, case, delete, literal, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
+from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
@@ -128,27 +129,14 @@ class JobDB(BaseSQLDB):
             ],
         )
 
-    @staticmethod
-    def _set_job_attributes_fix_value(column, value):
-        """Apply corrections to the values before inserting them into the database.
-
-        TODO: Move this logic into the sqlalchemy model.
-        """
-        if column == "VerifiedFlag":
-            value_str = str(value)
-            if value_str in ("True", "False"):
-                return value_str
-        if column == "AccountedFlag":
-            value_str = str(value)
-            if value_str in ("True", "False", "Failed"):
-                return value_str
-        else:
-            return value
-        raise NotImplementedError(f"Unrecognized value for column {column}: {value}")
-
     async def set_job_attributes(self, job_data):
         """Update the parameters of the given jobs."""
         # TODO: add myDate and force parameters.
+
+        if not job_data:
+            # nothing to do!
+            raise ValueError("job_data is empty")
+
         for job_id in job_data.keys():
             if "Status" in job_data[job_id]:
                 job_data[job_id].update(
@@ -160,7 +148,11 @@ class JobDB(BaseSQLDB):
                 *[
                     (
                         Jobs.__table__.c.JobID == job_id,
-                        self._set_job_attributes_fix_value(column, attrs[column]),
+                        # Since the setting of the new column value is obscured by the CASE statement,
+                        # ensure that SQLAlchemy renders the new column value with the correct type
+                        literal(attrs[column], type_=Jobs.__table__.c[column].type)
+                        if not isinstance(attrs[column], expression.FunctionElement)
+                        else attrs[column],
                     )
                     for job_id, attrs in job_data.items()
                     if column in attrs
@@ -193,7 +185,7 @@ class JobDB(BaseSQLDB):
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
         """Store a command to be passed to the job together with the next heart beat."""
         await self.conn.execute(
-            insert(JobCommands),
+            JobCommands.__table__.insert(),
             [
                 {
                     "JobID": job_id,

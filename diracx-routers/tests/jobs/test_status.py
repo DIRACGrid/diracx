@@ -889,10 +889,8 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
     assert r.status_code == 200, r.json()
 
-    # TODO: This should be timezone aware
     hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
-    assert hbt1.tzinfo is None
-    hbt1 = hbt1.replace(tzinfo=timezone.utc)
+    hbt1 = hbt1.astimezone(tz=timezone.utc)
 
     assert r.json()[0]["JobID"] == valid_job_id
     assert r.json()[0]["JobType"] == "VerySpecialIndeed"
@@ -983,9 +981,9 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     new_data = r.json()[0]
 
     hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
-    # TODO: This should be timezone aware
-    assert hbt.tzinfo is None
-    hbt = hbt.replace(tzinfo=timezone.utc)
+    # This should be timezone aware due to the enforced tzinfo from
+    # the SQLAlchemy type used for datetime fields in JobDB
+    assert hbt.tzinfo is not None
     assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
 
     # Kill the job by setting the status on it
@@ -1075,10 +1073,8 @@ def test_patch_metadata_doc_example(normal_user_client: TestClient, valid_job_id
     )
     assert r.status_code == 200, r.json()
 
-    # TODO: This should be timezone aware
     hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
-    assert hbt1.tzinfo is None
-    hbt1 = hbt1.replace(tzinfo=timezone.utc)
+    hbt1 = hbt1.astimezone(tz=timezone.utc)
 
     assert r.json()[0]["JobID"] == valid_job_id
     assert r.json()[0]["Status"] == payload["Status"]
@@ -1133,9 +1129,7 @@ def test_patch_heartbeat_doc_example(normal_user_client: TestClient, valid_job_i
     new_data = r.json()[0]
 
     hbt = datetime.fromisoformat(new_data["HeartBeatTime"])
-    # TODO: This should be timezone aware
-    assert hbt.tzinfo is None
-    hbt = hbt.replace(tzinfo=timezone.utc)
+    hbt = hbt.astimezone(tz=timezone.utc)
     assert hbt >= datetime.now(tz=timezone.utc) - timedelta(seconds=15)
 
 
