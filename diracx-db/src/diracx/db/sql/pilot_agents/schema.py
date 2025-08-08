@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from sqlalchemy import (
-    DateTime,
     Double,
     Index,
     Integer,
@@ -9,6 +8,8 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import declarative_base
+
+from diracx.db.sql.utils.types import SmarterDateTime
 
 from ..utils import Column, EnumBackedBool, NullColumn
 
@@ -29,8 +30,8 @@ class PilotAgents(PilotAgentsDBBase):
     vo = Column("VO", String(128))
     grid_type = Column("GridType", String(32), default="LCG")
     benchmark = Column("BenchMark", Double, default=0.0)
-    submission_time = NullColumn("SubmissionTime", DateTime)
-    last_update_time = NullColumn("LastUpdateTime", DateTime)
+    submission_time = NullColumn("SubmissionTime", SmarterDateTime)
+    last_update_time = NullColumn("LastUpdateTime", SmarterDateTime)
     status = Column("Status", String(32), default="Unknown")
     status_reason = Column("StatusReason", String(255), default="Unknown")
     accounting_sent = Column("AccountingSent", EnumBackedBool(), default=False)
@@ -47,7 +48,7 @@ class JobToPilotMapping(PilotAgentsDBBase):
 
     pilot_id = Column("PilotID", Integer, primary_key=True)
     job_id = Column("JobID", Integer, primary_key=True)
-    start_time = Column("StartTime", DateTime)
+    start_time = Column("StartTime", SmarterDateTime)
 
     __table_args__ = (Index("JobID", "JobID"), Index("PilotID", "PilotID"))
 
