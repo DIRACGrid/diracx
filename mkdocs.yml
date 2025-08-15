@@ -82,12 +82,14 @@ nav:
       - Authentication: admin/tutorials/authentication.md
     - How-To:
       - admin/how-to/index.md
-      - install:
-        - Install kubernetes: admin/how-to/install/install-kubernetes.md
-        - Installing DiracX: admin/how-to/install/installing.md
+      - Installation:
+        - admin/how-to/install/index.md
+        - Installing kubernetes: admin/how-to/install/install-kubernetes.md
         - Convert CS: admin/how-to/install/convert-cs.md
-        - Register a VO: admin/how-to/install/register-a-vo.md
+        - Installing DiracX: admin/how-to/install/installing.md
         - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
+        - Register a VO: admin/how-to/install/register-a-vo.md
+        - Embrassing DiracX: admin/how-to/install/embrassing.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
@@ -155,7 +157,7 @@ nav:
     - Explanations:
       - dev/explanations/index.md
       - Components:
-        - Introduction: dev/explanations/components/index.md
+        - dev/explanations/components/index.md
         - API: dev/explanations/components/api.md
         - CLI: dev/explanations/components/cli.md
         - Databases: dev/explanations/components/db.md
