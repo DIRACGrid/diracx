@@ -97,6 +97,7 @@ mkdocs-material = "*"
 mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"
+mkdocs-build = "mkdocs build --strict"
 
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
