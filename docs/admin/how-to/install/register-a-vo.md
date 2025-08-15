@@ -15,66 +15,71 @@
     - **Redirect URIs**:
         ```
         https://<your‑diracx‑url>/api/auth/authorize/complete
+        https://<your‑diracx‑url>/api/auth/device/complete
         ```
     - **Grant type**: `authorization_code`
     - **Scope**: at minimum `openid`, `profile` and `email`
 
-### 2. Configure DiracX
+### 1. Configure DiracX
 
 1. In your DIRAC CS, add under `DiracX > CsSync > VOs > <VO> > IdP`:
 
-    ```yaml
-    DiracX
-    {
-      CsSync
-      {
-        VOs
+    ??? example "Configuration example"
+
+        ```yaml
+        DiracX
         {
-          <VO>
+          CsSync
           {
-            IdP
+            VOs
             {
-              ClientID = "<OIDC‑client‑ID>"
-              URL = "https://<your‑idp‑instance>/"
+              <VO>
+              {
+                IdP
+                {
+                  ClientID = "<OIDC‑client‑ID>"
+                  URL = "https://<your‑idp‑instance>/"
+                }
+              }
             }
           }
         }
-      }
-    }
-    ```
+        ```
 
 2. To add specific users, list their subject‑IDs under `UserSubjects`:
 
-    ```yaml
-    DiracX
-    {
-      CsSync
-      {
-        VOs
+    ??? example "Configuration example"
+
+        ```yaml
+        DiracX
         {
-          <VO>
+          CsSync
           {
-            UserSubjects
+            VOs
             {
-              <username from dirac> = <user id from the IdP instance>
-              ...
+              <VO>
+              {
+                UserSubjects
+                {
+                  <username from dirac> = <user id from the IdP instance>
+                  ...
+                }
+              }
             }
           }
         }
-      }
-    }
-    ```
+        ```
 
-!!! note
+    !!! note
 
-    User IDs are associated to the usernames that are defined in the `Registry > Users` section. This allows DiracX to retrieve the groups they belong to and their properties.
+        User IDs are associated to the usernames that are defined in the `Registry > Users` section. This allows DiracX to retrieve the groups they belong to and their properties.
+
+    !!! success "Automatic population of the UserSubjects"
+
+        The `DIRAC VOMS2CSAgent` can populate this list for you from an `IAM` server. For that you need to enable the `UseIAM` flag to True.
 
 After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
 See the previous step [Convert CS](./convert-cs.md) for a refresher.
-
-### Automatic population of the UserSubjects
-
-The `DIRAC VOMS2CSAgent` can populate this list for you from an `IAM` server. For that you need to enable the `UseIAM` flag to True.
 
 ## Interact with Computing Elements
 
