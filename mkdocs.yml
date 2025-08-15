@@ -88,12 +88,9 @@ nav:
         - Convert CS: admin/how-to/install/convert-cs.md
         - Register a VO: admin/how-to/install/register-a-vo.md
         - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
-      - Deploy web instance: admin/deploy_instance.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
-      - Manage dependencies: admin/manage_dependencies.md
-      - Manage release: admin/manage_release.md
     - Explanations:
       - admin/explanations/index.md
       - Authentication: admin/explanations/authentication.md
@@ -147,12 +144,11 @@ nav:
       - Client customization: dev/how-to/client-customization.md
       - Client generation: dev/how-to/client-generation.md
       - Client extensions: dev/how-to/client-extension.md
-    - Web Development:
+    - Web Development:  # TODO: These should move to fit into the new unified structure
       - Setup environment: dev/setup_environment.md
       - Manage extensions: dev/manage_extension.md
       - Web architecture: dev/web-arch.md
       - Create application: dev/how-to/create_application.md
-    - Web Development (DiracX-Web):
       - Setup: developer/setup_environment.md
       - Contribute: developer/contribute.md
       - Manage extensions: developer/manage_extension.md
