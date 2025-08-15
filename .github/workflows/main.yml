@@ -71,6 +71,7 @@ jobs:
         run: |
           # Workaround for https://github.com/prefix-dev/pixi/issues/3762
           sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          export RUST_BACKTRACE=1
           rm pixi.toml.bak
           # Add annotations to github actions
           pixi add --no-install --pypi --feature diracx-core pytest-github-actions-annotate-failures
