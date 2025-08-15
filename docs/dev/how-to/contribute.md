@@ -19,7 +19,7 @@
 
 === "DiracX Web"
 
-    **Requirements:** [Getting Started](get_started.md)
+    **Requirements:** [Getting Started](../tutorials/getting-started.md)
 
     - **Code Documentation:** Ensure that any code you write is well-documented. This includes:
 
@@ -28,7 +28,7 @@
 
     - **Writing/Updating Tests:** When you change or add new code, make sure to write or update tests accordingly. This helps maintain the reliability and stability of the codebase.
 
-    **Note:** Don't forget to update the `extensions` code if you integrate breaking changes in the `diracx-web-components` library. See [Managing the extension](manage_extension.md) for further details.
+    **Note:** Don't forget to update the `extensions` code if you integrate breaking changes in the `diracx-web-components` library. See [Managing the extension](../setup_environment.md) for further details.
 
 ### 3. Commit
 

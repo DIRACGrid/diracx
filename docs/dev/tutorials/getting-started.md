@@ -151,7 +151,7 @@ async def show_joke():
 
 !!! question "How did we know that a new subcommand is added using the `@app.async_command()` decorator?"
 
-    In the [components explanation](./explanations/components/index.md) the `diracx-cli` section explains how [Typer](https://typer.tiangolo.com/) is used to define the CLI.
+    In the [components explanation](../explanations/components/index.md) the `diracx-cli` section explains how [Typer](https://typer.tiangolo.com/) is used to define the CLI.
 
     In addition, there is a dedicated how-to for [adding a CLI command](../how-to/add-a-cli-command.md).
 
@@ -230,7 +230,7 @@ git commit -m 'feat(cli): add "diracx config show-joke" CLI command' # (1)!
 ```
 
 1. The commit message should follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
-    See the [contributing documentation](../reference/contribute.md) for more details.
+    See the [contributing documentation](../how-to/contribute.md) for more details.
 
 It's likely that the commit failed the pre-commit hook with errors like:
 

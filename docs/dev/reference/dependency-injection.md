@@ -93,7 +93,7 @@ async def token(auth_db: AuthDB, ...):
         raise HTTPException(status_code=401)
 ```
 
-For more details on the underlying database classes, see the [Database Components](../../explanations/components/db.md) documentation.
+For more details on the underlying database classes, see the [Database Components](../explanations/components/db.md) documentation.
 
 ### Configuration and settings
 
