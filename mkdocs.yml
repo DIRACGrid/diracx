@@ -54,6 +54,12 @@ nav:
     - user/index.md
     - Getting started: user/tutorials/getting-started.md
     - Known installations: user/reference/known-installations.md
+    - Tutorials:
+      - user/tutorials/index.md
+    - How-To:
+      - user/how-to/index.md
+    - Explanations:
+      - user/explanations/index.md
     - Web:
       - user/web/index.md
       - Logging in: user/web/login_out.md
@@ -65,13 +71,17 @@ nav:
       - Python: user/reference/programmatic-usage/python-interface.md
       - HTTPS: user/reference/programmatic-usage/https-interface.md
     - Reference:
+      - user/reference/index.md
       - Client Config: user/reference/client-configuration.md
 
   - Administrator Guide:
     - admin/index.md
     - Tutorials:
+      - admin/tutorials/index.md
       - Run locally: admin/tutorials/run_locally.md
+      - Authentication: admin/tutorials/authentication.md
     - How-To:
+      - admin/how-to/index.md
       - install:
         - Install kubernetes: admin/how-to/install/install-kubernetes.md
         - Installing DiracX: admin/how-to/install/installing.md
@@ -85,13 +95,18 @@ nav:
       - Manage dependencies: admin/manage_dependencies.md
       - Manage release: admin/manage_release.md
     - Explanations:
+      - admin/explanations/index.md
+      - Authentication: admin/explanations/authentication.md
+      - User Management: admin/explanations/user-management.md
       - Configuration: admin/explanations/configuration.md
       - OpenTelemetry: admin/explanations/opentelemetry.md
       - Chart structure: admin/explanations/chart-structure.md
       - Databases: admin/explanations/database-management.md
       - Sandbox Store: admin/explanations/sandbox-store.md
     - Reference:
+      - admin/reference/index.md
       - Security Model: admin/reference/security_model.md
+      - Settings and Preferences: admin/reference/settings-and-preferences.md
       - Charts values: admin/reference/values.md
       - REFERENCE.md
       - RUN_PROD.md
@@ -102,11 +117,15 @@ nav:
     - dev/index.md
     - Getting started: dev/tutorials/getting-started.md
     - Tutorials:
+      - dev/tutorials/index.md
       - Larger developments: dev/tutorials/larger-developments.md
+      - Advanced tutorial: dev/tutorials/advanced-tutorial.md
+      - Making changes: dev/tutorials/making-changes.md
       - Developing DiracX Web: dev/tutorials/develop-web.md
       - Run a full DiracX instance locally: dev/tutorials/run-locally.md
       - Play with auth: dev/tutorials/play-with-auth.md
     - How-To:
+      - dev/how-to/index.md
       - Contribute: dev/how-to/contribute.md
       - Write docs: dev/tutorials/write-docs.md
       - Add functionality:
@@ -117,6 +136,8 @@ nav:
         - New CLI command: dev/how-to/add-a-cli-command.md
         - New settings: dev/how-to/add-a-setting.md
         - Add a test: dev/how-to/add-a-test.md
+      - Extend DiracX:
+        - dev/how-to/extend-diracx/index.md
       - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
       - Use the demo:
         - dev/how-to/use-the-demo/index.md
@@ -126,10 +147,17 @@ nav:
       - Client customization: dev/how-to/client-customization.md
       - Client generation: dev/how-to/client-generation.md
       - Client extensions: dev/how-to/client-extension.md
+    - Web Development:
       - Setup environment: dev/setup_environment.md
       - Manage extensions: dev/manage_extension.md
       - Web architecture: dev/web-arch.md
+      - Create application: dev/how-to/create_application.md
+    - Web Development (DiracX-Web):
+      - Setup: developer/setup_environment.md
+      - Contribute: developer/contribute.md
+      - Manage extensions: developer/manage_extension.md
     - Explanations:
+      - dev/explanations/index.md
       - Components:
         - Introduction: dev/explanations/components/index.md
         - API: dev/explanations/components/api.md
@@ -140,11 +168,21 @@ nav:
       - Testing: dev/explanations/testing.md
       - Run demo: dev/explanations/run_demo.md
       - Extensions: dev/explanations/extensions.md
+      - Designing functionality: dev/explanations/designing-functionality.md
     - Reference:
+      - dev/reference/index.md
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
       - Configuration: dev/reference/configuration.md
       - Dependency injection: dev/reference/dependency-injection.md
+      - Application state: dev/reference/application-state.md
+      - Client metapathfinder: dev/reference/client-metapathfinder.md
+      - DB transaction model: dev/reference/db-transaction-model.md
+      - Entrypoints: dev/reference/entrypoints.md
+      - Pixi tasks: dev/reference/pixi-tasks.md
+      - Security policies: dev/reference/security-policies.md
+      - Security properties: dev/reference/security-properties.md
+      - Test recipes: dev/reference/test-recipes.md
 
 markdown_extensions:
   - admonition
