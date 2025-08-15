@@ -22,7 +22,7 @@ Before starting the demo requires:
 
 !!! tip
 
-    If you're not interested in developing DiracX, check out the [administrator guide](../../admin/tutorials/run-demo.md).
+    If you're not interested in developing DiracX, check out the [administrator guide](../../admin/tutorials/run_locally.md).
 
 ## Getting the code
 

@@ -90,11 +90,14 @@ cmd = "cd extensions/gubbins/gubbins-logic/ && pytest"
 cmd = "cd extensions/gubbins/gubbins-routers/ && pytest"
 
 # Features for generating the documentation
+[feature.mkdocs.dependencies]
+python = "*"
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"
+mkdocs-build = "mkdocs build --strict"
 
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
@@ -141,7 +144,7 @@ diracx-generate-client = {features = ["client-gen", "diracx-client", "diracx-rou
 gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-client", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 
 # Tooling environments
-mkdocs = ["mkdocs"]
+mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 

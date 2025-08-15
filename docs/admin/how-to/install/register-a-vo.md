@@ -82,4 +82,4 @@ Client configuration is still managed through the DIRAC configuration so far. Se
 
 ## Interact with Storage Elements
 
-This isn't possible yet as the interaction hasn't yet been finalized by WLCG. See [the roadmap](../../roadmap.md) for details.
+This isn't possible yet as the interaction hasn't yet been finalized by WLCG. See [the roadmap](../../../roadmap.md) for details.

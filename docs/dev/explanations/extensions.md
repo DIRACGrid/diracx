@@ -62,7 +62,7 @@ To find out more about the entrypoints available for extensions, see [here](../r
     As `gubbins` is hosted in the main DiracX repository there are a couple of things that would need to be changed for a standard extension:
 
     - `root = "../../.."` in `pyproject.toml` should be `root = ".."` (i.e. the path to the root of your repository)
-    - The [GitHub actions file](%60%60.github/workflows/extensions.yaml%60%60) should in fact be split in multiple jobs under `.github/workflows/` of your repo.
+    - The GitHub actions file `.github/workflows/extensions.yaml` should in fact be split in multiple jobs under `.github/workflows/` of your repo.
 
 ## Installing the extension
 
@@ -80,11 +80,11 @@ The `gubbins-db` package contains the extension for the DB.
 
 `GubbinsJobDB` illustrates how to extend an existing `diracx` DB, add new methods, modify methods, add a table.
 
-A [router test](extensions/gubbins/gubbins-routers/tests/test_gubbins_job_manager.py) exists, even though no router is redefined. It is just to show that the correct DB is being loaded.
+A router test exists (`test_gubbins_job_manager.py`), even though no router is redefined. It is just to show that the correct DB is being loaded.
 
 !!! warning
 
-    In the [test dependency](gubbins/gubbins-routers/tests/test_gubbins_job_manager.py), you need to specify both the original DiracX `JobDB` as well as the extended one `GubbinsJobDB`. To avoid that inconvenience, reuse the same name (i.e. `JobDB` instead of `GubbinsJobDB`).
+    In the test dependency, you need to specify both the original DiracX `JobDB` as well as the extended one `GubbinsJobDB`. To avoid that inconvenience, reuse the same name (i.e. `JobDB` instead of `GubbinsJobDB`).
 
 ## `gubbins-routers`
 
@@ -127,9 +127,9 @@ with open("/tmp/openapi.json", "wt") as f:
 autorest --python --input-file=/tmp/openapi.json --models-mode=msrest --namespace=generated --output-folder=gubbins-client/src/gubbins/
 ```
 
-- Create the `patches` directory, simply exporting the generated `clients`(both [sync](gubbins/gubbins-client/src/gubbins/client/patches/__init__.py) and [async](gubbins/gubbins-client/src/gubbins/client/patches/aio/__init__.py))
+- Create the `patches` directory, simply exporting the generated `clients` (both sync and async)
 - Define the base modules to export what is needed
-- The [top init](gubbins/gubbins-client/src/gubbins/client/__init__.py) MUST have
+- The top init file MUST have
 
 ```python
 import diracx.client
@@ -179,7 +179,7 @@ Only extending the configuration is allowed. For example, you can add extra fiel
 
 You need to:
 
-- Redefine a new configuration [schema](gubbins/gubbins-core/src/gubbins/core/config/schema.py)
+- Redefine a new configuration schema
 - Declare this new class in the `diracx` entrypoint
 
 ```toml
@@ -187,7 +187,7 @@ You need to:
 config = "gubbins.core.config.schema:Config"
 ```
 
-- Redefine a dependency for your routers to use (see [example](gubbins/gubbins-routers/src/gubbins/routers/dependencies.py))
+- Redefine a dependency for your routers to use
 
 ### Properties
 
@@ -198,7 +198,7 @@ Properties can only be added. This is done in the `gubbins-core` `pyproject.toml
 properties_module = "gubbins.core.properties"
 ```
 
-[properties](gubbins/gubbins-core/src/gubbins/core/properties.py) illustrates how to do it
+The gubbins properties module illustrates how to do it
 
 ## `gubbins-testing`
 
