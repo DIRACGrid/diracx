@@ -6,6 +6,7 @@ from typing import Any
 from diracx.core.config.schema import Config
 from diracx.core.models import (
     ScalarSearchOperator,
+    ScalarSearchSpec,
     SearchParams,
     SummaryParams,
 )
@@ -79,6 +80,72 @@ async def search(
             job.update({"LoggingInfo": job_logging_info[job["JobID"]]})
 
     return total, jobs
+
+
+async def get_input_data(job_db: JobDB, job_id: int) -> list[dict[str, Any]]:
+    """Retrieve a job's input data."""
+    _, input_data = await job_db.search_input_data(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        [],
+    )
+
+    return input_data
+
+
+async def get_job_parameters(
+    job_parameters_db: JobParametersDB, job_id: int
+) -> list[dict[str, Any]]:
+    _, parameters = await job_parameters_db.search(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        [],
+    )
+
+    return parameters
+
+
+async def get_job_jdl(job_db: JobDB, job_id: int) -> dict[str, str | int]:
+    _, jdls = await job_db.search_jdl(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        sorts=[],
+    )
+
+    assert len(jdls) <= 1  # If not, there's a problem
+
+    if len(jdls) == 1:
+        return jdls[0]
+
+    return {}
+
+
+async def get_job_heartbeat_info(
+    job_db: JobDB, job_id: int
+) -> list[dict[str, str | int]]:
+    _, jdls = await job_db.search_heartbeat_logging_info(
+        [],
+        [
+            ScalarSearchSpec(
+                parameter="JobID", operator=ScalarSearchOperator.EQUAL, value=job_id
+            )
+        ],
+        sorts=[],
+    )
+
+    return jdls
 
 
 async def summary(
