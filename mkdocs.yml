@@ -89,7 +89,7 @@ nav:
         - Installing DiracX: admin/how-to/install/installing.md
         - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
         - Register a VO: admin/how-to/install/register-a-vo.md
-        - Embrassing DiracX: admin/how-to/install/embrassing.md
+        - Embracing DiracX: admin/how-to/install/embracing.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
