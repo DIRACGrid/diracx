@@ -898,47 +898,6 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     assert r.json()[0]["UserPriority"] == 2
 
 
-def test_bad_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
-    # Arrange
-    r = normal_user_client.post(
-        "/api/jobs/search",
-        json={
-            "search": [
-                {
-                    "parameter": "JobID",
-                    "operator": "eq",
-                    "value": valid_job_id,
-                }
-            ],
-            "parameters": ["LoggingInfo"],
-        },
-    )
-
-    assert r.status_code == 200, r.json()
-    for j in r.json():
-        assert j["JobID"] == valid_job_id
-        assert j["Status"] == JobStatus.RECEIVED.value
-        assert j["MinorStatus"] == "Job accepted"
-        assert j["ApplicationStatus"] == "Unknown"
-
-    # Act
-    hbt = str(datetime.now(timezone.utc))
-    r = normal_user_client.patch(
-        "/api/jobs/metadata",
-        json={
-            valid_job_id: {
-                "UserPriority": 2,
-                "Heartbeattime": hbt,
-                # set a parameter
-                "JobType": "VerySpecialIndeed",
-            }
-        },
-    )
-
-    # Assert
-    assert r.status_code == 422, r.text
-
-
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
     """Test fix for https://github.com/DIRACGrid/diracx/issues/476."""
     inner_payload = {"Status": JobStatus.FAILED.value, "MinorStatus": "Payload failed"}

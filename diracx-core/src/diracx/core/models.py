@@ -75,8 +75,8 @@ class SearchParams(BaseModel):
     # TODO: Add more validation
 
 
-class JobParameters(BaseModel):
-    """All the parameters that can be set for a job."""
+class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
+    """Some of the most important parameters that can be set for a job."""
 
     timestamp: datetime | None = None
     cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
@@ -113,7 +113,7 @@ class JobParameters(BaseModel):
         return v
 
 
-class JobAttributes(BaseModel):
+class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
     """All the attributes that can be set for a job."""
 
     job_type: str | None = Field(None, alias="JobType")
@@ -138,7 +138,7 @@ class JobAttributes(BaseModel):
     accounted_flag: bool | str | None = Field(None, alias="AccountedFlag")
 
 
-class JobMetaData(JobAttributes, JobParameters):
+class JobMetaData(JobAttributes, JobParameters, extra="allow"):
     """A model that combines both JobAttributes and JobParameters."""
 
 
