@@ -84,7 +84,7 @@ async def search(
 async def summary(
     config: Config,
     job_db: JobDB,
-    preferred_username: str,
+    preferred_username: str | None,
     body: SummaryParams,
 ):
     """Show information suitable for plotting."""
