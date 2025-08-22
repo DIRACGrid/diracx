@@ -62,7 +62,6 @@ jobs:
         run: |
           # Workaround for https://github.com/prefix-dev/pixi/issues/3762
           sed -i.bak 's@editable = true@editable = false@g' pixi.toml
-          export RUST_BACKTRACE=full
           rm pixi.toml.bak
           # Show any changes
           git diff
