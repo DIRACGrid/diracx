@@ -20,6 +20,7 @@ dependencies = [
     "httpx",
     "joserfc",
     "uuid-utils",
+    "pytest-github-actions-annotate-failures",
 ]
 dynamic = ["version"]
 
