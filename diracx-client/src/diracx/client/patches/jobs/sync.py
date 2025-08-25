@@ -11,12 +11,13 @@ __all__ = [
     "JobsOperations",
 ]
 
-from typing import Any, Unpack
+from typing import IO, Any, Dict, Union, Unpack, cast
 
 from azure.core.tracing.decorator import distributed_trace
 
 from ..._generated.operations._operations import JobsOperations as _JobsOperations
-from .common import make_search_body, make_summary_body, SearchKwargs, SummaryKwargs
+from diracx.client._generated.models._models import JobMetaData
+from .common import make_search_body, make_summary_body, SearchKwargs, SummaryKwargs, prepare_body_for_patch
 
 # We're intentionally ignoring overrides here because we want to change the interface.
 # mypy: disable-error-code=override
@@ -32,3 +33,20 @@ class JobsOperations(_JobsOperations):
     def summary(self, **kwargs: Unpack[SummaryKwargs]) -> list[dict[str, Any]]:
         """TODO"""
         return super().summary(**make_summary_body(**kwargs))
+
+    @distributed_trace
+    def patch_metadata(  # type: ignore[override]
+        self,
+        body: Union[Dict[str | int, JobMetaData | Dict[str, Any]], IO[bytes], bytes],
+        **kwargs: Any,
+    ) -> None:
+        """Patch Metadata.
+
+        Accepts job ids as str|int and metadata as dicts with pythonic or wire keys.
+        Unknown keys are emitted via `additional_properties`.
+        TODO: Remove this method once we have structured and known job parameters.
+        """
+        prepared = prepare_body_for_patch(body)
+        # Cast to Any to accommodate generated signature expecting Dict[str, JobMetaData]
+        # while still allowing bytes/IO at runtime.
+        super().patch_metadata(cast(Any, prepared), **kwargs)
