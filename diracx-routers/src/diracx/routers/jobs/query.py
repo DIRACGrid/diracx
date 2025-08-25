@@ -304,9 +304,13 @@ async def summary(
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 
+    preferred_username: str | None = user_info.preferred_username
+    if JOB_ADMINISTRATOR in user_info.properties:
+        preferred_username = None
+
     return await summary_bl(
         config=config,
         job_db=job_db,
-        preferred_username=user_info.preferred_username,
+        preferred_username=preferred_username,
         body=body,
     )
