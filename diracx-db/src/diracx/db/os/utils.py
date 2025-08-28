@@ -198,12 +198,24 @@ class BaseOSDB(metaclass=ABCMeta):
         )
 
     async def search(
-        self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
-    ) -> list[dict[str, Any]]:
+        self,
+        parameters,
+        search,
+        sorts,
+        *,
+        per_page: int = 10000,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[str, Any]]]:
         """Search the database for matching results.
 
         See the DiracX search API documentation for details.
         """
+        if page:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+
         body = {}
         if parameters:
             body["_source"] = parameters
@@ -213,7 +225,12 @@ class BaseOSDB(metaclass=ABCMeta):
         for sort in sorts:
             field_name = sort["parameter"]
             field_type = self.fields.get(field_name, {}).get("type")
-            require_type("sort", field_name, field_type, {"keyword", "long", "date"})
+            require_type(
+                "sort",
+                field_name,
+                field_type,
+                {"keyword", "long", "date", "date_nanos"},
+            )
             body["sort"].append({field_name: {"order": sort["direction"]}})
 
         params = {}
@@ -226,17 +243,19 @@ class BaseOSDB(metaclass=ABCMeta):
         )
         hits = [hit["_source"] for hit in response["hits"]["hits"]]
 
+        total_hits = response["hits"]["total"]["value"]
+
         # Dates are returned as strings, convert them to Python datetimes
         for hit in hits:
             for field_name in hit:
                 if field_name not in self.fields:
                     continue
-                if self.fields[field_name]["type"] == "date":
+                if self.fields[field_name]["type"] in ["date", "date_nanos"]:
                     hit[field_name] = datetime.strptime(
                         hit[field_name], "%Y-%m-%dT%H:%M:%S.%f%z"
                     )
 
-        return hits
+        return total_hits, hits
 
 
 def require_type(operator, field_name, field_type, allowed_types):
