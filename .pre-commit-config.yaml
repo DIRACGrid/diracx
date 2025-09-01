@@ -62,3 +62,12 @@ repos:
     hooks:
     - id: codespell
       args: ["-w"]
+
+  - repo: local
+    hooks:
+      - id: check-lollygag
+        name: check for lollygag
+        types: [python]
+        entry: '(?i)lollygag'
+        language: pygrep
+        files: ^diracx
