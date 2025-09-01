@@ -1,6 +1,6 @@
 # Packaging and versioning
 
-DiracX is written in Python package and composed of several interconnected submodules.
+DiracX a Python package composed of several interconnected submodules.
 It's designed to provide robust and versatile functionalities, primarily through these key components:
 
 1. **User-Facing Components**:
@@ -77,7 +77,7 @@ flowchart BT
 
 - Currently, and as long as `DIRAC` and `diracx` coexist, we employ a versioning format of v0.<major>.<patch>.
 - We only support using the same version across all `diracx-*` packages.
-- The client and server versions can vary, but the client version is always communicated to the server. Incompatibly old client versions may lead to request rejections, prompting a client update. (TODO: https://github.com/DIRACGrid/diracx/issues/258)
+- The client and server versions can vary, but the client version is always communicated to the server. Incompatibly old client versions may lead to request rejections, prompting a client update.
 
 ## Container Images
 
