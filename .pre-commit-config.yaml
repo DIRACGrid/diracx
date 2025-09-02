@@ -7,6 +7,9 @@ default_install_hook_types:
 default_language_version:
   python: python3
 
+ci:
+  skip: [generate-pixi-docs]
+
 default_stages: [pre-commit]
 
 repos:
@@ -71,3 +74,12 @@ repos:
         entry: '(?i)lollygag'
         language: pygrep
         files: ^diracx
+
+  - repo: local
+    hooks:
+      - id: generate-pixi-docs
+        name: Generate pixi tasks documentation
+        entry: pixi run -e default python .github/workflows/generate_pixi_tasks_doc.py
+        language: system
+        pass_filenames: false
+        files: ^pixi\.toml$|^pixi\.lock$   # only run if pixi files change
