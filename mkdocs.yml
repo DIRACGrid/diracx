@@ -110,7 +110,6 @@ nav:
       - Charts values: admin/reference/values.md
       - REFERENCE.md
       - RUN_PROD.md
-      - SECURITY.md
       - SSO.md
 
   - Developer Guide:
