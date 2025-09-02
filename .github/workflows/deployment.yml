@@ -219,3 +219,84 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             EXTRA_PACKAGES_TO_INSTALL=git+https://github.com/DIRACGrid/DIRAC.git@integration
+
+  update-charts:
+    name: Update Helm charts
+    needs:
+      - deploy-pypi
+      - docker
+    runs-on: ubuntu-latest
+    if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+    steps:
+      - name: Checkout diracx
+        uses: actions/checkout@v5
+        with:
+          path: diracx
+
+      - name: Checkout diracx-charts
+        uses: actions/checkout@v5
+        with:
+          repository: DIRACGrid/diracx-charts
+          token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
+          path: diracx-charts
+
+      - name: Configure Git
+        run: |
+          cd diracx-charts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update chart versions
+        id: update-versions
+        run: |
+          cd diracx-charts
+          VERSION="${{ needs.deploy-pypi.outputs.new-version }}"
+
+          # Get current chart version before updating
+          CURRENT_CHART_VERSION=$(grep '^version:' diracx/Chart.yaml | sed 's/version: //' | tr -d '"')
+
+          # Use Python script to update versions
+          python ../diracx/.github/workflows/update_chart_version.py \
+            --charts-dir . \
+            --diracx-version "$VERSION"
+
+          # Get new chart version after update
+          NEW_CHART_VERSION=$(grep '^version:' diracx/Chart.yaml | sed 's/version: //' | tr -d '"')
+
+          echo "current_chart_version=$CURRENT_CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "new_chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "diracx_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install pre-commit
+        run: |
+          pip install pre-commit
+
+      - name: Run pre-commit to update README
+        run: |
+          cd diracx-charts
+          pre-commit run --all-files || true
+
+      - name: Commit and push changes
+        if: success()
+        run: |
+          cd diracx-charts
+
+          # Stage all changes
+          git add -A
+
+          # Check if there are changes to commit
+          if ! git diff --cached --quiet; then
+            # Commit the changes
+            git commit -m "chore: bump chart to ${{ steps.update-versions.outputs.new_chart_version }} for DiracX ${{ steps.update-versions.outputs.diracx_version }}
+
+            - Update appVersion to ${{ steps.update-versions.outputs.diracx_version }}
+            - Update image tag to ${{ steps.update-versions.outputs.diracx_version }}
+            - Bump chart version from ${{ steps.update-versions.outputs.current_chart_version }} to ${{ steps.update-versions.outputs.new_chart_version }}"
+
+            # Push the commit to main branch
+            git push origin main
+
+            echo "✅ Successfully pushed chart version ${{ steps.update-versions.outputs.new_chart_version }} and tag ${TAG_NAME}"
+          else
+            echo "No changes to commit"
+          fi
