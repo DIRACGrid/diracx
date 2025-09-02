@@ -30,7 +30,7 @@ The `diracx-client` consists of three parts:
 
 ### Generating a Client
 
-The client is generated using [AutoRest](https://github.com/Azure/autorest){target="_blank"}, a tool that reads OpenAPI specifications provided by FastAPI routers.
+The client is generated using [AutoRest](https://github.com/Azure/autorest){target="\_blank"}, a tool that reads OpenAPI specifications provided by FastAPI routers.
 
 - **Breaking Changes**: Each time there is a breaking change in a router, the client needs to be regenerated.
 
@@ -50,7 +50,7 @@ The generated client consists of several key components:
 - **operations**: Contain the methods to interact with the API endpoints.
 - **aio**: Asynchronous client.
 
-Further details can be found in the [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/client/readme.md){target="_blank"}.
+Further details can be found in the [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/client/readme.md){target="\_blank"}.
 
 To customize a client, see [how-to](../how-to/client-customization.md)
 

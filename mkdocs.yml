@@ -106,6 +106,7 @@ nav:
       - admin/reference/index.md
       - Security Model: admin/reference/security_model.md
       - Settings and Preferences: admin/reference/settings-and-preferences.md
+      - Environment variables: admin/reference/env_variables.md
       - Charts values: admin/reference/values.md
       - REFERENCE.md
       - RUN_PROD.md

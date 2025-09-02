@@ -9,7 +9,7 @@ This page shows an incomplete list of DiracX installations in alphabetical order
 
 ## LHCb
 
-[LHCb](https://lhcb-outreach.web.cern.ch/){target="_blank"} is one of the four large experiments of the Large Hadron Collider at CERN and DiracX is used for all of their distributed computing activities.
+[LHCb](https://lhcb-outreach.web.cern.ch/){target="\_blank"} is one of the four large experiments of the Large Hadron Collider at CERN and DiracX is used for all of their distributed computing activities.
 
 === "Client setup"
 
@@ -42,7 +42,8 @@ This page shows an incomplete list of DiracX installations in alphabetical order
 
 We provide a developers' installation at https://diracx-cert.app.cern.ch/. The installation is mostly used for testing and certifying candidate releases.
 
-The installation uses the [`dteam` Virtual Organization](https://dteam-auth.cern.ch/){target="_blank"} and as such is used to access Grid resources. The installation is using the latest pre-release of DiracX and as such can not be considered a stable and fully reliable installation. If nevertheless:
+The installation uses the [`dteam` Virtual Organization](https://dteam-auth.cern.ch/){target="\_blank"} and as such is used to access Grid resources. The installation is using the latest pre-release of DiracX and as such can not be considered a stable and fully reliable installation. If nevertheless:
+
 - you are part of `dteam` (becoming member is an easy process)
 - you would like to access an existing DiracX installation, and see it "in action"
-[get in contact](https://web.diracgrid.org/contacts.html) explaining your use-case.
+    [get in contact](https://web.diracgrid.org/contacts.html) explaining your use-case.
