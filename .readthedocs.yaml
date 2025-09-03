@@ -8,9 +8,17 @@
    # This is just a quick example to get started.
    # https://docs.readthedocs.io/page/guides/reproducible-builds.html
    jobs:
-     pre_install:
-       - pip install mkdocs-material
-       - pip install mkdocs-diracx-plugin@git+https://github.com/DIRACGrid/mkdocs-diracx-plugin
+      create_environment:
+        - asdf plugin add pixi
+        - asdf install pixi latest
+        - asdf global pixi latest
+
+      install:
+        - pixi install -e mkdocs
+
+      build:
+        html:
+          - pixi run -e mkdocs mkdocs-build --site-dir $READTHEDOCS_OUTPUT/html
 
  mkdocs:
    configuration: mkdocs.yml
