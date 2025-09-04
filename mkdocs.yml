@@ -78,7 +78,6 @@ nav:
     - admin/index.md
     - Tutorials:
       - admin/tutorials/index.md
-      - Run locally: admin/tutorials/run_locally.md`
       - Authentication: admin/tutorials/authentication.md
     - How-To:
       - admin/how-to/index.md

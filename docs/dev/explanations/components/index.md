@@ -1,6 +1,6 @@
 # Packaging and versioning
 
-DiracX a Python package composed of several interconnected submodules.
+DiracX is a Python package composed of several interconnected submodules.
 It's designed to provide robust and versatile functionalities, primarily through these key components:
 
 1. **User-Facing Components**:
