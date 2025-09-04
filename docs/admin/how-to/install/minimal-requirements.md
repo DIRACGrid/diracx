@@ -10,7 +10,7 @@ In order to run DiracX, a few requirements must be met:
 - An **IdP** supporting OAuth/OIDC (e.g. [Indigo IAM](https://indigo-iam.github.io/))
 
 The following chapters will *NOT* cover: 
-- DIRAC v9 installation. If you are new to DIRAC, defer to the [existing DIRAC documentation](dirac.diracgrid.org).
+- DIRAC v9 installation. If you are new to DIRAC, defer to the [existing DIRAC documentation](https://dirac.diracgrid.org).
 - [MySQL](https://dev.mysql.com/doc/refman/8.4/en/installing.html), [OpenSearch](https://docs.opensearch.org/latest/install-and-configure/install-opensearch/index/) and [S3](https://docs.min.io/enterprise/aistor-object-store/) installations.
 
 Few suggestion will be given for Kubernetes installation. 
