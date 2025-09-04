@@ -78,12 +78,13 @@ nav:
     - admin/index.md
     - Tutorials:
       - admin/tutorials/index.md
-      - Run locally: admin/tutorials/run_locally.md
+      - Run locally: admin/tutorials/run_locally.md`
       - Authentication: admin/tutorials/authentication.md
     - How-To:
       - admin/how-to/index.md
       - Installation:
         - admin/how-to/install/index.md
+        - Minimal requirements: admin/how-to/install/minimal-requirements.md
         - Installing kubernetes: admin/how-to/install/install-kubernetes.md
         - Convert CS: admin/how-to/install/convert-cs.md
         - Installing DiracX: admin/how-to/install/installing.md
