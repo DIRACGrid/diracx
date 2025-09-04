@@ -124,6 +124,7 @@ async def submit_jdl_jobs(
             job_db=job_db,
         )
     except ExceptionGroup as e:
+        logging.exception("JDL syntax error occurred during job submission")
         raise ValueError("JDL syntax error") from e
 
     logging.debug(
@@ -213,6 +214,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB):
             class_ad_req = ClassAd("[]")
             if not class_ad_job.isOK():
                 # Rollback the entire transaction
+                logging.exception(f"Error in JDL syntax for job JDL: {original_jdl}")
                 raise ValueError(f"Error in JDL syntax for job JDL: {original_jdl}")
             # TODO: check if that is actually true
             if class_ad_job.lookupAttribute("Parameters"):
