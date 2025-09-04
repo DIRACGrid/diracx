@@ -297,10 +297,6 @@ async def reschedule_jobs(
 ):
     """Reschedule given job."""
     failed = {}
-    reschedule_max = config.Operations[
-        "Defaults"
-    ].Services.JobScheduling.MaxRescheduling
-
     status_changes = {}
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
     jdl_changes = {}
@@ -314,6 +310,7 @@ async def reschedule_jobs(
             "Owner",
             "OwnerGroup",
             "JobID",
+            "VO",
         ],
         search=[
             VectorSearchSpec(
@@ -350,6 +347,10 @@ async def reschedule_jobs(
             job_attrs["RescheduleCounter"] = 0
         else:
             job_attrs["RescheduleCounter"] = int(job_attrs["RescheduleCounter"]) + 1
+
+        reschedule_max = config.Operations[
+            job_attrs["VO"]
+        ].Services.JobScheduling.MaxRescheduling
 
         if job_attrs["RescheduleCounter"] > reschedule_max:
             status_changes[job_id] = {

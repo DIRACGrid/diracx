@@ -33,6 +33,7 @@ Operations:
         CatalogList: FileCatalog, TSCatalog, MultiVOFileCatalog
     Transformations:
       DataProcessing: MCSimulation, Merge, DataReprocessing
+  Jenkins: {}
   vo:
     Shifter:
       DataManager:
@@ -690,9 +691,8 @@ Systems:
         SubmitStatus: Active, Completing
         SubmitTasks: 'yes'
         TaskUpdateChunkSize: '0'
-        TaskUpdateStatus: Checking, Deleted, Killed, Staging, Stalled, Matched,
-          Scheduled, Rescheduled, Completed, Submitted, Assigned, Received, Waiting,
-          Running
+        TaskUpdateStatus: Checking, Deleted, Killed, Staging, Stalled, Matched, Scheduled,
+          Rescheduled, Completed, Submitted, Assigned, Received, Waiting, Running
         TasksPerLoop: '50'
         TransType: ''
         UpdateFilesStatus: Active, Completing, Stopped
@@ -726,8 +726,7 @@ Systems:
         TaskUpdateStatus: Submitted, Received, Waiting, Running, Matched, Completed,
           Failed
         TasksPerLoop: '50'
-        TransType: MCSimulation, DataReconstruction, DataStripping, MCStripping,
-          Merge
+        TransType: MCSimulation, DataReconstruction, DataStripping, MCStripping, Merge
         UpdateFilesStatus: Active, Completing, Stopped
         UpdateTasksStatus: Active, Completing, Stopped
         maxNumberOfThreads: '15'
@@ -787,8 +786,8 @@ Systems:
     Executors:
       Optimizers:
         JobScheduling:
-          RescheduleDelays: '0'
           MaxRescheduling: '3'
+          RescheduleDelays: '0'
     FailoverURLs: {}
     Services:
       Matcher:

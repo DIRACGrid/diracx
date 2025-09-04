@@ -1299,7 +1299,6 @@ def test_parse_scopes(vos, groups, scope, expected):
                 }
                 for vo_name, vo_conf in vos.items()
             },
-            "Operations": {"Defaults": {}},
         }
     )
     available_properties = SecurityProperty.available_properties()
@@ -1357,7 +1356,7 @@ def test_parse_scopes_invalid(vos, groups, scope, expected_error):
                 }
                 for vo in vos
             },
-            "Operations": {"Defaults": {}},
+            "Operations": {},
         }
     )
     available_properties = SecurityProperty.available_properties()

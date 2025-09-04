@@ -25,6 +25,7 @@ async def search(
     job_parameters_db: JobParametersDB,
     job_logging_db: JobLoggingDB,
     preferred_username: str | None,
+    vo: str,
     page: int = 1,
     per_page: int = 100,
     body: SearchParams | None = None,
@@ -46,10 +47,8 @@ async def search(
                 body.parameters = ["JobID"] + (body.parameters or [])
 
     # TODO: Apply all the job policy stuff properly using user_info
-    if (
-        not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo
-        and preferred_username
-    ):
+    global_jobs_info = config.Operations[vo].Services.JobMonitoring.GlobalJobsInfo
+    if not global_jobs_info and preferred_username:
         body.search.append(
             {
                 "parameter": "Owner",
@@ -85,13 +84,12 @@ async def summary(
     config: Config,
     job_db: JobDB,
     preferred_username: str | None,
+    vo: str,
     body: SummaryParams,
 ):
     """Show information suitable for plotting."""
-    if (
-        not config.Operations["Defaults"].Services.JobMonitoring.GlobalJobsInfo
-        and preferred_username
-    ):
+    global_jobs_info = config.Operations[vo].Services.JobMonitoring.GlobalJobsInfo
+    if not global_jobs_info and preferred_username:
         body.search.append(
             {
                 "parameter": "Owner",

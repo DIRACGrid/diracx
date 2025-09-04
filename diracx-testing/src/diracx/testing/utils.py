@@ -464,7 +464,7 @@ def with_config_repo(tmp_path_factory):
                     },
                 }
             },
-            "Operations": {"Defaults": {}},
+            "Operations": {},
             "Systems": {
                 "WorkloadManagement": {
                     "Databases": {

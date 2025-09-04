@@ -9,6 +9,7 @@ from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator
 from pydantic.functional_serializers import PlainSerializer
 
 from ..properties import SecurityProperty
+from ..utils import recursive_merge
 
 # By default the serialization of set doesn't have a well defined ordering so
 # we have to use a custom type to make sure the values are always sorted.
@@ -162,7 +163,6 @@ class OperationsConfig(BaseModel):
 class Config(BaseModel):
     Registry: MutableMapping[str, RegistryConfig]
     DIRAC: DIRACConfig
-    # TODO: Should this be split by vo rather than setup?
     Operations: MutableMapping[str, OperationsConfig]
 
     LocalSite: Any = None
@@ -171,6 +171,24 @@ class Config(BaseModel):
     Resources: Any = None
     Systems: Any | None = None
     WebApp: Any = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_operations_defaults(cls, v: dict[str, Any]):
+        """Merge the Defaults entry into the VO-specific config under Operations."""
+        operations = v.setdefault("Operations", {})
+        if os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
+            # The Defaults entry should be kept and not merged into the VO-specific
+            # config as we want the "human readable" config to still contain it
+            defaults = {}
+        else:
+            # Remove the Defaults entry
+            defaults = operations.pop("Defaults", {})
+        # Ensure an Operations entry exists for each VO
+        # Defaults are automatically merged into each VO-specific config
+        for vo in v.get("Registry", {}):
+            operations[vo] = recursive_merge(defaults, operations.get(vo, {}))
+        return v
 
     # These 2 parameters are used for client side caching
     # see the "/config/" route for details
