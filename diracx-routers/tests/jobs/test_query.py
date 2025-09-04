@@ -202,10 +202,8 @@ def test_insert_malformed_jdl(normal_user_client):
         minute=0,
         second=0,
         microsecond=123456,
-        # astimezone call below adds the local tz
-        # to this otherwise naive object
-        tzinfo=None,
-    ).astimezone()
+        tzinfo=timezone.utc,
+    )
 )
 def test_insert_and_search_by_datetime(normal_user_client):
     """Test inserting a job and then searching for it.
