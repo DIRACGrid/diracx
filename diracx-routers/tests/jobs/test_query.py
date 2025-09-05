@@ -878,7 +878,7 @@ def test_get_job_status_history_in_bulk(
     assert r.json()[str(valid_job_id)][0]["Source"] == "JobManager"
 
 
-def test_patch_summary(normal_user_client: TestClient, valid_job_id: int):
+def test_summary(normal_user_client: TestClient, valid_job_id: int):
     """Test that the summary endpoint works as expected."""
     r = normal_user_client.post(
         "/api/jobs/summary",
@@ -904,7 +904,7 @@ def test_patch_summary(normal_user_client: TestClient, valid_job_id: int):
     assert r.json() == [{"Owner": "preferred_username", "count": 1}]
 
 
-def test_patch_summary_doc_example(normal_user_client: TestClient, valid_job_id: int):
+def test_summary_doc_example(normal_user_client: TestClient, valid_job_id: int):
     """Test that the summary doc example is correct."""
     payload = EXAMPLE_SUMMARY["Group by JobGroup"]["value"]
     r = normal_user_client.post("/api/jobs/summary", json=payload)
