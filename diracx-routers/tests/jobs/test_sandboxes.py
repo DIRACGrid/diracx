@@ -15,6 +15,7 @@ from diracx.routers.auth.token import create_token
 pytestmark = pytest.mark.enabled_dependencies(
     [
         "AuthSettings",
+        "ConfigSource",
         "JobDB",
         "JobLoggingDB",
         "SandboxMetadataDB",
