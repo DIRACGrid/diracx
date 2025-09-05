@@ -51,9 +51,73 @@ Once all VOs have been enabled, DiracX can start replacing DIRAC services. In or
 
 The following sequence of images explain the process:
 
-| ![Image 1](../../../assets/images/legacy_before_Adaptor.png) | ![Image 2](../../../assets/images/legaxyAdaptor.png) | ![Image 3](../../../assets/images/legacy_after_Adaptor.png) |
-| ------------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------- |
-| 1: DBs are shared                                            | 2. Activate a legacy adaptor                         | 3. DIRAC service can be removed                             |
+DBs are shared, so DIRAC DIPS services and DiracX HTTP services are looking into the same database
+
+```mermaid
+flowchart TB
+    DB[(DB)]:::db
+    DIPS(["DIPS service"]):::service
+    DIRACClient(["DIRAC client class"]):::client
+    DIRACXService(["DiracX service"]):::service
+    DIRACXClient(["DiracX client class"]):::client
+
+    DB --- DIPS
+    DB --- DIRACXService
+    DIPS --- DIRACClient
+    DIRACXService --- DIRACXClient
+
+    classDef db fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef service fill:#e6ffe6,stroke:#333,stroke-width:1px;
+    classDef client fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef adaptor fill:#e6f0ff,stroke:#333,stroke-width:1px;
+
+```
+
+*Legacy Adaptors* are coded to move the traffic from DIRAC clients to DiracX services.
+
+```mermaid
+flowchart TB
+    DB[(DB)]:::db
+    DIPS(["DIPS service"]):::service
+    DIRACClient(["DIRAC client class"]):::client
+    DIRACXService(["DiracX service"]):::service
+    DIRACXClient(["DiracX client class"]):::client
+    LegacyAdaptor{"Legacy adaptor"}:::adaptor
+
+    DB --- DIPS
+    DB --- DIRACXService
+    LegacyAdaptor --- DIRACClient
+    DIRACXService --- DIRACXClient
+    DIRACXService --- LegacyAdaptor
+
+    classDef db fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef service fill:#e6ffe6,stroke:#333,stroke-width:1px;
+    classDef client fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef adaptor fill:#e6f0ff,stroke:#333,stroke-width:1px;
+
+```
+
+At this point, DIRAC services can be removed:
+
+```mermaid
+flowchart TB
+    DB[(DB)]:::db
+    DIRACClient(["DIRAC client class"]):::client
+    DIRACXService(["DiracX service"]):::service
+    DIRACXClient(["DiracX client class"]):::client
+    LegacyAdaptor{"Legacy adaptor"}:::adaptor
+
+    DB --- DIRACXService
+    LegacyAdaptor --- DIRACClient
+    DIRACXService --- DIRACXClient
+    DIRACXService --- LegacyAdaptor
+
+    classDef db fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef service fill:#e6ffe6,stroke:#333,stroke-width:1px;
+    classDef client fill:#ffe6e6,stroke:#333,stroke-width:1px;
+    classDef adaptor fill:#e6f0ff,stroke:#333,stroke-width:1px;
+
+```
 
 Legacy adaptors will eventually be created for each of the DIRAC services.
 In order to activate one, it is enough to add the following CS option:
