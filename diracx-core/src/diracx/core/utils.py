@@ -14,6 +14,7 @@ import fcntl
 import json
 import os
 import re
+import stat
 import threading
 from collections import defaultdict
 from collections.abc import Callable
@@ -118,7 +119,14 @@ def write_credentials(token_response: TokenResponse, *, location: Path | None = 
     credentials_path = location or get_diracx_preferences().credentials_path
     credentials_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(credentials_path, "w") as f:
+    # Open a file and set the permissions to 0x600
+    file_descriptor = os.open(
+        path=credentials_path,
+        flags=os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+        mode=stat.S_IRUSR | stat.S_IWUSR,
+    )
+
+    with open(file_descriptor, "w") as f:
         # Lock the file to prevent other processes from writing to it at the same time
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
