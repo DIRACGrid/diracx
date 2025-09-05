@@ -3,12 +3,17 @@ from __future__ import annotations
 __all__ = [
     "extensions_by_priority",
     "select_from_extension",
+    "supports_extending",
 ]
 
 from collections import defaultdict
 from importlib.metadata import EntryPoint, entry_points
+from typing import Callable, ParamSpec, TypeVar, cast
 
 from cachetools import LRUCache, cached
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 @cached(cache=LRUCache(maxsize=1))
@@ -53,3 +58,36 @@ def select_from_extension(*, group: str, name: str | None = None) -> list[EntryP
         for module_name in extensions_by_priority()
         for x in matches.get(module_name, [])
     ]
+
+
+def supports_extending(
+    group: str, name: str
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    """Decorator to replace a function with an extension implementation.
+
+    This decorator looks for an entry point in the specified group and name,
+    and if found, replaces the decorated function with the extension's implementation.
+
+    Args:
+        group: The entry point group to search in
+        name: The entry point name to search for
+
+    Example:
+        @supports_extending("diracx.resources", "find_compatible_platforms")
+        def my_function():
+            return "default implementation"
+
+    """
+
+    def decorator(f: Callable[P, T]) -> Callable[P, T]:
+        candidates = select_from_extension(group=group, name=name)
+        assert len(candidates) > 0, f"No extension found for {group=} {name=}"
+        # Try to find an extension implementation
+        for entry_point in candidates[:-1]:
+            extension_func = cast(Callable[P, T], entry_point.load())
+            return extension_func
+        # Fall back to the original function
+        assert candidates[-1].value == f"{f.__module__}:{f.__qualname__}"
+        return f
+
+    return decorator
