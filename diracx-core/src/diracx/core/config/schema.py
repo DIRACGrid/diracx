@@ -5,7 +5,14 @@ from datetime import datetime
 from typing import Annotated, Any, MutableMapping, TypeVar
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, model_validator
+from pydantic import (
+    ConfigDict,
+    EmailStr,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 from pydantic.functional_serializers import PlainSerializer
 
 from ..properties import SecurityProperty
@@ -129,19 +136,38 @@ class ServicesConfig(BaseModel):
     JobScheduling: JobSchedulingConfig = JobSchedulingConfig()
 
 
+class JobDescriptionConfig(BaseModel):
+    DefaultCPUTime: int = 86400
+    DefaultPriority: int = 1
+    MinCPUTime: int = 100
+    MinPriority: int = 0
+    MaxCPUTime: int = 500000
+    MaxPriority: int = 10
+    MaxInputData: int = 100
+    AllowedJobTypes: list[str] = ["User", "Test", "Hospital"]
+
+
+class InputDataPolicyConfig(BaseModel):
+    InputDataModule: str = "LocalInputData"
+
+
+class ExternalsPolicyConfig(BaseModel):
+    SoftwareDistModule: str = "LocalSoftwareDist"
+
+
 class OperationsConfig(BaseModel):
     EnableSecurityLogging: bool = False
+    ExternalsPolicy: ExternalsPolicyConfig = ExternalsPolicyConfig()
+    InputDataPolicy: InputDataPolicyConfig = InputDataPolicyConfig()
+    JobDescription: JobDescriptionConfig = JobDescriptionConfig()
     Services: ServicesConfig = ServicesConfig()
 
     Cloud: MutableMapping[str, Any] | None = None
     DataConsistency: MutableMapping[str, Any] | None = None
     DataManagement: MutableMapping[str, Any] | None = None
     EMail: MutableMapping[str, Any] | None = None
-    ExternalsPolicy: MutableMapping[str, Any] | None = None
     GaudiExecution: MutableMapping[str, Any] | None = None
     Hospital: MutableMapping[str, Any] | None = None
-    InputDataPolicy: MutableMapping[str, Any] | None = None
-    JobDescription: MutableMapping[str, Any] | None = None
     JobScheduling: MutableMapping[str, Any] | None = None
     JobTypeMapping: MutableMapping[str, Any] | None = None
     LogFiles: MutableMapping[str, Any] | None = None
@@ -160,15 +186,50 @@ class OperationsConfig(BaseModel):
     ResourceStatus: MutableMapping[str, Any] | None = None
 
 
+class ResourcesComputingConfig(BaseModel):
+    # TODO: Remove this once the model is extended to support everything
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    # TODO: Figure out how to remove this in LHCbDIRAC and then consider
+    # constraining there to be at least one entry
+    OSCompatibility: MutableMapping[str, set[str]] = {}
+
+    @field_validator("OSCompatibility", mode="before")
+    @classmethod
+    def legacy_adaptor_os_compatibility(cls, v: Any) -> Any:
+        """Apply transformations to interpret the legacy DIRAC CFG format."""
+        if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
+            return v
+        os_compatibility = v.get("OSCompatibility", {})
+        for k, v in os_compatibility.items():
+            os_compatibility[k] = set(v.replace(" ", "").split(","))
+        return os_compatibility
+
+    @field_validator("OSCompatibility")
+    @classmethod
+    def ensure_self_compatibility(cls, v: dict[str, set[str]]) -> dict[str, set[str]]:
+        """Ensure platforms are compatible with themselves."""
+        for platform, compatible_platforms in v.items():
+            compatible_platforms.add(platform)
+        return v
+
+
+class ResourcesConfig(BaseModel):
+    # TODO: Remove this once the model is extended to support everything
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    Computing: ResourcesComputingConfig = ResourcesComputingConfig()
+
+
 class Config(BaseModel):
-    Registry: MutableMapping[str, RegistryConfig]
     DIRAC: DIRACConfig
     Operations: MutableMapping[str, OperationsConfig]
+    Registry: MutableMapping[str, RegistryConfig]
+    Resources: ResourcesConfig = ResourcesConfig()
 
     LocalSite: Any = None
     LogLevel: Any = None
     MCTestingDestination: Any = None
-    Resources: Any = None
     Systems: Any | None = None
     WebApp: Any = None
 
