@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   shellcheck:
     runs-on: ubuntu-latest
     steps:
