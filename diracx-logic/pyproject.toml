@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "cachetools",
-    "dirac >=9.0.0a0",
+    "diraccommon >=9.0.0a67",
     "diracx-core",
     "diracx-db",
     "joserfc",

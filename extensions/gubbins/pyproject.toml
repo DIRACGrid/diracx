@@ -107,7 +107,7 @@ explicit_package_bases = true
 enable_error_code = ["import", "attr-defined"]
 
 [[tool.mypy.overrides]]
-module = 'DIRAC.*'
+module = 'DIRACCommon.*'
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
