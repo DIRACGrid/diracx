@@ -886,6 +886,18 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
+class PathsLs6HcyApiJobsJobIdHeartbeatGetResponses200ContentApplicationJsonSchemaItemsAdditionalproperties(
+    _serialization.Model
+):  # pylint: disable=name-too-long
+    """PathsLs6HcyApiJobsJobIdHeartbeatGetResponses200ContentApplicationJsonSchemaItemsAdditionalproperties."""
+
+
+class PathsZ91EtjApiJobsJobIdJdlGetResponses200ContentApplicationJsonSchemaAdditionalproperties(
+    _serialization.Model
+):  # pylint: disable=name-too-long
+    """PathsZ91EtjApiJobsJobIdJdlGetResponses200ContentApplicationJsonSchemaAdditionalproperties."""
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 
