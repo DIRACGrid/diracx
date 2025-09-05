@@ -10,6 +10,7 @@ from diracx.core.models import InsertedJob
 from diracx.logic.jobs.submission import submit_jdl_jobs as submit_jdl_jobs_bl
 
 from ..dependencies import (
+    Config,
     JobDB,
     JobLoggingDB,
 )
@@ -60,13 +61,14 @@ async def submit_jdl_jobs(
     job_logging_db: JobLoggingDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
+    config: Config,
 ) -> list[InsertedJob]:
     """Submit a list of jobs in JDL format."""
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
 
     try:
         inserted_jobs = await submit_jdl_jobs_bl(
-            job_definitions, job_db, job_logging_db, user_info
+            job_definitions, job_db, job_logging_db, user_info, config
         )
     except ValueError as e:
         raise HTTPException(

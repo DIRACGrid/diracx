@@ -17,13 +17,13 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 from unittest.mock import MagicMock
 
-from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
-from DIRAC.Core.Utilities.ReturnValues import SErrorException, returnValueOrRaise
-from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
+from DIRACCommon.Core.Utilities.ClassAd.ClassAdLight import ClassAd
+from DIRACCommon.Core.Utilities.ReturnValues import SErrorException, returnValueOrRaise
+from DIRACCommon.WorkloadManagementSystem.DB.JobDBUtils import (
     compressJDL,
     extractJDL,
 )
-from DIRAC.WorkloadManagementSystem.Utilities.JobStatusUtility import (
+from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
     getNewStatus,
     getStartAndEndTime,
 )
@@ -297,10 +297,6 @@ async def reschedule_jobs(
 ):
     """Reschedule given job."""
     failed = {}
-    reschedule_max = config.Operations[
-        "Defaults"
-    ].Services.JobScheduling.MaxRescheduling
-
     status_changes = {}
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
     jdl_changes = {}
@@ -314,6 +310,7 @@ async def reschedule_jobs(
             "Owner",
             "OwnerGroup",
             "JobID",
+            "VO",
         ],
         search=[
             VectorSearchSpec(
@@ -350,6 +347,10 @@ async def reschedule_jobs(
             job_attrs["RescheduleCounter"] = 0
         else:
             job_attrs["RescheduleCounter"] = int(job_attrs["RescheduleCounter"]) + 1
+
+        reschedule_max = config.Operations[
+            job_attrs["VO"]
+        ].Services.JobScheduling.MaxRescheduling
 
         if job_attrs["RescheduleCounter"] > reschedule_max:
             status_changes[job_id] = {
@@ -394,7 +395,7 @@ async def reschedule_jobs(
         )
     }
 
-    for job_id in surviving_job_ids:
+    for job_id, job_attrs in jobs_to_resched.items():
         class_ad_job = job_jdls[job_id]
         class_ad_req = ClassAd("[]")
         try:
@@ -402,11 +403,12 @@ async def reschedule_jobs(
                 job_id,
                 class_ad_job,
                 class_ad_req,
-                jobs_to_resched[job_id]["Owner"],
-                jobs_to_resched[job_id]["OwnerGroup"],
-                {"RescheduleCounter": jobs_to_resched[job_id]["RescheduleCounter"]},
-                class_ad_job.getAttributeString("VirtualOrganization"),
+                job_attrs["Owner"],
+                job_attrs["OwnerGroup"],
+                {"RescheduleCounter": job_attrs["RescheduleCounter"]},
+                job_attrs["VO"],
                 job_db,
+                config,
             )
         except SErrorException as e:
             failed[job_id] = {"detail": str(e)}
@@ -435,7 +437,7 @@ async def reschedule_jobs(
             "Site": site,
             "UserPriority": priority,
             "RescheduleTime": datetime.now(tz=timezone.utc),
-            "RescheduleCounter": jobs_to_resched[job_id]["RescheduleCounter"],
+            "RescheduleCounter": job_attrs["RescheduleCounter"],
         }
 
         # set new JDL
@@ -452,6 +454,7 @@ async def reschedule_jobs(
         # set new attributes
         attribute_changes[job_id].update(additional_attrs)
 
+    success = {}
     if surviving_job_ids:
         set_job_status_result = await set_job_statuses(
             status_changes=status_changes,
@@ -465,7 +468,6 @@ async def reschedule_jobs(
 
         await job_db.update_job_jdls(jdl_changes)
 
-        success = {}
         for job_id, set_status_result in set_job_status_result.success.items():
             if job_id in failed:
                 continue
@@ -480,15 +482,7 @@ async def reschedule_jobs(
                 **set_status_result.model_dump(),
             }
 
-        return {
-            "failed": failed,
-            "success": success,
-        }
-
-    return {
-        "success": [],
-        "failed": failed,
-    }
+    return {"failed": failed, "success": success}
 
 
 async def remove_jobs_from_task_queue(

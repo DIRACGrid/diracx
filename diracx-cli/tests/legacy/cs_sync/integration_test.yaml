@@ -33,6 +33,7 @@ Operations:
         CatalogList: FileCatalog, TSCatalog, MultiVOFileCatalog
     Transformations:
       DataProcessing: MCSimulation, Merge, DataReprocessing
+  Jenkins: {}
   vo:
     Shifter:
       DataManager:
@@ -131,94 +132,7 @@ Registry:
         - /C=ch/O=DIRAC/OU=DIRAC CI/CN=trialUser
         Email: lhcb-dirac-ci@cern.ch
         PreferedUsername: trialUser
-Resources:
-  FTSEndpoints:
-    FTS3:
-      JENKINS-FTS3: https://jenkins-fts3.cern.ch:8446
-  FileCatalogs:
-    FileCatalog:
-      AccessType: Read-Write
-      Master: 'True'
-      Status: Active
-    MultiVOFileCatalog:
-      AccessType: Read-Write
-      CatalogType: FileCatalog
-      CatalogURL: DataManagement/MultiVOFileCatalog
-      Status: Active
-    TSCatalog:
-      AccessType: Write
-      CatalogType: TSCatalog
-      CatalogURL: Transformation/TransformationManager
-      Status: Active
-  Sites:
-    DIRAC:
-      DIRAC.Jenkins.ch:
-        CEs:
-          jenkins.cern.ch:
-            CEType: Test
-            Queues:
-              jenkins-queue_not_important:
-                SI00: '2400'
-                maxCPUTime: '200000'
-        Name: aNameWhatSoEver
-        SE: SE-1
-        jenkins.cern.ch:
-          QueuesResources:
-            Sites:
-              DIRAC:
-                DIRAC.Jenkins.ch:
-                  jenkins.cern.ch:
-                    Queues:
-                      jenkins-queue_not_important: {}
-  StorageElements:
-    ProductionSandboxSE:
-      AccessProtocol: dips
-      BackendType: DISET
-      DIP:
-        Access: remote
-        Host: localhost
-        Path: sandboxes
-        Port: '9196'
-        Protocol: dips
-        ProtocolName: DIP
-    S3-DIRECT:
-      AccessProtocols: s3
-      S3:
-        Access: remote
-        Aws_access_key_id: FakeId
-        Aws_secret_access_key: 'True'
-        Host: s3-direct
-        Path: my-first-bucket
-        Port: '9090'
-        Protocol: s3
-        SecureConnection: 'False'
-      WriteProtocols: s3
-    S3-INDIRECT:
-      AccessProtocols: s3
-      S3:
-        Access: remote
-        Host: s3-direct
-        Path: my-first-bucket
-        Port: '9090'
-        Protocol: s3
-        SecureConnection: 'False'
-      WriteProtocols: s3
-    SE-1:
-      AccessProtocol: dips
-      DIP:
-        Access: remote
-        Host: server
-        Path: /DataManagement/SE-1
-        Port: '9148'
-        Protocol: dips
-    SE-2:
-      AccessProtocol: dips
-      DIP:
-        Access: remote
-        Host: server
-        Path: /DataManagement/SE-2
-        Port: '9147'
-        Protocol: dips
+Resources: {}
 Systems:
   Accounting:
     Databases:
@@ -690,9 +604,8 @@ Systems:
         SubmitStatus: Active, Completing
         SubmitTasks: 'yes'
         TaskUpdateChunkSize: '0'
-        TaskUpdateStatus: Checking, Deleted, Killed, Staging, Stalled, Matched,
-          Scheduled, Rescheduled, Completed, Submitted, Assigned, Received, Waiting,
-          Running
+        TaskUpdateStatus: Checking, Deleted, Killed, Staging, Stalled, Matched, Scheduled,
+          Rescheduled, Completed, Submitted, Assigned, Received, Waiting, Running
         TasksPerLoop: '50'
         TransType: ''
         UpdateFilesStatus: Active, Completing, Stopped
@@ -726,8 +639,7 @@ Systems:
         TaskUpdateStatus: Submitted, Received, Waiting, Running, Matched, Completed,
           Failed
         TasksPerLoop: '50'
-        TransType: MCSimulation, DataReconstruction, DataStripping, MCStripping,
-          Merge
+        TransType: MCSimulation, DataReconstruction, DataStripping, MCStripping, Merge
         UpdateFilesStatus: Active, Completing, Stopped
         UpdateTasksStatus: Active, Completing, Stopped
         maxNumberOfThreads: '15'
@@ -787,8 +699,8 @@ Systems:
     Executors:
       Optimizers:
         JobScheduling:
-          RescheduleDelays: '0'
           MaxRescheduling: '3'
+          RescheduleDelays: '0'
     FailoverURLs: {}
     Services:
       Matcher:

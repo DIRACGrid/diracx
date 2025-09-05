@@ -161,6 +161,7 @@ async def search(
         job_parameters_db=job_parameters_db,
         job_logging_db=job_logging_db,
         preferred_username=preferred_username,
+        vo=user_info.vo,
         page=page,
         per_page=per_page,
         body=body,
@@ -312,5 +313,6 @@ async def summary(
         config=config,
         job_db=job_db,
         preferred_username=preferred_username,
+        vo=user_info.vo,
         body=body,
     )

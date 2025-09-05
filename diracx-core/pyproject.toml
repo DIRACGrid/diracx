@@ -23,6 +23,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "sh",
+    "diraccommon >=9.0.0a67",
 ]
 dynamic = ["version"]
 
@@ -43,6 +44,9 @@ types = [
 properties_module = "diracx.core.properties"
 config = "diracx.core.config.schema:Config"
 extension = "diracx"
+
+[project.entry-points."diracx.resources"]
+find_compatible_platforms = "diracx.core.resources:find_compatible_platforms"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

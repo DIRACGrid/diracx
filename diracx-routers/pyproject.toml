@@ -33,7 +33,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = ["diracx-testing", "moto[server]", "pytest-httpx", "freezegun",]
+testing = ["diracx-testing", "moto[server]", "pytest-httpx", "freezegun", "pyjwt"]
 types = [
     "types-cachetools",
     "types-python-dateutil",

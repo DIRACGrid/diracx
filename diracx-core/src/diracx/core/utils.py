@@ -7,6 +7,7 @@ __all__ = [
     "write_credentials",
     "TwoLevelCache",
     "batched_async",
+    "recursive_merge",
 ]
 
 import fcntl
@@ -19,7 +20,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, AsyncIterable, TypeVar
+from typing import Any, AsyncIterable, TypeVar, overload
 
 from cachetools import Cache, TTLCache
 
@@ -29,6 +30,32 @@ from diracx.core.models import TokenResponse
 EXPIRES_GRACE_SECONDS = 15
 
 T = TypeVar("T")
+
+
+@overload
+def recursive_merge(base: T, override: None) -> T: ...
+@overload
+def recursive_merge(base: None, override: T) -> T: ...
+@overload
+def recursive_merge(base: T, override: T) -> T: ...
+def recursive_merge(base: Any, override: Any) -> Any:
+    """Recursively merge dictionaries; values in ``override`` take precedence.
+
+    - If both ``base`` and ``override`` are dicts, merge keys recursively.
+    - Otherwise, return ``override`` if it is not ``None``; fallback to ``base``.
+    """
+    if isinstance(base, dict) and isinstance(override, dict):
+        merged: dict[str, Any] = {}
+        for key, base_val in base.items():
+            if key in override:
+                merged[key] = recursive_merge(base_val, override[key])
+            else:
+                merged[key] = base_val
+        for key, override_val in override.items():
+            if key not in merged:
+                merged[key] = override_val
+        return merged
+    return override if override is not None else base
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:

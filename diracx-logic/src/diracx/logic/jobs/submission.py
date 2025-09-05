@@ -5,19 +5,20 @@ import logging
 from copy import deepcopy
 from datetime import datetime, timezone
 
-from DIRAC.Core.Utilities.ClassAd.ClassAdLight import ClassAd
-from DIRAC.Core.Utilities.ReturnValues import returnValueOrRaise
-from DIRAC.WorkloadManagementSystem.DB.JobDBUtils import (
+from DIRACCommon.Core.Utilities.ClassAd.ClassAdLight import ClassAd
+from DIRACCommon.Core.Utilities.ReturnValues import returnValueOrRaise
+from DIRACCommon.WorkloadManagementSystem.DB.JobDBUtils import (
     checkAndAddOwner,
     compressJDL,
     createJDLWithInitialStatus,
 )
-from DIRAC.WorkloadManagementSystem.Utilities.ParametricJob import (
+from DIRACCommon.WorkloadManagementSystem.Utilities.ParametricJob import (
     generateParametricJobs,
     getParameterVectorLength,
 )
 from pydantic import BaseModel
 
+from diracx.core.config import Config
 from diracx.core.models import (
     InsertedJob,
     JobLoggingRecord,
@@ -26,7 +27,7 @@ from diracx.core.models import (
 )
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
-from diracx.logic.jobs.utils import check_and_prepare_job
+from diracx.logic.jobs.utils import check_and_prepare_job, make_job_manifest_config
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ async def submit_jdl_jobs(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     user_info: UserInfo,
+    config: Config,
 ) -> list[InsertedJob]:
     """Submit a list of JDLs to the JobDB."""
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
@@ -122,8 +124,10 @@ async def submit_jdl_jobs(
                 for jdl in job_desc_list
             ],
             job_db=job_db,
+            config=config,
         )
     except ExceptionGroup as e:
+        logging.exception("JDL syntax error occurred during job submission")
         raise ValueError("JDL syntax error") from e
 
     logging.debug(
@@ -159,7 +163,7 @@ async def submit_jdl_jobs(
     ]
 
 
-async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB):
+async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: Config):
     """Create jobs from JDLs and insert them into the DB."""
     jobs_to_insert = {}
     jdls_to_update = {}
@@ -172,7 +176,12 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB):
         for job in jobs:
             original_jdl = deepcopy(job.jdl)
             job_manifest = returnValueOrRaise(
-                checkAndAddOwner(original_jdl, job.owner, job.owner_group)
+                checkAndAddOwner(
+                    original_jdl,
+                    job.owner,
+                    job.owner_group,
+                    job_manifest_config=make_job_manifest_config(config, job.vo),
+                )
             )
 
             # Fix possible lack of brackets
@@ -213,6 +222,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB):
             class_ad_req = ClassAd("[]")
             if not class_ad_job.isOK():
                 # Rollback the entire transaction
+                logging.exception(f"Error in JDL syntax for job JDL: {original_jdl}")
                 raise ValueError(f"Error in JDL syntax for job JDL: {original_jdl}")
             # TODO: check if that is actually true
             if class_ad_job.lookupAttribute("Parameters"):
@@ -230,6 +240,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB):
                 job_attrs,
                 job.vo,
                 job_db,
+                config,
             )
             job_jdl = createJDLWithInitialStatus(
                 class_ad_job,

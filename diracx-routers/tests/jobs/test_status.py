@@ -390,7 +390,7 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     )
     assert r.json() == {
         "detail": {
-            "success": [],
+            "success": {},
             "failed": {
                 "1": {
                     "detail": f"Maximum number of reschedules exceeded ({max_resched})"
@@ -464,7 +464,7 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
     )
     assert r.json() == {
         "detail": {
-            "success": [],
+            "success": {},
             "failed": {
                 str(i): {
                     "detail": f"Maximum number of reschedules exceeded ({max_resched})"

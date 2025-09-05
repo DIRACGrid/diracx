@@ -31,7 +31,12 @@ def test_cs_sync(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert output_file.is_file()
     actual_output = yaml.safe_load(output_file.read_text())
-    expected_output = yaml.safe_load((file_path / "integration_test.yaml").read_text())
+    expected_output_file = file_path / "integration_test.yaml"
+    expected_output = yaml.safe_load(expected_output_file.read_text())
+    # If you need to update the expected output, you can do so by running pytest --pdb
+    # and then running the following command:
+    # expected_output_file.write_text(yaml.dump(actual_output, sort_keys=True))
+    # And then carefully(!) review the diff
     assert actual_output == expected_output
     Config.model_validate(actual_output)
 
