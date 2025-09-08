@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import fcntl
+import os
+import stat
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -112,6 +114,18 @@ def test_write_credentials_writing_locked_file(monkeypatch, tmp_path):
         f"Expected LOCK_EX, got {flock_calls[-1][1]}"
     )
     assert "File is locked" in str(exc_info.value)
+
+
+def test_write_credentials_writing_unlocked_file(monkeypatch, tmp_path):
+    """Test that write_credentials waits to write into an unlocked file."""
+    token_location = tmp_path / "credentials.json"
+
+    # Write credentials to the file
+    write_credentials(TokenResponse(**TOKEN_RESPONSE_DICT), location=token_location)
+
+    # Verify the permissions
+    mode = os.stat(token_location).st_mode
+    assert mode == (stat.S_IFREG | stat.S_IRUSR | stat.S_IWUSR)
 
 
 def test_read_credentials_empty_file(tmp_path):
