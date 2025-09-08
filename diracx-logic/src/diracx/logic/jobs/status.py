@@ -535,6 +535,11 @@ async def set_job_parameters_or_attributes(
             if pname in JOB_PARAMETERS_ALIASES:
                 param_updates[job_id][pname] = pvalue
 
+            # If the field is not in either known aliases, default to treating it as a parameter
+            # This allows for more flexible metadata handling
+            elif pname not in JOB_ATTRIBUTES_ALIASES:
+                param_updates[job_id][pname] = pvalue
+
     # Bulk set job attributes if required
     attr_updates = {k: v for k, v in attr_updates.items() if v}
     if attr_updates:

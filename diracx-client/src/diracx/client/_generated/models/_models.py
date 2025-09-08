@@ -413,6 +413,9 @@ class JobCommand(_serialization.Model):
 class JobMetaData(_serialization.Model):
     """A model that combines both JobAttributes and JobParameters.
 
+    :ivar additional_properties: Unmatched properties from the message are deserialized to this
+     collection.
+    :vartype additional_properties: dict[str, any]
     :ivar timestamp: Timestamp.
     :vartype timestamp: ~datetime.datetime
     :ivar cpu_normalization_factor: Cpunormalizationfactor.
@@ -486,6 +489,7 @@ class JobMetaData(_serialization.Model):
     """
 
     _attribute_map = {
+        "additional_properties": {"key": "", "type": "{object}"},
         "timestamp": {"key": "timestamp", "type": "iso-8601"},
         "cpu_normalization_factor": {"key": "CPUNormalizationFactor", "type": "int"},
         "norm_cpu_time_s": {"key": "NormCPUTime(s)", "type": "int"},
@@ -526,6 +530,7 @@ class JobMetaData(_serialization.Model):
     def __init__(  # pylint: disable=too-many-locals
         self,
         *,
+        additional_properties: Optional[Dict[str, Any]] = None,
         timestamp: Optional[datetime.datetime] = None,
         cpu_normalization_factor: Optional[int] = None,
         norm_cpu_time_s: Optional[int] = None,
@@ -564,6 +569,9 @@ class JobMetaData(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
+        :keyword additional_properties: Unmatched properties from the message are deserialized to this
+         collection.
+        :paramtype additional_properties: dict[str, any]
         :keyword timestamp: Timestamp.
         :paramtype timestamp: ~datetime.datetime
         :keyword cpu_normalization_factor: Cpunormalizationfactor.
@@ -636,6 +644,7 @@ class JobMetaData(_serialization.Model):
         :paramtype accounted_flag: ~_generated.models.JobMetaDataAccountedFlag
         """
         super().__init__(**kwargs)
+        self.additional_properties = additional_properties
         self.timestamp = timestamp
         self.cpu_normalization_factor = cpu_normalization_factor
         self.norm_cpu_time_s = norm_cpu_time_s

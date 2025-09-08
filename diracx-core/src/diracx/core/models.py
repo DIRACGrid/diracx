@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
 
@@ -75,8 +75,8 @@ class SearchParams(BaseModel):
     # TODO: Add more validation
 
 
-class JobParameters(BaseModel, extra="forbid"):
-    """All the parameters that can be set for a job."""
+class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
+    """Some of the most important parameters that can be set for a job."""
 
     timestamp: datetime | None = None
     cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
@@ -95,8 +95,25 @@ class JobParameters(BaseModel, extra="forbid"):
     job_type: str | None = Field(None, alias="JobType")
     job_status: str | None = Field(None, alias="JobStatus")
 
+    @field_validator(
+        "cpu_normalization_factor", "norm_cpu_time_s", "total_cpu_time_s", mode="before"
+    )
+    @classmethod
+    def convert_cpu_fields_to_int(cls, v):
+        """Convert string representation of float to integer for CPU-related fields."""
+        if v is None:
+            return v
+        if isinstance(v, str):
+            try:
+                return int(float(v))
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Cannot convert '{v}' to integer") from e
+        if isinstance(v, (int, float)):
+            return int(v)
+        return v
 
-class JobAttributes(BaseModel, extra="forbid"):
+
+class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
     """All the attributes that can be set for a job."""
 
     job_type: str | None = Field(None, alias="JobType")
@@ -121,7 +138,7 @@ class JobAttributes(BaseModel, extra="forbid"):
     accounted_flag: bool | str | None = Field(None, alias="AccountedFlag")
 
 
-class JobMetaData(JobAttributes, JobParameters, extra="forbid"):
+class JobMetaData(JobAttributes, JobParameters, extra="allow"):
     """A model that combines both JobAttributes and JobParameters."""
 
 
