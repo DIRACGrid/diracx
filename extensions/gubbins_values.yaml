@@ -6,6 +6,7 @@ global:
   imagePullPolicy: IfNotPresent
   images:
     services: gubbins/services
+    tag: dev
 
 developer:
   enabled: true
