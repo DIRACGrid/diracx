@@ -120,15 +120,15 @@ async def prefilled_db(request):
 
 
 async def test_specified_parameters(prefilled_db: DummyOSDB):
-    results = await prefilled_db.search(None, [], [])
-    assert len(results) == 3
+    total, results = await prefilled_db.search(None, [], [])
+    assert len(results) == total == 3
     assert DOC1 in results and DOC2 in results and DOC3 in results
 
-    results = await prefilled_db.search([], [], [])
-    assert len(results) == 3
+    total, results = await prefilled_db.search([], [], [])
+    assert len(results) == total == 3
     assert DOC1 in results and DOC2 in results and DOC3 in results
 
-    results = await prefilled_db.search(["IntField"], [], [])
+    total, results = await prefilled_db.search(["IntField"], [], [])
     expected_results = []
     for doc in [DOC1, DOC2, DOC3]:
         expected_doc = {key: doc[key] for key in {"IntField"}}
@@ -136,58 +136,69 @@ async def test_specified_parameters(prefilled_db: DummyOSDB):
         # If it is the all() check below no longer makes sense
         assert expected_doc not in expected_results
         expected_results.append(expected_doc)
-    assert len(results) == len(expected_results)
+    assert len(results) == len(expected_results) == total
     assert all(result in expected_results for result in results)
 
-    results = await prefilled_db.search(["IntField", "UnknownField"], [], [])
+    total, results = await prefilled_db.search(["IntField", "UnknownField"], [], [])
     expected_results = [
         {"IntField": DOC1["IntField"], "UnknownField": DOC1["UnknownField"]},
         {"IntField": DOC2["IntField"], "UnknownField": DOC2["UnknownField"]},
         {"IntField": DOC3["IntField"]},
     ]
-    assert len(results) == len(expected_results)
+    assert len(results) == len(expected_results) == total
     assert all(result in expected_results for result in results)
 
 
 async def test_pagination_asc(prefilled_db: DummyOSDB):
     sort = [{"parameter": "IntField", "direction": "asc"}]
 
-    results = await prefilled_db.search(None, [], sort)
+    total, results = await prefilled_db.search(None, [], sort)
+    assert total == 3
     assert results == [DOC3, DOC2, DOC1]
 
     # Pagination has no effect if a specific page isn't requested
-    results = await prefilled_db.search(None, [], sort, per_page=2)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2)
+    assert total == 3
     assert results == [DOC3, DOC2, DOC1]
 
-    results = await prefilled_db.search(None, [], sort, per_page=2, page=1)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2, page=1)
+    assert total == 3
     assert results == [DOC3, DOC2]
 
-    results = await prefilled_db.search(None, [], sort, per_page=2, page=2)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2, page=2)
+    assert total == 3
     assert results == [DOC1]
 
-    results = await prefilled_db.search(None, [], sort, per_page=2, page=3)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2, page=3)
+    assert total == 3
     assert results == []
 
-    results = await prefilled_db.search(None, [], sort, per_page=1, page=1)
+    total, results = await prefilled_db.search(None, [], sort, per_page=1, page=1)
+    assert total == 3
     assert results == [DOC3]
 
-    results = await prefilled_db.search(None, [], sort, per_page=1, page=2)
+    total, results = await prefilled_db.search(None, [], sort, per_page=1, page=2)
+    assert total == 3
     assert results == [DOC2]
 
-    results = await prefilled_db.search(None, [], sort, per_page=1, page=3)
+    total, results = await prefilled_db.search(None, [], sort, per_page=1, page=3)
+    assert total == 3
     assert results == [DOC1]
 
-    results = await prefilled_db.search(None, [], sort, per_page=1, page=4)
+    total, results = await prefilled_db.search(None, [], sort, per_page=1, page=4)
+    assert total == 3
     assert results == []
 
 
 async def test_pagination_desc(prefilled_db: DummyOSDB):
     sort = [{"parameter": "IntField", "direction": "desc"}]
 
-    results = await prefilled_db.search(None, [], sort, per_page=2, page=1)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2, page=1)
+    assert total == 3  # 3 Because of pagination
     assert results == [DOC1, DOC2]
 
-    results = await prefilled_db.search(None, [], sort, per_page=2, page=2)
+    total, results = await prefilled_db.search(None, [], sort, per_page=2, page=2)
+    assert total == 3  # Still 3 because of pagination
     assert results == [DOC3]
 
 
@@ -195,22 +206,26 @@ async def test_eq_filter_long(prefilled_db: DummyOSDB):
     part = {"parameter": "IntField", "operator": "eq"}
 
     # Search for an ID which doesn't exist
-    results = await prefilled_db.search(None, [part | {"value": "78"}], [])
+    total, results = await prefilled_db.search(None, [part | {"value": "78"}], [])
+    assert total == 0
     assert results == []
 
     # Check the DB contains what we expect when not filtering
-    results = await prefilled_db.search(None, [], [])
-    assert len(results) == 3
+    total, results = await prefilled_db.search(None, [], [])
+    assert total == 3
     assert DOC1 in results
     assert DOC2 in results
     assert DOC3 in results
 
     # Search separately for the two documents which do exist
-    results = await prefilled_db.search(None, [part | {"value": "1234"}], [])
+    total, results = await prefilled_db.search(None, [part | {"value": "1234"}], [])
+    assert total == 1
     assert results == [DOC1]
-    results = await prefilled_db.search(None, [part | {"value": "679"}], [])
+    total, results = await prefilled_db.search(None, [part | {"value": "679"}], [])
+    assert total == 1
     assert results == [DOC2]
-    results = await prefilled_db.search(None, [part | {"value": "42"}], [])
+    total, results = await prefilled_db.search(None, [part | {"value": "42"}], [])
+    assert total == 1
     assert results == [DOC3]
 
 
@@ -218,31 +233,38 @@ async def test_operators_long(prefilled_db: DummyOSDB):
     part = {"parameter": "IntField"}
 
     query = part | {"operator": "neq", "value": "1234"}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC2["IntField"], DOC3["IntField"]}
 
     query = part | {"operator": "in", "values": ["1234", "42"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC3["IntField"]}
 
     query = part | {"operator": "not in", "values": ["1234", "42"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC2["IntField"]}
 
     query = part | {"operator": "lt", "value": "1234"}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC2["IntField"], DOC3["IntField"]}
 
     query = part | {"operator": "lt", "value": "679"}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC3["IntField"]}
 
     query = part | {"operator": "gt", "value": "1234"}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 0
     assert {x["IntField"] for x in results} == set()
 
     query = part | {"operator": "lt", "value": "42"}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 0
     assert {x["IntField"] for x in results} == set()
 
 
@@ -250,11 +272,13 @@ async def test_operators_date(prefilled_db: DummyOSDB):
     part = {"parameter": "DateField"}
 
     query = part | {"operator": "eq", "value": DOC3["DateField"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC3["IntField"]}
 
     query = part | {"operator": "neq", "value": DOC2["DateField"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC3["IntField"]}
 
     doc1_time = DOC1["DateField"].strftime("%Y-%m-%dT%H:%M")
@@ -262,35 +286,43 @@ async def test_operators_date(prefilled_db: DummyOSDB):
     doc3_time = DOC3["DateField"].strftime("%Y-%m-%dT%H:%M")
 
     query = part | {"operator": "in", "values": [doc1_time, doc2_time]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC2["IntField"]}
 
     query = part | {"operator": "not in", "values": [doc1_time, doc2_time]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC3["IntField"]}
 
     query = part | {"operator": "lt", "value": doc1_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC2["IntField"], DOC3["IntField"]}
 
     query = part | {"operator": "lt", "value": doc3_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC2["IntField"]}
 
     query = part | {"operator": "lt", "value": doc2_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 0
     assert {x["IntField"] for x in results} == set()
 
     query = part | {"operator": "gt", "value": doc1_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 0
     assert {x["IntField"] for x in results} == set()
 
     query = part | {"operator": "gt", "value": doc3_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC1["IntField"]}
 
     query = part | {"operator": "gt", "value": doc2_time}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC3["IntField"]}
 
 
@@ -312,11 +344,13 @@ async def test_operators_date_partial_doc1(prefilled_db: DummyOSDB, date_format:
     formatted_date = DOC1["DateField"].strftime(date_format)
 
     query = {"parameter": "DateField", "operator": "eq", "value": formatted_date}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC1["IntField"]}
 
     query = {"parameter": "DateField", "operator": "neq", "value": formatted_date}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC2["IntField"], DOC3["IntField"]}
 
 
@@ -324,11 +358,13 @@ async def test_operators_keyword(prefilled_db: DummyOSDB):
     part = {"parameter": "KeywordField1"}
 
     query = part | {"operator": "eq", "value": DOC1["KeywordField1"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC2["IntField"]}
 
     query = part | {"operator": "neq", "value": DOC1["KeywordField1"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC3["IntField"]}
 
     part = {"parameter": "KeywordField0"}
@@ -337,22 +373,26 @@ async def test_operators_keyword(prefilled_db: DummyOSDB):
         "operator": "in",
         "values": [DOC1["KeywordField0"], DOC3["KeywordField0"]],
     }
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 2
     assert {x["IntField"] for x in results} == {DOC1["IntField"], DOC3["IntField"]}
 
     query = part | {"operator": "in", "values": ["missing"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 0
     assert {x["IntField"] for x in results} == set()
 
     query = part | {
         "operator": "not in",
         "values": [DOC1["KeywordField0"], DOC3["KeywordField0"]],
     }
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 1
     assert {x["IntField"] for x in results} == {DOC2["IntField"]}
 
     query = part | {"operator": "not in", "values": ["missing"]}
-    results = await prefilled_db.search(["IntField"], [query], [])
+    total, results = await prefilled_db.search(["IntField"], [query], [])
+    assert total == 3
     assert {x["IntField"] for x in results} == {
         DOC1["IntField"],
         DOC2["IntField"],
@@ -387,35 +427,41 @@ async def test_unindexed_field(prefilled_db: DummyOSDB):
 
 
 async def test_sort_long(prefilled_db: DummyOSDB):
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "IntField", "direction": "asc"}]
     )
+    assert total == 3
     assert results == [DOC3, DOC2, DOC1]
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "IntField", "direction": "desc"}]
     )
+    assert total == 3
     assert results == [DOC1, DOC2, DOC3]
 
 
 async def test_sort_date(prefilled_db: DummyOSDB):
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "DateField", "direction": "asc"}]
     )
+    assert total == 3
     assert results == [DOC2, DOC3, DOC1]
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "DateField", "direction": "desc"}]
     )
+    assert total == 3
     assert results == [DOC1, DOC3, DOC2]
 
 
 async def test_sort_keyword(prefilled_db: DummyOSDB):
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "KeywordField0", "direction": "asc"}]
     )
+    assert total == 3
     assert results == [DOC1, DOC3, DOC2]
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None, [], [{"parameter": "KeywordField0", "direction": "desc"}]
     )
+    assert total == 3
     assert results == [DOC2, DOC3, DOC1]
 
 
@@ -436,7 +482,7 @@ async def test_sort_unknown(prefilled_db: DummyOSDB):
 
 
 async def test_sort_multiple(prefilled_db: DummyOSDB):
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None,
         [],
         [
@@ -444,9 +490,10 @@ async def test_sort_multiple(prefilled_db: DummyOSDB):
             {"parameter": "IntField", "direction": "asc"},
         ],
     )
+    assert total == 3
     assert results == [DOC2, DOC1, DOC3]
 
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None,
         [],
         [
@@ -454,9 +501,10 @@ async def test_sort_multiple(prefilled_db: DummyOSDB):
             {"parameter": "IntField", "direction": "desc"},
         ],
     )
+    assert total == 3
     assert results == [DOC1, DOC2, DOC3]
 
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None,
         [],
         [
@@ -464,9 +512,10 @@ async def test_sort_multiple(prefilled_db: DummyOSDB):
             {"parameter": "IntField", "direction": "asc"},
         ],
     )
+    assert total == 3
     assert results == [DOC3, DOC2, DOC1]
 
-    results = await prefilled_db.search(
+    total, results = await prefilled_db.search(
         None,
         [],
         [
@@ -474,4 +523,5 @@ async def test_sort_multiple(prefilled_db: DummyOSDB):
             {"parameter": "KeywordField1", "direction": "asc"},
         ],
     )
+    assert total == 3
     assert results == [DOC3, DOC2, DOC1]
