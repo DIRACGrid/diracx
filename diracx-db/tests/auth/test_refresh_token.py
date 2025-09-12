@@ -56,7 +56,6 @@ async def test_get(auth_db: AuthDB):
             refresh_token_details["sub"],
             refresh_token_details["scope"],
         )
-        creation_time = (await auth_db.get_refresh_token(jti))["CreationTime"]
 
     # Enrich the dict with the generated refresh token attributes
     expected_refresh_token = {
@@ -64,7 +63,6 @@ async def test_get(auth_db: AuthDB):
         "Scope": refresh_token_details["scope"],
         "JTI": jti,
         "Status": RefreshTokenStatus.CREATED,
-        "CreationTime": creation_time,
     }
 
     # Get refresh token details

@@ -10,7 +10,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from diracx.db.sql.utils import Column, DateNowColumn, EnumColumn, NullColumn
+from diracx.db.sql.utils import (
+    Column,
+    DateNowColumn,
+    EnumColumn,
+    NullColumn,
+)
 
 USER_CODE_LENGTH = 8
 
@@ -92,7 +97,6 @@ class RefreshTokens(Base):
     status = EnumColumn(
         "Status", RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
     )
-    creation_time = DateNowColumn("CreationTime", index=True)
     scope = Column("Scope", String(1024))
 
     # User attributes bound to the refresh token

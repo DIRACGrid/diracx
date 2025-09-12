@@ -28,6 +28,7 @@ from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
+from diracx.db.sql.utils import uuid7_to_datetime
 from diracx.db.sql.utils.functions import substract_date
 
 from .utils import (
@@ -315,12 +316,11 @@ async def exchange_token(
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
 
-    creation_time = datetime.now(timezone.utc)
     refresh_payload: RefreshTokenPayload | None = None
     if include_refresh_token:
         # Insert the refresh token with user details into the RefreshTokens table
         # User details are needed to regenerate access tokens later
-        jti, creation_time = await insert_refresh_token(
+        refresh_jti = await insert_refresh_token(
             auth_db=auth_db,
             subject=sub,
             scope=scope,
@@ -329,9 +329,12 @@ async def exchange_token(
         # Generate refresh token payload
         if refresh_token_expire_minutes is None:
             refresh_token_expire_minutes = settings.refresh_token_expire_minutes
+        refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
+            minutes=refresh_token_expire_minutes
+        )
         refresh_payload = {
-            "jti": str(jti),
-            "exp": creation_time + timedelta(minutes=refresh_token_expire_minutes),
+            "jti": str(refresh_jti),
+            "exp": refresh_exp,
             # legacy_exchange is used to indicate that the original refresh token
             # was obtained from the legacy_exchange endpoint
             "legacy_exchange": legacy_exchange,
@@ -341,15 +344,19 @@ async def exchange_token(
     # Generate access token payload
     # For now, the access token is only used to access DIRAC services,
     # therefore, the audience is not set and checked
+    access_jti = uuid7()
+    access_exp = uuid7_to_datetime(access_jti) + timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
     access_payload: AccessTokenPayload = {
         "sub": sub,
         "vo": vo,
         "iss": settings.token_issuer,
         "dirac_properties": list(properties),
-        "jti": str(uuid7()),
+        "jti": str(access_jti),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
-        "exp": creation_time + timedelta(minutes=settings.access_token_expire_minutes),
+        "exp": access_exp,
         "dirac_policies": {},
     }
 
@@ -382,8 +389,8 @@ async def insert_refresh_token(
     auth_db: AuthDB,
     subject: str,
     scope: str,
-) -> tuple[UUID, datetime]:
-    """Insert a refresh token into the database and return the JWT ID and creation time."""
+) -> UUID:
+    """Insert a refresh token into the database and return the JWT ID."""
     # Generate a JWT ID
     jti = uuid7()
 
@@ -393,10 +400,7 @@ async def insert_refresh_token(
         subject=subject,
         scope=scope,
     )
-
-    # Get the creation time of the refresh token
-    refresh_token = await auth_db.get_refresh_token(jti)
-    return jti, refresh_token["CreationTime"]
+    return jti
 
 
 async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):

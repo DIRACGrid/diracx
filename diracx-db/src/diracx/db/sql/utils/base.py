@@ -7,13 +7,15 @@ import re
 from abc import ABCMeta
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Self, cast
+from uuid import UUID as StdUUID  # noqa: N811
 
 from pydantic import TypeAdapter
 from sqlalchemy import DateTime, MetaData, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import select_from_extension
@@ -416,3 +418,33 @@ def apply_sort_constraints(column_mapping, stmt, sorts):
     if sort_columns:
         stmt = stmt.order_by(*sort_columns)
     return stmt
+
+
+def uuid7_to_datetime(uuid: UUID | StdUUID | str) -> datetime:
+    """Convert a UUIDv7 to a datetime."""
+    if isinstance(uuid, StdUUID):
+        # Convert stdlib UUID to uuid_utils.UUID
+        uuid = UUID(str(uuid))
+    elif not isinstance(uuid, UUID):
+        # Convert string or other types to uuid_utils.UUID
+        uuid = UUID(uuid)
+    if uuid.version != 7:
+        raise ValueError(f"UUID {uuid} is not a UUIDv7")
+    return datetime.fromtimestamp(uuid.timestamp / 1000.0, tz=timezone.utc)
+
+
+def uuid7_from_datetime(dt: datetime, *, randomize: bool = True) -> UUID:
+    """Generate a UUIDv7 corresponding to the given datetime.
+
+    If randomize is True, the standard uuid7 function is used resulting in the
+    lowest 62-bits being random. If randomize is False, the UUIDv7 will be the
+    lowest possible UUIDv7 for the given datetime.
+    """
+    timestamp = dt.timestamp()
+    if randomize:
+        uuid = uuid7(int(timestamp), int((timestamp % 1) * 1e9))
+    else:
+        time_high = int(timestamp * 1000) >> 16
+        time_low = int(timestamp * 1000) & 0xFFFF
+        uuid = UUID.from_fields((time_high, time_low, 0x7000, 0x80, 0, 0))
+    return uuid
