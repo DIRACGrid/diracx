@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 
 from uuid_utils import uuid7
@@ -11,6 +11,7 @@ from diracx.core.models import AccessTokenPayload, TokenResponse
 from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import AuthSettings
 from diracx.core.utils import write_credentials
+from diracx.db.sql.utils import uuid7_to_datetime
 from diracx.logic.auth.token import create_token
 
 
@@ -30,18 +31,19 @@ def main(token_keystore: str):
     preferred_username = "localuser"
     dirac_properties = [str(NORMAL_USER)]
     settings = AuthSettings(token_keystore=token_keystore)
-    creation_time = datetime.now(tz=timezone.utc)
     expires_in = 7 * 24 * 60 * 60
+    jti = uuid7()
+    expires_at = uuid7_to_datetime(jti) + timedelta(seconds=expires_in)
 
     access_payload: AccessTokenPayload = {
         "sub": f"{vo}:{sub}",
         "vo": vo,
         "iss": settings.token_issuer,
         "dirac_properties": dirac_properties,
-        "jti": str(uuid7()),
+        "jti": str(jti),
         "preferred_username": preferred_username,
         "dirac_group": dirac_group,
-        "exp": creation_time + timedelta(seconds=expires_in),
+        "exp": expires_at,
         "dirac_policies": {},
     }
     token = TokenResponse(
