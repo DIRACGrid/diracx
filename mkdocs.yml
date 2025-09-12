@@ -78,12 +78,12 @@ nav:
     - admin/index.md
     - Tutorials:
       - admin/tutorials/index.md
-      - Run locally: admin/tutorials/run_locally.md
       - Authentication: admin/tutorials/authentication.md
     - How-To:
       - admin/how-to/index.md
       - Installation:
         - admin/how-to/install/index.md
+        - Minimal requirements: admin/how-to/install/minimal-requirements.md
         - Installing kubernetes: admin/how-to/install/install-kubernetes.md
         - Convert CS: admin/how-to/install/convert-cs.md
         - Installing DiracX: admin/how-to/install/installing.md
@@ -106,10 +106,10 @@ nav:
       - admin/reference/index.md
       - Security Model: admin/reference/security_model.md
       - Settings and Preferences: admin/reference/settings-and-preferences.md
+      - Environment variables: admin/reference/env_variables.md
       - Charts values: admin/reference/values.md
       - REFERENCE.md
       - RUN_PROD.md
-      - SECURITY.md
       - SSO.md
 
   - Developer Guide:
@@ -135,11 +135,9 @@ nav:
         - New CLI command: dev/how-to/add-a-cli-command.md
         - New settings: dev/how-to/add-a-setting.md
         - Add a test: dev/how-to/add-a-test.md
-      - Extend DiracX:
-        - dev/how-to/extend-diracx/index.md
       - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
       - Use the demo:
-        - dev/how-to/use-the-demo/index.md
+        - dev/how-to/run-demo.md
         - Accessing the client: dev/how-to/use-the-demo/swagger.md
         - Use swagger: dev/how-to/use-the-demo/swagger.md
         - Accessing DiracX Web: dev/how-to/use-the-demo/web.md

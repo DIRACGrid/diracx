@@ -2,6 +2,7 @@
 
 These pages provide detailed instructions and best practices to have a running `DiracX` instance. If you start from nothing, they should be followed in order.
 
+- [Minimal Requirements](minimal-requirements.md): minimal requirements for running `DiracX`
 - [Install Kubernetes](install-kubernetes.md): how to install a minimal cluster.
 - [Convert CS](convert-cs.md): how to generate the `DiracX` configuration from your `DIRAC` CS.
 - [Installing](installing.md): how to install `DiracX`, that will do nothing to start with.
