@@ -7,7 +7,7 @@
 
 ## Manage Users
 
-### 1. Generate an OIDC client
+### Generate an OIDC client
 
 1. Log in to your VO’s IdP instance.
 2. Create a new OIDC client with:
@@ -20,7 +20,7 @@
     - **Grant type**: `authorization_code`
     - **Scope**: at minimum `openid`, `profile` and `email`
 
-### 1. Configure DiracX
+### Configure DiracX
 
 1. In your DIRAC CS, add under `DiracX > CsSync > VOs > <VO> > IdP`:
 
@@ -78,8 +78,10 @@
 
         The `DIRAC VOMS2CSAgent` can populate this list for you from an `IAM` server. For that you need to enable the `UseIAM` flag to True.
 
-After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
-See the previous step [Convert CS](./convert-cs.md) for a refresher.
+    After saving, you should sync the configuration with DiracX. Dirac Groups and properties should then be associated to users defined in the `DiracX` section.
+    See the previous step [Convert CS](./convert-cs.md) for a refresher.
+
+3. Remove the VO from the `DiracX > DisabledVOs` list
 
 ## Interact with Computing Elements
 
