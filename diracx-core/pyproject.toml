@@ -23,7 +23,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "sh",
-    "diraccommon >=9.0.0a67",
+    "diraccommon >=9.0.0",
 ]
 dynamic = ["version"]
 
