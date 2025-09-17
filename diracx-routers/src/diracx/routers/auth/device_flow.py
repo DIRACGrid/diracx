@@ -1,55 +1,6 @@
 """Device flow.
 
-Client Device                      DIRAC Auth Service                  IAM (Identity Access Management)
--------------                      ------------------                  --------------------------------
-     |                                     |                                         |
-     |---(A)--- Device Authorization ----->|                                         |
-     |                                     |                                         |
-     |<--(B)--- User Code, Device Code ----|                                         |
-     |                                     |                                         |
-User |                                     |                                         |
------|-------------------------------------|-----------------------------------------|
-     |                                     |                                         |
-     |   (C) Enter User Code in Browser    |                                         |
-     |------------------------------------>|                                         |
-     |                                     |---(D)--- Authorization Request -------->|
-     |                                     |                                         |
-     |                                     |<--(E)--- Authorization Grant -----------|
-     |                                     |                                         |
-     |                                     |---(F)--- ID Token Request ------------->|
-     |                                     |                                         |
-     |                                     |<--(G)--- ID Token ----------------------|
-     |                                     |                                         |
-     |<--(H)--- Device Grant --------------|                                         |
-     |                                     |                                         |
------|-------------------------------------|-----------------------------------------|
-     |                                     |                                         |
-     |---(I)--- Access Token Request ----->|                                         |
-     |                                     |                                         |
-     |<--(J)--- Access Token --------------|                                         |
-     |                                     |                                         |
-
-
-* (A) The device flow is initiated by the client, which is typically a device with
-limited input capabilities (POST /device).
-* (B) The DIRAC auth service responds with a user code and a device code.
-* The client then displays the user code to the user and instructs the user to go to
-a verification URI on another device
-(e.g. a smartphone or computer) and enter the user code.
-* (C) The user then authenticates on the other device (GET /device).
-In the meantime, the client polls the DIRAC authorization server to check if the user has authorized the client.
-* (D) The DIRAC auth service stores the request details and redirects the user to the IAM's authorization flow
-by performing an authorization request on behalf of the user.
-* (E) Once done, the IAM redirects the user back to the DIRAC auth service (GET /device/complete).
-* (F) The DIRAC auth service exchanges the code for an ID token by making a
-token request to the IAM.
-* (G) The IAM responds with an access, a refresh and an ID tokens.
-* (H) The DIRAC auth service stores the ID token and redirects the user to
-the redirect URI (GET /device/complete/finished).
-* (I) The client requests an access token from the DIRAC auth service by making a request to
-the token endpoint (POST /token).
-* (J) The DIRAC auth service responds with a DIRAC access token, based on the ID token.
-* The client can then use the access token to access the DIRAC services.
+See docs/admin/explanations/authentication.md
 """
 
 from __future__ import annotations

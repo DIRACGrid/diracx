@@ -95,7 +95,8 @@ nav:
       - Rotate a secret: admin/how-to/rotate-a-secret.md
     - Explanations:
       - admin/explanations/index.md
-      - Authentication: admin/explanations/authentication.md
+      - Auth in DiracX: admin/explanations/auth-with-diracx.md
+      - Auth with external services: admin/explanations/auth-with-external.md
       - User Management: admin/explanations/user-management.md
       - Configuration: admin/explanations/configuration.md
       - OpenTelemetry: admin/explanations/opentelemetry.md
@@ -108,7 +109,6 @@ nav:
       - Settings and Preferences: admin/reference/settings-and-preferences.md
       - Environment variables: admin/reference/env_variables.md
       - Charts values: admin/reference/values.md
-      - REFERENCE.md
       - RUN_PROD.md
       - SSO.md
 

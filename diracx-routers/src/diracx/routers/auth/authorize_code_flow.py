@@ -1,35 +1,6 @@
 """Authorization code flow.
 
-Client Application                   DIRAC Auth Service                IAM (Identity Access Management)
-------------------                   ------------------                --------------------------------
-       |                                     |                                         |
-       |---(A)--- Authorization Request ---->|                                         |
-       |                                     |---(B)--- Authorization Request -------->|
-       |                                     |                                         |
-       |                                     |<--(C)--- Authorization Grant -----------|
-       |                                     |                                         |
-       |                                     |---(D)--- ID Token Request ------------->|
-       |                                     |                                         |
-       |                                     |<--(E)--- ID Token ----------------------|
-       |<--(F)--- Authorization Grant -------|                                         |
-       |                                     |                                         |
-       |---(G)--- Access Token Request ----->|                                         |
-       |                                     |                                         |
-       |<--(H)--- Access Token --------------|                                         |
-       |                                     |                                         |
-
-
-* (A) The flow is initiated by the client making a request to the DIRAC auth service (GET /authorize) with PKCE.
-* (B) The DIRAC auth service stores the request details and redirects the user to the IAM's authorization flow
-by performing an authorization request on behalf of the user.
-* (C) Once done, the IAM redirects the user back to the DIRAC auth service (GET /authorize/complete).
-* (D) The DIRAC auth service exchanges the code for an ID token by making a token request to the IAM.
-* (E) The IAM responds with an access, a refresh and an ID tokens.
-* (F) The DIRAC auth service only stores the ID token and redirects the user to the client's redirect URI.
-* (G) The client requests an access token from the DIRAC auth service by making a request to
-the token endpoint (POST /token).
-* (H) The DIRAC auth service responds with a DIRAC access token, based on the ID token.
-* The client can then use the access token to access the DIRAC services.
+See docs/admin/explanations/authentication.md
 """
 
 from __future__ import annotations
