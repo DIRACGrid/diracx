@@ -2,8 +2,11 @@
 
 DiracX supports the concept of extensions to modify and extend its functionality to meet community specific needs.
 This is typically done by larger installations that serve a single virtual organization and for whom community specific workflows are well established.
-While DiracX extensions are a powerful and flexible tool, they also require ongoing maintenance to follow upstream DiracX changes.
-Before embarking on this journey, consider contributing to DiracX itself and avoiding all of the long term maintenance costs.
+
+??? note "Extensions require maintenance !"
+
+    While DiracX extensions are a powerful and flexible tool, they also require ongoing maintenance to follow upstream DiracX changes.
+    Before embarking on this journey, consider contributing to DiracX itself and avoiding all of the long term maintenance costs.
 
 ## Do you need an extension?
 
@@ -11,7 +14,7 @@ Before going any further you should consider if you even need a DiracX extension
 Creating a standard python package which uses the [DiracX Python API](../../user/reference/programmatic-usage/python-interface.md) might be a better choice as this will be more stable over time and leave you with more flexibility in how you implement your code.
 For example, if you wish to create a job submission framework that lets people submit specialized jobs, monitor their status and then download data you're likely best off not making a DiracX extension.
 
-Alternatively, you should make an extension if you want to, for example, to:
+Alternatively, you should make an extension if you want for example to:
 
 - Add a custom metadata and provenance catalog with deep integration into the transformation system based on the specific workflows of your community.
 - Interact directly with the DiracX databases for automating installation specific operational tasks.
@@ -41,8 +44,10 @@ It should also serve as a reference doc on how to write your own extension. Ever
 If you write your own extension, just replace `gubbins` with whatever name you chose (e.g. `lhcbdiracx`, `belle2diracx`, `donotforgetgriddpp`).
 The structure of the repo, the content of the `pyproject.toml` files, the `__init__.py` of the modules are all skeletons that you must reproduce.
 It is not required to reproduce all submodules (e.g. you can have `myextension-cli` without having any other components).
-**Any use cases not included in `gubbins` are not supported.**
-If you think you need additional functionality please open an issue to discuss so it can be added here to assist with long term stability.
+
+!!! danger "Any use cases not included in `gubbins` are not supported."
+
+    If you think you need additional functionality please open an issue to discuss so it can be added here to assist with long term stability.
 
 Most functionality is managed via entrypoints in the various `pyproject.toml` files.
 The only essential one to have is:
@@ -205,3 +210,7 @@ The gubbins properties module illustrates how to do it
 `diracx-testing` package contains a lot of useful tools for testing `diracx` and its extensions.
 
 Note that even if you have your own `testing` package depending on `diracx-testing`, you should specify it when calling `pytest` (see various `pyprojects.toml`)
+
+## `Dockerfile`
+
+`extensions/containers/services/Dockerfile` contains an example of `Dockerfile` for extensions.

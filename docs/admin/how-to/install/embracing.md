@@ -1,29 +1,15 @@
-# Use DiracX functionalities
+# Embracing DiracX
 
-DiracX functionalities can be enabled at your pace.
+Once DiracX is installed and all the VOs are enabled, you can start embracing DiracX.
 
-## Enable the VO
+!!! danger "Configure all VOs before using DiracX"
 
-With "enabling a VO" we mean that a Virtual Organization enjoys DiracX functionalities.
-By default, every VO managed within a DIRAC (v9+) installation is enabled.
-If, for whatever reason (e.g. the IdP for a certain VO is not setup),
-such VO can be disabled by adding it in the following list (which is empty by default).
-
-```
-DiracX
-{
-    DisabledVOs =
-}
-```
-
--> gives you token
-
-ToDO
+    You cannot enable any diracx service before all of your DIRAC VOs are configured in diracx. Failure to do this will result in non configured VOs being broken in DIRAC in non obvious ways which are difficult to recover from.
 
 ## Enable the S3 sandbox store
 
-With DiracX the Sandboxes can be stored in an S3-compatible sandbox store.
-This functionality will be activated for all the enabled VOs by adding the following option in the CS:
+With DiracX sandboxes are stored on S3-compatible storage.
+This functionality is activated for all VOs by adding the following option in the CS:
 
 ```
 Systems
@@ -38,16 +24,17 @@ Systems
 }
 ```
 
-When this option is activated, DIRAC will forward to DiracX the upload/download of sandboxes.
-DiracX will find the correct settings in the `DIRACX_SANDBOX_STORE_*` [environment variables](../../reference/env_variables.md).
+When this option is activated, DIRAC will forward uploads to DiracX.
+Downloading sandboxes which are in DiracX is always possible regardless of this setting.
+The DiracX sandbox store is configured via the environment variables in the helm chart. See the [environment variable docs](../../reference/env_variables.md) for details.
 
-!!! warning
+??? note "DIRAC sandbox compatibility in DiracX"
 
-    The `DIRAC` clients still interact with the DIRAC services to proxy the sandbox files to S3. New writes only go to S3, and read can be done from both. Eventually, given the periodic cleanup of sandboxes, all the files will be on S3 only.
+    The `DIRAC` clients still interact with the DIRAC services to proxy the sandbox files to S3. New writes only go to S3, and read can be done from both. Eventually, given the periodic cleanup of sandboxes, all the files will be on S3 only. It is not possible to download sandboxes from the DIRAC sandbox store using a DiracX client.
 
 ## Enable a DiracX service
 
-Once all VOs have been enabled, DiracX can start replacing DIRAC services. In order to do so, "legacy adaptors" have been developed. Activating them is a manual operation in the CS.
+Once all VOs have been enabled, DiracX can start replacing DIRAC services. In order to do so, "legacy adaptors" have been developed. Activating them is a manual per-service operation in the CS.
 
 The following sequence of images explain the process:
 
@@ -73,7 +60,7 @@ flowchart TB
 
 ```
 
-*Legacy Adaptors* are coded to move the traffic from DIRAC clients to DiracX services.
+*Legacy Adaptors* intercept requests in the DIRAC client and redirect the traffic to DiracX services. If necessary, they also transmute the response to match the format that would have been returned by a DIRAC service.
 
 ```mermaid
 flowchart TB
@@ -119,17 +106,16 @@ flowchart TB
 
 ```
 
-Legacy adaptors will eventually be created for each of the DIRAC services.
-In order to activate one, it is enough to add the following CS option:
+Over time as more Legacy Adaptors are developed, you can enable them with the following CS option:
 
 ```
 DiracX
 {
     LegacyClientEnabled
     {
-        DIRAC_System
+        <System>
         {
-            DIRAC_ServiceName = True
+            <ServiceName> = True
         }
     }
 }
@@ -137,6 +123,6 @@ DiracX
 
 The following table summarizes the DIRAC services for which a Legacy Adaptor is available (tested and certified), per DiracX release:
 
-| DiracX release | DIRAC_System       | DIRAC_ServiceName |
-| -------------- | ------------------ | ----------------- |
-| v0.1.0         | WorkloadManagement | JobStateUpdate    |
+| DiracX release | System             | ServiceName    |
+| -------------- | ------------------ | -------------- |
+| v0.0.1         | WorkloadManagement | JobStateUpdate |

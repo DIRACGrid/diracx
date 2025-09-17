@@ -2,13 +2,7 @@
 
 ## Core
 
-- `DIRACX_URL`: The URL of the DiracX server.
-- `DIRACX_CA_PATH`: The path to the CA certificate bundle.
-- `DIRACX_OUTPUT_FORMAT`: The output format for the CLI (RICH or JSON).
-- `DIRACX_LOG_LEVEL`: The log level for the CLI (ERROR, WARNING, INFO, or DEBUG).
-- `DIRACX_CREDENTIALS_PATH`: The path to the credentials file.
 - `DIRACX_CONFIG_BACKEND_URL`: The URL of the configuration backend.
-- `DIRAC_COMPAT_ENABLE_CS_CONVERSION`: Enable the conversion of the old CS to the new YAML format.
 
 ## Services:
 
@@ -35,10 +29,6 @@
 
 - `DIRACX_DB_URL_<db_name>`: The URL for the SQL database `<db_name>`.
 - `DIRACX_OS_DB_<db_name>`: A JSON-encoded dictionary of connection keyword arguments for the OpenSearch database `<db_name>`
-
-## Development:
-
-- `DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY`: If set to true, the server will crash if an access policy is not called.
 
 ## OTEL:
 

@@ -135,9 +135,11 @@ nav:
         - New CLI command: dev/how-to/add-a-cli-command.md
         - New settings: dev/how-to/add-a-setting.md
         - Add a test: dev/how-to/add-a-test.md
+      - Extend DiracX:
+        - dev/how-to/extend-diracx/index.md
       - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
       - Use the demo:
-        - dev/how-to/run-demo.md
+        - dev/how-to/use-the-demo/index.md
         - Accessing the client: dev/how-to/use-the-demo/swagger.md
         - Use swagger: dev/how-to/use-the-demo/swagger.md
         - Accessing DiracX Web: dev/how-to/use-the-demo/web.md
@@ -160,7 +162,7 @@ nav:
         - CLI: dev/explanations/components/cli.md
         - Databases: dev/explanations/components/db.md
         - Routes: dev/explanations/components/routes.md
-      - Client: dev/explanations/client.md
+        - Client: dev/explanations/components/client.md
       - Testing: dev/explanations/testing.md
       - Run demo: dev/explanations/run_demo.md
       - Extensions: dev/explanations/extensions.md
@@ -207,6 +209,7 @@ markdown_extensions:
   - tables
 
 plugins:
+  - privacy
   - diracx:
       repos:
         - url: https://github.com/DIRACGrid/diracx-charts
