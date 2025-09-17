@@ -147,20 +147,29 @@ class JobDescriptionConfig(BaseModel):
     AllowedJobTypes: list[str] = ["User", "Test", "Hospital"]
 
 
+class InputDataPolicyProtocolsConfig(BaseModel):
+    Remote: list[str] = []
+    Local: list[str] = []
+
+
 class InputDataPolicyConfig(BaseModel):
-    InputDataModule: str = "LocalInputData"
+    # TODO: Remove this once the model is extended to support everything
+    model_config = ConfigDict(extra="ignore", frozen=True)
 
-
-class ExternalsPolicyConfig(BaseModel):
-    SoftwareDistModule: str = "LocalSoftwareDist"
+    Default: str = "Default = DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol"
+    Download: str = "DIRAC.WorkloadManagementSystem.Client.DownloadInputData"
+    Protocol: str = "DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol"
+    AllReplicas: bool = True
+    Protocols: InputDataPolicyProtocolsConfig = InputDataPolicyProtocolsConfig()
+    InputDataModule: str = "DIRAC.Core.Utilities.InputDataResolution"
 
 
 class OperationsConfig(BaseModel):
     EnableSecurityLogging: bool = False
-    ExternalsPolicy: ExternalsPolicyConfig = ExternalsPolicyConfig()
     InputDataPolicy: InputDataPolicyConfig = InputDataPolicyConfig()
     JobDescription: JobDescriptionConfig = JobDescriptionConfig()
     Services: ServicesConfig = ServicesConfig()
+    SoftwareDistModule: str = "LocalSoftwareDist"
 
     Cloud: MutableMapping[str, Any] | None = None
     DataConsistency: MutableMapping[str, Any] | None = None
