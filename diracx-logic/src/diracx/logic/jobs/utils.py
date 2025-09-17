@@ -39,7 +39,7 @@ def make_check_and_prepare_job_config(config: Config, vo: str):
     ops = config.Operations[vo]
     return {
         "inputDataPolicyForVO": ops.InputDataPolicy.InputDataModule,
-        "softwareDistModuleForVO": ops.ExternalsPolicy.SoftwareDistModule,
+        "softwareDistModuleForVO": ops.SoftwareDistModule,
         "defaultCPUTimeForOwnerGroup": ops.JobDescription.DefaultCPUTime,
         "getDIRACPlatform": partial(find_compatible_platforms, config=config),
     }
