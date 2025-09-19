@@ -7,9 +7,9 @@ to get information about the user's identity.
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Form, HTTPException, status
 from joserfc.errors import DecodeError
 from typing_extensions import TypedDict
 from uuid_utils import UUID
@@ -66,8 +66,12 @@ async def get_refresh_tokens(
 async def revoke_refresh_token_by_refresh_token(
     auth_db: AuthDB,
     settings: AuthSettings,
-    refresh_token: str,
-    client_id: str,
+    token: Annotated[str, Form()],
+    # Unused but necessary parameter: https://datatracker.ietf.org/doc/html/rfc7009#section-2.1
+    token_type_hint: Annotated[
+        Literal["access_token", "refresh_token"], Form()
+    ] = "refresh_token",  # noqa: S107
+    client_id: Annotated[str, Form()] = "myDIRACClientID",
 ) -> str:
     """Revoke a refresh token."""
     # Test the client_id
@@ -77,9 +81,7 @@ async def revoke_refresh_token_by_refresh_token(
         )
 
     try:
-        await revoke_refresh_token_by_refresh_token_bl(
-            auth_db, None, refresh_token, settings
-        )
+        await revoke_refresh_token_by_refresh_token_bl(auth_db, None, token, settings)
     except DecodeError:
         logger.warning("Someone tried to revoke its token but failed.")
 
