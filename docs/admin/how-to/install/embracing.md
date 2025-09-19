@@ -26,7 +26,7 @@ Systems
 
 When this option is activated, DIRAC will forward uploads to DiracX.
 Downloading sandboxes which are in DiracX is always possible regardless of this setting.
-The DiracX sandbox store is configured via the environment variables in the helm chart. See the [environment variable docs](../../reference/env_variables.md) for details.
+The DiracX sandbox store is configured via the environment variables in the helm chart. See the [environment variable docs](../../reference/env-variables.md) for details.
 
 ??? note "DIRAC sandbox compatibility in DiracX"
 

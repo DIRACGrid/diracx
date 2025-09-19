@@ -38,7 +38,7 @@ The client is generated using [AutoRest](https://github.com/Azure/autorest){targ
 
 The CI/CD pipeline handles client regeneration upon each push to the `main` branch. This process helps detect breaking changes in the developer's code, causing the CI/CD to fail if such changes are present.
 
-If a breaking change is acknowledged and approved, one of the repo admin will regenerate the client on behalf of the developer. Developers can still manually regenerate the client but it requires a few additional tools. To see how to generate a client consult the [how-to](../how-to/client-generation.md).
+If a breaking change is acknowledged and approved, one of the repo admin will regenerate the client on behalf of the developer. Developers can still manually regenerate the client but it requires a few additional tools. To see how to generate a client consult the [how-to](../../how-to/client-generation.md).
 
 ### Structure of the Generated Client
 
@@ -52,7 +52,7 @@ The generated client consists of several key components:
 
 Further details can be found in the [Python Autorest documentation](https://github.com/Azure/autorest.python/blob/main/docs/client/readme.md){target="\_blank"}.
 
-To customize a client, see [how-to](../how-to/client-customization.md)
+To customize a client, see [how-to](../../how-to/client-customization.md)
 
 ### Configuring the Generated Client
 
