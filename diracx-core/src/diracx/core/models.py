@@ -247,6 +247,13 @@ class SandboxUploadResponse(BaseModel):
     fields: dict[str, str] = {}
 
 
+class TokenTypeHint(StrEnum):
+    """Token type hints for RFC7009 revocation endpoint."""
+
+    access_token = "access_token"  # noqa: S105
+    refresh_token = "refresh_token"  # noqa: S105
+
+
 class GrantType(StrEnum):
     """Grant types for OAuth2."""
 

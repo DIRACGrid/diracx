@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from uuid_utils import UUID
 
+from diracx.core.exceptions import InvalidCredentialsError
+from diracx.core.models import TokenTypeHint
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
 from diracx.logic.auth.utils import verify_dirac_refresh_token
@@ -35,9 +37,22 @@ async def revoke_refresh_token_by_jti(
 
 
 async def revoke_refresh_token_by_refresh_token(
-    auth_db: AuthDB, subject: str | None, refresh_token: str, settings: AuthSettings
+    auth_db: AuthDB,
+    subject: str | None,
+    token: str,
+    token_type_hint: str | None,
+    client_id: str,
+    settings: AuthSettings,
 ) -> str:
-    """Revoke a refresh token. If a subject is provided, then the refresh token must be owned by that subject."""
-    jti, _, _ = await verify_dirac_refresh_token(refresh_token, settings)
+    """Revoke a refresh token following RFC7009."""
+    # Test the token type hint
+    if token_type_hint and token_type_hint == TokenTypeHint.access_token:
+        raise ValueError("unsupported_token_type")
 
+    # Test the client_id
+    if settings.dirac_client_id != client_id:
+        raise InvalidCredentialsError("Unrecognised client_id")
+
+    # Decode and verify the refresh token
+    jti, _, _ = await verify_dirac_refresh_token(token, settings)
     return await revoke_refresh_token_by_jti(auth_db=auth_db, subject=subject, jti=jti)
