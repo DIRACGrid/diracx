@@ -54,7 +54,7 @@ async def get_installation_metadata(
     return await get_installation_metadata_bl(config)
 
 
-@router.get("/.well-known/security.txt")
+@router.get("/security.txt")
 async def get_security_txt() -> str:
     """Get the security.txt file."""
     return """Contact: https://github.com/DIRACGrid/diracx/security/advisories/new
