@@ -25,6 +25,10 @@ async def test_dirac_metadata_is_overwriten(test_client):
     )
     assert r.status_code == 200, r.json()
     assert "gubbins_secrets" in r.json(), r.json()
+    assert "versions" in r.json(), r.json()
+
+    assert "gubbins-core" in r.json()["versions"]
+    assert "gubbins-routers" in r.json()["versions"]
 
 
 async def test_openid_configuration_is_not_changed(test_client):

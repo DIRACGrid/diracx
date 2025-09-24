@@ -326,6 +326,7 @@ class VOInfo(TypedDict):
 
 class Metadata(TypedDict):
     virtual_organizations: dict[str, VOInfo]
+    versions: dict[str, str]
 
 
 class HeartbeatData(BaseModel, extra="forbid"):

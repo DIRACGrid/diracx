@@ -22,6 +22,7 @@ async def get_installation_metadata(
     gubbins_metadata = ExtendedMetadata(
         gubbins_secrets="hush!",
         virtual_organizations=original_metadata["virtual_organizations"],
+        versions=original_metadata["versions"],
         gubbins_user_info=gubbins_user_info,
     )
 

@@ -743,23 +743,32 @@ class Metadata(_serialization.Model):
 
     :ivar virtual_organizations: Virtual Organizations. Required.
     :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+    :ivar versions: Versions. Required.
+    :vartype versions: dict[str, str]
     """
 
     _validation = {
         "virtual_organizations": {"required": True},
+        "versions": {"required": True},
     }
 
     _attribute_map = {
         "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+        "versions": {"key": "versions", "type": "{str}"},
     }
 
-    def __init__(self, *, virtual_organizations: Dict[str, "_models.VOInfo"], **kwargs: Any) -> None:
+    def __init__(
+        self, *, virtual_organizations: Dict[str, "_models.VOInfo"], versions: Dict[str, str], **kwargs: Any
+    ) -> None:
         """
         :keyword virtual_organizations: Virtual Organizations. Required.
         :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+        :keyword versions: Versions. Required.
+        :paramtype versions: dict[str, str]
         """
         super().__init__(**kwargs)
         self.virtual_organizations = virtual_organizations
+        self.versions = versions
 
 
 class OpenIDConfiguration(_serialization.Model):

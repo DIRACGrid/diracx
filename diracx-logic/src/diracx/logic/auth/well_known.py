@@ -1,8 +1,27 @@
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
+
+import pkg_resources
+
 from diracx.core.config.schema import Config
+from diracx.core.extensions import extensions_by_priority
 from diracx.core.models import GroupInfo, Metadata, OpenIDConfiguration
 from diracx.core.settings import AuthSettings
+
+
+def get_package_version(extension_name: str) -> dict[str, str]:
+    """Get package versions for a given diracx extension."""
+    installed_packages = pkg_resources.working_set
+    matching_packages = {}
+    for package in installed_packages:
+        if package.project_name.startswith(f"{extension_name}-"):
+            matching_packages[package.project_name] = package.version
+
+    if not matching_packages:
+        raise PackageNotFoundError(f"Packages {extension_name}-* not found")
+
+    return matching_packages
 
 
 async def get_openid_configuration(
@@ -55,6 +74,7 @@ async def get_installation_metadata(
     """Get metadata about the dirac installation."""
     metadata: Metadata = {
         "virtual_organizations": {},
+        "versions": {},
     }
     for vo, vo_info in config.Registry.items():
         groups: dict[str, GroupInfo] = {
@@ -70,5 +90,7 @@ async def get_installation_metadata(
             },
             "default_group": vo_info.DefaultGroup,
         }
+    for module in extensions_by_priority():
+        metadata["versions"].update(get_package_version(module))
 
     return metadata

@@ -153,6 +153,8 @@ class ExtendedMetadata(_serialization.Model):
 
     :ivar virtual_organizations: Virtual Organizations. Required.
     :vartype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+    :ivar versions: Versions. Required.
+    :vartype versions: dict[str, str]
     :ivar gubbins_secrets: Gubbins Secrets. Required.
     :vartype gubbins_secrets: str
     :ivar gubbins_user_info: Gubbins User Info. Required.
@@ -161,12 +163,14 @@ class ExtendedMetadata(_serialization.Model):
 
     _validation = {
         "virtual_organizations": {"required": True},
+        "versions": {"required": True},
         "gubbins_secrets": {"required": True},
         "gubbins_user_info": {"required": True},
     }
 
     _attribute_map = {
         "virtual_organizations": {"key": "virtual_organizations", "type": "{VOInfo}"},
+        "versions": {"key": "versions", "type": "{str}"},
         "gubbins_secrets": {"key": "gubbins_secrets", "type": "str"},
         "gubbins_user_info": {"key": "gubbins_user_info", "type": "{[str]}"},
     }
@@ -175,6 +179,7 @@ class ExtendedMetadata(_serialization.Model):
         self,
         *,
         virtual_organizations: Dict[str, "_models.VOInfo"],
+        versions: Dict[str, str],
         gubbins_secrets: str,
         gubbins_user_info: Dict[str, List[str]],
         **kwargs: Any
@@ -182,6 +187,8 @@ class ExtendedMetadata(_serialization.Model):
         """
         :keyword virtual_organizations: Virtual Organizations. Required.
         :paramtype virtual_organizations: dict[str, ~_generated.models.VOInfo]
+        :keyword versions: Versions. Required.
+        :paramtype versions: dict[str, str]
         :keyword gubbins_secrets: Gubbins Secrets. Required.
         :paramtype gubbins_secrets: str
         :keyword gubbins_user_info: Gubbins User Info. Required.
@@ -189,6 +196,7 @@ class ExtendedMetadata(_serialization.Model):
         """
         super().__init__(**kwargs)
         self.virtual_organizations = virtual_organizations
+        self.versions = versions
         self.gubbins_secrets = gubbins_secrets
         self.gubbins_user_info = gubbins_user_info
 

@@ -39,7 +39,15 @@ def test_installation_metadata(test_client):
     r = test_client.get("/.well-known/dirac-metadata")
 
     assert r.status_code == 200
-    assert r.json()
+
+    data = r.json()
+
+    assert data
+    assert "virtual_organizations" in data
+    assert "versions" in data
+
+    assert "diracx-core" in data["versions"]
+    assert "diracx-routers" in data["versions"]
 
 
 @pytest.mark.xfail(reason="TODO")
