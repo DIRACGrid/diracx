@@ -69,7 +69,7 @@ def build_well_known_get_security_txt_request(**kwargs: Any) -> HttpRequest:  # 
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/.well-known/.well-known/security.txt"
+    _url = "/.well-known/security.txt"
 
     # Construct headers
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
