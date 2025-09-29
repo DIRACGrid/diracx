@@ -9,12 +9,12 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Form, HTTPException, status
 from joserfc.errors import DecodeError
 from typing_extensions import TypedDict
 from uuid_utils import UUID
 
-from diracx.core.exceptions import TokenNotFoundError
+from diracx.core.exceptions import InvalidCredentialsError, TokenNotFoundError
 from diracx.core.properties import PROXY_MANAGEMENT, SecurityProperty
 from diracx.logic.auth.management import (
     get_refresh_tokens as get_refresh_tokens_bl,
@@ -66,22 +66,34 @@ async def get_refresh_tokens(
 async def revoke_refresh_token_by_refresh_token(
     auth_db: AuthDB,
     settings: AuthSettings,
-    refresh_token: str,
-    client_id: str,
+    token: Annotated[str, Form(description="The refresh token to revoke")],
+    token_type_hint: Annotated[
+        str | None,
+        Form(description="Hint for the type of token being revoked"),
+    ] = None,
+    client_id: Annotated[
+        str,
+        Form(description="The client ID of the application requesting the revocation"),
+    ] = "myDIRACClientID",
 ) -> str:
-    """Revoke a refresh token."""
-    # Test the client_id
-    if settings.dirac_client_id != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Unrecognised client_id"
-        )
-
+    """Revoke a refresh token. Closely follows RFC 7009 (or try to, at least)."""
     try:
         await revoke_refresh_token_by_refresh_token_bl(
-            auth_db, None, refresh_token, settings
+            auth_db, None, token, token_type_hint, client_id, settings
         )
-    except DecodeError:
+    except (DecodeError, KeyError):
         logger.warning("Someone tried to revoke its token but failed.")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except InvalidCredentialsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
 
     return "Refresh token revoked"
 

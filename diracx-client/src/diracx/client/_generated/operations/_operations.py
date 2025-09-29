@@ -175,27 +175,6 @@ def build_auth_get_refresh_tokens_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_auth_revoke_refresh_token_by_refresh_token_request(  # pylint: disable=name-too-long
-    *, refresh_token: str, client_id: str, **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/auth/revoke"
-
-    # Construct parameters
-    _params["refresh_token"] = _SERIALIZER.query("refresh_token", refresh_token, "str")
-    _params["client_id"] = _SERIALIZER.query("client_id", client_id, "str")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="POST", url=_url, params=_params, headers=_headers, **kwargs)
-
-
 def build_auth_revoke_refresh_token_by_jti_request(  # pylint: disable=name-too-long
     jti: str, **kwargs: Any
 ) -> HttpRequest:
@@ -816,6 +795,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         raise_if_not_implemented(
             self.__class__,
             [
+                "revoke_refresh_token_by_refresh_token",
                 "get_oidc_token",
             ],
         )
@@ -1098,59 +1078,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("[object]", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
-    @distributed_trace
-    def revoke_refresh_token_by_refresh_token(self, *, refresh_token: str, client_id: str, **kwargs: Any) -> str:
-        """Revoke Refresh Token By Refresh Token.
-
-        Revoke a refresh token.
-
-        :keyword refresh_token: Required.
-        :paramtype refresh_token: str
-        :keyword client_id: Required.
-        :paramtype client_id: str
-        :return: str
-        :rtype: str
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[str] = kwargs.pop("cls", None)
-
-        _request = build_auth_revoke_refresh_token_by_refresh_token_request(
-            refresh_token=refresh_token,
-            client_id=client_id,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("str", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

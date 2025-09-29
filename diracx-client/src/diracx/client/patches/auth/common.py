@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 __all__ = [
-    "prepare_request",
-    "handle_response",
+    "prepare_oidc_request",
+    "handle_oidc_response",
 ]
 
 from typing import Any
@@ -18,20 +18,24 @@ from ..._generated.models import TokenResponse, DeviceFlowErrorResponse
 from ..._generated.operations._operations import _SERIALIZER
 
 
-def build_token_request(**kwargs: Any) -> HttpRequest:
+def build_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     accept = _headers.pop("Accept", "application/json")
 
-    _url = "/api/auth/token"
+    _url = kwargs.pop("url")
 
     _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
 
-    return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
+    _method = kwargs.pop("method")
+
+    return HttpRequest(method=_method, url=_url, headers=_headers, **kwargs)
 
 
-def prepare_request(device_code, client_id, format_url) -> HttpRequest:
-    request = build_token_request(
+def prepare_oidc_request(device_code, client_id, format_url) -> HttpRequest:
+    request = build_request(
+        method="POST",
+        url="/api/auth/token",
         data={
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": device_code,
@@ -42,7 +46,21 @@ def prepare_request(device_code, client_id, format_url) -> HttpRequest:
     return request
 
 
-def handle_response(
+def prepare_revoke_request(token, client_id, token_type_hint, format_url) -> HttpRequest:
+    request = build_request(
+        method="POST",
+        url="/api/auth/revoke",
+        data={
+            "token": token,
+            "client_id": client_id,
+            "token_type_hint": token_type_hint,
+        }
+    )
+    request.url = format_url(request.url)
+    return request
+
+
+def handle_oidc_response(
     pipeline_response: PipelineResponse, deserialize
 ) -> TokenResponse | DeviceFlowErrorResponse:
     response = pipeline_response.http_response
@@ -54,3 +72,14 @@ def handle_response(
     else:
         map_error(status_code=response.status_code, response=response, error_map={})
         raise HttpResponseError(response=response)
+
+
+def handle_revoke_response(
+    pipeline_response: PipelineResponse, deserialize
+) -> str:
+    response = pipeline_response.http_response
+
+    if response.status_code != 200:
+        map_error(status_code=response.status_code, response=response, error_map={})
+        raise HttpResponseError(response=response)
+    return deserialize("str", pipeline_response)

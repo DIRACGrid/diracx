@@ -1124,8 +1124,8 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
     # Normal user tries to delete a random and non-existing RT: should respond with a 200
     r = test_client.post(
         "/api/auth/revoke",
-        params={
-            "refresh_token": "does-not-exist",
+        data={
+            "token": "does-not-exist",
             "client_id": DIRAC_CLIENT_ID,
         },
     )
@@ -1134,8 +1134,8 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
     # Normal user tries to delete his/her RT: should work
     r = test_client.post(
         "/api/auth/revoke",
-        params={
-            "refresh_token": normal_user_refresh_token,
+        data={
+            "token": normal_user_refresh_token,
             "client_id": DIRAC_CLIENT_ID,
         },
     )
@@ -1152,13 +1152,55 @@ async def test_revoke_refresh_token_classic(test_client, auth_httpx_mock: HTTPXM
     # Normal user tries to delete a valid RT using the wrong client id
     r = test_client.post(
         "/api/auth/revoke",
-        params={
-            "refresh_token": normal_user_refresh_token,
+        data={
+            "token": normal_user_refresh_token,
             "client_id": "a_wrong_dirac_client_id",
         },
     )
-    assert r.status_code == 403
+    assert r.status_code == 401
     assert r.json()["detail"] == "Unrecognised client_id"
+
+    # Normal user tries to delete a valid access token: should not work but respond with a 200
+    r = test_client.post(
+        "/api/auth/revoke",
+        data={
+            "token": normal_user_access_token,
+            "client_id": DIRAC_CLIENT_ID,
+        },
+    )
+    assert r.status_code == 200
+
+    # Get all refresh tokens, expect no refresh token
+    r = test_client.get(
+        "/api/auth/refresh-tokens",
+        headers={"Authorization": f"Bearer {normal_user_access_token}"},
+    )
+
+    assert r.json() == []
+
+    # Normal user tries to delete a valid access token by specifying the token_type_hint: should not work
+    r = test_client.post(
+        "/api/auth/revoke",
+        data={
+            "token": normal_user_access_token,
+            "client_id": DIRAC_CLIENT_ID,
+            "token_type_hint": "access_token",
+        },
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == "unsupported_token_type"
+
+    # Normal user tries to delete a valid access token by specifying an invalid token_type_hint:
+    # Should not work but respond with a 200
+    r = test_client.post(
+        "/api/auth/revoke",
+        data={
+            "token": normal_user_access_token,
+            "client_id": DIRAC_CLIENT_ID,
+            "token_type_hint": "invalid_token_type",
+        },
+    )
+    assert r.status_code == 200
 
 
 def _get_tokens(

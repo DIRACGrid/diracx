@@ -94,6 +94,46 @@ class BodyAuthGetOidcTokenGrantType(_serialization.Model):
     """OAuth2 Grant type."""
 
 
+class BodyAuthRevokeRefreshTokenByRefreshToken(_serialization.Model):
+    """Body_auth_revoke_refresh_token_by_refresh_token.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar token: The refresh token to revoke. Required.
+    :vartype token: str
+    :ivar token_type_hint: Hint for the type of token being revoked.
+    :vartype token_type_hint: str
+    :ivar client_id: The client ID of the application requesting the revocation.
+    :vartype client_id: str
+    """
+
+    _validation = {
+        "token": {"required": True},
+    }
+
+    _attribute_map = {
+        "token": {"key": "token", "type": "str"},
+        "token_type_hint": {"key": "token_type_hint", "type": "str"},
+        "client_id": {"key": "client_id", "type": "str"},
+    }
+
+    def __init__(
+        self, *, token: str, token_type_hint: Optional[str] = None, client_id: str = "myDIRACClientID", **kwargs: Any
+    ) -> None:
+        """
+        :keyword token: The refresh token to revoke. Required.
+        :paramtype token: str
+        :keyword token_type_hint: Hint for the type of token being revoked.
+        :paramtype token_type_hint: str
+        :keyword client_id: The client ID of the application requesting the revocation.
+        :paramtype client_id: str
+        """
+        super().__init__(**kwargs)
+        self.token = token
+        self.token_type_hint = token_type_hint
+        self.client_id = client_id
+
+
 class BodyJobsRescheduleJobs(_serialization.Model):
     """Body_jobs_reschedule_jobs.
 
