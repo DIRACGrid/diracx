@@ -222,3 +222,4 @@ plugins:
           include:
             - docs
   - search
+  - mermaid2
