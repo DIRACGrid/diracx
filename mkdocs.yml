@@ -224,3 +224,4 @@ plugins:
             - docs
   - search
   - mermaid2
+  - autorefs
