@@ -170,6 +170,7 @@ nav:
       - Designing functionality: dev/explanations/designing-functionality.md
     - Reference:
       - dev/reference/index.md
+      - Dev env variables: dev/reference/env-variables.md
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
       - Configuration: dev/reference/configuration.md
