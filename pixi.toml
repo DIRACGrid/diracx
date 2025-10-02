@@ -110,6 +110,7 @@ python = "*"
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-mermaid2-plugin = "*"
+mkdocs-autorefs = "*"
 mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"

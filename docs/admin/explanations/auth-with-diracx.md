@@ -107,7 +107,7 @@ sequenceDiagram
 The client can:
 
 - [use the access token to access the DIRAC services](#using-a-token)
-- [use the refresh token to get a new access token](#refresh-token)
+- [use the refresh token to get a new access token](#refresh-tokens)
 
 ### CLI clients
 
@@ -159,7 +159,7 @@ sequenceDiagram
 The client can then:
 
 - [use the access token to access the DIRAC services](#using-a-token)
-- [use the refresh token to get a new access token](#refresh-token)
+- [use the refresh token to get a new access token](#refresh-tokens)
 
 ## Using a token
 
@@ -220,7 +220,7 @@ If you have a distinct use case for this, please [open an issue](https://github.
 
 !!! warning "Differs from reality"
 
-    This section represents the expected final workflow for pilots. Currently pilots follow the standard historical DIRAC workflow with the only addition being the inclusion of the DiracX token inside the proxy's PEM file. See [here](#dirac---diracx-communication) for details.
+    This section represents the expected final workflow for pilots. Currently pilots follow the standard historical DIRAC workflow with the only addition being the inclusion of the DiracX token inside the proxy's PEM file. See [here](#dirac-diracx-communication) for details.
 
 !!! note "This section only explains after pilots start!"
 
