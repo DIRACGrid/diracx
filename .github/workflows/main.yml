@@ -137,7 +137,7 @@ jobs:
           docker load --input /tmp/gubbins_services_image.tar
           # Free up disk space by removing the tarball after loading the image
           rm -Rf /tmp/gubbins_services_image.tar
-          rm -rf extensions/containers/services/
+          docker builder prune -af || true
           docker image ls -a
       - name: Start demo
         run: |
@@ -155,7 +155,7 @@ jobs:
           if [ ${{ matrix.extension }} == 'gubbins' ]; then
             # We have to copy the code to another directory
             # and make it a git repository by itself because otherwise the
-            # root in the pyproject to do not make sense once mounted
+            # root in the pyproject do not make sense once mounted
             # in the containers.
             cp -r ./extensions/gubbins /tmp/
             sed -i 's@../..@.@g' /tmp/gubbins/pyproject.toml
