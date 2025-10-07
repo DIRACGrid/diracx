@@ -135,6 +135,9 @@ jobs:
         if: ${{ matrix.extension == 'gubbins' }}
         run: |
           docker load --input /tmp/gubbins_services_image.tar
+          # Free up disk space by removing the tarball after loading the image
+          rm -Rf /tmp/gubbins_services_image.tar
+          rm -rf extensions/containers/services/
           docker image ls -a
       - name: Start demo
         run: |
