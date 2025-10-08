@@ -82,6 +82,26 @@ jobs:
           - diracx
           - gubbins
     steps:
+      - name: Free disk space
+        run: |
+          echo "Before cleanup:"
+          df -h
+
+          # remove .NET SDKs
+          sudo rm -rf /usr/share/dotnet || true
+          # remove Android SDK
+          sudo rm -rf usr/local/lib/android || true
+          # remove Haskell Compiler
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+
+          sudo apt-get clean || echo "::warning::The command [sudo apt-get clean] failed to complete successfully. Proceeding..."
+
+          # prune docker
+          docker system prune -af || true
+
+          echo "After cleanup:"
+          df -h
       - name: Checkout code
         uses: actions/checkout@v5
       - uses: prefix-dev/setup-pixi@v0.9.1
