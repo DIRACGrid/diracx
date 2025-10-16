@@ -156,6 +156,11 @@ class BaseSQLDB(metaclass=ABCMeta):
         return db_urls
 
     @classmethod
+    async def post_create(cls, conn: AsyncConnection) -> None:
+        """Execute actions after the schema has been created."""
+        return
+
+    @classmethod
     def transaction(cls) -> Self:
         raise NotImplementedError("This should never be called")
 

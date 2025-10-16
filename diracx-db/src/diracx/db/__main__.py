@@ -39,6 +39,7 @@ async def init_sql():
                 if db._db_url.startswith("sqlite"):
                     await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
                 await conn.run_sync(db.metadata.create_all)
+                await db.post_create(conn)
 
 
 async def init_os():
