@@ -46,6 +46,7 @@ repos:
           - types-PyYAML
           - types-cachetools
           - types-requests
+          - types-python-dateutil
           - types-aiobotocore[essential]
           - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
