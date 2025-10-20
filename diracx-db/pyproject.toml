@@ -18,11 +18,13 @@ dependencies = [
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "uuid-utils",
+    "python-dateutil",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 testing = ["diracx-testing", "freezegun"]
+types = ["types-python-dateutil"]
 
 [project.entry-points."diracx.dbs.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
