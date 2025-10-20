@@ -18,11 +18,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           cache: false
           environments: shellcheck
@@ -53,7 +53,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           run-install: false
           post-cleanup: false
@@ -64,7 +64,7 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           cache: false
           environments: ${{ matrix.package }}
@@ -104,7 +104,7 @@ jobs:
           df -h
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           run-install: false
           post-cleanup: false
@@ -115,7 +115,7 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
@@ -231,11 +231,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@v0.9.1
+      - uses: prefix-dev/setup-pixi@v0.9.2
         with:
           cache: false
           locked: false
