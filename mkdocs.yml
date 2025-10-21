@@ -76,9 +76,6 @@ nav:
 
   - Administrator Guide:
     - admin/index.md
-    - Tutorials:
-      - admin/tutorials/index.md
-      - Authentication: admin/tutorials/authentication.md
     - How-To:
       - admin/how-to/index.md
       - Installation:
@@ -87,6 +84,7 @@ nav:
         - Installing kubernetes: admin/how-to/install/install-kubernetes.md
         - Convert CS: admin/how-to/install/convert-cs.md
         - Installing DiracX: admin/how-to/install/installing.md
+        - Connect DIRAC to DiracX: admin/how-to/install/connect.md
         - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
         - Register a VO: admin/how-to/install/register-a-vo.md
         - Embracing DiracX: admin/how-to/install/embracing.md
@@ -103,6 +101,9 @@ nav:
       - Chart structure: admin/explanations/chart-structure.md
       - Databases: admin/explanations/database-management.md
       - Sandbox Store: admin/explanations/sandbox-store.md
+    - Tutorials:
+      - admin/tutorials/index.md
+      - Authentication: admin/tutorials/authentication.md
     - Reference:
       - admin/reference/index.md
       - Security Model: admin/reference/security_model.md
@@ -169,6 +170,7 @@ nav:
       - Designing functionality: dev/explanations/designing-functionality.md
     - Reference:
       - dev/reference/index.md
+      - Dev env variables: dev/reference/env-variables.md
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
       - Configuration: dev/reference/configuration.md
@@ -197,7 +199,7 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+          format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.highlight:
@@ -222,3 +224,5 @@ plugins:
           include:
             - docs
   - search
+  - mermaid2
+  - autorefs

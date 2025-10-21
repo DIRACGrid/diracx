@@ -4,6 +4,10 @@ Currently the source of truth for the configuration in DiracX comes from your le
 
 ## Converting the DIRAC CS manually
 
+??? note "Prerequisite"
+
+    The script below expects that the DIRAC CS already contains a `DiracX` section.
+
 1. Clone the Git repository containing the DiracX CS (can be empty)
 
     ```bash
