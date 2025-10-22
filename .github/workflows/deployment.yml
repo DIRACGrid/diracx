@@ -2,17 +2,11 @@ name: Deployment
 
 on:
   push:
+    tags:
+      - 'v*'
   pull_request:
   schedule:
     - cron: '0 10 * * *'
-  workflow_dispatch:
-    inputs:
-      check-ci:
-        description: "Require the CI to have passed for this commit"
-        required: true
-        default: "yes"
-      version:
-        description: "Override the release version number (e.g. 8.0.0a5)"
 
 jobs:
   deploy-pypi:
@@ -63,57 +57,21 @@ jobs:
       - name: Validate README for PyPI
         run: |
           python -m readme_renderer README.md -o /tmp/README.html
-      - name: Prepare release notes
-        run: |
-          set -xeuo pipefail
-          IFS=$'\n\t'
-          # Needed for the advanced pattern matching used in REFERENCE_BRANCH
-          PREV_VERSION=$(git describe --tags --abbrev=0)
-          # In case of manual trigger,
-          # GITHUB_REF is of the form refs/heads/main -> we want main
-          # In case of PR it is of the form refs/pull/59/merge -> we want pull/59/merge
-          REFERENCE_BRANCH=${GITHUB_REF##refs*(/heads)/}
-          echo "Making release notes for ${REFERENCE_BRANCH} since ${PREV_VERSION}"
-          (git log ${PREV_VERSION}...${REFERENCE_BRANCH} --oneline --no-merges --) > release.notes.new
-          cat release.notes.new
-      - name: Create tag if required
+      - name: Extract version from tag
         id: check-tag
         run: |
           set -xeuo pipefail
           IFS=$'\n\t'
-          # Only do a real release for workflow_dispatch events
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Will create a real release"
-            export NEW_VERSION="v${{ github.event.inputs.version }}"
-            if [[ "${NEW_VERSION}" == "v" ]]; then
-              # If version wasn't given as an input to the workflow, use setuptools_scm to guess while removing "dev" portion of the version number
-              NEW_VERSION=v$(python -m setuptools_scm | sed 's@Guessed Version @@g' | sed -E 's@(\.dev|\+g).+@@g')
-              export NEW_VERSION
-            fi
-            echo "Release will be named $NEW_VERSION"
-            # Validate the version
-            # Ensure the version doesn't look like a PEP-440 "dev release" (which might happen if the automatic version bump has issues)
-            python -c $'from packaging.version import Version; v = Version('"'$NEW_VERSION'"$')\nif v.is_devrelease:\n    raise ValueError(v)'
-            # Make sure we always only create pre-releases
-            python -c $'from packaging.version import Version; v = Version('"'$NEW_VERSION'"$')\nif not v.is_prerelease:\n    raise ValueError("integration should only be used for pre-releases")'
-            # Commit the release notes
-            mv release.notes release.notes.old
-            cat release.notes.old
-            (echo -e "[${NEW_VERSION}]" &&  cat release.notes.new release.notes.old) > release.notes
-            ###################3
-            # TODO: we should add the release notes somewhere at some point
-            # now we just don't do it because main branch is protected
-            # and we can't push directly from the CI
-            #git add release.notes
-            #git commit -m "docs: Add release notes for $NEW_VERSION"
-            # Stash is mandatory not to leave the repo dirty
-            git stash
-            ########################
-            git show
-            # Create the tag
-            git tag "$NEW_VERSION"
+          # Check if this is a tag push
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract version from the tag
+            export NEW_VERSION="${GITHUB_REF#refs/tags/}"
+            echo "Deploying release $NEW_VERSION"
             echo "create-release=true" >> $GITHUB_OUTPUT
             echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a tag push, skipping release"
+            echo "create-release=false" >> $GITHUB_OUTPUT
           fi
       - name: Build distributions
         run: |
@@ -129,21 +87,6 @@ jobs:
           name: diracx-whl
           path: dist/diracx*.whl
           retention-days: 5
-      - name: Make release on GitHub
-        if: steps.check-tag.outputs.create-release == 'true'
-        run: |
-          set -e
-          export NEW_VERSION=${{ steps.check-tag.outputs.new-version }}
-          REFERENCE_BRANCH=${GITHUB_REF##refs*(/heads)/}
-          echo "Pushing tagged release notes to ${REFERENCE_BRANCH}"
-          git push "origin" "${REFERENCE_BRANCH}"
-          echo "Making GitHub release for ${NEW_VERSION}"
-          .github/workflows/make_release.py \
-            --repo="${{ github.repository }}" \
-            --token="${{ secrets.GITHUB_TOKEN }}" \
-            --version="${NEW_VERSION}" \
-            --rev="$(git rev-parse HEAD)" \
-            --release-notes-fn="release.notes.new"
       # Use trusted publisher for pypi
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
@@ -190,7 +133,7 @@ jobs:
           push: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
-          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRACCommon~=9.0.0a1
+          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRACCommon~=9.0.0
       - name: Build and push services (release)
         uses: docker/build-push-action@v6
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
@@ -199,7 +142,7 @@ jobs:
           push: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
-          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRACCommon~=9.0.0a1
+          build-args: EXTRA_PACKAGES_TO_INSTALL=DIRACCommon~=9.0.0
 
       - name: Build and push client (dev)
         uses: docker/build-push-action@v6
