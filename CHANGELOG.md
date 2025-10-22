@@ -2,10 +2,9 @@
 
 ## [0.0.2](https://github.com/DIRACGrid/diracx/compare/v0.0.1...v0.0.2) (2025-10-22)
 
-
 ### Bug Fixes
 
-* correct release-please integration in deployment workflow ([#683](https://github.com/DIRACGrid/diracx/issues/683)) ([0084328](https://github.com/DIRACGrid/diracx/commit/00843286b49a2a075226ad47af746d03b9413d60))
+- correct release-please integration in deployment workflow ([#683](https://github.com/DIRACGrid/diracx/issues/683)) ([0084328](https://github.com/DIRACGrid/diracx/commit/00843286b49a2a075226ad47af746d03b9413d60))
 
 ## [0.0.1](https://github.com/DIRACGrid/diracx/compare/v0.0.1...v0.0.1) (2025-10-22)
 
