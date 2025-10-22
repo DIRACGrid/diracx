@@ -236,8 +236,7 @@ jobs:
             - Update image tag to ${{ steps.update-versions.outputs.diracx_version }}
             - Bump chart version from ${{ steps.update-versions.outputs.current_chart_version }} to ${{ steps.update-versions.outputs.new_chart_version }}"
 
-            # Push the commit to main branch
-            git push origin main
+            git push origin master
 
             echo "✅ Successfully pushed chart version ${{ steps.update-versions.outputs.new_chart_version }} and tag ${TAG_NAME}"
           else
