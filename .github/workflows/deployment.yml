@@ -82,7 +82,7 @@ jobs:
           # Also build the diracx metapackage
           python -m build --outdir $PWD/dist .
       - name: 'Upload Artifact'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: diracx-whl
           path: dist/diracx*.whl
@@ -111,7 +111,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Download diracx wheels
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
             name: diracx-whl
       - name: "Find wheels"

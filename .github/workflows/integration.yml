@@ -75,7 +75,7 @@ jobs:
           docker logs diracx 2>&1 | tee /tmp/service-logs/diracx.log
           cd /tmp/DIRACRepo
           ./integration_tests.py logs --no-follow --lines 1000 2>&1 | tee /tmp/service-logs/dirac.log
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: ${{ failure() }}
         with:
           name: service-logs-${{ github.job }}
