@@ -1,0 +1,25 @@
+apiVersion: v2
+name: gubbins
+description: Gubbins-specific DiracX Helm chart that extends the base DiracX chart
+type: application
+version: 0.1.0
+# Note: this is not reflected in the app.kubernetes.io/version label :-(
+appVersion: "v0.0.1"
+
+dependencies:
+  - name: diracx
+    version: "1.0.0"
+    repository: "https://charts.diracgrid.org/"
+maintainers:
+  - name: Gubbins DiracX Team
+    email: gubbins-diracx@example.com
+
+keywords:
+  - diracx
+  - gubbins
+  - grid
+  - computing
+
+home: https://github.com/diracgrid/diracx
+sources:
+  - https://github.com/diracgrid/diracx

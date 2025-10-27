@@ -1,0 +1,16 @@
+# Helm dependencies - these are regenerated with `helm dependency update`
+charts/
+Chart.lock
+
+# Helm package files
+*.tgz
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
