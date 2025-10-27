@@ -35,6 +35,7 @@ For most components you can extend them in isolation without needing to have an 
 
 The exception to this is when extending `diracx-routers` you MUST also extend `diracx-client` and your client extension MUST be regenerated for every DiracX release.
 More details about this can be found in the [dedicated how to](../how-to/client-extension.md).
+Additionally, you will need an umbrella helm chart for your extension.
 
 ## Gubbins
 
