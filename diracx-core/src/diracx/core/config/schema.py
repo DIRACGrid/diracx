@@ -35,24 +35,34 @@ class BaseModel(_BaseModel):
         """Apply transformations to interpret the legacy DIRAC CFG format."""
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
+
         # If we're running with DIRAC_COMPAT_ENABLE_CS_CONVERSION set we apply
         # some hacky transformations to the content to ease the transition from
         # a CFG file. This is done by analysing the type hints as strings
         # though ideally we should parse the type hints properly.
+        convertible_hints = {
+            "list[str]",
+            "SerializableSet[str]",
+            "SerializableSet[SecurityProperty]",
+        }
         for field, hint in cls.__annotations__.items():
             # Convert comma separated lists to actual lists
             if hint.startswith("set"):
                 raise NotImplementedError("Use SerializableSet instead!")
-            if hint in {
-                "list[str]",
-                "SerializableSet[str]",
-                "SerializableSet[SecurityProperty]",
-            } and isinstance(v.get(field), str):
+
+            if field not in v:
+                continue
+
+            # Get the base hint without the optional part
+            base_hint = hint.split(" | ")[0].strip()
+
+            # Convert comma-separated strings to lists
+            if base_hint in convertible_hints and isinstance(v[field], str):
                 v[field] = [x.strip() for x in v[field].split(",") if x.strip()]
+
             # If the field is optional and the value is "None" convert it to None
-            if "| None" in hint and field in v:
-                if v[field] == "None":
-                    v[field] = None
+            if "| None" in hint and v[field] == "None":
+                v[field] = None
         return v
 
 
