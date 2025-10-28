@@ -167,12 +167,16 @@ jobs:
           demo_args+=("--enable-open-telemetry")
           demo_args+=("--enable-coverage")
           demo_args+=("--exit-when-done")
-          demo_args+=("--set-value" "developer.autoReload=false")
           demo_args+=("--ci-values" "../diracx-charts/demo/ci_values.yaml")
 
           declare -a demo_source_dirs=("$PWD")
 
+          # Download helm/kubectl/kind first
+          ../diracx-charts/run_demo.sh --only-download-deps
+
           if [ ${{ matrix.extension }} == 'gubbins' ]; then
+            demo_args+=("--set-value" "diracx.developer.autoReload=false")
+
             # We have to copy the code to another directory
             # and make it a git repository by itself because otherwise the
             # root in the pyproject do not make sense once mounted
@@ -182,12 +186,19 @@ jobs:
             sed -i 's@../../@@g' /tmp/gubbins/gubbins-*/pyproject.toml
             git init /tmp/gubbins/
 
+            # Copy gubbins-charts to a temporary location and build dependencies
+            cp -r ./extensions/gubbins-charts /tmp/
+            ../diracx-charts/.demo/helm dependency build /tmp/gubbins-charts
+
+            demo_args+=("--extension-chart-path" "/tmp/gubbins-charts")
             demo_args+=("--ci-values" "./extensions/gubbins_values.yaml")
             demo_args+=("--load-docker-image" "gubbins/services:dev")
             demo_source_dirs+=("/tmp/gubbins/")
           elif [ ${{ matrix.extension }} != 'diracx' ]; then
             echo "Unknown extension: ${{ matrix.extension }}"
             exit 1
+          else
+            demo_args+=("--set-value" "developer.autoReload=false")
           fi
 
           # Run the demo with the provided arguments

@@ -1,0 +1,12 @@
+diracx:
+  developer:
+    enabled: true
+  diracx:
+    hostname: gubbinsdiracx.example.com
+    sqlDbs:
+      dbs:
+        LollygagDB:
+  global:
+    images:
+      tag: "dev"
+      services: gubbins/services

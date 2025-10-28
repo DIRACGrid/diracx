@@ -529,7 +529,12 @@ def demo_urls(demo_dir):
     import yaml
 
     helm_values = yaml.safe_load((demo_dir / "values.yaml").read_text())
-    yield helm_values["developer"]["urls"]
+    try:
+        yield helm_values["developer"]["urls"]
+    except KeyError:
+        # If we're testing an extension they will have an umbrella chart so the
+        # URLs are under a "diracx" section corrosponding to the vanilla chart
+        yield helm_values["diracx"]["developer"]["urls"]
 
 
 @pytest.fixture(scope="session")
