@@ -30,6 +30,10 @@ diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
 [feature.diracx-routers.pypi-dependencies]
 diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
 
+# Settings documentation feature
+[feature.settings-doc.pypi-dependencies]
+settings-doc = "*"
+
 # DiracX features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
 # See: https://github.com/prefix-dev/pixi/issues/1519#issuecomment-2651078457
@@ -56,6 +60,22 @@ description = "Run the tests for diracx-logic"
 [feature.task-diracx-routers.tasks.pytest-diracx-routers]
 cmd = "cd diracx-routers/ && pytest"
 description = "Run the tests for diracx-routers"
+
+# Settings documentation task
+[feature.settings-doc.tasks.generate-settings-doc]
+cmd = """settings-doc generate \
+  --module diracx.core.settings \
+  --output-format markdown \
+  --update docs/dev/reference/env-variables.md \
+  --between "<!-- generated env. vars. start -->" "<!-- generated env. vars. end -->" \
+  --heading-offset 1"""
+description = "Generate settings documentation in Markdown format"
+
+[feature.settings-doc.tasks.generate-settings-dotenv]
+cmd = """settings-doc generate \
+  --module diracx.core.settings \
+  --output-format dotenv > .env"""
+description = "Generate a dotenv file from settings"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
@@ -142,7 +162,7 @@ description = "Run shellcheck on all shell scripts"
 
 [environments]
 # DiracX environments
-default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers"], solve-group = "diracx"}
+default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "settings-doc"], solve-group = "diracx"}
 diracx-core = {features = ["task-diracx-core", "diracx-core"], solve-group = "diracx"}
 diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-cli = {features = ["task-diracx-cli", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}

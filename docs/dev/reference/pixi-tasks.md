@@ -46,6 +46,11 @@ This page documents the available pixi tasks.
 
 - `pre-commit`: pre-commit
 
+## Settings Tasks
+
+- `generate-settings-doc`: Generate settings documentation in Markdown format
+- `generate-settings-dotenv`: Generate a dotenv file from settings
+
 ## Shellcheck Tasks
 
 - `shellcheck`: Run shellcheck on all shell scripts
