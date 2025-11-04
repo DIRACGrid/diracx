@@ -8,7 +8,7 @@ default_language_version:
   python: python3
 
 ci:
-  skip: [generate-pixi-docs]
+  skip: [generate-pixi-docs, settings-doc-check]
 
 default_stages: [pre-commit]
 
@@ -85,3 +85,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^pixi\.toml$|^pixi\.lock$   # only run if pixi files change
+
+  - repo: local
+    hooks:
+      - id: settings-doc-check
+        name: Generate settings documentation
+        entry: scripts/check_settings_doc.sh
+        language: system
+        pass_filenames: false
+        files: ^diracx-core/src/diracx/core/settings\.py$
