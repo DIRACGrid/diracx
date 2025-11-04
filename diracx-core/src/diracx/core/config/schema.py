@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from functools import cached_property
 from typing import Annotated, Any, MutableMapping, TypeVar
 
 from pydantic import BaseModel as _BaseModel
@@ -149,6 +150,11 @@ class RegistryConfig(BaseModel):
     Groups: MutableMapping[str, GroupConfig]
     """DIRAC groups section, subsections represent the name of the group."""
 
+    @cached_property
+    def _preferred_username_to_sub(self) -> dict[str, str]:
+        """Compute reverse lookup map from preferred username to user sub."""
+        return {user.PreferedUsername: sub for sub, user in self.Users.items()}
+
     def sub_from_preferred_username(self, preferred_username: str) -> str:
         """Get the user sub from the preferred username.
 
@@ -162,10 +168,10 @@ class RegistryConfig(BaseModel):
             KeyError: If no user with the given preferred username is found.
 
         """
-        for sub, user in self.Users.items():
-            if user.PreferedUsername == preferred_username:
-                return sub
-        raise KeyError(f"User {preferred_username} not found in registry")
+        try:
+            return self._preferred_username_to_sub[preferred_username]
+        except KeyError:
+            raise KeyError(f"User {preferred_username} not found in registry") from None
 
 
 class DIRACConfig(BaseModel):
