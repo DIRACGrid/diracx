@@ -9,4 +9,4 @@ validation, and complex operations.
 
 - [Jobs Logic](jobs.md) - Job submission, querying, status management, and sandboxes
 - [Auth Logic](auth.md) - Authentication and authorization flows
-- [Task Queues Logic](task-queues.md) - Task queue management and priority
+- [Task Queues Logic](task_queues.md) - Task queue management and priority

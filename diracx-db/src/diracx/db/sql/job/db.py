@@ -93,7 +93,7 @@ class JobDB(BaseSQLDB):
             page=page,
         )
 
-    async def create_job(self, compressed_original_jdl: str):
+    async def create_job(self, compressed_original_jdl: str) -> int:
         """Create a new job with its original JDL.
 
         Args:
@@ -181,7 +181,7 @@ class JobDB(BaseSQLDB):
             ],
         )
 
-    async def set_job_attributes(self, job_data):
+    async def set_job_attributes(self, job_data: dict[int, dict[str, Any]]) -> None:
         """Update the parameters of the given jobs.
 
         Automatically updates LastUpdateTime when Status is changed.
@@ -231,7 +231,9 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
-    async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int, str]:
+    async def get_job_jdls(
+        self, job_ids: Iterable[int], original: bool = False
+    ) -> dict[int, str]:
         """Get the JDLs for the given jobs.
 
         Args:
