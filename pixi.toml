@@ -63,19 +63,8 @@ description = "Run the tests for diracx-routers"
 
 # Settings documentation task
 [feature.settings-doc.tasks.generate-settings-doc]
-cmd = """settings-doc generate \
-  --module diracx.core.settings \
-  --output-format markdown \
-  --update docs/dev/reference/env-variables.md \
-  --between "<!-- generated env. vars. start -->" "<!-- generated env. vars. end -->" \
-  --heading-offset 1"""
-description = "Generate settings documentation in Markdown format"
-
-[feature.settings-doc.tasks.generate-settings-dotenv]
-cmd = """settings-doc generate \
-  --module diracx.core.settings \
-  --output-format dotenv > .env"""
-description = "Generate a dotenv file from settings"
+cmd = "python scripts/generate_settings_docs.py"
+description = "Auto-discover and generate settings documentation with validation"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]

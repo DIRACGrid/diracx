@@ -48,8 +48,7 @@ This page documents the available pixi tasks.
 
 ## Settings Tasks
 
-- `generate-settings-doc`: Generate settings documentation in Markdown format
-- `generate-settings-dotenv`: Generate a dotenv file from settings
+- `generate-settings-doc`: Auto-discover and generate settings documentation with validation
 
 ## Shellcheck Tasks
 
