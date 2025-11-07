@@ -8,7 +8,7 @@ default_language_version:
   python: python3
 
 ci:
-  skip: [generate-pixi-docs, settings-doc-check]
+  skip: [generate-pixi-docs, settings-doc-check, api-doc-coverage-check]
 
 default_stages: [pre-commit]
 
@@ -93,3 +93,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^(diracx-.*/src/diracx/.*/settings\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
+
+  - repo: local
+    hooks:
+      - id: api-doc-coverage-check
+        name: Check API documentation coverage
+        entry: pixi run -e default python docs/dev/reference/api/check_coverage.py
+        language: system
+        pass_filenames: false
+        files: ^(diracx-.*/src/diracx/.*\.py|docs/dev/reference/api/.*\.md|docs/dev/reference/api/check_coverage\.py)$

@@ -170,6 +170,52 @@ nav:
       - Designing functionality: dev/explanations/designing-functionality.md
     - Reference:
       - dev/reference/index.md
+      - API Reference:
+        - dev/reference/api/index.md
+        - Writing API Docs: dev/reference/api/writing-api-docs.md
+        - Core:
+          - dev/reference/api/core/index.md
+          - Models: dev/reference/api/core/models.md
+          - Settings: dev/reference/api/core/settings.md
+          - Preferences: dev/reference/api/core/preferences.md
+          - Configuration: dev/reference/api/core/config.md
+          - Exceptions: dev/reference/api/core/exceptions.md
+          - Resources: dev/reference/api/core/resources.md
+          - S3: dev/reference/api/core/s3.md
+          - Properties: dev/reference/api/core/properties.md
+          - Extensions: dev/reference/api/core/extensions.md
+          - Utilities: dev/reference/api/core/utils.md
+        - Routers:
+          - dev/reference/api/routers/index.md
+          - Jobs: dev/reference/api/routers/jobs.md
+          - Auth: dev/reference/api/routers/auth.md
+          - Configuration: dev/reference/api/routers/configuration.md
+          - Health: dev/reference/api/routers/health.md
+          - Access Policies: dev/reference/api/routers/access_policies.md
+          - Dependencies: dev/reference/api/routers/dependencies.md
+          - Factory: dev/reference/api/routers/factory.md
+          - FastAPI Classes: dev/reference/api/routers/fastapi_classes.md
+          - OpenTelemetry: dev/reference/api/routers/otel.md
+          - Utilities: dev/reference/api/routers/utils.md
+        - Logic:
+          - dev/reference/api/logic/index.md
+          - Jobs: dev/reference/api/logic/jobs.md
+          - Auth: dev/reference/api/logic/auth.md
+          - Task Queues: dev/reference/api/logic/task_queues.md
+        - Database:
+          - dev/reference/api/db/index.md
+          - Job DB: dev/reference/api/db/job.md
+          - Job Logging DB: dev/reference/api/db/job_logging.md
+          - Auth DB: dev/reference/api/db/auth.md
+          - Sandbox Metadata DB: dev/reference/api/db/sandbox_metadata.md
+          - Task Queue DB: dev/reference/api/db/task_queue.md
+          - Pilot Agents DB: dev/reference/api/db/pilot_agents.md
+          - Dummy DB: dev/reference/api/db/dummy.md
+          - OpenSearch: dev/reference/api/db/opensearch.md
+          - SQL Utilities: dev/reference/api/db/utils.md
+          - Exceptions: dev/reference/api/db/exceptions.md
+        - CLI:
+          - dev/reference/api/cli/index.md
       - Dev env variables: dev/reference/env-variables.md
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
@@ -226,3 +272,29 @@ plugins:
   - search
   - mermaid2
   - autorefs
+  - mkdocstrings:
+      enabled: true
+      default_handler: python
+      handlers:
+        python:
+          paths: [diracx-core/src, diracx-api/src, diracx-routers/src, diracx-db/src, diracx-logic/src, diracx-client/src, diracx-cli/src]
+          import:
+            - https://docs.python.org/3/objects.inv
+            - https://docs.pydantic.dev/latest/objects.inv
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            group_by_category: true
+            show_category_heading: true
+            show_if_no_docstring: true
+            inherited_members: false
+            filters:
+              - "!^_"
+            extensions:
+              - griffe_pydantic

@@ -106,12 +106,24 @@ description = "Run the tests for gubbins-routers"
 
 # Features for generating the documentation
 [feature.mkdocs.dependencies]
-python = "*"
+python = ">=3.12,<3.13"
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-mermaid2-plugin = "*"
 mkdocs-autorefs = "*"
 mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugin.git", branch = "master"}
+mkdocstrings = { version = ">=0.24", extras = ["python"] }
+mkdocstrings-python = "*"
+griffe = "*"
+griffe-pydantic = "*"
+# Install DiracX packages for documentation
+diracx-core = { path = "diracx-core", editable = true }
+diracx-api = { path = "diracx-api", editable = true }
+diracx-routers = { path = "diracx-routers", editable = true }
+diracx-db = { path = "diracx-db", editable = true }
+diracx-logic = { path = "diracx-logic", editable = true }
+diracx-client = { path = "diracx-client", editable = true }
+diracx-cli = { path = "diracx-cli", editable = true }
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"
 mkdocs-build = "mkdocs build --strict"
