@@ -2,11 +2,9 @@
 
 *This page is auto-generated from the settings classes in `diracx.core.settings`.*
 
-
 ## AuthSettings
 
 Settings for the authentication service.
-
 
 ### `DIRACX_SERVICE_AUTH_DIRAC_CLIENT_ID`
 
@@ -107,13 +105,9 @@ Set of security properties available in this DIRAC installation.
 These properties define various authorization capabilities and are used
 for access control decisions. Defaults to all available security properties.
 
-
-
-
 ## SandboxStoreSettings
 
 Settings for the sandbox store.
-
 
 ### `DIRACX_SANDBOX_STORE_BUCKET_NAME`
 
@@ -154,13 +148,9 @@ Logical name of the Storage Element for the sandbox store.
 This name is used within DIRAC to refer to this sandbox storage
 endpoint in job descriptions and file catalogs.
 
-
-
-
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.
-
 
 ### `DIRACX_OTEL_ENABLED`
 
@@ -172,7 +162,7 @@ Settings for the Open Telemetry Configuration.
 
 ### `DIRACX_OTEL_GRPC_ENDPOINT`
 
-*Optional*, default value: ``
+*Optional*, default value: \`\`
 
 ### `DIRACX_OTEL_GRPC_INSECURE`
 
