@@ -53,7 +53,7 @@ def find_python_modules(package_name: str, package_path: Path) -> list[ModuleInf
         List of ModuleInfo objects for each Python module
 
     """
-    modules = []
+    modules: list[ModuleInfo] = []
 
     if not package_path.exists():
         print(f"Warning: Package path does not exist: {package_path}")
@@ -83,7 +83,7 @@ def find_python_modules(package_name: str, package_path: Path) -> list[ModuleInf
     return sorted(modules, key=lambda m: m.module_path)
 
 
-def get_expected_doc_path(module: ModuleInfo) -> Path:
+def get_expected_doc_path(module: ModuleInfo) -> Path | None:
     """Get the expected documentation file path for a module.
 
     Args:
@@ -140,7 +140,7 @@ def get_expected_doc_path(module: ModuleInfo) -> Path:
     return doc_path
 
 
-def check_module_documented(module: ModuleInfo) -> tuple[bool, Path]:
+def check_module_documented(module: ModuleInfo) -> tuple[bool, Path | None]:
     """Check if a module is documented.
 
     Args:
