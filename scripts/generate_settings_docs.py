@@ -17,6 +17,7 @@ import inspect
 import pkgutil
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -212,7 +213,7 @@ def generate_all_templates(
     settings_classes: dict[str, dict],
     docs_dir: Path,
     repo_root: Path,
-) -> None:
+) -> list:
     """Generate documentation for all discovered templates."""
     # Collect all unique modules that contain settings
     modules = sorted(set(info["module"] for info in settings_classes.values()))
@@ -334,6 +335,23 @@ def compare_and_update_files(
     def normalize(text: str) -> str:
         return "\n".join(line for line in text.splitlines() if line.strip())
 
+    # First, run mdformat on all .bak files to ensure consistent formatting
+    backup_files = [backup for _, backup in generated_files]
+    if backup_files:
+        try:
+            subprocess.run(  # noqa: S603
+                ["mdformat", "--number"] + [str(f) for f in backup_files],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  mdformat failed: {e.stderr}")
+            return False
+        except FileNotFoundError:
+            print("⚠️  mdformat not found in environment")
+            return False
+
     all_up_to_date = True
 
     for original_file, backup_file in generated_files:
@@ -401,10 +419,10 @@ def main():
         templates, settings_classes, docs_dir, repo_root
     )
 
-    print("\n📝 Generating .env file...")
-    dotenv_path = repo_root / ".env.example"
-    dotenv_backup = generate_dotenv_file(settings_classes, dotenv_path)
-    generated_files.append((dotenv_path, dotenv_backup))
+    # print("\n📝 Generating .env file...")
+    # dotenv_path = repo_root / ".env.example"
+    # dotenv_backup = generate_dotenv_file(settings_classes, dotenv_path)
+    # generated_files.append((dotenv_path, dotenv_backup))
 
     # Update files if they're different
     print("\n📝 Updating files...")

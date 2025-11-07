@@ -30,10 +30,6 @@ diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
 [feature.diracx-routers.pypi-dependencies]
 diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
 
-# Settings documentation feature
-[feature.settings-doc.pypi-dependencies]
-settings-doc = "*"
-
 # DiracX features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
 # See: https://github.com/prefix-dev/pixi/issues/1519#issuecomment-2651078457
@@ -60,11 +56,6 @@ description = "Run the tests for diracx-logic"
 [feature.task-diracx-routers.tasks.pytest-diracx-routers]
 cmd = "cd diracx-routers/ && pytest"
 description = "Run the tests for diracx-routers"
-
-# Settings documentation task
-[feature.settings-doc.tasks.generate-settings-doc]
-cmd = "python scripts/generate_settings_docs.py"
-description = "Auto-discover and generate settings documentation with validation"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
@@ -149,6 +140,22 @@ shellcheck = "*"
 cmd = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 description = "Run shellcheck on all shell scripts"
 
+# Settings documentation feature
+[feature.settings-doc.dependencies]
+python = "*"
+[feature.settings-doc.pypi-dependencies]
+settings-doc = "*"
+mdformat = "*"
+mdformat-mkdocs = "*"
+mdformat-gfm = "*"
+mdformat-black = "*"
+diracx-core = { path = "diracx-core", editable = true }
+diracx-routers = { path = "diracx-routers", editable = true }
+# Settings documentation task
+[feature.settings-doc.tasks.generate-settings-doc]
+cmd = "python scripts/generate_settings_docs.py"
+description = "Auto-discover and generate settings documentation with validation"
+
 [environments]
 # DiracX environments
 default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "settings-doc"], solve-group = "diracx"}
@@ -177,6 +184,7 @@ gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-c
 mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
+settings-doc = {features = ["settings-doc"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]
