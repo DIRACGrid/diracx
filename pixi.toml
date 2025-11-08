@@ -106,7 +106,7 @@ description = "Run the tests for gubbins-routers"
 
 # Features for generating the documentation
 [feature.mkdocs.dependencies]
-python = ">=3.12,<3.13"
+python = "*"
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-mermaid2-plugin = "*"
