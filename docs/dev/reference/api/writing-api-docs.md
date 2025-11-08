@@ -358,23 +358,40 @@ def process_config(config: dict[str, dict[str, list[str]]]) -> ProcessedConfig:
 Examples help users understand how to use your code:
 
 ```python
-def format_job_id(vo: str, job_number: int) -> str:
-    """Format a job ID string.
+def recursive_merge(base: Any, override: Any) -> Any:
+    """Recursively merge dictionaries; values in ``override`` take precedence.
+
+    - If both ``base`` and ``override`` are dicts, merge keys recursively.
+    - Otherwise, return ``override`` if it is not ``None``; fallback to ``base``.
 
     Args:
-        vo: Virtual organization name.
-        job_number: Job number.
+        base: Base dictionary or value to merge.
+        override: Override dictionary or value to merge. Values here take precedence.
 
     Returns:
-        Formatted job ID string.
+        The merged result.
 
     Examples:
-        >>> format_job_id("lhcb", 12345)
-        'lhcb:12345'
-        >>> format_job_id("atlas", 1)
-        'atlas:00001'
+        >>> from diracx.core.utils import recursive_merge
+        >>> base = {"a": 1, "b": {"c": 2, "d": 3}}
+        >>> override = {"b": {"c": 10}, "e": 4}
+        >>> recursive_merge(base, override)
+        {'a': 1, 'b': {'c': 10, 'd': 3}, 'e': 4}
+        >>> recursive_merge(None, {"key": "value"})
+        {'key': 'value'}
     """
-    return f"{vo}:{job_number:05d}"
+    if isinstance(base, dict) and isinstance(override, dict):
+        merged: dict[str, Any] = {}
+        for key, base_val in base.items():
+            if key in override:
+                merged[key] = recursive_merge(base_val, override[key])
+            else:
+                merged[key] = base_val
+        for key, override_val in override.items():
+            if key not in merged:
+                merged[key] = override_val
+        return merged
+    return override if override is not None else base
 ```
 
 ### 4. Document Async Functions
