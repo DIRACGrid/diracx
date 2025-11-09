@@ -1,6 +1,8 @@
 # Dependencies
 
-FastAPI dependency injection utilities and common dependencies.
+FastAPI dependency injection utilities for database access, authentication, and configuration in routers.
+
+Dependencies are used in route handlers to inject common resources like database connections, authenticated users, and configuration objects.
 
 ::: diracx.routers.dependencies
     options:
@@ -9,3 +11,6 @@ FastAPI dependency injection utilities and common dependencies.
         members_order: source
         group_by_category: true
         show_if_no_docstring: true
+        filters:
+        - "!^\_"
+        - "!^logger"

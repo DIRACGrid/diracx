@@ -9,9 +9,9 @@ Authentication and authorization endpoints.
         members_order: source
         group_by_category: true
         show_if_no_docstring: true
-filters:
-\- "!^\_"
-\- "!^logger"
+        filters:
+        - "!^\_"
+        - "!^logger"
 
 ## Token Management
 

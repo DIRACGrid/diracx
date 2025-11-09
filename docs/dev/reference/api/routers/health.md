@@ -9,8 +9,8 @@ Health check and monitoring endpoints for service status.
         members_order: source
         group_by_category: true
         show_if_no_docstring: true
-filters:
-\- "!^\_"
+        filters:
+        - "!^\_"
 
 ## Health Probes
 
@@ -21,5 +21,5 @@ filters:
         members_order: source
         group_by_category: true
         show_if_no_docstring: true
-filters:
-\- "!^\_"
+        filters:
+        - "!^\_"

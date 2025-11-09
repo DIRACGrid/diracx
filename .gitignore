@@ -100,3 +100,5 @@ docs/templates/_builtin_markdown.jinja
 
 # docs site
 site
+.github/copilot-instructions.md
+docs/openapi.json

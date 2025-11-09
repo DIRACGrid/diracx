@@ -1,6 +1,8 @@
 # Router Utilities
 
-Utility functions for DiracX routers.
+Helper functions and utilities for building DiracX routers.
+
+These utilities provide common functionality needed across multiple routers, such as user management, response formatting, and request validation.
 
 ## User Utilities
 
@@ -11,3 +13,6 @@ Utility functions for DiracX routers.
         members_order: source
         group_by_category: true
         show_if_no_docstring: true
+        filters:
+        - "!^\_"
+        - "!^logger"

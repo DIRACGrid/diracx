@@ -8,7 +8,7 @@ default_language_version:
   python: python3
 
 ci:
-  skip: [generate-pixi-docs, settings-doc-check, api-doc-coverage-check]
+  skip: [generate-pixi-docs, settings-doc-check, api-doc-coverage-check, generate-entrypoints-docs]
 
 default_stages: [pre-commit]
 
@@ -60,6 +60,7 @@ repos:
       - mdformat-mkdocs
       - mdformat-gfm
       - mdformat-black
+      exclude: ^docs/dev/reference/api/
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
@@ -102,3 +103,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^(diracx-.*/src/diracx/.*\.py|docs/dev/reference/api/.*\.md|docs/dev/reference/api/check_coverage\.py)$
+
+  - repo: local
+    hooks:
+      - id: generate-entrypoints-docs
+        name: Generate entry points documentation
+        entry: pixi run -e default python scripts/generate_entrypoints_docs.py
+        language: system
+        pass_filenames: false
+        files: ^(diracx-.*/pyproject\.toml|extensions/.*/pyproject\.toml|scripts/generate_entrypoints_docs\.py)$

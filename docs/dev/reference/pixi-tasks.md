@@ -12,6 +12,7 @@ This page documents the available pixi tasks.
 ## Default Tasks
 
 - `description`: Run pre-commit hooks
+- `generate-openapi-spec`: Generate OpenAPI specification for documentation
 
 ## DiracX Tasks
 

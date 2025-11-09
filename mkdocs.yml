@@ -1,5 +1,6 @@
 extra_css:
   - assets/css/extra.css
+  - assets/css/neoteroi-mkdocs.css
 
 site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
@@ -216,6 +217,7 @@ nav:
           - Exceptions: dev/reference/api/db/exceptions.md
         - CLI:
           - dev/reference/api/cli/index.md
+        - Routes: dev/reference/routes/index.md
       - Dev env variables: dev/reference/env-variables.md
       - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
@@ -255,6 +257,7 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - tables
+  - pymdownx.details
 
 plugins:
   - privacy
