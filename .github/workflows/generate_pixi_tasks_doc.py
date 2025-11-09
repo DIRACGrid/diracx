@@ -10,7 +10,7 @@ def get_task_group(task_name):
         return "DiracX"
     if task_name.startswith("pytest-gubbins"):
         return "Gubbins"
-    if task_name.startswith("mkdocs"):
+    if task_name.startswith("mkdocs") or task_name == "generate-openapi-spec":
         return "Documentation"
     if task_name == "pre-commit":
         return "Pre-commit"

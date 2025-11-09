@@ -128,15 +128,14 @@ diracx-cli = { path = "diracx-cli", editable = true }
 pyparsing = "*"
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"
-mkdocs-build = { cmd = "mkdocs build --strict", depends-on = ["generate-openapi-spec"] }
-description = "Generate the documentation with mkdocs"
+mkdocs-build = { cmd = "mkdocs build --strict", depends-on = ["generate-openapi-spec"], description = "Generate the documentation with mkdocs" }
 generate-openapi-spec = "python scripts/generate_openapi_spec.py"
 
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
 pre-commit = "*"
-[feature.pre-commit.tasks]
-pre-commit = "pre-commit"
+[feature.pre-commit.tasks.pre-commit]
+cmd = "pre-commit"
 description = "Run pre-commit hooks"
 
 # Features for generating the clients
