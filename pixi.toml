@@ -116,6 +116,7 @@ mkdocstrings = { version = ">=0.24", extras = ["python"] }
 mkdocstrings-python = "*"
 griffe = "*"
 griffe-pydantic = "*"
+neoteroi-mkdocs = "*"
 # Install DiracX packages for documentation
 diracx-core = { path = "diracx-core", editable = true }
 diracx-api = { path = "diracx-api", editable = true }

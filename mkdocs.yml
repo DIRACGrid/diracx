@@ -272,6 +272,8 @@ plugins:
   - search
   - mermaid2
   - autorefs
+  - neoteroi.mkdocsoad:
+      use_pymdownx: true
   - mkdocstrings:
       enabled: true
       default_handler: python
