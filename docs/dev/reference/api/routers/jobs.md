@@ -4,10 +4,10 @@ Job management API endpoints including submission, querying, and status updates.
 
 The Jobs router is composed of multiple sub-routers:
 
-        - **Submission**: Job submission endpoints
-        - **Query**: Job search and filtering
-        - **Status**: Job status management
-        - **Sandboxes**: Sandbox upload/download
+- **Submission**: Job submission endpoints
+- **Query**: Job search and filtering
+- **Status**: Job status management
+- **Sandboxes**: Sandbox upload/download
 
 ## Router
 

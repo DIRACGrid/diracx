@@ -70,13 +70,13 @@ class UserConfig(BaseModel):
 
 Griffe-Pydantic extracts and displays:
 
-        - **Field names and types** (including Union types, Optional, etc.)
-        - **Field descriptions** from `Field(description=...)`
-        - **Default values** from `Field(default=...)`
-        - **Validation constraints**: `min_length`, `max_length`, `ge`, `le`, `pattern`, etc.
-        - **Required vs optional** fields
-        - **Field examples** from `Field(examples=...)`
-        - **Validators** (custom field validators)
+- **Field names and types** (including Union types, Optional, etc.)
+- **Field descriptions** from `Field(description=...)`
+- **Default values** from `Field(default=...)`
+- **Validation constraints**: `min_length`, `max_length`, `ge`, `le`, `pattern`, etc.
+- **Required vs optional** fields
+- **Field examples** from `Field(examples=...)`
+- **Validators** (custom field validators)
 
 ## Class Documentation
 
@@ -212,11 +212,11 @@ By default, mkdocstrings will discover and document:
 
 This will show:
 
-        - Module docstring
-        - All public classes
-        - All public functions
-        - All public constants
-        - Grouped by category (attributes, classes, functions, etc.)
+- Module docstring
+- All public classes
+- All public functions
+- All public constants
+- Grouped by category (attributes, classes, functions, etc.)
 
 #### Document a Specific Class
 
@@ -304,11 +304,11 @@ Job management endpoints.
 
 This will show:
 
-        - The router's docstring
-        - All route handler functions with their HTTP methods, paths, and parameters
-        - Request/response models
-        - Dependencies
-        - Source code links
+- The router's docstring
+- All route handler functions with their HTTP methods, paths, and parameters
+- Request/response models
+- Dependencies
+- Source code links
 
 ## Best Practices
 
@@ -458,7 +458,7 @@ class MyClass:
 
 ## Additional Resources
 
-        - [Google Style Docstrings Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
-        - [Griffe Documentation](https://mkdocstrings.github.io/griffe/)
-        - [Griffe-Pydantic Documentation](https://mkdocstrings.github.io/griffe-pydantic/)
-        - [mkdocstrings Documentation](https://mkdocstrings.github.io/)
+- [Google Style Docstrings Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+- [Griffe Documentation](https://mkdocstrings.github.io/griffe/)
+- [Griffe-Pydantic Documentation](https://mkdocstrings.github.io/griffe-pydantic/)
+- [mkdocstrings Documentation](https://mkdocstrings.github.io/)
