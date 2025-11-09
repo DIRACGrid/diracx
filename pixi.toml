@@ -125,10 +125,12 @@ diracx-db = { path = "diracx-db", editable = true }
 diracx-logic = { path = "diracx-logic", editable = true }
 diracx-client = { path = "diracx-client", editable = true }
 diracx-cli = { path = "diracx-cli", editable = true }
+pyparsing = "*"
 [feature.mkdocs.tasks]
 mkdocs = "mkdocs serve"
 mkdocs-build = { cmd = "mkdocs build --strict", depends-on = ["generate-openapi-spec"] }
 description = "Generate the documentation with mkdocs"
+generate-openapi-spec = "python scripts/generate_openapi_spec.py"
 
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
@@ -198,11 +200,6 @@ mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
-
-# Task for generating OpenAPI specification
-[tasks.generate-openapi-spec]
-cmd = "python scripts/generate_openapi_spec.py"
-description = "Generate OpenAPI specification for documentation"
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]
