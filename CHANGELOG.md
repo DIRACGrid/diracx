@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.2...v0.1.0) (2025-11-11)
+
+
+### Features
+
+* add gubbins-charts Helm chart for gubbins extension ([#691](https://github.com/DIRACGrid/diracx/issues/691)) ([649f318](https://github.com/DIRACGrid/diracx/commit/649f318daa8eeaec177cfde4bc2830a2a89a9058))
+
+
+### Bug Fixes
+
+* support additional config hints ([#690](https://github.com/DIRACGrid/diracx/issues/690)) ([c265a47](https://github.com/DIRACGrid/diracx/commit/c265a47363850662502bb7f0fb8ebbbe94893e85))
+
 ## [0.0.2](https://github.com/DIRACGrid/diracx/compare/v0.0.1...v0.0.2) (2025-10-22)
 
 ### Bug Fixes
