@@ -9,10 +9,6 @@ This page documents the available pixi tasks.
 
 - `generate-client`: Generate the API clients for diracx-client
 
-## Default Tasks
-
-- `description`: Run pre-commit hooks
-
 ## DiracX Tasks
 
 - `pytest-diracx`: pytest
@@ -27,8 +23,9 @@ This page documents the available pixi tasks.
 
 ## Documentation Tasks
 
+- `generate-openapi-spec`: python scripts/generate_openapi_spec.py
 - `mkdocs`: mkdocs serve
-- `mkdocs-build`: mkdocs build --strict
+- `mkdocs-build`: Generate the documentation with mkdocs
 
 ## Gubbins Tasks
 
@@ -44,7 +41,11 @@ This page documents the available pixi tasks.
 
 ## Pre-commit Tasks
 
-- `pre-commit`: pre-commit
+- `pre-commit`: Run pre-commit hooks
+
+## Settings Tasks
+
+- `generate-settings-doc`: Auto-discover and generate settings documentation with validation
 
 ## Shellcheck Tasks
 

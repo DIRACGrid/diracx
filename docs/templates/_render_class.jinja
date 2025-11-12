@@ -1,0 +1,40 @@
+{#
+Reusable macro to render a settings class with all its environment variables.
+
+This macro encapsulates all the complexity of rendering fields, so the main
+template can be kept simple and clean.
+#}
+
+{% macro render_class(class_name) %}
+{# Find the class by name from the classes dict #}
+{% set cls = namespace(found=none) %}
+{% for c, field_list in classes.items() %}
+  {% if c.__name__ == class_name %}
+    {% set cls.found = c %}
+  {% endif %}
+{% endfor %}
+
+{% if cls.found %}
+## {{ cls.found.__name__ }}
+
+{{ cls.found.__doc__ or "*No description available.*" }}
+
+{# Build the fields list in the format expected by the built-in template #}
+{% set ns = namespace(fields=[]) %}
+{% for field_name, field_info in cls.found.model_fields.items() %}
+  {% set env_prefix = cls.found.model_config.get('env_prefix', '') %}
+  {% set env_name = (env_prefix ~ field_name).upper() %}
+  {% set _ = ns.fields.append((env_name, field_info)) %}
+{% endfor %}
+
+{# Set the fields variable and include the built-in settings_doc template #}
+{% set fields = ns.fields %}
+{% include '_builtin_markdown.jinja' with context %}
+{% else %}
+{# Class not found - provide a helpful error #}
+**Error: Class '{{ class_name }}' not found in diracx.core.settings**
+
+Available classes: {{ classes.keys() | map(attribute='__name__') | list | join(', ') }}
+{% endif %}
+
+{% endmacro %}

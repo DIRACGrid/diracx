@@ -1,5 +1,16 @@
-# List of development environment variables
+# List of environment variables
 
-## Development:
+*This page is auto-generated from the DevelopmentSettings class in `diracx.core.settings`.*
 
-- `DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY`: If set to true, the server will crash if an access policy is not called.
+## DevelopmentSettings
+
+Settings for the Development Configuration that can influence run time.
+
+### `DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY`
+
+*Optional*, default value: `False`
+
+When set to true (only for demo/CI), crash if an access policy isn't called.
+
+This is useful for development and testing to ensure all endpoints have proper
+access control policies defined.

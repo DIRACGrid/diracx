@@ -47,7 +47,16 @@ class JobDB(BaseSQLDB):
     async def summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
-        """Get a summary of the jobs."""
+        """Get a summary of jobs aggregated by specified fields.
+
+        Args:
+            group_by: List of field names to group results by.
+            search: List of search specifications to filter jobs.
+
+        Returns:
+            List of dictionaries containing grouped job statistics.
+
+        """
         return await self._summary(table=Jobs, group_by=group_by, search=search)
 
     async def search(
@@ -60,7 +69,20 @@ class JobDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for jobs in the database."""
+        """Search for jobs in the database matching specified criteria.
+
+        Args:
+            parameters: List of field names to return, or None for all fields.
+            search: List of search specifications to filter jobs.
+            sorts: List of sort specifications for result ordering.
+            distinct: If True, return only distinct results.
+            per_page: Number of results per page.
+            page: Page number to return, or None for all results.
+
+        Returns:
+            Tuple of (total_count, list of job dictionaries).
+
+        """
         return await self._search(
             table=Jobs,
             parameters=parameters,
@@ -71,8 +93,16 @@ class JobDB(BaseSQLDB):
             page=page,
         )
 
-    async def create_job(self, compressed_original_jdl: str):
-        """Used to insert a new job with original JDL. Returns inserted job id."""
+    async def create_job(self, compressed_original_jdl: str) -> int:
+        """Create a new job with its original JDL.
+
+        Args:
+            compressed_original_jdl: The compressed original JDL string.
+
+        Returns:
+            The inserted job ID.
+
+        """
         result = await self.conn.execute(
             JobJDLs.__table__.insert().values(
                 JDL="",
@@ -83,12 +113,22 @@ class JobDB(BaseSQLDB):
         return result.lastrowid
 
     async def delete_jobs(self, job_ids: list[int]):
-        """Delete jobs from the database."""
+        """Delete jobs and their associated JDLs from the database.
+
+        Args:
+            job_ids: List of job IDs to delete.
+
+        """
         stmt = delete(JobJDLs).where(JobJDLs.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def insert_input_data(self, lfns: dict[int, list[str]]):
-        """Insert input data for jobs."""
+        """Insert input data LFNs for jobs.
+
+        Args:
+            lfns: Mapping of job IDs to lists of logical file names (LFNs).
+
+        """
         await self.conn.execute(
             InputData.__table__.insert(),
             [
@@ -102,7 +142,12 @@ class JobDB(BaseSQLDB):
         )
 
     async def insert_job_attributes(self, jobs_to_update: dict[int, dict]):
-        """Insert the job attributes."""
+        """Insert job attributes for newly created jobs.
+
+        Args:
+            jobs_to_update: Mapping of job IDs to their attribute dictionaries.
+
+        """
         await self.conn.execute(
             Jobs.__table__.insert(),
             [
@@ -115,7 +160,14 @@ class JobDB(BaseSQLDB):
         )
 
     async def update_job_jdls(self, jdls_to_update: dict[int, str]):
-        """Used to update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
+        """Update the JDL for existing jobs.
+
+        Typically used just after inserting the original JDL or when rescheduling.
+
+        Args:
+            jdls_to_update: Mapping of job IDs to their compressed JDL strings.
+
+        """
         await self.conn.execute(
             JobJDLs.__table__.update().where(
                 JobJDLs.__table__.c.JobID == bindparam("b_JobID")
@@ -129,8 +181,18 @@ class JobDB(BaseSQLDB):
             ],
         )
 
-    async def set_job_attributes(self, job_data):
-        """Update the parameters of the given jobs."""
+    async def set_job_attributes(self, job_data: dict[int, dict[str, Any]]) -> None:
+        """Update the parameters of the given jobs.
+
+        Automatically updates LastUpdateTime when Status is changed.
+
+        Args:
+            job_data: Mapping of job IDs to their attribute dictionaries.
+
+        Raises:
+            ValueError: If job_data is empty.
+
+        """
         # TODO: add myDate and force parameters.
 
         if not job_data:
@@ -169,8 +231,19 @@ class JobDB(BaseSQLDB):
         )
         await self.conn.execute(stmt)
 
-    async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int, str]:
-        """Get the JDLs for the given jobs."""
+    async def get_job_jdls(
+        self, job_ids: Iterable[int], original: bool = False
+    ) -> dict[int, str]:
+        """Get the JDLs for the given jobs.
+
+        Args:
+            job_ids: List of job IDs to retrieve JDLs for.
+            original: If True, return the original JDL, otherwise return the processed JDL.
+
+        Returns:
+            Mapping of job IDs to their JDL strings.
+
+        """
         if original:
             stmt = select(JobJDLs.job_id, JobJDLs.original_jdl).where(
                 JobJDLs.job_id.in_(job_ids)
@@ -183,7 +256,12 @@ class JobDB(BaseSQLDB):
         return {jobid: jdl for jobid, jdl in (await self.conn.execute(stmt)) if jdl}
 
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
-        """Store a command to be passed to the job together with the next heart beat."""
+        """Store commands to be passed to jobs with the next heartbeat.
+
+        Args:
+            commands: List of tuples containing (job_id, command, arguments).
+
+        """
         await self.conn.execute(
             JobCommands.__table__.insert(),
             [
@@ -200,13 +278,20 @@ class JobDB(BaseSQLDB):
     async def set_properties(
         self, properties: dict[int, dict[str, Any]], update_timestamp: bool = False
     ) -> int:
-        """Update the job parameters
-        All the jobs must update the same properties.
+        """Update job properties in bulk.
 
-        :param properties: {job_id : {prop1: val1, prop2:val2}
-        :param update_timestamp: if True, update the LastUpdate to now
+        All jobs must update the same set of properties.
 
-        :return rowcount
+        Args:
+            properties: Mapping of job IDs to property dictionaries.
+                Example: {job_id: {prop1: val1, prop2: val2}}.
+            update_timestamp: If True, update the LastUpdateTime to now.
+
+        Returns:
+            Number of rows updated.
+
+        Raises:
+            NotImplementedError: If jobs attempt to update different sets of properties.
 
         """
         # Check that all we always update the same set of properties
@@ -237,13 +322,19 @@ class JobDB(BaseSQLDB):
     ) -> None:
         """Add the job's heartbeat data to the database.
 
-        NOTE: This does not update the HeartBeatTime column in the Jobs table.
-        This is instead handled by the `diracx.logic.jobs.status.set_job_statuses`
-        as it involves updating multiple databases.
+        Note:
+            This does not update the HeartBeatTime column in the Jobs table.
+            This is instead handled by diracx.logic.jobs.status.set_job_statuses
+            as it involves updating multiple databases.
 
-        :param job_id: the job id
-        :param dynamic_data: mapping of the dynamic data to store,
-            e.g. {"AvailableDiskSpace": 123}
+        Args:
+            job_id: The job ID.
+            dynamic_data: Mapping of dynamic data to store.
+                Example: {"AvailableDiskSpace": "123"}.
+
+        Raises:
+            InvalidQueryError: If dynamic_data contains fields not in heartbeat_fields.
+
         """
         if extra_fields := set(dynamic_data) - self.heartbeat_fields:
             raise InvalidQueryError(
@@ -262,10 +353,16 @@ class JobDB(BaseSQLDB):
         await self.conn.execute(HeartBeatLoggingInfo.__table__.insert().values(values))
 
     async def get_job_commands(self, job_ids: Iterable[int]) -> list[JobCommand]:
-        """Get a command to be passed to the job together with the next heartbeat.
+        """Get commands to be passed to jobs with the next heartbeat.
 
-        :param job_ids: the job ids
-        :return: mapping of job id to list of commands
+        Commands are marked as "Sent" after retrieval.
+
+        Args:
+            job_ids: The job IDs to get commands for.
+
+        Returns:
+            List of JobCommand objects containing job_id, command, and arguments.
+
         """
         # Get the commands
         stmt = (
