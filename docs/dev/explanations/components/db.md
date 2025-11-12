@@ -38,6 +38,13 @@ MySQL `TIMESTAMP` types should be treated with caution as they are stored as nai
 
 See MySQL docs: https://dev.mysql.com/doc/refman/8.4/en/datetime.html
 
+### On SQLAlchemy usage
+
+The database schemas are defined using SQLAlchemy's ORM declarative models (e.g., classes inheriting from [`declarative_base`](https://docs.sqlalchemy.org/en/20/orm/mapping_api.html#sqlalchemy.orm.declarative_base))
+All database interactions (queries, inserts, updates, deletes) are performed using SQLAlchemy Core constructs like [`select()`](https://docs.sqlalchemy.org/en/20/core/selectable.html#sqlalchemy.sql.expression.select), `insert()`, `update()`, and `delete()`. There is no usage of the ORM `Session` or `sessionmaker`. Instead, operations are executed directly on a connection object (e.g., `self.conn.execute(...)`).
+
+This pattern is referred within the SQLAlchemy documentation as a ["2.0-style"](https://docs.sqlalchemy.org/en/20/tutorial/index.html#sqlalchemy-unified-tutorial) of working. This is practice for asynchronous applications and when used together with FastAPI.
+
 ### API
 
 TODO: Document the basic API for SQL databases once things settle
