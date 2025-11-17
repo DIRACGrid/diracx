@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.2...v0.1.0) (2025-11-17)
+
+
+### Features
+
+* add gubbins-charts Helm chart for gubbins extension ([#691](https://github.com/DIRACGrid/diracx/issues/691)) ([649f318](https://github.com/DIRACGrid/diracx/commit/649f318daa8eeaec177cfde4bc2830a2a89a9058))
+
+
+### Bug Fixes
+
+* move cern-specific config option from diracx to lhcbdiracx ([#694](https://github.com/DIRACGrid/diracx/issues/694)) ([927d51b](https://github.com/DIRACGrid/diracx/commit/927d51bb8cf21b5e4f82c53b7e04bf0e72435806))
+* support additional config hints ([#690](https://github.com/DIRACGrid/diracx/issues/690)) ([c265a47](https://github.com/DIRACGrid/diracx/commit/c265a47363850662502bb7f0fb8ebbbe94893e85))
+
 ## [0.0.2](https://github.com/DIRACGrid/diracx/compare/v0.0.1...v0.0.2) (2025-10-22)
 
 ### Bug Fixes
