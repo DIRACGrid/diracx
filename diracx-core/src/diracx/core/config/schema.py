@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import date, datetime
+from datetime import datetime
 from typing import Annotated, Any, MutableMapping, TypeVar
 
 from pydantic import BaseModel as _BaseModel
@@ -72,13 +72,6 @@ class UserConfig(BaseModel):
     Email: EmailStr | None = None
     Suspended: list[str] = []
     Quota: int | None = None
-    # TODO: These should be LHCbDIRAC specific
-    CERNAccountType: str | None = None
-    PrimaryCERNAccount: str | None = None
-    CERNPersonId: int | None = None
-
-    # Mapping from VO name to affiliation end date (YYYY-MM-DD)
-    AffiliationEnds: dict[str, date] = Field(default_factory=dict)
 
 
 class GroupConfig(BaseModel):
