@@ -27,7 +27,9 @@ app = AsyncTyper()
 def get_repo_path(config_repo_str: str) -> Path:
     config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo_str)
     if config_repo.scheme not in ("git+file", "file") or config_repo.path is None:
-        raise NotImplementedError("Only git+file:// and file:// URLs are supported for local config repositories")
+        raise NotImplementedError(
+            "Only git+file:// and file:// URLs are supported for local config repositories"
+        )
 
     repo_path = Path(config_repo.path)
 
@@ -35,7 +37,9 @@ def get_repo_path(config_repo_str: str) -> Path:
 
 
 def get_config_from_repo_path(repo_path: Path) -> Config:
-    return ConfigSource.create_from_url(backend_url=f"git+file://{repo_path}").read_config()
+    return ConfigSource.create_from_url(
+        backend_url=f"git+file://{repo_path}"
+    ).read_config()
 
 
 @app.command()
