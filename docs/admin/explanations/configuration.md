@@ -5,10 +5,10 @@ This is in contrast to "Settings" which are only available on the server side.
 Confidential information (such as passwords) is only handled in Settings, see the DiracX helm chart for details.
 
 The DiracX configuration is stored as a single YAML file.
-We recommend that this is stored within a Git repository, and DiracX provides two git-based backends can be used by servers:
+We recommend that this is stored within a Git repository, and DiracX provides git-based backends that can be used by servers:
 
-- `git+file`: Refers to a local git repository. This must be stored on a shared volume which is made available to all DiracX servers.
-- `git+https`: Refers to a remote git repository that can be stored on any standard git host.
+- `git+https`: Refers to a remote git repository that can be stored on any standard git host. This is the recommended approach for production deployments.
+- `git+file`: Refers to a local git repository. This clones the repository into a temporary directory to avoid file permission issues in containerized environments. For production use with local repositories, `git+https` with a local git server is recommended instead.
 
 ## Structure of the CS
 
