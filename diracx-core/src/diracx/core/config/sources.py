@@ -12,13 +12,12 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated
 from urllib.parse import urlparse, urlunparse
 
 import sh
 import yaml
 from cachetools import Cache, LRUCache
-from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
+from pydantic import AnyUrl, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersionError
 from ..extensions import select_from_extension
@@ -43,18 +42,11 @@ def is_running_in_async_context():
         return False
 
 
-def _apply_default_scheme(value: str) -> str:
-    """Applies the default git+file:// scheme if not present."""
-    if isinstance(value, str) and "://" not in value:
-        value = f"git+file://{value}"
-    return value
-
-
 class AnyUrlWithoutHost(AnyUrl):
     _constraints = UrlConstraints(host_required=False)
 
 
-ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_scheme)]
+ConfigSourceUrl = AnyUrlWithoutHost
 
 
 class ConfigSource(metaclass=ABCMeta):
@@ -233,40 +225,13 @@ class BaseGitConfigSource(ConfigSource):
         return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
 
 
-class LocalGitConfigSource(BaseGitConfigSource):
-    """The configuration is stored on a local git repository
-    When running on multiple servers, the filesystem must be shared.
-    """
-
-    scheme = "git+file"
-
-    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        super().__init__(backend_url=backend_url)
-        if not backend_url.path:
-            raise ValueError("Empty path for LocalGitConfigSource")
-
-        self.repo_location = Path(backend_url.path)
-        # Check if it's a valid git repository
-        try:
-            sh.git(
-                "rev-parse",
-                "--git-dir",
-                _cwd=self.repo_location,
-                _tty_out=False,
-                _async=False,
-            )
-        except sh.ErrorReturnCode as e:
-            raise ValueError(
-                f"{self.repo_location} is not a valid git repository"
-            ) from e
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
-
-    def __hash__(self):
-        return hash(self.repo_location)
-
-
 class RemoteGitConfigSource(BaseGitConfigSource):
-    """Use a remote directory as a config source."""
+    """Use a remote directory as a config source.
+
+    This supports both remote repositories (git+https://) and local repositories
+    (git+file://). For local repositories, it clones them into a temporary directory
+    to avoid the file permission issues that LocalGitConfigSource encountered.
+    """
 
     scheme = "git+https"
 
@@ -292,3 +257,14 @@ class RemoteGitConfigSource(BaseGitConfigSource):
             logger.exception(err)
 
         return super().latest_revision()
+
+
+class FileGitConfigSource(RemoteGitConfigSource):
+    """Alias for RemoteGitConfigSource that handles git+file:// URLs.
+
+    This class uses the same implementation as RemoteGitConfigSource,
+    cloning the local repository into a temporary directory to avoid
+    file permission issues in containerized environments.
+    """
+
+    scheme = "git+file"
