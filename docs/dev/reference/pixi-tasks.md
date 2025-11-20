@@ -46,6 +46,10 @@ This page documents the available pixi tasks.
 
 - `pre-commit`: pre-commit
 
+## Settings Tasks
+
+- `generate-settings-doc`: Auto-discover and generate settings documentation with validation
+
 ## Shellcheck Tasks
 
 - `shellcheck`: Run shellcheck on all shell scripts

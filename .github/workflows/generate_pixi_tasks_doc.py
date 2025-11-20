@@ -18,6 +18,8 @@ def get_task_group(task_name):
         return "Client Generation"
     if task_name == "shellcheck":
         return "Shellcheck"
+    if task_name.startswith("generate-settings-"):
+        return "Settings"
     return "Default"
 
 
