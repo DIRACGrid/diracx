@@ -96,3 +96,9 @@ docs/source/_build
 .pixi
 pixi.lock
 *.egg-info
+docs/templates/_builtin_markdown.jinja
+
+# docs site
+site
+.github/copilot-instructions.md
+docs/openapi.json
