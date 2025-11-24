@@ -35,7 +35,7 @@ jobs:
         # We need extglob for REFERENCE_BRANCH substitution
         shell: bash -l -O extglob {0}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           token: ${{ github.token }}
       - run: |
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -172,12 +172,12 @@ jobs:
     if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: diracx
 
       - name: Checkout diracx-charts
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: DIRACGrid/diracx-charts
           token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
