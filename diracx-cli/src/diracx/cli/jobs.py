@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from typer import FileText, Option
 
+from diracx.api.jobs import submit_jobs
 from diracx.client.aio import AsyncDiracClient
 from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
 from diracx.core.preferences import OutputFormats, get_diracx_preferences
@@ -150,9 +151,8 @@ def display_rich(data, content_range: ContentRange) -> None:
 
 
 @app.async_command()
-async def submit(jdl: list[FileText]):
-    async with AsyncDiracClient() as api:
-        jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
+async def submit(jdls: list[FileText]):
+    jobs = await submit_jobs(jdls)
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )

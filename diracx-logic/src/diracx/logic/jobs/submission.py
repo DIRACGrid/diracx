@@ -184,10 +184,6 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: 
                 )
             )
 
-            # Fix possible lack of brackets
-            if original_jdl.strip()[0] != "[":
-                original_jdl = f"[{original_jdl}]"
-
             original_jdls.append(
                 (
                     original_jdl,
