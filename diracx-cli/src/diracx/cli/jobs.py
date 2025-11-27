@@ -152,7 +152,9 @@ def display_rich(data, content_range: ContentRange) -> None:
 
 @app.async_command()
 async def submit(jdls: list[FileText]):
-    jobs = await submit_jobs(jdls)
+    jdls_values = [jdl.read() for jdl in jdls]
+
+    jobs = await submit_jobs(jdls_values)
     print(
         f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
     )

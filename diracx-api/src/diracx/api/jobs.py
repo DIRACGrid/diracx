@@ -14,7 +14,6 @@ from typing import BinaryIO, Literal
 import httpx
 import zstandard
 from DIRACCommon.Core.Utilities.ClassAd.ClassAdLight import ClassAd
-from typer import FileText
 
 from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import SandboxInfo
@@ -128,22 +127,20 @@ async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracCli
 
 
 @with_client
-async def submit_jobs(jdls: list[FileText], *, client: AsyncDiracClient):
+async def submit_jobs(jdls: list[str], *, client: AsyncDiracClient):
     # Create and upload InputSandboxes from JDLs
     for i, jdl in enumerate(jdls):
-        original_jdl = jdl.read()
-
         # Fix possible lack of brackets
-        if original_jdl.strip()[0] != "[":
-            original_jdl = f"[{original_jdl}]"
+        if jdl.strip()[0] != "[":
+            jdl = f"[{jdl}]"
 
-        class_ad_job = ClassAd(original_jdl)
+        class_ad_job = ClassAd(jdl)
         if class_ad_job.lookupAttribute("InputSandbox"):
             isb = class_ad_job.getListFromExpression("InputSandbox")
             sandboxes_pfn = await create_sandbox(
                 paths=[Path(file_path) for file_path in isb]
             )
-            print(f"InputSandbox created: {sandboxes_pfn[13:]}")
+            logging.info(f"InputSandbox created: {sandboxes_pfn[13:]}")
             class_ad_job.set_expression("InputSandbox", {sandboxes_pfn})
 
         jdls[i] = class_ad_job.asJDL()
