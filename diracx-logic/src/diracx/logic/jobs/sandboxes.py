@@ -153,14 +153,15 @@ async def assign_sandbox_to_job(
     job_id: int,
     pfn: str,
     sandbox_metadata_db: SandboxMetadataDB,
+    sandbox_type: Literal["input", "output"],
     settings: SandboxStoreSettings,
 ):
-    """Map the pfn as output sandbox to job."""
+    """Map the pfn as input or output sandbox to job."""
     short_pfn = pfn.split("|", 1)[-1]
     await sandbox_metadata_db.assign_sandbox_to_jobs(
         jobs_ids=[job_id],
         pfn=short_pfn,
-        sb_type=SandboxType.Output,
+        sb_type=SandboxType(sandbox_type.capitalize()),
         se_name=settings.se_name,
     )
 
