@@ -175,7 +175,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
     model_config = SettingsConfigDict(env_prefix="DIRACX_SANDBOX_STORE_")
 
     bucket_name: str
-    s3_client_kwargs: dict[str, str]
+    s3_client_kwargs: dict[str, Any]
     auto_create_bucket: bool = False
     url_validity_seconds: int = 5 * 60
     se_name: str = "SandboxSE"
