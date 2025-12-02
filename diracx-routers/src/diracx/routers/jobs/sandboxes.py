@@ -129,19 +129,22 @@ async def get_job_sandbox(
     return await get_job_sandbox_bl(job_id, sandbox_metadata_db, sandbox_type)
 
 
-@router.patch("/{job_id}/sandbox/output")
+@router.patch("/{job_id}/sandbox/{sandbox_type}")
 async def assign_sandbox_to_job(
     job_id: int,
     pfn: Annotated[str, Body(max_length=256, pattern=SANDBOX_PFN_REGEX)],
+    sandbox_type: Literal["input", "output"],
     sandbox_metadata_db: SandboxMetadataDB,
     job_db: JobDB,
     settings: SandboxStoreSettings,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Map the pfn as output sandbox to job."""
+    """Map the pfn as input or output sandbox to job."""
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     try:
-        await assign_sandbox_to_job_bl(job_id, pfn, sandbox_metadata_db, settings)
+        await assign_sandbox_to_job_bl(
+            job_id, pfn, sandbox_metadata_db, sandbox_type, settings
+        )
     except SandboxNotFoundError as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST, detail="Sandbox not found"

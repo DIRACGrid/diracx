@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("create_sandbox", "download_sandbox")
+__all__ = ("create_sandbox", "download_sandbox", "submit_jobs")
 
 import hashlib
 import logging
@@ -13,6 +13,7 @@ from typing import BinaryIO, Literal
 
 import httpx
 import zstandard
+from DIRACCommon.Core.Utilities.ClassAd.ClassAdLight import ClassAd
 
 from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import SandboxInfo
@@ -123,3 +124,26 @@ async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracCli
         with tarfile_open(fh) as tf:
             tf.extractall(path=destination, filter="data")
         logger.debug("Extracted %s to %s", pfn, destination)
+
+
+@with_client
+async def submit_jobs(jdls: list[str], *, client: AsyncDiracClient):
+    # Create and upload InputSandboxes from JDLs
+    for i, jdl in enumerate(jdls):
+        # Fix possible lack of brackets
+        if jdl.strip()[0] != "[":
+            jdl = f"[{jdl}]"
+
+        class_ad_job = ClassAd(jdl)
+        if class_ad_job.lookupAttribute("InputSandbox"):
+            isb = class_ad_job.getListFromExpression("InputSandbox")
+            sandboxes_pfn = await create_sandbox(
+                paths=[Path(file_path) for file_path in isb]
+            )
+            logging.info(f"InputSandbox created: {sandboxes_pfn[13:]}")
+            class_ad_job.set_expression("InputSandbox", {sandboxes_pfn})
+
+        jdls[i] = class_ad_job.asJDL()
+
+    jobs = await client.jobs.submit_jdl_jobs(list(jdls))
+    return jobs
