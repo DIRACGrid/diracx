@@ -14,8 +14,8 @@ __all__ = [
 
 import json
 from io import BytesIO, IOBase
-from typing import Any, IO, Dict, TypedDict, Union, Unpack, cast, Literal
-
+from typing import Any, IO, Dict, Union, Unpack, cast, Literal
+from typing_extensions import TypedDict
 from diracx.core.models import SearchSpec
 
 

@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import secrets
+from typing_extensions import TypedDict
 
 import httpx
 from cachetools import TTLCache
@@ -11,7 +12,6 @@ from cryptography.fernet import Fernet
 from joserfc import jwt
 from joserfc.jwk import KeySet
 from joserfc.jwt import Claims, JWTClaimsRegistry
-from typing_extensions import TypedDict
 from uuid_utils import UUID
 
 from diracx.core.config.schema import Config
