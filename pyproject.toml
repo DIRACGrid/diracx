@@ -110,6 +110,7 @@ ignore-words-list = ["CheckIn", "dependant"]
 
 [tool.mypy]
 python_version = "3.11"
+strict = false
 files = [
   "diracx-api/src/**/*.py",
   "diracx-cli/src/**/*.py",
