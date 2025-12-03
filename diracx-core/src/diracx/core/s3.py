@@ -12,9 +12,9 @@ __all__ = (
 import asyncio
 import base64
 from typing import TYPE_CHECKING, cast
-from typing_extensions import TypedDict
 
 from botocore.errorfactory import ClientError
+from typing_extensions import TypedDict
 
 from .models import ChecksumAlgorithm
 
