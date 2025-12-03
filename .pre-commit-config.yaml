@@ -30,7 +30,7 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.14.14'
+    rev: "v0.14.14"
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -51,29 +51,29 @@ repos:
           - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
-  - repo: https://github.com/executablebooks/mdformat
+  - repo: https://github.com/hukkin/mdformat
     rev: 1.0.0
     hooks:
-    - id: mdformat
-      args: ["--number"]
-      exclude: ^CHANGELOG\.md$
-      additional_dependencies:
-      - mdformat-mkdocs
-      - mdformat-gfm
-      - mdformat-black
+      - id: mdformat
+        args: ["--number"]
+        exclude: ^CHANGELOG\.md$
+        additional_dependencies:
+          - mdformat-mkdocs
+          - mdformat-gfm
+          - mdformat-black
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
-    - id: codespell
-      args: ["-w"]
+      - id: codespell
+        args: ["-w"]
 
   - repo: local
     hooks:
       - id: check-lollygag
         name: check for lollygag
         types: [python]
-        entry: '(?i)lollygag'
+        entry: "(?i)lollygag"
         language: pygrep
         files: ^diracx
 
@@ -84,7 +84,7 @@ repos:
         entry: pixi run -e default python .github/workflows/generate_pixi_tasks_doc.py
         language: system
         pass_filenames: false
-        files: ^pixi\.toml$|^pixi\.lock$   # only run if pixi files change
+        files: ^pixi\.toml$|^pixi\.lock$ # only run if pixi files change
 
   - repo: local
     hooks:
