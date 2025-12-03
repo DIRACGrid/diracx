@@ -18,7 +18,8 @@ from .utils import with_client
 
 
 @with_client
-async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str: ...
+async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
+    ...
 ```
 
 In this example, `paths` are the parameters of the API. The `@with_client` decorator allows the method to be called without manually managing the client:

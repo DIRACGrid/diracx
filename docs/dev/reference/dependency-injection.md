@@ -81,7 +81,7 @@ For advanced scenarios requiring explicit transaction commits (e.g., revoking to
 
 ```python
 @router.post("/token")
-async def token(auth_db: AuthDB, ...):
+async def token(auth_db: AuthDB):
     if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
         # Revoke all the user tokens associated with the subject
         await auth_db.revoke_user_refresh_tokens(sub)
