@@ -564,6 +564,7 @@ async def test_refresh_token_expired(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
     """Test the expiration date of the passed refresh token.
+
     - get a refresh token
     - decode it and change the expiration time
     - recode it (with the JWK of the server).
@@ -602,6 +603,7 @@ async def test_access_token_expired(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
     """Test the expiration date of the passed access token.
+
     - get an access token
     - decode it and change the expiration time
     - recode it (with the JWK of the server).
@@ -636,6 +638,7 @@ async def test_invalid_access_token_signature(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
     """Test the signature of a token.
+
     - get an access token
     - decode it and change the signature
     - recode it (with the JWK of the server).
@@ -670,8 +673,12 @@ async def test_invalid_access_token_alg_none(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
     """Test token with 'alg': 'none' header (alg:none attack).
+
     - get a valid token
     - decode payload
+    - craft a JWT with alg=none and no signature
+    - verify that the server rejects it.
+    """
     - craft a JWT with alg=none and no signature
     - verify that the server rejects it.
     """
@@ -709,6 +716,7 @@ async def test_refresh_token_rotated_expiration_time(
     test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
 ):
     """Test the expiration date of the newly generated refresh token is similar to the previous one.
+
     - get a refresh token
     - decode it and change the expiration time
     - recode it (with the JWK of the server)
@@ -1065,11 +1073,11 @@ async def test_revoke_refresh_tokens_normal_user_with_jti(
 async def test_revoke_refresh_tokens_token_manager_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
-    """Test the refresh token revokation with 2 users, a normal one and token manager:
-    - normal user gets a refresh token
-    - token manager gets a refresh token
-    - token manager tries to delete normal user's RT: should work
-    - token manager tries to delete his/her RT: should work too.
+        """Test the refresh token revokation with 2 users, a normal one and token manager:
+        - normal user gets a refresh token
+        - token manager gets a refresh token
+        - token manager tries to delete normal user's RT: should work
+        - token manager tries to delete his/her RT: should work too.
     """
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)

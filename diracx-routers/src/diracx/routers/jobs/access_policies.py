@@ -29,6 +29,7 @@ class ActionType(StrEnum):
 
 class WMSAccessPolicy(BaseAccessPolicy):
     """Rules:
+
     * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
     * An admin cannot create any resource but can read everything and modify everything
     * A NORMAL_USER can create
@@ -116,6 +117,7 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 class SandboxAccessPolicy(BaseAccessPolicy):
     """Policy for the sandbox.
+
     They are similar to the WMS access policies.
     """
 

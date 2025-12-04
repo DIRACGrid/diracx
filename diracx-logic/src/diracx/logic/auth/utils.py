@@ -210,6 +210,7 @@ async def verify_dirac_refresh_token(
     settings: AuthSettings,
 ) -> tuple[UUID, float, bool]:
     """Verify dirac user token and return a UserInfo class
+
     Used for each API endpoint.
     """
     claims = read_token(
@@ -236,6 +237,7 @@ def parse_and_validate_scope(
     scope: str, config: Config, available_properties: set[SecurityProperty]
 ) -> ScopeInfoDict:
     """Check:
+
         * At most one VO
         * At most one group
         * group belongs to VO
