@@ -104,7 +104,7 @@ def create_app_inner(
     config_source: ConfigSource,
     all_access_policies: dict[str, Sequence[BaseAccessPolicy]],
 ) -> DiracFastAPI:
-    """This method does the heavy lifting work of putting all the pieces together.
+Assemble all the application components.
 
     When starting the application normally, this method is called by create_app,
     and the values of the parameters are taken from environment variables or
@@ -460,6 +460,7 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
     """Cache the result of pinging the DB
+
     (exceptions are not cacheable).
     """
     if db not in _db_alive_cache:
@@ -486,6 +487,7 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2]:
 
 class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
     """Custom FastAPI middleware to verify that
+
     the client has the required minimum version.
     """
 
@@ -539,7 +541,7 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
 
 
 def get_min_client_version():
-    """Extracting min client version from entry_points and searching for extension."""
+    """Extract min client version from entry_points and search for extension."""
     matched_entry_points: EntryPoints = entry_points(
         group=DiracEntryPoint.MIN_CLIENT_VERSION
     )

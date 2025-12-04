@@ -52,6 +52,7 @@ async def initiate_authorization_flow(
     settings: AuthSettings,
 ) -> responses.RedirectResponse:
     """Initiate the authorization flow.
+
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 

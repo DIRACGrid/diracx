@@ -19,7 +19,7 @@ router = DiracxRouter(require_auth=False)
 
 @router.get("/live", include_in_schema=False)
 async def liveness(config: Config):
-    """Returns a simple status to indicate the app is running.
+    """Return a simple status to indicate the app is running.
 
     The method doesn't use the config but we want to depend on it so the check
     fails if the config expires without managing to refresh.

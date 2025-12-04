@@ -107,7 +107,7 @@ async def calculate_priority(
     """
 
     def is_background(tq_priority: float, allow_bg_tqs: bool) -> bool:
-        """A TQ is background if its priority is below a threshold and background TQs are allowed."""
+        """Determine if a TQ is background based on its priority and allowed background TQs."""
         return tq_priority <= 0.1 and allow_bg_tqs
 
     # Calculate Sum of priorities of non background TQs

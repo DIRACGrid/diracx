@@ -6,18 +6,13 @@ requires-python = ">=3.11"
 keywords = []
 license = { text = "GPL-3.0-only" }
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering",
-    "Topic :: System :: Distributed Computing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+  "Topic :: System :: Distributed Computing",
 ]
-dependencies = [
-    "diracx-api",
-    "diracx-cli",
-    "diracx-client",
-    "diracx-core",
-]
+dependencies = ["diracx-api", "diracx-cli", "diracx-client", "diracx-core"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
@@ -35,43 +30,39 @@ bypass-selection = true
 
 [tool.ruff]
 src = ["diracx-*/src", "diracx-*/tests"]
-exclude = [
-    "diracx-client/src/diracx/client",
-]
+exclude = ["diracx-client/src/diracx/client"]
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "B",   # flake8-bugbear
-    "I",   # isort
-    "PLE", # pylint errors
-    "D",   # pydocstyle
-    # "UP",   # pyUpgrade
-    "FLY", # flynt
-    "DTZ", # flake8-datetimez
-    "S",   # flake8-bandit
-    "N",   # pep8-naming
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "B",   # flake8-bugbear
+  "I",   # isort
+  "PLE", # pylint errors
+  "D",   # pydocstyle
+  # "UP",   # pyUpgrade
+  "FLY", # flynt
+  "DTZ", # flake8-datetimez
+  "S",   # flake8-bandit
+  "N",   # pep8-naming
 ]
 ignore = [
-    "B905",
-    "B008",
-    "B006",
-    "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
-    "D203",
-    "D213",
-    # TODO: Maybe enable these
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D107",
-    # TODO: These should be re-enabled after fixing
-    "D205",
-    "D401",
-    "D404",
+  "B905",
+  "B008",
+  "B006",
+  "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+  "D203",
+  "D213",
+  # TODO: Maybe enable these
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D107",
+  # TODO enable this
+  "D401",
 ]
 
 [tool.ruff.lint.isort]
@@ -88,11 +79,11 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
 extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.Query",
-    "fastapi.Path",
-    "fastapi.Body",
-    "fastapi.Header",
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.Path",
+  "fastapi.Body",
+  "fastapi.Header",
 ]
 
 [tool.ruff.lint.pycodestyle]
@@ -108,36 +99,33 @@ profile = "black"
 
 [tool.codespell]
 skip = [
-    "diracx-client/src/diracx/client/_generated/*",
-    "diracx-[a-z]*/tests/*",
-    "diracx-testing/*",
-    "extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*",
-    "extensions/gubbins/gubbins-*/tests/*",
+  "diracx-client/src/diracx/client/_generated/*",
+  "diracx-[a-z]*/tests/*",
+  "diracx-testing/*",
+  "extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*",
+  "extensions/gubbins/gubbins-*/tests/*",
 ]
-ignore-words-list = [
-    "CheckIn",
-    "dependant",
-]
+ignore-words-list = ["CheckIn", "dependant"]
 
 
 [tool.mypy]
 files = [
-    "diracx-api/src/**/*.py",
-    "diracx-cli/src/**/*.py",
-    "diracx-client/src/**/_patch.py",
-    "diracx-core/src/**/*.py",
-    "diracx-db/src/**/*.py",
-    "diracx-logic/src/**/*.py",
-    "diracx-routers/src/**/*.py",
+  "diracx-api/src/**/*.py",
+  "diracx-cli/src/**/*.py",
+  "diracx-client/src/**/_patch.py",
+  "diracx-core/src/**/*.py",
+  "diracx-db/src/**/*.py",
+  "diracx-logic/src/**/*.py",
+  "diracx-routers/src/**/*.py",
 ]
 mypy_path = [
-    "$MYPY_CONFIG_FILE_DIR/diracx-api/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-cli/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-client/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-core/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-db/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-logic/src",
-    "$MYPY_CONFIG_FILE_DIR/diracx-routers/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-api/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-cli/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-client/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-core/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-db/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-logic/src",
+  "$MYPY_CONFIG_FILE_DIR/diracx-routers/src",
 ]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 allow_redefinition = true
@@ -160,23 +148,25 @@ log_cli_level = "INFO"
 xfail_strict = true
 filterwarnings = ["default"]
 testpaths = [
-    "diracx-api/tests",
-    "diracx-cli/tests",
-    "diracx-client/tests",
-    "diracx-core/tests",
-    "diracx-db/tests",
-    "diracx-routers/tests",
+  "diracx-api/tests",
+  "diracx-cli/tests",
+  "diracx-client/tests",
+  "diracx-core/tests",
+  "diracx-db/tests",
+  "diracx-routers/tests",
 ]
 addopts = [
-    "-v",
-    "--cov=diracx",
-    "--cov-report=term-missing",
-    "-pdiracx.testing",
-    "-pdiracx.testing.osdb",
-    "--import-mode=importlib",
-    "-ra", "--strict-config", "--strict-markers",
+  "-v",
+  "--cov=diracx",
+  "--cov-report=term-missing",
+  "-pdiracx.testing",
+  "-pdiracx.testing.osdb",
+  "--import-mode=importlib",
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
 ]
 asyncio_mode = "auto"
 markers = [
-    "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+  "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
 ]

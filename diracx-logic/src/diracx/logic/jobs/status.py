@@ -106,6 +106,7 @@ async def set_job_statuses(
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
     """Set various status fields for job specified by its jobId.
+
     Set only the last status in the JobDB, updating all the status
     logging information in the JobLoggingDB. The status dict has datetime
     as a key and status information dictionary as values.

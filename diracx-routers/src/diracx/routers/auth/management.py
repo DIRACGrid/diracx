@@ -1,4 +1,4 @@
-"""This module contains the auth management endpoints.
+"""Module for auth management endpoints.
 
 These endpoints are used to manage the user's authentication tokens and
 to get information about the user's identity.
@@ -52,7 +52,9 @@ async def get_refresh_tokens(
     auth_db: AuthDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> list:
-    """Get all refresh tokens for the user. If the user has the `proxy_management` property, then
+    """Get all refresh tokens for the user.
+
+    If the user has the `proxy_management` property, then
     the subject is not used to filter the refresh tokens.
     """
     subject: str | None = user_info.sub
@@ -108,7 +110,9 @@ async def revoke_refresh_token_by_jti(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     jti: str,
 ) -> str:
-    """Revoke a refresh token. If the user has the `proxy_management` property, then
+    """Revoke a refresh token.
+
+    If the user has the `proxy_management` property, then
     the subject is not used to filter the refresh tokens.
     """
     subject: str | None = user_info.sub

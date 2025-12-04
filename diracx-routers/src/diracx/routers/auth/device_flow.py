@@ -93,7 +93,8 @@ async def do_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """This is called as the verification URI for the device flow.
+    """Serve as the verification URI for the device flow.
+
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 
@@ -122,8 +123,8 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """This the url callbacked by IAM/CheckIn after the authorization
-    flow was granted.
+    """Handle the URL callbacked by IAM/CheckIn after authorization flow.
+
     It gets us the code we need for the authorization flow, and we
     can map it to the corresponding device flow using the user_code
     in the cookie/session.
@@ -157,7 +158,7 @@ async def finish_device_flow(
 
 @router.get("/device/complete/finished")
 def finished(response: Response):
-    """This is the final step of the device flow."""
+    """Mark the final step of the device flow."""
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"
