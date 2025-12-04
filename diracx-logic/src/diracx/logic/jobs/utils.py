@@ -56,7 +56,7 @@ async def check_and_prepare_job(
     job_db: JobDB,
     config: Config,
 ):
-    """Check Consistency of Submitted JDL and set some defaults
+    """Check Consistency of Submitted JDL and set some defaults.
 
     Prepare subJDL with Job Requirements.
     """

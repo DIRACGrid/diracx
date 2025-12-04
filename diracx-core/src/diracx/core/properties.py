@@ -1,6 +1,4 @@
-"""Just listing the possible Properties
-This module contains list of Properties that can be assigned to users and groups.
-"""
+"""Module containing the list of Properties that can be assigned to users and groups."""
 
 from __future__ import annotations
 

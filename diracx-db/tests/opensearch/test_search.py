@@ -40,7 +40,7 @@ DOC3 = {
 
 @contextlib.asynccontextmanager
 async def resolve_fixtures_hack(request, name):
-    """Resolves a fixture from `diracx.testing.osdb`.
+    """Resolve a fixture from `diracx.testing.osdb`.
 
     This is a hack to work around pytest-asyncio not supporting the use of
     request.getfixturevalue() from within an async function.

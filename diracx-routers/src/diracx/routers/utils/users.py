@@ -75,7 +75,7 @@ async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,
 ) -> AuthorizedUserInfo:
-    """Verify dirac user token and return a UserInfo class
+    """Verify dirac user token and return a UserInfo class.
 
     Used for each API endpoint.
     """

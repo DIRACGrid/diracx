@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 
 def test_all_routes_have_policy():
-    """Loop over all the routers, loop over every route,
-    and make sure there is a dependency on a BaseAccessPolicy class.
+    """Loop over all the routers, loop over every route.
+
+    Make sure there is a dependency on a BaseAccessPolicy class.
 
     If the router is created with "require_auth=False", we skip it.
     We also skip routes that have the "diracx_open_access" decorator

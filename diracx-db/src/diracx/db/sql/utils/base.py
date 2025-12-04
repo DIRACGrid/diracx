@@ -42,7 +42,7 @@ class SQLDBUnavailableError(DBUnavailableError, SQLDBError):
 
 
 class BaseSQLDB(metaclass=ABCMeta):
-    """This should be the base class of all the SQL DiracX DBs.
+    """The base class of all the SQL DiracX DBs.
 
     The details covered here should be handled automatically by the service and
     task machinery of DiracX and this documentation exists for informational
@@ -224,7 +224,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """This is called when exiting a route.
+        """Called when exiting a route.
 
         If there was no exception, the changes in the DB are committed.
         Otherwise, they are rolled back.

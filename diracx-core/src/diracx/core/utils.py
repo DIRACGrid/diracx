@@ -245,7 +245,7 @@ class TwoLevelCache:
         raise NotReadyError(f"Cache key {key} is not ready yet.")
 
     def _work(self, key: str, populate_func: Callable[[], Any]) -> None:
-        """Internal method to execute the populate_func and update caches.
+        """Execute the populate_func and update caches.
 
         This method is intended to be run in a separate thread. It calls the
         populate_func, stores the result in both caches, and cleans up the

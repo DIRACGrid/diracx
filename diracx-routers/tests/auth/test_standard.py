@@ -678,7 +678,6 @@ async def test_invalid_access_token_alg_none(
     - decode payload
     - craft a JWT with alg=none and no signature
     - verify that the server rejects it.
-    """
     - craft a JWT with alg=none and no signature
     - verify that the server rejects it.
     """
@@ -760,6 +759,7 @@ async def test_refresh_token_rotated_expiration_time(
 
 async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
     """Test the validity of the passed refresh token.
+
     - get a refresh token
     - decode it and recode it with a different JWK key.
     """
@@ -947,7 +947,8 @@ async def test_bad_access_token(test_client):
 
 
 async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
-    """Test the refresh token listing with 2 users, a normal one and token manager:
+    """Test the refresh token listing with 2 users, a normal one and token manager.
+
     - normal user gets a refresh token and lists it
     - token manager gets a refresh token and lists all of them
     - normal user renews his/her refresh token and list it: should have only one as the first one should be revoked
@@ -1013,7 +1014,8 @@ async def test_list_refresh_tokens(test_client, auth_httpx_mock: HTTPXMock):
 async def test_revoke_refresh_tokens_normal_user_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
-    """Test the refresh token revokation with 2 users, a normal one and token manager:
+    """Test the refresh token revokation with 2 users, a normal one and token manager.
+
     - normal user gets a refresh token
     - token manager gets a refresh token
     - normal user tries to delete a non-existing RT: should not work
@@ -1073,11 +1075,12 @@ async def test_revoke_refresh_tokens_normal_user_with_jti(
 async def test_revoke_refresh_tokens_token_manager_with_jti(
     test_client, auth_httpx_mock: HTTPXMock
 ):
-        """Test the refresh token revokation with 2 users, a normal one and token manager:
-        - normal user gets a refresh token
-        - token manager gets a refresh token
-        - token manager tries to delete normal user's RT: should work
-        - token manager tries to delete his/her RT: should work too.
+    """Test the refresh token revokation with 2 users, a normal one and token manager.
+
+    - normal user gets a refresh token
+    - token manager gets a refresh token
+    - token manager tries to delete normal user's RT: should work
+    - token manager tries to delete his/her RT: should work too.
     """
     # Normal user gets a pair of tokens
     normal_user_tokens = _get_tokens(test_client, property=NORMAL_USER)
@@ -1248,8 +1251,9 @@ def _get_tokens(
 
 
 def _get_and_check_token_response(test_client, request_data):
-    """Get a token and check that mandatory fields are present and that the userinfo endpoint returns
-    something sensible.
+    """Get a token and check that mandatory fields are present.
+
+    Also checks that the userinfo endpoint returns something sensible.
     """
     # Check that token request now works
     r = test_client.post("/api/auth/token", data=request_data)

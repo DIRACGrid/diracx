@@ -108,7 +108,7 @@ class SandboxMetadataDB(BaseSQLDB):
             )
 
     async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
-        """Checks if a sandbox exists and has been assigned."""
+        """Check if a sandbox exists and has been assigned."""
         stmt: Executable = select(SandBoxes.Assigned).where(
             SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn
         )
