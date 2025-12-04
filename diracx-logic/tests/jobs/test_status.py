@@ -105,7 +105,7 @@ async def valid_job_id(job_db: JobDB) -> int:
 async def test_patch_metadata_updates_attributes_and_parameters(
     job_db: JobDB, job_parameters_db: _MockJobParametersDB, valid_job_id: int
 ):
-    """Patch metadata mixing:
+    """Patch metadata mixing.
 
     - Attribute only (UserPriority)
     - Attribute + parameter (JobType)

@@ -1,4 +1,4 @@
-"""This module contains the auth management functions."""
+"""Module containing the auth management functions."""
 
 from __future__ import annotations
 
@@ -15,8 +15,9 @@ async def get_refresh_tokens(
     auth_db: AuthDB,
     subject: str | None,
 ) -> list:
-    """Get all refresh tokens bound to a given subject. If there is no subject, then
-    all the refresh tokens are retrieved.
+    """Get all refresh tokens bound to a given subject.
+
+    If there is no subject, then all the refresh tokens are retrieved.
     """
     return await auth_db.get_user_refresh_tokens(subject)
 

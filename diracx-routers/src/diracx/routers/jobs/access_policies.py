@@ -28,7 +28,7 @@ class ActionType(StrEnum):
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
-    """Rules:
+    """Rules.
 
     * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
     * An admin cannot create any resource but can read everything and modify everything

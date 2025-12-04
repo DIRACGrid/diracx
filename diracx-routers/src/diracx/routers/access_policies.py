@@ -157,8 +157,6 @@ def open_access(f):
     This is useful to allow the CI to detect routes which may have forgotten
     to have an access check.
     """
-    to have an access check.
-    """
     f.diracx_open_access = True
 
     @functools.wraps(f)
