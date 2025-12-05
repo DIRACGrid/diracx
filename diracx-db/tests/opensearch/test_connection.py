@@ -7,7 +7,7 @@ from diracx.testing.osdb import OPENSEARCH_PORT, DummyOSDB, require_port_availab
 
 
 async def _ensure_db_unavailable(db: DummyOSDB):
-    """Helper function which raises an exception if we manage to connect to the DB."""
+    """Raise an exception if we manage to connect to the DB."""
     async with db.client_context():
         async with db:
             with pytest.raises(OpenSearchDBUnavailableError):

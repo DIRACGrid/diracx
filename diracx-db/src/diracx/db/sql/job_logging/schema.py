@@ -11,8 +11,9 @@ JobLoggingDBBase = declarative_base()
 
 
 class MagicEpochDateTime(TypeDecorator):
-    """A SQLAlchemy type that stores a datetime as a numeric value representing the
-    seconds elapsed since MAGIC_EPOC_NUMBER. The underlying column is defined as
+    """A SQLAlchemy type to store a datetime as a numeric value.
+
+    Representing the seconds elapsed since MAGIC_EPOC_NUMBER. The underlying column is defined as
     Numeric(12,3) which provides a fixed-precision representation.
     """
 
@@ -23,6 +24,7 @@ class MagicEpochDateTime(TypeDecorator):
 
     def process_bind_param(self, value, dialect):
         """Convert a Python datetime to a numeric value: (timestamp - MAGIC_EPOC_NUMBER).
+
         The result is rounded to three decimal places.
         """
         if value is None:
@@ -39,8 +41,9 @@ class MagicEpochDateTime(TypeDecorator):
         )
 
     def process_result_value(self, value, dialect):
-        """Convert the numeric database value back into a Python datetime by reversing the
-        stored difference (adding MAGIC_EPOC_NUMBER).
+        """Convert the numeric database value back into a Python datetime.
+
+        Reversing the stored difference (adding MAGIC_EPOC_NUMBER).
         """
         if value is None:
             return None

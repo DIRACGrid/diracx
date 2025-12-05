@@ -381,7 +381,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def do_device_flow(self, *, user_code: str, **kwargs: Any) -> Any:
         """Do Device Flow.
 
-        This is called as the verification URI for the device flow.
+        Serve as the verification URI for the device flow.
+
         It will redirect to the actual OpenID server (IAM, CheckIn) to
         perform a authorization code flow.
 
@@ -438,8 +439,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Finish Device Flow.
 
-        This the url callbacked by IAM/CheckIn after the authorization
-        flow was granted.
+        Handle the URL callbacked by IAM/CheckIn after authorization flow.
+
         It gets us the code we need for the authorization flow, and we
         can map it to the corresponding device flow using the user_code
         in the cookie/session.
@@ -495,7 +496,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def finished(self, **kwargs: Any) -> Any:
         """Finished.
 
-        This is the final step of the device flow.
+        Mark the final step of the device flow.
 
         :return: any
         :rtype: any
@@ -542,7 +543,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def get_refresh_tokens(self, **kwargs: Any) -> List[Any]:
         """Get Refresh Tokens.
 
-        Get all refresh tokens for the user. If the user has the ``proxy_management`` property, then
+        Get all refresh tokens for the user.
+
+        If the user has the ``proxy_management`` property, then
         the subject is not used to filter the refresh tokens.
 
         :return: list of any
@@ -590,7 +593,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def revoke_refresh_token_by_jti(self, jti: str, **kwargs: Any) -> str:
         """Revoke Refresh Token By Jti.
 
-        Revoke a refresh token. If the user has the ``proxy_management`` property, then
+        Revoke a refresh token.
+
+        If the user has the ``proxy_management`` property, then
         the subject is not used to filter the refresh tokens.
 
         :param jti: Required.
@@ -700,6 +705,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         """Initiate Authorization Flow.
 
         Initiate the authorization flow.
+
         It will redirect to the actual OpenID server (IAM, CheckIn) to
         perform a authorization code flow.
 
@@ -1834,6 +1840,7 @@ class JobsOperations:
         """Patch Metadata.
 
         Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+
         The argument  are all the attributes/parameters of a job (except the ID).
 
         :param body: Required.
@@ -1851,6 +1858,7 @@ class JobsOperations:
         """Patch Metadata.
 
         Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+
         The argument  are all the attributes/parameters of a job (except the ID).
 
         :param body: Required.
@@ -1868,6 +1876,7 @@ class JobsOperations:
         """Patch Metadata.
 
         Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+
         The argument  are all the attributes/parameters of a job (except the ID).
 
         :param body: Is either a {str: JobMetaData} type or a IO[bytes] type. Required.
@@ -1933,8 +1942,9 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Creates a search query to the job database. This search can be based on
-        different parameters, such as jobID, status, owner, etc.
+        Create a search query to the job database.
+
+        This search can be based on different parameters, such as jobID, status, owner, etc.
 
         **Possibilities**
 
@@ -1972,8 +1982,9 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Creates a search query to the job database. This search can be based on
-        different parameters, such as jobID, status, owner, etc.
+        Create a search query to the job database.
+
+        This search can be based on different parameters, such as jobID, status, owner, etc.
 
         **Possibilities**
 
@@ -2010,8 +2021,9 @@ class JobsOperations:
     ) -> List[Dict[str, Any]]:
         """Search.
 
-        Creates a search query to the job database. This search can be based on
-        different parameters, such as jobID, status, owner, etc.
+        Create a search query to the job database.
+
+        This search can be based on different parameters, such as jobID, status, owner, etc.
 
         **Possibilities**
 
@@ -2097,8 +2109,9 @@ class JobsOperations:
     ) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
-        contains the
+        Group jobs by a specific list of parameters.
+
+        Returns an array of n-uplets, where each n-uplet contains the
         values of the grouping parameters and the number of jobs that match those values.
 
         Body parameters:
@@ -2121,8 +2134,9 @@ class JobsOperations:
     async def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
-        contains the
+        Group jobs by a specific list of parameters.
+
+        Returns an array of n-uplets, where each n-uplet contains the
         values of the grouping parameters and the number of jobs that match those values.
 
         Body parameters:
@@ -2145,8 +2159,9 @@ class JobsOperations:
     async def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet
-        contains the
+        Group jobs by a specific list of parameters.
+
+        Returns an array of n-uplets, where each n-uplet contains the
         values of the grouping parameters and the number of jobs that match those values.
 
         Body parameters:

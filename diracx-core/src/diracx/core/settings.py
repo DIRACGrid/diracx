@@ -107,7 +107,7 @@ class FernetKey(SecretStr):
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Applies the default file:// scheme if not present."""
+    """Apply the default file:// scheme if not present."""
     if isinstance(value, str) and "://" not in value:
         value = f"file://{value}"
     return value
@@ -125,7 +125,7 @@ class ServiceSettingsBase(BaseSettings):
 
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
-        """A context manager that can be used to run code at startup and shutdown."""
+        """Context manager to run code at startup and shutdown."""
         yield
 
 
