@@ -400,6 +400,21 @@ def test_insert_and_reschedule(normal_user_client: TestClient):
     }
 
 
+def test_insert_and_get_jdl(normal_user_client: TestClient):
+    job_definitions = [TEST_JDL] * 10
+    r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
+    assert r.status_code == 200, r.json()
+    assert len(r.json()) == len(job_definitions)
+
+    submitted_job_ids = set(job_dict["JobID"] for job_dict in r.json())
+
+    for id in submitted_job_ids:
+        # Get the JDL
+        r = normal_user_client.get(f"/api/jobs/{id}/jdl")
+        assert r.status_code == 200, r.json()
+        # Won't fetch it, submission logic alters the JDL
+
+
 # test edge case for rescheduling
 
 
