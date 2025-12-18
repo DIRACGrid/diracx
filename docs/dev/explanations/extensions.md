@@ -76,25 +76,35 @@ To develop, follow the same [instruction as `diracx`](../tutorials/getting-start
 
 ## `gubbins-db`
 
-The `gubbins-db` package contains the extension for the DB.
+The `gubbins-db` package contains examples of an extension for the DB. What is in this example covers what can be done without incurring into risks.
+What is not specifically listed is not supported, and discouraged.
 
-### New DB
+### New SQL DB
 
-`lollygagDB` is a DB which is specific to `gubbins`, i.e. it does not modify or extend an existing `diracx` db
+`lollygagDB` is a DB which is specific to `gubbins`, i.e. it does not modify or extend an existing `diracx` db.
+This DB should not exist already in DiracX. Authors should choose a specific name that will not conflict with possible future databases developed in DiracX.
 
-### Extended DB
+### Extended SQL DB
 
-`GubbinsJobDB` illustrates how to extend an existing `diracx` DB, add new methods, modify methods, add a table.
+`GubbinsJobDB` illustrates how to extend an existing `diracx` SQL DB, add new methods, modify methods and add a table.
+If a new table is added, developers should choose a specific name for the table (e.g. including the installation name).
+
+Examples of what is not supported:
+
+- Modifying an existing column
+- Add a column to a table
+
+The above use cases can be sorted by specifying "has-a" relationships: (e.g. a new table with a foreign key).
+
+## `gubbins-routers`
+
+The `gubbins-routers` package contains the extension for the routers.
 
 A router test exists (`test_gubbins_job_manager.py`), even though no router is redefined. It is just to show that the correct DB is being loaded.
 
 !!! warning
 
     In the test dependency, you need to specify both the original DiracX `JobDB` as well as the extended one `GubbinsJobDB`. To avoid that inconvenience, reuse the same name (i.e. `JobDB` instead of `GubbinsJobDB`).
-
-## `gubbins-routers`
-
-The `gubbins-routers` package contains the extension for the routers.
 
 ### New router
 
