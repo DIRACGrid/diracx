@@ -78,13 +78,14 @@ To develop, follow the same [instruction as `diracx`](../tutorials/getting-start
 
 The `gubbins-db` package contains the extension for the DB.
 
-### New DB
+### New SQL DB
 
 `lollygagDB` is a DB which is specific to `gubbins`, i.e. it does not modify or extend an existing `diracx` db
 
-### Extended DB
+### Extended SQL DB
 
-`GubbinsJobDB` illustrates how to extend an existing `diracx` DB, add new methods, modify methods, add a table.
+`GubbinsJobDB` illustrates how to extend an existing `diracx` SQL DB, add new methods, modify methods, add a table, adding a column to one table.
+Modifying an existing column is instead not supported.
 
 A router test exists (`test_gubbins_job_manager.py`), even though no router is redefined. It is just to show that the correct DB is being loaded.
 
