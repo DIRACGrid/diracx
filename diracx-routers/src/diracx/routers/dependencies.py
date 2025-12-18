@@ -12,6 +12,7 @@ __all__ = (
     "AvailableSecurityProperties",
 )
 
+from functools import partial
 from typing import Annotated, TypeVar
 
 from fastapi import Depends
@@ -32,6 +33,10 @@ from diracx.db.sql import TaskQueueDB as _TaskQueueDB
 
 T = TypeVar("T")
 
+# Use scope="function" to ensure DB commits happen before sending HTTP responses
+# This prevents race conditions when DIRAC immediately queries data after DiracX writes it
+DBDepends = partial(Depends, scope="function")
+
 
 def add_settings_annotation(cls: T) -> T:
     """Add a `Depends` annotation to a class that has a `create` classmethod."""
@@ -39,17 +44,17 @@ def add_settings_annotation(cls: T) -> T:
 
 
 # Databases
-AuthDB = Annotated[_AuthDB, Depends(_AuthDB.transaction)]
-JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
-JobLoggingDB = Annotated[_JobLoggingDB, Depends(_JobLoggingDB.transaction)]
-PilotAgentsDB = Annotated[_PilotAgentsDB, Depends(_PilotAgentsDB.transaction)]
+AuthDB = Annotated[_AuthDB, DBDepends(_AuthDB.transaction)]
+JobDB = Annotated[_JobDB, DBDepends(_JobDB.transaction)]
+JobLoggingDB = Annotated[_JobLoggingDB, DBDepends(_JobLoggingDB.transaction)]
+PilotAgentsDB = Annotated[_PilotAgentsDB, DBDepends(_PilotAgentsDB.transaction)]
 SandboxMetadataDB = Annotated[
-    _SandboxMetadataDB, Depends(_SandboxMetadataDB.transaction)
+    _SandboxMetadataDB, DBDepends(_SandboxMetadataDB.transaction)
 ]
-TaskQueueDB = Annotated[_TaskQueueDB, Depends(_TaskQueueDB.transaction)]
+TaskQueueDB = Annotated[_TaskQueueDB, DBDepends(_TaskQueueDB.transaction)]
 
 # Opensearch databases
-JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
+JobParametersDB = Annotated[_JobParametersDB, DBDepends(_JobParametersDB.session)]
 
 
 # Miscellaneous
