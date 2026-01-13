@@ -390,10 +390,7 @@ def session_client_factory(
     tmp_path_factory,
     test_dev_settings,
 ):
-    """TODO.
-    ----
-
-    """
+    """TODO."""
     yield ClientFactory(
         tmp_path_factory,
         with_config_repo,

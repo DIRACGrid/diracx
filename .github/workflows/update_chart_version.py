@@ -101,7 +101,7 @@ def update_values_yaml(values_path: Path, diracx_version: str) -> None:
 
 
 def main() -> None:
-    """Main function."""
+    """Run the Main."""
     parser = argparse.ArgumentParser(
         description="Update chart versions for DiracX release"
     )

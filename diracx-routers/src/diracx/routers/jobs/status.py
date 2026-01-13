@@ -270,6 +270,7 @@ async def patch_metadata(
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+
     The argument  are all the attributes/parameters of a job (except the ID).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)

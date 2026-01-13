@@ -229,7 +229,7 @@ async def delete_batch_and_log(
     objects: list[S3Object],
     semaphore: asyncio.Semaphore,
 ) -> None:
-    """Helper function to delete a batch of objects and log the result."""
+    """Delete a batch of objects and log the result."""
     async with semaphore:
         await s3_bulk_delete_with_retry(
             settings.s3_client, settings.bucket_name, objects
