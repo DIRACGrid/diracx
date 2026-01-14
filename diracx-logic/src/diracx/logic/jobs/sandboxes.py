@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Literal
-
-from pyparsing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
 from diracx.core.models import (

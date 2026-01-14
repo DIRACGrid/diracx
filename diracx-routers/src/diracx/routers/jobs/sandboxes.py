@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import Body, Depends, HTTPException, Query
-from pyparsing import Any
 
 from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
 from diracx.core.models import (
