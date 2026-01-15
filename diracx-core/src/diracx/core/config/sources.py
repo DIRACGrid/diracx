@@ -172,12 +172,16 @@ class BaseGitConfigSource(ConfigSource):
         super().__init__(backend_url=backend_url)
         self.remote_url = self.extract_remote_url(backend_url)
         self.git_branch = self.get_git_branch_from_url(backend_url)
+        self.git_commit_hash = self.get_git_commit_hash_from_url(backend_url)
+        self.git_reference = (
+            self.git_commit_hash if self.git_commit_hash else self.git_branch
+        )
 
     def latest_revision(self) -> tuple[str, datetime]:
         try:
             rev = sh.git(
                 "rev-parse",
-                self.git_branch,
+                self.git_reference,
                 _cwd=self.repo_location,
                 _tty_out=False,
                 _async=is_running_in_async_context(),
@@ -232,6 +236,10 @@ class BaseGitConfigSource(ConfigSource):
         """Extract the branch from the query parameters."""
         return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
 
+    def get_git_commit_hash_from_url(self, backend_url: ConfigSourceUrl) -> str | None:
+        """Extract the commit hash from the query parameters."""
+        return dict(backend_url.query_params()).get("commit_hash", None)
+
 
 class LocalGitConfigSource(BaseGitConfigSource):
     """The configuration is stored on a local git repository
@@ -259,7 +267,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
             raise ValueError(
                 f"{self.repo_location} is not a valid git repository"
             ) from e
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
+        sh.git.checkout(self.git_reference, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
@@ -280,6 +288,8 @@ class RemoteGitConfigSource(BaseGitConfigSource):
         sh.git.clone(
             self.remote_url, self.repo_location, branch=self.git_branch, _async=False
         )
+        if self.git_commit_hash:
+            sh.git.checkout(self.git_commit_hash, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
