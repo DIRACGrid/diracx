@@ -417,13 +417,16 @@ def client_factory(session_client_factory, request):
 def with_config_repo(tmp_path_factory):
     from git import Repo
 
-    from diracx.core.config import Config
+    from diracx.core.extensions import select_from_extension
+
+    # Use extension-aware Config discovery to support extensions that add fields
+    config_class = select_from_extension(group="diracx", name="config")[0].load()
 
     tmp_path = tmp_path_factory.mktemp("cs-repo")
 
     repo = Repo.init(tmp_path, initial_branch="master")
     cs_file = tmp_path / "default.yml"
-    example_cs = Config.model_validate(
+    example_cs = config_class.model_validate(
         {
             "DIRAC": {},
             "Registry": {
