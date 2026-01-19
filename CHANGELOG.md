@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.0.3](https://github.com/DIRACGrid/diracx/compare/v0.0.2...v0.0.3) (2026-01-19)
+
+
+### Features
+
+* add gubbins-charts Helm chart for gubbins extension ([#691](https://github.com/DIRACGrid/diracx/issues/691)) ([649f318](https://github.com/DIRACGrid/diracx/commit/649f318daa8eeaec177cfde4bc2830a2a89a9058))
+
+
+### Bug Fixes
+
+* do not use Any from pyparsing ([#725](https://github.com/DIRACGrid/diracx/issues/725)) ([b3873a1](https://github.com/DIRACGrid/diracx/commit/b3873a1d8859b670ac61e4d124a91a38f2e9c807))
+* ensure database commits complete before HTTP responses ([#722](https://github.com/DIRACGrid/diracx/issues/722)) ([4685790](https://github.com/DIRACGrid/diracx/commit/46857909b9259c13e8603b2cbaecb212d3229784))
+* exclude CHANGELOG.md from mdformat ([639026a](https://github.com/DIRACGrid/diracx/commit/639026a19605afd8ae94c67f36bd90b5c381b45b))
+* move cern-specific config option from diracx to lhcbdiracx ([#694](https://github.com/DIRACGrid/diracx/issues/694)) ([927d51b](https://github.com/DIRACGrid/diracx/commit/927d51bb8cf21b5e4f82c53b7e04bf0e72435806))
+* support additional config hints ([#690](https://github.com/DIRACGrid/diracx/issues/690)) ([c265a47](https://github.com/DIRACGrid/diracx/commit/c265a47363850662502bb7f0fb8ebbbe94893e85))
+
+
+### Miscellaneous Chores
+
+* release 0.0.3 ([dbc726c](https://github.com/DIRACGrid/diracx/commit/dbc726c2e6ac1ed5555b8144b01fea71b5e897ba))
+
 ## [0.0.2](https://github.com/DIRACGrid/diracx/compare/v0.0.1...v0.0.2) (2025-10-22)
 
 ### Bug Fixes
