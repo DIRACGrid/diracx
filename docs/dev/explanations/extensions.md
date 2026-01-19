@@ -35,6 +35,7 @@ For most components you can extend them in isolation without needing to have an 
 
 The exception to this is when extending `diracx-routers` you MUST also extend `diracx-client` and your client extension MUST be regenerated for every DiracX release.
 More details about this can be found in the [dedicated how to](../how-to/client-extension.md).
+
 Additionally, you will need an umbrella helm chart for your extension.
 
 ## Gubbins
@@ -225,3 +226,65 @@ Note that even if you have your own `testing` package depending on `diracx-testi
 ## `Dockerfile`
 
 `extensions/gubbins/containers/Dockerfile` contains an example of `Dockerfile` for extensions.
+
+## Extension chart
+
+Although you could simply replace the docker images used in the `diracx-charts` by your own, having the umbrella extension is strongly recommended. The reason is that you will be able to properly manage your release cycle and manage proper dependencies, `AppVersion` corresponding to your app, etc.
+
+Note that your `value.yaml` needs an extra `diracx` layer:
+
+```yaml
+diracx:
+  diracx:
+    settings:
+      DIRACX_CONFIG_BACKEND_URL: "some github url"
+```
+
+## Repository setup
+
+How the repositories are setup is very extension specific and flexible. Here we describe one possible set up.
+
+This setup works by having one GitLab repository for you extension's code and a separate GitLab repository for an extension to `diracx-charts`. One or more installations are then managed via the GitLab CI of `<extension>-charts`. Updating the DiracX dependency of `<extension>` is handled via [`renovate`](https://github.com/renovatebot/renovate). `Renovate` should be configured to update the `pyproject.toml` and the `dockerfile` (see [lhcb configuration](https://gitlab.cern.ch/lhcb-dirac/lhcbdiracx/-/blob/master/renovate.json)) Updating the `<extension>-charts` repository is handled by the GitLab CI job of `<extension>` whenever a Git tag is created.
+
+A new extension release should trigger a release of your extension chart. (See `deploy-chart` job in [lhcb ci config](https://gitlab.cern.ch/lhcb-dirac/lhcbdiracx/-/blob/master/.gitlab-ci.yml))
+In this case, a new extension-chart release means updating:
+
+- the chart version
+- the AppVersion
+- the containers versions
+- the diracx-charts version to the latest compatible with the diracx version required by lhcbdiracx
+
+```mermaid
+flowchart LR
+    subgraph diracx-block["diracx"]
+        diracx-charts("diracx-charts")
+        diracx("diracx")
+        diracx-web("diracx-web")
+    end
+
+    subgraph extension-block["extension"]
+        extension("extension")
+        extension-web("extension-web")
+        extension-charts("extension-charts")
+    end
+
+
+    diracx -->|commit| diracx-charts
+    diracx-web -->|commit| diracx-charts
+
+    diracx -->|renovate| extension
+    diracx-web -->|renovate| extension-web
+    extension -->|commit and bump diracx-charts| extension-charts
+    extension-web -->|commit| extension-charts
+
+    linkStyle 0 stroke: blue
+    linkStyle 1 stroke: blue
+    linkStyle 2 stroke: red
+    linkStyle 3 stroke: red
+    linkStyle 4 stroke: blue
+    linkStyle 5 stroke: blue
+```
+
+=== "Gitlab"
+
+    This assumes you are
