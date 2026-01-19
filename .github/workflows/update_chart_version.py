@@ -282,17 +282,16 @@ def main() -> None:
         print(f"Error: values.yaml not found at {values_yaml}")
         sys.exit(1)
 
-    # Get current chart version
+    # Get current chart version using YAML parser to handle comments correctly
     chart_content = chart_yaml.read_text()
-    version_match = re.search(
-        r'^version:\s*["\']?([^"\']+)["\']?$', chart_content, re.MULTILINE
-    )
+    chart_data = yaml.safe_load(chart_content)
+    version_match = chart_data.get("version")
 
     if not version_match:
         print("Error: Could not find version in Chart.yaml")
         sys.exit(1)
 
-    current_chart_version = version_match.group(1)
+    current_chart_version = str(version_match)
     print(f"Current chart version: {current_chart_version}")
 
     # Calculate new chart version (alpha if present, else patch)
