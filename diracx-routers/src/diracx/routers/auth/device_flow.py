@@ -5,6 +5,8 @@ See docs/admin/explanations/authentication.md
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import (
     HTTPException,
     Request,
@@ -31,6 +33,8 @@ from ..dependencies import (
     Config,
 )
 from ..fastapi_classes import DiracxRouter
+
+logger = logging.getLogger(__name__)
 
 router = DiracxRouter(require_auth=False)
 
@@ -136,11 +140,13 @@ async def finish_device_flow(
             settings,
         )
     except IAMServerError as e:
+        logger.warning("IAM server error during device flow completion: %s", e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=e.args[0],
         ) from e
     except IAMClientError as e:
+        logger.warning("IAM client error during device flow completion: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.args[0],

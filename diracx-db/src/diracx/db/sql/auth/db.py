@@ -178,6 +178,10 @@ class AuthDB(BaseSQLDB):
                 await self.conn.execute(stmt)
 
             except IntegrityError:
+                logger.warning(
+                    "Device flow code collision detected, retrying (user_code=%s)",
+                    user_code,
+                )
                 continue
 
             return user_code, device_code
