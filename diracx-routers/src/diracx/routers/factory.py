@@ -404,6 +404,12 @@ def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Resp
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
+    logger.warning(
+        "503 Service Unavailable: %s (path=%s)",
+        exc,
+        request.url.path,
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
