@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.4](https://github.com/DIRACGrid/diracx/compare/v0.0.3...v0.0.4) (2026-01-19)
+
+
+### Bug Fixes
+
+* use extension-aware Config discovery in testing fixture ([#727](https://github.com/DIRACGrid/diracx/issues/727)) ([49d0fb8](https://github.com/DIRACGrid/diracx/commit/49d0fb8c2718a5668f330219025832365119d15d))
+
 ## [0.0.3](https://github.com/DIRACGrid/diracx/compare/v0.0.2...v0.0.3) (2026-01-19)
 
 
