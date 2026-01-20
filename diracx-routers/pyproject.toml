@@ -19,7 +19,7 @@ dependencies = [
     "diracx-db",
     "python-dotenv",    # TODO: We might not need this
     "python-multipart",
-    "fastapi",
+    "fastapi>=0.121.0",
     "httpx",
     "joserfc",
     "pydantic >=2.10",
