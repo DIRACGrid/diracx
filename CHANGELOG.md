@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.7](https://github.com/DIRACGrid/diracx/compare/v0.0.6...v0.0.7) (2026-01-20)
+
+
+### Bug Fixes
+
+* add logging and retry for cache population failures ([#736](https://github.com/DIRACGrid/diracx/issues/736)) ([b899a8d](https://github.com/DIRACGrid/diracx/commit/b899a8d207a42b232fbe4062f329a32d64c37ec3))
+* require fastapi&gt;=0.121.0 for Depends scope parameter ([#737](https://github.com/DIRACGrid/diracx/issues/737)) ([fb15f9c](https://github.com/DIRACGrid/diracx/commit/fb15f9c5bb9d36568e37f0fae7a2a78995f02d51))
+
 ## [0.0.6](https://github.com/DIRACGrid/diracx/compare/v0.0.5...v0.0.6) (2026-01-20)
 
 
