@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.5](https://github.com/DIRACGrid/diracx/compare/v0.0.4...v0.0.5) (2026-01-20)
+
+
+### Features
+
+* add logging for error conditions and edge cases ([#734](https://github.com/DIRACGrid/diracx/issues/734)) ([2c8b5c6](https://github.com/DIRACGrid/diracx/commit/2c8b5c682f17270e341deaf23cd4a7b4b7c4dd0a))
+* extend update_chart_version.py for downstream charts ([#731](https://github.com/DIRACGrid/diracx/issues/731)) ([b1a293b](https://github.com/DIRACGrid/diracx/commit/b1a293b01ad062d162afdfb5377a76c95eb09913))
+
+
+### Bug Fixes
+
+* use YAML parser for chart version to handle comments ([9516971](https://github.com/DIRACGrid/diracx/commit/95169716206bb476f450fff8fd228ada649fef5b))
+
+
+### Miscellaneous Chores
+
+* release 0.0.5 ([c0f166b](https://github.com/DIRACGrid/diracx/commit/c0f166bf29e1ed0ac2b5aa89ebb39ac60cfe23d3))
+
 ## [0.0.4](https://github.com/DIRACGrid/diracx/compare/v0.0.3...v0.0.4) (2026-01-19)
 
 
