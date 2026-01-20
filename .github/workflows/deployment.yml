@@ -201,7 +201,7 @@ jobs:
           # Use Python script to update versions
           python ../diracx/.github/workflows/update_chart_version.py \
             --charts-dir . \
-            --diracx-version "$VERSION"
+            --app-version "$VERSION"
 
           # Get new chart version after update
           NEW_CHART_VERSION=$(grep '^version:' diracx/Chart.yaml | sed 's/version: //' | tr -d '"')
