@@ -76,7 +76,7 @@ def configure_logger():
         uvicorn_access_logger.handlers[0].setFormatter(AccessFormatter(new_format))
     # There may not be any handler defined, like in the CI
     except IndexError:
-        pass
+        logger.debug("No handlers found for uvicorn.access logger (expected in CI)")
 
     uvicorn_logger = logging.getLogger("uvicorn")
     try:
@@ -85,7 +85,7 @@ def configure_logger():
         uvicorn_logger.handlers[0].setFormatter(DefaultFormatter(new_format))
     # There may not be any handler defined, like in the CI
     except IndexError:
-        pass
+        logger.debug("No handlers found for uvicorn logger (expected in CI)")
 
 
 # Rules:
@@ -404,6 +404,12 @@ def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Resp
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
+    logger.warning(
+        "503 Service Unavailable: %s (path=%s)",
+        exc,
+        request.url.path,
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
@@ -510,9 +516,13 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 status_code=exc.status_code,
                 content={"detail": exc.detail},
             )
-        # If the version is not given
-        except Exception:  # noqa: S110
-            pass
+        # If the version is not given or cannot be parsed
+        except Exception:
+            logger.debug(
+                "Failed to check client version header: %s",
+                client_version,
+                exc_info=True,
+            )
 
         response = await call_next(request)
         return response

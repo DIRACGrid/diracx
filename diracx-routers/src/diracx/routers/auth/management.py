@@ -82,7 +82,11 @@ async def revoke_refresh_token_by_refresh_token(
             auth_db, None, token, token_type_hint, client_id, settings
         )
     except (DecodeError, KeyError):
-        logger.warning("Someone tried to revoke its token but failed.")
+        logger.warning(
+            "Token revocation failed: invalid token format (client_id=%s)",
+            client_id,
+            exc_info=True,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

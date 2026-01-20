@@ -211,6 +211,12 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             self._conn.set(await self.engine.connect().__aenter__())
         except Exception as e:
+            logger.warning(
+                "Database connection failed for %s: %s",
+                self.__class__.__name__,
+                e,
+                exc_info=True,
+            )
             raise SQLDBUnavailableError(
                 f"Cannot connect to {self.__class__.__name__}"
             ) from e
