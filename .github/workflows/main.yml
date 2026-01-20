@@ -205,23 +205,8 @@ jobs:
           set -x
           ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
-        run: |
-          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
-          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
-          export PATH=${DIRACX_DEMO_DIR}:$PATH
-          kubectl get pods
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
-            echo "${pod_name}"
-            kubectl describe pod/"${pod_name}" || true
-            for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
-              echo $pod_name $container_name
-              kubectl logs "${pod_name}" -c "${container_name}" || true
-            done
-          done
-          if [ ! -f "${DIRACX_DEMO_DIR}/.success" ]; then
-            cat "${DIRACX_DEMO_DIR}/.failed"
-            exit 1
-          fi
+        if: always()
+        run: .github/scripts/collect-k8s-debug-info.sh "$PWD/../diracx-charts/.demo" "${{ matrix.extension == 'gubbins' && 'gubbins' || 'diracx' }}"
       - name: Run pytest
         run: |
           pixi run pytest-${{ matrix.extension }} --demo-dir="$PWD/../diracx-charts/" --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
