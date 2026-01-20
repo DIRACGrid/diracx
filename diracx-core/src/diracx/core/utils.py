@@ -12,13 +12,14 @@ __all__ = [
 
 import fcntl
 import json
+import logging
 import os
 import re
 import stat
 import threading
 from collections import defaultdict
 from collections.abc import Callable
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterable, TypeVar, overload
@@ -27,6 +28,8 @@ from cachetools import Cache, TTLCache
 
 from diracx.core.exceptions import NotReadyError
 from diracx.core.models import TokenResponse
+
+logger = logging.getLogger(__name__)
 
 EXPIRES_GRACE_SECONDS = 15
 
@@ -208,15 +211,16 @@ class TwoLevelCache:
             This method is thread-safe and handles concurrent requests for the same key.
 
         """
-        if result := self.soft_cache.get(key):
-            return result
+        if key in self.soft_cache:
+            return self.soft_cache[key]
         if self.locks[key].acquire(blocking=blocking):
             try:
                 if key not in self.futures:
                     self.futures[key] = self.pool.submit(self._work, key, populate_func)
-                if result := self.hard_cache.get(key):
+                if key in self.hard_cache:
                     # The soft cache will be updated by _work so we can fill the soft
-                    # cache to avoid later requests needign to acquire the lock.
+                    # cache to avoid later requests needing to acquire the lock.
+                    result = self.hard_cache[key]
                     self.soft_cache[key] = result
                     return result
                 future = self.futures[key]
@@ -227,13 +231,17 @@ class TwoLevelCache:
                 # as _work acquires the lock before filling the caches. This also
                 # means we can guarantee that the future has not yet been removed
                 # from the futures dict.
-                wait([future])
+                # Use result() instead of wait() to propagate any exceptions
+                future.result()
                 return self.hard_cache[key]
 
         # If the lock is not acquired we're in a non-blocking mode, try to get the
         # value from the hard cache. If it's not there, raise NotReadyError.
-        if result := self.hard_cache.get(key):
-            return result
+        if key in self.hard_cache:
+            return self.hard_cache[key]
+        logger.debug(
+            "Cache key %r not ready yet, background population in progress", key
+        )
         raise NotReadyError(f"Cache key {key} is not ready yet.")
 
     def _work(self, key: str, populate_func: Callable[[], Any]) -> None:
@@ -251,11 +259,26 @@ class TwoLevelCache:
             This method is not intended to be called directly by users of the class.
 
         """
-        result = populate_func()
-        with self.locks[key]:
-            self.futures.pop(key)
-            self.hard_cache[key] = result
-            self.soft_cache[key] = result
+        success = False
+        result = None
+        try:
+            result = populate_func()
+            success = True
+        except Exception:
+            logger.error(
+                "Failed to populate cache key %r, will retry on next request",
+                key,
+                exc_info=True,
+            )
+            raise
+        finally:
+            # Always remove the future so the next request can retry on failure
+            # or submit a new refresh task on success
+            with self.locks[key]:
+                self.futures.pop(key, None)
+                if success:
+                    self.hard_cache[key] = result
+                    self.soft_cache[key] = result
 
     def clear(self):
         """Clear all caches and reset the thread pool."""
