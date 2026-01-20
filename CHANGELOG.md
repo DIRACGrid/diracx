@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.6](https://github.com/DIRACGrid/diracx/compare/v0.0.5...v0.0.6) (2026-01-20)
+
+
+### Bug Fixes
+
+* use correct argument name for update_chart_version.py ([84390f0](https://github.com/DIRACGrid/diracx/commit/84390f0ec66bae4db342864da52810b26955c4bd))
+
 ## [0.0.5](https://github.com/DIRACGrid/diracx/compare/v0.0.4...v0.0.5) (2026-01-20)
 
 
