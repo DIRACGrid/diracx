@@ -23,6 +23,7 @@ import pytest
 from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
+from diracx.core.extensions import EntryPointGroups
 from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
 
 if TYPE_CHECKING:
@@ -173,17 +174,17 @@ class ClientFactory:
                 return {"PolicySpecific": "OpenAccessForTest"}, {}
 
         enabled_systems = {
-            e.name for e in select_from_extension(group="diracx.services")
+            e.name for e in select_from_extension(group=EntryPointGroups.FAST_API)
         }
         database_urls = {
             e.name: "sqlite+aiosqlite:///:memory:"
-            for e in select_from_extension(group="diracx.dbs.sql")
+            for e in select_from_extension(group=EntryPointGroups.SQL_DB)
         }
         # TODO: Monkeypatch this in a less stupid way
         # TODO: Only use this if opensearch isn't available
         os_database_conn_kwargs = {
             e.name: {"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
-            for e in select_from_extension(group="diracx.dbs.os")
+            for e in select_from_extension(group=EntryPointGroups.OS_DB)
         }
         BaseOSDB.available_implementations = partial(
             fake_available_osdb_implementations,
@@ -198,7 +199,7 @@ class ClientFactory:
         all_access_policies = {
             e.name: [AlwaysAllowAccessPolicy]
             + BaseAccessPolicy.available_implementations(e.name)
-            for e in select_from_extension(group="diracx.access_policies")
+            for e in select_from_extension(group=EntryPointGroups.ACCESS_POLICY)
         }
 
         config_source = ConfigSource.create_from_url(

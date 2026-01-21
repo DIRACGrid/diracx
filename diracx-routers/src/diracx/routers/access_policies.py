@@ -26,7 +26,7 @@ from typing import Annotated, Self
 
 from fastapi import Depends
 
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import EntryPointGroups, select_from_extension
 from diracx.core.models import (
     AccessTokenPayload,
     RefreshTokenPayload,
@@ -68,7 +68,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
         policy_classes: list[type["BaseAccessPolicy"]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.access_policies", name=access_policy_name
+                group=EntryPointGroups.ACCESS_POLICY, name=access_policy_name
             )
         ]
         if not policy_classes:
