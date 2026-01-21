@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    paths-ignore:
+      - 'CHANGELOG.md'
   pull_request:
   schedule:
     - cron: '0 10 * * *'
