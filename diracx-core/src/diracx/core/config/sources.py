@@ -21,7 +21,7 @@ from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersionError
-from ..extensions import select_from_extension
+from ..extensions import EntryPointGroups, select_from_extension
 from ..utils import TwoLevelCache
 from .schema import Config
 
@@ -214,9 +214,9 @@ class BaseGitConfigSource(ConfigSource):
                 f"Error reading configuration: {e}"
             ) from e
 
-        config_class: Config = select_from_extension(group="diracx", name="config")[
-            0
-        ].load()
+        config_class: Config = select_from_extension(
+            group=EntryPointGroups.CORE, name="config"
+        )[0].load()
         config = config_class.model_validate(raw_obj)
         config._hexsha = hexsha
         config._modified = modified

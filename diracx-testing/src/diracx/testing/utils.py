@@ -421,7 +421,9 @@ def with_config_repo(tmp_path_factory):
     from diracx.core.extensions import select_from_extension
 
     # Use extension-aware Config discovery to support extensions that add fields
-    config_class = select_from_extension(group="diracx", name="config")[0].load()
+    config_class = select_from_extension(group=EntryPointGroups.CORE, name="config")[
+        0
+    ].load()
 
     tmp_path = tmp_path_factory.mktemp("cs-repo")
 

@@ -77,9 +77,9 @@ def cs_sync(old_file: Path, new_file: Path):
         )
 
     _apply_fixes(raw)
-    config_class: Config = select_from_extension(group="diracx", name="config")[
-        0
-    ].load()
+    config_class: Config = select_from_extension(
+        group=EntryPointGroups.CORE, name="config"
+    )[0].load()
     config = config_class.model_validate(raw)
     new_file.write_text(
         yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))

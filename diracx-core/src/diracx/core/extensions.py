@@ -19,6 +19,8 @@ P = ParamSpec("P")
 
 
 class EntryPointGroups(StrEnum):
+    """Available entrypoint group values."""
+
     CORE = "diracx"
     ACCESS_POLICY = "diracx.access_policies"
     CLI = "diracx.cli"
@@ -87,7 +89,7 @@ def supports_extending(
         name: The entry point name to search for
 
     Example:
-        @supports_extending(Entrypoints.RESOURCES, "find_compatible_platforms")
+        @supports_extending(EntryPointGroups.RESOURCES, "find_compatible_platforms")
         def my_function():
             return "default implementation"
 
