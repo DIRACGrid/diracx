@@ -9,7 +9,7 @@ import pytest
 from azure.core.credentials import AccessToken
 
 from diracx.client.patches.utils import get_token
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 from diracx.core.utils import serialize_credentials
 
 # Create a fake jwt dictionary

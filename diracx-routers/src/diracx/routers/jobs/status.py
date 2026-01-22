@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import Body, HTTPException, Query
 
-from diracx.core.models import (
+from diracx.core.models.job import (
     HeartbeatData,
     JobCommand,
     JobMetaData,

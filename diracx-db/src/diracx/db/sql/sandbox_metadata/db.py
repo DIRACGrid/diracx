@@ -27,7 +27,8 @@ from diracx.core.exceptions import (
     SandboxAlreadyInsertedError,
     SandboxNotFoundError,
 )
-from diracx.core.models import SandboxInfo, SandboxType, UserInfo
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import SandboxInfo, SandboxType
 from diracx.db.sql.utils.base import BaseSQLDB
 from diracx.db.sql.utils.functions import days_since, utcnow
 

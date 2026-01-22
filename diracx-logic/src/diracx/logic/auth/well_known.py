@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from diracx.core.config.schema import Config
-from diracx.core.models import GroupInfo, Metadata, OpenIDConfiguration
+from diracx.core.models.auth import GroupInfo, Metadata, OpenIDConfiguration
 from diracx.core.settings import AuthSettings
 
 

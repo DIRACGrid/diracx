@@ -8,7 +8,7 @@ import sqlalchemy
 from sqlalchemy.exc import IntegrityError
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import (
+from diracx.core.models.search import (
     ScalarSearchOperator,
     ScalarSearchSpec,
     SortDirection,

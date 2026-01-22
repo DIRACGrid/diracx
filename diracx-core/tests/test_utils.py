@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from diracx.core.exceptions import NotReadyError
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 from diracx.core.utils import (
     TwoLevelCache,
     dotenv_files_from_environment,
