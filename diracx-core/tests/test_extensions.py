@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from diracx.core.extensions import (
-    EntryPointGroups,
+    DiracEntryPoint,
     extensions_by_priority,
     select_from_extension,
     supports_extending,
@@ -27,9 +27,9 @@ def test_extensions_by_priority():
 def test_select_from_extension():
     """Test the select_from_extension function."""
     # Test with existing group
-    result = select_from_extension(group=EntryPointGroups.CORE, name="extension")
+    result = select_from_extension(group=DiracEntryPoint.CORE, name="extension")
     assert len(result) >= 1
-    assert all(ep.group == EntryPointGroups.CORE for ep in result)
+    assert all(ep.group == DiracEntryPoint.CORE for ep in result)
     assert all(ep.name == "extension" for ep in result)
 
     # Test with non-existent group

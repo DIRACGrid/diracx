@@ -28,7 +28,7 @@ from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
-from diracx.core.extensions import EntryPointGroups, select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailableError
@@ -235,7 +235,7 @@ def create_app_inner(
     for system_name in sorted(enabled_systems):
         assert system_name not in routers
         for entry_point in select_from_extension(
-            group=EntryPointGroups.FAST_API, name=system_name
+            group=DiracEntryPoint.SERVICES, name=system_name
         ):
             routers[system_name] = entry_point.load()
             break
@@ -351,7 +351,7 @@ def create_app() -> DiracFastAPI:
     # Load all available routers
     enabled_systems = set()
     settings_classes = set()
-    for entry_point in select_from_extension(group=EntryPointGroups.FAST_API):
+    for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES):
         env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
         enabled = TypeAdapter(bool).validate_json(os.environ.get(env_var, "true"))
         logger.debug("Found service %r: enabled=%s", entry_point, enabled)
@@ -370,7 +370,7 @@ def create_app() -> DiracFastAPI:
 
     available_access_policy_names = {
         entry_point.name
-        for entry_point in select_from_extension(group=EntryPointGroups.ACCESS_POLICY)
+        for entry_point in select_from_extension(group=DiracEntryPoint.ACCESS_POLICY)
     }
 
     all_access_policies = {}
@@ -541,16 +541,16 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
 def get_min_client_version():
     """Extracting min client version from entry_points and searching for extension."""
     matched_entry_points: EntryPoints = entry_points(
-        group=EntryPointGroups.MIN_CLIENT_VERSION
+        group=DiracEntryPoint.MIN_CLIENT_VERSION
     )
     # Searching for an extension:
     entry_points_dict: dict[str, EntryPoint] = {
         ep.name: ep for ep in matched_entry_points
     }
     for ep_name, ep in entry_points_dict.items():
-        if ep_name != EntryPointGroups.CORE:
+        if ep_name != DiracEntryPoint.CORE:
             return ep.load()
 
     # Taking diracx if no extension:
-    if EntryPointGroups.CORE in entry_points_dict:
-        return entry_points_dict[EntryPointGroups.CORE].load()
+    if DiracEntryPoint.CORE in entry_points_dict:
+        return entry_points_dict[DiracEntryPoint.CORE].load()

@@ -21,7 +21,7 @@ from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersionError
-from ..extensions import EntryPointGroups, select_from_extension
+from ..extensions import DiracEntryPoint, select_from_extension
 from ..utils import TwoLevelCache
 from .schema import Config
 
@@ -215,7 +215,7 @@ class BaseGitConfigSource(ConfigSource):
             ) from e
 
         config_class: Config = select_from_extension(
-            group=EntryPointGroups.CORE, name="config"
+            group=DiracEntryPoint.CORE, name="config"
         )[0].load()
         config = config_class.model_validate(raw_obj)
         config._hexsha = hexsha

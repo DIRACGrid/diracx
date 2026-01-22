@@ -6,7 +6,7 @@ from importlib.metadata import PackageNotFoundError, distribution, entry_points
 
 import pytest
 
-from diracx.core.extensions import EntryPointGroups
+from diracx.core.extensions import DiracEntryPoint
 
 
 def get_installed_entry_points():
@@ -14,7 +14,7 @@ def get_installed_entry_points():
     entry_pts = entry_points()
     diracx_eps = defaultdict(dict)
     for group in entry_pts.groups:
-        if EntryPointGroups.CORE in group:
+        if DiracEntryPoint.CORE in group:
             for ep in entry_pts.select(group=group):
                 diracx_eps[group][ep.name] = ep.value
     return dict(diracx_eps)

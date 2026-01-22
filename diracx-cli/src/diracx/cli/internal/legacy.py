@@ -21,7 +21,7 @@ from typer import Option
 
 from diracx.core.config import Config
 from diracx.core.config.schema import Field, SupportInfo
-from diracx.core.extensions import EntryPointGroups, select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 
 from ..utils import AsyncTyper
 
@@ -78,7 +78,7 @@ def cs_sync(old_file: Path, new_file: Path):
 
     _apply_fixes(raw)
     config_class: Config = select_from_extension(
-        group=EntryPointGroups.CORE, name="config"
+        group=DiracEntryPoint.CORE, name="config"
     )[0].load()
     config = config_class.model_validate(raw)
     new_file.write_text(
@@ -264,7 +264,7 @@ def generate_helm_values(
 
     from diracx.core.extensions import select_from_extension
 
-    for entry_point in select_from_extension(group=EntryPointGroups.SQL_DB):
+    for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
 
@@ -310,7 +310,7 @@ def generate_helm_values(
         },
     }
 
-    for entry_point in select_from_extension(group=EntryPointGroups.OS_DB):
+    for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
 

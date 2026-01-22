@@ -4,7 +4,7 @@ __all__ = [
     "extensions_by_priority",
     "select_from_extension",
     "supports_extending",
-    "EntryPointGroups",
+    "DiracEntryPoint",
 ]
 
 from collections import defaultdict
@@ -18,7 +18,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-class EntryPointGroups(StrEnum):
+class DiracEntryPoint(StrEnum):
     """Available entrypoint group values."""
 
     CORE = "diracx"
@@ -29,7 +29,7 @@ class EntryPointGroups(StrEnum):
     SQL_DB = "diracx.dbs.sql"
     MIN_CLIENT_VERSION = "diracx.min_client_version"
     RESOURCES = "diracx.resources"
-    FAST_API = "diracx.services"
+    SERVICES = "diracx.services"
 
 
 @cached(cache=LRUCache(maxsize=1))
@@ -40,10 +40,10 @@ def extensions_by_priority() -> list[str]:
     importing diracx in the MetaPathFinder as part of unrelated imports
     (e.g. http.client).
     """
-    selected = entry_points().select(group=EntryPointGroups.CORE)
+    selected = entry_points().select(group=DiracEntryPoint.CORE)
     if selected is None:
         raise NotImplementedError(
-            f"No entry points found for group {EntryPointGroups.CORE}. Do you have it installed?"
+            f"No entry points found for group {DiracEntryPoint.CORE}. Do you have it installed?"
         )
     extensions = set()
     for entry_point in selected.select(name="extension"):
@@ -89,7 +89,7 @@ def supports_extending(
         name: The entry point name to search for
 
     Example:
-        @supports_extending(EntryPointGroups.RESOURCES, "find_compatible_platforms")
+        @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
         def my_function():
             return "default implementation"
 
