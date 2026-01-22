@@ -153,8 +153,8 @@ The various policies are defined in `diracx-routers/pyproject.toml`:
 
 ```toml
 [project.entry-points."diracx.access_policies"]
-WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
-SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
+wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
+sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 ```
 
 Each route must have a policy as an argument and call it:
