@@ -37,7 +37,7 @@ lollygag = "gubbins.routers.lollygag:router"
 ".well-known" = "gubbins.routers.well_known:router"
 
 [project.entry-points."diracx.access_policies"]
-LollygagAccessPolicy = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
+lollygag = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

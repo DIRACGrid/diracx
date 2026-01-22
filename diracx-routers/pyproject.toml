@@ -48,8 +48,8 @@ health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
 
 [project.entry-points."diracx.access_policies"]
-WMSAccessPolicy = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
-SandboxAccessPolicy = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
+wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
+sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
