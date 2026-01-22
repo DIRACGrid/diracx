@@ -7,13 +7,15 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from diracx.db.sql.utils.types import SmarterDateTime
 
 from ..utils import Column, EnumBackedBool, NullColumn
 
-PilotAgentsDBBase = declarative_base()
+
+class PilotAgentsDBBase(DeclarativeBase):
+    pass
 
 
 class PilotAgents(PilotAgentsDBBase):
