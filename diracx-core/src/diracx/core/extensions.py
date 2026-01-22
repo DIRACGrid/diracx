@@ -24,7 +24,7 @@ class EntryPointGroups(StrEnum):
     CORE = "diracx"
     ACCESS_POLICY = "diracx.access_policies"
     CLI = "diracx.cli"
-    HIDDEN_CLI = "diracx.hidden_cli"
+    HIDDEN_CLI = "diracx.cli.hidden"
     OS_DB = "diracx.dbs.os"
     SQL_DB = "diracx.dbs.sql"
     MIN_CLIENT_VERSION = "diracx.min_client_version"

@@ -16,8 +16,6 @@ import types
 from importlib.metadata import entry_points
 from pathlib import Path
 
-from diracx.core.extensions import EntryPointGroups
-
 
 class DiracXPathFinder(importlib.abc.MetaPathFinder):
     """A meta path finder that aliases the diracx.client module to an extension.
@@ -344,10 +342,10 @@ def get_extension_name(fullname: str) -> str | None:
     importing diracx in the MetaPathFinder as part of unrelated imports
     (e.g. http.client).
     """
-    selected = entry_points().select(group=EntryPointGroups.CORE)
+    selected = entry_points().select(group="diracx")
     if selected is None:
         raise NotImplementedError(
-            f"No entry points found for group {EntryPointGroups.CORE}. Do you have it installed?"
+            "No entry points found for group 'diracx'. Do you have it installed?"
         )
     extensions = set()
     for entry_point in selected.select(name="extension"):
