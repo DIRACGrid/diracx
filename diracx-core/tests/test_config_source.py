@@ -10,9 +10,9 @@ from diracx.core.config.schema import Config
 
 # The diracx-chart contains a CS example
 TEST_REPO = "git+https://github.com/DIRACGrid/diracx-charts.git"
-TEST_REPO_SPECIFIC_BRANCH = TEST_REPO + "?branch=master"
+TEST_REPO_SPECIFIC_BRANCH = TEST_REPO + "?revision=master"
 COMMIT_HASH = "03c5a890d1af4a0a0fb934acea8f538ba08ec68c"
-TEST_REPO_SPECIFIC_COMMIT_HASH = TEST_REPO + f"?commit_hash={COMMIT_HASH}"
+TEST_REPO_SPECIFIC_COMMIT_HASH = TEST_REPO + f"?revision={COMMIT_HASH}"
 
 
 def github_is_down():
@@ -38,7 +38,7 @@ def test_remote_git_config_source(monkeypatch, repo_url):
     hexsha, modified = remote_conf.latest_revision()
     assert isinstance(hexsha, str)
 
-    if remote_conf.git_commit_hash:
+    if repo_url == TEST_REPO_SPECIFIC_COMMIT_HASH:
         assert hexsha == COMMIT_HASH
 
     assert isinstance(modified, datetime.datetime)
