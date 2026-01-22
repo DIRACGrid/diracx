@@ -67,7 +67,7 @@ class ConfigSource(metaclass=ABCMeta):
 
     # Keep a mapping between the scheme and the class
     __registry: dict[str, type["ConfigSource"]] = {}
-    scheme: str
+    scheme: str | list[str]
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         # Revision cache is used to store the latest revision and its
@@ -102,9 +102,11 @@ class ConfigSource(metaclass=ABCMeta):
 
     def __init_subclass__(cls) -> None:
         """Keep a record of <scheme: class>."""
-        if cls.scheme in cls.__registry:
-            raise TypeError(f"{cls.scheme=} is already define")
-        cls.__registry[cls.scheme] = cls
+        schemes = cls.scheme if isinstance(cls.scheme, list) else [cls.scheme]
+        for scheme in schemes:
+            if scheme in cls.__registry:
+                raise TypeError(f"{scheme=} is already defined")
+            cls.__registry[scheme] = cls
 
     @classmethod
     def create(cls):
@@ -233,42 +235,14 @@ class BaseGitConfigSource(ConfigSource):
         return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
 
 
-class LocalGitConfigSource(BaseGitConfigSource):
-    """The configuration is stored on a local git repository
-    When running on multiple servers, the filesystem must be shared.
+class RemoteGitConfigSource(BaseGitConfigSource):
+    """Use a remote or local git repository as a config source.
+
+    Supports both remote URLs (git+https://) and local file URLs (git+file://).
+    The repository is cloned to a temporary directory.
     """
 
-    scheme = "git+file"
-
-    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
-        super().__init__(backend_url=backend_url)
-        if not backend_url.path:
-            raise ValueError("Empty path for LocalGitConfigSource")
-
-        self.repo_location = Path(backend_url.path)
-        # Check if it's a valid git repository
-        try:
-            sh.git(
-                "rev-parse",
-                "--git-dir",
-                _cwd=self.repo_location,
-                _tty_out=False,
-                _async=False,
-            )
-        except sh.ErrorReturnCode as e:
-            raise ValueError(
-                f"{self.repo_location} is not a valid git repository"
-            ) from e
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
-
-    def __hash__(self):
-        return hash(self.repo_location)
-
-
-class RemoteGitConfigSource(BaseGitConfigSource):
-    """Use a remote directory as a config source."""
-
-    scheme = "git+https"
+    scheme = ["git+https", "git+file"]
 
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         super().__init__(backend_url=backend_url)
