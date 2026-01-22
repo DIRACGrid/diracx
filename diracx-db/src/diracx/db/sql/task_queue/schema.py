@@ -9,11 +9,13 @@ from sqlalchemy import (
     Integer,
     String,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from ..utils import Column
 
-TaskQueueDBBase = declarative_base()
+
+class TaskQueueDBBase(DeclarativeBase):
+    pass
 
 
 class TaskQueues(TaskQueueDBBase):
