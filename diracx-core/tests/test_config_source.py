@@ -32,6 +32,12 @@ def test_remote_git_config_source(monkeypatch, repo_url):
         "diracx.core.config.sources.DEFAULT_CONFIG_FILE",
         "k3s/examples/cs.yaml",
     )
+    if repo_url == TEST_REPO_SPECIFIC_BRANCH:
+        monkeypatch.setattr(
+            "diracx.core.config.sources.DEFAULT_GIT_BRANCH",
+            "non_existing_branch",
+        )
+
     remote_conf = ConfigSource.create_from_url(backend_url=repo_url)
     assert isinstance(remote_conf, RemoteGitConfigSource)
 
