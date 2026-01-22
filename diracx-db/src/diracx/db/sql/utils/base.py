@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.models import (
     SearchSpec,
     SortDirection,
@@ -111,7 +111,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.dbs.sql", name=db_name
+                group=DiracEntryPoint.SQL_DB, name=db_name
             )
         ]
         if not db_classes:
@@ -126,7 +126,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select_from_extension(group="diracx.dbs.sql"):
+        for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from importlib.metadata import entry_points
 
+from diracx.core.extensions import DiracEntryPoint
+
 
 def test_diracx_resources_entry_point():
     """Test that the diracx.resources entry point is properly configured."""
     # Get all entry points for the diracx.resources group
-    resources_eps = entry_points().select(group="diracx.resources")
+    resources_eps = entry_points().select(group=DiracEntryPoint.RESOURCES)
 
     # Check that find_compatible_platforms entry point exists
     find_platforms_ep = None
@@ -29,7 +31,7 @@ def test_diracx_resources_entry_point():
 def test_entry_point_functionality():
     """Test that the entry point points to the correct function."""
     # Get the entry point
-    resources_eps = entry_points().select(group="diracx.resources")
+    resources_eps = entry_points().select(group=DiracEntryPoint.RESOURCES)
     find_platforms_ep = None
     for ep in resources_eps:
         if ep.name == "find_compatible_platforms":

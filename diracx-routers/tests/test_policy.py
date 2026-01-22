@@ -4,7 +4,7 @@ import inspect
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.routers.access_policies import (
     BaseAccessPolicy,
 )
@@ -22,7 +22,7 @@ def test_all_routes_have_policy():
 
     """
     missing_security: defaultdict[list[str]] = defaultdict(list)
-    for entry_point in select_from_extension(group="diracx.services"):
+    for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES):
         router: DiracxRouter = entry_point.load()
 
         # If the router was created with the
