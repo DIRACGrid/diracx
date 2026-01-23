@@ -74,7 +74,7 @@ A new `diracx-web` release will trigger a new `diracx-charts` updating:
 
 ## diracx release
 
-Token for release please in dirac is a token belonging which diracbot github user
+Releases are managed by `ReleasePlease`. The token used to perform it belongs to `diracbot` github user
 
 [PROCESS TO BE COMPLETED BY ALEXANDRE]
 
@@ -95,5 +95,4 @@ git push upstream HEAD:main
 
 ## diracx-charts releases
 
-Every commit in master triggers a new release.
-A release
+Every commit in master triggers a new release. The releases are published on a [helm repo](https://charts.diracgrid.org/index.yaml)
