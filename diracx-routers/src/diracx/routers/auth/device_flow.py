@@ -17,7 +17,7 @@ from fastapi import (
 from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
-from diracx.core.models import InitiateDeviceFlowResponse
+from diracx.core.models.auth import InitiateDeviceFlowResponse
 from diracx.logic.auth.device_flow import do_device_flow as do_device_flow_bl
 from diracx.logic.auth.device_flow import (
     finish_device_flow as finish_device_flow_bl,

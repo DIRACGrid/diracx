@@ -24,7 +24,7 @@ from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
 from diracx.core.extensions import DiracEntryPoint
-from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
+from diracx.core.models.auth import AccessTokenPayload, RefreshTokenPayload
 
 if TYPE_CHECKING:
     from diracx.core.settings import (

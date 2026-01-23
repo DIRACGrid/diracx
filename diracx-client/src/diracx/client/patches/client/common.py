@@ -20,7 +20,7 @@ import httpx
 import jwt
 from azure.core.credentials import AccessToken
 from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 
 
 class TokenStatus(Enum):

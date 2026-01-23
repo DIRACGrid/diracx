@@ -7,7 +7,7 @@ from pathlib import Path
 
 from uuid_utils import uuid7
 
-from diracx.core.models import AccessTokenPayload, TokenResponse
+from diracx.core.models.auth import AccessTokenPayload, TokenResponse
 from diracx.core.properties import NORMAL_USER
 from diracx.core.settings import AuthSettings
 from diracx.core.utils import write_credentials

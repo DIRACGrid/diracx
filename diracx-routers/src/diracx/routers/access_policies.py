@@ -27,7 +27,7 @@ from typing import Annotated, Self
 from fastapi import Depends
 
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models import (
+from diracx.core.models.auth import (
     AccessTokenPayload,
     RefreshTokenPayload,
 )

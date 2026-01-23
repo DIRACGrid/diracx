@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from diracx.core.models import Metadata, OpenIDConfiguration
+from diracx.core.models.auth import Metadata, OpenIDConfiguration
 from diracx.logic.auth.well_known import (
     get_installation_metadata as get_installation_metadata_bl,
 )

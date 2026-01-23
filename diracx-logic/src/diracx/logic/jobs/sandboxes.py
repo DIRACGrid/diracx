@@ -5,12 +5,12 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
-from diracx.core.models import (
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import (
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxType,
     SandboxUploadResponse,
-    UserInfo,
 )
 from diracx.core.s3 import (
     generate_presigned_upload,

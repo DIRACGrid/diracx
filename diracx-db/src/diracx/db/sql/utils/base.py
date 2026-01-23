@@ -19,7 +19,7 @@ from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models import (
+from diracx.core.models.search import (
     SearchSpec,
     SortDirection,
     SortSpec,
