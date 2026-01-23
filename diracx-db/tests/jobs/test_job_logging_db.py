@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from diracx.core.models import JobLoggingRecord, JobStatus
+from diracx.core.models.job import JobLoggingRecord, JobStatus
 from diracx.db.sql import JobLoggingDB
 
 

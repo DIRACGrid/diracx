@@ -19,11 +19,11 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.ParametricJob import (
 from pydantic import BaseModel
 
 from diracx.core.config import Config
-from diracx.core.models import (
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.job import (
     InsertedJob,
     JobLoggingRecord,
     JobStatus,
-    UserInfo,
 )
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB

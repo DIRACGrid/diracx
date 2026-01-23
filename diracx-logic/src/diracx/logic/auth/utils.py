@@ -16,7 +16,7 @@ from uuid_utils import UUID
 
 from diracx.core.config.schema import Config
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
-from diracx.core.models import GrantType
+from diracx.core.models.auth import GrantType
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
 

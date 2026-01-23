@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, TypedDict, cast
 
 from botocore.errorfactory import ClientError
 
-from .models import ChecksumAlgorithm
+from .models.sandbox import ChecksumAlgorithm
 
 if TYPE_CHECKING:
     from typing import TypedDict

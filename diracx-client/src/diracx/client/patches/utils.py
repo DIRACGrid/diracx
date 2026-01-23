@@ -22,7 +22,7 @@ from azure.core.credentials import TokenCredential
 from azure.core.pipeline import PipelineRequest
 from azure.core.pipeline.policies import BearerTokenCredentialPolicy
 
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 from diracx.core.preferences import DiracxPreferences, get_diracx_preferences
 
 

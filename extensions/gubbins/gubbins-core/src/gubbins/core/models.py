@@ -1,4 +1,4 @@
-from diracx.core.models import Metadata
+from diracx.core.models.auth import Metadata
 
 
 class ExtendedMetadata(Metadata):

@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal
 from fastapi import Body, Depends, HTTPException, Query
 
 from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
-from diracx.core.models import (
+from diracx.core.models.sandbox import (
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxUploadResponse,

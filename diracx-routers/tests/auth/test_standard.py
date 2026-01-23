@@ -23,7 +23,7 @@ from uuid_utils import uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import AuthorizationError
-from diracx.core.models import GrantType
+from diracx.core.models.auth import GrantType
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.core.settings import AuthSettings
 from diracx.logic.auth.token import create_token

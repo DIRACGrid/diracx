@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from diracx.core.config.schema import Config
-from diracx.core.models import (
+from diracx.core.models.search import (
     ScalarSearchOperator,
     SearchParams,
     SummaryParams,

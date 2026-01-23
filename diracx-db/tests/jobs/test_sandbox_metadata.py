@@ -8,7 +8,8 @@ import pytest
 import sqlalchemy
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
-from diracx.core.models import SandboxInfo, UserInfo
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import SandboxInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
 

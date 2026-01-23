@@ -16,7 +16,7 @@ import json
 from io import BytesIO, IOBase
 from typing import Any, IO, Dict, TypedDict, Union, Unpack, cast, Literal
 
-from diracx.core.models import SearchSpec
+from diracx.core.models.search import SearchSpec
 
 
 class ResponseExtra(TypedDict, total=False):

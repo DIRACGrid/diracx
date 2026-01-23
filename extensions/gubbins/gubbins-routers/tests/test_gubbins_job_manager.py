@@ -5,7 +5,7 @@ Just repeat the diracx tests to make sure they still pass
 from datetime import datetime, timezone
 
 import pytest
-from diracx.core.models import JobStatus
+from diracx.core.models.job import JobStatus
 from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.enabled_dependencies(

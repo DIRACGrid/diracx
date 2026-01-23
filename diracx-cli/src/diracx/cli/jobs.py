@@ -13,7 +13,11 @@ from rich.table import Table
 from typer import FileText, Option
 
 from diracx.client.aio import AsyncDiracClient
-from diracx.core.models import ScalarSearchOperator, SearchSpec, VectorSearchOperator
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    SearchSpec,
+    VectorSearchOperator,
+)
 from diracx.core.preferences import OutputFormats, get_diracx_preferences
 
 from .utils import AsyncTyper

@@ -27,7 +27,7 @@ from typing import Any, AsyncIterable, TypeVar, overload
 from cachetools import Cache, TTLCache
 
 from diracx.core.exceptions import NotReadyError
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 
 logger = logging.getLogger(__name__)
 

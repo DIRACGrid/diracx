@@ -16,9 +16,9 @@ from diracx.core.s3 import (
     s3_object_exists,
 )
 
-BUCKET_NAME = "test_bucket"
-OTHER_BUCKET_NAME = "other_bucket"
-MISSING_BUCKET_NAME = "missing_bucket"
+BUCKET_NAME = "test-bucket"
+OTHER_BUCKET_NAME = "other-bucket"
+MISSING_BUCKET_NAME = "missing-bucket"
 INVALID_BUCKET_NAME = ".."
 
 rng = random.Random(1234)
