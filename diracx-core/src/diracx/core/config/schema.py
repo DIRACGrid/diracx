@@ -48,7 +48,15 @@ class BaseModel(_BaseModel):
             "SerializableSet[str]",
             "SerializableSet[SecurityProperty]",
         }
-        for field, hint in cls.__annotations__.items():
+
+        # To support inheritance, we have to find the annotation of all the MRO
+        # Skip the first classes (object, Pydantic.BaseModel, our BaseModel )
+        mro_annotations = {}
+        for mro_cls in cls.__mro__[::-1]:
+            if issubclass(mro_cls, BaseModel) and mro_cls != BaseModel:
+                mro_annotations.update(mro_cls.__annotations__)
+
+        for field, hint in mro_annotations.items():
             # Convert comma separated lists to actual lists
             if hint.startswith("set"):
                 raise NotImplementedError("Use SerializableSet instead!")
