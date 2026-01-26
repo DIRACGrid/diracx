@@ -24,7 +24,9 @@ async def liveness(config: Config):
     The method doesn't use the config but we want to depend on it so the check
     fails if the config expires without managing to refresh.
     """
-    assert config  # Depend on the config so we know it's loaded successfully
+    assert (
+        config is not None
+    )  # Depend on the config so we know it's loaded successfully
     return JSONResponse(content={"status": "live"})
 
 
@@ -35,7 +37,9 @@ async def ready(config: Config, auth_db: AuthDB):
     Checks if at least the configuration is loaded and the AuthDB database
     connection is available.
     """
-    assert config  # Depend on the config so we know it's loaded successfully
+    assert (
+        config is not None
+    )  # Depend on the config so we know it's loaded successfully
     try:
         await auth_db.ping()
     except Exception as e:
@@ -51,7 +55,9 @@ async def startup(config: Config, auth_db: AuthDB):
     Checks if at least the configuration is loaded and the AuthDB database
     connection is available.
     """
-    assert config  # Depend on the config so we know it's loaded successfully
+    assert (
+        config is not None
+    )  # Depend on the config so we know it's loaded successfully
     try:
         await auth_db.ping()
     except Exception as e:

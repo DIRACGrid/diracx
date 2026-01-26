@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated
+from typing import Annotated, Any
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -43,7 +43,7 @@ def is_running_in_async_context():
         return False
 
 
-def _apply_default_scheme(value: str) -> str:
+def _apply_default_scheme(value: Any) -> Any:
     """Applies the default git+file:// scheme if not present."""
     if isinstance(value, str) and "://" not in value:
         value = f"git+file://{value}"
