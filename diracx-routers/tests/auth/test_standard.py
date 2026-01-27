@@ -54,6 +54,16 @@ def non_mocked_hosts(test_client) -> list[str]:
 
 
 @pytest.fixture
+def user_client(client_factory):
+    with client_factory.normal_user() as client:
+        yield client
+
+
+def test_that_fails(test_client, user_client):
+    assert True
+
+
+@pytest.fixture
 async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
     data_dir = Path(__file__).parent.parent / "data"
     path = "idp-server.invalid/.well-known/openid-configuration"
