@@ -35,6 +35,7 @@ For most components you can extend them in isolation without needing to have an 
 
 The exception to this is when extending `diracx-routers` you MUST also extend `diracx-client` and your client extension MUST be regenerated for every DiracX release.
 More details about this can be found in the [dedicated how to](../how-to/client-extension.md).
+
 Additionally, you will need an umbrella helm chart for your extension.
 
 ## Gubbins
@@ -215,3 +216,16 @@ Note that even if you have your own `testing` package depending on `diracx-testi
 ## `Dockerfile`
 
 `extensions/containers/services/Dockerfile` contains an example of `Dockerfile` for extensions.
+
+## Extension chart
+
+Although you could simply replace the docker images used in the `diracx-charts` by your own, having the umbrella extension is strongly recommended. The reason is that you will be able to properly manage your release cycle and manage proper dependencies, `AppVersion` corresponding to your app, etc.
+
+Note that your `value.yaml` needs an extra `diracx` layer:
+
+```yaml
+diracx:
+  diracx:
+    settings:
+      DIRACX_CONFIG_BACKEND_URL: "some github url"
+```
