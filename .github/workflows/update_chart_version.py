@@ -221,7 +221,7 @@ def lookup_dependency_chart_version(
 
 
 def main() -> None:
-    """Main function."""
+    """Run the Main."""
     parser = argparse.ArgumentParser(
         description="Update chart versions for DiracX release"
     )

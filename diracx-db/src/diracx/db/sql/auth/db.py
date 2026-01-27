@@ -38,7 +38,9 @@ class AuthDB(BaseSQLDB):
 
     @classmethod
     async def post_create(cls, conn: AsyncConnection) -> None:
-        """Create partitions if it is a MySQL DB and it does not have
+        """Create partitions.
+
+        If it is a MySQL DB and it does not have
         it yet and the table does not have any data yet.
         We do this as a post_create step as sqlalchemy does not support
         partition so well.
@@ -115,7 +117,7 @@ class AuthDB(BaseSQLDB):
         return (await self.conn.execute(stmt)).scalar_one()
 
     async def get_device_flow(self, device_code: str):
-        """:raises: NoResultFound"""
+        """raise: NoResultFound."""
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -137,7 +139,7 @@ class AuthDB(BaseSQLDB):
     async def device_flow_insert_id_token(
         self, user_code: str, id_token: dict[str, str], max_validity: int
     ) -> None:
-        """:raises: AuthorizationError if no such code or status not pending"""
+        """raise: AuthorizationError if no such code or status not pending."""
         stmt = update(DeviceFlows)
         stmt = stmt.where(
             DeviceFlows.user_code == user_code,
@@ -215,7 +217,8 @@ class AuthDB(BaseSQLDB):
     async def authorization_flow_insert_id_token(
         self, uuid: str, id_token: dict[str, str], max_validity: int
     ) -> tuple[str, str]:
-        """Returns code, redirect_uri
+        """Return code, redirect_uri.
+
         :raises: AuthorizationError if no such uuid or status not pending.
         """
         # Hash the code to avoid leaking information
@@ -272,8 +275,9 @@ class AuthDB(BaseSQLDB):
         subject: str,
         scope: str,
     ) -> None:
-        """Insert a refresh token in the DB as well as user attributes
-        required to generate access tokens.
+        """Insert a refresh token in the DB.
+
+        As well as user attributes required to generate access tokens.
         """
         # Insert values into the DB
         stmt = insert(RefreshTokens).values(

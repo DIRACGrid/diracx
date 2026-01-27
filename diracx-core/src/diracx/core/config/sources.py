@@ -1,4 +1,4 @@
-"""This module implements the logic of the configuration server side.
+"""Module to implement the logic of the configuration server side.
 
 This is where all the backend abstraction and the caching logic takes place.
 """
@@ -44,7 +44,7 @@ def is_running_in_async_context():
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Applies the default git+file:// scheme if not present."""
+    """Apply the default git+file:// scheme if not present."""
     if isinstance(value, str) and "://" not in value:
         value = f"git+file://{value}"
     return value
@@ -88,14 +88,18 @@ class ConfigSource(metaclass=ABCMeta):
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
-        """Must return:
+        """Abstract method.
+
+        Must return:
         * a unique hash as a string, representing the last version
         * a datetime object corresponding to when the version dates.
         """
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """Return the Config object that corresponds to the
+        """Abstract method.
+
+        Return the Config object that corresponds to the
         specific hash
         The `modified` parameter is just added as a attribute to the config.
         """
@@ -114,10 +118,7 @@ class ConfigSource(metaclass=ABCMeta):
     def create_from_url(
         cls, *, backend_url: ConfigSourceUrl | Path | str
     ) -> "ConfigSource":
-        """Factory method to produce a concrete instance depending on
-        the backend URL scheme.
-
-        """
+        """Produce a concrete instance depending on the backend URL scheme."""
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
@@ -234,7 +235,8 @@ class BaseGitConfigSource(ConfigSource):
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
-    """The configuration is stored on a local git repository
+    """The configuration is stored on a local git repository.
+
     When running on multiple servers, the filesystem must be shared.
     """
 

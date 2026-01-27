@@ -58,5 +58,5 @@ class DiracxPreferences(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_diracx_preferences() -> DiracxPreferences:
-    """Caches the preferences."""
+    """Cache the preferences."""
     return DiracxPreferences()

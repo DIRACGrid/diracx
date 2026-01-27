@@ -1,6 +1,6 @@
-"""Models are used to define the data structure of the requests and responses
-for the DiracX API. They are shared between the client components (cli, api) and
-services components (db, logic, routers).
+"""Models used to define the data structure of the requests and responses for the DiracX API.
+
+Shared between the client components (cli, api) and services components (db, logic, routers).
 """
 
 # in order to avoid DIRAC from failing to import TokenResponse

@@ -75,8 +75,9 @@ async def test_get(auth_db: AuthDB):
 
 
 async def test_get_user_refresh_tokens(auth_db: AuthDB):
-    """Insert refresh tokens belonging to different users in the DB and
-    get the refresh tokens of each user.
+    """Insert refresh tokens belonging to different users in the DB.
+
+    Get the refresh tokens of each user.
     """
     # Two users
     sub1 = "subject1"
@@ -174,8 +175,9 @@ async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
 
 
 async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
-    """Insert refresh tokens belonging to a user, revoke one of them and
-    make sure that only the active tokens appear.
+    """Insert refresh tokens belonging to a user.
+
+    Revoke one of them and make sure that only the active tokens appear.
     """
     # User
     sub = "subject"
@@ -222,8 +224,9 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
 
 
 async def test_get_refresh_tokens(auth_db: AuthDB):
-    """Insert refresh tokens belonging to different users in the DB and
-    get the refresh tokens.
+    """Insert refresh tokens belonging to different users in the DB.
+
+    Get the refresh tokens.
     """
     # Two users
     sub1 = "subject1"

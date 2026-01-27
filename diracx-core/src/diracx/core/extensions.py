@@ -79,7 +79,7 @@ def select_from_extension(*, group: str, name: str | None = None) -> list[EntryP
 def supports_extending(
     group: str, name: str
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """Decorator to replace a function with an extension implementation.
+    """Replace a function with an extension implementation.
 
     This decorator looks for an entry point in the specified group and name,
     and if found, replaces the decorated function with the extension's implementation.
