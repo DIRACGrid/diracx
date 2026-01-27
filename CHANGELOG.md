@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.7...v0.1.0) (2026-01-27)
+
+
+### Features
+
+* allow git commit hash usage in config source revision ([#726](https://github.com/DIRACGrid/diracx/issues/726)) ([8b8b687](https://github.com/DIRACGrid/diracx/commit/8b8b687dc7a72a5a3bb904a338969351e64e6173))
+
+
+### Bug Fixes
+
+* add ci skip settings-doc-check ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+* added a StrEnum for Entrypoints to avoid spelling mistakes ([#744](https://github.com/DIRACGrid/diracx/issues/744)) ([19bfadc](https://github.com/DIRACGrid/diracx/commit/19bfadc1c473626dfe9f3a6489248c098056186e))
+* annoying wrapper script ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+* cleanups ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+* cs conversion takes into account all the parent classes ([#753](https://github.com/DIRACGrid/diracx/issues/753)) ([b742a34](https://github.com/DIRACGrid/diracx/commit/b742a34150d9d925460de4db2c5eba0cb5eafd49))
+* format ([0440a9c](https://github.com/DIRACGrid/diracx/commit/0440a9cecba1b2302630b5aae707b6162954332d))
+* format settings doc files ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+* formatting ([0440a9c](https://github.com/DIRACGrid/diracx/commit/0440a9cecba1b2302630b5aae707b6162954332d))
+* formatting and remove caching ([4ed2709](https://github.com/DIRACGrid/diracx/commit/4ed2709980338cb0e423ef5630bdf6796e4c7250))
+* improve pytest-integration debugging output ([#740](https://github.com/DIRACGrid/diracx/issues/740)) ([d691175](https://github.com/DIRACGrid/diracx/commit/d691175438db532bd833ceecf1ad36ea3de29a5d))
+* reorder imports ([4ed2709](https://github.com/DIRACGrid/diracx/commit/4ed2709980338cb0e423ef5630bdf6796e4c7250))
+* set exclude=True on computed field ([4ed2709](https://github.com/DIRACGrid/diracx/commit/4ed2709980338cb0e423ef5630bdf6796e4c7250))
+* update tasks ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+* use batched DB deletes with SKIP LOCKED for sandbox cleanup ([#739](https://github.com/DIRACGrid/diracx/issues/739)) ([584d4e6](https://github.com/DIRACGrid/diracx/commit/584d4e62a87d1b2ffbf739e80fe44f9c0fb92c9a))
+* well that didn't work ([ccb1f48](https://github.com/DIRACGrid/diracx/commit/ccb1f489902a45ceea2524ec3213968641db5e2e))
+
 ## [0.0.7](https://github.com/DIRACGrid/diracx/compare/v0.0.6...v0.0.7) (2026-01-20)
 
 
