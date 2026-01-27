@@ -9,11 +9,13 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from diracx.db.sql.utils import Column, DateNowColumn
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class SBOwners(Base):

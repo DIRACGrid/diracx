@@ -3,11 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import Integer, Numeric, PrimaryKeyConstraint, String, TypeDecorator
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from ..utils import Column, DateNowColumn
 
-JobLoggingDBBase = declarative_base()
+
+class JobLoggingDBBase(DeclarativeBase):
+    pass
 
 
 class MagicEpochDateTime(TypeDecorator):

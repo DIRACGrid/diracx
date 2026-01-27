@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from sqlalchemy import ForeignKey, Integer, String, Uuid
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from diracx.db.sql.utils import Column, DateNowColumn
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Owners(Base):
