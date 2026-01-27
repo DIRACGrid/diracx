@@ -171,13 +171,13 @@ class BaseGitConfigSource(ConfigSource):
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         super().__init__(backend_url=backend_url)
         self.remote_url = self.extract_remote_url(backend_url)
-        self.git_branch = self.get_git_branch_from_url(backend_url)
+        self.git_revision = self.get_git_revision_from_url(backend_url)
 
     def latest_revision(self) -> tuple[str, datetime]:
         try:
             rev = sh.git(
                 "rev-parse",
-                self.git_branch,
+                self.git_revision,
                 _cwd=self.repo_location,
                 _tty_out=False,
                 _async=is_running_in_async_context(),
@@ -228,9 +228,9 @@ class BaseGitConfigSource(ConfigSource):
         remote_url = urlunparse(parsed_url._replace(query=""))
         return remote_url
 
-    def get_git_branch_from_url(self, backend_url: ConfigSourceUrl) -> str:
+    def get_git_revision_from_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the branch from the query parameters."""
-        return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
+        return dict(backend_url.query_params()).get("revision", DEFAULT_GIT_BRANCH)
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
@@ -259,7 +259,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
             raise ValueError(
                 f"{self.repo_location} is not a valid git repository"
             ) from e
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
+        sh.git.checkout(self.git_revision, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
@@ -277,9 +277,8 @@ class RemoteGitConfigSource(BaseGitConfigSource):
 
         self._temp_dir = TemporaryDirectory()
         self.repo_location = Path(self._temp_dir.name)
-        sh.git.clone(
-            self.remote_url, self.repo_location, branch=self.git_branch, _async=False
-        )
+        sh.git.clone(self.remote_url, self.repo_location, _async=False)
+        sh.git.checkout(self.git_revision, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
