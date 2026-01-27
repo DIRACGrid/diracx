@@ -84,6 +84,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         async with db:
             # Do something in the first transaction
             # Commit will be called automatically
+            pass
 
         async with db:
             # This transaction will be rolled back due to the exception

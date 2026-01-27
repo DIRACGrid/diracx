@@ -66,9 +66,11 @@ class BaseOSDB(metaclass=ABCMeta):
     MyDBClass = BaseOSDB.available_implementations(db_name)[0]
 
     db = MyDBClass(conn_params)
+
     async with db.client_context:
         async with db:
             # Do something with the OpenSearch client
+            pass
     ```
     """
 
