@@ -7,7 +7,7 @@ map, which maps Logical File Names (LFNs) to their physical locations
 Key concepts:
     - LFN (Logical File Name): A unique logical path identifying a file,
       e.g., "/lhcb/MC/2024/file.dst". May be prefixed with "LFN:".
-    - PFN (Physical File Name): The actual URL or path where a replica is
+    - PFN (Physical File Name): The actual URL where a replica is
       stored, e.g., "https://storage.example.com/data/file.dst". May be
       prefixed with "PFN:".
     - Storage Element (SE): An identifier for the storage system hosting
@@ -48,7 +48,6 @@ from pydantic import (
     AnyUrl,
     BaseModel,
     BeforeValidator,
-    FilePath,
     RootModel,
     field_validator,
 )
@@ -123,7 +122,7 @@ def _validate_guid(value: str) -> str:
 
 # Logical File Name such as LFN:/lhcb/MC/2024/HLT2.DST/00327923/0000/00327923_00000533_1.hlt2.dst
 LFN = Annotated[str, BeforeValidator(_validate_lfn)]
-PFN = Annotated[AnyUrl | FilePath, BeforeValidator(_validate_pfn)]
+PFN = Annotated[AnyUrl, BeforeValidator(_validate_pfn)]
 StorageElementId = str
 
 Adler32Checksum = Annotated[str, BeforeValidator(_validate_adler32)]
