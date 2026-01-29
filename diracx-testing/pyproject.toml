@@ -14,8 +14,9 @@ classifiers = [
 ]
 dependencies = [
     "pytest",
-    "pytest-asyncio==1.0.0",
+    "pytest-asyncio>=1.1.0",
     "pytest-cov",
+    "pytest-lazy-fixtures",
     "pytest-xdist",
     "httpx",
     "joserfc",
