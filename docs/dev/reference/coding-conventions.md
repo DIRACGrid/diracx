@@ -32,7 +32,8 @@ import pytest
 
 
 @pytest.fixture
-def my_ficture(): ...
+def my_ficture():
+    ...
 ```
 
 </td>
@@ -44,7 +45,8 @@ from pytest import fixture
 
 
 @fixture
-def my_ficture(): ...
+def my_ficture():
+    ...
 ```
 
 </td>
