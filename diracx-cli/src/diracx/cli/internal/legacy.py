@@ -6,7 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Annotated, cast
 from urllib.parse import urljoin, urlparse
 
 import diraccfg
@@ -179,11 +179,11 @@ def _apply_fixes(raw):
 
 @app.command()
 def generate_helm_values(
-    public_cfg: Path = Option(help="Path to the cfg file served by the CS"),
-    secret_cfg: Path = Option(
-        default=None, help="Path to the cfg containing the secret"
-    ),
-    output_file: Path = Option(help="Where to dump the yam file"),
+    public_cfg: Annotated[Path, Option(help="Path to the cfg file served by the CS")],
+    output_file: Annotated[Path, Option(help="Where to dump the yam file")],
+    secret_cfg: Annotated[
+        Path | None, Option(help="Path to the cfg containing the secret")
+    ] = None,
 ):
     """Generate an initial values.yaml to run a DiracX installation.
 

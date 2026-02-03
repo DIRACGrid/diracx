@@ -48,7 +48,6 @@ select = [
 ]
 ignore = [
   "B905",
-  "B008",
   "B006",
   "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
   # TODO: Maybe enable these

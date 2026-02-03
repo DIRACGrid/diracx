@@ -48,17 +48,21 @@ async def login(
         Optional[str],
         typer.Argument(callback=vo_callback, help="Virtual Organization name"),
     ] = None,
-    group: Optional[str] = typer.Option(
-        None,
-        help="Group name within the VO. If not provided, the default group for the VO will be used.",
-    ),
-    property: Optional[list[str]] = typer.Option(
-        None,
-        help=(
-            "List of properties to add to the default properties of the group. "
-            "If not provided, default properties of the group will be used."
+    group: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Group name within the VO. If not provided, the default group for the VO will be used."
         ),
-    ),
+    ] = None,
+    property: Annotated[
+        Optional[list[str]],
+        typer.Option(
+            help=(
+                "List of properties to add to the default properties of the group. "
+                "If not provided, default properties of the group will be used."
+            )
+        ),
+    ] = None,
 ):
     """Login to the DIRAC system using the device flow.
 
