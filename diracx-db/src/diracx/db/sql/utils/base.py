@@ -225,7 +225,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """Called when exiting a route.
+        """Commit or roll back changes to a DB.
+
+        Called when exiting a route.
 
         If there was no exception, the changes in the DB are committed.
         Otherwise, they are rolled back.
