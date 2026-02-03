@@ -6,6 +6,7 @@ from typing import Optional
 from sqlalchemy import (
     Double,
     Index,
+    String,
     Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -20,7 +21,11 @@ from diracx.db.sql.utils.types import SmarterDateTime
 
 
 class PilotAgentsDBBase(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        str32: String(32),
+        str128: String(128),
+        str255: String(255),
+    }
 
 
 class PilotAgents(PilotAgentsDBBase):
