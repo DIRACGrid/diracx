@@ -18,12 +18,6 @@ from diracx.db.sql.utils.types import SmarterDateTime
 from ..utils import EnumBackedBool, str32, str64, str128, str255
 
 str100 = Annotated[str, 100]
-jobid_type = Annotated[
-    int,
-    mapped_column(
-        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    ),
-]
 
 
 class JobDBBase(DeclarativeBase):
@@ -141,28 +135,36 @@ class JobJDLs(JobDBBase):
 
 class InputData(JobDBBase):
     __tablename__ = "InputData"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     lfn: Mapped[str255] = mapped_column("LFN", default="", primary_key=True)
     status: Mapped[str32] = mapped_column("Status", default="AprioriGood")
 
 
 class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     name: Mapped[str100] = mapped_column("Name", primary_key=True)
     value: Mapped[str] = mapped_column("Value", Text)
 
 
 class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     name: Mapped[str100] = mapped_column("Name", primary_key=True)
     value: Mapped[str] = mapped_column("Value", Text)
 
 
 class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     name: Mapped[str100] = mapped_column("Name", primary_key=True)
     value: Mapped[str] = mapped_column("Value", Text)
     reschedule_cycle: Mapped[int] = mapped_column("RescheduleCycle")
@@ -170,7 +172,9 @@ class AtticJobParameters(JobDBBase):
 
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     name: Mapped[str100] = mapped_column("Name", primary_key=True)
     value: Mapped[str] = mapped_column("Value", Text)
     heart_beat_time: Mapped[datetime] = mapped_column(
@@ -182,7 +186,9 @@ class HeartBeatLoggingInfo(JobDBBase):
 
 class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
-    job_id: Mapped[jobid_type]
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    )
     command: Mapped[str100] = mapped_column("Command")
     arguments: Mapped[str100] = mapped_column("Arguments")
     status: Mapped[str64] = mapped_column("Status", default="Received")
