@@ -7,7 +7,6 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from typing_extensions import Annotated
 
 from diracx.db.sql.utils import (
     str32,
@@ -26,15 +25,6 @@ class TaskQueueDBBase(DeclarativeBase):
     }
 
 
-tqid_type = Annotated[
-    int,
-    mapped_column(
-        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
-    ),
-]
-value_type = Annotated[str64, mapped_column(primary_key=True)]
-
-
 class TaskQueues(TaskQueueDBBase):
     __tablename__ = "tq_TaskQueues"
     TQId: Mapped[int] = mapped_column(primary_key=True)
@@ -49,7 +39,9 @@ class TaskQueues(TaskQueueDBBase):
 
 class JobsQueue(TaskQueueDBBase):
     __tablename__ = "tq_Jobs"
-    TQId: Mapped[tqid_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
     JobId: Mapped[int] = mapped_column(primary_key=True)
     Priority: Mapped[int]
     RealPriority: Mapped[float]
@@ -58,8 +50,10 @@ class JobsQueue(TaskQueueDBBase):
 
 class SitesQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToSites"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("SitesTaskIndex", "TQId"),
         Index("SitesIndex", "Value"),
@@ -68,8 +62,10 @@ class SitesQueue(TaskQueueDBBase):
 
 class GridCEsQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToGridCEs"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("GridCEsTaskIndex", "TQId"),
         Index("GridCEsValueIndex", "Value"),
@@ -78,8 +74,10 @@ class GridCEsQueue(TaskQueueDBBase):
 
 class BannedSitesQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToBannedSites"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("BannedSitesTaskIndex", "TQId"),
         Index("BannedSitesValueIndex", "Value"),
@@ -88,8 +86,10 @@ class BannedSitesQueue(TaskQueueDBBase):
 
 class PlatformsQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToPlatforms"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("PlatformsTaskIndex", "TQId"),
         Index("PlatformsValueIndex", "Value"),
@@ -98,8 +98,10 @@ class PlatformsQueue(TaskQueueDBBase):
 
 class JobTypesQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToJobTypes"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("JobTypesTaskIndex", "TQId"),
         Index("JobTypesValueIndex", "Value"),
@@ -108,8 +110,10 @@ class JobTypesQueue(TaskQueueDBBase):
 
 class TagsQueue(TaskQueueDBBase):
     __tablename__ = "tq_TQToTags"
-    TQId: Mapped[tqid_type]
-    Value: Mapped[value_type]
+    TQId: Mapped[int] = mapped_column(
+        ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
+    )
+    Value: Mapped[str64] = mapped_column(primary_key=True)
     __table_args__ = (
         Index("TagsTaskIndex", "TQId"),
         Index("TagsValueIndex", "Value"),
