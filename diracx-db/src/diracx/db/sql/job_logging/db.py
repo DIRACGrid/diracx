@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Iterable, cast
+from typing import Iterable
 
-from sqlalchemy import Table, delete, func, select
+from sqlalchemy import delete, func, insert, select
 
 from diracx.core.models.job import JobLoggingRecord, JobStatusReturn
 
@@ -56,7 +56,7 @@ class JobLoggingDB(BaseSQLDB):
             seqnums[record.job_id] = seqnums[record.job_id] + 1
 
         await self.conn.execute(
-            cast(Table, LoggingInfo.__table__).insert(),
+            insert(LoggingInfo),
             values,
         )
 
