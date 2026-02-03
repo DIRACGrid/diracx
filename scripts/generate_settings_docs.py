@@ -378,7 +378,7 @@ def compare_and_update_files(
 
 
 def main():
-    """Main entry point."""
+    """Generate settings: main entry point."""
     repo_root = Path(__file__).parent.parent
     docs_dir = repo_root / "docs"
 
