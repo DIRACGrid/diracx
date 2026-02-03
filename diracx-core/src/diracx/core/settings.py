@@ -108,7 +108,7 @@ class FernetKey(SecretStr):
 
 def _apply_default_scheme(value: str) -> str:
     """Apply the default file:// scheme if not present."""
-    if isinstance(value, str) and "://" not in value:
+    if "://" not in value:
         value = f"file://{value}"
     return value
 

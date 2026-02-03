@@ -129,7 +129,7 @@ allow_redefinition = true
 explicit_package_bases = true
 # disallow_untyped_defs = true
 # strict = true
-enable_error_code = ["import", "attr-defined"]
+enable_error_code = ["import", "attr-defined", "redundant-expr"]
 
 [[tool.mypy.overrides]]
 module = 'DIRACCommon.*'
