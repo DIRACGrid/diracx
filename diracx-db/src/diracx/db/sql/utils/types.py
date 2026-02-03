@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 import sqlalchemy.types as types
 from sqlalchemy import Column as RawColumn
 from sqlalchemy import DateTime, Enum
+from sqlalchemy.orm import mapped_column
+from typing_extensions import Annotated
 
 from .functions import utcnow
 
@@ -17,9 +19,24 @@ DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=ut
 # Module-level constants for default timezone values
 _DEFAULT_UTC = ZoneInfo("UTC")
 
+datetime_now = Annotated[
+    datetime, mapped_column(DateTime(timezone=True), server_default=utcnow())
+]
+
+str32 = Annotated[str, 32]
+str64 = Annotated[str, 64]
+str128 = Annotated[str, 128]
+str255 = Annotated[str, 255]
+str512 = Annotated[str, 512]
+str1024 = Annotated[str, 1024]
+
 
 def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
     return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
+
+
+def enum_column(name, enum_type, **kwargs):
+    return mapped_column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
 class EnumBackedBool(types.TypeDecorator):

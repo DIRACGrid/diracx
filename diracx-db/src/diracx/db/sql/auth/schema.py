@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+from typing import Any, Optional
+from uuid import UUID
 
 from sqlalchemy import (
     JSON,
@@ -8,20 +10,26 @@ from sqlalchemy import (
     String,
     Uuid,
 )
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from diracx.db.sql.utils import (
-    Column,
-    DateNowColumn,
-    EnumColumn,
-    NullColumn,
+    datetime_now,
+    enum_column,
+    str128,
+    str255,
+    str1024,
 )
 
 USER_CODE_LENGTH = 8
 
 
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        str128: String(128),
+        str255: String(255),
+        str1024: String(1024),
+        dict[str, Any]: JSON,
+    }
 
 
 class FlowStatus(Enum):
@@ -49,27 +57,35 @@ class FlowStatus(Enum):
 
 class DeviceFlows(Base):
     __tablename__ = "DeviceFlows"
-    user_code = Column("UserCode", String(USER_CODE_LENGTH), primary_key=True)
-    status = EnumColumn("Status", FlowStatus, server_default=FlowStatus.PENDING.name)
-    creation_time = DateNowColumn("CreationTime")
-    client_id = Column("ClientID", String(255))
-    scope = Column("Scope", String(1024))
-    device_code = Column("DeviceCode", String(128), unique=True)  # Should be a hash
-    id_token = NullColumn("IDToken", JSON())
+    user_code: Mapped[str] = mapped_column(
+        "UserCode", String(USER_CODE_LENGTH), primary_key=True
+    )
+    status: Mapped[FlowStatus] = enum_column(
+        "Status", FlowStatus, server_default=FlowStatus.PENDING.name
+    )
+    creation_time: Mapped[datetime_now] = mapped_column("CreationTime")
+    client_id: Mapped[str255] = mapped_column("ClientID")
+    scope: Mapped[str1024] = mapped_column("Scope")
+    device_code: Mapped[str128] = mapped_column(
+        "DeviceCode", unique=True
+    )  # Should be a hash
+    id_token: Mapped[Optional[dict[str, Any]]] = mapped_column("IDToken")
 
 
 class AuthorizationFlows(Base):
     __tablename__ = "AuthorizationFlows"
-    uuid = Column("UUID", Uuid(as_uuid=False), primary_key=True)
-    status = EnumColumn("Status", FlowStatus, server_default=FlowStatus.PENDING.name)
-    client_id = Column("ClientID", String(255))
-    creation_time = DateNowColumn("CreationTime")
-    scope = Column("Scope", String(1024))
-    code_challenge = Column("CodeChallenge", String(255))
-    code_challenge_method = Column("CodeChallengeMethod", String(8))
-    redirect_uri = Column("RedirectURI", String(255))
-    code = NullColumn("Code", String(255))  # Should be a hash
-    id_token = NullColumn("IDToken", JSON())
+    uuid: Mapped[UUID] = mapped_column("UUID", Uuid(as_uuid=False), primary_key=True)
+    status: Mapped[FlowStatus] = enum_column(
+        "Status", FlowStatus, server_default=FlowStatus.PENDING.name
+    )
+    client_id: Mapped[str255] = mapped_column("ClientID")
+    creation_time: Mapped[datetime_now] = mapped_column("CreationTime")
+    scope: Mapped[str1024] = mapped_column("Scope")
+    code_challenge: Mapped[str255] = mapped_column("CodeChallenge")
+    code_challenge_method: Mapped[str] = mapped_column("CodeChallengeMethod", String(8))
+    redirect_uri: Mapped[str255] = mapped_column("RedirectURI")
+    code: Mapped[Optional[str255]] = mapped_column("Code")  # Should be a hash
+    id_token: Mapped[Optional[dict[str, Any]]] = mapped_column("IDToken")
 
 
 class RefreshTokenStatus(Enum):
@@ -95,13 +111,13 @@ class RefreshTokens(Base):
 
     __tablename__ = "RefreshTokens"
     # Refresh token attributes
-    jti = Column("JTI", Uuid(as_uuid=False), primary_key=True)
-    status = EnumColumn(
+    jti: Mapped[UUID] = mapped_column("JTI", Uuid(as_uuid=False), primary_key=True)
+    status: Mapped[RefreshTokenStatus] = enum_column(
         "Status", RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
     )
-    scope = Column("Scope", String(1024))
+    scope: Mapped[str1024] = mapped_column("Scope")
 
     # User attributes bound to the refresh token
-    sub = Column("Sub", String(256), index=True)
+    sub: Mapped[str] = mapped_column("Sub", String(256), index=True)
 
     __table_args__ = (Index("index_status_sub", status, sub),)

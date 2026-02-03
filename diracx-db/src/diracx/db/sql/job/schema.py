@@ -1,22 +1,39 @@
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Optional
+
 import sqlalchemy.types as types
 from sqlalchemy import (
     ForeignKey,
     Index,
-    Integer,
     String,
     Text,
 )
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from typing_extensions import Annotated
 
 from diracx.db.sql.utils.types import SmarterDateTime
 
-from ..utils import Column, EnumBackedBool, NullColumn
+from ..utils import EnumBackedBool, str32, str64, str128, str255
+
+str100 = Annotated[str, 100]
+jobid_type = Annotated[
+    int,
+    mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    ),
+]
 
 
 class JobDBBase(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        str32: String(32),
+        str64: String(64),
+        str100: String(100),
+        str128: String(128),
+        str255: String(255),
+    }
 
 
 class AccountedFlagEnum(types.TypeDecorator):
@@ -49,51 +66,56 @@ class AccountedFlagEnum(types.TypeDecorator):
 class Jobs(JobDBBase):
     __tablename__ = "Jobs"
 
-    job_id = Column(
+    job_id: Mapped[int] = mapped_column(
         "JobID",
-        Integer,
         ForeignKey("JobJDLs.JobID", ondelete="CASCADE"),
         primary_key=True,
         default=0,
     )
-    job_type = Column("JobType", String(32), default="user")
-    job_group = Column("JobGroup", String(32), default="00000000")
-    site = Column("Site", String(100), default="ANY")
-    job_name = Column("JobName", String(128), default="Unknown")
-    owner = Column("Owner", String(64), default="Unknown")
-    owner_group = Column("OwnerGroup", String(128), default="Unknown")
-    vo = Column("VO", String(32))
-    submission_time = NullColumn(
+    job_type: Mapped[str32] = mapped_column("JobType", default="user")
+    job_group: Mapped[str32] = mapped_column("JobGroup", default="00000000")
+    site: Mapped[str100] = mapped_column("Site", default="ANY")
+    job_name: Mapped[str128] = mapped_column("JobName", default="Unknown")
+    owner: Mapped[str64] = mapped_column("Owner", default="Unknown")
+    owner_group: Mapped[str128] = mapped_column("OwnerGroup", default="Unknown")
+    vo: Mapped[str32] = mapped_column("VO")
+    submission_time: Mapped[Optional[datetime]] = mapped_column(
         "SubmissionTime",
         SmarterDateTime(),
     )
-    reschedule_time = NullColumn(
+    reschedule_time: Mapped[Optional[datetime]] = mapped_column(
         "RescheduleTime",
         SmarterDateTime(),
     )
-    last_update_time = NullColumn(
+    last_update_time: Mapped[Optional[datetime]] = mapped_column(
         "LastUpdateTime",
         SmarterDateTime(),
     )
-    start_exec_time = NullColumn(
+    start_exec_time: Mapped[Optional[datetime]] = mapped_column(
         "StartExecTime",
         SmarterDateTime(),
     )
-    heart_beat_time = NullColumn(
+    heart_beat_time: Mapped[Optional[datetime]] = mapped_column(
         "HeartBeatTime",
         SmarterDateTime(),
     )
-    end_exec_time = NullColumn(
+    end_exec_time: Mapped[Optional[datetime]] = mapped_column(
         "EndExecTime",
         SmarterDateTime(),
     )
-    status = Column("Status", String(32), default="Received")
-    minor_status = Column("MinorStatus", String(128), default="Unknown")
-    application_status = Column("ApplicationStatus", String(255), default="Unknown")
-    user_priority = Column("UserPriority", Integer, default=0)
-    reschedule_counter = Column("RescheduleCounter", Integer, default=0)
-    verified_flag = Column("VerifiedFlag", EnumBackedBool(), default=False)
-    accounted_flag = Column("AccountedFlag", AccountedFlagEnum(), default=False)
+    status: Mapped[str32] = mapped_column("Status", default="Received")
+    minor_status: Mapped[str128] = mapped_column("MinorStatus", default="Unknown")
+    application_status: Mapped[str255] = mapped_column(
+        "ApplicationStatus", default="Unknown"
+    )
+    user_priority: Mapped[int] = mapped_column("UserPriority", default=0)
+    reschedule_counter: Mapped[int] = mapped_column("RescheduleCounter", default=0)
+    verified_flag: Mapped[bool] = mapped_column(
+        "VerifiedFlag", EnumBackedBool(), default=False
+    )
+    accounted_flag: Mapped[bool | str] = mapped_column(
+        "AccountedFlag", AccountedFlagEnum(), default=False
+    )
 
     __table_args__ = (
         Index("JobType", "JobType"),
@@ -111,57 +133,47 @@ class Jobs(JobDBBase):
 
 class JobJDLs(JobDBBase):
     __tablename__ = "JobJDLs"
-    job_id = Column("JobID", Integer, autoincrement=True, primary_key=True)
-    jdl = Column("JDL", Text)
-    job_requirements = Column("JobRequirements", Text)
-    original_jdl = Column("OriginalJDL", Text)
+    job_id: Mapped[int] = mapped_column("JobID", autoincrement=True, primary_key=True)
+    jdl: Mapped[str] = mapped_column("JDL", Text)
+    job_requirements: Mapped[str] = mapped_column("JobRequirements", Text)
+    original_jdl: Mapped[str] = mapped_column("OriginalJDL", Text)
 
 
 class InputData(JobDBBase):
     __tablename__ = "InputData"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    lfn = Column("LFN", String(255), default="", primary_key=True)
-    status = Column("Status", String(32), default="AprioriGood")
+    job_id: Mapped[jobid_type]
+    lfn: Mapped[str255] = mapped_column("LFN", default="", primary_key=True)
+    status: Mapped[str32] = mapped_column("Status", default="AprioriGood")
 
 
 class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    name = Column("Name", String(100), primary_key=True)
-    value = Column("Value", Text)
+    job_id: Mapped[jobid_type]
+    name: Mapped[str100] = mapped_column("Name", primary_key=True)
+    value: Mapped[str] = mapped_column("Value", Text)
 
 
 class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    name = Column("Name", String(100), primary_key=True)
-    value = Column("Value", Text)
+    job_id: Mapped[jobid_type]
+    name: Mapped[str100] = mapped_column("Name", primary_key=True)
+    value: Mapped[str] = mapped_column("Value", Text)
 
 
 class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    name = Column("Name", String(100), primary_key=True)
-    value = Column("Value", Text)
-    reschedule_cycle = Column("RescheduleCycle", Integer)
+    job_id: Mapped[jobid_type]
+    name: Mapped[str100] = mapped_column("Name", primary_key=True)
+    value: Mapped[str] = mapped_column("Value", Text)
+    reschedule_cycle: Mapped[int] = mapped_column("RescheduleCycle")
 
 
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    name = Column("Name", String(100), primary_key=True)
-    value = Column("Value", Text)
-    heart_beat_time = Column(
+    job_id: Mapped[jobid_type]
+    name: Mapped[str100] = mapped_column("Name", primary_key=True)
+    value: Mapped[str] = mapped_column("Value", Text)
+    heart_beat_time: Mapped[datetime] = mapped_column(
         "HeartBeatTime",
         SmarterDateTime(),
         primary_key=True,
@@ -170,18 +182,16 @@ class HeartBeatLoggingInfo(JobDBBase):
 
 class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
-    )
-    command = Column("Command", String(100))
-    arguments = Column("Arguments", String(100))
-    status = Column("Status", String(64), default="Received")
-    reception_time = Column(
+    job_id: Mapped[jobid_type]
+    command: Mapped[str100] = mapped_column("Command")
+    arguments: Mapped[str100] = mapped_column("Arguments")
+    status: Mapped[str64] = mapped_column("Status", default="Received")
+    reception_time: Mapped[datetime] = mapped_column(
         "ReceptionTime",
         SmarterDateTime(),
         primary_key=True,
     )
-    execution_time = NullColumn(
+    execution_time: Mapped[Optional[datetime]] = mapped_column(
         "ExecutionTime",
         SmarterDateTime(),
     )
