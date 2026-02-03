@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Optional
+
 from sqlalchemy import (
     Double,
     Index,
-    Integer,
-    String,
     Text,
 )
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from diracx.db.sql.utils import (
+    EnumBackedBool,
+    str32,
+    str128,
+    str255,
+)
 from diracx.db.sql.utils.types import SmarterDateTime
-
-from ..utils import Column, EnumBackedBool, NullColumn
 
 
 class PilotAgentsDBBase(DeclarativeBase):
@@ -21,22 +26,34 @@ class PilotAgentsDBBase(DeclarativeBase):
 class PilotAgents(PilotAgentsDBBase):
     __tablename__ = "PilotAgents"
 
-    pilot_id = Column("PilotID", Integer, autoincrement=True, primary_key=True)
-    initial_job_id = Column("InitialJobID", Integer, default=0)
-    current_job_id = Column("CurrentJobID", Integer, default=0)
-    pilot_job_reference = Column("PilotJobReference", String(255), default="Unknown")
-    pilot_stamp = Column("PilotStamp", String(32), default="")
-    destination_site = Column("DestinationSite", String(128), default="NotAssigned")
-    queue = Column("Queue", String(128), default="Unknown")
-    grid_site = Column("GridSite", String(128), default="Unknown")
-    vo = Column("VO", String(128))
-    grid_type = Column("GridType", String(32), default="LCG")
-    benchmark = Column("BenchMark", Double, default=0.0)
-    submission_time = NullColumn("SubmissionTime", SmarterDateTime)
-    last_update_time = NullColumn("LastUpdateTime", SmarterDateTime)
-    status = Column("Status", String(32), default="Unknown")
-    status_reason = Column("StatusReason", String(255), default="Unknown")
-    accounting_sent = Column("AccountingSent", EnumBackedBool(), default=False)
+    pilot_id: Mapped[int] = mapped_column(
+        "PilotID", autoincrement=True, primary_key=True
+    )
+    initial_job_id: Mapped[int] = mapped_column("InitialJobID", default=0)
+    current_job_id: Mapped[int] = mapped_column("CurrentJobID", default=0)
+    pilot_job_reference: Mapped[str255] = mapped_column(
+        "PilotJobReference", default="Unknown"
+    )
+    pilot_stamp: Mapped[str32] = mapped_column("PilotStamp", default="")
+    destination_site: Mapped[str128] = mapped_column(
+        "DestinationSite", default="NotAssigned"
+    )
+    queue: Mapped[str128] = mapped_column("Queue", default="Unknown")
+    grid_site: Mapped[str128] = mapped_column("GridSite", default="Unknown")
+    vo: Mapped[str128] = mapped_column("VO")
+    grid_type: Mapped[str32] = mapped_column("GridType", default="LCG")
+    benchmark: Mapped[float] = mapped_column("BenchMark", Double, default=0.0)
+    submission_time: Mapped[Optional[datetime]] = mapped_column(
+        "SubmissionTime", SmarterDateTime
+    )
+    last_update_time: Mapped[Optional[datetime]] = mapped_column(
+        "LastUpdateTime", SmarterDateTime
+    )
+    status: Mapped[str32] = mapped_column("Status", default="Unknown")
+    status_reason: Mapped[str255] = mapped_column("StatusReason", default="Unknown")
+    accounting_sent: Mapped[bool] = mapped_column(
+        "AccountingSent", EnumBackedBool(), default=False
+    )
 
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
@@ -48,9 +65,9 @@ class PilotAgents(PilotAgentsDBBase):
 class JobToPilotMapping(PilotAgentsDBBase):
     __tablename__ = "JobToPilotMapping"
 
-    pilot_id = Column("PilotID", Integer, primary_key=True)
-    job_id = Column("JobID", Integer, primary_key=True)
-    start_time = Column("StartTime", SmarterDateTime)
+    pilot_id: Mapped[int] = mapped_column("PilotID", primary_key=True)
+    job_id: Mapped[int] = mapped_column("JobID", primary_key=True)
+    start_time: Mapped[datetime] = mapped_column("StartTime", SmarterDateTime)
 
     __table_args__ = (Index("JobID", "JobID"), Index("PilotID", "PilotID"))
 
@@ -58,6 +75,6 @@ class JobToPilotMapping(PilotAgentsDBBase):
 class PilotOutput(PilotAgentsDBBase):
     __tablename__ = "PilotOutput"
 
-    pilot_id = Column("PilotID", Integer, primary_key=True)
-    std_output = Column("StdOutput", Text)
-    std_error = Column("StdError", Text)
+    pilot_id: Mapped[int] = mapped_column("PilotID", primary_key=True)
+    std_output: Mapped[str] = mapped_column("StdOutput", Text)
+    std_error: Mapped[str] = mapped_column("StdError", Text)

@@ -3,9 +3,9 @@ from __future__ import annotations
 __all__ = ["JobDB"]
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Iterable, cast
+from typing import TYPE_CHECKING, Any, Iterable
 
-from sqlalchemy import Table, bindparam, case, delete, literal, select, update
+from sqlalchemy import bindparam, case, delete, insert, literal, select, update
 
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import BindParameter
@@ -75,9 +75,7 @@ class JobDB(BaseSQLDB):
     async def create_job(self, compressed_original_jdl: str):
         """Insert a new job with original JDL. Returns inserted job id."""
         result = await self.conn.execute(
-            cast(Table, JobJDLs.__table__)
-            .insert()
-            .values(
+            insert(JobJDLs).values(
                 JDL="",
                 JobRequirements="",
                 OriginalJDL=compressed_original_jdl,
@@ -93,7 +91,7 @@ class JobDB(BaseSQLDB):
     async def insert_input_data(self, lfns: dict[int, list[str]]):
         """Insert input data for jobs."""
         await self.conn.execute(
-            cast(Table, InputData.__table__).insert(),
+            insert(InputData),
             [
                 {
                     "JobID": job_id,
@@ -107,7 +105,7 @@ class JobDB(BaseSQLDB):
     async def insert_job_attributes(self, jobs_to_update: dict[int, dict]):
         """Insert the job attributes."""
         await self.conn.execute(
-            cast(Table, Jobs.__table__).insert(),
+            insert(Jobs),
             [
                 {
                     "JobID": job_id,
@@ -120,9 +118,7 @@ class JobDB(BaseSQLDB):
     async def update_job_jdls(self, jdls_to_update: dict[int, str]):
         """Update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
         await self.conn.execute(
-            cast(Table, JobJDLs.__table__)
-            .update()
-            .where(JobJDLs.__table__.c.JobID == bindparam("b_JobID")),
+            update(JobJDLs).where(JobJDLs.__table__.c.JobID == bindparam("b_JobID")),
             [
                 {
                     "b_JobID": job_id,
@@ -188,7 +184,7 @@ class JobDB(BaseSQLDB):
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
         """Store a command to be passed to the job together with the next heart beat."""
         await self.conn.execute(
-            cast(Table, JobCommands.__table__).insert(),
+            insert(JobCommands),
             [
                 {
                     "JobID": job_id,
@@ -263,9 +259,7 @@ class JobDB(BaseSQLDB):
             }
             for key, value in dynamic_data.items()
         ]
-        await self.conn.execute(
-            cast(Table, HeartBeatLoggingInfo.__table__).insert().values(values)
-        )
+        await self.conn.execute(insert(HeartBeatLoggingInfo).values(values))
 
     async def get_job_commands(self, job_ids: Iterable[int]) -> list[JobCommand]:
         """Get a command to be passed to the job together with the next heartbeat.
