@@ -84,3 +84,10 @@ repos:
         language: system
         pass_filenames: false
         files: ^pixi\.toml$|^pixi\.lock$   # only run if pixi files change
+
+  - repo: local
+    hooks:
+      - id: check-init-files
+        name: Check for __all__ presence in __init__.py files
+        language: system
+        entry: "sh .github/workflows/check_init_files_precommit_hook.sh"
