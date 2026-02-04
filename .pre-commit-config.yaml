@@ -103,3 +103,10 @@ repos:
         language: system
         pass_filenames: false
         files: ^(diracx-.*/src/diracx/.*/settings\.py|diracx-routers/src/diracx/routers/otel\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
+
+  - repo: local
+    hooks:
+      - id: check-init-files
+        name: Check for __all__ presence in __init__.py files
+        language: system
+        entry: "sh .github/workflows/check_init_files_precommit_hook.sh"
