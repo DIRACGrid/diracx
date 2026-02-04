@@ -109,6 +109,7 @@ nav:
       - Security Model: admin/reference/security_model.md
       - Settings and Preferences: admin/reference/settings-and-preferences.md
       - Environment variables: admin/reference/env-variables.md
+      - Making and deploying releases: dev/reference/making-releases.md
       - Charts values: admin/reference/values.md
       - RUN_PROD.md
       - SSO.md
