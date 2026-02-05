@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import uuid as std_uuid
 from typing import Annotated, Any
@@ -12,10 +13,12 @@ from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from uuid_utils import UUID as _UUID
 
-from diracx.core.models import UserInfo
+from diracx.core.models.auth import UserInfo
 from diracx.core.properties import SecurityProperty
 from diracx.logic.auth.utils import read_token
 from diracx.routers.dependencies import AuthSettings
+
+logger = logging.getLogger(__name__)
 
 # auto_error=False is used to avoid raising the wrong exception when the token is missing
 # The error is handled in the verify_dirac_access_token function
@@ -72,7 +75,8 @@ async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,
 ) -> AuthorizedUserInfo:
-    """Verify dirac user token and return a UserInfo class
+    """Verify dirac user token and return a UserInfo class.
+
     Used for each API endpoint.
     """
     if not authorization:
@@ -99,6 +103,7 @@ async def verify_dirac_access_token(
             ),
         )
     except JoseError as e:
+        logger.warning("Token validation failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid JWT",

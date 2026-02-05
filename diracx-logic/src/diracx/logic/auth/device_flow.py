@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from diracx.core.config import Config
-from diracx.core.models import GrantType, InitiateDeviceFlowResponse
+from diracx.core.models.auth import GrantType, InitiateDeviceFlowResponse
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
@@ -50,7 +50,7 @@ async def do_device_flow(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
 ) -> str:
-    """This is called as the verification URI for the device flow."""
+    """Verify URI for the device flow."""
     # Here we make sure the user_code actually exists
     scope = await auth_db.device_flow_validate_user_code(
         user_code, settings.device_flow_expiration_seconds
@@ -82,9 +82,7 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ):
-    """This the url callbacked by IAM/CheckIn after the authorization
-    flow was granted.
-    """
+    """Check that the url callbacked by IAM/CheckIn after the authorization flow was granted."""
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code
 

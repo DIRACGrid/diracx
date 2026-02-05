@@ -4,9 +4,11 @@ __all__ = [
     "extensions_by_priority",
     "select_from_extension",
     "supports_extending",
+    "DiracEntryPoint",
 ]
 
 from collections import defaultdict
+from enum import StrEnum
 from importlib.metadata import EntryPoint, entry_points
 from typing import Callable, ParamSpec, TypeVar, cast
 
@@ -14,6 +16,20 @@ from cachetools import LRUCache, cached
 
 T = TypeVar("T")
 P = ParamSpec("P")
+
+
+class DiracEntryPoint(StrEnum):
+    """Available entrypoint group values."""
+
+    CORE = "diracx"
+    ACCESS_POLICY = "diracx.access_policies"
+    CLI = "diracx.cli"
+    HIDDEN_CLI = "diracx.cli.hidden"
+    OS_DB = "diracx.dbs.os"
+    SQL_DB = "diracx.dbs.sql"
+    MIN_CLIENT_VERSION = "diracx.min_client_version"
+    RESOURCES = "diracx.resources"
+    SERVICES = "diracx.services"
 
 
 @cached(cache=LRUCache(maxsize=1))
@@ -24,10 +40,10 @@ def extensions_by_priority() -> list[str]:
     importing diracx in the MetaPathFinder as part of unrelated imports
     (e.g. http.client).
     """
-    selected = entry_points().select(group="diracx")
+    selected = entry_points().select(group=DiracEntryPoint.CORE)
     if selected is None:
         raise NotImplementedError(
-            "No entry points found for group 'diracx'. Do you have it installed?"
+            f"No entry points found for group {DiracEntryPoint.CORE}. Do you have it installed?"
         )
     extensions = set()
     for entry_point in selected.select(name="extension"):
@@ -63,7 +79,7 @@ def select_from_extension(*, group: str, name: str | None = None) -> list[EntryP
 def supports_extending(
     group: str, name: str
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """Decorator to replace a function with an extension implementation.
+    """Replace a function with an extension implementation.
 
     This decorator looks for an entry point in the specified group and name,
     and if found, replaces the decorated function with the extension's implementation.
@@ -73,7 +89,7 @@ def supports_extending(
         name: The entry point name to search for
 
     Example:
-        @supports_extending("diracx.resources", "find_compatible_platforms")
+        @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
         def my_function():
             return "default implementation"
 

@@ -6,7 +6,7 @@ from typing import Iterable
 
 from sqlalchemy import delete, func, select
 
-from diracx.core.models import JobLoggingRecord, JobStatusReturn
+from diracx.core.models.job import JobLoggingRecord, JobStatusReturn
 
 from ..utils import BaseSQLDB
 from .schema import JobLoggingDBBase, LoggingInfo
@@ -61,8 +61,9 @@ class JobLoggingDB(BaseSQLDB):
         )
 
     async def get_records(self, job_ids: list[int]) -> dict[int, JobStatusReturn]:
-        """Returns a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple
-        for each record found for job specified by its jobID in historical order.
+        """Return a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple.
+
+        For each record found for job specified by its jobID in historical order.
         """
         # We could potentially use a group_by here, but we need to post-process the
         # results later.
@@ -140,7 +141,8 @@ class JobLoggingDB(BaseSQLDB):
     async def get_wms_time_stamps(
         self, job_ids: Iterable[int]
     ) -> dict[int, dict[str, datetime]]:
-        """Get TimeStamps for job MajorState transitions for multiple jobs at once
+        """Get TimeStamps for job MajorState transitions for multiple jobs at once.
+
         return a {JobID: {State:timestamp}} dictionary.
         """
         result: defaultdict[int, dict[str, datetime]] = defaultdict(dict)

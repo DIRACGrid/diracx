@@ -4,18 +4,22 @@ from __future__ import annotations
 
 __all__ = ["router"]
 
+import logging
+
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
 
 from ..dependencies import AuthDB, Config
 from ..fastapi_classes import DiracxRouter
 
+logger = logging.getLogger(__name__)
+
 router = DiracxRouter(require_auth=False)
 
 
 @router.get("/live", include_in_schema=False)
 async def liveness(config: Config):
-    """Returns a simple status to indicate the app is running.
+    """Return a simple status to indicate the app is running.
 
     The method doesn't use the config but we want to depend on it so the check
     fails if the config expires without managing to refresh.
@@ -35,6 +39,7 @@ async def ready(config: Config, auth_db: AuthDB):
     try:
         await auth_db.ping()
     except Exception as e:
+        logger.warning("Ready probe failed: AuthDB ping failed", exc_info=True)
         raise HTTPException(status_code=503, detail="AuthDB ping failed") from e
     return JSONResponse(content={"status": "ready"})
 
@@ -50,5 +55,6 @@ async def startup(config: Config, auth_db: AuthDB):
     try:
         await auth_db.ping()
     except Exception as e:
+        logger.warning("Startup probe failed: AuthDB ping failed", exc_info=True)
         raise HTTPException(status_code=503, detail="AuthDB ping failed") from e
     return JSONResponse(content={"status": "startup complete"})

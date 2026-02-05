@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'CHANGELOG.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.2
+        uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@v0.9.2
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: false
           environments: shellcheck
@@ -52,8 +54,8 @@ jobs:
           - gubbins-cli
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.2
+        uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           run-install: false
           post-cleanup: false
@@ -64,14 +66,14 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@v0.9.2
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: false
           environments: ${{ matrix.package }}
       - name: Run pytest
         run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
       - name: Upload coverage report
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
 
   pytest-integration:
     runs-on: ubuntu-latest
@@ -103,8 +105,8 @@ jobs:
           echo "After cleanup:"
           df -h
       - name: Checkout code
-        uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.2
+        uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           run-install: false
           post-cleanup: false
@@ -115,7 +117,7 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@v0.9.2
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
@@ -205,23 +207,8 @@ jobs:
           set -x
           ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
       - name: Debugging information
-        run: |
-          DIRACX_DEMO_DIR=$PWD/../diracx-charts/.demo
-          export KUBECONFIG=${DIRACX_DEMO_DIR}/kube.conf
-          export PATH=${DIRACX_DEMO_DIR}:$PATH
-          kubectl get pods
-          for pod_name in $(kubectl get pods -o json | jq -r '.items[] | .metadata.name' | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
-            echo "${pod_name}"
-            kubectl describe pod/"${pod_name}" || true
-            for container_name in $(kubectl get pods $pod_name -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}'); do
-              echo $pod_name $container_name
-              kubectl logs "${pod_name}" -c "${container_name}" || true
-            done
-          done
-          if [ ! -f "${DIRACX_DEMO_DIR}/.success" ]; then
-            cat "${DIRACX_DEMO_DIR}/.failed"
-            exit 1
-          fi
+        if: always()
+        run: .github/scripts/collect-k8s-debug-info.sh "$PWD/../diracx-charts/.demo" "${{ matrix.extension == 'gubbins' && 'gubbins' || 'diracx' }}"
       - name: Run pytest
         run: |
           pixi run pytest-${{ matrix.extension }} --demo-dir="$PWD/../diracx-charts/" --cov-report=xml:coverage-pytest.xml --junitxml=report.xml
@@ -229,7 +216,7 @@ jobs:
         run: |
           pixi run -e ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }} python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
       - name: Upload coverage report
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         with:
           files: ./coverage-pytest.xml,./coverage-demo.xml
 
@@ -241,12 +228,12 @@ jobs:
         package: [diracx, gubbins]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-      - uses: prefix-dev/setup-pixi@v0.9.2
+        uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@v0.9.2
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: false
           locked: false

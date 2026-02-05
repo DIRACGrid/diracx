@@ -1,6 +1,6 @@
-"""Models are used to define the data structure of the requests and responses
-for the DiracX API. They are shared between the client components (cli, api) and
-services components (db, logic, routers).
+"""Models used to define the data structure of the requests and responses for the DiracX API.
+
+They are shared between the client components (cli, api) and services components (db, logic, routers).
 """
 
 from __future__ import annotations
@@ -13,47 +13,6 @@ from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
 
-class ScalarSearchOperator(StrEnum):
-    EQUAL = "eq"
-    NOT_EQUAL = "neq"
-    GREATER_THAN = "gt"
-    LESS_THAN = "lt"
-    LIKE = "like"
-    NOT_LIKE = "not like"
-    REGEX = "regex"
-
-
-class VectorSearchOperator(StrEnum):
-    IN = "in"
-    NOT_IN = "not in"
-
-
-class ScalarSearchSpec(TypedDict):
-    parameter: str
-    operator: ScalarSearchOperator
-    value: str | int
-
-
-class VectorSearchSpec(TypedDict):
-    parameter: str
-    operator: VectorSearchOperator
-    values: list[str] | list[int]
-
-
-SearchSpec = ScalarSearchSpec | VectorSearchSpec
-
-
-class SortDirection(StrEnum):
-    ASC = "asc"
-    DESC = "desc"
-
-
-# TODO: TypedDict vs pydantic?
-class SortSpec(TypedDict):
-    parameter: str
-    direction: SortDirection
-
-
 class InsertedJob(TypedDict):
     JobID: int
     Status: str
@@ -61,18 +20,20 @@ class InsertedJob(TypedDict):
     TimeStamp: datetime
 
 
-class SummaryParams(BaseModel):
-    grouping: list[str]
-    search: list[SearchSpec] = []
-    # TODO: Add more validation
+class HeartbeatData(BaseModel, extra="forbid"):
+    LoadAverage: float | None = None
+    MemoryUsed: float | None = None
+    Vsize: float | None = None
+    AvailableDiskSpace: float | None = None
+    CPUConsumed: float | None = None
+    WallClockTime: float | None = None
+    StandardOutput: str | None = None
 
 
-class SearchParams(BaseModel):
-    parameters: list[str] | None = None
-    search: list[SearchSpec] = []
-    sort: list[SortSpec] = []
-    distinct: bool = False
-    # TODO: Add more validation
+class JobCommand(BaseModel):
+    job_id: int
+    command: Literal["Kill"]
+    arguments: str | None = None
 
 
 class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
@@ -206,146 +167,3 @@ class SetJobStatusReturn(BaseModel):
 
     success: dict[int, SetJobStatusReturnSuccess]
     failed: dict[int, dict[str, str]]
-
-
-class UserInfo(BaseModel):
-    sub: str  # dirac generated vo:sub
-    preferred_username: str
-    dirac_group: str
-    vo: str
-
-
-class ChecksumAlgorithm(StrEnum):
-    SHA256 = "sha256"
-
-
-class SandboxFormat(StrEnum):
-    TAR_BZ2 = "tar.bz2"
-    TAR_ZST = "tar.zst"
-
-
-class SandboxInfo(BaseModel):
-    checksum_algorithm: ChecksumAlgorithm
-    checksum: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
-    size: int = Field(ge=1)
-    format: SandboxFormat
-
-
-class SandboxType(StrEnum):
-    Input = "Input"
-    Output = "Output"
-
-
-class SandboxDownloadResponse(BaseModel):
-    url: str
-    expires_in: int
-
-
-class SandboxUploadResponse(BaseModel):
-    pfn: str
-    url: str | None = None
-    fields: dict[str, str] = {}
-
-
-class TokenTypeHint(StrEnum):
-    """Token type hints for RFC7009 revocation endpoint."""
-
-    access_token = "access_token"  # noqa: S105
-    refresh_token = "refresh_token"  # noqa: S105
-
-
-class GrantType(StrEnum):
-    """Grant types for OAuth2."""
-
-    authorization_code = "authorization_code"
-    device_code = "urn:ietf:params:oauth:grant-type:device_code"
-    refresh_token = "refresh_token"  # noqa: S105   # False positive of Bandit about hard coded password
-
-
-class InitiateDeviceFlowResponse(TypedDict):
-    """Response for the device flow initiation."""
-
-    user_code: str
-    device_code: str
-    verification_uri_complete: str
-    verification_uri: str
-    expires_in: int
-
-
-class OpenIDConfiguration(TypedDict):
-    issuer: str
-    token_endpoint: str
-    userinfo_endpoint: str
-    authorization_endpoint: str
-    device_authorization_endpoint: str
-    revocation_endpoint: str
-    jwks_uri: str
-    grant_types_supported: list[str]
-    scopes_supported: list[str]
-    response_types_supported: list[str]
-    token_endpoint_auth_signing_alg_values_supported: list[str]
-    token_endpoint_auth_methods_supported: list[str]
-    code_challenge_methods_supported: list[str]
-
-
-class TokenPayload(TypedDict):
-    jti: str
-    exp: datetime
-    dirac_policies: dict
-
-
-class TokenResponse(BaseModel):
-    # Based on RFC 6749
-    access_token: str
-    expires_in: int
-    token_type: str = "Bearer"  # noqa: S105
-    refresh_token: str | None = None
-
-
-class AccessTokenPayload(TokenPayload):
-    sub: str
-    vo: str
-    iss: str
-    dirac_properties: list[str]
-    preferred_username: str
-    dirac_group: str
-
-
-class RefreshTokenPayload(TokenPayload):
-    legacy_exchange: bool
-
-
-class SupportInfo(TypedDict):
-    message: str
-    webpage: str | None
-    email: str | None
-
-
-class GroupInfo(TypedDict):
-    properties: list[str]
-
-
-class VOInfo(TypedDict):
-    groups: dict[str, GroupInfo]
-    support: SupportInfo
-    default_group: str
-
-
-class Metadata(TypedDict):
-    virtual_organizations: dict[str, VOInfo]
-
-
-class HeartbeatData(BaseModel, extra="forbid"):
-    LoadAverage: float | None = None
-    MemoryUsed: float | None = None
-    Vsize: float | None = None
-    AvailableDiskSpace: float | None = None
-    CPUConsumed: float | None = None
-    WallClockTime: float | None = None
-    StandardOutput: str | None = None
-
-
-class JobCommand(BaseModel):
-    job_id: int
-    command: Literal["Kill"]
-    arguments: str | None = None

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pytest
 import sqlalchemy
 
-from diracx.core.models import JobMetaData
+from diracx.core.models.job import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.logic.jobs.status import set_job_parameters_or_attributes
@@ -105,7 +105,8 @@ async def valid_job_id(job_db: JobDB) -> int:
 async def test_patch_metadata_updates_attributes_and_parameters(
     job_db: JobDB, job_parameters_db: _MockJobParametersDB, valid_job_id: int
 ):
-    """Patch metadata mixing:
+    """Patch metadata mixing.
+
     - Attribute only (UserPriority)
     - Attribute + parameter (JobType)
     - Parameter only (CPUNormalizationFactor)

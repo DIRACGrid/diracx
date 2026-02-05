@@ -2,17 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Literal
-
-from pyparsing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
-from diracx.core.models import (
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import (
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxType,
     SandboxUploadResponse,
-    UserInfo,
 )
 from diracx.core.s3 import (
     generate_presigned_upload,
@@ -20,7 +18,6 @@ from diracx.core.s3 import (
     s3_object_exists,
 )
 from diracx.core.settings import SandboxStoreSettings
-from diracx.core.utils import batched_async
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 
 if TYPE_CHECKING:
@@ -204,34 +201,68 @@ async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
     *,
-    limit: int = 10_000,
-    max_concurrent_batches: int = 10,
+    batch_size: int = 500,
+    max_workers: int = 10,
 ) -> int:
-    """Delete sandboxes that are not assigned to any job."""
-    semaphore = asyncio.Semaphore(max_concurrent_batches)
-    n_deleted = 0
-    async with (
-        sandbox_metadata_db.delete_unused_sandboxes(limit=limit) as generator,
-        asyncio.TaskGroup() as tg,
-    ):
-        async for batch in batched_async(generator, 500):
-            objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in batch]
-            if logger.isEnabledFor(logging.DEBUG):
-                for pfn in batch:
-                    logger.debug("Deleting sandbox %s from S3", pfn)
-            tg.create_task(delete_batch_and_log(settings, objects, semaphore))
-            n_deleted += len(objects)
-    return n_deleted
+    """Delete sandboxes that are not assigned to any job.
 
+    Uses SELECT FOR UPDATE SKIP LOCKED to allow multiple workers to run
+    in parallel without conflicts. Each batch:
+    1. Selects and locks rows
+    2. Deletes from S3
+    3. Deletes from DB
 
-async def delete_batch_and_log(
-    settings: SandboxStoreSettings,
-    objects: list[S3Object],
-    semaphore: asyncio.Semaphore,
-) -> None:
-    """Helper function to delete a batch of objects and log the result."""
-    async with semaphore:
-        await s3_bulk_delete_with_retry(
-            settings.s3_client, settings.bucket_name, objects
+    Args:
+        sandbox_metadata_db: Database connection (not yet entered).
+        settings: Sandbox store settings with S3 client.
+        batch_size: Number of sandboxes to process per batch.
+        max_workers: Maximum number of concurrent workers processing batches.
+
+    Returns:
+        Total number of sandboxes deleted.
+
+    """
+    # Check if parallel workers are supported
+    async with sandbox_metadata_db:
+        dialect = sandbox_metadata_db.conn.dialect.name
+    if max_workers > 1 and dialect == "sqlite":
+        raise NotImplementedError(
+            "SQLite does not support parallel workers (no SKIP LOCKED support)"
         )
-        logger.info("Deleted %d sandboxes from %s", len(objects), settings.bucket_name)
+
+    async def worker() -> int:
+        """Process batches until no more work is available."""
+        worker_deleted = 0
+        while True:
+            async with sandbox_metadata_db:
+                # Select and lock a batch of sandboxes
+                sb_ids, pfns = await sandbox_metadata_db.select_sandboxes_for_deletion(
+                    batch_size=batch_size
+                )
+
+                if not pfns:
+                    break
+
+                # Delete from S3 first (while rows are locked)
+                objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
+                if logger.isEnabledFor(logging.DEBUG):
+                    for pfn in pfns:
+                        logger.debug("Deleting sandbox %s from S3", pfn)
+
+                await s3_bulk_delete_with_retry(
+                    settings.s3_client, settings.bucket_name, objects
+                )
+                logger.info(
+                    "Deleted %d sandboxes from %s", len(objects), settings.bucket_name
+                )
+
+                # Then delete from DB
+                await sandbox_metadata_db.delete_sandboxes(sb_ids)
+                worker_deleted += len(sb_ids)
+
+        return worker_deleted
+
+    async with asyncio.TaskGroup() as tg:
+        tasks = [tg.create_task(worker()) for _ in range(max_workers)]
+
+    return sum(task.result() for task in tasks)

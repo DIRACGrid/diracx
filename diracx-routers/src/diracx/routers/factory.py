@@ -28,7 +28,7 @@ from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailableError
@@ -76,7 +76,7 @@ def configure_logger():
         uvicorn_access_logger.handlers[0].setFormatter(AccessFormatter(new_format))
     # There may not be any handler defined, like in the CI
     except IndexError:
-        pass
+        logger.debug("No handlers found for uvicorn.access logger (expected in CI)")
 
     uvicorn_logger = logging.getLogger("uvicorn")
     try:
@@ -85,7 +85,7 @@ def configure_logger():
         uvicorn_logger.handlers[0].setFormatter(DefaultFormatter(new_format))
     # There may not be any handler defined, like in the CI
     except IndexError:
-        pass
+        logger.debug("No handlers found for uvicorn logger (expected in CI)")
 
 
 # Rules:
@@ -104,7 +104,7 @@ def create_app_inner(
     config_source: ConfigSource,
     all_access_policies: dict[str, Sequence[BaseAccessPolicy]],
 ) -> DiracFastAPI:
-    """This method does the heavy lifting work of putting all the pieces together.
+    """Assemble all the application components.
 
     When starting the application normally, this method is called by create_app,
     and the values of the parameters are taken from environment variables or
@@ -235,7 +235,7 @@ def create_app_inner(
     for system_name in sorted(enabled_systems):
         assert system_name not in routers
         for entry_point in select_from_extension(
-            group="diracx.services", name=system_name
+            group=DiracEntryPoint.SERVICES, name=system_name
         ):
             routers[system_name] = entry_point.load()
             break
@@ -351,7 +351,7 @@ def create_app() -> DiracFastAPI:
     # Load all available routers
     enabled_systems = set()
     settings_classes = set()
-    for entry_point in select_from_extension(group="diracx.services"):
+    for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES):
         env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
         enabled = TypeAdapter(bool).validate_json(os.environ.get(env_var, "true"))
         logger.debug("Found service %r: enabled=%s", entry_point, enabled)
@@ -370,7 +370,7 @@ def create_app() -> DiracFastAPI:
 
     available_access_policy_names = {
         entry_point.name
-        for entry_point in select_from_extension(group="diracx.access_policies")
+        for entry_point in select_from_extension(group=DiracEntryPoint.ACCESS_POLICY)
     }
 
     all_access_policies = {}
@@ -404,6 +404,12 @@ def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Resp
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
+    logger.warning(
+        "503 Service Unavailable: %s (path=%s)",
+        exc,
+        request.url.path,
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
@@ -453,7 +459,8 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
-    """Cache the result of pinging the DB
+    """Cache the result of pinging the DB.
+
     (exceptions are not cacheable).
     """
     if db not in _db_alive_cache:
@@ -479,9 +486,7 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2]:
 
 
 class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
-    """Custom FastAPI middleware to verify that
-    the client has the required minimum version.
-    """
+    """Custom FastAPI middleware to verify that the client has the required minimum version."""
 
     def __init__(self, app: FastAPI):
         super().__init__(app)
@@ -510,9 +515,13 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 status_code=exc.status_code,
                 content={"detail": exc.detail},
             )
-        # If the version is not given
-        except Exception:  # noqa: S110
-            pass
+        # If the version is not given or cannot be parsed
+        except Exception:
+            logger.debug(
+                "Failed to check client version header: %s",
+                client_version,
+                exc_info=True,
+            )
 
         response = await call_next(request)
         return response
@@ -529,16 +538,18 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
 
 
 def get_min_client_version():
-    """Extracting min client version from entry_points and searching for extension."""
-    matched_entry_points: EntryPoints = entry_points(group="diracx.min_client_version")
+    """Extract min client version from entry_points and search for extension."""
+    matched_entry_points: EntryPoints = entry_points(
+        group=DiracEntryPoint.MIN_CLIENT_VERSION
+    )
     # Searching for an extension:
     entry_points_dict: dict[str, EntryPoint] = {
         ep.name: ep for ep in matched_entry_points
     }
     for ep_name, ep in entry_points_dict.items():
-        if ep_name != "diracx":
+        if ep_name != DiracEntryPoint.CORE:
             return ep.load()
 
     # Taking diracx if no extension:
-    if "diracx" in entry_points_dict:
-        return entry_points_dict["diracx"].load()
+    if DiracEntryPoint.CORE in entry_points_dict:
+        return entry_points_dict[DiracEntryPoint.CORE].load()

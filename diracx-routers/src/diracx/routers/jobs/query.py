@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import Body, Depends, Response
 
-from diracx.core.models import (
+from diracx.core.models.search import (
     SearchParams,
     SummaryParams,
 )
@@ -138,8 +138,9 @@ async def search(
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
 ) -> list[dict[str, Any]]:
-    """Creates a search query to the job database. This search can be based on
-    different parameters, such as jobID, status, owner, etc.
+    """Create a search query to the job database.
+
+    This search can be based on different parameters, such as jobID, status, owner, etc.
 
     **Possibilities**
     - Use `search` to filter jobs based on various parameters (optional).
@@ -295,7 +296,9 @@ async def summary(
     body: SummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Group jobs by a specific list of parameters. Returns an array of n-uplets, where each n-uplet contains the
+    """Group jobs by a specific list of parameters.
+
+    Returns an array of n-uplets, where each n-uplet contains the
     values of the grouping parameters and the number of jobs that match those values.
 
     Body parameters:

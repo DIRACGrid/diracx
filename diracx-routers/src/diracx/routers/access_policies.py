@@ -26,8 +26,8 @@ from typing import Annotated, Self
 
 from fastapi import Depends
 
-from diracx.core.extensions import select_from_extension
-from diracx.core.models import (
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
+from diracx.core.models.auth import (
     AccessTokenPayload,
     RefreshTokenPayload,
 )
@@ -51,12 +51,12 @@ class BaseAccessPolicy(metaclass=ABCMeta):
 
     @classmethod
     def check(cls) -> Self:
-        """Placeholder which is in the dependency override."""
+        """Provide a placeholder in the dependency override."""
         raise NotImplementedError("This should never be called")
 
     @classmethod
     def all_used_access_policies(cls) -> dict[str, "BaseAccessPolicy"]:
-        """Returns the list of classes that are actually called.
+        """Return the list of classes that are actually called.
 
         This should be overridden by the dependency_override.
         """
@@ -68,7 +68,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
         policy_classes: list[type["BaseAccessPolicy"]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.access_policies", name=access_policy_name
+                group=DiracEntryPoint.ACCESS_POLICY, name=access_policy_name
             )
         ]
         if not policy_classes:
@@ -80,7 +80,8 @@ class BaseAccessPolicy(metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     async def policy(policy_name: str, user_info: AuthorizedUserInfo, /):
-        """This is the method  to be implemented in child classes.
+        """Implement the method in child classes.
+
         It should always take an AuthorizedUserInfo parameter, which
         is passed by check_permissions.
         The rest is whatever the policy actually needs. There are rules to write it:
@@ -95,8 +96,9 @@ class BaseAccessPolicy(metaclass=ABCMeta):
     def enrich_tokens(
         access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload | None
     ) -> tuple[dict, dict]:
-        """This method is called when issuing a token, and can add whatever
-        content it wants inside the access or refresh payload.
+        """Add content to access or refresh payload when issuing a token.
+
+        Content can be whatever is desired inside the access or refresh payload.
 
         :param access_payload: access token payload
         :param refresh_payload: refresh token payload
@@ -111,8 +113,8 @@ def check_permissions(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dev_settings: DevelopmentSettings,
 ):
-    """This wrapper just calls the actual implementation, but also makes sure
-    that the policy has been called.
+    """Call the actual policy implementation and ensure it has been invoked.
+
     If not, diracx will abruptly crash. It is violent, but necessary to make
     sure that it gets noticed :-).
 
@@ -123,7 +125,7 @@ def check_permissions(
 
     @functools.wraps(policy)
     async def wrapped_policy(**kwargs):
-        """This wrapper is just to update the has_been_called flag."""
+        """Update the has_been_called flag."""
         nonlocal has_been_called
         has_been_called = True
         return await policy(policy_name, user_info, **kwargs)
@@ -149,8 +151,8 @@ def check_permissions(
 
 
 def open_access(f):
-    """Decorator to put around the route that are part of a DiracxRouter
-    that are expected not to do any access policy check.
+    """Decorate routes that are part of a DiracxRouter and do not require access policy checks.
+
     The presence of a token will still be checked if the router has require_auth to True.
     This is useful to allow the CI to detect routes which may have forgotten
     to have an access check.

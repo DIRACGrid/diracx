@@ -2,7 +2,7 @@ FROM ghcr.io/diracgrid/diracx/services:dev
 
 # Instructs the entrypoint to overwrite
 ENV DIRACX_EXTENSIONS="gubbins,diracx"
-ENV GUBBINS_IMAGE_PACKAGES=core,db,routers,client
+ENV GUBBINS_IMAGE_PACKAGES=core,db,routers
 
 ARG EXTRA_PACKAGES_TO_INSTALL
 

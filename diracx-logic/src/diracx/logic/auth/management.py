@@ -1,11 +1,11 @@
-"""This module contains the auth management functions."""
+"""Module containing the auth management functions."""
 
 from __future__ import annotations
 
 from uuid_utils import UUID
 
 from diracx.core.exceptions import InvalidCredentialsError
-from diracx.core.models import TokenTypeHint
+from diracx.core.models.auth import TokenTypeHint
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
 from diracx.logic.auth.utils import verify_dirac_refresh_token
@@ -15,8 +15,9 @@ async def get_refresh_tokens(
     auth_db: AuthDB,
     subject: str | None,
 ) -> list:
-    """Get all refresh tokens bound to a given subject. If there is no subject, then
-    all the refresh tokens are retrieved.
+    """Get all refresh tokens bound to a given subject.
+
+    If there is no subject, then all the refresh tokens are retrieved.
     """
     return await auth_db.get_user_refresh_tokens(subject)
 

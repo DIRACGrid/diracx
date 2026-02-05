@@ -8,7 +8,7 @@ default_language_version:
   python: python3
 
 ci:
-  skip: [generate-pixi-docs]
+  skip: [generate-pixi-docs, settings-doc-check]
 
 default_stages: [pre-commit]
 
@@ -30,14 +30,14 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.14.2'
+    rev: "v0.14.14"
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.1
     hooks:
       - id: mypy
         additional_dependencies:
@@ -51,28 +51,35 @@ repos:
           - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
-  - repo: https://github.com/executablebooks/mdformat
+  - repo: https://github.com/hukkin/mdformat
     rev: 1.0.0
     hooks:
-    - id: mdformat
-      args: ["--number"]
-      additional_dependencies:
-      - mdformat-mkdocs
-      - mdformat-gfm
-      - mdformat-black
+      - id: mdformat
+        args: ["--number"]
+        exclude: ^CHANGELOG\.md$
+        additional_dependencies:
+          - mdformat-mkdocs
+          - mdformat-gfm
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
-    - id: codespell
-      args: ["-w"]
+      - id: codespell
+        args: ["-w"]
+
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.20.0
+    hooks:
+      - id: blacken-docs
+        additional_dependencies:
+          - black==22.12.0
 
   - repo: local
     hooks:
       - id: check-lollygag
         name: check for lollygag
         types: [python]
-        entry: '(?i)lollygag'
+        entry: "(?i)lollygag"
         language: pygrep
         files: ^diracx
 
@@ -83,7 +90,16 @@ repos:
         entry: pixi run -e default python .github/workflows/generate_pixi_tasks_doc.py
         language: system
         pass_filenames: false
-        files: ^pixi\.toml$|^pixi\.lock$   # only run if pixi files change
+        files: ^pixi\.toml$|^pixi\.lock$ # only run if pixi files change
+
+  - repo: local
+    hooks:
+      - id: settings-doc-check
+        name: Generate settings documentation
+        entry: pixi run -e default python scripts/generate_settings_docs.py
+        language: system
+        pass_filenames: false
+        files: ^(diracx-.*/src/diracx/.*/settings\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
 
   - repo: local
     hooks:

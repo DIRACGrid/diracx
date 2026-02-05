@@ -5,6 +5,8 @@ See docs/admin/explanations/authentication.md
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import (
     HTTPException,
     Request,
@@ -15,7 +17,7 @@ from fastapi import (
 from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
-from diracx.core.models import InitiateDeviceFlowResponse
+from diracx.core.models.auth import InitiateDeviceFlowResponse
 from diracx.logic.auth.device_flow import do_device_flow as do_device_flow_bl
 from diracx.logic.auth.device_flow import (
     finish_device_flow as finish_device_flow_bl,
@@ -31,6 +33,8 @@ from ..dependencies import (
     Config,
 )
 from ..fastapi_classes import DiracxRouter
+
+logger = logging.getLogger(__name__)
 
 router = DiracxRouter(require_auth=False)
 
@@ -89,7 +93,8 @@ async def do_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """This is called as the verification URI for the device flow.
+    """Serve as the verification URI for the device flow.
+
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 
@@ -118,8 +123,8 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """This the url callbacked by IAM/CheckIn after the authorization
-    flow was granted.
+    """Handle the URL callbacked by IAM/CheckIn after authorization flow.
+
     It gets us the code we need for the authorization flow, and we
     can map it to the corresponding device flow using the user_code
     in the cookie/session.
@@ -136,11 +141,13 @@ async def finish_device_flow(
             settings,
         )
     except IAMServerError as e:
+        logger.warning("IAM server error during device flow completion: %s", e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=e.args[0],
         ) from e
     except IAMClientError as e:
+        logger.warning("IAM client error during device flow completion: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.args[0],
@@ -151,7 +158,7 @@ async def finish_device_flow(
 
 @router.get("/device/complete/finished")
 def finished(response: Response):
-    """This is the final step of the device flow."""
+    """Mark the final step of the device flow."""
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"

@@ -8,7 +8,7 @@ from diracx.client.aio import AsyncDiracClient
 
 
 def with_client(func):
-    """Decorator to provide a AsyncDiracClient to a function.
+    """Provide a AsyncDiracClient to a function (decorator).
 
     If the function already has a `client` keyword argument, it will be used.
     Otherwise, a new AsyncDiracClient will be created and passed as a keyword argument.

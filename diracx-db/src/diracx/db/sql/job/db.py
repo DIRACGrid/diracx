@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import JobCommand, SearchSpec, SortSpec
+from diracx.core.models.job import JobCommand
+from diracx.core.models.search import SearchSpec, SortSpec
 
 from ..utils import BaseSQLDB, _get_columns
 from ..utils.functions import utcnow
@@ -72,7 +73,7 @@ class JobDB(BaseSQLDB):
         )
 
     async def create_job(self, compressed_original_jdl: str):
-        """Used to insert a new job with original JDL. Returns inserted job id."""
+        """Insert a new job with original JDL. Returns inserted job id."""
         result = await self.conn.execute(
             JobJDLs.__table__.insert().values(
                 JDL="",
@@ -115,7 +116,7 @@ class JobDB(BaseSQLDB):
         )
 
     async def update_job_jdls(self, jdls_to_update: dict[int, str]):
-        """Used to update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
+        """Update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
         await self.conn.execute(
             JobJDLs.__table__.update().where(
                 JobJDLs.__table__.c.JobID == bindparam("b_JobID")
@@ -200,7 +201,8 @@ class JobDB(BaseSQLDB):
     async def set_properties(
         self, properties: dict[int, dict[str, Any]], update_timestamp: bool = False
     ) -> int:
-        """Update the job parameters
+        """Update the job parameters.
+
         All the jobs must update the same properties.
 
         :param properties: {job_id : {prop1: val1, prop2:val2}

@@ -14,7 +14,7 @@ __all__ = [
 
 from azure.core.pipeline import PipelineResponse
 from azure.core.tracing.decorator_async import distributed_trace_async
-from diracx.core.models import TokenResponse
+from diracx.core.models.auth import TokenResponse
 
 from ..._generated.aio.operations._operations import (
     _models,

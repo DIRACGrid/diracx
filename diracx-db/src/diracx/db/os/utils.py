@@ -15,7 +15,7 @@ from typing import Any, Self
 from opensearchpy import AsyncOpenSearch
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.db.exceptions import DBUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class OpenSearchDBUnavailableError(DBUnavailableError, OpenSearchDBError):
 
 
 class BaseOSDB(metaclass=ABCMeta):
-    """This should be the base class of all the OpenSearch DiracX DBs.
+    """Base class of all the OpenSearch DiracX DBs.
 
     The details covered here should be handled automatically by the service and
     task machinery of DiracX and this documentation exists for informational
@@ -66,9 +66,11 @@ class BaseOSDB(metaclass=ABCMeta):
     MyDBClass = BaseOSDB.available_implementations(db_name)[0]
 
     db = MyDBClass(conn_params)
+
     async with db.client_context:
         async with db:
             # Do something with the OpenSearch client
+            pass
     ```
     """
 
@@ -93,7 +95,7 @@ class BaseOSDB(metaclass=ABCMeta):
         db_classes: list[type[BaseOSDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.dbs.os", name=db_name
+                group=DiracEntryPoint.OS_DB, name=db_name
             )
         ]
         if not db_classes:
@@ -108,7 +110,7 @@ class BaseOSDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
         """
         conn_kwargs: dict[str, dict[str, Any]] = {}
-        for entry_point in select_from_extension(group="diracx.dbs.os"):
+        for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
             db_name = entry_point.name
             var_name = f"DIRACX_OS_DB_{entry_point.name.upper()}"
             if var_name in os.environ:
@@ -121,26 +123,19 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @classmethod
     def session(cls) -> Self:
-        """This is just a fake method such that the Dependency overwrite has
-        a hash to use.
-        """
+        """Fake method such that the Dependency overwrite has a hash to use."""
         raise NotImplementedError("This should never be called")
 
     @property
     def client(self) -> AsyncOpenSearch:
-        """Just a getter for _client, making sure we entered
-        the context manager.
-        """
+        """Just a getter for _client, making sure we entered the context manager."""
         if self._client is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return self._client
 
     @contextlib.asynccontextmanager
     async def client_context(self) -> AsyncIterator[None]:
-        """Context manage to manage the client lifecycle.
-        This is called when starting fastapi.
-
-        """
+        """Context manager to manage the client lifecycle. This is called when starting fastapi."""
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
             try:
@@ -150,6 +145,7 @@ class BaseOSDB(metaclass=ABCMeta):
 
     async def ping(self):
         """Check whether the connection to the DB is still working.
+
         We could enable the ``pre_ping`` in the engine, but this would
         be ran at every query.
         """
@@ -159,7 +155,8 @@ class BaseOSDB(metaclass=ABCMeta):
             )
 
     async def __aenter__(self):
-        """This is entered on every request.
+        """Entered on every request.
+
         At the moment it does nothing, however, we keep it here
         in case we ever want to use OpenSearch equivalent of a transaction.
         """

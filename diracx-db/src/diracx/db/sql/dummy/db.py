@@ -10,8 +10,7 @@ from .schema import Cars, Owners
 
 
 class DummyDB(BaseSQLDB):
-    """This DummyDB is just to illustrate some important aspect of writing
-    DB classes in DiracX.
+    """Illustrate some important aspect of writing DB classes in DiracX.
 
     It is mostly pure SQLAlchemy, with a few convention
 

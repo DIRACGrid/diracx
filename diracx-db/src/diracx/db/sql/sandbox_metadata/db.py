@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
-from functools import partial
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from sqlalchemy import (
-    BigInteger,
-    Column,
     Executable,
-    MetaData,
-    Table,
     and_,
     delete,
     exists,
@@ -27,7 +21,8 @@ from diracx.core.exceptions import (
     SandboxAlreadyInsertedError,
     SandboxNotFoundError,
 )
-from diracx.core.models import SandboxInfo, SandboxType, UserInfo
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import SandboxInfo, SandboxType
 from diracx.db.sql.utils.base import BaseSQLDB
 from diracx.db.sql.utils.functions import days_since, utcnow
 
@@ -39,14 +34,6 @@ logger = logging.getLogger(__name__)
 
 class SandboxMetadataDB(BaseSQLDB):
     metadata = SandboxMetadataDBBase.metadata
-
-    # Temporary table to store the sandboxes to delete, see `select_and_delete_expired`
-    _temp_table = Table(
-        "sb_to_delete",
-        MetaData(),
-        Column("SBId", BigInteger, primary_key=True),
-        prefixes=["TEMPORARY"],
-    )
 
     async def get_owner_id(self, user: UserInfo) -> int | None:
         """Get the id of the owner from the database."""
@@ -121,7 +108,7 @@ class SandboxMetadataDB(BaseSQLDB):
             )
 
     async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
-        """Checks if a sandbox exists and has been assigned."""
+        """Check if a sandbox exists and has been assigned."""
         stmt: Executable = select(SandBoxes.Assigned).where(
             SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn
         )
@@ -221,18 +208,20 @@ class SandboxMetadataDB(BaseSQLDB):
                 )
                 await self.conn.execute(unassign_stmt)
 
-    @asynccontextmanager
-    async def delete_unused_sandboxes(
-        self, *, limit: int | None = None
-    ) -> AsyncGenerator[AsyncGenerator[str, None], None]:
-        """Get the sandbox PFNs to delete.
+    async def select_sandboxes_for_deletion(
+        self, *, batch_size: int = 500
+    ) -> tuple[list[int], list[str]]:
+        """Select and lock a batch of sandboxes for deletion.
 
-        The result of this function can be used as an async context manager
-        to yield the PFNs of the sandboxes to delete. The context manager
-        will automatically remove the sandboxes from the database upon exit.
+        Uses FOR UPDATE SKIP LOCKED on MySQL to allow concurrent workers to
+        process different sandboxes in parallel without conflicts.
 
         Args:
-            limit: If not None, the maximum number of sandboxes to delete.
+            batch_size: Maximum number of sandboxes to select.
+
+        Returns:
+            Tuple of (sb_ids, pfns) for the selected sandboxes.
+            On MySQL, the rows remain locked until the transaction commits/rollbacks.
 
         """
         conditions = [
@@ -247,32 +236,41 @@ class SandboxMetadataDB(BaseSQLDB):
         # Sandboxes which are not on S3 will be handled by legacy DIRAC
         condition = and_(SandBoxes.SEPFN.like("/S3/%"), or_(*conditions))
 
-        # Copy the in-flight rows to a temporary table
-        await self.conn.run_sync(partial(self._temp_table.create, checkfirst=True))
-        select_stmt = select(SandBoxes.SBId).where(condition)
-        if limit:
-            select_stmt = select_stmt.limit(limit)
-        insert_stmt = insert(self._temp_table).from_select(["SBId"], select_stmt)
-        await self.conn.execute(insert_stmt)
+        select_stmt = (
+            select(SandBoxes.SBId, SandBoxes.SEPFN).where(condition).limit(batch_size)
+        )
 
-        try:
-            # Select the sandbox PFNs from the temporary table and yield them
-            select_stmt = select(SandBoxes.SEPFN).join(
-                self._temp_table, self._temp_table.c.SBId == SandBoxes.SBId
+        # FOR UPDATE SKIP LOCKED is only supported on MySQL
+        # SQLite is used for testing and doesn't support row locking
+        if self.conn.dialect.name == "mysql":
+            select_stmt = select_stmt.with_for_update(skip_locked=True)
+        elif self.conn.dialect.name != "sqlite":
+            raise NotImplementedError(
+                f"Unsupported database dialect: {self.conn.dialect.name}"
             )
 
-            async def yield_pfns() -> AsyncGenerator[str, None]:
-                async for row in await self.conn.stream(select_stmt):
-                    yield row.SEPFN
+        result = await self.conn.execute(select_stmt)
+        rows = result.all()
 
-            yield yield_pfns()
+        sb_ids = [row.SBId for row in rows]
+        pfns = [row.SEPFN for row in rows]
 
-            # Delete the sandboxes from the main table
-            delete_stmt = delete(SandBoxes).where(
-                SandBoxes.SBId.in_(select(self._temp_table.c.SBId))
-            )
-            result = await self.conn.execute(delete_stmt)
-            logger.info("Deleted %d expired/unassigned sandboxes", result.rowcount)
+        return sb_ids, pfns
 
-        finally:
-            await self.conn.run_sync(partial(self._temp_table.drop, checkfirst=True))
+    async def delete_sandboxes(self, sb_ids: list[int]) -> int:
+        """Delete sandboxes by their IDs.
+
+        Args:
+            sb_ids: List of sandbox IDs to delete.
+
+        Returns:
+            Number of rows deleted.
+
+        """
+        if not sb_ids:
+            return 0
+
+        delete_stmt = delete(SandBoxes).where(SandBoxes.SBId.in_(sb_ids))
+        result = await self.conn.execute(delete_stmt)
+        logger.info("Deleted %d expired/unassigned sandboxes", result.rowcount)
+        return result.rowcount

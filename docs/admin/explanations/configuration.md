@@ -30,3 +30,10 @@ During this time, the DiracX configuration is not intended to be edited directly
 The DiracX `default.yml` file differs in structure and contents from the legacy DIRAC Configuration Service.
 
 See [how-to](../how-to/install/convert-cs.md) for how to convert.
+
+## Using specific remote configuration branch or commit
+
+DiracX uses `master` as default branch for configuration git repository. Using remote git repo, one can use the `revision` url query parameters to specify:
+
+- a branch: `git+https://git.repo.url/my_diracx_cs.git?revision=my_branch`
+- a commit hash: `git+https://git.repo.url/my_diracx_cs.git?revision=912e0782e96769fecff3941e56fbeeb5`

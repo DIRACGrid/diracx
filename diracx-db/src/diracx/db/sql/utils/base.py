@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.extensions import select_from_extension
-from diracx.core.models import (
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
+from diracx.core.models.search import (
     SearchSpec,
     SortDirection,
     SortSpec,
@@ -42,7 +42,7 @@ class SQLDBUnavailableError(DBUnavailableError, SQLDBError):
 
 
 class BaseSQLDB(metaclass=ABCMeta):
-    """This should be the base class of all the SQL DiracX DBs.
+    """The base class of all the SQL DiracX DBs.
 
     The details covered here should be handled automatically by the service and
     task machinery of DiracX and this documentation exists for informational
@@ -84,6 +84,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         async with db:
             # Do something in the first transaction
             # Commit will be called automatically
+            pass
 
         async with db:
             # This transaction will be rolled back due to the exception
@@ -111,7 +112,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
-                group="diracx.dbs.sql", name=db_name
+                group=DiracEntryPoint.SQL_DB, name=db_name
             )
         ]
         if not db_classes:
@@ -126,7 +127,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
         db_urls: dict[str, str] = {}
-        for entry_point in select_from_extension(group="diracx.dbs.sql"):
+        for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
             db_name = entry_point.name
             var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
             if var_name in os.environ:
@@ -211,6 +212,12 @@ class BaseSQLDB(metaclass=ABCMeta):
         try:
             self._conn.set(await self.engine.connect().__aenter__())
         except Exception as e:
+            logger.warning(
+                "Database connection failed for %s: %s",
+                self.__class__.__name__,
+                e,
+                exc_info=True,
+            )
             raise SQLDBUnavailableError(
                 f"Cannot connect to {self.__class__.__name__}"
             ) from e
@@ -218,7 +225,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """This is called when exiting a route.
+        """Commit or roll back changes to a DB.
+
+        Called when exiting a route.
 
         If there was no exception, the changes in the DB are committed.
         Otherwise, they are rolled back.

@@ -1,4 +1,4 @@
-"""This module implements the logic of the configuration server side.
+"""Module to implement the logic of the configuration server side.
 
 This is where all the backend abstraction and the caching logic takes place.
 """
@@ -21,7 +21,7 @@ from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from ..exceptions import BadConfigurationVersionError
-from ..extensions import select_from_extension
+from ..extensions import DiracEntryPoint, select_from_extension
 from ..utils import TwoLevelCache
 from .schema import Config
 
@@ -44,7 +44,7 @@ def is_running_in_async_context():
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Applies the default git+file:// scheme if not present."""
+    """Apply the default git+file:// scheme if not present."""
     if isinstance(value, str) and "://" not in value:
         value = f"git+file://{value}"
     return value
@@ -88,14 +88,18 @@ class ConfigSource(metaclass=ABCMeta):
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
-        """Must return:
+        """Abstract method.
+
+        Must return:
         * a unique hash as a string, representing the last version
         * a datetime object corresponding to when the version dates.
         """
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """Return the Config object that corresponds to the
+        """Abstract method.
+
+        Return the Config object that corresponds to the
         specific hash
         The `modified` parameter is just added as a attribute to the config.
         """
@@ -114,10 +118,7 @@ class ConfigSource(metaclass=ABCMeta):
     def create_from_url(
         cls, *, backend_url: ConfigSourceUrl | Path | str
     ) -> "ConfigSource":
-        """Factory method to produce a concrete instance depending on
-        the backend URL scheme.
-
-        """
+        """Produce a concrete instance depending on the backend URL scheme."""
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
@@ -171,13 +172,13 @@ class BaseGitConfigSource(ConfigSource):
     def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
         super().__init__(backend_url=backend_url)
         self.remote_url = self.extract_remote_url(backend_url)
-        self.git_branch = self.get_git_branch_from_url(backend_url)
+        self.git_revision = self.get_git_revision_from_url(backend_url)
 
     def latest_revision(self) -> tuple[str, datetime]:
         try:
             rev = sh.git(
                 "rev-parse",
-                self.git_branch,
+                self.git_revision,
                 _cwd=self.repo_location,
                 _tty_out=False,
                 _async=is_running_in_async_context(),
@@ -214,9 +215,9 @@ class BaseGitConfigSource(ConfigSource):
                 f"Error reading configuration: {e}"
             ) from e
 
-        config_class: Config = select_from_extension(group="diracx", name="config")[
-            0
-        ].load()
+        config_class: Config = select_from_extension(
+            group=DiracEntryPoint.CORE, name="config"
+        )[0].load()
         config = config_class.model_validate(raw_obj)
         config._hexsha = hexsha
         config._modified = modified
@@ -228,13 +229,14 @@ class BaseGitConfigSource(ConfigSource):
         remote_url = urlunparse(parsed_url._replace(query=""))
         return remote_url
 
-    def get_git_branch_from_url(self, backend_url: ConfigSourceUrl) -> str:
+    def get_git_revision_from_url(self, backend_url: ConfigSourceUrl) -> str:
         """Extract the branch from the query parameters."""
-        return dict(backend_url.query_params()).get("branch", DEFAULT_GIT_BRANCH)
+        return dict(backend_url.query_params()).get("revision", DEFAULT_GIT_BRANCH)
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
-    """The configuration is stored on a local git repository
+    """The configuration is stored on a local git repository.
+
     When running on multiple servers, the filesystem must be shared.
     """
 
@@ -259,7 +261,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
             raise ValueError(
                 f"{self.repo_location} is not a valid git repository"
             ) from e
-        sh.git.checkout(self.git_branch, _cwd=self.repo_location, _async=False)
+        sh.git.checkout(self.git_revision, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)
@@ -277,9 +279,8 @@ class RemoteGitConfigSource(BaseGitConfigSource):
 
         self._temp_dir = TemporaryDirectory()
         self.repo_location = Path(self._temp_dir.name)
-        sh.git.clone(
-            self.remote_url, self.repo_location, branch=self.git_branch, _async=False
-        )
+        sh.git.clone(self.remote_url, self.repo_location, _async=False)
+        sh.git.checkout(self.git_revision, _cwd=self.repo_location, _async=False)
 
     def __hash__(self):
         return hash(self.repo_location)

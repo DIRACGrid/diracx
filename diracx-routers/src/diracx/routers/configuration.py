@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -13,6 +14,8 @@ from fastapi import (
 from .access_policies import open_access
 from .dependencies import Config
 from .fastapi_classes import DiracxRouter
+
+logger = logging.getLogger(__name__)
 
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
@@ -52,7 +55,9 @@ async def serve_config(
                 if_modified_since, LAST_MODIFIED_FORMAT
             ).astimezone(timezone.utc)
         except ValueError:
-            pass
+            logger.debug(
+                "Failed to parse If-Modified-Since header: %s", if_modified_since
+            )
         else:
             if not_before > config._modified:
                 raise HTTPException(

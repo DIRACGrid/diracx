@@ -157,6 +157,7 @@ nav:
       - Manage extensions: developer/manage_extension.md
     - Explanations:
       - dev/explanations/index.md
+      - Documentation system: dev/explanations/documentation-system.md
       - Components:
         - dev/explanations/components/index.md
         - API: dev/explanations/components/api.md

@@ -5,6 +5,7 @@ See docs/admin/explanations/authentication.md
 
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from fastapi import (
@@ -30,6 +31,8 @@ from ..dependencies import (
 )
 from ..fastapi_classes import DiracxRouter
 
+logger = logging.getLogger(__name__)
+
 router = DiracxRouter(require_auth=False)
 
 
@@ -49,6 +52,7 @@ async def initiate_authorization_flow(
     settings: AuthSettings,
 ) -> responses.RedirectResponse:
     """Initiate the authorization flow.
+
     It will redirect to the actual OpenID server (IAM, CheckIn) to
     perform a authorization code flow.
 
@@ -115,15 +119,18 @@ async def complete_authorization_flow(
             settings=settings,
         )
     except AuthorizationError as e:
+        logger.warning("Authorization flow failed with invalid state: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
         ) from e
     except IAMServerError as e:
+        logger.warning("IAM server error during authorization flow: %s", e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Failed to contact IAM server",
         ) from e
     except IAMClientError as e:
+        logger.warning("IAM client error during authorization flow: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid code"
         ) from e

@@ -13,7 +13,8 @@ import pytest
 import sqlalchemy
 
 from diracx.core.exceptions import SandboxNotFoundError
-from diracx.core.models import ChecksumAlgorithm, SandboxFormat, SandboxInfo, UserInfo
+from diracx.core.models.auth import UserInfo
+from diracx.core.models.sandbox import ChecksumAlgorithm, SandboxFormat, SandboxInfo
 from diracx.core.settings import SandboxStoreSettings
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.logic.jobs.sandboxes import (
@@ -117,8 +118,7 @@ async def test_upload_and_clean(
         assert response.content == data
 
     # There should be no sandboxes to remove
-    async with sandbox_metadata_db:
-        await clean_sandboxes(sandbox_metadata_db, sandbox_settings)
+    await clean_sandboxes(sandbox_metadata_db, sandbox_settings, max_workers=1)
 
     # Try to download the sandbox
     async with sandbox_metadata_db:
@@ -139,8 +139,7 @@ async def test_upload_and_clean(
     )
 
     # Now the sandbox should be removed
-    async with sandbox_metadata_db:
-        await clean_sandboxes(sandbox_metadata_db, sandbox_settings)
+    await clean_sandboxes(sandbox_metadata_db, sandbox_settings, max_workers=1)
 
     # Check that the sandbox was actually removed from the bucket
     with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):

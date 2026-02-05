@@ -7,10 +7,10 @@ from DIRACCommon.ConfigurationSystem.Client.Helpers.Resources import getDIRACPla
 from DIRACCommon.Core.Utilities.ReturnValues import returnValueOrRaise
 
 from diracx.core.config import Config
-from diracx.core.extensions import supports_extending
+from diracx.core.extensions import DiracEntryPoint, supports_extending
 
 
-@supports_extending("diracx.resources", "find_compatible_platforms")
+@supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
 def find_compatible_platforms(job_platforms: list[str], config: Config) -> list[str]:
     """Find compatible platforms for the given job platforms.
 

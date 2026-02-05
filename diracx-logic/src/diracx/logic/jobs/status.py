@@ -29,7 +29,7 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 )
 
 from diracx.core.config.schema import Config
-from diracx.core.models import (
+from diracx.core.models.job import (
     HeartbeatData,
     JobAttributes,
     JobCommand,
@@ -40,9 +40,8 @@ from diracx.core.models import (
     JobStatus,
     JobStatusUpdate,
     SetJobStatusReturn,
-    VectorSearchOperator,
-    VectorSearchSpec,
 )
+from diracx.core.models.search import VectorSearchOperator, VectorSearchSpec
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
@@ -107,6 +106,7 @@ async def set_job_statuses(
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
     """Set various status fields for job specified by its jobId.
+
     Set only the last status in the JobDB, updating all the status
     logging information in the JobLoggingDB. The status dict has datetime
     as a key and status information dictionary as values.

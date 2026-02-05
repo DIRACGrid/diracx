@@ -14,7 +14,7 @@ from diracx.core.exceptions import (
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
-from diracx.core.models import (
+from diracx.core.models.auth import (
     AccessTokenPayload,
     GrantType,
     RefreshTokenPayload,
@@ -118,6 +118,7 @@ async def get_oidc_token(
     ] = None,
 ) -> TokenResponse:
     """Token endpoint to retrieve the token at the end of a flow.
+
     This is the endpoint being pulled by dirac-login when doing the device flow.
     """
     try:

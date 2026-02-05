@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.models import VectorSearchOperator
+from diracx.core.models.search import VectorSearchOperator
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
@@ -28,7 +28,8 @@ class ActionType(StrEnum):
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
-    """Rules:
+    """Rules.
+
     * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
     * An admin cannot create any resource but can read everything and modify everything
     * A NORMAL_USER can create
@@ -116,6 +117,7 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 class SandboxAccessPolicy(BaseAccessPolicy):
     """Policy for the sandbox.
+
     They are similar to the WMS access policies.
     """
 

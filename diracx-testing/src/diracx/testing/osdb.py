@@ -99,3 +99,66 @@ async def sql_opensearch_db():
         await db.create_index_template()
         yield db
         # No need to cleanup as this uses an in-memory sqlite database
+
+
+async def _prefill_db(db: DummyOSDB, is_sql: bool) -> DummyOSDB:
+    """Fill the database with test records.
+
+    This is a helper used by the prefilled fixture wrappers.
+    The test documents are stored on db.test_docs for access by tests.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    doc1 = {
+        "DateField": datetime.now(tz=timezone.utc),
+        "IntField": 1234,
+        "KeywordField0": "a",
+        "KeywordField1": "keyword1",
+        "KeywordField2": "keyword one",
+        "TextField": "text value",
+        "UnknownField": "unknown field 1",
+    }
+    doc2 = {
+        "DateField": datetime.now(tz=timezone.utc) - timedelta(days=1, minutes=34),
+        "IntField": 679,
+        "KeywordField0": "c",
+        "KeywordField1": "keyword1",
+        "KeywordField2": "keyword two",
+        "TextField": "another text value",
+        "UnknownField": "unknown field 2",
+    }
+    doc3 = {
+        "DateField": datetime.now(tz=timezone.utc) - timedelta(days=1),
+        "IntField": 42,
+        "KeywordField0": "b",
+        "KeywordField1": "keyword2",
+        "KeywordField2": "keyword two",
+        "TextField": "yet another text value",
+    }
+
+    await db.upsert("dummyvo", 798811211, doc1)
+    # the following line tests if the index name is made properly lowercase in case
+    # the VO has capital letters e.g. "diracAdmin"
+    await db.upsert("dummyVO", 998811211, doc2)
+    await db.upsert("dummyvo", 798811212, doc3)
+
+    # Force a refresh to make sure the documents are available
+    if not is_sql:
+        await db.client.indices.refresh(index=f"{db.index_prefix}*")
+
+    # Store test documents on the db object for access by tests
+    db.test_docs = (doc1, doc2, doc3)
+
+    return db
+
+
+@pytest.fixture
+async def prefilled_dummy_opensearch_db(dummy_opensearch_db):
+    """Fixture which returns a DummyOSDB object prefilled with test data."""
+    yield await _prefill_db(dummy_opensearch_db, is_sql=False)
+
+
+@pytest.fixture
+async def prefilled_sql_opensearch_db(sql_opensearch_db):
+    """Fixture which returns a SQLOSDB object prefilled with test data."""
+    yield await _prefill_db(sql_opensearch_db, is_sql=True)

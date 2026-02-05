@@ -18,7 +18,7 @@ from diracx.core.exceptions import (
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
-from diracx.core.models import (
+from diracx.core.models.auth import (
     AccessTokenPayload,
     GrantType,
     RefreshTokenPayload,
@@ -282,7 +282,7 @@ async def exchange_token(
     legacy_exchange: bool = False,
     include_refresh_token: bool = True,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
-    """Method called to exchange the OIDC token for a DIRAC generated access token."""
+    """Exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     vo = parsed_scope["vo"]

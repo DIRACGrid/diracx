@@ -140,9 +140,25 @@ shellcheck = "*"
 cmd = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 description = "Run shellcheck on all shell scripts"
 
+# Settings documentation feature
+[feature.settings-doc.dependencies]
+python = "*"
+[feature.settings-doc.pypi-dependencies]
+settings-doc = "*"
+mdformat = "*"
+mdformat-mkdocs = "*"
+mdformat-gfm = "*"
+mdformat-black = "*"
+diracx-core = { path = "diracx-core", editable = true }
+diracx-routers = { path = "diracx-routers", editable = true }
+# Settings documentation task
+[feature.settings-doc.tasks.generate-settings-doc]
+cmd = "python scripts/generate_settings_docs.py"
+description = "Auto-discover and generate settings documentation with validation"
+
 [environments]
 # DiracX environments
-default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers"], solve-group = "diracx"}
+default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "settings-doc"], solve-group = "diracx"}
 diracx-core = {features = ["task-diracx-core", "diracx-core"], solve-group = "diracx"}
 diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-cli = {features = ["task-diracx-cli", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
@@ -168,6 +184,7 @@ gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-c
 mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
+settings-doc = {features = ["settings-doc"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]
