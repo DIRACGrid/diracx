@@ -1,0 +1,13 @@
+name: Draft on Changes Requested
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  draft:
+    if: github.event.review.state == 'changes_requested'
+    uses: DIRACGrid/management/.github/workflows/draft-on-changes-requested.yml@master
