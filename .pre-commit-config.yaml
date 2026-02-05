@@ -91,3 +91,5 @@ repos:
         name: Check for __all__ presence in __init__.py files
         language: system
         entry: "sh .github/workflows/check_init_files_precommit_hook.sh"
+        files: ^diracx-.*__init__\.py$
+        exclude: _generated
