@@ -107,8 +107,8 @@ class Owners(Base):
 class Owners(Base):
     __tablename__ = "Owners"
     OwnerID: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    creation_time: Mapped[datetime_now]
-    name: Mapped[str255]
+    CreationTime: Mapped[datetime_now]
+    Name: Mapped[str255]
 ```
 
 </td>
