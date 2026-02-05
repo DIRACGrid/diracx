@@ -48,11 +48,8 @@ select = [
 ]
 ignore = [
   "B905",
-  "B008",
   "B006",
   "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
-  "D203",
-  "D213",
   # TODO: Maybe enable these
   "D100",
   "D101",
@@ -132,7 +129,7 @@ allow_redefinition = true
 explicit_package_bases = true
 # disallow_untyped_defs = true
 # strict = true
-enable_error_code = ["import", "attr-defined"]
+enable_error_code = ["import", "attr-defined", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
 module = 'DIRACCommon.*'

@@ -14,6 +14,9 @@ Column: partial[RawColumn] = partial(RawColumn, nullable=False)
 NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
 DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
 
+# Module-level constants for default timezone values
+_DEFAULT_UTC = ZoneInfo("UTC")
+
 
 def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
     return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
@@ -55,12 +58,16 @@ class SmarterDateTime(types.TypeDecorator):
 
     def __init__(
         self,
-        stored_tz: ZoneInfo | None = ZoneInfo("UTC"),
-        returned_tz: ZoneInfo = ZoneInfo("UTC"),
+        stored_tz: ZoneInfo | None = None,
+        returned_tz: ZoneInfo | None = None,
         stored_naive_sqlite=True,
         stored_naive_mysql=True,
         stored_naive_postgres=False,  # Forces timezone-awareness
     ):
+        if stored_tz is None:
+            stored_tz = _DEFAULT_UTC
+        if returned_tz is None:
+            returned_tz = _DEFAULT_UTC
         self._stored_naive_dialect = {
             "sqlite": stored_naive_sqlite,
             "mysql": stored_naive_mysql,
