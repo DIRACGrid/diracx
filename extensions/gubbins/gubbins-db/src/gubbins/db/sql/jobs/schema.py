@@ -1,19 +1,16 @@
 from diracx.db.sql.job.db import JobDBBase
-from diracx.db.sql.utils import Column
-from sqlalchemy import (
-    ForeignKey,
-    Integer,
-    String,
-)
+from diracx.db.sql.job.schema import str255
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 
-# You need to inherit from the declarative_base of the parent DB
+# You need to inherit from the DeclarativeBase of the parent DB
 class GubbinsInfo(JobDBBase):
     """An extra table with respect to Vanilla diracx JobDB"""
 
     __tablename__ = "GubbinsJobs"
 
-    job_id = Column(
-        "JobID", Integer, ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
+    job_id: Mapped[int] = mapped_column(
+        "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
-    info = Column("Info", String(255), default="", primary_key=True)
+    info: Mapped[str255] = mapped_column("Info", default="", primary_key=True)
