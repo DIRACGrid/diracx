@@ -9,8 +9,4 @@ jobs:
     if: github.event.review.state == 'changes_requested'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ github.event.pull_request.number }}" > pr_number.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pr-info
-          path: pr_number.txt
+      - run: 'true'
