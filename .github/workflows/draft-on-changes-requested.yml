@@ -1,13 +1,33 @@
 name: Draft on Changes Requested
 
 on:
-  pull_request_review:
-    types: [submitted]
+  workflow_run:
+    workflows: ["Record Changes Requested"]
+    types: [completed]
 
 permissions:
   pull-requests: write
+  actions: read
 
 jobs:
+  get-pr:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.pr.outputs.number }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-info
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - id: pr
+        run: echo "number=$(cat pr_number.txt)" >> "$GITHUB_OUTPUT"
+
   draft:
-    if: github.event.review.state == 'changes_requested'
+    needs: get-pr
+    permissions:
+      pull-requests: write
     uses: DIRACGrid/management/.github/workflows/draft-on-changes-requested.yml@master
+    with:
+      pr_number: ${{ fromJSON(needs.get-pr.outputs.pr_number) }}
