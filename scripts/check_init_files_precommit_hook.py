@@ -7,6 +7,7 @@ import sys
 
 
 def main():
+    """Check if the __all__ dunder exists and it's a list."""
     files_without_all = []
     files_not_list_all = []
 
@@ -34,7 +35,7 @@ def main():
         if not found:
             files_without_all.append(file)
 
-    if files_without_all == [] and files_not_list_all == []:
+    if not (files_without_all or files_not_list_all):
         return 0
 
     for file in files_without_all:
