@@ -104,8 +104,7 @@ repos:
   - repo: local
     hooks:
       - id: check-init-files
-        name: Check for __all__ presence in __init__.py files
+        name: Check __all__ dunder in __init__.py files
         language: system
-        entry: "sh .github/workflows/check_init_files_precommit_hook.sh"
-        files: ^(diracx-|extensions/gubbins/gubbins-).*__init__\.py$
-        exclude: _generated
+        entry: pixi run -e default python .github/workflows/check_init_files_precommit_hook.py
+        pass_filenames: false
