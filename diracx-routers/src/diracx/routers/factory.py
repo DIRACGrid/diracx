@@ -178,8 +178,8 @@ def create_app_inner(
                 policy_name=access_policy_name,
             )
 
-    app.dependency_overrides[BaseAccessPolicy.all_used_access_policies] = (
-        lambda: all_access_policies_used
+    app.dependency_overrides[BaseAccessPolicy.all_used_access_policies] = lambda: (
+        all_access_policies_used
     )
 
     fail_startup = True
