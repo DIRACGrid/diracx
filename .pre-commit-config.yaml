@@ -87,7 +87,7 @@ repos:
     hooks:
       - id: generate-pixi-docs
         name: Generate pixi tasks documentation
-        entry: pixi run -e default python .github/workflows/generate_pixi_tasks_doc.py
+        entry: pixi run -e default python scripts/generate_pixi_tasks_doc.py
         language: system
         pass_filenames: false
         files: ^pixi\.toml$|^pixi\.lock$ # only run if pixi files change
@@ -106,6 +106,6 @@ repos:
       - id: check-init-files
         name: Check __all__ dunder in __init__.py files
         language: system
-        entry: pixi run -e default python .github/workflows/check_init_files_precommit_hook.py
+        entry: pixi run -e default python scripts/check_init_files_precommit_hook.py
         files: ^(diracx-|extensions/gubbins/gubbins-).*__init__\.py$
         exclude: _generated
