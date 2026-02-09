@@ -186,6 +186,7 @@ nav:
     - Reference:
       - dev/reference/index.md
       - Coding conventions: dev/reference/coding-conventions.md
+      - Issue triage: dev/reference/issue-triage.md
       - Writing tests: dev/reference/writing-tests.md
       - Test recipes: dev/reference/test-recipes.md
       - Pixi tasks: dev/reference/pixi-tasks.md
