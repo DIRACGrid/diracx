@@ -16,7 +16,7 @@ jobs:
     outputs:
       pr_number: ${{ steps.pr.outputs.number }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: pr-info
           run-id: ${{ github.event.workflow_run.id }}
