@@ -107,4 +107,5 @@ repos:
         name: Check __all__ dunder in __init__.py files
         language: system
         entry: pixi run -e default python .github/workflows/check_init_files_precommit_hook.py
-        pass_filenames: false
+        files: ^(diracx-|extensions/gubbins/gubbins-).*__init__\.py$
+        exclude: _generated
