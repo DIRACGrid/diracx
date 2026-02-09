@@ -2,58 +2,48 @@
 
 from __future__ import annotations
 
-import re
-from glob import glob
+import ast
+import sys
 
 
 def main():
-    """Check if the __all__ dunder exists and it's a list."""
-    check_patterns = [
-        "extensions/gubbins/gubbins-*/**/__init__.py",
-        "diracx-*/**/__init__.py",
-    ]
-    exclude_patterns = ["_generated"]
-
-    files = []
-
-    for pattern in check_patterns:
-        files.extend(glob(pattern, recursive=True))
-
-    for pattern in exclude_patterns:
-        for file in files[:]:
-            if pattern in file:
-                files.remove(file)
-
     files_without_all = []
-    files_incorrect_format_all = []
+    files_not_list_all = []
 
-    for file in files:
-        with open(file, "r") as f:
+    for file in sys.argv[1:]:
+        with open(file, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # __all__ dunder exists
-        if not re.search("__all__ =", content):
+        module_tree = ast.parse(content)
+        found = False
+
+        # Go through the module
+        for node in module_tree.body:
+            # Has to be __all__ = {something} or __all__ += {something}
+            if isinstance(node, ast.Assign) or isinstance(node, ast.AugAssign):
+                target = node.targets[0]
+                # The target is the __all__ dunder
+                if isinstance(target, ast.Name) and target.id == "__all__":
+                    found = True
+                    # __all__ is a list
+                    if not isinstance(node.value, ast.List):
+                        files_not_list_all.append(file)
+
+                    break
+
+        if not found:
             files_without_all.append(file)
 
-        # If exists, make sure its a list
-        elif not re.search("__all__ =[\S\s]*\[", content):
-            files_incorrect_format_all.append(file)
+    if files_without_all == [] and files_not_list_all == []:
+        return 0
 
-    ret_val = 0
+    for file in files_without_all:
+        print(f"- {file}: __all__ not found")
 
-    if files_without_all:
-        ret_val = 1
-        print("> Files without __all__ defined")
-        for filename in files_without_all:
-            print(f"\t- {filename}")
+    for file in files_not_list_all:
+        print(f"- {file}: __all__ is not a list")
 
-    if files_incorrect_format_all:
-        ret_val = 1
-        print("> Files with __all__ not defined as a list")
-        for filename in files_incorrect_format_all:
-            print(f"\t- {filename}")
-
-    return ret_val
+    return 1
 
 
 if __name__ == "__main__":
