@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("create_sandbox", "download_sandbox")
+__all__ = ("create_sandbox", "download_sandbox", "set_job_status")
 
 import hashlib
 import logging
@@ -8,12 +8,18 @@ import os
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO, Literal
 
 import httpx
 import zstandard
 
+from diracx.client._generated.models import (
+    JobStatus,
+    JobStatusUpdate,
+    SetJobStatusReturn,
+)
 from diracx.client.aio import AsyncDiracClient
 from diracx.client.models import SandboxInfo
 
@@ -123,3 +129,60 @@ async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracCli
         with tarfile_open(fh) as tf:
             tf.extractall(path=destination, filter="data")
         logger.debug("Extracted %s to %s", pfn, destination)
+
+
+@with_client
+async def set_job_status(
+    job_id: str,
+    status: JobStatus | None = None,
+    minor_status: str | None = None,
+    application_status: str | None = None,
+    source: str = "Unknown",
+    timestamp: str | None = None,
+    force: bool = False,
+    *,
+    client: AsyncDiracClient,
+) -> SetJobStatusReturn:
+    """Set the status of a job.
+
+    :param job_id: Target Job ID
+    :type job_id: str
+    :param status: Status to set for the job. No change if None.
+    :type status: JobStatus | None
+    :param minor_status: Minor Status to set for the job. No change if None.
+    :type minor_status: str | None
+    :param application_status: Application Status to set for the job. No change if None.
+    :type application_status: str | None
+    :param source: Source of the status (i.e. JobWrapper)
+    :type source: str
+    :param timestamp: When the status changed. Default is now
+    :type timestamp: str | None
+    :param force: Whether to force the update. Default is False.
+    :type force: bool
+
+    :return: Result of the job status update.
+    :rtype: SetJobStatusReturn
+    """
+    if not timestamp:
+        timestamp = datetime.now(timezone.utc).isoformat()
+    body = {
+        job_id: {
+            timestamp: JobStatusUpdate(
+                status=status,
+                minor_status=minor_status,
+                application_status=application_status,
+                source=source,
+            )
+        }
+    }
+    logger.debug(
+        "Setting job status %s, minor status %s, application status %s, force: %s",
+        status,
+        minor_status,
+        application_status,
+        force,
+    )
+    result = await client.jobs.set_job_statuses(body, force=force)
+    if result.success:
+        logger.debug("Job statuses set successfully")
+    return result
