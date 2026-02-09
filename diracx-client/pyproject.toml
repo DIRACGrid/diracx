@@ -32,6 +32,9 @@ root = ".."
 [tool.hatch.build.targets.wheel]
 packages = ["src/diracx"]
 
+[tool.hatch.build.targets.sdist.force-include]
+"../LICENSE" = "LICENSE"
+
 [tool.hatch.build.targets.wheel.force-include]
 "src/_diracx_client_importer.pth" = "_diracx_client_importer.pth"
 
