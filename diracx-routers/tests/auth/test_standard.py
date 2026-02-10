@@ -783,7 +783,8 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
 
     new_auth_settings = AuthSettings(
         token_issuer="https://iam-auth.web.cern.ch/",
-        token_allowed_algorithms=["EdDSA", "RS256"],
+        # TODO: EdDSA should be removed later due to "SecurityWarning: EdDSA is deprecated via RFC 9864"
+        token_allowed_algorithms=["EdDSA", "RS256", "Ed25519"],
         token_keystore=json.dumps(KeySet(keys=[key]).as_dict(private=True)),
         state_key=Fernet.generate_key(),
         allowed_redirects=[
@@ -833,34 +834,34 @@ async def test_keystore(test_client):
             "kid": uuid7().hex,
         },
     )
-    eddsa_key = OKPKey.generate_key(
+    ed25519_key = OKPKey.generate_key(
         "Ed25519",
         {
             "key_ops": ["sign", "verify"],
-            "alg": "EdDSA",
+            "alg": "Ed25519",
             "kid": uuid7().hex,
         },
     )
 
-    # Generate the keystore with eddsa key only first
-    jwks = KeySet(keys=[eddsa_key])
+    # Generate the keystore with ed25519 key only first
+    jwks = KeySet(keys=[ed25519_key])
 
     # Generate the keystore with rsa key only first
     auth_settings = AuthSettings(
         token_issuer=issuer,
-        token_allowed_algorithms=["RS256"],  # We purposefully remove EdDSA
+        token_allowed_algorithms=["RS256"],  # We purposefully remove Ed25519
         token_keystore=json.dumps(jwks.as_dict(private=True)),
         state_key=state_key,
         allowed_redirects=allowed_redirects,
     )
 
     # Encode/Decode with the keystore: should not work
-    # because EdDSA is not part of the allowed algorithms
+    # because Ed25519 is not part of the allowed algorithms
     with pytest.raises(UnsupportedAlgorithmError):
         token = create_token(payload, auth_settings)
 
-    # Add EdDSA to the allowed algorithms
-    auth_settings.token_allowed_algorithms.append("EdDSA")
+    # Add Ed25519 to the allowed algorithms
+    auth_settings.token_allowed_algorithms.append("Ed25519")
 
     # Encode/Decode with the keystore: should work
     token = create_token(payload, auth_settings)
@@ -869,9 +870,15 @@ async def test_keystore(test_client):
     # Add the rsa key to the keystore
     jwks.keys.append(rsa_key)
 
+    # TODO: what's the point of this here?
+    #  Since it's the same as before (because we added Ed25519 back meanwhile)
+    #  Maybe a wrong copy paste?
     auth_settings = AuthSettings(
         token_issuer=issuer,
-        token_allowed_algorithms=["RS256", "EdDSA"],  # We purposefully remove EdDSA
+        token_allowed_algorithms=[
+            "RS256",
+            "Ed25519",
+        ],  # We purposefully remove Ed25519 (?)
         token_keystore=json.dumps(jwks.as_dict(private=True)),
         state_key=state_key,
         allowed_redirects=allowed_redirects,
@@ -882,7 +889,7 @@ async def test_keystore(test_client):
     await verify_dirac_refresh_token(token, auth_settings)
 
     # Remove 'sign' operation from the RSA key:
-    # should still work because eddsa_key is still there
+    # should still work because ed25519_key is still there
     auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("sign")
     token = create_token(payload, auth_settings)
     await verify_dirac_refresh_token(token, auth_settings)
