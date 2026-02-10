@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 from functools import partial
 from zoneinfo import ZoneInfo
@@ -12,9 +13,39 @@ from typing_extensions import Annotated
 
 from .functions import utcnow
 
-Column: partial[RawColumn] = partial(RawColumn, nullable=False)
-NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
-DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
+
+def _deprecated(name: str, replacement: str):
+    warnings.warn(
+        f"{name} is deprecated and will be removed in a future major release. "
+        f"Use {replacement} instead.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+_Column: partial[RawColumn] = partial(RawColumn, nullable=False)
+
+
+def Column(*args, **kwargs):  # noqa: N802
+    _deprecated("Column", "Mapped[...] + mapped_column(...)")
+    return _Column(*args, **kwargs)
+
+
+_NullColumn: partial[RawColumn] = partial(RawColumn, nullable=True)
+
+
+def NullColumn(*args, **kwargs):  # noqa: N802
+    _deprecated("NullColumn", "Mapped[Optional[...]] + mapped_column(...)")
+    return _NullColumn(*args, **kwargs)
+
+
+_DateNowColumn = partial(Column, type_=DateTime(timezone=True), server_default=utcnow())
+
+
+def DateNowColumn(*args, **kwargs):  # noqa: N802
+    _deprecated("DateNowColumn", "Mapped[datetime_now] + mapped_column(...)")
+    return _DateNowColumn(*args, **kwargs)
+
 
 # Module-level constants for default timezone values
 _DEFAULT_UTC = ZoneInfo("UTC")
@@ -32,6 +63,7 @@ str1024 = Annotated[str, 1024]
 
 
 def EnumColumn(name, enum_type, **kwargs):  # noqa: N802
+    _deprecated("EnumColumn", "Mapped[...] + enum_column(...)")
     return Column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
