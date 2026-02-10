@@ -208,8 +208,8 @@ class AuthSettings(ServiceSettingsBase):
     token_allowed_algorithms: list[str] = ["RS256", "EdDSA", "Ed25519"]  # noqa: S105
     """List of allowed cryptographic algorithms for JWT token signing.
 
-    Supported algorithms include RS256 (RSA with SHA-256) and EdDSA
-    (Edwards-curve Digital Signature Algorithm). Default: ["RS256", "EdDSA"]
+    Supported algorithms include RS256 (RSA with SHA-256) and Ed25519
+    (Edwards-curve Digital Signature Algorithm). Default: ["RS256", "Ed25519"]
     """
 
     access_token_expire_minutes: int = 20

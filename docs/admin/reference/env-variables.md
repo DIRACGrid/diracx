@@ -71,12 +71,12 @@ generation and verification.
 
 ### `DIRACX_SERVICE_AUTH_TOKEN_ALLOWED_ALGORITHMS`
 
-*Optional*, default value: `['RS256', 'EdDSA']`
+*Optional*, default value: `['RS256', 'EdDSA', 'Ed25519']`
 
 List of allowed cryptographic algorithms for JWT token signing.
 
-Supported algorithms include RS256 (RSA with SHA-256) and EdDSA
-(Edwards-curve Digital Signature Algorithm). Default: ["RS256", "EdDSA"]
+Supported algorithms include RS256 (RSA with SHA-256) and Ed25519
+(Edwards-curve Digital Signature Algorithm). Default: ["RS256", "Ed25519"]
 
 ### `DIRACX_SERVICE_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`
 

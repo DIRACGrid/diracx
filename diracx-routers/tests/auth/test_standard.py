@@ -783,8 +783,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
 
     new_auth_settings = AuthSettings(
         token_issuer="https://iam-auth.web.cern.ch/",
-        # TODO: EdDSA should be removed later due to "SecurityWarning: EdDSA is deprecated via RFC 9864"
-        token_allowed_algorithms=["EdDSA", "RS256", "Ed25519"],
+        token_allowed_algorithms=["RS256", "Ed25519"],
         token_keystore=json.dumps(KeySet(keys=[key]).as_dict(private=True)),
         state_key=Fernet.generate_key(),
         allowed_redirects=[
