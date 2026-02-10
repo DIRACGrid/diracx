@@ -869,15 +869,12 @@ async def test_keystore(test_client):
     # Add the rsa key to the keystore
     jwks.keys.append(rsa_key)
 
-    # TODO: what's the point of this here?
-    #  Since it's the same as before (because we added Ed25519 back meanwhile)
-    #  Maybe a wrong copy paste?
     auth_settings = AuthSettings(
         token_issuer=issuer,
         token_allowed_algorithms=[
             "RS256",
             "Ed25519",
-        ],  # We purposefully remove Ed25519 (?)
+        ],
         token_keystore=json.dumps(jwks.as_dict(private=True)),
         state_key=state_key,
         allowed_redirects=allowed_redirects,
