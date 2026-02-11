@@ -12,9 +12,10 @@ from typing import Any, Self, cast
 from uuid import UUID as StdUUID  # noqa: N811
 
 from pydantic import TypeAdapter
-from sqlalchemy import DateTime, MetaData, func, select
+from sqlalchemy import DateTime, MetaData, func, inspect, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import InvalidQueryError
@@ -250,7 +251,7 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     async def _search(
         self,
-        table: Any,
+        table: type[DeclarativeBase],
         parameters: list[str] | None,
         search: list[SearchSpec],
         sorts: list[SortSpec],
@@ -290,12 +291,15 @@ class BaseSQLDB(metaclass=ABCMeta):
         ]
 
     async def _summary(
-        self, table: Any, group_by: list[str], search: list[SearchSpec]
+        self,
+        table: type[DeclarativeBase],
+        group_by: list[str],
+        search: list[SearchSpec],
     ) -> list[dict[str, str | int]]:
         """Get a summary of the elements of a table."""
         columns = _get_columns(table.__table__, group_by)
 
-        pk_columns = list(table.__table__.primary_key.columns)
+        pk_columns = list(inspect(table).primary_key)
         if not pk_columns:
             raise ValueError(
                 "Model has no primary key and no count_column was provided."
@@ -310,7 +314,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         return [
             dict(row._mapping)
             async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
+            if row._mapping["count"] > 0
         ]
 
 

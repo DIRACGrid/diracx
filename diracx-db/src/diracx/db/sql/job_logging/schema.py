@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Integer, Numeric, PrimaryKeyConstraint, String, TypeDecorator
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Numeric, PrimaryKeyConstraint, String, TypeDecorator
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from ..utils import Column, DateNowColumn
+from ..utils import datetime_now, str32, str128, str255
 
-JobLoggingDBBase = declarative_base()
+
+class JobLoggingDBBase(DeclarativeBase):
+    type_annotation_map = {
+        str32: String(32),
+        str128: String(128),
+        str255: String(255),
+    }
 
 
 class MagicEpochDateTime(TypeDecorator):
@@ -56,12 +62,14 @@ class MagicEpochDateTime(TypeDecorator):
 
 class LoggingInfo(JobLoggingDBBase):
     __tablename__ = "LoggingInfo"
-    job_id = Column("JobID", Integer)
-    seq_num = Column("SeqNum", Integer)
-    status = Column("Status", String(32), default="")
-    minor_status = Column("MinorStatus", String(128), default="")
-    application_status = Column("ApplicationStatus", String(255), default="")
-    status_time = DateNowColumn("StatusTime")
-    status_time_order = Column("StatusTimeOrder", MagicEpochDateTime, default=0)
-    source = Column("StatusSource", String(32), default="Unknown")
+    job_id: Mapped[int] = mapped_column("JobID")
+    seq_num: Mapped[int] = mapped_column("SeqNum")
+    status: Mapped[str32] = mapped_column("Status", default="")
+    minor_status: Mapped[str128] = mapped_column("MinorStatus", default="")
+    application_status: Mapped[str255] = mapped_column("ApplicationStatus", default="")
+    status_time: Mapped[datetime_now] = mapped_column("StatusTime")
+    status_time_order: Mapped[datetime] = mapped_column(
+        "StatusTimeOrder", MagicEpochDateTime(), default=0
+    )
+    source: Mapped[str32] = mapped_column("StatusSource", default="Unknown")
     __table_args__ = (PrimaryKeyConstraint("JobID", "SeqNum"),)
