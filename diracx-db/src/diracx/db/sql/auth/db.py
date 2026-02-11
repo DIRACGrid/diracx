@@ -163,7 +163,7 @@ class AuthDB(BaseSQLDB):
         for _ in range(MAX_RETRY):
             user_code = "".join(
                 secrets.choice(USER_CODE_ALPHABET)
-                for _ in range(DeviceFlows.user_code.type.length)  # type: ignore
+                for _ in range(DeviceFlows.user_code.type.length)
             )
             device_code = secrets.token_urlsafe()
 

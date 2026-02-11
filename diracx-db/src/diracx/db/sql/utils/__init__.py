@@ -9,6 +9,7 @@ __all__ = [
     "BaseSQLDB",
     "EnumBackedBool",
     "EnumColumn",
+    "enum_column",
     "apply_search_filters",
     "apply_sort_constraints",
     "substract_date",
@@ -16,6 +17,13 @@ __all__ = [
     "SQLDBUnavailableError",
     "uuid7_from_datetime",
     "uuid7_to_datetime",
+    "datetime_now",
+    "str32",
+    "str64",
+    "str128",
+    "str255",
+    "str512",
+    "str1024",
 ]
 
 from .base import (
@@ -28,4 +36,18 @@ from .base import (
     uuid7_to_datetime,
 )
 from .functions import hash, substract_date, utcnow
-from .types import Column, DateNowColumn, EnumBackedBool, EnumColumn, NullColumn
+from .types import (
+    Column,
+    DateNowColumn,
+    EnumBackedBool,
+    EnumColumn,
+    NullColumn,
+    datetime_now,
+    enum_column,
+    str32,
+    str64,
+    str128,
+    str255,
+    str512,
+    str1024,
+)

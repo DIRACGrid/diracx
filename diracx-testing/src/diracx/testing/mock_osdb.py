@@ -37,9 +37,7 @@ class MockOSDBMixin:
     """
 
     def __init__(self, connection_kwargs: dict[str, Any]) -> None:
-        from sqlalchemy import JSON, Column, Integer, MetaData, String, Table
-
-        from diracx.db.sql.utils import DateNowColumn
+        from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table
 
         # Dynamically create a subclass of BaseSQLDB so we get clearer errors
         mocked_db = type(f"Mocked{self.__class__.__name__}", (sql_utils.BaseSQLDB,), {})
@@ -53,7 +51,11 @@ class MockOSDBMixin:
         for field, field_type in self.fields.items():
             match field_type["type"]:
                 case "date":
-                    column_type = DateNowColumn
+                    column_type = partial(
+                        Column,
+                        type_=DateTime(timezone=True),
+                        server_default=sql_utils.utcnow(),
+                    )
                 case "long":
                     column_type = partial(Column, type_=Integer)
                 case "keyword":
