@@ -314,7 +314,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         return [
             dict(row._mapping)
             async for row in (await self.conn.stream(stmt))
-            if row.count > 0  # type: ignore
+            if row._mapping["count"] > 0
         ]
 
 
