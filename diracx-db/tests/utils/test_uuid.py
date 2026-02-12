@@ -131,16 +131,16 @@ class TestUuid7ToDatetime:
     def test_uuid7_to_datetime_invalid_input_type(self):
         """Test that invalid input types raise appropriate errors."""
         with pytest.raises(TypeError):
-            uuid7_to_datetime(123)  # type: ignore
+            uuid7_to_datetime(123)
 
         with pytest.raises(TypeError):
-            uuid7_to_datetime(123.45)  # type: ignore
+            uuid7_to_datetime(123.45)
 
         with pytest.raises(TypeError):
-            uuid7_to_datetime([])  # type: ignore
+            uuid7_to_datetime([])
 
         with pytest.raises(TypeError):
-            uuid7_to_datetime({})  # type: ignore
+            uuid7_to_datetime({})
 
     def test_uuid7_to_datetime_invalid_uuid_string(self):
         """Test that invalid UUID strings raise appropriate errors."""

@@ -88,11 +88,13 @@ def serialize_credentials(token_response: TokenResponse) -> str:
     return json.dumps(credential_data)
 
 
-def read_credentials(location: Path) -> TokenResponse:
+def read_credentials(location: Path | None = None) -> TokenResponse:
     """Read credentials from a file."""
     from diracx.core.preferences import get_diracx_preferences
 
-    credentials_path = location or get_diracx_preferences().credentials_path
+    credentials_path = (
+        location if location is not None else get_diracx_preferences().credentials_path
+    )
     try:
         with open(credentials_path, "r") as f:
             # Lock the file to prevent other processes from writing to it at the same time
