@@ -8,5 +8,43 @@
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions"
     }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "autorest",
+      "matchStrings": [
+        "AUTOREST_VERSION\\s*=\\s*[\"'](?<currentValue>\\S+)[\"']"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@autorest/core",
+      "matchStrings": [
+        "AUTOREST_CORE_VERSION\\s*=\\s*[\"'](?<currentValue>\\S+)[\"']"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "matchStrings": [
+        "AUTOREST_PUGINS\\s*=\\s*{[^}]*}",
+        "\\s*[\"'](?<depName>\\S+)[\"']:\\s*[\"'](?<currentValue>\\S+)[\"'],?"
+      ]
+    }
   ]
 }
