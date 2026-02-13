@@ -42,7 +42,7 @@
       "versioningTemplate": "npm",
       "datasourceTemplate": "npm",
       "matchStrings": [
-        "AUTOREST_PUGINS\\s*=\\s*{[^}]*}",
+        "AUTOREST_PLUGINS\\s*=\\s*{[^}]*}",
         "\\s*[\"'](?<depName>\\S+)[\"']:\\s*[\"'](?<currentValue>\\S+)[\"'],?"
       ]
     }
