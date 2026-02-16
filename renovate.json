@@ -7,6 +7,12 @@
       "description": "Group all GitHub Actions updates together",
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Group all Autorest updates together",
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["autorest", "@autorest/*"],
+      "groupName": "Autorest"
     }
   ],
   "customManagers": [
