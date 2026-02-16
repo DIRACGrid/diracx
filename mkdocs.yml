@@ -5,8 +5,10 @@ site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
 site_url: https://diracx.io/
 site_description: >-
-  Write your documentation in Markdown and create a professional static site in
-  minutes – searchable, customizable, in 60+ languages, for all devices
+  DiracX is the modern, next-generation successor to the DIRAC distributed computing framework,
+  originally developed by LHCb at CERN for large-scale scientific data management and workload processing.
+  DiracX redefines distributed infrastructure with a microservices architecture, token-based authentication,
+  and a focus on usability, extensibility, and easy deployment.
 
 theme:
   name: material
