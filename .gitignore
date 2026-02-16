@@ -75,6 +75,9 @@ Local_*
 htmlcov/
 *.xml.temp
 
+# Autorest
+**/*-client/src/*/client/apiview-properties.json
+
 #remove in case we want a specific LHCb one
 .pylintrc
 
