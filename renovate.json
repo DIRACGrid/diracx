@@ -7,6 +7,50 @@
       "description": "Group all GitHub Actions updates together",
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Group all Autorest updates together",
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["autorest", "@autorest/*"],
+      "groupName": "Autorest"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "autorest",
+      "matchStrings": [
+        "AUTOREST_VERSION\\s*=\\s*[\"'](?<currentValue>\\S+)[\"']"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "depNameTemplate": "@autorest/core",
+      "matchStrings": [
+        "AUTOREST_CORE_VERSION\\s*=\\s*[\"'](?<currentValue>\\S+)[\"']"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "diracx-testing/src/diracx/testing/client_generation.py"
+      ],
+      "versioningTemplate": "npm",
+      "datasourceTemplate": "npm",
+      "matchStrings": [
+        "AUTOREST_PLUGINS\\s*=\\s*{[^}]*}",
+        "\\s*[\"'](?<depName>\\S+)[\"']:\\s*[\"'](?<currentValue>\\S+)[\"'],?"
+      ]
     }
   ]
 }
