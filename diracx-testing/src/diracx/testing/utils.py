@@ -61,7 +61,7 @@ def private_key() -> OKPKey:
     return OKPKey.generate_key(
         parameters={
             "key_ops": ["sign", "verify"],
-            "alg": "EdDSA",
+            "alg": "Ed25519",
             "kid": uuid7().hex,
         }
     )
