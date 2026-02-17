@@ -187,6 +187,7 @@ nav:
       - Security policies: dev/reference/security-policies.md
       - Security properties: dev/reference/security-properties.md
       - Test recipes: dev/reference/test-recipes.md
+      - Issue triage: dev/reference/issue-triage.md
 
 markdown_extensions:
   - admonition
