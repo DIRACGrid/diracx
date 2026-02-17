@@ -10,7 +10,6 @@ from sqlalchemy import (
     exists,
     insert,
     literal,
-    or_,
     select,
     update,
 )
@@ -24,7 +23,7 @@ from diracx.core.exceptions import (
 from diracx.core.models.auth import UserInfo
 from diracx.core.models.sandbox import SandboxInfo, SandboxType
 from diracx.db.sql.utils.base import BaseSQLDB
-from diracx.db.sql.utils.functions import days_since, utcnow
+from diracx.db.sql.utils.functions import substract_date, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners
@@ -216,6 +215,10 @@ class SandboxMetadataDB(BaseSQLDB):
         Uses FOR UPDATE SKIP LOCKED on MySQL to allow concurrent workers to
         process different sandboxes in parallel without conflicts.
 
+        Runs two separate queries so MySQL can use indexes effectively:
+        1. Assigned but orphaned sandboxes (fast with Location key + NOT EXISTS)
+        2. Unassigned sandboxes older than 15 days (uses idx_assigned_lastaccesstime)
+
         Args:
             batch_size: Maximum number of sandboxes to select.
 
@@ -224,33 +227,61 @@ class SandboxMetadataDB(BaseSQLDB):
             On MySQL, the rows remain locked until the transaction commits/rollbacks.
 
         """
-        conditions = [
-            # If it has assigned to a job but is no longer mapped it can be removed
-            and_(
-                SandBoxes.Assigned,
-                ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
-            ),
-            # If the sandbox is still unassigned after 15 days, remove it
-            and_(~SandBoxes.Assigned, days_since(SandBoxes.LastAccessTime) >= 15),
-        ]
-        # Sandboxes which are not on S3 will be handled by legacy DIRAC
-        condition = and_(SandBoxes.SEPFN.like("/S3/%"), or_(*conditions))
-
-        select_stmt = (
-            select(SandBoxes.SBId, SandBoxes.SEPFN).where(condition).limit(batch_size)
-        )
-
-        # FOR UPDATE SKIP LOCKED is only supported on MySQL
-        # SQLite is used for testing and doesn't support row locking
-        if self.conn.dialect.name == "mysql":
-            select_stmt = select_stmt.with_for_update(skip_locked=True)
-        elif self.conn.dialect.name != "sqlite":
+        is_mysql = self.conn.dialect.name == "mysql"
+        if not is_mysql and self.conn.dialect.name != "sqlite":
             raise NotImplementedError(
                 f"Unsupported database dialect: {self.conn.dialect.name}"
             )
 
-        result = await self.conn.execute(select_stmt)
-        rows = result.all()
+        # Fetch distinct SEName values so the queries can use the Location
+        # unique key (SEName, SEPFN) instead of doing a full table scan.
+        se_names_result = await self.conn.execute(select(SandBoxes.SEName).distinct())
+        se_names = [row.SEName for row in se_names_result]
+        if not se_names:
+            return [], []
+
+        s3_condition = and_(
+            SandBoxes.SEName.in_(se_names),
+            SandBoxes.SEPFN.like("/S3/%"),
+        )
+
+        # Query 1: Assigned but orphaned sandboxes (fast with Location key)
+        orphaned_condition = and_(
+            SandBoxes.Assigned,
+            ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
+            s3_condition,
+        )
+        stmt1 = (
+            select(SandBoxes.SBId, SandBoxes.SEPFN)
+            .where(orphaned_condition)
+            .limit(batch_size)
+        )
+        if is_mysql:
+            stmt1 = stmt1.with_for_update(skip_locked=True)
+
+        result = await self.conn.execute(stmt1)
+        rows = list(result.all())
+
+        # Query 2: Unassigned sandboxes older than 15 days (sargable,
+        # benefits from idx_assigned_lastaccesstime index)
+        remaining = batch_size - len(rows)
+        if remaining > 0:
+            threshold = substract_date(days=15)
+            unassigned_condition = and_(
+                ~SandBoxes.Assigned,
+                SandBoxes.LastAccessTime < threshold,
+                s3_condition,
+            )
+            stmt2 = (
+                select(SandBoxes.SBId, SandBoxes.SEPFN)
+                .where(unassigned_condition)
+                .limit(remaining)
+            )
+            if is_mysql:
+                stmt2 = stmt2.with_for_update(skip_locked=True)
+
+            result = await self.conn.execute(stmt2)
+            rows.extend(result.all())
 
         sb_ids = [row.SBId for row in rows]
         pfns = [row.SEPFN for row in rows]

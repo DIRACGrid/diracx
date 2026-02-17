@@ -201,7 +201,7 @@ async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
     *,
-    batch_size: int = 500,
+    batch_size: int = 5000,
     max_workers: int = 10,
 ) -> int:
     """Delete sandboxes that are not assigned to any job.
