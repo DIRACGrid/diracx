@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.9](https://github.com/DIRACGrid/diracx/compare/v0.0.8...v0.0.9) (2026-02-17)
+
+
+### Features
+
+* auto-convert PR to draft on changes requested ([#770](https://github.com/DIRACGrid/diracx/issues/770)) ([f6cef6f](https://github.com/DIRACGrid/diracx/commit/f6cef6f7f98c148c4447b55b976ac2fc1b76dbda))
+* use artifact-based approach for draft-on-changes-requested workflow ([#773](https://github.com/DIRACGrid/diracx/issues/773)) ([e84ed6f](https://github.com/DIRACGrid/diracx/commit/e84ed6fd8e63f87fb729cb50bcfc5467f7fee3d3))
+
+
+### Bug Fixes
+
+* include LICENSE file in sub-package sdists and wheels ([#776](https://github.com/DIRACGrid/diracx/issues/776)) ([9073611](https://github.com/DIRACGrid/diracx/commit/9073611ed9acfc64621b21b7d401de4ab847c5b5))
+* reference reusable workflow from .github repo ([#774](https://github.com/DIRACGrid/diracx/issues/774)) ([9b967b1](https://github.com/DIRACGrid/diracx/commit/9b967b1e2600a370f0d16a1650e8c1b8f9a96a3d))
+* use PAT and API-based PR lookup for draft conversion ([#772](https://github.com/DIRACGrid/diracx/issues/772)) ([ee1095b](https://github.com/DIRACGrid/diracx/commit/ee1095bb96a9c63ea3436c96a31664c374f85a2b))
+
+
+### Miscellaneous Chores
+
+* release 0.0.9 ([26efc44](https://github.com/DIRACGrid/diracx/commit/26efc441de387202d3050db73f17ce9852520be0))
+
 ## [0.0.8](https://github.com/DIRACGrid/diracx/compare/v0.0.7...v0.0.8) (2026-02-02)
 
 
