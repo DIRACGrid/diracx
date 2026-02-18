@@ -233,12 +233,18 @@ async def clean_sandboxes(
     async def worker(prefer_unassigned: bool) -> int:
         """Process batches until no more work is available."""
         worker_deleted = 0
+        cursor = 0
         while True:
             async with sandbox_metadata_db:
                 # Select and lock a batch of sandboxes
-                sb_ids, pfns = await sandbox_metadata_db.select_sandboxes_for_deletion(
+                (
+                    sb_ids,
+                    pfns,
+                    cursor,
+                ) = await sandbox_metadata_db.select_sandboxes_for_deletion(
                     batch_size=batch_size,
                     prefer_unassigned=prefer_unassigned,
+                    cursor=cursor,
                 )
 
                 if not pfns:
