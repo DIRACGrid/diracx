@@ -208,12 +208,19 @@ class SandboxMetadataDB(BaseSQLDB):
                 await self.conn.execute(unassign_stmt)
 
     async def select_sandboxes_for_deletion(
-        self, *, batch_size: int = 500, prefer_unassigned: bool = False
-    ) -> tuple[list[int], list[str]]:
+        self,
+        *,
+        batch_size: int = 500,
+        prefer_unassigned: bool = False,
+        cursor: int = 0,
+    ) -> tuple[list[int], list[str], int]:
         """Select and lock a batch of sandboxes for deletion.
 
         Uses FOR UPDATE SKIP LOCKED on MySQL to allow concurrent workers to
         process different sandboxes in parallel without conflicts.
+
+        Uses cursor-based pagination (SBId > cursor) to avoid re-scanning
+        rows that were already checked in previous batches.
 
         Runs two separate queries so MySQL can use indexes effectively:
         - Assigned but orphaned sandboxes (fast with Location key + NOT EXISTS)
@@ -225,9 +232,11 @@ class SandboxMetadataDB(BaseSQLDB):
         Args:
             batch_size: Maximum number of sandboxes to select.
             prefer_unassigned: If True, run the unassigned query first.
+            cursor: Only consider sandboxes with SBId > cursor.
 
         Returns:
-            Tuple of (sb_ids, pfns) for the selected sandboxes.
+            Tuple of (sb_ids, pfns, new_cursor) for the selected sandboxes.
+            new_cursor is the maximum SBId seen, to pass as cursor next time.
             On MySQL, the rows remain locked until the transaction commits/rollbacks.
 
         """
@@ -242,7 +251,7 @@ class SandboxMetadataDB(BaseSQLDB):
         se_names_result = await self.conn.execute(select(SandBoxes.SEName).distinct())
         se_names = [row.SEName for row in se_names_result]
         if not se_names:
-            return [], []
+            return [], [], cursor
 
         s3_condition = and_(
             SandBoxes.SEName.in_(se_names),
@@ -251,6 +260,7 @@ class SandboxMetadataDB(BaseSQLDB):
 
         # Orphaned: assigned but no longer mapped to any entity
         orphaned_condition = and_(
+            SandBoxes.SBId > cursor,
             SandBoxes.Assigned,
             ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
             s3_condition,
@@ -258,6 +268,7 @@ class SandboxMetadataDB(BaseSQLDB):
         # Unassigned: never assigned and older than 15 days (sargable)
         threshold = substract_date(days=15)
         unassigned_condition = and_(
+            SandBoxes.SBId > cursor,
             ~SandBoxes.Assigned,
             SandBoxes.LastAccessTime < threshold,
             s3_condition,
@@ -276,6 +287,7 @@ class SandboxMetadataDB(BaseSQLDB):
             stmt = (
                 select(SandBoxes.SBId, SandBoxes.SEPFN)
                 .where(condition)
+                .order_by(SandBoxes.SBId)
                 .limit(remaining)
             )
             if is_mysql:
@@ -285,8 +297,9 @@ class SandboxMetadataDB(BaseSQLDB):
 
         sb_ids = [row.SBId for row in rows]
         pfns = [row.SEPFN for row in rows]
+        new_cursor = max(sb_ids) if sb_ids else cursor
 
-        return sb_ids, pfns
+        return sb_ids, pfns, new_cursor
 
     async def delete_sandboxes(self, sb_ids: list[int]) -> int:
         """Delete sandboxes by their IDs.
