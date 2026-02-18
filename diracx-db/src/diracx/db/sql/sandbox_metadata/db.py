@@ -208,7 +208,7 @@ class SandboxMetadataDB(BaseSQLDB):
                 await self.conn.execute(unassign_stmt)
 
     async def select_sandboxes_for_deletion(
-        self, *, batch_size: int = 500
+        self, *, batch_size: int = 500, prefer_unassigned: bool = False
     ) -> tuple[list[int], list[str]]:
         """Select and lock a batch of sandboxes for deletion.
 
@@ -216,11 +216,15 @@ class SandboxMetadataDB(BaseSQLDB):
         process different sandboxes in parallel without conflicts.
 
         Runs two separate queries so MySQL can use indexes effectively:
-        1. Assigned but orphaned sandboxes (fast with Location key + NOT EXISTS)
-        2. Unassigned sandboxes older than 15 days (uses idx_assigned_lastaccesstime)
+        - Assigned but orphaned sandboxes (fast with Location key + NOT EXISTS)
+        - Unassigned sandboxes older than 15 days (uses idx_assigned_lastaccesstime)
+
+        The ``prefer_unassigned`` flag controls which query runs first, allowing
+        callers to spread workers across both query types.
 
         Args:
             batch_size: Maximum number of sandboxes to select.
+            prefer_unassigned: If True, run the unassigned query first.
 
         Returns:
             Tuple of (sb_ids, pfns) for the selected sandboxes.
@@ -245,42 +249,38 @@ class SandboxMetadataDB(BaseSQLDB):
             SandBoxes.SEPFN.like("/S3/%"),
         )
 
-        # Query 1: Assigned but orphaned sandboxes (fast with Location key)
+        # Orphaned: assigned but no longer mapped to any entity
         orphaned_condition = and_(
             SandBoxes.Assigned,
             ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
             s3_condition,
         )
-        stmt1 = (
-            select(SandBoxes.SBId, SandBoxes.SEPFN)
-            .where(orphaned_condition)
-            .limit(batch_size)
+        # Unassigned: never assigned and older than 15 days (sargable)
+        threshold = substract_date(days=15)
+        unassigned_condition = and_(
+            ~SandBoxes.Assigned,
+            SandBoxes.LastAccessTime < threshold,
+            s3_condition,
         )
-        if is_mysql:
-            stmt1 = stmt1.with_for_update(skip_locked=True)
 
-        result = await self.conn.execute(stmt1)
-        rows = list(result.all())
+        if prefer_unassigned:
+            conditions = [unassigned_condition, orphaned_condition]
+        else:
+            conditions = [orphaned_condition, unassigned_condition]
 
-        # Query 2: Unassigned sandboxes older than 15 days (sargable,
-        # benefits from idx_assigned_lastaccesstime index)
-        remaining = batch_size - len(rows)
-        if remaining > 0:
-            threshold = substract_date(days=15)
-            unassigned_condition = and_(
-                ~SandBoxes.Assigned,
-                SandBoxes.LastAccessTime < threshold,
-                s3_condition,
-            )
-            stmt2 = (
+        rows: list = []
+        for condition in conditions:
+            remaining = batch_size - len(rows)
+            if remaining <= 0:
+                break
+            stmt = (
                 select(SandBoxes.SBId, SandBoxes.SEPFN)
-                .where(unassigned_condition)
+                .where(condition)
                 .limit(remaining)
             )
             if is_mysql:
-                stmt2 = stmt2.with_for_update(skip_locked=True)
-
-            result = await self.conn.execute(stmt2)
+                stmt = stmt.with_for_update(skip_locked=True)
+            result = await self.conn.execute(stmt)
             rows.extend(result.all())
 
         sb_ids = [row.SBId for row in rows]

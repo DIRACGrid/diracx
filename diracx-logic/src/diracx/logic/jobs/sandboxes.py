@@ -230,14 +230,15 @@ async def clean_sandboxes(
             "SQLite does not support parallel workers (no SKIP LOCKED support)"
         )
 
-    async def worker() -> int:
+    async def worker(prefer_unassigned: bool) -> int:
         """Process batches until no more work is available."""
         worker_deleted = 0
         while True:
             async with sandbox_metadata_db:
                 # Select and lock a batch of sandboxes
                 sb_ids, pfns = await sandbox_metadata_db.select_sandboxes_for_deletion(
-                    batch_size=batch_size
+                    batch_size=batch_size,
+                    prefer_unassigned=prefer_unassigned,
                 )
 
                 if not pfns:
@@ -263,6 +264,10 @@ async def clean_sandboxes(
         return worker_deleted
 
     async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(worker()) for _ in range(max_workers)]
+        # Split workers: half prefer orphaned sandboxes, half prefer unassigned
+        tasks = [
+            tg.create_task(worker(prefer_unassigned=i % 2 == 1))
+            for i in range(max_workers)
+        ]
 
     return sum(task.result() for task in tasks)
