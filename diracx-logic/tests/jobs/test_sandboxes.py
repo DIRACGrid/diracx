@@ -118,7 +118,7 @@ async def test_upload_and_clean(
         assert response.content == data
 
     # There should be no sandboxes to remove
-    await clean_sandboxes(sandbox_metadata_db, sandbox_settings, max_workers=1)
+    await clean_sandboxes(sandbox_metadata_db, sandbox_settings)
 
     # Try to download the sandbox
     async with sandbox_metadata_db:
@@ -139,7 +139,7 @@ async def test_upload_and_clean(
     )
 
     # Now the sandbox should be removed
-    await clean_sandboxes(sandbox_metadata_db, sandbox_settings, max_workers=1)
+    await clean_sandboxes(sandbox_metadata_db, sandbox_settings)
 
     # Check that the sandbox was actually removed from the bucket
     with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):

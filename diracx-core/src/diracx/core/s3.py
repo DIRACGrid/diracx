@@ -90,11 +90,15 @@ def b16_to_b64(hex_string: str) -> str:
 async def s3_bulk_delete_with_retry(
     s3_client, bucket: str, objects: list[S3Object]
 ) -> None:
-    # S3 delete_objects supports at most 1000 keys per call
+    # S3 delete_objects supports at most 1000 keys per call.
+    # Chunks are sent concurrently for throughput.
     max_chunk_size = 1000
-    for i in range(0, len(objects), max_chunk_size):
-        chunk = objects[i : i + max_chunk_size]
-        await _s3_delete_chunk_with_retry(s3_client, bucket, chunk)
+    chunks = [
+        objects[i : i + max_chunk_size] for i in range(0, len(objects), max_chunk_size)
+    ]
+    async with asyncio.TaskGroup() as tg:
+        for chunk in chunks:
+            tg.create_task(_s3_delete_chunk_with_retry(s3_client, bucket, chunk))
 
 
 async def _s3_delete_chunk_with_retry(
