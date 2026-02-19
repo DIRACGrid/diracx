@@ -21,7 +21,7 @@ import git
 AUTOREST_VERSION = "3.7.2"
 AUTOREST_CORE_VERSION = "3.10.8"
 AUTOREST_PLUGINS = {
-    "@autorest/python": "6.49.0",
+    "@autorest/python": "6.49.1",
     "@autorest/modelerfour": "4.27.2",
 }
 
@@ -143,11 +143,11 @@ def regenerate_client(openapi_spec: Path, client_module: str):
     extension_name = client_root.parent.name
 
     repo_root = client_root.parents[3]
-    if extension_name == "gubbins" and not (repo_root / ".git").is_dir():
+    if extension_name == "gubbins" and not (repo_root / ".git").exists():
         # Gubbins is special because it has a different structure due to being
         # in a subdirectory of diracx
         repo_root = repo_root.parents[1]
-    assert (repo_root / ".git").is_dir()
+    assert (repo_root / ".git").exists()
     repo = git.Repo(repo_root)
     generated_dir = client_root / "_generated"
     if repo.is_dirty(path=generated_dir):
