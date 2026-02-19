@@ -211,41 +211,26 @@ class SandboxMetadataDB(BaseSQLDB):
         self,
         *,
         batch_size: int = 500,
-        prefer_unassigned: bool = False,
         cursor: int = 0,
     ) -> tuple[list[int], list[str], int]:
-        """Select and lock a batch of sandboxes for deletion.
-
-        Uses FOR UPDATE SKIP LOCKED on MySQL to allow concurrent workers to
-        process different sandboxes in parallel without conflicts.
+        """Select a batch of sandboxes for deletion.
 
         Uses cursor-based pagination (SBId > cursor) to avoid re-scanning
         rows that were already checked in previous batches.
 
         Runs two separate queries so MySQL can use indexes effectively:
-        - Assigned but orphaned sandboxes (fast with Location key + NOT EXISTS)
-        - Unassigned sandboxes older than 15 days (uses idx_assigned_lastaccesstime)
-
-        The ``prefer_unassigned`` flag controls which query runs first, allowing
-        callers to spread workers across both query types.
+        - Orphaned assigned sandboxes (NOT EXISTS on entity mapping)
+        - Unassigned sandboxes older than 15 days (sargable comparison)
 
         Args:
             batch_size: Maximum number of sandboxes to select.
-            prefer_unassigned: If True, run the unassigned query first.
             cursor: Only consider sandboxes with SBId > cursor.
 
         Returns:
             Tuple of (sb_ids, pfns, new_cursor) for the selected sandboxes.
             new_cursor is the maximum SBId seen, to pass as cursor next time.
-            On MySQL, the rows remain locked until the transaction commits/rollbacks.
 
         """
-        is_mysql = self.conn.dialect.name == "mysql"
-        if not is_mysql and self.conn.dialect.name != "sqlite":
-            raise NotImplementedError(
-                f"Unsupported database dialect: {self.conn.dialect.name}"
-            )
-
         # Fetch distinct SEName values so the queries can use the Location
         # unique key (SEName, SEPFN) instead of doing a full table scan.
         se_names_result = await self.conn.execute(select(SandBoxes.SEName).distinct())
@@ -258,26 +243,24 @@ class SandboxMetadataDB(BaseSQLDB):
             SandBoxes.SEPFN.like("/S3/%"),
         )
 
-        # Orphaned: assigned but no longer mapped to any entity
-        orphaned_condition = and_(
-            SandBoxes.SBId > cursor,
-            SandBoxes.Assigned,
-            ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
-            s3_condition,
-        )
-        # Unassigned: never assigned and older than 15 days (sargable)
-        threshold = substract_date(days=15)
-        unassigned_condition = and_(
-            SandBoxes.SBId > cursor,
-            ~SandBoxes.Assigned,
-            SandBoxes.LastAccessTime < threshold,
-            s3_condition,
-        )
+        conditions = [
+            # Orphaned: assigned but no longer mapped to any entity
+            and_(
+                SandBoxes.SBId > cursor,
+                SandBoxes.Assigned,
+                ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
+                s3_condition,
+            ),
+            # Unassigned: never assigned and older than 15 days (sargable)
+            and_(
+                SandBoxes.SBId > cursor,
+                ~SandBoxes.Assigned,
+                SandBoxes.LastAccessTime < substract_date(days=15),
+                s3_condition,
+            ),
+        ]
 
-        if prefer_unassigned:
-            conditions = [unassigned_condition, orphaned_condition]
-        else:
-            conditions = [orphaned_condition, unassigned_condition]
+        is_mysql = self.conn.dialect.name == "mysql"
 
         rows: list = []
         for condition in conditions:

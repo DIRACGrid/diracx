@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -201,79 +200,55 @@ async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
     *,
-    batch_size: int = 5000,
-    max_workers: int = 10,
+    batch_size: int = 50000,
 ) -> int:
     """Delete sandboxes that are not assigned to any job.
 
-    Uses SELECT FOR UPDATE SKIP LOCKED to allow multiple workers to run
-    in parallel without conflicts. Each batch:
-    1. Selects and locks rows
-    2. Deletes from S3
+    Each batch:
+    1. Selects rows using cursor-based pagination
+    2. Deletes from S3 (chunks sent concurrently)
     3. Deletes from DB
 
     Args:
         sandbox_metadata_db: Database connection (not yet entered).
         settings: Sandbox store settings with S3 client.
         batch_size: Number of sandboxes to process per batch.
-        max_workers: Maximum number of concurrent workers processing batches.
 
     Returns:
         Total number of sandboxes deleted.
 
     """
-    # Check if parallel workers are supported
-    async with sandbox_metadata_db:
-        dialect = sandbox_metadata_db.conn.dialect.name
-    if max_workers > 1 and dialect == "sqlite":
-        raise NotImplementedError(
-            "SQLite does not support parallel workers (no SKIP LOCKED support)"
-        )
+    total_deleted = 0
+    cursor = 0
+    while True:
+        async with sandbox_metadata_db:
+            (
+                sb_ids,
+                pfns,
+                cursor,
+            ) = await sandbox_metadata_db.select_sandboxes_for_deletion(
+                batch_size=batch_size,
+                cursor=cursor,
+            )
 
-    async def worker(prefer_unassigned: bool) -> int:
-        """Process batches until no more work is available."""
-        worker_deleted = 0
-        cursor = 0
-        while True:
-            async with sandbox_metadata_db:
-                # Select and lock a batch of sandboxes
-                (
-                    sb_ids,
-                    pfns,
-                    cursor,
-                ) = await sandbox_metadata_db.select_sandboxes_for_deletion(
-                    batch_size=batch_size,
-                    prefer_unassigned=prefer_unassigned,
-                    cursor=cursor,
-                )
+            if not pfns:
+                break
 
-                if not pfns:
-                    break
+            # Delete from S3 first (chunks sent concurrently)
+            objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
+            if logger.isEnabledFor(logging.DEBUG):
+                for pfn in pfns:
+                    logger.debug("Deleting sandbox %s from S3", pfn)
 
-                # Delete from S3 first (while rows are locked)
-                objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
-                if logger.isEnabledFor(logging.DEBUG):
-                    for pfn in pfns:
-                        logger.debug("Deleting sandbox %s from S3", pfn)
+            await s3_bulk_delete_with_retry(
+                settings.s3_client, settings.bucket_name, objects
+            )
+            logger.info(
+                "Deleted %d sandboxes from %s", len(objects), settings.bucket_name
+            )
 
-                await s3_bulk_delete_with_retry(
-                    settings.s3_client, settings.bucket_name, objects
-                )
-                logger.info(
-                    "Deleted %d sandboxes from %s", len(objects), settings.bucket_name
-                )
+            # Then delete from DB
+            await sandbox_metadata_db.delete_sandboxes(sb_ids)
+            total_deleted += len(sb_ids)
 
-                # Then delete from DB
-                await sandbox_metadata_db.delete_sandboxes(sb_ids)
-                worker_deleted += len(sb_ids)
-
-        return worker_deleted
-
-    async with asyncio.TaskGroup() as tg:
-        # Split workers: half prefer orphaned sandboxes, half prefer unassigned
-        tasks = [
-            tg.create_task(worker(prefer_unassigned=i % 2 == 1))
-            for i in range(max_workers)
-        ]
-
-    return sum(task.result() for task in tasks)
+    return total_deleted
