@@ -22,7 +22,7 @@ jobs:
           tags: true
 
       - name: Run Trivy (client:dev)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ghcr.io/diracgrid/diracx/client:dev"
           format: "sarif"
@@ -35,7 +35,7 @@ jobs:
           category: "client-dev"
 
       - name: Run Trivy (services:dev)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ghcr.io/diracgrid/diracx/services:dev"
           format: "sarif"
@@ -61,7 +61,7 @@ jobs:
 
       - name: Run Trivy (client:release)
         if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ghcr.io/diracgrid/diracx/client:${{ steps.get-latest-tag.outputs.latest_tag }}"
           format: "sarif"
@@ -77,7 +77,7 @@ jobs:
 
       - name: Run Trivy (services:release)
         if: ${{ steps.get-latest-tag.outputs.latest_tag != '' }}
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: "ghcr.io/diracgrid/diracx/services:${{ steps.get-latest-tag.outputs.latest_tag }}"
           format: "sarif"
