@@ -221,6 +221,7 @@ async def clean_sandboxes(
     total_deleted = 0
     cursor = 0
     while True:
+        # Phase 1: SELECT candidates (short transaction, no locks)
         async with sandbox_metadata_db:
             (
                 sb_ids,
@@ -231,24 +232,24 @@ async def clean_sandboxes(
                 cursor=cursor,
             )
 
-            if not pfns:
-                break
+        if not pfns:
+            break
 
-            # Delete from S3 first (chunks sent concurrently)
-            objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
-            if logger.isEnabledFor(logging.DEBUG):
-                for pfn in pfns:
-                    logger.debug("Deleting sandbox %s from S3", pfn)
+        # Phase 2: Delete from S3 (no transaction — prevents dark data
+        # since S3 is cleaned first)
+        objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
+        if logger.isEnabledFor(logging.DEBUG):
+            for pfn in pfns:
+                logger.debug("Deleting sandbox %s from S3", pfn)
 
-            await s3_bulk_delete_with_retry(
-                settings.s3_client, settings.bucket_name, objects
-            )
-            logger.info(
-                "Deleted %d sandboxes from %s", len(objects), settings.bucket_name
-            )
+        await s3_bulk_delete_with_retry(
+            settings.s3_client, settings.bucket_name, objects
+        )
+        logger.info("Deleted %d sandboxes from %s", len(objects), settings.bucket_name)
 
-            # Then delete from DB
+        # Phase 3: Delete from DB (short transaction)
+        async with sandbox_metadata_db:
             await sandbox_metadata_db.delete_sandboxes(sb_ids)
-            total_deleted += len(sb_ids)
+        total_deleted += len(sb_ids)
 
     return total_deleted
