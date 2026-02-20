@@ -291,4 +291,8 @@ async def clean_sandboxes(
             total_deleted,
         )
 
+        # If we got fewer than batch_size, there are no more candidates
+        if len(sb_ids) < batch_size:
+            break
+
     return total_deleted
