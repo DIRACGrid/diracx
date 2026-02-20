@@ -276,7 +276,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
         async with get_session().create_client(
             "s3",
             **self.s3_client_kwargs,
-            config=Config(signature_version="v4"),
+            config=Config(signature_version="v4", max_pool_connections=50),
         ) as self._client:  # type: ignore
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
