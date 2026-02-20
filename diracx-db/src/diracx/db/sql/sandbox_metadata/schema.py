@@ -46,7 +46,6 @@ class SandBoxes(Base):
     __table_args__ = (
         PrimaryKeyConstraint("SBId"),
         Index("OwnerId", "OwnerId"),
-        Index("idx_assigned_lastaccesstime", "Assigned", "LastAccessTime"),
         UniqueConstraint("SEName", "SEPFN", name="Location"),
     )
 
