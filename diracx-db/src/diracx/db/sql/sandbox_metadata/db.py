@@ -298,5 +298,5 @@ class SandboxMetadataDB(BaseSQLDB):
 
         delete_stmt = delete(SandBoxes).where(SandBoxes.SBId.in_(sb_ids))
         result = await self.conn.execute(delete_stmt)
-        logger.info("Deleted %d expired/unassigned sandboxes", result.rowcount)
+        logger.debug("Deleted %d expired/unassigned sandboxes", result.rowcount)
         return result.rowcount

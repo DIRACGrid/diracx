@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Literal
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
@@ -221,8 +222,12 @@ async def clean_sandboxes(
     """
     total_deleted = 0
     cursor = 0
+    batch_num = 0
     while True:
+        batch_num += 1
+
         # Phase 1: SELECT candidates (short transaction, no locks)
+        t0 = time.monotonic()
         async with sandbox_metadata_db:
             (
                 sb_ids,
@@ -232,25 +237,37 @@ async def clean_sandboxes(
                 batch_size=batch_size,
                 cursor=cursor,
             )
+        select_duration = time.monotonic() - t0
 
         if not pfns:
+            logger.info(
+                "Batch %d: no candidates found (%.1fs)", batch_num, select_duration
+            )
             break
+
+        logger.info(
+            "Batch %d: selected %d candidates (%.1fs)",
+            batch_num,
+            len(pfns),
+            select_duration,
+        )
 
         # Phase 2: Delete from S3 (no transaction — prevents dark data
         # since S3 is cleaned first)
+        t0 = time.monotonic()
         objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
-        if logger.isEnabledFor(logging.DEBUG):
-            for pfn in pfns:
-                logger.debug("Deleting sandbox %s from S3", pfn)
-
         await s3_bulk_delete_with_retry(
             settings.s3_client, settings.bucket_name, objects
         )
-        logger.info("Deleted %d sandboxes from %s", len(objects), settings.bucket_name)
+        s3_duration = time.monotonic() - t0
+        logger.info(
+            "Batch %d: deleted %d from S3 (%.1fs)", batch_num, len(objects), s3_duration
+        )
 
         # Phase 3: Delete from DB in small chunks (each chunk is a short
         # transaction to avoid locking millions of rows in a single DELETE).
         # Up to 10 chunks run concurrently via a semaphore.
+        t0 = time.monotonic()
         delete_chunk_size = 1000
         sem = asyncio.Semaphore(10)
 
@@ -263,6 +280,15 @@ async def clean_sandboxes(
             for i in range(0, len(sb_ids), delete_chunk_size)
         ]
         results = await asyncio.gather(*tasks)
-        total_deleted += sum(results)
+        deleted = sum(results)
+        db_duration = time.monotonic() - t0
+        total_deleted += deleted
+        logger.info(
+            "Batch %d: deleted %d from DB (%.1fs, total so far: %d)",
+            batch_num,
+            deleted,
+            db_duration,
+            total_deleted,
+        )
 
     return total_deleted
