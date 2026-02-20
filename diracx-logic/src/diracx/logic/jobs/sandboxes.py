@@ -234,6 +234,7 @@ async def clean_sandboxes(
                 pfns,
                 cursor,
             ) = await sandbox_metadata_db.select_sandboxes_for_deletion(
+                se_name=settings.se_name,
                 batch_size=batch_size,
                 cursor=cursor,
             )
@@ -256,13 +257,38 @@ async def clean_sandboxes(
         # since S3 is cleaned first)
         t0 = time.monotonic()
         objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
-        await s3_bulk_delete_with_retry(
+        failed_keys = await s3_bulk_delete_with_retry(
             settings.s3_client, settings.bucket_name, objects
         )
         s3_duration = time.monotonic() - t0
+
+        if failed_keys:
+            # Only delete DB rows for sandboxes whose S3 objects were
+            # actually removed — the rest will be retried next run.
+            logger.warning(
+                "Batch %d: %d S3 deletions failed, skipping their DB rows",
+                batch_num,
+                len(failed_keys),
+            )
+            filtered = [
+                (sid, pfn)
+                for sid, pfn in zip(sb_ids, pfns)
+                if pfn_to_key(pfn) not in failed_keys
+            ]
+            if filtered:
+                sb_ids, pfns = map(list, zip(*filtered))
+            else:
+                sb_ids, pfns = [], []
+
         logger.info(
-            "Batch %d: deleted %d from S3 (%.1fs)", batch_num, len(objects), s3_duration
+            "Batch %d: deleted %d from S3 (%.1fs)",
+            batch_num,
+            len(objects) - len(failed_keys),
+            s3_duration,
         )
+
+        if not sb_ids:
+            continue
 
         # Phase 3: Delete from DB in small chunks (each chunk is a short
         # transaction to avoid locking millions of rows in a single DELETE).
