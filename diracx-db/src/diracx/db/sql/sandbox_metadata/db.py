@@ -260,27 +260,38 @@ class SandboxMetadataDB(BaseSQLDB):
             ),
         ]
 
-        is_mysql = self.conn.dialect.name == "mysql"
-
-        rows: list = []
+        # Step 1: Find candidate SBIds without locking (avoids locking
+        # every row examined during the scan).
+        candidate_ids: list[int] = []
         for condition in conditions:
-            remaining = batch_size - len(rows)
+            remaining = batch_size - len(candidate_ids)
             if remaining <= 0:
                 break
             stmt = (
-                select(SandBoxes.SBId, SandBoxes.SEPFN)
+                select(SandBoxes.SBId)
                 .where(condition)
                 .order_by(SandBoxes.SBId)
                 .limit(remaining)
             )
-            if is_mysql:
-                stmt = stmt.with_for_update(skip_locked=True)
             result = await self.conn.execute(stmt)
-            rows.extend(result.all())
+            candidate_ids.extend(row.SBId for row in result)
+
+        if not candidate_ids:
+            return [], [], cursor
+
+        # Step 2: Lock only the exact rows by primary key. SKIP LOCKED
+        # ensures concurrent runs don't process the same rows.
+        lock_stmt = select(SandBoxes.SBId, SandBoxes.SEPFN).where(
+            SandBoxes.SBId.in_(candidate_ids)
+        )
+        if self.conn.dialect.name == "mysql":
+            lock_stmt = lock_stmt.with_for_update(skip_locked=True)
+        result = await self.conn.execute(lock_stmt)
+        rows = result.all()
 
         sb_ids = [row.SBId for row in rows]
         pfns = [row.SEPFN for row in rows]
-        new_cursor = max(sb_ids) if sb_ids else cursor
+        new_cursor = max(candidate_ids)
 
         return sb_ids, pfns, new_cursor
 
