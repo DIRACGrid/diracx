@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -247,9 +248,21 @@ async def clean_sandboxes(
         )
         logger.info("Deleted %d sandboxes from %s", len(objects), settings.bucket_name)
 
-        # Phase 3: Delete from DB (short transaction)
-        async with sandbox_metadata_db:
-            await sandbox_metadata_db.delete_sandboxes(sb_ids)
-        total_deleted += len(sb_ids)
+        # Phase 3: Delete from DB in small chunks (each chunk is a short
+        # transaction to avoid locking millions of rows in a single DELETE).
+        # Up to 10 chunks run concurrently via a semaphore.
+        delete_chunk_size = 1000
+        sem = asyncio.Semaphore(10)
+
+        async def _delete_chunk(chunk: list[int], _sem: asyncio.Semaphore = sem) -> int:
+            async with _sem, sandbox_metadata_db:
+                return await sandbox_metadata_db.delete_sandboxes(chunk)
+
+        tasks = [
+            _delete_chunk(sb_ids[i : i + delete_chunk_size])
+            for i in range(0, len(sb_ids), delete_chunk_size)
+        ]
+        results = await asyncio.gather(*tasks)
+        total_deleted += sum(results)
 
     return total_deleted
