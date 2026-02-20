@@ -148,6 +148,15 @@ Logical name of the Storage Element for the sandbox store.
 This name is used within DIRAC to refer to this sandbox storage
 endpoint in job descriptions and file catalogs.
 
+### `DIRACX_SANDBOX_STORE_S3_MAX_POOL_CONNECTIONS`
+
+*Optional*, default value: `50`
+
+Maximum number of connections in the S3 client connection pool.
+
+Higher values allow more parallel S3 requests (e.g. during bulk sandbox
+deletion). Default: 50.
+
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.

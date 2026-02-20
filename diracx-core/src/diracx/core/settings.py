@@ -269,6 +269,14 @@ class SandboxStoreSettings(ServiceSettingsBase):
     This name is used within DIRAC to refer to this sandbox storage
     endpoint in job descriptions and file catalogs.
     """
+
+    s3_max_pool_connections: int = 50
+    """Maximum number of connections in the S3 client connection pool.
+
+    Higher values allow more parallel S3 requests (e.g. during bulk sandbox
+    deletion). Default: 50.
+    """
+
     _client: S3Client = PrivateAttr()
 
     @contextlib.asynccontextmanager
@@ -276,7 +284,10 @@ class SandboxStoreSettings(ServiceSettingsBase):
         async with get_session().create_client(
             "s3",
             **self.s3_client_kwargs,
-            config=Config(signature_version="v4", max_pool_connections=50),
+            config=Config(
+                signature_version="v4",
+                max_pool_connections=self.s3_max_pool_connections,
+            ),
         ) as self._client:  # type: ignore
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
