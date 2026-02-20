@@ -210,19 +210,21 @@ class SandboxMetadataDB(BaseSQLDB):
     async def select_sandboxes_for_deletion(
         self,
         *,
+        se_name: str,
         batch_size: int = 500,
         cursor: int = 0,
     ) -> tuple[list[int], list[str], int]:
-        """Select a batch of sandboxes for deletion.
+        """Select a batch of sandboxes eligible for deletion.
 
-        Uses cursor-based pagination (SBId > cursor) to avoid re-scanning
-        rows that were already checked in previous batches.
+        Uses cursor-based pagination (SBId > cursor) and runs two queries:
+        - Orphaned: assigned but no entity mapping (NOT EXISTS)
+        - Unassigned: not assigned and older than 15 days
 
-        Runs two separate queries so MySQL can use indexes effectively:
-        - Orphaned assigned sandboxes (NOT EXISTS on entity mapping)
-        - Unassigned sandboxes older than 15 days (sargable comparison)
+        No row locking is used — the caller is responsible for crash safety
+        by deleting from S3 before removing DB rows.
 
         Args:
+            se_name: Storage element name to filter on.
             batch_size: Maximum number of sandboxes to select.
             cursor: Only consider sandboxes with SBId > cursor.
 
@@ -231,15 +233,8 @@ class SandboxMetadataDB(BaseSQLDB):
             new_cursor is the maximum SBId seen, to pass as cursor next time.
 
         """
-        # Fetch distinct SEName values so the queries can use the Location
-        # unique key (SEName, SEPFN) instead of doing a full table scan.
-        se_names_result = await self.conn.execute(select(SandBoxes.SEName).distinct())
-        se_names = [row.SEName for row in se_names_result]
-        if not se_names:
-            return [], [], cursor
-
         s3_condition = and_(
-            SandBoxes.SEName.in_(se_names),
+            SandBoxes.SEName == se_name,
             SandBoxes.SEPFN.like("/S3/%"),
         )
 
