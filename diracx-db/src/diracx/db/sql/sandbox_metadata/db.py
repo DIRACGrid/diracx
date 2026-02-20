@@ -10,7 +10,6 @@ from sqlalchemy import (
     exists,
     insert,
     literal,
-    or_,
     select,
     update,
 )
@@ -24,7 +23,7 @@ from diracx.core.exceptions import (
 from diracx.core.models.auth import UserInfo
 from diracx.core.models.sandbox import SandboxInfo, SandboxType
 from diracx.db.sql.utils.base import BaseSQLDB
-from diracx.db.sql.utils.functions import days_since, utcnow
+from diracx.db.sql.utils.functions import substract_date, utcnow
 
 from .schema import Base as SandboxMetadataDBBase
 from .schema import SandBoxes, SBEntityMapping, SBOwners
@@ -209,53 +208,75 @@ class SandboxMetadataDB(BaseSQLDB):
                 await self.conn.execute(unassign_stmt)
 
     async def select_sandboxes_for_deletion(
-        self, *, batch_size: int = 500
-    ) -> tuple[list[int], list[str]]:
-        """Select and lock a batch of sandboxes for deletion.
+        self,
+        *,
+        se_name: str,
+        batch_size: int = 500,
+        cursor: int = 0,
+    ) -> tuple[list[int], list[str], int]:
+        """Select a batch of sandboxes eligible for deletion.
 
-        Uses FOR UPDATE SKIP LOCKED on MySQL to allow concurrent workers to
-        process different sandboxes in parallel without conflicts.
+        Uses cursor-based pagination (SBId > cursor) and runs two queries:
+        - Orphaned: assigned but no entity mapping (NOT EXISTS)
+        - Unassigned: not assigned and older than 15 days
+
+        No row locking is used — the caller is responsible for crash safety
+        by deleting from S3 before removing DB rows.
 
         Args:
+            se_name: Storage element name to filter on.
             batch_size: Maximum number of sandboxes to select.
+            cursor: Only consider sandboxes with SBId > cursor.
 
         Returns:
-            Tuple of (sb_ids, pfns) for the selected sandboxes.
-            On MySQL, the rows remain locked until the transaction commits/rollbacks.
+            Tuple of (sb_ids, pfns, new_cursor) for the selected sandboxes.
+            new_cursor is the maximum SBId seen, to pass as cursor next time.
 
         """
-        conditions = [
-            # If it has assigned to a job but is no longer mapped it can be removed
-            and_(
-                SandBoxes.Assigned,
-                ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
-            ),
-            # If the sandbox is still unassigned after 15 days, remove it
-            and_(~SandBoxes.Assigned, days_since(SandBoxes.LastAccessTime) >= 15),
-        ]
-        # Sandboxes which are not on S3 will be handled by legacy DIRAC
-        condition = and_(SandBoxes.SEPFN.like("/S3/%"), or_(*conditions))
-
-        select_stmt = (
-            select(SandBoxes.SBId, SandBoxes.SEPFN).where(condition).limit(batch_size)
+        s3_condition = and_(
+            SandBoxes.SEName == se_name,
+            SandBoxes.SEPFN.like("/S3/%"),
         )
 
-        # FOR UPDATE SKIP LOCKED is only supported on MySQL
-        # SQLite is used for testing and doesn't support row locking
-        if self.conn.dialect.name == "mysql":
-            select_stmt = select_stmt.with_for_update(skip_locked=True)
-        elif self.conn.dialect.name != "sqlite":
-            raise NotImplementedError(
-                f"Unsupported database dialect: {self.conn.dialect.name}"
+        conditions = [
+            # Orphaned: assigned but no longer mapped to any entity
+            and_(
+                SandBoxes.SBId > cursor,
+                SandBoxes.Assigned,
+                ~exists().where(SBEntityMapping.SBId == SandBoxes.SBId),
+                s3_condition,
+            ),
+            # Unassigned: never assigned and older than 15 days (sargable)
+            and_(
+                SandBoxes.SBId > cursor,
+                ~SandBoxes.Assigned,
+                SandBoxes.LastAccessTime < substract_date(days=15),
+                s3_condition,
+            ),
+        ]
+
+        sb_ids: list[int] = []
+        pfns: list[str] = []
+        for condition in conditions:
+            remaining = batch_size - len(sb_ids)
+            if remaining <= 0:
+                break
+            stmt = (
+                select(SandBoxes.SBId, SandBoxes.SEPFN)
+                .where(condition)
+                .order_by(SandBoxes.SBId)
+                .limit(remaining)
             )
+            result = await self.conn.execute(stmt)
+            for row in result:
+                sb_ids.append(row.SBId)
+                pfns.append(row.SEPFN)
 
-        result = await self.conn.execute(select_stmt)
-        rows = result.all()
+        if not sb_ids:
+            return [], [], cursor
 
-        sb_ids = [row.SBId for row in rows]
-        pfns = [row.SEPFN for row in rows]
-
-        return sb_ids, pfns
+        new_cursor = max(sb_ids)
+        return sb_ids, pfns, new_cursor
 
     async def delete_sandboxes(self, sb_ids: list[int]) -> int:
         """Delete sandboxes by their IDs.
@@ -272,5 +293,5 @@ class SandboxMetadataDB(BaseSQLDB):
 
         delete_stmt = delete(SandBoxes).where(SandBoxes.SBId.in_(sb_ids))
         result = await self.conn.execute(delete_stmt)
-        logger.info("Deleted %d expired/unassigned sandboxes", result.rowcount)
+        logger.debug("Deleted %d expired/unassigned sandboxes", result.rowcount)
         return result.rowcount
