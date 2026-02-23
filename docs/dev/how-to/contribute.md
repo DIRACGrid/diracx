@@ -52,3 +52,22 @@
 
 - **Trivial Changes:** For minor changes like fixing typos, feel free to skip the issue creation step and go straight to making a PR.
 - **Stay Up-to-Date:** Make sure your branch is up-to-date with the latest changes in the main branch before submitting your PR. Use `git rebase` if necessary.
+
+### 6. CI Automation
+
+DIRACGrid repositories use shared CI workflows (defined in [`DIRACGrid/.github`](https://github.com/DIRACGrid/.github)) to streamline the review process.
+
+#### Automatic draft conversion on changes requested
+
+When a reviewer requests changes on your PR, it is **automatically converted to a draft**. This makes it clear that the PR is back in the contributor's hands and not ready for another review round.
+
+Once you've addressed the feedback:
+
+1. Push your updates to the branch.
+2. Mark the PR as **Ready for review** again using the GitHub UI.
+
+The reviewer will be re-notified and can continue the review.
+
+#### PR review reminders
+
+A daily digest of open (non-draft) PRs is posted to Mattermost on weekday mornings. The digest includes the PR title, author, assigned reviewer, age, and review status for all repositories in the DIRACGrid organisation. This ensures that open PRs don't get forgotten.
