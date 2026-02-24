@@ -20,9 +20,10 @@ import yaml
 from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersionError
-from ..extensions import DiracEntryPoint, select_from_extension
-from ..utils import TwoLevelCache
+from diracx.core.exceptions import BadConfigurationVersionError
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
+from diracx.core.utils import TwoLevelCache
+
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"

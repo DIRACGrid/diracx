@@ -7,6 +7,97 @@ Shared between the client components (cli, api) and services components (db, log
 # TODO: remove after DIRACGrid/DIRAC#8433
 from __future__ import annotations
 
-from .auth import TokenResponse
+__all__ = [
+    # Auth
+    "AccessTokenPayload",
+    "GrantType",
+    "GroupInfo",
+    "InitiateDeviceFlowResponse",
+    "Metadata",
+    "OpenIDConfiguration",
+    "RefreshTokenPayload",
+    "TokenPayload",
+    "TokenResponse",
+    "TokenTypeHint",
+    "UserInfo",
+    # Job
+    "HeartbeatData",
+    "InsertedJob",
+    "JobAttributes",
+    "JobCommand",
+    "JobLoggingRecord",
+    "JobMetaData",
+    "JobMinorStatus",
+    "JobParameters",
+    "JobStatus",
+    "JobStatusReturn",
+    "JobStatusUpdate",
+    "SetJobStatusReturn",
+    # Replica Map
+    "ReplicaMap",
+    # Sanbox
+    "ChecksumAlgorithm",
+    "SandboxDownloadResponse",
+    "SandboxFormat",
+    "SandboxInfo",
+    "SandboxType",
+    "SandboxUploadResponse",
+    # Search
+    "ScalarSearchOperator",
+    "ScalarSearchSpec",
+    "SearchParams",
+    "SearchSpec",
+    "SortDirection",
+    "SortSpec",
+    "SummaryParams",
+    "VectorSearchOperator",
+    "VectorSearchSpec",
+]
 
-__all__ = ["TokenResponse"]
+from .auth import (
+    AccessTokenPayload,
+    GrantType,
+    GroupInfo,
+    InitiateDeviceFlowResponse,
+    Metadata,
+    OpenIDConfiguration,
+    RefreshTokenPayload,
+    TokenPayload,
+    TokenResponse,
+    TokenTypeHint,
+    UserInfo,
+)
+from .job import (
+    HeartbeatData,
+    InsertedJob,
+    JobAttributes,
+    JobCommand,
+    JobLoggingRecord,
+    JobMetaData,
+    JobMinorStatus,
+    JobParameters,
+    JobStatus,
+    JobStatusReturn,
+    JobStatusUpdate,
+    SetJobStatusReturn,
+)
+from .replica_map import ReplicaMap
+from .sandbox import (
+    ChecksumAlgorithm,
+    SandboxDownloadResponse,
+    SandboxFormat,
+    SandboxInfo,
+    SandboxType,
+    SandboxUploadResponse,
+)
+from .search import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    SearchParams,
+    SearchSpec,
+    SortDirection,
+    SortSpec,
+    SummaryParams,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)

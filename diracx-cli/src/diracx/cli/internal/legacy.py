@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 from pydantic import BaseModel
 from typer import Option
 
-from diracx.core.config import Config
-from diracx.core.config.schema import Field, SupportInfo
+from diracx.core.config import Config, Field, SupportInfo
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 
 from ..utils import AsyncTyper

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = (
+__all__ = [
     "Config",
     "AuthDB",
     "JobDB",
@@ -10,7 +10,9 @@ __all__ = (
     "PilotAgentsDB",
     "add_settings_annotation",
     "AvailableSecurityProperties",
-)
+    "AuthSettings",
+    "DevelopmentSettings",
+]
 
 from functools import partial
 from typing import Annotated, TypeVar

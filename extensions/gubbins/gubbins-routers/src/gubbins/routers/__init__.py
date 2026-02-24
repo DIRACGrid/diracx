@@ -1,1 +1,3 @@
-__all__ = ("dependencies", "lollygag", "well_known")
+from __future__ import annotations
+
+__all__ = []

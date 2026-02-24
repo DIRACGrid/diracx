@@ -6,28 +6,28 @@ from typing import Annotated, Any, Literal
 from fastapi import Body, Depends, HTTPException, Query
 
 from diracx.core.exceptions import SandboxAlreadyAssignedError, SandboxNotFoundError
-from diracx.core.models.sandbox import (
+from diracx.core.models import (
     SandboxDownloadResponse,
     SandboxInfo,
     SandboxUploadResponse,
 )
-from diracx.logic.jobs.sandboxes import SANDBOX_PFN_REGEX
-from diracx.logic.jobs.sandboxes import (
+from diracx.logic.jobs import SANDBOX_PFN_REGEX
+from diracx.logic.jobs import (
     assign_sandbox_to_job as assign_sandbox_to_job_bl,
 )
-from diracx.logic.jobs.sandboxes import get_job_sandbox as get_job_sandbox_bl
-from diracx.logic.jobs.sandboxes import get_job_sandboxes as get_job_sandboxes_bl
-from diracx.logic.jobs.sandboxes import get_sandbox_file as get_sandbox_file_bl
-from diracx.logic.jobs.sandboxes import (
+from diracx.logic.jobs import get_job_sandbox as get_job_sandbox_bl
+from diracx.logic.jobs import get_job_sandboxes as get_job_sandboxes_bl
+from diracx.logic.jobs import get_sandbox_file as get_sandbox_file_bl
+from diracx.logic.jobs import (
     initiate_sandbox_upload as initiate_sandbox_upload_bl,
 )
-from diracx.logic.jobs.sandboxes import (
+from diracx.logic.jobs import (
     unassign_jobs_sandboxes as unassign_jobs_sandboxes_bl,
 )
 
 from ..dependencies import JobDB, SandboxMetadataDB, SandboxStoreSettings
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import (
     ActionType,
     CheckSandboxPolicyCallable,

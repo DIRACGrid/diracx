@@ -2,6 +2,27 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "ClientFactory",
+    "aio_moto",
+    "cli_env",
+    "client_factory",
+    "demo_dir",
+    "demo_kubectl_env",
+    "demo_urls",
+    "do_device_flow_with_dex",
+    "fernet_key",
+    "private_key",
+    "pytest_addoption",
+    "session_client_factory",
+    "test_auth_settings",
+    "test_dev_settings",
+    "test_login",
+    "test_sandbox_settings",
+    "with_cli_login",
+    "with_config_repo",
+]
+
 # TODO: this needs a lot of documentation, in particular what will matter for users
 # are the enabled_dependencies markers
 import asyncio
@@ -24,7 +45,7 @@ from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
 from diracx.core.extensions import DiracEntryPoint
-from diracx.core.models.auth import AccessTokenPayload, RefreshTokenPayload
+from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
 
 if TYPE_CHECKING:
     from diracx.core.settings import (
@@ -32,7 +53,7 @@ if TYPE_CHECKING:
         DevelopmentSettings,
         SandboxStoreSettings,
     )
-    from diracx.routers.utils.users import AuthorizedUserInfo
+    from diracx.routers.utils import AuthorizedUserInfo
 
 
 # to get a string like this run:
@@ -342,7 +363,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def normal_user(self):
         from diracx.core.properties import NORMAL_USER
-        from diracx.routers.auth.token import create_token
+        from diracx.routers.auth import create_token
 
         with self.unauthenticated() as client:
             payload = {
@@ -365,7 +386,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def admin_user(self):
         from diracx.core.properties import JOB_ADMINISTRATOR
-        from diracx.routers.auth.token import create_token
+        from diracx.routers.auth import create_token
 
         with self.unauthenticated() as client:
             payload = {

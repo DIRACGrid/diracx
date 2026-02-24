@@ -6,11 +6,11 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.models.search import VectorSearchOperator
+from diracx.core.models import VectorSearchOperator
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.routers.access_policies import BaseAccessPolicy
-from diracx.routers.utils.users import AuthorizedUserInfo
+from diracx.routers.utils import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):

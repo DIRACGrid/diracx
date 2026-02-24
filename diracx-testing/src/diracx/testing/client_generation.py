@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-__all__ = [
-    "regenerate_client",
-]
+__all__ = ["regenerate_client"]
 
 import argparse
 import ast

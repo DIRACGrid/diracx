@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-__all__ = (
+__all__ = [
     "AuthDB",
     "JobDB",
     "JobLoggingDB",
     "PilotAgentsDB",
     "SandboxMetadataDB",
     "TaskQueueDB",
-)
+]
 
 from .auth.db import AuthDB
 from .job.db import JobDB

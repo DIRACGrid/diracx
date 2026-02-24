@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ["verify_entry_points"]
+
 import tomllib
 from collections import defaultdict
 from importlib.metadata import PackageNotFoundError, distribution, entry_points

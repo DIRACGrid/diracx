@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from diracx.core.settings import AuthSettings
-from diracx.routers.auth.token import create_token
+from diracx.routers.auth import create_token
 
 pytestmark = pytest.mark.enabled_dependencies(
     [

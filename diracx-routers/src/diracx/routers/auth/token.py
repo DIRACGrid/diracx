@@ -14,15 +14,15 @@ from diracx.core.exceptions import (
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
-from diracx.core.models.auth import (
+from diracx.core.models import (
     AccessTokenPayload,
     GrantType,
     RefreshTokenPayload,
     TokenResponse,
 )
-from diracx.logic.auth.token import create_token
-from diracx.logic.auth.token import get_oidc_token as get_oidc_token_bl
-from diracx.logic.auth.token import (
+from diracx.logic.auth import create_token
+from diracx.logic.auth import get_oidc_token as get_oidc_token_bl
+from diracx.logic.auth import (
     perform_legacy_exchange as perform_legacy_exchange_bl,
 )
 from diracx.routers.access_policies import BaseAccessPolicy

@@ -19,15 +19,16 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.ParametricJob import (
 from pydantic import BaseModel
 
 from diracx.core.config import Config
-from diracx.core.models.auth import UserInfo
-from diracx.core.models.job import (
+from diracx.core.models import (
     InsertedJob,
     JobLoggingRecord,
     JobStatus,
+    UserInfo,
 )
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
-from diracx.logic.jobs.utils import check_and_prepare_job, make_job_manifest_config
+
+from .utils import check_and_prepare_job, make_job_manifest_config
 
 logger = logging.getLogger(__name__)
 

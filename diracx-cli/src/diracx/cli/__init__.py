@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+__all__ = ["app"]
+
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 
 from .auth import app
-
-__all__ = ("app",)
-
 
 # Load all the sub commands
 cli_names = set(

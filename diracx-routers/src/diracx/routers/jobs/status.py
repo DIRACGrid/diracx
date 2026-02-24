@@ -6,20 +6,20 @@ from typing import Annotated, Any
 
 from fastapi import Body, HTTPException, Query
 
-from diracx.core.models.job import (
+from diracx.core.models import (
     HeartbeatData,
     JobCommand,
     JobMetaData,
     JobStatusUpdate,
     SetJobStatusReturn,
 )
-from diracx.logic.jobs.status import add_heartbeat as add_heartbeat_bl
-from diracx.logic.jobs.status import get_job_commands as get_job_commands_bl
-from diracx.logic.jobs.status import reschedule_jobs as reschedule_jobs_bl
-from diracx.logic.jobs.status import (
+from diracx.logic.jobs import add_heartbeat as add_heartbeat_bl
+from diracx.logic.jobs import get_job_commands as get_job_commands_bl
+from diracx.logic.jobs import reschedule_jobs as reschedule_jobs_bl
+from diracx.logic.jobs import (
     set_job_parameters_or_attributes as set_job_parameters_or_attributes_bl,
 )
-from diracx.logic.jobs.status import set_job_statuses as set_job_statuses_bl
+from diracx.logic.jobs import set_job_statuses as set_job_statuses_bl
 
 from ..dependencies import (
     Config,

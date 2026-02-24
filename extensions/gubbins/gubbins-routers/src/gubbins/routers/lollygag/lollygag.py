@@ -11,11 +11,11 @@ from diracx.routers.fastapi_classes import DiracxRouter
 from fastapi import Depends
 
 from gubbins.db.sql import LollygagDB as _LollygagDB
-from gubbins.logic.lollygag.lollygag import (
+from gubbins.logic.lollygag import (
     get_gubbins_secrets as get_gubbins_secrets_bl,
 )
-from gubbins.logic.lollygag.lollygag import get_owner_object as get_owner_object_bl
-from gubbins.logic.lollygag.lollygag import (
+from gubbins.logic.lollygag import get_owner_object as get_owner_object_bl
+from gubbins.logic.lollygag import (
     insert_owner_object as insert_owner_object_bl,
 )
 

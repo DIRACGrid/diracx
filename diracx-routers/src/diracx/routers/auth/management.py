@@ -16,19 +16,19 @@ from uuid_utils import UUID
 
 from diracx.core.exceptions import InvalidCredentialsError, TokenNotFoundError
 from diracx.core.properties import PROXY_MANAGEMENT, SecurityProperty
-from diracx.logic.auth.management import (
+from diracx.logic.auth import (
     get_refresh_tokens as get_refresh_tokens_bl,
 )
-from diracx.logic.auth.management import (
+from diracx.logic.auth import (
     revoke_refresh_token_by_jti as revoke_refresh_token_by_jti_bl,
 )
-from diracx.logic.auth.management import (
+from diracx.logic.auth import (
     revoke_refresh_token_by_refresh_token as revoke_refresh_token_by_refresh_token_bl,
 )
 
 from ..dependencies import AuthDB, AuthSettings
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils import AuthorizedUserInfo, verify_dirac_access_token
 
 router = DiracxRouter(require_auth=False)
 

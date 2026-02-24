@@ -7,8 +7,8 @@ from time import sleep
 import pytest
 from fastapi.testclient import TestClient
 
-from diracx.core.models.job import JobStatus
-from diracx.routers.jobs.status import (
+from diracx.core.models import JobStatus
+from diracx.routers.jobs import (
     EXAMPLE_HEARTBEAT,
     EXAMPLE_METADATA,
     EXAMPLE_STATUS_UPDATES,

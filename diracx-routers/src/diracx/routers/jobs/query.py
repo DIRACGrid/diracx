@@ -5,13 +5,13 @@ from typing import Annotated, Any
 
 from fastapi import Body, Depends, Response
 
-from diracx.core.models.search import (
+from diracx.core.models import (
     SearchParams,
     SummaryParams,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR
-from diracx.logic.jobs.query import search as search_bl
-from diracx.logic.jobs.query import summary as summary_bl
+from diracx.logic.jobs import search as search_bl
+from diracx.logic.jobs import summary as summary_bl
 
 from ..dependencies import (
     Config,
@@ -20,7 +20,7 @@ from ..dependencies import (
     JobParametersDB,
 )
 from ..fastapi_classes import DiracxRouter
-from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from ..utils import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 router = DiracxRouter()

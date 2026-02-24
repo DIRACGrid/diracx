@@ -17,6 +17,10 @@ Adding a new policy:
 
 """
 
+from __future__ import annotations
+
+__all__ = ["BaseAccessPolicy", "check_permissions"]
+
 import functools
 import os
 import time
@@ -27,20 +31,12 @@ from typing import Annotated, Self
 from fastapi import Depends
 
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models.auth import (
+from diracx.core.models import (
     AccessTokenPayload,
     RefreshTokenPayload,
 )
 from diracx.routers.dependencies import DevelopmentSettings
-from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
-
-if "annotations" in globals():
-    raise NotImplementedError(
-        "FastAPI bug: We normally would use `from __future__ import annotations` "
-        "but a bug in FastAPI prevents us from doing so "
-        "https://github.com/tiangolo/fastapi/pull/11355 "
-        "Until it is merged, we can work around it by using strings."
-    )
+from diracx.routers.utils import AuthorizedUserInfo, verify_dirac_access_token
 
 
 class BaseAccessPolicy(metaclass=ABCMeta):

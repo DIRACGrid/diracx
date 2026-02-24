@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 import pytest
 import sqlalchemy
 
-from diracx.core.models.job import JobMetaData
+from diracx.core.models import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
-from diracx.logic.jobs.status import set_job_parameters_or_attributes
+from diracx.logic.jobs import set_job_parameters_or_attributes
 from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.time import mock_sqlite_time
 

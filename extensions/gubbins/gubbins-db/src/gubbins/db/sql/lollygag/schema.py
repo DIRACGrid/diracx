@@ -1,5 +1,7 @@
 # The utils class define some boilerplate types that should be used
 # in place of the SQLAlchemy one. Have a look at them
+from __future__ import annotations
+
 from uuid import UUID
 
 from diracx.db.sql.utils import datetime_now, str255

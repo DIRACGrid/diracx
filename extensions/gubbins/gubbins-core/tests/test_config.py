@@ -8,7 +8,7 @@ from urllib import request
 import pytest
 from diracx.core.config import ConfigSource, RemoteGitConfigSource
 
-from gubbins.core.config.schema import Config
+from gubbins.core.config import Config
 
 # The diracx-chart contains a CS example
 TEST_REPO = "git+https://github.com/DIRACGrid/diracx-charts/"
