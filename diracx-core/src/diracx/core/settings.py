@@ -183,6 +183,13 @@ class AuthSettings(ServiceSettingsBase):
     before it must be exchanged for tokens. Default: 5 minutes.
     """
 
+    completed_flow_retention_minutes: int = 60
+    """Retention time in minutes for completed flow.
+
+    The maximum retention time of flow after being completed
+    and before they are deleted. Default: 60 minutes.
+    """
+
     state_key: FernetKey
     """Encryption key used to encrypt/decrypt the state parameter passed to the IAM.
 
@@ -224,6 +231,13 @@ class AuthSettings(ServiceSettingsBase):
 
     The maximum lifetime of refresh tokens before they must be re-issued
     through a new authentication flow. Default: 60 minutes.
+    """
+
+    revoked_refresh_token_retention_days: int = 30
+    """Retention time in days for revoked refresh tokens.
+
+    The maximum retention time of refresh tokens after being
+    revoked and before they are deleted. Default: 30 days.
     """
 
     available_properties: set[SecurityProperty] = Field(

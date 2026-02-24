@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from typing import cast
@@ -36,6 +37,8 @@ from .utils import (
     parse_and_validate_scope,
     verify_dirac_refresh_token,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def get_oidc_token(
@@ -429,6 +432,8 @@ async def get_authorization_flow(auth_db: AuthDB, code: str, max_validity: int):
     """Get the authorization flow from the DB and check few parameters before returning it."""
     res = await auth_db.get_authorization_flow(code, max_validity)
 
+    print(f"Flow status : {res['Status']}")
+
     if res["Status"] == FlowStatus.READY:
         await auth_db.update_authorization_flow_status(code, FlowStatus.DONE)
         return res
@@ -437,3 +442,32 @@ async def get_authorization_flow(auth_db: AuthDB, code: str, max_validity: int):
         raise AuthorizationError("Code was already used")
 
     raise AuthorizationError("Bad state in authorization flow")
+
+
+async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
+    """Remove expired data from the auth database."""
+    expired_tokens, revoked_tokens = await auth_db.clean_expired_refresh_token(
+        max_validity=settings.refresh_token_expire_minutes,
+        max_retention=settings.revoked_refresh_token_retention_days,
+    )
+    logger.info(
+        "Deleted %d expired and %d revoked refresh tokens",
+        expired_tokens,
+        revoked_tokens,
+    )
+
+    auth = await auth_db.clean_expired_authorization_flows(
+        max_retention=settings.completed_flow_retention_minutes,
+    )
+    logger.info(
+        "Deleted %d expired authorization flows",
+        auth,
+    )
+
+    device = await auth_db.clean_expired_device_flows(
+        max_retention=settings.completed_flow_retention_minutes,
+    )
+    logger.info(
+        "Deleted %d expired device flows",
+        device,
+    )

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from itertools import pairwise
 
 from dateutil.rrule import MONTHLY, rrule
-from sqlalchemy import insert, select, text, update
+from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID, uuid7
@@ -339,3 +339,47 @@ class AuthDB(BaseSQLDB):
             .where(RefreshTokens.sub == subject)
             .values(status=RefreshTokenStatus.REVOKED)
         )
+
+    async def clean_expired_refresh_token(
+        self, max_validity: int, max_retention: int
+    ) -> tuple[int, int]:
+        """Delete expired and old revoked refresh tokens."""
+        expired_date = str(
+            uuid7_from_datetime(substract_date(minutes=max_validity), randomize=False)
+        )
+        stmt_expired = delete(RefreshTokens).where(
+            RefreshTokens.status == RefreshTokenStatus.CREATED,
+            RefreshTokens.jti < expired_date,
+        )
+        res_expired = await self.conn.execute(stmt_expired)
+
+        revoked_date = str(
+            uuid7_from_datetime(substract_date(days=max_retention), randomize=False)
+        )
+        stmt_revoked = delete(RefreshTokens).where(
+            RefreshTokens.status == RefreshTokenStatus.REVOKED,
+            RefreshTokens.jti < revoked_date,
+        )
+        res_revoked = await self.conn.execute(stmt_revoked)
+
+        return res_expired.rowcount, res_revoked.rowcount
+
+    async def clean_expired_authorization_flows(self, max_retention: int) -> int:
+        """Delete old DONE/ERROR authorization flows."""
+        stmt_auth = delete(AuthorizationFlows).where(
+            AuthorizationFlows.status.in_([FlowStatus.DONE, FlowStatus.ERROR]),
+            AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
+        )
+        res_auth = await self.conn.execute(stmt_auth)
+
+        return res_auth.rowcount
+
+    async def clean_expired_device_flows(self, max_retention: int) -> int:
+        """Delete old DONE/ERROR device flows."""
+        stmt_device = delete(DeviceFlows).where(
+            DeviceFlows.status.in_([FlowStatus.DONE, FlowStatus.ERROR]),
+            DeviceFlows.creation_time < substract_date(minutes=max_retention),
+        )
+        res_device = await self.conn.execute(stmt_device)
+
+        return res_device.rowcount

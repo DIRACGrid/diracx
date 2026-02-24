@@ -42,6 +42,15 @@ Expiration time in seconds for authorization code flow.
 The time window during which the authorization code remains valid
 before it must be exchanged for tokens. Default: 5 minutes.
 
+### `DIRACX_SERVICE_AUTH_COMPLETED_FLOW_RETENTION_MINUTES`
+
+*Optional*, default value: `60`
+
+Retention time in minutes for completed flow.
+
+The maximum retention time of flow after being completed
+and before they are deleted. Default: 60 minutes.
+
 ### `DIRACX_SERVICE_AUTH_STATE_KEY`
 
 **Required**
@@ -95,6 +104,15 @@ Expiration time in minutes for refresh tokens.
 
 The maximum lifetime of refresh tokens before they must be re-issued
 through a new authentication flow. Default: 60 minutes.
+
+### `DIRACX_SERVICE_AUTH_REVOKED_REFRESH_TOKEN_RETENTION_DAYS`
+
+*Optional*, default value: `30`
+
+Retention time in days for revoked refresh tokens.
+
+The maximum retention time of refresh tokens after being
+revoked and before they are deleted. Default: 30 days.
 
 ### `DIRACX_SERVICE_AUTH_AVAILABLE_PROPERTIES`
 
