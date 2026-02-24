@@ -257,3 +257,44 @@ async def test_get_refresh_tokens(auth_db: AuthDB):
 
     # Check the number of retrieved refresh tokens (should be 3 refresh tokens)
     assert len(refresh_tokens) == 2
+
+
+async def test_clean_refresh_tokens(auth_db: AuthDB):
+    # Insert two refresh tokens
+    jtis = []
+    async with auth_db as auth_db:
+        for _ in range(2):
+            jti = uuid7()
+            await auth_db.insert_refresh_token(
+                jti,
+                "subject",
+                "scope",
+            )
+            jtis.append(jti)
+
+    # Revoke one of the refresh token
+    async with auth_db as auth_db:
+        await auth_db.revoke_refresh_token(jtis[0])
+
+    # Check the number of deleted refresh tokens (should be 0)
+    async with auth_db as auth_db:
+        deleted_expired, deleted_revoked = await auth_db.clean_expired_refresh_token(
+            max_validity=10, max_retention=30
+        )
+    assert deleted_expired == 0
+    assert deleted_revoked == 0
+
+    # Check the number of deleted refresh tokens (should be 1 of each)
+    async with auth_db as auth_db:
+        deleted_expired, deleted_revoked = await auth_db.clean_expired_refresh_token(
+            max_validity=0, max_retention=0
+        )
+    assert deleted_expired == 1
+    assert deleted_revoked == 1
+
+    # Get all refresh tokens (Admin)
+    async with auth_db as auth_db:
+        refresh_tokens = await auth_db.get_user_refresh_tokens()
+
+    # Check the number of retrieved refresh tokens (should be 0)
+    assert len(refresh_tokens) == 0
