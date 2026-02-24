@@ -2,6 +2,10 @@
 This shows how to create a new subcommand
 """
 
+from __future__ import annotations
+
+__all__ = ["app"]
+
 from diracx.cli.utils import AsyncTyper
 
 from gubbins.client.aio import AsyncGubbinsClient

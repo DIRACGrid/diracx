@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from diracx.core.config.schema import Config
+from diracx.core.config import Config
 from diracx.core.properties import JOB_SHARING
 from diracx.db.sql.task_queue.db import TaskQueueDB
 

@@ -7,7 +7,7 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from diracx.core.config.schema import BaseModel, SerializableSet
+from diracx.core.config import BaseModel, SerializableSet
 from diracx.core.properties import NORMAL_USER, PRODUCTION_MANAGEMENT, SecurityProperty
 
 
