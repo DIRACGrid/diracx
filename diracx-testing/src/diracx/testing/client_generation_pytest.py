@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = []
+
 import pytest
 
 from diracx.testing.client_generation import regenerate_client

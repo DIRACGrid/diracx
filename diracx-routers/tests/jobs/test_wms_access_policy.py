@@ -5,12 +5,12 @@ from fastapi import HTTPException, status
 from uuid_utils import uuid7
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
-from diracx.routers.jobs.access_policies import (
+from diracx.routers.jobs import (
     ActionType,
     SandboxAccessPolicy,
     WMSAccessPolicy,
 )
-from diracx.routers.utils.users import AuthorizedUserInfo
+from diracx.routers.utils import AuthorizedUserInfo
 
 base_payload = {
     "sub": "testingVO:yellow-sub",

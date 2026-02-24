@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ["DiracxRouter"]
+
 import asyncio
 import contextlib
 from typing import Any, Callable, TypeVar, cast

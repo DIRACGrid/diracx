@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-__all__ = (
+__all__ = [
+    "b16_to_b64",
+    "generate_presigned_upload",
     "s3_bucket_exists",
     "s3_bulk_delete_with_retry",
     "s3_object_exists",
-    "generate_presigned_upload",
-)
+]
 
 import asyncio
 import base64
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING, TypedDict, cast
 
 from botocore.errorfactory import ClientError
 
-from .models.sandbox import ChecksumAlgorithm
+from diracx.core.models import ChecksumAlgorithm
 
 if TYPE_CHECKING:
     from typing import TypedDict

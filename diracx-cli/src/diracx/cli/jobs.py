@@ -2,7 +2,7 @@
 # from __future__ import annotations
 from __future__ import annotations
 
-__all__ = ("app",)
+__all__ = ["app"]
 
 import json
 import re
@@ -13,7 +13,7 @@ from rich.table import Table
 from typer import FileText, Option
 
 from diracx.client.aio import AsyncDiracClient
-from diracx.core.models.search import (
+from diracx.core.models import (
     ScalarSearchOperator,
     SearchSpec,
     VectorSearchOperator,

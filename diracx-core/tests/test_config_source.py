@@ -5,8 +5,7 @@ from urllib import request
 
 import pytest
 
-from diracx.core.config import ConfigSource, RemoteGitConfigSource
-from diracx.core.config.schema import Config
+from diracx.core.config import Config, ConfigSource, RemoteGitConfigSource
 
 # The diracx-chart contains a CS example
 TEST_REPO = "git+https://github.com/DIRACGrid/diracx-charts.git"

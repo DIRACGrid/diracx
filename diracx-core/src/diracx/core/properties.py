@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "GENERIC_PILOT",
+    "JOB_ADMINISTRATOR",
+    "JOB_SHARING",
+    "NORMAL_USER",
+    "PRODUCTION_MANAGEMENT",
+    "PROXY_MANAGEMENT",
+    "SecurityProperty",
+    "UnevaluatedProperty",
+]
+
 import inspect
 import operator
 from collections.abc import Callable
@@ -10,7 +21,7 @@ from typing import Any
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
-from diracx.core.extensions import select_from_extension
+from .extensions import select_from_extension
 
 
 class SecurityProperty(str):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-__all__ = (
+__all__ = [
     "MockOSDBMixin",
     "fake_available_osdb_implementations",
-)
+]
 
 import contextlib
 from datetime import datetime, timezone
@@ -13,7 +13,7 @@ from typing import Any, AsyncIterator
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from diracx.core.models.search import SearchSpec, SortSpec
+from diracx.core.models import SearchSpec, SortSpec
 from diracx.db.sql import utils as sql_utils
 
 

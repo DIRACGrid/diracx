@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = []
+
 import secrets
 
 from diracx.db.os.utils import BaseOSDB

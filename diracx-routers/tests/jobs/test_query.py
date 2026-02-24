@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 
-from diracx.core.models.job import JobStatus
-from diracx.routers.jobs.query import EXAMPLE_SUMMARY
+from diracx.core.models import JobStatus
+from diracx.routers.jobs import EXAMPLE_SUMMARY
 
 from .conftest import TEST_JDL, TEST_PARAMETRIC_JDL
 

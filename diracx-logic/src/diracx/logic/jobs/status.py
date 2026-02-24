@@ -1,15 +1,5 @@
 from __future__ import annotations
 
-__all__ = [
-    "remove_jobs",
-    "set_job_statuses",
-    "reschedule_jobs",
-    "remove_jobs_from_task_queue",
-    "set_job_parameters_or_attributes",
-    "add_heartbeat",
-    "get_job_commands",
-]
-
 import logging
 from asyncio import TaskGroup
 from collections import defaultdict
@@ -28,8 +18,8 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
     getStartAndEndTime,
 )
 
-from diracx.core.config.schema import Config
-from diracx.core.models.job import (
+from diracx.core.config import Config
+from diracx.core.models import (
     HeartbeatData,
     JobAttributes,
     JobCommand,
@@ -40,16 +30,18 @@ from diracx.core.models.job import (
     JobStatus,
     JobStatusUpdate,
     SetJobStatusReturn,
+    VectorSearchOperator,
+    VectorSearchSpec,
 )
-from diracx.core.models.search import VectorSearchOperator, VectorSearchSpec
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.task_queue.db import TaskQueueDB
 from diracx.db.sql.utils.functions import utcnow
-from diracx.logic.jobs.utils import check_and_prepare_job
-from diracx.logic.task_queues.priority import recalculate_tq_shares_for_entity
+from diracx.logic.task_queues import recalculate_tq_shares_for_entity
+
+from .utils import check_and_prepare_job
 
 logger = logging.getLogger(__name__)
 

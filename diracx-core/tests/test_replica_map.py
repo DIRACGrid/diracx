@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from diracx.core.models import ReplicaMap
 from diracx.core.models.replica_map import (
-    ReplicaMap,
     _validate_adler32,
     _validate_guid,
     _validate_lfn,
