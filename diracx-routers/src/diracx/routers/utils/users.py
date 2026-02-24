@@ -13,10 +13,10 @@ from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from uuid_utils import UUID as _UUID
 
-from diracx.core.models.auth import UserInfo
+from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
-from diracx.logic.auth.utils import read_token
+from diracx.logic.auth import read_token
 from diracx.routers.dependencies import auto_inject
 
 logger = logging.getLogger(__name__)

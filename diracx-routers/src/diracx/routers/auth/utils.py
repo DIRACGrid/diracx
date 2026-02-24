@@ -8,7 +8,7 @@ from diracx.core.properties import (
     SecurityProperty,
     UnevaluatedProperty,
 )
-from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from diracx.routers.utils import AuthorizedUserInfo, verify_dirac_access_token
 
 
 def has_properties(expression: UnevaluatedProperty | SecurityProperty):

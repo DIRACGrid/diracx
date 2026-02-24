@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from diracx.core.config.schema import Config
-from diracx.core.models.search import (
+from diracx.core.config import Config
+from diracx.core.models import (
     ScalarSearchOperator,
     SearchParams,
     SummaryParams,

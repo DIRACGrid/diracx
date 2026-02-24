@@ -18,7 +18,7 @@ from diracx.core.exceptions import (
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
-from diracx.core.models.auth import (
+from diracx.core.models import (
     AccessTokenPayload,
     GrantType,
     RefreshTokenPayload,

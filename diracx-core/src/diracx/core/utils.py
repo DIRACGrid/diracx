@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "EXPIRES_GRACE_SECONDS",
     "dotenv_files_from_environment",
     "serialize_credentials",
     "read_credentials",
@@ -26,8 +27,8 @@ from typing import Any, AsyncIterable, TypeVar, overload
 
 from cachetools import Cache, TTLCache
 
-from diracx.core.exceptions import NotReadyError
-from diracx.core.models.auth import TokenResponse
+from .exceptions import NotReadyError
+from .models import TokenResponse
 
 logger = logging.getLogger(__name__)
 

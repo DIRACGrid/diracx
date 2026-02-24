@@ -1,5 +1,21 @@
 from __future__ import annotations
 
+__all__ = [
+    "AuthorizationError",
+    "DiracError",
+    "DiracHttpResponseError",
+    "IAMClientError",
+    "IAMServerError",
+    "InvalidCredentialsError",
+    "InvalidQueryError",
+    "NotReadyError",
+    "PendingAuthorizationError",
+    "SandboxAlreadyAssignedError",
+    "SandboxAlreadyInsertedError",
+    "SandboxNotFoundError",
+    "TokenNotFoundError",
+]
+
 from http import HTTPStatus
 
 

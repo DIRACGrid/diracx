@@ -6,11 +6,15 @@ It :
 * uses the Gubbins dependencies
 """
 
-from diracx.routers.auth.well_known import router as diracx_wellknown_router
+from __future__ import annotations
+
+__all__ = ["get_installation_metadata"]
+
+from diracx.routers.auth import router as diracx_wellknown_router
 from diracx.routers.fastapi_classes import DiracxRouter
 
 from gubbins.core.models import ExtendedMetadata
-from gubbins.logic.auth.well_known import (
+from gubbins.logic.auth import (
     get_installation_metadata as get_installation_metadata_bl,
 )
 from gubbins.routers.dependencies import Config

@@ -2,7 +2,7 @@
 # from __future__ import annotations
 from __future__ import annotations
 
-__all__ = ("dump",)
+__all__ = ["dump"]
 
 import json
 

@@ -17,14 +17,16 @@ from fastapi import (
 from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
-from diracx.core.models.auth import InitiateDeviceFlowResponse
+from diracx.core.models import InitiateDeviceFlowResponse
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
-from diracx.logic.auth.device_flow import do_device_flow as do_device_flow_bl
-from diracx.logic.auth.device_flow import (
+from diracx.logic.auth import (
+    do_device_flow as do_device_flow_bl,
+)
+from diracx.logic.auth import (
     finish_device_flow as finish_device_flow_bl,
 )
-from diracx.logic.auth.device_flow import (
+from diracx.logic.auth import (
     initiate_device_flow as initiate_device_flow_bl,
 )
 from diracx.routers.dependencies import Config
