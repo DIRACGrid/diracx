@@ -8,7 +8,7 @@ appVersion: "v0.0.1"
 
 dependencies:
   - name: diracx
-    version: "1.0.10"
+    version: "1.0.12"
     repository: "https://charts.diracgrid.org/"
 maintainers:
   - name: Gubbins DiracX Team
