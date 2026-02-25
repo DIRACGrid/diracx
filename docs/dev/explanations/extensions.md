@@ -30,7 +30,7 @@ Okay, so you've decided you definitely do need an extension but not all extensio
 Before proceeding you should read and and understand the [structure of DiracX](./components/index.md) to know which components you want to extend.
 For most components you can extend them in isolation without needing to have an extension for the other components, for example:
 
-- `diracx-web` can be extended to customize the web interface without needing to extend any of the Python packages.
+- `diracx-web` can be extended to customize the web interface without needing to extend any of the Python packages. For details, see the [Creating a web extension](../tutorials/web-extensions.md) tutorial.
 - `diracx-logic` can be extended without needing to extend `diracx-core` or `diracx-routers`
 
 The exception to this is when extending `diracx-routers` you MUST also extend `diracx-client` and your client extension MUST be regenerated for every DiracX release.
