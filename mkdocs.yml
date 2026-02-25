@@ -59,19 +59,18 @@ nav:
     - Tutorials:
       - user/tutorials/index.md
     - How-To:
-      - user/how-to/index.md
+      - Command Line: user/reference/programmatic-usage/command-line-interface.md
+      - Programmatic Usage:
+        - user/reference/programmatic-usage/index.md
+        - Python: user/reference/programmatic-usage/python-interface.md
+        - HTTPS: user/reference/programmatic-usage/https-interface.md
+      - Web Interface:
+        - user/how-to/index.md
+        - Logging in: user/how-to/login-out.md
+        - List and share applications: user/how-to/list-and-share-applications.md
+        - Monitor jobs: user/how-to/monitor-jobs.md
     - Explanations:
       - user/explanations/index.md
-    - Web:
-      - user/web/index.md
-      - Logging in: user/web/login_out.md
-      - List and share applications: user/web/list_and_share_applications.md
-      - Monitor jobs: user/web/monitor_jobs.md
-    - Programmatic Usage:
-      - user/reference/programmatic-usage/index.md
-      - Command Line: user/reference/programmatic-usage/command-line-interface.md
-      - Python: user/reference/programmatic-usage/python-interface.md
-      - HTTPS: user/reference/programmatic-usage/https-interface.md
     - Reference:
       - user/reference/index.md
       - Client Config: user/reference/client-configuration.md
@@ -103,6 +102,7 @@ nav:
       - Chart structure: admin/explanations/chart-structure.md
       - Databases: admin/explanations/database-management.md
       - Sandbox Store: admin/explanations/sandbox-store.md
+      - Web release process: admin/explanations/manage-web-release.md
     - Tutorials:
       - admin/tutorials/index.md
       - Authentication: admin/tutorials/authentication.md
@@ -117,76 +117,91 @@ nav:
 
   - Developer Guide:
     - dev/index.md
-    - Getting started: dev/tutorials/getting-started.md
     - Tutorials:
       - dev/tutorials/index.md
-      - Larger developments: dev/tutorials/larger-developments.md
-      - Advanced tutorial: dev/tutorials/advanced-tutorial.md
-      - Making changes: dev/tutorials/making-changes.md
-      - Developing DiracX Web: dev/tutorials/develop-web.md
-      - Run a full DiracX instance locally: dev/tutorials/run-locally.md
-      - Play with auth: dev/tutorials/play-with-auth.md
+      - Backend:
+          - Getting started: dev/tutorials/getting-started.md
+          - Larger developments: dev/tutorials/larger-developments.md
+          - Advanced tutorial: dev/tutorials/advanced-tutorial.md
+          - Making changes: dev/tutorials/making-changes.md
+          - Run a full DiracX instance locally: dev/tutorials/run-locally.md
+          - Play with auth: dev/tutorials/play-with-auth.md
+      - Frontend:
+          - Web:
+              - Getting started: dev/tutorials/web-getting-started.md
+              - Creating a web extension: dev/tutorials/web-extensions.md
     - How-To:
       - dev/how-to/index.md
       - Contribute: dev/how-to/contribute.md
-      - Write docs: dev/tutorials/write-docs.md
-      - Add functionality:
-        - dev/how-to/add-functionality/index.md
-        - New route or router: dev/how-to/add-a-route.md
-        - New task: dev/how-to/add-a-task.md
-        - New DB: dev/how-to/add-a-db.md
-        - New CLI command: dev/how-to/add-a-cli-command.md
-        - New settings: dev/how-to/add-a-setting.md
-        - Add a test: dev/how-to/add-a-test.md
-      - Extend DiracX:
-        - dev/how-to/extend-diracx/index.md
-      - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
+      - Write docs: dev/how-to/write-docs.md
       - Use the demo:
         - dev/how-to/use-the-demo/index.md
         - Accessing the client: dev/how-to/use-the-demo/swagger.md
-        - Use swagger: dev/how-to/use-the-demo/swagger.md
         - Accessing DiracX Web: dev/how-to/use-the-demo/web.md
-      - Client customization: dev/how-to/client-customization.md
-      - Client generation: dev/how-to/client-generation.md
-      - Client extensions: dev/how-to/client-extension.md
-    - Web Development:  # TODO: These should move to fit into the new unified structure
-      - Setup environment: dev/setup_environment.md
-      - Manage extensions: dev/manage_extension.md
-      - Web architecture: dev/web-arch.md
-      - Create application: dev/how-to/create_application.md
-      - Setup: developer/setup_environment.md
-      - Contribute: developer/contribute.md
-      - Manage extensions: developer/manage_extension.md
+      - Backend:
+        - Add functionality:
+          - dev/how-to/add-functionality/index.md
+          - New route or router: dev/how-to/add-a-route.md
+          - New task: dev/how-to/add-a-task.md
+          - New DB: dev/how-to/add-a-db.md
+          - New settings: dev/how-to/add-a-setting.md
+          - Add a test: dev/how-to/add-a-test.md
+        - Extend DiracX:
+          - dev/how-to/extend-diracx/index.md
+        - Develop legacy DIRAC: dev/how-to/develop-legacy-dirac.md
+      - Frontend:
+        - CLI:
+          - New CLI command: dev/how-to/add-a-cli-command.md
+          - Client customization: dev/how-to/client-customization.md
+          - Client generation: dev/how-to/client-generation.md
+          - Client extensions: dev/how-to/client-extension.md
+        - Web:
+          - Contribute to web: dev/how-to/contribute-to-web.md
+          - Setup web environment: dev/how-to/setup-web-environment.md
+          - Create a web application: dev/how-to/create-web-application.md
+          - Manage web extensions: dev/how-to/manage-web-extension.md
     - Explanations:
       - dev/explanations/index.md
+      - Repository structure: dev/explanations/repo-structure.md
       - Documentation system: dev/explanations/documentation-system.md
-      - Components:
-        - dev/explanations/components/index.md
-        - API: dev/explanations/components/api.md
-        - CLI: dev/explanations/components/cli.md
-        - Databases: dev/explanations/components/db.md
-        - Routes: dev/explanations/components/routes.md
-        - Client: dev/explanations/components/client.md
-      - Testing: dev/explanations/testing.md
-      - Run demo: dev/explanations/run_demo.md
-      - Extensions: dev/explanations/extensions.md
-      - Designing functionality: dev/explanations/designing-functionality.md
+      - Components overview: dev/explanations/components/index.md
       - Dependency management: dev/explanations/dependency-management.md
+      - Run demo: dev/explanations/run_demo.md
+      - Backend:
+          - Components:
+              - Databases: dev/explanations/components/db.md
+              - Routes: dev/explanations/components/routes.md
+          - Testing: dev/explanations/testing.md
+          - Extensions: dev/explanations/extensions.md
+          - Designing functionality: dev/explanations/designing-functionality.md
+      - Frontend:
+          - CLI:
+              - API: dev/explanations/components/api.md
+              - CLI: dev/explanations/components/cli.md
+              - Client: dev/explanations/components/client.md
+          - Web:
+              - Architecture: dev/explanations/web-architecture.md
+              - Testing: dev/explanations/web-testing.md
     - Reference:
       - dev/reference/index.md
-      - Dev env variables: dev/reference/env-variables.md
-      - Writing tests: dev/reference/writing-tests.md
       - Coding conventions: dev/reference/coding-conventions.md
-      - Configuration: dev/reference/configuration.md
-      - Dependency injection: dev/reference/dependency-injection.md
-      - Application state: dev/reference/application-state.md
-      - Client metapathfinder: dev/reference/client-metapathfinder.md
-      - DB transaction model: dev/reference/db-transaction-model.md
-      - Entrypoints: dev/reference/entrypoints.md
-      - Pixi tasks: dev/reference/pixi-tasks.md
-      - Security policies: dev/reference/security-policies.md
-      - Security properties: dev/reference/security-properties.md
+      - Writing tests: dev/reference/writing-tests.md
       - Test recipes: dev/reference/test-recipes.md
+      - Pixi tasks: dev/reference/pixi-tasks.md
+      - Dev env variables: dev/reference/env-variables.md
+      - Backend:
+          - Configuration: dev/reference/configuration.md
+          - Dependency injection: dev/reference/dependency-injection.md
+          - Application state: dev/reference/application-state.md
+          - DB transaction model: dev/reference/db-transaction-model.md
+          - Entrypoints: dev/reference/entrypoints.md
+          - Security policies: dev/reference/security-policies.md
+          - Security properties: dev/reference/security-properties.md
+      - Frontend:
+          - CLI:
+              - Client metapathfinder: dev/reference/client-metapathfinder.md
+          - Web:
+              - Coding conventions: dev/reference/web-coding-conventions.md
 
 markdown_extensions:
   - admonition
