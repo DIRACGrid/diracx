@@ -40,7 +40,7 @@ def new_key(
     """Create a fresh private signing key."""
     parameters = {
         "key_ops": ["sign", "verify"],
-        "alg": "EdDSA",
+        "alg": "Ed25519",
         "kid": uuid7().hex,
     }
     return JWKRegistry.generate_key(
