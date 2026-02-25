@@ -201,8 +201,6 @@ async def insert_sandbox(
 async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
-    *,
-    batch_size: int = 50000,
 ) -> int:
     """Delete sandboxes that are not assigned to any job.
 
@@ -214,12 +212,12 @@ async def clean_sandboxes(
     Args:
         sandbox_metadata_db: Database connection (not yet entered).
         settings: Sandbox store settings with S3 client.
-        batch_size: Number of sandboxes to process per batch.
 
     Returns:
         Total number of sandboxes deleted.
 
     """
+    batch_size = settings.clean_batch_size
     total_deleted = 0
     cursor = 0
     batch_num = 0
@@ -294,8 +292,8 @@ async def clean_sandboxes(
         # transaction to avoid locking millions of rows in a single DELETE).
         # Up to 10 chunks run concurrently via a semaphore.
         t0 = time.monotonic()
-        delete_chunk_size = 1000
-        sem = asyncio.Semaphore(10)
+        delete_chunk_size = settings.clean_delete_chunk_size
+        sem = asyncio.Semaphore(settings.clean_max_concurrent_db_deletes)
 
         async def _delete_chunk(chunk: list[int], _sem: asyncio.Semaphore = sem) -> int:
             async with _sem, sandbox_metadata_db:
