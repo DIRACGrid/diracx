@@ -7,12 +7,13 @@ import re
 from abc import ABCMeta
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from enum import StrEnum
 from typing import Any, Self, cast
 from uuid import UUID as StdUUID  # noqa: N811
 
 from pydantic import TypeAdapter
-from sqlalchemy import DateTime, MetaData, func, inspect, select
+from sqlalchemy import DateTime, MetaData, and_, func, inspect, or_, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -21,15 +22,15 @@ from uuid_utils import UUID, uuid7
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.models.search import (
+    ScalarSearchOperator,
     SearchSpec,
     SortDirection,
     SortSpec,
+    VectorSearchOperator,
 )
 from diracx.core.settings import SqlalchemyDsn
 from diracx.db.exceptions import DBUnavailableError
 from diracx.db.sql.utils.types import SmarterDateTime
-
-from .functions import date_trunc
 
 logger = logging.getLogger(__name__)
 
@@ -318,6 +319,15 @@ class BaseSQLDB(metaclass=ABCMeta):
         ]
 
 
+class TimeResolution(StrEnum):
+    YEAR = "YEAR"
+    MONTH = "MONTH"
+    DAY = "DAY"
+    HOUR = "HOUR"
+    MINUTE = "MINUTE"
+    SECOND = "SECOND"
+
+
 def find_time_resolution(value):
     if isinstance(value, datetime):
         return None, value
@@ -325,17 +335,17 @@ def find_time_resolution(value):
         r"\d{4}(-\d{2}(-\d{2}(([ T])\d{2}(:\d{2}(:\d{2}(\.\d{1,6}Z?)?)?)?)?)?)?", value
     ):
         if match.group(6):
-            precision, pattern = "SECOND", r"\1-\2-\3 \4:\5:\6"
+            precision, pattern = TimeResolution.SECOND, r"\1-\2-\3 \4:\5:\6"
         elif match.group(5):
-            precision, pattern = "MINUTE", r"\1-\2-\3 \4:\5"
+            precision, pattern = TimeResolution.MINUTE, r"\1-\2-\3 \4:\5"
         elif match.group(3):
-            precision, pattern = "HOUR", r"\1-\2-\3 \4"
+            precision, pattern = TimeResolution.HOUR, r"\1-\2-\3 \4"
         elif match.group(2):
-            precision, pattern = "DAY", r"\1-\2-\3"
+            precision, pattern = TimeResolution.DAY, r"\1-\2-\3"
         elif match.group(1):
-            precision, pattern = "MONTH", r"\1-\2"
+            precision, pattern = TimeResolution.MONTH, r"\1-\2"
         else:
-            precision, pattern = "YEAR", r"\1"
+            precision, pattern = TimeResolution.YEAR, r"\1"
         return (
             precision,
             re.sub(
@@ -359,6 +369,84 @@ def _get_columns(table, parameters):
     return columns
 
 
+def _datetime_period_bounds(
+    value_str: str, precision: TimeResolution
+) -> tuple[datetime, datetime]:
+    """Compute the inclusive start and exclusive end of a datetime period.
+
+    For example, precision=TimeResolution.DAY and value_str="2025-08-25" returns:
+        (datetime(2025, 8, 25, 0, 0), datetime(2025, 8, 26, 0, 0))
+    """
+    parse_formats = {
+        TimeResolution.YEAR: "%Y",
+        TimeResolution.MONTH: "%Y-%m",
+        TimeResolution.DAY: "%Y-%m-%d",
+        TimeResolution.HOUR: "%Y-%m-%d %H",
+        TimeResolution.MINUTE: "%Y-%m-%d %H:%M",
+        TimeResolution.SECOND: "%Y-%m-%d %H:%M:%S",
+    }
+    start = datetime.strptime(value_str, parse_formats[precision]).replace(
+        tzinfo=timezone.utc
+    )
+
+    if precision == TimeResolution.YEAR:
+        end = start.replace(year=start.year + 1)
+    elif precision == TimeResolution.MONTH:
+        end = (
+            start.replace(year=start.year + 1, month=1)
+            if start.month == 12
+            else start.replace(month=start.month + 1)
+        )
+    elif precision == TimeResolution.DAY:
+        end = start + timedelta(days=1)
+    elif precision == TimeResolution.HOUR:
+        end = start + timedelta(hours=1)
+    elif precision == TimeResolution.MINUTE:
+        end = start + timedelta(minutes=1)
+    else:  # SECOND
+        end = start + timedelta(seconds=1)
+
+    return start, end
+
+
+def _build_datetime_range_expr(
+    column,
+    operator: ScalarSearchOperator,
+    start: datetime,
+    end: datetime,
+):
+    """Build a sargable range expression for a single datetime period.
+
+    Uses range predicates on the raw column so database indexes can be used.
+    """
+    if operator == ScalarSearchOperator.EQUAL:
+        return and_(column >= start, column < end)
+    if operator == ScalarSearchOperator.NOT_EQUAL:
+        return or_(column < start, column >= end)
+    if operator == ScalarSearchOperator.GREATER_THAN:
+        return column >= end
+    if operator == ScalarSearchOperator.LESS_THAN:
+        return column < start
+    raise InvalidQueryError(
+        f"Operator '{operator}' is not supported for partial datetime values"
+    )
+
+
+def _build_datetime_range_multi_expr(
+    column,
+    operator: VectorSearchOperator,
+    bounds: list[tuple[datetime, datetime]],
+):
+    """Build a sargable range expression for multiple datetime periods (IN/NOT IN)."""
+    if operator == VectorSearchOperator.IN:
+        return or_(*[and_(column >= s, column < e) for s, e in bounds])
+    if operator == VectorSearchOperator.NOT_IN:
+        return and_(*[or_(column < s, column >= e) for s, e in bounds])
+    raise InvalidQueryError(
+        f"Operator '{operator}' is not supported for partial datetime values"
+    )
+
+
 def apply_search_filters(column_mapping, stmt, search):
     for query in search:
         try:
@@ -370,7 +458,13 @@ def apply_search_filters(column_mapping, stmt, search):
             if "value" in query and isinstance(query["value"], str):
                 resolution, value = find_time_resolution(query["value"])
                 if resolution:
-                    column = date_trunc(column, time_resolution=resolution)
+                    start, end = _datetime_period_bounds(value, resolution)
+                    stmt = stmt.where(
+                        _build_datetime_range_expr(
+                            column, query["operator"], start, end
+                        )
+                    )
+                    continue
                 query["value"] = value
 
             if query.get("values"):
@@ -382,28 +476,37 @@ def apply_search_filters(column_mapping, stmt, search):
                         f"Cannot mix different time resolutions in {query=}"
                     )
                 if resolution := resolutions[0]:
-                    column = date_trunc(column, time_resolution=resolution)
+                    bounds = [
+                        _datetime_period_bounds(cast(str, v), resolution)
+                        for v in values
+                    ]
+                    stmt = stmt.where(
+                        _build_datetime_range_multi_expr(
+                            column, query["operator"], bounds
+                        )
+                    )
+                    continue
                 query["values"] = values
 
-        if query["operator"] == "eq":
+        if query["operator"] == ScalarSearchOperator.EQUAL:
             expr = column == query["value"]
-        elif query["operator"] == "neq":
+        elif query["operator"] == ScalarSearchOperator.NOT_EQUAL:
             expr = column != query["value"]
-        elif query["operator"] == "gt":
+        elif query["operator"] == ScalarSearchOperator.GREATER_THAN:
             expr = column > query["value"]
-        elif query["operator"] == "lt":
+        elif query["operator"] == ScalarSearchOperator.LESS_THAN:
             expr = column < query["value"]
-        elif query["operator"] == "in":
+        elif query["operator"] == VectorSearchOperator.IN:
             expr = column.in_(query["values"])
-        elif query["operator"] == "not in":
+        elif query["operator"] == VectorSearchOperator.NOT_IN:
             expr = column.notin_(query["values"])
-        elif query["operator"] in "like":
+        elif query["operator"] == ScalarSearchOperator.LIKE:
             expr = column.like(query["value"])
         elif query["operator"] in "ilike":
             expr = column.ilike(query["value"])
-        elif query["operator"] == "not like":
+        elif query["operator"] == ScalarSearchOperator.NOT_LIKE:
             expr = column.not_like(query["value"])
-        elif query["operator"] == "regex":
+        elif query["operator"] == ScalarSearchOperator.REGEX:
             # We check the regex validity here
             try:
                 re.compile(query["value"])
