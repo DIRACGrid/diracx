@@ -89,20 +89,60 @@ def b16_to_b64(hex_string: str) -> str:
 
 async def s3_bulk_delete_with_retry(
     s3_client, bucket: str, objects: list[S3Object]
-) -> None:
+) -> set[str]:
+    """Delete objects from S3 in chunks of 1000, retrying failures.
+
+    Returns:
+        Set of keys that failed to delete after all retries.
+
+    """
+    max_chunk_size = 1000
+    chunks = [
+        objects[i : i + max_chunk_size] for i in range(0, len(objects), max_chunk_size)
+    ]
+    tasks = [_s3_delete_chunk_with_retry(s3_client, bucket, chunk) for chunk in chunks]
+    results = await asyncio.gather(*tasks)
+    failed_keys: set[str] = set()
+    for result in results:
+        failed_keys.update(result)
+    return failed_keys
+
+
+async def _s3_delete_chunk_with_retry(
+    s3_client, bucket: str, objects: list[S3Object]
+) -> set[str]:
+    """Try to delete a chunk of S3 objects, retrying partial failures.
+
+    Returns:
+        Set of keys that failed to delete after all retries.
+
+    """
     max_attempts = 5
     delay = 1.0
+    remaining = objects
     for attempt in range(1, max_attempts + 1):
         try:
             response = await s3_client.delete_objects(
                 Bucket=bucket,
-                Delete={"Objects": objects, "Quiet": True},
+                Delete={"Objects": remaining, "Quiet": True},
             )
-            if "Errors" in response and response["Errors"]:
-                raise RuntimeError(f"S3 deletion error: {response['Errors']}")
-            return
-        except (ClientError, RuntimeError) as e:
+        except ClientError:
             if attempt == max_attempts:
-                raise RuntimeError(f"Failed to delete objects in {bucket}") from e
+                return {obj["Key"] for obj in remaining}
             await asyncio.sleep(delay)
             delay *= 2
+            continue
+
+        errors = response.get("Errors", [])
+        if not errors:
+            return set()
+
+        # Retry only the keys that failed
+        failed_keys = {e["Key"] for e in errors}
+        if attempt == max_attempts:
+            return failed_keys
+        remaining = [obj for obj in remaining if obj["Key"] in failed_keys]
+        await asyncio.sleep(delay)
+        delay *= 2
+
+    return set()
