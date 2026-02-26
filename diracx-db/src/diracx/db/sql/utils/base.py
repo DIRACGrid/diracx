@@ -7,12 +7,12 @@ import re
 from abc import ABCMeta
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Self, cast
 from uuid import UUID as StdUUID  # noqa: N811
 
 from pydantic import TypeAdapter
-from sqlalchemy import DateTime, MetaData, func, inspect, select
+from sqlalchemy import DateTime, MetaData, and_, func, inspect, or_, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -28,8 +28,6 @@ from diracx.core.models.search import (
 from diracx.core.settings import SqlalchemyDsn
 from diracx.db.exceptions import DBUnavailableError
 from diracx.db.sql.utils.types import SmarterDateTime
-
-from .functions import date_trunc
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +357,77 @@ def _get_columns(table, parameters):
     return columns
 
 
+def _datetime_period_bounds(
+    value_str: str, precision: str
+) -> tuple[datetime, datetime]:
+    """Compute the inclusive start and exclusive end of a datetime period.
+
+    For example, precision="DAY" and value_str="2025-08-25" returns:
+        (datetime(2025, 8, 25, 0, 0), datetime(2025, 8, 26, 0, 0))
+    """
+    parse_formats = {
+        "YEAR": "%Y",
+        "MONTH": "%Y-%m",
+        "DAY": "%Y-%m-%d",
+        "HOUR": "%Y-%m-%d %H",
+        "MINUTE": "%Y-%m-%d %H:%M",
+        "SECOND": "%Y-%m-%d %H:%M:%S",
+    }
+    start = datetime.strptime(value_str, parse_formats[precision]).replace(
+        tzinfo=timezone.utc
+    )
+
+    if precision == "YEAR":
+        end = start.replace(year=start.year + 1)
+    elif precision == "MONTH":
+        end = (
+            start.replace(year=start.year + 1, month=1)
+            if start.month == 12
+            else start.replace(month=start.month + 1)
+        )
+    elif precision == "DAY":
+        end = start + timedelta(days=1)
+    elif precision == "HOUR":
+        end = start + timedelta(hours=1)
+    elif precision == "MINUTE":
+        end = start + timedelta(minutes=1)
+    else:  # SECOND
+        end = start + timedelta(seconds=1)
+
+    return start, end
+
+
+def _build_datetime_range_expr(column, operator: str, start: datetime, end: datetime):
+    """Build a sargable range expression for a single datetime period.
+
+    Uses range predicates on the raw column so database indexes can be used.
+    """
+    if operator == "eq":
+        return and_(column >= start, column < end)
+    elif operator == "neq":
+        return or_(column < start, column >= end)
+    elif operator == "gt":
+        return column >= end
+    elif operator == "lt":
+        return column < start
+    raise InvalidQueryError(
+        f"Operator '{operator}' is not supported for partial datetime values"
+    )
+
+
+def _build_datetime_range_multi_expr(
+    column, operator: str, bounds: list[tuple[datetime, datetime]]
+):
+    """Build a sargable range expression for multiple datetime periods (IN/NOT IN)."""
+    if operator == "in":
+        return or_(*[and_(column >= s, column < e) for s, e in bounds])
+    elif operator == "not in":
+        return and_(*[or_(column < s, column >= e) for s, e in bounds])
+    raise InvalidQueryError(
+        f"Operator '{operator}' is not supported for partial datetime values"
+    )
+
+
 def apply_search_filters(column_mapping, stmt, search):
     for query in search:
         try:
@@ -370,7 +439,13 @@ def apply_search_filters(column_mapping, stmt, search):
             if "value" in query and isinstance(query["value"], str):
                 resolution, value = find_time_resolution(query["value"])
                 if resolution:
-                    column = date_trunc(column, time_resolution=resolution)
+                    start, end = _datetime_period_bounds(value, resolution)
+                    stmt = stmt.where(
+                        _build_datetime_range_expr(
+                            column, query["operator"], start, end
+                        )
+                    )
+                    continue
                 query["value"] = value
 
             if query.get("values"):
@@ -382,7 +457,16 @@ def apply_search_filters(column_mapping, stmt, search):
                         f"Cannot mix different time resolutions in {query=}"
                     )
                 if resolution := resolutions[0]:
-                    column = date_trunc(column, time_resolution=resolution)
+                    bounds = [
+                        _datetime_period_bounds(cast(str, v), resolution)
+                        for v in values
+                    ]
+                    stmt = stmt.where(
+                        _build_datetime_range_multi_expr(
+                            column, query["operator"], bounds
+                        )
+                    )
+                    continue
                 query["values"] = values
 
         if query["operator"] == "eq":
