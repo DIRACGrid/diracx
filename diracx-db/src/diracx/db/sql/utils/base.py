@@ -421,11 +421,11 @@ def _build_datetime_range_expr(
     """
     if operator == ScalarSearchOperator.EQUAL:
         return and_(column >= start, column < end)
-    elif operator == ScalarSearchOperator.NOT_EQUAL:
+    if operator == ScalarSearchOperator.NOT_EQUAL:
         return or_(column < start, column >= end)
-    elif operator == ScalarSearchOperator.GREATER_THAN:
+    if operator == ScalarSearchOperator.GREATER_THAN:
         return column >= end
-    elif operator == ScalarSearchOperator.LESS_THAN:
+    if operator == ScalarSearchOperator.LESS_THAN:
         return column < start
     raise InvalidQueryError(
         f"Operator '{operator}' is not supported for partial datetime values"
@@ -440,7 +440,7 @@ def _build_datetime_range_multi_expr(
     """Build a sargable range expression for multiple datetime periods (IN/NOT IN)."""
     if operator == VectorSearchOperator.IN:
         return or_(*[and_(column >= s, column < e) for s, e in bounds])
-    elif operator == VectorSearchOperator.NOT_IN:
+    if operator == VectorSearchOperator.NOT_IN:
         return and_(*[or_(column < s, column >= e) for s, e in bounds])
     raise InvalidQueryError(
         f"Operator '{operator}' is not supported for partial datetime values"
