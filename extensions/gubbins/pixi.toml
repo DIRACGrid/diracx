@@ -1,6 +1,6 @@
 [workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["linux-64", "osx-arm64", "linux-aarch64"]
 
 [dependencies]
 python = ">=3.11.3,<3.12"
@@ -50,6 +50,18 @@ cmd = "cd gubbins-logic/ && pytest"
 [feature.task-gubbins-routers.tasks.pytest-gubbins-routers]
 cmd = "cd gubbins-routers/ && pytest"
 
+# Container runtime dependencies (from current base images)
+[feature.container.dependencies]
+git = "*"            # Used at runtime for some operations
+coverage = "*"       # Needed for integration test coverage inside containers
+# These packages are only available on Linux
+[feature.container.target.linux-64.dependencies]
+tini = "*"           # Init process for containers (zombie reaping, signal forwarding)
+ca-policy-lcg = "*"  # Grid CA certificates (services need this)
+[feature.container.target.linux-aarch64.dependencies]
+tini = "*"
+ca-policy-lcg = "*"
+
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
 pre-commit = "*"
@@ -73,6 +85,10 @@ gubbins-client = {features = ["task-gubbins-client", "gubbins-client", "gubbins-
 gubbins-db = {features = ["task-gubbins-db", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
 gubbins-logic = {features = ["task-gubbins-logic", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
 gubbins-routers = {features = ["task-gubbins-routers", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+
+# Container environments
+container-services = {features = ["container", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
+container-client = {features = ["container", "gubbins", "gubbins-cli", "gubbins-api", "gubbins-client", "gubbins-core"], solve-group = "gubbins"}
 
 generate-client = {features = ["client-gen", "gubbins-client", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core"], solve-group = "gubbins"}
 

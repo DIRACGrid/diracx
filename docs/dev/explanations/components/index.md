@@ -81,57 +81,48 @@ flowchart BT
 
 ## Container Images
 
-DiracX utilizes a structured approach to containerization:
+DiracX container images are built using [pixi](https://pixi.sh/) environments defined in `pixi.toml`. All dependencies — both conda and PyPI packages — are resolved via the committed `pixi.lock` file, ensuring reproducible builds with exact version parity between development and production.
 
-1. **Base Image**:
+### Architecture
 
-    - All container images start from `diracx/base`.
+Each container image is built using a multi-stage Dockerfile:
 
-2. **Specialized Base Images**:
+1. **Build stage**: Uses `ghcr.io/prefix-dev/pixi` to install a pixi environment from the lock file with `pixi install --locked`.
+2. **Runtime stage**: Uses a minimal `ubuntu:24.04` base image. The installed pixi environment is copied from the build stage. [Tini](https://github.com/krallin/tini) is used as the init process for proper signal handling.
 
-    - `diracx/services-base`
-    - `diracx/tasks-base`
-    - `diracx/client-base`
+The container environments are defined in `pixi.toml` alongside the development environments, sharing the same solve group to guarantee identical dependency versions:
 
-3. **Image Versioning and Building**:
+- **`container-services`**: Includes `diracx-routers`, `diracx-logic`, `diracx-db`, and `diracx-core` plus runtime dependencies (tini, CA certificates, git).
+- **`container-client`**: Includes `diracx-cli`, `diracx-api`, `diracx-client`, and `diracx-core` plus runtime dependencies.
 
-    - Images are built periodically (e.g., every Monday) and tagged as `YYYY.MM.DD.P`.
-    - A DiracX release triggers the creation of new `DiracXService`, `diracx/tasks`, and `diracx/client` images, based on specific `diracx/base` tags.
-    - This approach ensures stability in production environments.
-    - For testing purposes, the `latest` base images are used, with dependencies installed via `pip install`.
+### Building
 
-See this diagram for an example of how this looks in practice:
+Container images are self-contained — the Dockerfile copies source code and uses `pixi install --locked` to resolve everything from the lock file. No separate base images or wheel-building steps are needed:
 
 ```
-                       ┌──────────────────────────┐
-                 ┌─────┤ diracx/base:YYYY.MM.DD.P ├─────┐
-                 │     └──────────────────────────┘     │
-                 │                                      │
-┌────────────────▼──────────────────┐  ┌────────────────▼───────────────┐
-│ diracx/services-base:YYYY.MM.DD.P │  │ diracx/tasks-base:YYYY.MM.DD.P │
-└────────────────┬──────────────────┘  └────────────────┬───────────────┘
-                 │                                      │
-     ┌───────────▼────────────┐              ┌──────────▼──────────┐
-     │ diracx/services:v0.X.Y │              │ diracx/tasks:v0.X.Y │
-     └────────────────────────┘              └─────────────────────┘
-
+┌──────────────────────────────────────────┐
+│           pixi build stage               │
+│  pixi.toml + pixi.lock + source → env    │
+└────────────────┬─────────────────────────┘
+                 │
+     ┌───────────▼────────────┐
+     │  ubuntu:24.04 runtime  │
+     │  + pixi env copied in  │
+     └────────────────────────┘
 ```
 
-### Dependencies
+### Versioning
 
-- There is a noted duplication between `setup.cfg` and `environment.yaml`.
-- The `diracx/base` image is built from a Dockerfile with `environment.yml`, primarily defining the Python version and `dirac_environment.yaml` containing the DIRAC specific dependencies. The latter is there as a "temporary" thing.
-- The `diracx/services-base` and `diracx/tasks-base` images extend `diracx/base` with additional Dockerfiles and `environment.yml`, tailored to their specific needs.
-- The `diracx/services` and `diracx/tasks` images are further built upon their respective base images, adding necessary diracx packages through `pip install --no-dependencies`.
+- Release builds are tagged with the version (e.g., `ghcr.io/diracgrid/diracx/services:v0.X.Y`).
+- Development builds from `main` are tagged as `dev`.
 
-### Entrypoint
-
-TODO: document the entry point
+### Server Entry Points
 
 - `diracx-routers`:
     - `diracx.diracx_min_client_version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `diracx-routers/src/__init.py__`
 
 ## Extensions
 
-- Extensions will extend one or more of `diracx`, `diracx-routers`, `diracx-tasks` images (e.g. `lhcbdiracx`, `lhcbdiracx-routers`, `lhcbdiracx-tasks`).
-- Extensions provide a corresponding container image based on a specific release of the corresponding DiracX image.
+Extensions (e.g., Gubbins, LHCbDIRACX) provide their own `pixi.toml` and `pixi.lock` with container environments that pull in both the extension and upstream DiracX packages transitively.
+
+The extension container Dockerfile follows the same multi-stage pixi pattern, built from the extension's own source directory.
