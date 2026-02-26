@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Literal
 
 from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundError
@@ -200,69 +201,122 @@ async def insert_sandbox(
 async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
-    *,
-    batch_size: int = 500,
-    max_workers: int = 10,
 ) -> int:
     """Delete sandboxes that are not assigned to any job.
 
-    Uses SELECT FOR UPDATE SKIP LOCKED to allow multiple workers to run
-    in parallel without conflicts. Each batch:
-    1. Selects and locks rows
-    2. Deletes from S3
+    Each batch:
+    1. Selects rows using cursor-based pagination
+    2. Deletes from S3 (chunks sent concurrently)
     3. Deletes from DB
 
     Args:
         sandbox_metadata_db: Database connection (not yet entered).
         settings: Sandbox store settings with S3 client.
-        batch_size: Number of sandboxes to process per batch.
-        max_workers: Maximum number of concurrent workers processing batches.
 
     Returns:
         Total number of sandboxes deleted.
 
     """
-    # Check if parallel workers are supported
-    async with sandbox_metadata_db:
-        dialect = sandbox_metadata_db.conn.dialect.name
-    if max_workers > 1 and dialect == "sqlite":
-        raise NotImplementedError(
-            "SQLite does not support parallel workers (no SKIP LOCKED support)"
+    batch_size = settings.clean_batch_size
+    total_deleted = 0
+    cursor = 0
+    batch_num = 0
+    while True:
+        batch_num += 1
+
+        # Phase 1: SELECT candidates (short transaction, no locks)
+        t0 = time.monotonic()
+        async with sandbox_metadata_db:
+            (
+                sb_ids,
+                pfns,
+                cursor,
+            ) = await sandbox_metadata_db.select_sandboxes_for_deletion(
+                se_name=settings.se_name,
+                batch_size=batch_size,
+                cursor=cursor,
+            )
+        select_duration = time.monotonic() - t0
+
+        if not pfns:
+            logger.info(
+                "Batch %d: no candidates found (%.1fs)", batch_num, select_duration
+            )
+            break
+
+        logger.info(
+            "Batch %d: selected %d candidates (%.1fs)",
+            batch_num,
+            len(pfns),
+            select_duration,
         )
 
-    async def worker() -> int:
-        """Process batches until no more work is available."""
-        worker_deleted = 0
-        while True:
-            async with sandbox_metadata_db:
-                # Select and lock a batch of sandboxes
-                sb_ids, pfns = await sandbox_metadata_db.select_sandboxes_for_deletion(
-                    batch_size=batch_size
-                )
+        # Phase 2: Delete from S3 (no transaction — prevents dark data
+        # since S3 is cleaned first)
+        t0 = time.monotonic()
+        objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
+        failed_keys = await s3_bulk_delete_with_retry(
+            settings.s3_client, settings.bucket_name, objects
+        )
+        s3_duration = time.monotonic() - t0
 
-                if not pfns:
-                    break
+        if failed_keys:
+            # Only delete DB rows for sandboxes whose S3 objects were
+            # actually removed — the rest will be retried next run.
+            logger.warning(
+                "Batch %d: %d S3 deletions failed, skipping their DB rows",
+                batch_num,
+                len(failed_keys),
+            )
+            filtered = [
+                (sid, pfn)
+                for sid, pfn in zip(sb_ids, pfns)
+                if pfn_to_key(pfn) not in failed_keys
+            ]
+            if filtered:
+                sb_ids, pfns = map(list, zip(*filtered))
+            else:
+                sb_ids, pfns = [], []
 
-                # Delete from S3 first (while rows are locked)
-                objects: list[S3Object] = [{"Key": pfn_to_key(pfn)} for pfn in pfns]
-                if logger.isEnabledFor(logging.DEBUG):
-                    for pfn in pfns:
-                        logger.debug("Deleting sandbox %s from S3", pfn)
+        logger.info(
+            "Batch %d: deleted %d from S3 (%.1fs)",
+            batch_num,
+            len(objects) - len(failed_keys),
+            s3_duration,
+        )
 
-                await s3_bulk_delete_with_retry(
-                    settings.s3_client, settings.bucket_name, objects
-                )
-                logger.info(
-                    "Deleted %d sandboxes from %s", len(objects), settings.bucket_name
-                )
+        if not sb_ids:
+            continue
 
-                # Then delete from DB
-                await sandbox_metadata_db.delete_sandboxes(sb_ids)
-                worker_deleted += len(sb_ids)
+        # Phase 3: Delete from DB in small chunks (each chunk is a short
+        # transaction to avoid locking millions of rows in a single DELETE).
+        # Up to 10 chunks run concurrently via a semaphore.
+        t0 = time.monotonic()
+        delete_chunk_size = settings.clean_delete_chunk_size
+        sem = asyncio.Semaphore(settings.clean_max_concurrent_db_deletes)
 
-        return worker_deleted
+        async def _delete_chunk(chunk: list[int], _sem: asyncio.Semaphore = sem) -> int:
+            async with _sem, sandbox_metadata_db:
+                return await sandbox_metadata_db.delete_sandboxes(chunk)
 
-    async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(worker()) for _ in range(max_workers)]
+        tasks = [
+            _delete_chunk(sb_ids[i : i + delete_chunk_size])
+            for i in range(0, len(sb_ids), delete_chunk_size)
+        ]
+        results = await asyncio.gather(*tasks)
+        deleted = sum(results)
+        db_duration = time.monotonic() - t0
+        total_deleted += deleted
+        logger.info(
+            "Batch %d: deleted %d from DB (%.1fs, total so far: %d)",
+            batch_num,
+            deleted,
+            db_duration,
+            total_deleted,
+        )
 
-    return sum(task.result() for task in tasks)
+        # If we got fewer than batch_size, there are no more candidates
+        if len(sb_ids) < batch_size:
+            break
+
+    return total_deleted

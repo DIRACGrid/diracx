@@ -148,6 +148,39 @@ Logical name of the Storage Element for the sandbox store.
 This name is used within DIRAC to refer to this sandbox storage
 endpoint in job descriptions and file catalogs.
 
+### `DIRACX_SANDBOX_STORE_S3_MAX_POOL_CONNECTIONS`
+
+*Optional*, default value: `50`
+
+Maximum number of connections in the S3 client connection pool.
+
+Higher values allow more parallel S3 requests (e.g. during bulk sandbox
+deletion).
+
+### `DIRACX_SANDBOX_STORE_CLEAN_BATCH_SIZE`
+
+*Optional*, default value: `50000`
+
+Number of sandbox candidates to select per batch during cleaning.
+
+Each batch runs SELECT → S3 delete → DB delete sequentially.
+
+### `DIRACX_SANDBOX_STORE_CLEAN_DELETE_CHUNK_SIZE`
+
+*Optional*, default value: `1000`
+
+Number of sandbox DB rows to delete per chunk during cleaning.
+
+Smaller chunks mean shorter transactions and less lock contention.
+
+### `DIRACX_SANDBOX_STORE_CLEAN_MAX_CONCURRENT_DB_DELETES`
+
+*Optional*, default value: `10`
+
+Maximum number of concurrent DB delete chunks during cleaning.
+
+Controls parallelism of database DELETE operations.
+
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.
