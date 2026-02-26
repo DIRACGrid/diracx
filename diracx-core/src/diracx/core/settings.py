@@ -274,25 +274,25 @@ class SandboxStoreSettings(ServiceSettingsBase):
     """Maximum number of connections in the S3 client connection pool.
 
     Higher values allow more parallel S3 requests (e.g. during bulk sandbox
-    deletion). Default: 50.
+    deletion).
     """
 
     clean_batch_size: int = 50_000
     """Number of sandbox candidates to select per batch during cleaning.
 
-    Each batch runs SELECT → S3 delete → DB delete sequentially. Default: 50000.
+    Each batch runs SELECT → S3 delete → DB delete sequentially.
     """
 
     clean_delete_chunk_size: int = 1000
     """Number of sandbox DB rows to delete per chunk during cleaning.
 
-    Smaller chunks mean shorter transactions and less lock contention. Default: 1000.
+    Smaller chunks mean shorter transactions and less lock contention.
     """
 
     clean_max_concurrent_db_deletes: int = 10
     """Maximum number of concurrent DB delete chunks during cleaning.
 
-    Controls parallelism of database DELETE operations. Default: 10.
+    Controls parallelism of database DELETE operations.
     """
 
     _client: S3Client = PrivateAttr()

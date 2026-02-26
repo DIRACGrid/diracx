@@ -155,7 +155,7 @@ endpoint in job descriptions and file catalogs.
 Maximum number of connections in the S3 client connection pool.
 
 Higher values allow more parallel S3 requests (e.g. during bulk sandbox
-deletion). Default: 50.
+deletion).
 
 ### `DIRACX_SANDBOX_STORE_CLEAN_BATCH_SIZE`
 
@@ -163,7 +163,7 @@ deletion). Default: 50.
 
 Number of sandbox candidates to select per batch during cleaning.
 
-Each batch runs SELECT → S3 delete → DB delete sequentially. Default: 50000.
+Each batch runs SELECT → S3 delete → DB delete sequentially.
 
 ### `DIRACX_SANDBOX_STORE_CLEAN_DELETE_CHUNK_SIZE`
 
@@ -171,7 +171,7 @@ Each batch runs SELECT → S3 delete → DB delete sequentially. Default: 50000.
 
 Number of sandbox DB rows to delete per chunk during cleaning.
 
-Smaller chunks mean shorter transactions and less lock contention. Default: 1000.
+Smaller chunks mean shorter transactions and less lock contention.
 
 ### `DIRACX_SANDBOX_STORE_CLEAN_MAX_CONCURRENT_DB_DELETES`
 
@@ -179,7 +179,7 @@ Smaller chunks mean shorter transactions and less lock contention. Default: 1000
 
 Maximum number of concurrent DB delete chunks during cleaning.
 
-Controls parallelism of database DELETE operations. Default: 10.
+Controls parallelism of database DELETE operations.
 
 ## OTELSettings
 
