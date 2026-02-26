@@ -1,12 +1,33 @@
-FROM ghcr.io/diracgrid/diracx/client-base
+FROM ghcr.io/prefix-dev/pixi:latest AS build
 
-ARG EXTRA_PACKAGES_TO_INSTALL
+WORKDIR /app
+COPY pixi.toml pixi.lock ./
 
-RUN --mount=type=bind,source=.,target=/bindmount DIRACX_CUSTOM_SOURCE_PREFIXES=/bindmount /entrypoint.sh bash -ec "pip install --no-deps ${EXTRA_PACKAGES_TO_INSTALL} && echo 'Running pip check' && pip check"
+# Copy source directories needed for path-based installs
+COPY diracx-core/ diracx-core/
+COPY diracx-client/ diracx-client/
+COPY diracx-api/ diracx-api/
+COPY diracx-cli/ diracx-cli/
+COPY diracx-testing/ diracx-testing/
+COPY pyproject.toml ./
 
-# In many clusters the container is ran as a random uid for security reasons.
-# If we mark the conda directory as group 0 and give it group write permissions
-# then we're still able to manage the environment from inside the container.
-USER 0
-RUN chown -R $MAMBA_USER:0 /opt/conda && chmod -R g=u /opt/conda
-USER $MAMBA_USER
+# Switch to non-editable installs (same workaround as CI)
+RUN sed -i 's@editable = true@editable = false@g' pixi.toml
+
+RUN pixi install --locked -e container-client
+
+# Generate activation script
+RUN pixi shell-hook -e container-client > /activate.sh
+
+FROM ubuntu:24.04
+
+# Copy the installed environment
+COPY --from=build /app/.pixi/envs/container-client /app/.pixi/envs/container-client
+COPY --from=build /activate.sh /activate.sh
+
+# In many clusters the container is run as a random uid for security reasons.
+RUN chmod -R g=u /app/.pixi
+
+# Use tini as init (installed by pixi in the env)
+ENTRYPOINT ["/app/.pixi/envs/container-client/bin/tini", "--", \
+            "/bin/bash", "-c", "source /activate.sh && exec \"$@\"", "--"]

@@ -1,6 +1,6 @@
 [workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["linux-64", "osx-arm64", "linux-aarch64"]
 
 [dependencies]
 python = ">=3.11.3,<3.12"
@@ -117,6 +117,18 @@ mkdocs = "mkdocs serve"
 mkdocs-build = "mkdocs build --strict"
 description = "Generate the documentation with mkdocs"
 
+# Container runtime dependencies (from current base images)
+[feature.container.dependencies]
+git = "*"            # Used at runtime for some operations
+coverage = "*"       # Needed for integration test coverage inside containers
+# These packages are only available on Linux
+[feature.container.target.linux-64.dependencies]
+tini = "*"           # Init process for containers (zombie reaping, signal forwarding)
+ca-policy-lcg = "*"  # Grid CA certificates (services need this)
+[feature.container.target.linux-aarch64.dependencies]
+tini = "*"
+ca-policy-lcg = "*"
+
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
 pre-commit = "*"
@@ -176,6 +188,13 @@ gubbins-client = {features = ["task-gubbins-client", "diracx-client", "gubbins-c
 gubbins-db = {features = ["task-gubbins-db", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-logic = {features = ["task-gubbins-logic", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-routers = {features = ["task-gubbins-routers", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+
+# Container environments - same solve group as dev ensures version parity
+container-services = {features = ["container", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+container-client = {features = ["container", "diracx", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
+
+# Gubbins container environments
+gubbins-container-services = {features = ["container", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "gubbins"}
 
 diracx-generate-client = {features = ["client-gen", "diracx-client", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-client", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
