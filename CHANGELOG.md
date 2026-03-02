@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.10](https://github.com/DIRACGrid/diracx/compare/v0.0.9...v0.0.10) (2026-02-26)
+
+
+### Bug Fixes
+
+* EdDSA to Ed25519 token migration ([#786](https://github.com/DIRACGrid/diracx/issues/786)) ([84c7651](https://github.com/DIRACGrid/diracx/commit/84c7651eb644947009f10ce3fa3ce4a788a9b8a7))
+* optimize sandbox cleaning performance ([#796](https://github.com/DIRACGrid/diracx/issues/796)) ([9dd0b39](https://github.com/DIRACGrid/diracx/commit/9dd0b39c5e56fcb58d09bfddce79da3d965a7b3d))
+
+
+### Performance Improvements
+
+* use sargable (Search ARGument ABLE) range predicates for datetime search filters ([#809](https://github.com/DIRACGrid/diracx/issues/809)) ([c94dad5](https://github.com/DIRACGrid/diracx/commit/c94dad5cb7ba18444ca9c591015057943feec4d5))
+
 ## [0.0.9](https://github.com/DIRACGrid/diracx/compare/v0.0.8...v0.0.9) (2026-02-17)
 
 
