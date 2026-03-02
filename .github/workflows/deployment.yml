@@ -6,7 +6,9 @@ on:
       - 'v*'
   pull_request:
     paths-ignore:
-      - 'CHANGELOG.md'
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
   schedule:
     - cron: '0 10 * * *'
 
