@@ -101,5 +101,8 @@ pixi.lock
 *.egg-info
 docs/templates/_builtin_markdown.jinja
 
+# virtualenv
+.venv
+
 # docs site
 site
