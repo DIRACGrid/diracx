@@ -113,7 +113,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Download diracx wheels
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
             name: diracx-whl
       - name: "Find wheels"
