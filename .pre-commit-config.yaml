@@ -99,4 +99,4 @@ repos:
         entry: pixi run -e default python scripts/generate_settings_docs.py
         language: system
         pass_filenames: false
-        files: ^(diracx-.*/src/diracx/.*/settings\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
+        files: ^(diracx-.*/src/diracx/.*/settings\.py|diracx-routers/src/diracx/routers/otel\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
