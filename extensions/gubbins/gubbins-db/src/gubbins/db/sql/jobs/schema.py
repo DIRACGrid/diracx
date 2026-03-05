@@ -4,11 +4,12 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 
-# You need to inherit from the DeclarativeBase of the parent DB
+# Example of defining a new table
+# NOTE: You need to inherit from the DeclarativeBase of the parent DB
 class GubbinsInfo(JobDBBase):
     """An extra table with respect to Vanilla diracx JobDB"""
 
-    __tablename__ = "GubbinsJobs"
+    __tablename__ = "GubbinsInfo"
 
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
