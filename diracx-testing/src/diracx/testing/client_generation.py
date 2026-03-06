@@ -18,10 +18,10 @@ from urllib.parse import urlparse
 
 import git
 
-AUTOREST_VERSION = "3.7.2"
+AUTOREST_VERSION = "3.8.0"
 AUTOREST_CORE_VERSION = "3.10.8"
 AUTOREST_PLUGINS = {
-    "@autorest/python": "6.49.1",
+    "@autorest/python": "6.49.2",
     "@autorest/modelerfour": "4.27.2",
 }
 
