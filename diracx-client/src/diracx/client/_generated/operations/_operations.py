@@ -519,9 +519,9 @@ def build_jobs_search_request(*, page: int = 1, per_page: int = 100, **kwargs: A
 
     # Construct parameters
     if page is not None:
-        _params["page"] = _SERIALIZER.query("page", page, "int")
+        _params["page"] = _SERIALIZER.query("page", page, "int", minimum=1)
     if per_page is not None:
-        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
+        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int", maximum=10000, minimum=1)
 
     # Construct headers
     if content_type is not None:
@@ -2437,7 +2437,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
         """Search.
 
         Create a search query to the job database.
@@ -2463,8 +2463,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of dict mapping str to any
-        :rtype: list[dict[str, any]]
+        :return: ResponseJobsSearch or list of dict mapping str to any
+        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2477,7 +2477,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
         """Search.
 
         Create a search query to the job database.
@@ -2503,8 +2503,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: list of dict mapping str to any
-        :rtype: list[dict[str, any]]
+        :return: ResponseJobsSearch or list of dict mapping str to any
+        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2516,7 +2516,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
         """Search.
 
         Create a search query to the job database.
@@ -2539,8 +2539,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :return: list of dict mapping str to any
-        :rtype: list[dict[str, any]]
+        :return: ResponseJobsSearch or list of dict mapping str to any
+        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2555,7 +2555,7 @@ class JobsOperations:
         _params = kwargs.pop("params", {}) or {}
 
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+        cls: ClsType[Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -2591,10 +2591,13 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         response_headers = {}
+        if response.status_code == 200:
+            deserialized = self._deserialize("ResponseJobsSearch", pipeline_response.http_response)
+
         if response.status_code == 206:
             response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
 
-        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+            deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, response_headers)  # type: ignore

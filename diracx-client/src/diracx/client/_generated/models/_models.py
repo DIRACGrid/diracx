@@ -5,7 +5,6 @@
 # Changes may cause incorrect behavior and will be lost if the code is regenerated.
 # --------------------------------------------------------------------------
 
-from collections.abc import MutableMapping
 import datetime
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
@@ -13,7 +12,6 @@ from .._utils import serialization as _serialization
 
 if TYPE_CHECKING:
     from .. import models as _models
-JSON = MutableMapping[str, Any]
 
 
 class BodyAuthGetOidcToken(_serialization.Model):
@@ -937,6 +935,10 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
+class ResponseJobsSearch(_serialization.Model):
+    """Response Jobs Search."""
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 
@@ -1524,10 +1526,6 @@ class ValidationError(_serialization.Model):
     :vartype msg: str
     :ivar type: Error Type. Required.
     :vartype type: str
-    :ivar input: Input.
-    :vartype input: any
-    :ivar ctx: Context.
-    :vartype ctx: JSON
     """
 
     _validation = {
@@ -1540,20 +1538,9 @@ class ValidationError(_serialization.Model):
         "loc": {"key": "loc", "type": "[ValidationErrorLocItem]"},
         "msg": {"key": "msg", "type": "str"},
         "type": {"key": "type", "type": "str"},
-        "input": {"key": "input", "type": "object"},
-        "ctx": {"key": "ctx", "type": "object"},
     }
 
-    def __init__(
-        self,
-        *,
-        loc: List["_models.ValidationErrorLocItem"],
-        msg: str,
-        type: str,
-        input: Optional[Any] = None,
-        ctx: Optional[JSON] = None,
-        **kwargs: Any
-    ) -> None:
+    def __init__(self, *, loc: List["_models.ValidationErrorLocItem"], msg: str, type: str, **kwargs: Any) -> None:
         """
         :keyword loc: Location. Required.
         :paramtype loc: list[~_generated.models.ValidationErrorLocItem]
@@ -1561,17 +1548,11 @@ class ValidationError(_serialization.Model):
         :paramtype msg: str
         :keyword type: Error Type. Required.
         :paramtype type: str
-        :keyword input: Input.
-        :paramtype input: any
-        :keyword ctx: Context.
-        :paramtype ctx: JSON
         """
         super().__init__(**kwargs)
         self.loc = loc
         self.msg = msg
         self.type = type
-        self.input = input
-        self.ctx = ctx
 
 
 class ValidationErrorLocItem(_serialization.Model):
