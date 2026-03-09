@@ -935,10 +935,6 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
-class ResponseJobsSearch(_serialization.Model):
-    """Response Jobs Search."""
-
-
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 

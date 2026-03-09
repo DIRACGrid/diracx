@@ -1936,7 +1936,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Create a search query to the job database.
@@ -1962,8 +1962,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: ResponseJobsSearch or list of dict mapping str to any
-        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -1976,7 +1976,7 @@ class JobsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Create a search query to the job database.
@@ -2002,8 +2002,8 @@ class JobsOperations:
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
          Default value is "application/json".
         :paramtype content_type: str
-        :return: ResponseJobsSearch or list of dict mapping str to any
-        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
 
@@ -2015,7 +2015,7 @@ class JobsOperations:
         page: int = 1,
         per_page: int = 100,
         **kwargs: Any
-    ) -> Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]:
+    ) -> List[Dict[str, Any]]:
         """Search.
 
         Create a search query to the job database.
@@ -2038,8 +2038,8 @@ class JobsOperations:
         :paramtype page: int
         :keyword per_page: Default value is 100.
         :paramtype per_page: int
-        :return: ResponseJobsSearch or list of dict mapping str to any
-        :rtype: ~_generated.models.ResponseJobsSearch or list[dict[str, any]]
+        :return: list of dict mapping str to any
+        :rtype: list[dict[str, any]]
         :raises ~azure.core.exceptions.HttpResponseError:
         """
         error_map: MutableMapping = {
@@ -2054,7 +2054,7 @@ class JobsOperations:
         _params = kwargs.pop("params", {}) or {}
 
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[Union[_models.ResponseJobsSearch, List[Dict[str, Any]]]] = kwargs.pop("cls", None)
+        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
 
         content_type = content_type or "application/json"
         _json = None
@@ -2090,13 +2090,10 @@ class JobsOperations:
             raise HttpResponseError(response=response)
 
         response_headers = {}
-        if response.status_code == 200:
-            deserialized = self._deserialize("ResponseJobsSearch", pipeline_response.http_response)
-
         if response.status_code == 206:
             response_headers["Content-Range"] = self._deserialize("str", response.headers.get("Content-Range"))
 
-            deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
+        deserialized = self._deserialize("[{object}]", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, response_headers)  # type: ignore
