@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, Query, Response
+from fastapi import Body, Depends, HTTPException, Query, Response
 
 from diracx.core.models.search import (
     SearchParams,
@@ -134,7 +134,7 @@ async def search(
     body: Annotated[
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
-) -> str | list[dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Create a search query to the job database.
 
     This search can be based on different parameters, such as jobID, status, owner, etc.
@@ -171,9 +171,11 @@ async def search(
     # No jobs found but there are jobs for the requested search
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
     if len(jobs) == 0 and total > 0:
-        response.headers["Content-Range"] = f"jobs */{total}"
-        response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
-        return HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE.phrase
+        raise HTTPException(
+            status_code=HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
+            detail=HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE.phrase,
+            headers={"Content-Range": f"jobs */{total}"},
+        )
 
     # The total number of jobs is greater than the number of jobs returned
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
