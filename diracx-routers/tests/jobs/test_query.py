@@ -518,7 +518,7 @@ def test_search_pagination(normal_user_client):
     r = normal_user_client.post("/api/jobs/search", params={"page": 3, "per_page": 10})
     error = r.json()
     assert r.status_code == 416, error
-    assert error == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE.phrase
+    assert error["detail"] == HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE.phrase
 
     assert "Content-Range" in r.headers
     assert r.headers["Content-Range"] == f"jobs */{len(job_definitions)}"
