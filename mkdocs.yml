@@ -171,6 +171,7 @@ nav:
           - Components:
               - Databases: dev/explanations/components/db.md
               - Routes: dev/explanations/components/routes.md
+              - Job commands: dev/explanations/job_commands.md
           - Testing: dev/explanations/testing.md
           - Extensions: dev/explanations/extensions.md
           - Designing functionality: dev/explanations/designing-functionality.md
