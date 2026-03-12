@@ -143,10 +143,10 @@ jobs:
           done
       - name: Set up Docker Buildx
         if: ${{ matrix.extension == 'gubbins' }}
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build container for gubbins
         if: ${{ matrix.extension == 'gubbins' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: extensions/containers/services
           tags: gubbins/services:dev
