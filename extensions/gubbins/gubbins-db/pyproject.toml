@@ -23,6 +23,9 @@ testing = ["gubbins-testing", "diracx-testing"]
 [project.entry-points."diracx.dbs.sql"]
 LollygagDB = "gubbins.db.sql:LollygagDB"
 JobDB = "gubbins.db.sql:GubbinsJobDB"
+# --8<-- [start:my_pilots_db_entry_point]
+MyPilotDB = "gubbins.db.sql:MyPilotDB"
+# --8<-- [end:my_pilots_db_entry_point]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

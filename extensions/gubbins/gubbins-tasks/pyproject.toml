@@ -1,0 +1,66 @@
+[project]
+name = "gubbins-tasks"
+description = "Task definitions for the Gubbins diracx extension"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = []
+license = { text = "GPL-3.0-only" }
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "diracx-tasks",
+    "gubbins-db",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["gubbins-testing", "diracx-testing", "fakeredis"]
+
+[project.entry-points."diracx.tasks.lollygag"]
+SyncOwnersTask = "gubbins.tasks.lollygag:SyncOwnersTask"
+OwnerCleanupTask = "gubbins.tasks.lollygag:OwnerCleanupTask"
+OwnerReportTask = "gubbins.tasks.lollygag:OwnerReportTask"
+# --8<-- [start:my_pilots_task_entry_points]
+
+[project.entry-points."diracx.tasks.my_pilots"]
+MySubmitPilotsTask = "gubbins.tasks.my_pilots:MySubmitPilotsTask"
+MyPilotTask = "gubbins.tasks.my_pilots:MyPilotTask"
+MyCheckPilotsTask = "gubbins.tasks.my_pilots:MyCheckPilotsTask"
+MyPilotReportTask = "gubbins.tasks.my_pilots:MyPilotReportTask"
+# --8<-- [end:my_pilots_task_entry_points]
+
+[project.entry-points."diracx.lock_object_types"]
+lollygag = "gubbins.tasks.lock_types"
+# --8<-- [start:my_pilots_lock_entry_point]
+my_pilot = "gubbins.tasks.my_pilot_lock_types"
+# --8<-- [end:my_pilots_lock_entry_point]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+root = "../../.."
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gubbins"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=gubbins.tasks",
+    "--cov-report=term-missing",
+    "-pgubbins.testing",
+    "-pdiracx.testing",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"
