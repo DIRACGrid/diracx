@@ -6,6 +6,9 @@ diracx:
     sqlDbs:
       dbs:
         LollygagDB:
+        # --8<-- [start:my_pilots_helm_db]
+        MyPilotDB:
+        # --8<-- [end:my_pilots_helm_db]
   global:
     images:
       tag: "dev"

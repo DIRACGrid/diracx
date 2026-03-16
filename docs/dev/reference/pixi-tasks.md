@@ -12,6 +12,11 @@ This page documents the available pixi tasks.
 ## Default Tasks
 
 - `description`: Run pre-commit hooks
+- `local-shell`: Open a shell with the local DiracX environment configured
+- `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)
+- `local-tasks`: Run diracx-task-run with the local environment variables
+- `test-tutorial`: Run only the advanced tutorial tests
+- `tutorial-reset`: Strip tutorial code from gubbins for the advanced tutorial
 
 ## DiracX Tasks
 
@@ -24,6 +29,7 @@ This page documents the available pixi tasks.
 - `pytest-diracx-db`: Run the tests for diracx-db
 - `pytest-diracx-logic`: Run the tests for diracx-logic
 - `pytest-diracx-routers`: Run the tests for diracx-routers
+- `pytest-diracx-tasks`: Run the tests for diracx-tasks
 
 ## Documentation Tasks
 
@@ -41,6 +47,7 @@ This page documents the available pixi tasks.
 - `pytest-gubbins-db`: Run the tests for gubbins-db
 - `pytest-gubbins-logic`: Run the tests for gubbins-logic
 - `pytest-gubbins-routers`: Run the tests for gubbins-routers
+- `pytest-gubbins-tasks`: Run the tests for gubbins-tasks
 
 ## Pre-commit Tasks
 
