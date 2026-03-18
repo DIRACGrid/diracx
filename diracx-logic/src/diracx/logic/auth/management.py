@@ -65,20 +65,22 @@ async def revoke_refresh_token_by_refresh_token(
 
 async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
     """Remove expired data from the auth database."""
-    expired_tokens, revoked_tokens = await auth_db.clean_expired_refresh_token(
+    expired_tokens = await auth_db.clean_expired_refresh_tokens(
         max_validity=settings.refresh_token_expire_minutes,
-        max_retention=settings.revoked_refresh_token_retention_days,
     )
-    logger.info(
-        f"Deleted {expired_tokens} expired and {revoked_tokens} revoked refresh tokens"
+    logger.info("Deleted %d expired refresh tokens", expired_tokens)
+
+    revoked_tokens = await auth_db.clean_revoked_refresh_tokens(
+        max_retention=settings.revoked_refresh_token_retention_minutes,
     )
+    logger.info("Deleted %d revoked refresh tokens", revoked_tokens)
 
     auth = await auth_db.clean_expired_authorization_flows(
         max_retention=settings.completed_flow_retention_minutes,
     )
-    logger.info(f"Deleted {auth} expired authorization flows")
+    logger.info("Deleted %d expired authorization flows", auth)
 
     device = await auth_db.clean_expired_device_flows(
         max_retention=settings.completed_flow_retention_minutes,
     )
-    logger.info(f"Deleted {device} expired device flows")
+    logger.info("Deleted %d expired device flows", device)

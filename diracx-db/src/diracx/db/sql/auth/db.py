@@ -340,10 +340,11 @@ class AuthDB(BaseSQLDB):
             .values(status=RefreshTokenStatus.REVOKED)
         )
 
-    async def clean_expired_refresh_token(
-        self, max_validity: int, max_retention: int
-    ) -> tuple[int, int]:
-        """Delete expired and old revoked refresh tokens."""
+    async def clean_expired_refresh_tokens(self, max_validity: int) -> int:
+        """Delete expired refresh tokens.
+
+        max_validity: Maximum validity time in minutes for refresh tokens.
+        """
         expired_date = str(
             uuid7_from_datetime(substract_date(minutes=max_validity), randomize=False)
         )
@@ -353,8 +354,15 @@ class AuthDB(BaseSQLDB):
         )
         res_expired = await self.conn.execute(stmt_expired)
 
+        return res_expired.rowcount
+
+    async def clean_revoked_refresh_tokens(self, max_retention: int) -> int:
+        """Delete old revoked refresh tokens.
+
+        max_retention: Maximum retention time in minutes for revoked refresh tokens.
+        """
         revoked_date = str(
-            uuid7_from_datetime(substract_date(days=max_retention), randomize=False)
+            uuid7_from_datetime(substract_date(minutes=max_retention), randomize=False)
         )
         stmt_revoked = delete(RefreshTokens).where(
             RefreshTokens.status == RefreshTokenStatus.REVOKED,
@@ -362,12 +370,23 @@ class AuthDB(BaseSQLDB):
         )
         res_revoked = await self.conn.execute(stmt_revoked)
 
-        return res_expired.rowcount, res_revoked.rowcount
+        return res_revoked.rowcount
 
     async def clean_expired_authorization_flows(self, max_retention: int) -> int:
-        """Delete old DONE/ERROR authorization flows."""
+        """Delete old authorization flows.
+
+        max_retention: Maximum retention time in minutes for expired authorization flows.
+        Must be bigger than authorization_flow_expiration_seconds.
+        """
         stmt_auth = delete(AuthorizationFlows).where(
-            AuthorizationFlows.status.in_([FlowStatus.DONE, FlowStatus.ERROR]),
+            AuthorizationFlows.status.in_(
+                [
+                    FlowStatus.PENDING,
+                    FlowStatus.READY,
+                    FlowStatus.DONE,
+                    FlowStatus.ERROR,
+                ]
+            ),
             AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
         )
         res_auth = await self.conn.execute(stmt_auth)
@@ -375,9 +394,20 @@ class AuthDB(BaseSQLDB):
         return res_auth.rowcount
 
     async def clean_expired_device_flows(self, max_retention: int) -> int:
-        """Delete old DONE/ERROR device flows."""
+        """Delete old device flows.
+
+        max_retention: Maximum retention time in minutes for expired device flows.
+        Must be bigger than device_flow_expiration_seconds.
+        """
         stmt_device = delete(DeviceFlows).where(
-            DeviceFlows.status.in_([FlowStatus.DONE, FlowStatus.ERROR]),
+            DeviceFlows.status.in_(
+                [
+                    FlowStatus.PENDING,
+                    FlowStatus.READY,
+                    FlowStatus.DONE,
+                    FlowStatus.ERROR,
+                ]
+            ),
             DeviceFlows.creation_time < substract_date(minutes=max_retention),
         )
         res_device = await self.conn.execute(stmt_device)

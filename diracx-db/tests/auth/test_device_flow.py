@@ -144,26 +144,28 @@ async def test_device_flow_insert_id_token(auth_db: AuthDB):
 async def test_clean_device_flows(auth_db: AuthDB):
     # Insert two device flows
     async with auth_db as auth_db:
-        user_code1, device_code1 = await auth_db.insert_device_flow(
-            "client_id", "scope"
-        )
-        user_code2, device_code2 = await auth_db.insert_device_flow(
-            "client_id", "scope"
-        )
+        _, _ = await auth_db.insert_device_flow("client_id1", "scope1")
+        user_code2, _ = await auth_db.insert_device_flow("client_id2", "scope2")
+        _, device_code3 = await auth_db.insert_device_flow("client_id3", "scope3")
+        _, device_code4 = await auth_db.insert_device_flow("client_id4", "scope4")
 
     async with auth_db as auth_db:
-        await auth_db.update_device_flow_status(device_code1, FlowStatus.DONE)
-        await auth_db.update_device_flow_status(device_code2, FlowStatus.ERROR)
+        await auth_db.device_flow_validate_user_code(user_code2, MAX_VALIDITY)
+        await auth_db.device_flow_insert_id_token(
+            user_code2, {"sub": "myIdToken"}, MAX_VALIDITY
+        )
+        await auth_db.update_device_flow_status(device_code3, FlowStatus.DONE)
+        await auth_db.update_device_flow_status(device_code4, FlowStatus.ERROR)
 
     # Check the number of deleted device flows (should be 0)
     async with auth_db as auth_db:
         deleted_device = await auth_db.clean_expired_device_flows(max_retention=30)
         assert deleted_device == 0
 
-    # Check the number of deleted device flows (should be 2)
+    # Check the number of deleted device flows (should be 4: 1 PENDING, 1 READY, 1 DONE, 1 ERROR)
     async with auth_db as auth_db:
         deleted_device = await auth_db.clean_expired_device_flows(max_retention=0)
-        assert deleted_device == 2
+        assert deleted_device == 4
 
     # Check the number of deleted device flow (should be 0 because there is nothing left to delete)
     async with auth_db as auth_db:

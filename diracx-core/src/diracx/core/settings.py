@@ -32,6 +32,7 @@ from pydantic import (
     SecretStr,
     TypeAdapter,
     UrlConstraints,
+    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -151,6 +152,21 @@ class DevelopmentSettings(ServiceSettingsBase):
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
 
+    @model_validator(mode="after")
+    def check_retention_greater_than_expiration(self) -> Self:
+        """Ensure retention times are bigger than expiration times to avoid deleting valid flows."""
+        if self.completed_flow_retention_minutes <= (
+            self.device_flow_expiration_seconds / 60
+        ) or self.completed_flow_retention_minutes <= (
+            self.authorization_flow_expiration_seconds / 60
+        ):
+            raise ValueError(
+                f"completed_flow_retention_minutes ({self.completed_flow_retention_minutes} minutes) must be bigger"
+                f" than device_flow_expiration_seconds ({self.device_flow_expiration_seconds / 60} minutes) and"
+                f" authorization_flow_expiration_seconds: ({self.authorization_flow_expiration_seconds / 60} minutes)"
+            )
+        return self
+
     model_config = SettingsConfigDict(
         env_prefix="DIRACX_SERVICE_AUTH_", use_attribute_docstrings=True
     )
@@ -233,11 +249,11 @@ class AuthSettings(ServiceSettingsBase):
     through a new authentication flow. Default: 60 minutes.
     """
 
-    revoked_refresh_token_retention_days: int = 30
-    """Retention time in days for revoked refresh tokens.
+    revoked_refresh_token_retention_minutes: int = 43200
+    """Retention time in minutes for revoked refresh tokens.
 
     The maximum retention time of refresh tokens after being
-    revoked and before they are deleted. Default: 30 days.
+    revoked and before they are deleted. Default: 43200 minutes (30 days).
     """
 
     available_properties: set[SecurityProperty] = Field(

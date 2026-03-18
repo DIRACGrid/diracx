@@ -278,18 +278,20 @@ async def test_clean_refresh_tokens(auth_db: AuthDB):
 
     # Check the number of deleted refresh tokens (should be 0)
     async with auth_db as auth_db:
-        deleted_expired, deleted_revoked = await auth_db.clean_expired_refresh_token(
-            max_validity=10, max_retention=30
-        )
+        deleted_expired = await auth_db.clean_expired_refresh_tokens(max_validity=10)
     assert deleted_expired == 0
+
+    async with auth_db as auth_db:
+        deleted_revoked = await auth_db.clean_revoked_refresh_tokens(max_retention=30)
     assert deleted_revoked == 0
 
     # Check the number of deleted refresh tokens (should be 1 of each)
     async with auth_db as auth_db:
-        deleted_expired, deleted_revoked = await auth_db.clean_expired_refresh_token(
-            max_validity=0, max_retention=0
-        )
+        deleted_expired = await auth_db.clean_expired_refresh_tokens(max_validity=0)
     assert deleted_expired == 1
+
+    async with auth_db as auth_db:
+        deleted_revoked = await auth_db.clean_revoked_refresh_tokens(max_retention=0)
     assert deleted_revoked == 1
 
     # Get all refresh tokens (Admin)

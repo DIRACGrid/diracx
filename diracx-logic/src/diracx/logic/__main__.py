@@ -93,12 +93,15 @@ async def delete_jwk(args):
 async def cleanup_authdb(args):
     """Delete expired tokens and flows from the AuthDB."""
     logger.info("Deleting expired tokens and flows")
+    import os
+
     from diracx.core.settings import AuthSettings
     from diracx.db.sql import AuthDB
     from diracx.logic.auth.management import cleanup_expired_data
 
     settings = AuthSettings()
-    db = AuthDB(args.db_url)
+    db_url = os.environ["DIRACX_DB_URL_AUTHDB"]
+    db = AuthDB(db_url)
     async with db.engine_context():
         async with db:
             await cleanup_expired_data(db, settings)
@@ -136,9 +139,6 @@ def parse_args():
 
     cleanup_authdb_parser = subparsers.add_parser(
         "cleanup-authdb", help="Delete expired tokens and flows from the AuthDB"
-    )
-    cleanup_authdb_parser.add_argument(
-        "--db-url", required=True, help="URL to the AuthDB"
     )
     cleanup_authdb_parser.set_defaults(func=cleanup_authdb)
 
