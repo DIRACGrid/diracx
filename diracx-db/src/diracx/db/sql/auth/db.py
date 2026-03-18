@@ -379,14 +379,6 @@ class AuthDB(BaseSQLDB):
         Must be bigger than authorization_flow_expiration_seconds.
         """
         stmt_auth = delete(AuthorizationFlows).where(
-            AuthorizationFlows.status.in_(
-                [
-                    FlowStatus.PENDING,
-                    FlowStatus.READY,
-                    FlowStatus.DONE,
-                    FlowStatus.ERROR,
-                ]
-            ),
             AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
         )
         res_auth = await self.conn.execute(stmt_auth)
@@ -400,14 +392,6 @@ class AuthDB(BaseSQLDB):
         Must be bigger than device_flow_expiration_seconds.
         """
         stmt_device = delete(DeviceFlows).where(
-            DeviceFlows.status.in_(
-                [
-                    FlowStatus.PENDING,
-                    FlowStatus.READY,
-                    FlowStatus.DONE,
-                    FlowStatus.ERROR,
-                ]
-            ),
             DeviceFlows.creation_time < substract_date(minutes=max_retention),
         )
         res_device = await self.conn.execute(stmt_device)
