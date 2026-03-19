@@ -13,6 +13,10 @@ The URL of the configuration backend.
 The variable points to .env files where configuration may be placed. There could be more than one file, with suffixes
 \_X, where X is a number. The files will be loaded in order.
 
+### `DIRACX_SERVICE_JOBS_ENABLED`
+
+Determines whether the jobs service is enabled.
+
 ## AuthSettings
 
 Settings for the authentication service.
@@ -134,6 +138,10 @@ Set of security properties available in this DIRAC installation.
 These properties define various authorization capabilities and are used
 for access control decisions. Defaults to all available security properties.
 
+### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
+
+The hashed API key for the legacy exchange endpoint.
+
 ## SandboxStoreSettings
 
 Settings for the sandbox store.
@@ -209,14 +217,6 @@ Smaller chunks mean shorter transactions and less lock contention.
 Maximum number of concurrent DB delete chunks during cleaning.
 
 Controls parallelism of database DELETE operations.
-
-### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
-
-The hashed API key for the legacy exchange endpoint.
-
-### `DIRACX_SERVICE_JOBS_ENABLED`
-
-Determines whether the jobs service is enabled.
 
 ## Databases
 
