@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, HTTPException, Query, Response
+from fastapi import Body, Depends, Query, Response
 
 from diracx.core.models.search import (
     SearchParams,
@@ -171,11 +171,8 @@ async def search(
     # No jobs found but there are jobs for the requested search
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
     if len(jobs) == 0 and total > 0:
-        raise HTTPException(
-            status_code=HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
-            detail=HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE.phrase,
-            headers={"Content-Range": f"jobs */{total}"},
-        )
+        response.headers["Content-Range"] = f"jobs */{total}"
+        response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
 
     # The total number of jobs is greater than the number of jobs returned
     # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
