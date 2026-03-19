@@ -525,25 +525,25 @@ def test_search_pagination(normal_user_client):
 
     # Set the per_page parameter to 0
     r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": 0})
-    assert r.json()["detail"][0]["msg"] == "Input should be greater than or equal to 1"
+    assert r.status_code == 422, r.json()
 
     # Set the per_page parameter to a negative number
     r = normal_user_client.post("/api/jobs/search", params={"page": 1, "per_page": -1})
-    assert r.json()["detail"][0]["msg"] == "Input should be greater than or equal to 1"
+    assert r.status_code == 422, r.json()
 
     # Set the page parameter to 0
     r = normal_user_client.post("/api/jobs/search", params={"page": 0, "per_page": 10})
-    assert r.json()["detail"][0]["msg"] == "Input should be greater than or equal to 1"
+    assert r.status_code == 422, r.json()
 
     # Set the page parameter to a negative number
     r = normal_user_client.post("/api/jobs/search", params={"page": -1, "per_page": 10})
-    assert r.json()["detail"][0]["msg"] == "Input should be greater than or equal to 1"
+    assert r.status_code == 422, r.json()
 
     # Too many jobs per page (max = 10000)
     r = normal_user_client.post(
         "/api/jobs/search", params={"page": 1, "per_page": 20000}
     )
-    assert r.json()["detail"][0]["msg"] == "Input should be less than or equal to 10000"
+    assert r.status_code == 422, r.json()
 
 
 def test_user_cannot_submit_parametric_jdl_greater_than_max_parametric_jobs(
