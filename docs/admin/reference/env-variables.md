@@ -214,11 +214,6 @@ Controls parallelism of database DELETE operations.
 
 The hashed API key for the legacy exchange endpoint.
 
-### `DIRACX_SERVICE_DOTENV`
-
-The variable points to .env files where configuration may be placed. There could be more than one file, with suffixes
-\_X, where X is a number. The files will be loaded in order.
-
 ### `DIRACX_SERVICE_JOBS_ENABLED`
 
 Determines whether the jobs service is enabled.
