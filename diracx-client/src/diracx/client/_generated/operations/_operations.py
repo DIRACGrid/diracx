@@ -519,9 +519,9 @@ def build_jobs_search_request(*, page: int = 1, per_page: int = 100, **kwargs: A
 
     # Construct parameters
     if page is not None:
-        _params["page"] = _SERIALIZER.query("page", page, "int")
+        _params["page"] = _SERIALIZER.query("page", page, "int", minimum=1)
     if per_page is not None:
-        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int")
+        _params["per_page"] = _SERIALIZER.query("per_page", per_page, "int", maximum=10000, minimum=1)
 
     # Construct headers
     if content_type is not None:
