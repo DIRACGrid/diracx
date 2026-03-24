@@ -152,9 +152,7 @@ def create_app_inner(
 
     # Override the ConfigSource.create by the actual reading of the config
     # Mark it as non-blocking so we can serve 503 errors while waiting for the config
-    app.dependency_overrides[ConfigSource.create] = (
-        config_source.read_config_non_blocking
-    )
+    app.dependency_overrides[ConfigSource.create] = config_source.read_non_blocking
 
     all_access_policies_used = {}
 

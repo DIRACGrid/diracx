@@ -72,7 +72,7 @@ def test_generate_cs(tmp_path, protocol):
 
 
 def test_add_vo(cs_repo):
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
     assert TEST_VO in config.Registry
     assert config.Registry[TEST_VO].DefaultGroup == "user"
@@ -95,7 +95,7 @@ def test_add_vo(cs_repo):
         ],
     )
 
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     assert result.exit_code == 0, result.output
 
     assert vo2 in config.Registry
@@ -121,7 +121,7 @@ def test_add_vo(cs_repo):
 def test_add_group(cs_repo):
     new_group = "testgroup2"
 
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
     assert TEST_USER_GROUP in config.Registry[TEST_VO].Groups
     assert config.Registry[TEST_VO].Groups[TEST_USER_GROUP].JobShare == 1000
@@ -143,7 +143,7 @@ def test_add_group(cs_repo):
             "AdminUser",
         ],
     )
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     assert result.exit_code == 0, result.output
 
     assert new_group in config.Registry[TEST_VO].Groups
@@ -190,7 +190,7 @@ def test_add_user(cs_repo, vo, user_group):
     sub = "lhcb:chaen"
     preferred_username = "dontCallMeShirley"
 
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
     # Check the user isn't in it
     if vo in config.Registry:
@@ -216,7 +216,7 @@ def test_add_user(cs_repo, vo, user_group):
 
     assert result.exit_code == 0, result.output
 
-    config = ConfigSource.create_from_url(backend_url=cs_repo).read_config()
+    config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     # check the user is defined
     assert vo in config.Registry
     assert sub in config.Registry[vo].Users
