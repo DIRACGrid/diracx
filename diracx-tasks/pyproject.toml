@@ -35,6 +35,9 @@ diracx-task-run = "diracx.tasks.task_run:main"
 [project.entry-points."diracx.dbs.sql"]
 TaskDB = "diracx.tasks.plumbing.persistence:TaskDB"
 
+[project.entry-points."diracx.tasks.jobs"]
+CleanSandboxStoreTask = "diracx.tasks.jobs:CleanSandboxStoreTask"
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
