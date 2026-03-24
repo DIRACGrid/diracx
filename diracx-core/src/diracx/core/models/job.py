@@ -6,7 +6,7 @@ They are shared between the client components (cli, api) and services components
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 

@@ -23,7 +23,8 @@ class ActionType(StrEnum):
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
-    """Rules:
+    """Pilot management access policy.
+
     * Every user can access data about his VO
     * An administrator can modify a pilot.
     """

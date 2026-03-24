@@ -76,11 +76,7 @@ class PilotAgentsDB(BaseSQLDB):
         """Associate a pilot with jobs.
 
         job_to_pilot_mapping format:
-            ```py
-            job_to_pilot_mapping = [
-                {"PilotID": pilot_id, "JobID": job_id, "StartTime": now}
-            ]
-            ```
+            job_to_pilot_mapping = [{"PilotID": pilot_id, "JobID": job_id, "StartTime": now}]
 
         Raises:
         - PilotNotFoundError if a pilot_id is not associated with a pilot.
@@ -144,7 +140,7 @@ class PilotAgentsDB(BaseSQLDB):
         """Bulk update pilots with a mapping.
 
         pilot_stamps_to_fields_mapping format:
-            ```py
+
             [
                 {
                     "PilotStamp": pilot_stamp,
@@ -157,7 +153,6 @@ class PilotAgentsDB(BaseSQLDB):
                     ...
                 }
             ]
-            ```
 
         The mapping helps to update multiple fields at a time.
 
