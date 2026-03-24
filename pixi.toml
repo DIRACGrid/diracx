@@ -10,6 +10,8 @@ ipython = ">=9.2.0"
 # Ensure these packages are installed using conda instead of pip
 python-gfal2 = "*"
 m2crypto = "*"
+# opentelemetry-api requires importlib-metadata<8.8.0
+importlib-metadata = "<8.8.0"
 
 # DiracX features for providing dependencies
 [feature.diracx.pypi-dependencies]
