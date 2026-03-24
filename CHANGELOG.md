@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11](https://github.com/DIRACGrid/diracx/compare/v0.0.10...v0.0.11) (2026-03-24)
+
+
+### Features
+
+* authdb tables cleanup ([#815](https://github.com/DIRACGrid/diracx/issues/815)) ([3e495e1](https://github.com/DIRACGrid/diracx/commit/3e495e11893cd14e0a3612ca175e46f16e6ae2d1))
+
 ## [0.0.10](https://github.com/DIRACGrid/diracx/compare/v0.0.9...v0.0.10) (2026-02-26)
 
 
