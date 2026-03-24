@@ -58,6 +58,11 @@ ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_sc
 
 
 class CacheableSource(metaclass=ABCMeta):
+    """Abstract base class for sources that can be cached.
+
+    Handles the caching of the latest revision and its content using a two-level cache.
+    """
+
     def __init__(self):
         # Revision cache is used to store the latest revision and its
         # modification date. This cache has two TTLs, one which triggers the
