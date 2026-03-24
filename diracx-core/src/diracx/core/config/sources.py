@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated
+from typing import Annotated, Generic, TypeVar
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -56,20 +56,16 @@ class AnyUrlWithoutHost(AnyUrl):
 
 ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_scheme)]
 
+T = TypeVar("T")
 
-class ConfigSource(metaclass=ABCMeta):
-    """Abstract class for the configuration source.
 
-    This class takes care of the expected caching and locking logic. Subclasses
-    are responsible for implementing the actual logic to find revisions and
-    reading the configuration.
+class CacheableSource(Generic[T], metaclass=ABCMeta):
+    """Abstract base class for sources that can be cached.
+
+    Handles the caching of the latest revision and its content using a two-level cache.
     """
 
-    # Keep a mapping between the scheme and the class
-    __registry: dict[str, type["ConfigSource"]] = {}
-    scheme: str
-
-    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
+    def __init__(self):
         # Revision cache is used to store the latest revision and its
         # modification date. This cache has two TTLs, one which triggers the
         # background refresh and the other which is results in a hard failure.
@@ -96,13 +92,66 @@ class ConfigSource(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> Config:
+    def read_raw(self, hexsha: str, modified: datetime) -> T:
         """Abstract method.
 
-        Return the Config object that corresponds to the
-        specific hash
-        The `modified` parameter is just added as a attribute to the config.
+        Return the Source object that corresponds to the specific hash
+        The `modified` parameter is just added as a attribute to the source.
         """
+
+    def read(self) -> T:
+        """Load the source from the backend with appropriate caching.
+
+        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
+        :raises: git.exc.BadName if version does not exist
+        """
+        hexsha = self._revision_cache.get(
+            "latest_revision", self._read_work, blocking=True
+        )
+        return self._content_cache[hexsha]
+
+    async def read_non_blocking(self) -> T:
+        """Load the source from the backend with appropriate caching.
+
+        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
+        :raises: git.exc.BadName if version does not exist
+        """
+        hexsha = self._revision_cache.get(
+            "latest_revision", self._read_work, blocking=False
+        )
+        return self._content_cache[hexsha]
+
+    def _read_work(self) -> str:
+        """Work function for the thread pool of `self._revision_cache`.
+
+        This function ensures that the latest revision is loaded into the
+        content cache before it is admitted into the revision cache.
+        """
+        hexsha, modified = self.latest_revision()
+        if hexsha not in self._content_cache:
+            self._content_cache[hexsha] = self.read_raw(hexsha, modified)
+        return hexsha
+
+    def clear_caches(self):
+        """Clear the caches."""
+        self._revision_cache.clear()
+        self._content_cache.clear()
+
+
+class ConfigSource(CacheableSource[Config]):
+    """Abstract class for the configuration source.
+
+    This class takes care of the expected caching and locking logic. Subclasses
+    are responsible for implementing the actual logic to find revisions and
+    reading the configuration.
+    """
+
+    # Keep a mapping between the scheme and the class
+    __registry: dict[str, type["ConfigSource"]] = {}
+    scheme: str
+
+    def __init__(self, *, backend_url: ConfigSourceUrl) -> None:
+        super().__init__()
 
     def __init_subclass__(cls) -> None:
         """Keep a record of <scheme: class>."""
@@ -122,16 +171,21 @@ class ConfigSource(metaclass=ABCMeta):
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
+    @abstractmethod
+    def read_raw(self, hexsha: str, modified: datetime) -> Config:
+        """Abstract method.
+
+        Return the Config object that corresponds to the specific hash
+        The `modified` parameter is just added as a attribute to the config.
+        """
+
     def read_config(self) -> Config:
         """Load the configuration from the backend with appropriate caching.
 
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha = self._revision_cache.get(
-            "latest_revision", self._read_config_work, blocking=True
-        )
-        return self._content_cache[hexsha]
+        return super().read()
 
     async def read_config_non_blocking(self) -> Config:
         """Load the configuration from the backend with appropriate caching.
@@ -139,26 +193,7 @@ class ConfigSource(metaclass=ABCMeta):
         :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
         :raises: git.exc.BadName if version does not exist
         """
-        hexsha = self._revision_cache.get(
-            "latest_revision", self._read_config_work, blocking=False
-        )
-        return self._content_cache[hexsha]
-
-    def _read_config_work(self) -> str:
-        """Work function for the thread pool of `self._revision_cache`.
-
-        This function ensures that the latest revision is loaded into the
-        content cache before it is admitted into the revision cache.
-        """
-        hexsha, modified = self.latest_revision()
-        if hexsha not in self._content_cache:
-            self._content_cache[hexsha] = self.read_raw(hexsha, modified)
-        return hexsha
-
-    def clear_caches(self):
-        """Clear the caches."""
-        self._revision_cache.clear()
-        self._content_cache.clear()
+        return await super().read_non_blocking()
 
 
 class BaseGitConfigSource(ConfigSource):
