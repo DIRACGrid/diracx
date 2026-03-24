@@ -8,7 +8,7 @@ In order to run DiracX in production we recommend having:
 - **S3-compatible storage** for storing jobs' sandboxes
 - An **IdP** supporting OAuth/OIDC (e.g. [Indigo IAM](https://indigo-iam.github.io/))
 
-At the time of writing, the only supported way of running DiracX is through **[Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/)**.
+At the time of writing, the only fully supported way of running DiracX is through **[Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/)**. If you need to decouple your DIRAC v9 upgrade from a Kubernetes deployment, see [Installation without Kubernetes](../install-without-kubernetes/index.md).
 
 The following chapters will *NOT* cover:
 
