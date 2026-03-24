@@ -206,7 +206,7 @@ class ClientFactory:
             backend_url=f"git+file://{with_config_repo}"
         )
         # Warm the cache to avoid 503 errors
-        config_source.read_config()
+        config_source.read()
 
         self.app = create_app_inner(
             enabled_systems=enabled_systems,

@@ -171,30 +171,6 @@ class ConfigSource(CacheableSource[Config]):
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
-    @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> Config:
-        """Abstract method.
-
-        Return the Config object that corresponds to the specific hash
-        The `modified` parameter is just added as a attribute to the config.
-        """
-
-    def read_config(self) -> Config:
-        """Load the configuration from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
-        return super().read()
-
-    async def read_config_non_blocking(self) -> Config:
-        """Load the configuration from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the config is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
-        return await super().read_non_blocking()
-
 
 class BaseGitConfigSource(ConfigSource):
     """Base class for the git based config source."""

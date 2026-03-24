@@ -21,14 +21,14 @@ async def test_live(client_factory):
         r = await _test_after_clear(config_source, probe_fcn)
         assert r.json() == {"status": "live"}
 
-        old_config = await config_source.read_config_non_blocking()
+        old_config = await config_source.read_non_blocking()
         repo = Repo(config_source.repo_location)
         commit = repo.index.commit("Test commit")
         assert commit.hexsha not in old_config._hexsha
 
         # This will trigger a config update but still return the old config
         config_source._revision_cache.soft_cache.clear()
-        new_config = await config_source.read_config_non_blocking()
+        new_config = await config_source.read_non_blocking()
         assert commit.hexsha not in old_config._hexsha
 
         # If we wait long enough, the new config should be returned
@@ -37,7 +37,7 @@ async def test_live(client_factory):
 
             r = probe_fcn()
             assert r.status_code == 200, r.text
-            new_config = await config_source.read_config_non_blocking()
+            new_config = await config_source.read_non_blocking()
             if commit.hexsha in new_config._hexsha:
                 break
         else:
