@@ -10,8 +10,8 @@ ipython = ">=9.2.0"
 # Ensure these packages are installed using conda instead of pip
 python-gfal2 = "*"
 m2crypto = "*"
-# Limit setuptools version due to compatibility issues
-setuptools = "<82.0"
+# opentelemetry-api requires importlib-metadata<8.8.0
+importlib-metadata = "<8.8.0"
 
 # DiracX features for providing dependencies
 [feature.diracx.pypi-dependencies]
@@ -31,6 +31,8 @@ diracx-db = { path = "diracx-db", editable = true, extras = ["testing"] }
 diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
 [feature.diracx-routers.pypi-dependencies]
 diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
+# opentelemetry-api requires importlib-metadata<8.8.0
+importlib-metadata = "<8.8.0"
 
 # DiracX features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
