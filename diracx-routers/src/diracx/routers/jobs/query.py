@@ -3,13 +3,14 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, Response
+from fastapi import Body, Depends, Query, Response
 
 from diracx.core.models.search import (
     SearchParams,
     SummaryParams,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR
+from diracx.logic.jobs.query import MAX_PER_PAGE
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
 
@@ -24,10 +25,6 @@ from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable
 
 router = DiracxRouter()
-
-
-MAX_PER_PAGE = 10000
-
 
 EXAMPLE_SEARCHES = {
     "Show all": {
@@ -132,8 +129,8 @@ async def search(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
     response: Response,
-    page: int = 1,
-    per_page: int = 100,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=MAX_PER_PAGE)] = 100,
     body: Annotated[
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,

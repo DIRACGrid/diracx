@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from itertools import pairwise
 
 from dateutil.rrule import MONTHLY, rrule
-from sqlalchemy import insert, select, text, update
+from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID, uuid7
@@ -339,3 +339,61 @@ class AuthDB(BaseSQLDB):
             .where(RefreshTokens.sub == subject)
             .values(status=RefreshTokenStatus.REVOKED)
         )
+
+    async def clean_expired_refresh_tokens(self, max_validity: int) -> int:
+        """Delete expired refresh tokens.
+
+        max_validity: Maximum validity time in minutes for refresh tokens.
+        """
+        expired_date = str(
+            uuid7_from_datetime(substract_date(minutes=max_validity), randomize=False)
+        )
+        stmt_expired = delete(RefreshTokens).where(
+            RefreshTokens.status == RefreshTokenStatus.CREATED,
+            RefreshTokens.jti < expired_date,
+        )
+        res_expired = await self.conn.execute(stmt_expired)
+
+        return res_expired.rowcount
+
+    async def clean_revoked_refresh_tokens(self, max_retention: int) -> int:
+        """Delete old revoked refresh tokens.
+
+        max_retention: Maximum retention time in minutes for revoked refresh tokens.
+        """
+        revoked_date = str(
+            uuid7_from_datetime(substract_date(minutes=max_retention), randomize=False)
+        )
+        stmt_revoked = delete(RefreshTokens).where(
+            RefreshTokens.status == RefreshTokenStatus.REVOKED,
+            RefreshTokens.jti < revoked_date,
+        )
+        res_revoked = await self.conn.execute(stmt_revoked)
+
+        return res_revoked.rowcount
+
+    async def clean_expired_authorization_flows(self, max_retention: int) -> int:
+        """Delete old authorization flows.
+
+        max_retention: Maximum retention time in minutes for expired authorization flows.
+        Must be bigger than authorization_flow_expiration_seconds.
+        """
+        stmt_auth = delete(AuthorizationFlows).where(
+            AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
+        )
+        res_auth = await self.conn.execute(stmt_auth)
+
+        return res_auth.rowcount
+
+    async def clean_expired_device_flows(self, max_retention: int) -> int:
+        """Delete old device flows.
+
+        max_retention: Maximum retention time in minutes for expired device flows.
+        Must be bigger than device_flow_expiration_seconds.
+        """
+        stmt_device = delete(DeviceFlows).where(
+            DeviceFlows.creation_time < substract_date(minutes=max_retention),
+        )
+        res_device = await self.conn.execute(stmt_device)
+
+        return res_device.rowcount

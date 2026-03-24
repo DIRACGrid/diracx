@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from uuid_utils import UUID
 
 from diracx.core.exceptions import InvalidCredentialsError
@@ -9,6 +11,8 @@ from diracx.core.models.auth import TokenTypeHint
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
 from diracx.logic.auth.utils import verify_dirac_refresh_token
+
+logger = logging.getLogger(__name__)
 
 
 async def get_refresh_tokens(
@@ -57,3 +61,26 @@ async def revoke_refresh_token_by_refresh_token(
     # Decode and verify the refresh token
     jti, _, _ = await verify_dirac_refresh_token(token, settings)
     return await revoke_refresh_token_by_jti(auth_db=auth_db, subject=subject, jti=jti)
+
+
+async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
+    """Remove expired data from the auth database."""
+    expired_tokens = await auth_db.clean_expired_refresh_tokens(
+        max_validity=settings.refresh_token_expire_minutes,
+    )
+    logger.info("Deleted %d expired refresh tokens", expired_tokens)
+
+    revoked_tokens = await auth_db.clean_revoked_refresh_tokens(
+        max_retention=settings.revoked_refresh_token_retention_minutes,
+    )
+    logger.info("Deleted %d revoked refresh tokens", revoked_tokens)
+
+    auth = await auth_db.clean_expired_authorization_flows(
+        max_retention=settings.completed_flow_retention_minutes,
+    )
+    logger.info("Deleted %d expired authorization flows", auth)
+
+    device = await auth_db.clean_expired_device_flows(
+        max_retention=settings.completed_flow_retention_minutes,
+    )
+    logger.info("Deleted %d expired device flows", device)

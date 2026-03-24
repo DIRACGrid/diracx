@@ -5,6 +5,7 @@ from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import AuthorizationError
 from diracx.db.sql.auth.db import AuthDB
+from diracx.db.sql.auth.schema import FlowStatus
 
 MAX_VALIDITY = 2
 EXPIRED = 0
@@ -74,3 +75,46 @@ async def test_insert(auth_db: AuthDB):
         )
 
     assert uuid1 != uuid2
+
+
+async def test_clean_authorization_flows(auth_db: AuthDB):
+    # Insert two authorization flows
+    async with auth_db as auth_db:
+        _ = await auth_db.insert_authorization_flow(
+            "client_id", "scope", "code_challenge", "S256", "redirect_uri"
+        )
+        uuid2 = await auth_db.insert_authorization_flow(
+            "client_id2", "scope2", "code_challenge2", "S256", "redirect_uri2"
+        )
+        uuid3 = await auth_db.insert_authorization_flow(
+            "client_id3", "scope3", "code_challenge3", "S256", "redirect_uri3"
+        )
+        uuid4 = await auth_db.insert_authorization_flow(
+            "client_id4", "scope4", "code_challenge4", "S256", "redirect_uri4"
+        )
+
+    id_token = {"sub": "myIdToken"}
+
+    async with auth_db as auth_db:
+        _, _ = await auth_db.authorization_flow_insert_id_token(uuid2, id_token, 1)
+        code3, _ = await auth_db.authorization_flow_insert_id_token(uuid3, id_token, 1)
+        code4, _ = await auth_db.authorization_flow_insert_id_token(uuid4, id_token, 1)
+
+    async with auth_db as auth_db:
+        await auth_db.update_authorization_flow_status(code3, FlowStatus.DONE)
+        await auth_db.update_authorization_flow_status(code4, FlowStatus.ERROR)
+
+    # Check the number of deleted authorization flow (should be 0)
+    async with auth_db as auth_db:
+        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=30)
+        assert deleted_auth == 0
+
+    # Check the number of deleted authorization flow (should be 4: 1 PENDING, 1 READY, 1 DONE, 1 ERROR)
+    async with auth_db as auth_db:
+        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=0)
+        assert deleted_auth == 4
+
+    # Check the number of deleted authorization flow (should be 0 because there is nothing left to delete)
+    async with auth_db as auth_db:
+        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=0)
+        assert deleted_auth == 0

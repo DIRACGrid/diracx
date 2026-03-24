@@ -10,6 +10,8 @@ ipython = ">=9.2.0"
 # Ensure these packages are installed using conda instead of pip
 python-gfal2 = "*"
 m2crypto = "*"
+# Limit setuptools version due to compatibility issues
+setuptools = "<82.0"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
