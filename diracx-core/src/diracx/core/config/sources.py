@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Any
+from typing import Annotated, Generic, TypeVar
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -56,8 +56,10 @@ class AnyUrlWithoutHost(AnyUrl):
 
 ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_scheme)]
 
+T = TypeVar("T")
 
-class CacheableSource(metaclass=ABCMeta):
+
+class CacheableSource(Generic[T], metaclass=ABCMeta):
     """Abstract base class for sources that can be cached.
 
     Handles the caching of the latest revision and its content using a two-level cache.
@@ -90,14 +92,14 @@ class CacheableSource(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> Any:
+    def read_raw(self, hexsha: str, modified: datetime) -> T:
         """Abstract method.
 
         Return the Source object that corresponds to the specific hash
         The `modified` parameter is just added as a attribute to the source.
         """
 
-    def read(self) -> Any:
+    def read(self) -> T:
         """Load the source from the backend with appropriate caching.
 
         :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
@@ -108,7 +110,7 @@ class CacheableSource(metaclass=ABCMeta):
         )
         return self._content_cache[hexsha]
 
-    async def read_non_blocking(self) -> Any:
+    async def read_non_blocking(self) -> T:
         """Load the source from the backend with appropriate caching.
 
         :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
@@ -136,7 +138,7 @@ class CacheableSource(metaclass=ABCMeta):
         self._content_cache.clear()
 
 
-class ConfigSource(CacheableSource):
+class ConfigSource(CacheableSource[Config]):
     """Abstract class for the configuration source.
 
     This class takes care of the expected caching and locking logic. Subclasses
