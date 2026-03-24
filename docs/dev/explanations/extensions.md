@@ -224,4 +224,4 @@ Note that even if you have your own `testing` package depending on `diracx-testi
 
 ## `Dockerfile`
 
-`extensions/containers/services/Dockerfile` contains an example of `Dockerfile` for extensions.
+`extensions/gubbins/containers/Dockerfile` contains an example of `Dockerfile` for extensions.

@@ -97,7 +97,6 @@ docs/source/_build
 
 # pixi environments
 .pixi
-pixi.lock
 *.egg-info
 docs/templates/_builtin_markdown.jinja
 
@@ -106,3 +105,7 @@ docs/templates/_builtin_markdown.jinja
 
 # docs site
 site
+
+# DiracX specific
+# No point in committing the pixi.lock for gubbins as it cannot work properly within the diracx repo
+extensions/gubbins/pixi.lock
