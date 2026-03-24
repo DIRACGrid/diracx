@@ -284,7 +284,3 @@ flowchart LR
     linkStyle 4 stroke: blue
     linkStyle 5 stroke: blue
 ```
-
-=== "Gitlab"
-
-    This assumes you are

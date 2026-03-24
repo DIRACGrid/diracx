@@ -2,11 +2,11 @@ This page describes how to mechanically make releases of DiracX and extensions. 
 
 # How to make a new DiracX release
 
-1. Merge any PR you want in your release
+Execute the following points in the presented order.
 
-2. Find the `release-please` [pull request](https://github.com/DIRACGrid/diracx/pulls?q=is%3Apr+is%3Aopen+%22chore%28main%29%3A+release%22) for your release
+1. Find the `release-please` [pull request](https://github.com/DIRACGrid/diracx/pulls?q=is%3Apr+is%3Aopen+%22chore%28main%29%3A+release%22) for your release. If you can't find it, it means that the currently existing latest release includes already all code changes.
 
-3. Review the release number **and** the content of the changelog
+2. Review the release number **and** the content of the changelog
 
     - If you need to change the release number, follow the [ `release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-do-i-change-the-version-number)
 
@@ -15,13 +15,13 @@ This page describes how to mechanically make releases of DiracX and extensions. 
     git push upstream HEAD:main
     ```
 
-    - TODO: update the release notes manually
+    - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
 
-4. Merge the PR
+3. Merge the `release-please` PR
 
-5. Check the [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush+actor%3ADIRACGridBot)
+4. Check the [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush+actor%3ADIRACGridBot)
 
-6. Check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml?query=actor%3ADIRACGridBot) in `diracx-charts` is successful
+5. When the above will be finished, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml?query=actor%3ADIRACGridBot) in `diracx-charts` is successful
 
 At this stage, there is a new `diracx` and `diracx-chart` release.
 
