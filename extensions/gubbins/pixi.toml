@@ -11,7 +11,7 @@ ipython = ">=9.2.0"
 python-gfal2 = "*"
 m2crypto = "*"
 # Limit setuptools version due to compatibility issues
-setuptools = "<82.0"
+setuptools = "<82.1"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
