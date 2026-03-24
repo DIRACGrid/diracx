@@ -2618,7 +2618,7 @@ class PilotsOperations:
     async def delete_pilots(
         self,
         *,
-        pilot_stamps: Optional[List[str]] = None,
+        pilot_stamps: Optional[list[str]] = None,
         age_in_days: Optional[int] = None,
         delete_only_aborted: bool = False,
         **kwargs: Any
@@ -2789,7 +2789,7 @@ class PilotsOperations:
     @distributed_trace_async
     async def get_pilot_jobs(
         self, *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
-    ) -> List[int]:
+    ) -> list[int]:
         """Get Pilot Jobs.
 
         Endpoint only for admins, to get jobs of a pilot.
@@ -2813,7 +2813,7 @@ class PilotsOperations:
         _headers = kwargs.pop("headers", {}) or {}
         _params = kwargs.pop("params", {}) or {}
 
-        cls: ClsType[List[int]] = kwargs.pop("cls", None)
+        cls: ClsType[list[int]] = kwargs.pop("cls", None)
 
         _request = build_pilots_get_pilot_jobs_request(
             pilot_stamp=pilot_stamp,
@@ -2850,7 +2850,7 @@ class PilotsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search.
 
         Retrieve information about pilots.
@@ -2878,7 +2878,7 @@ class PilotsOperations:
         per_page: int = 100,
         content_type: str = "application/json",
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search.
 
         Retrieve information about pilots.
@@ -2905,7 +2905,7 @@ class PilotsOperations:
         page: int = 1,
         per_page: int = 100,
         **kwargs: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search.
 
         Retrieve information about pilots.
@@ -2932,9 +2932,10 @@ class PilotsOperations:
         _params = kwargs.pop("params", {}) or {}
 
         content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
-        cls: ClsType[List[Dict[str, Any]]] = kwargs.pop("cls", None)
+        content_type = content_type if body else None
+        cls: ClsType[list[dict[str, Any]]] = kwargs.pop("cls", None)
 
-        content_type = content_type or "application/json"
+        content_type = content_type or "application/json" if body else None
         _json = None
         _content = None
         if isinstance(body, (IOBase, bytes)):

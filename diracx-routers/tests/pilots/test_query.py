@@ -6,9 +6,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models import (
-    PilotFieldsMapping,
-    PilotStatus,
+from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
+from diracx.core.models.search import (
     ScalarSearchOperator,
     ScalarSearchSpec,
     SortDirection,

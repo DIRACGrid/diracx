@@ -8,7 +8,7 @@ from fastapi import Body, Depends, HTTPException, Query, status
 from diracx.core.exceptions import (
     PilotAlreadyExistsError,
 )
-from diracx.core.models import (
+from diracx.core.models.pilot import (
     PilotFieldsMapping,
     PilotStatus,
 )

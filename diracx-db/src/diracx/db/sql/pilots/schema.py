@@ -11,6 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from diracx.core.models.pilot import PilotStatus
 from diracx.db.sql.utils import (
     EnumBackedBool,
     str32,
@@ -18,7 +19,6 @@ from diracx.db.sql.utils import (
     str255,
 )
 from diracx.db.sql.utils.types import SmarterDateTime
-from diracx.core.models import PilotStatus
 
 
 class PilotAgentsDBBase(DeclarativeBase):

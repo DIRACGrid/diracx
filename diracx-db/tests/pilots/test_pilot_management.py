@@ -7,7 +7,7 @@ import pytest
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
 )
-from diracx.core.models import (
+from diracx.core.models.pilot import (
     PilotFieldsMapping,
     PilotStatus,
 )

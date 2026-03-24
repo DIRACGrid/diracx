@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from sqlalchemy import update
 
-from diracx.core.models import (
+from diracx.core.models.search import (
     ScalarSearchOperator,
     ScalarSearchSpec,
     VectorSearchOperator,

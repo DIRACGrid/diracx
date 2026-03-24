@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import insert
 from uuid_utils import UUID
 
-from diracx.core.models import SearchSpec
+from diracx.core.models.search import SearchSpec
 from diracx.db.sql.utils import BaseSQLDB
 
 from .schema import Base as DummyDBBase

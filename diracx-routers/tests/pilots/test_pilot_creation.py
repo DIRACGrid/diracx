@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import update
 
-from diracx.core.models import (
+from diracx.core.models.pilot import (
     PilotFieldsMapping,
     PilotStatus,
 )

@@ -5,12 +5,10 @@ They are shared between the client components (cli, api) and services components
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
-from typing import Literal, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
-from typing_extensions import TypedDict
+from pydantic import BaseModel
 
 
 class PilotFieldsMapping(BaseModel, extra="forbid"):

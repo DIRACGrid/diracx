@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Any
 
 from diracx.core.exceptions import PilotNotFoundError
-from diracx.core.models import (
-    PilotStatus,
+from diracx.core.models.pilot import PilotStatus
+from diracx.core.models.search import (
     ScalarSearchOperator,
     ScalarSearchSpec,
     SearchParams,

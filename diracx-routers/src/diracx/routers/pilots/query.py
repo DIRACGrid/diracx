@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import Body, Depends, Response
 
-from diracx.core.models import SearchParams, SummaryParams
+from diracx.core.models.search import SearchParams, SummaryParams
 from diracx.logic.pilots.query import search as search_bl
 from diracx.logic.pilots.query import summary as summary_bl
 

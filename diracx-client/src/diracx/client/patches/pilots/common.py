@@ -17,7 +17,8 @@ import json
 from io import BytesIO
 from typing import Any, IO, TypedDict, Unpack, cast, Literal
 
-from diracx.core.models import SearchSpec, PilotStatus, PilotFieldsMapping
+from diracx.core.models.pilot import PilotStatus, PilotFieldsMapping
+from diracx.core.models.search import SearchSpec
 
 
 class ResponseExtra(TypedDict, total=False):

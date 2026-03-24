@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from diracx.core.models import VectorSearchOperator, VectorSearchSpec
+from diracx.core.models.search import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.pilots.db import PilotAgentsDB
@@ -23,7 +23,8 @@ class ActionType(StrEnum):
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
-    """Rules:
+    """Pilot management access policy.
+
     * Every user can access data about his VO
     * An administrator can modify a pilot.
     """

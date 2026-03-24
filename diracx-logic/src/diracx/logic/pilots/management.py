@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
-from diracx.core.models import PilotFieldsMapping
+from diracx.core.models.pilot import PilotFieldsMapping
 from diracx.db.sql import PilotAgentsDB
 
 from .query import (
