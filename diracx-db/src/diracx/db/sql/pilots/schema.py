@@ -11,6 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from diracx.core.models.pilot import PilotStatus
 from diracx.db.sql.utils import (
     EnumBackedBool,
     str32,
@@ -54,14 +55,14 @@ class PilotAgents(PilotAgentsDBBase):
     last_update_time: Mapped[Optional[datetime]] = mapped_column(
         "LastUpdateTime", SmarterDateTime
     )
-    status: Mapped[str32] = mapped_column("Status", default="Unknown")
+    status: Mapped[str32] = mapped_column("Status", default=PilotStatus.UNKNOWN)
     status_reason: Mapped[str255] = mapped_column("StatusReason", default="Unknown")
     accounting_sent: Mapped[bool] = mapped_column(
         "AccountingSent", EnumBackedBool(), default=False
     )
-
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
+        Index("PilotStamp", "PilotStamp"),
         Index("Status", "Status"),
         Index("Statuskey", "GridSite", "DestinationSite", "Status"),
     )

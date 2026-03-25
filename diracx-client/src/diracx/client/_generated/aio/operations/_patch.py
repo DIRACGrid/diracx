@@ -6,6 +6,7 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -15,6 +16,13 @@ __all__ = [
 
 from ....patches.auth.aio import AuthOperations
 from ....patches.jobs.aio import JobsOperations
+
+try:
+    from ....patches.pilots.aio import PilotsOperations
+
+    __all__.append("PilotsOperations")
+except ImportError:
+    pass
 
 
 def patch_sdk():
