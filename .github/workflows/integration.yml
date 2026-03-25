@@ -56,19 +56,35 @@ jobs:
           if [ -f client-tests-failed ]; then has_error=1; echo "Client tests failed"; fi
           if [ -f pilot-tests-failed ]; then has_error=1; echo "Pilot tests failed"; fi
           if [ ${has_error} = 1 ]; then exit 1; fi
-      - name: diracx filtered requests logs
+      - name: Debugging information
+        if: always()
         run: |
+          mkdir -p /tmp/service-logs
+
+          echo "::group::Container status"
+          docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"
+          echo "::endgroup::"
+
+          DIRACX_CONTAINERS="diracx diracx-init-keystore diracx-init-cs diracx-init-db diracx-chmod"
+
+          for container in $DIRACX_CONTAINERS; do
+            if docker inspect "$container" &>/dev/null; then
+              echo "::group::Logs: $container"
+              docker logs "$container" 2>&1 | tee -a /tmp/service-logs/diracx.log
+              echo "::endgroup::"
+            fi
+          done
+
+          echo "::group::DiracX API request summary"
           docker logs diracx 2>/dev/null | grep '/api/' \
             | awk -F\" '{print $2, $3}' \
             | awk '{print $1, $2, $4}' \
-            | sort | uniq -c | sort
-      - name: diracx error logs
-        if: ${{ failure() }}
-        run: |
-          mkdir -p /tmp/service-logs
-          docker logs diracx 2>&1 | tee /tmp/service-logs/diracx.log
-          cd /tmp/DIRACRepo
-          ./integration_tests.py logs --no-follow --lines 1000 2>&1 | tee /tmp/service-logs/dirac.log
+            | sort | uniq -c | sort || true
+          echo "::endgroup::"
+
+          echo "::group::DIRAC server logs"
+          cd /tmp/DIRACRepo && ./integration_tests.py logs --no-follow --lines 1000 2>&1 | tee /tmp/service-logs/dirac.log || true
+          echo "::endgroup::"
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         if: ${{ failure() }}
         with:
