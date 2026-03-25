@@ -6,7 +6,12 @@ from typing import Any
 import pytest
 from sqlalchemy import update
 
-from diracx.core.models.search import ScalarSearchOperator, ScalarSearchSpec, VectorSearchOperator, VectorSearchSpec
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.db.sql.pilots.schema import PilotAgents
 
