@@ -133,8 +133,8 @@ async def search(populated_pilot_client):
 
         r = populated_pilot_client.post("/api/pilots/search", json=body, params=params)
 
-        if r.status_code == 400:
-            # If we have a status_code 400, that means that the query failed
+        if r.status_code in (400, 422):
+            # If we have a status_code 400/422, that means that the query failed
             raise InvalidQueryError()
 
         return r.json(), r.headers
