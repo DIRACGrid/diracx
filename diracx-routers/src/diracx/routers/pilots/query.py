@@ -3,9 +3,10 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Body, Depends, Response
+from fastapi import Body, Depends, Query, Response
 
 from diracx.core.models.search import SearchParams, SummaryParams
+from diracx.logic.pilots.query import MAX_PER_PAGE
 from diracx.logic.pilots.query import search as search_bl
 from diracx.logic.pilots.query import summary as summary_bl
 
@@ -111,8 +112,8 @@ async def search(
     check_permissions: CheckPilotManagementPolicyCallable,
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    page: int = 1,
-    per_page: int = 100,
+    page: Annotated[int, Query(ge=1)] = 1,
+    per_page: Annotated[int, Query(ge=1, le=MAX_PER_PAGE)] = 100,
     body: Annotated[
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)  # type: ignore
     ] = None,
