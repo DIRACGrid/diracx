@@ -2,6 +2,21 @@
 
 *This page is auto-generated from the settings classes in `diracx.core.settings`.*
 
+## Core
+
+### `DIRACX_CONFIG_BACKEND_URL`
+
+The URL of the configuration backend.
+
+### `DIRACX_SERVICE_DOTENV`
+
+The variable points to .env files where configuration may be placed. There could be more than one file, with suffixes
+\_X, where X is a number. The files will be loaded in order.
+
+### `DIRACX_SERVICE_JOBS_ENABLED`
+
+Determines whether the jobs service is enabled.
+
 ## AuthSettings
 
 Settings for the authentication service.
@@ -123,6 +138,10 @@ Set of security properties available in this DIRAC installation.
 These properties define various authorization capabilities and are used
 for access control decisions. Defaults to all available security properties.
 
+### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
+
+The hashed API key for the legacy exchange endpoint.
+
 ## SandboxStoreSettings
 
 Settings for the sandbox store.
@@ -199,6 +218,16 @@ Maximum number of concurrent DB delete chunks during cleaning.
 
 Controls parallelism of database DELETE operations.
 
+## Databases
+
+### `DIRACX_DB_URL_<db_name>`
+
+The URL for the SQL database `<db_name>`.
+
+### `DIRACX_OS_DB_<db_name>`
+
+A JSON-encoded dictionary of connection keyword arguments for the OpenSearch database `<db_name>`.
+
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.
@@ -207,18 +236,28 @@ Settings for the Open Telemetry Configuration.
 
 *Optional*, default value: `False`
 
+Determines whether OpenTelemetry is enabled.
+
 ### `DIRACX_OTEL_APPLICATION_NAME`
 
 *Optional*, default value: `diracx`
+
+The name of the application for OpenTelemetry.
 
 ### `DIRACX_OTEL_GRPC_ENDPOINT`
 
 *Optional*, default value: \`\`
 
+The gRPC endpoint for the OpenTelemetry collector.
+
 ### `DIRACX_OTEL_GRPC_INSECURE`
 
 *Optional*, default value: `True`
 
+Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+
 ### `DIRACX_OTEL_HEADERS`
 
 *Optional*, default value: `None`
+
+A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g. {"tenant_id": "lhcbdiracx-cert"}.

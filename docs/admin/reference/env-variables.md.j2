@@ -3,9 +3,33 @@
 # List of environment variables
 
 *This page is auto-generated from the settings classes in `diracx.core.settings`.*
+## Core
+
+### `DIRACX_CONFIG_BACKEND_URL`
+The URL of the configuration backend.
+
+### `DIRACX_SERVICE_DOTENV`
+The variable points to .env files where configuration may be placed. There could be more than one file, with suffixes
+_X, where X is a number. The files will be loaded in order.
+
+### `DIRACX_SERVICE_JOBS_ENABLED`
+Determines whether the jobs service is enabled.
 
 {{ render_class('AuthSettings') }}
 
+### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
+The hashed API key for the legacy exchange endpoint.
+
 {{ render_class('SandboxStoreSettings') }}
+
+## Databases
+
+### `DIRACX_DB_URL_<db_name>`
+
+The URL for the SQL database `<db_name>`.
+
+### `DIRACX_OS_DB_<db_name>`
+
+A JSON-encoded dictionary of connection keyword arguments for the OpenSearch database `<db_name>`.
 
 {{ render_class('OTELSettings') }}

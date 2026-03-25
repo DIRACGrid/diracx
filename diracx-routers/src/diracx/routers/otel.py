@@ -35,15 +35,34 @@ from diracx.core.settings import ServiceSettingsBase
 class OTELSettings(ServiceSettingsBase):
     """Settings for the Open Telemetry Configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="DIRACX_OTEL_")
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_OTEL_", use_attribute_docstrings=True
+    )
 
     enabled: bool = False
+    """
+    Determines whether OpenTelemetry is enabled.
+    """
+
     application_name: str = "diracx"
+    """
+    The name of the application for OpenTelemetry.
+    """
+
     grpc_endpoint: str = ""
+    """
+    The gRPC endpoint for the OpenTelemetry collector.
+    """
+
     grpc_insecure: bool = True
-    # headers to pass to the OTEL Collector
-    # e.g. {"tenant_id": "lhcbdiracx-cert"}
+    """
+    Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+    """
+
     headers: Optional[dict[str, str]] = None
+    """
+    A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g. {"tenant_id": "lhcbdiracx-cert"}.
+    """
 
 
 def instrument_otel(app: FastAPI) -> None:
