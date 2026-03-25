@@ -7,7 +7,14 @@ from fastapi.testclient import TestClient
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
-from diracx.core.models.search import ScalarSearchOperator, ScalarSearchSpec, SortDirection, SortSpec, VectorSearchOperator, VectorSearchSpec
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    SortDirection,
+    SortSpec,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
