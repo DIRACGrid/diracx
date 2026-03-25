@@ -5,7 +5,15 @@ from typing import Any
 
 from diracx.core.exceptions import PilotNotFoundError
 from diracx.core.models.pilot import PilotStatus
-from diracx.core.models.search import ScalarSearchOperator, ScalarSearchSpec, SearchParams, SearchSpec, SummaryParams, VectorSearchOperator, VectorSearchSpec
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    SearchParams,
+    SearchSpec,
+    SummaryParams,
+    VectorSearchOperator,
+    VectorSearchSpec,
+)
 from diracx.db.sql import PilotAgentsDB
 
 MAX_PER_PAGE = 10000

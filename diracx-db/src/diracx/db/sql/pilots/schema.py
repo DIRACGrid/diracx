@@ -19,7 +19,6 @@ from diracx.db.sql.utils import (
     str255,
 )
 from diracx.db.sql.utils.types import SmarterDateTime
-from diracx.core.models.pilot import PilotStatus
 
 
 class PilotAgentsDBBase(DeclarativeBase):
