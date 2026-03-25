@@ -3,7 +3,6 @@
 Registering a VO means allowing users of a specific Virtual Organization to use DiracX services. In practice, this can be done once an external IdP is used for managing such VO.
 By default all VOs managed by a DIRAC/DiracX instance are already "registered" (or "enabled", in other words). There is anyway the possibility to "Disable" VOs by filling the option `DiracX > DisabledVOs` with the list of VOs that can not use DiracX:
 
-````
 ??? example "Configuration example"
 
     ```yaml
@@ -12,7 +11,6 @@ By default all VOs managed by a DIRAC/DiracX instance are already "registered" (
       DisabledVOs = vo_x, vo_y
     }
     ```
-````
 
 ## Prerequisites
 
