@@ -136,7 +136,12 @@ def instrument_otel(app: FastAPI) -> None:
     )
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
-    handler.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
+    default_format = dict.fromkeys(
+        ["otelTraceID", "otelSpanID", "otelServiceName", "otelTraceSampled"], "Default"
+    )
+    handler.setFormatter(
+        logging.Formatter(DEFAULT_LOGGING_FORMAT, defaults=default_format)
+    )
     # Add the handler to diracx and all uvicorn logger
     # Note adding it to just 'uvicorn' or the root logger
     # is not enough because uvicorn sets propagate=False
