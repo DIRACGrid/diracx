@@ -130,7 +130,6 @@ jobs:
           file: containers/Dockerfile
           build-args: |
             PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-services' || 'gubbins-container-services' }}
-            DIRACX_EXTENSIONS=${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins,diracx' }}
           tags: ghcr.io/${{ matrix.extension == 'diracx' && 'diracgrid/diracx' || 'gubbins' }}/services:dev
           outputs: type=docker,dest=/tmp/services_image.tar
       - name: Build client image
@@ -140,7 +139,6 @@ jobs:
           file: containers/Dockerfile
           build-args: |
             PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-client' || 'gubbins-container-client' }}
-            DIRACX_EXTENSIONS=${{ matrix.extension == 'diracx' && 'diracx' || 'gubbins,diracx' }}
           tags: ghcr.io/${{ matrix.extension == 'diracx' && 'diracgrid/diracx' || 'gubbins' }}/client:dev
           outputs: type=docker,dest=/tmp/client_image.tar
       - name: Load images

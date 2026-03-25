@@ -1,7 +1,6 @@
 FROM ghcr.io/prefix-dev/pixi:latest AS build
 
 ARG PIXI_ENV=container-services
-ARG DIRACX_EXTENSIONS=diracx
 
 WORKDIR /app
 COPY pixi.toml pixi.lock ./
@@ -40,9 +39,7 @@ RUN pixi shell-hook -e ${PIXI_ENV} > /activate.sh
 FROM ubuntu:24.04
 
 ARG PIXI_ENV=container-services
-ARG DIRACX_EXTENSIONS=diracx
 ENV PIXI_ENV=${PIXI_ENV}
-ENV DIRACX_EXTENSIONS=${DIRACX_EXTENSIONS}
 
 EXPOSE 8000
 

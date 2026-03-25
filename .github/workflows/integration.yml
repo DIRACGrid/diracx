@@ -29,21 +29,13 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.14'
-      - name: Build wheels
-        run: |
-          pip install build
-          for pkg_dir in $PWD/diracx-* .; do
-            echo "Building $pkg_dir"
-            python -m build --outdir "${GITHUB_WORKSPACE}/dist" $pkg_dir
-          done
       - name: Clone DIRAC
         run: |
           pip install typer pyyaml gitpython packaging
           git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
-          # We need to cd in the directory for the integration_tests.py to work
       - name: Prepare environment
-        run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes"  --diracx-dist-dir "${GITHUB_WORKSPACE}/dist"
+        run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes" --diracx-src-dir "${GITHUB_WORKSPACE}"
       - name: Install server
         run:  cd /tmp/DIRACRepo && ./integration_tests.py install-server
       - name: Install client

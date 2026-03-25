@@ -41,9 +41,7 @@ RUN pixi run -e ${PIXI_ENV} python -c " \
 FROM ubuntu:24.04
 
 ARG PIXI_ENV=container-services
-ARG DIRACX_EXTENSIONS=gubbins,diracx
 ENV PIXI_ENV=${PIXI_ENV}
-ENV DIRACX_EXTENSIONS=${DIRACX_EXTENSIONS}
 
 EXPOSE 8000
 
