@@ -4,7 +4,34 @@
 
     DiracX should be upgraded before upgrading legacy DIRAC installations.
 
-The versioning of `DIRAC`, `DIRACCommon`, `diracx`, `diracx-charts` and all the extensions are very linked to one another.
+The versioning of `DIRAC`, `DIRACCommon`, `diracx`, `diracx-charts` and all the extensions are linked to one another.
+
+## Dependencies between diracx, DIRAC and DIRACCommon
+
+Both `DIRAC` and `diracx` depend on `DIRACCommon`. However, `DIRACCommon` is in the same repository as `DIRAC`, and versioned together. This means that if we need to move code from `DIRAC` to `DIRACCommon` such that it is usable by `diracx`, we need first a new release of `DIRAC` and `DIRACCommon` just moving the code, before being able to use it in `diracx`.
+
+The releases of `DIRAC` and `DIRACCommon` are managed as they have always been, and are described in the `DIRAC` documentation
+
+## Dependencies between diracx and diracx-charts
+
+`diracx-charts` has a version number, as well as an `appversion`, which corresponds to the `diracx` version. This means that a new release of `diracx` requires a new `diracx-charts` release, which will update:
+
+- the diracx-charts version
+- the AppVersion
+- the container versions
+
+The `update-charts` [CI job](https://github.com/DIRACGrid/diracx/blob/e552651ac682e7461bc338856d295b0651ec2a26/.github/workflows/deployment.yml#L168) in `diracx` pushes a new commit in `diracx-charts`, which results in a new `diracx-charts` release.
+
+## Dependencies between diracx, diracx-web and diracx-charts
+
+The `diracx-web` version is only very loosely coupled with the `diracx` version.
+A new `diracx-web` release will trigger a new `diracx-charts` updating:
+
+- the chart version
+- the container versions
+- NOT the AppVersion
+
+It does not bump the AppVersion because it refers to the `diracx` version, which is more relevant.
 
 ```mermaid
 flowchart LR
@@ -22,31 +49,6 @@ flowchart LR
     linkStyle 1 stroke: blue
 
 ```
-
-## Dependencies between diracx, DIRAC and DIRACCommon
-
-Both `DIRAC` and `diracx` depend on `DIRACCommon`. However, `DIRACCommon` is in the same repository as `DIRAC`, and versioned together. This means that if we need to move code from `DIRAC` to `DIRACCommon` such that it is usable by `diracx`, we need first a new release of `DIRAC` and `DIRACCommon` just moving the code, before being able to use it in `diracx`.
-
-The releases of `DIRAC` and `DIRACCommon` are managed as they have always been, and are described in the `DIRAC` documentation
-
-## Dependencies between diracx and diracx-charts
-
-`diracx-charts` has a version number, as well as an `appversion`, which corresponds to the `diracx` version. This means that a new release of `diracx` requires a new `diracx-charts` release, which will update:
-
-- the diracx-charts version
-- the AppVersion
-- the container versions
-
-The `update-charts` CI job in `diracx` pushes a new commit in `diracx-charts`, which results in a new `diracx-charts` release.
-
-## Dependencies between diracx, diracx-web and diracx-charts
-
-The `diracx-web` version is only very loosely coupled with the `diracx` version.
-A new `diracx-web` release will trigger a new `diracx-charts` updating:
-
-- the chart version
-- the container versions
-- NOT the AppVersion
 
 ## diracx release
 
