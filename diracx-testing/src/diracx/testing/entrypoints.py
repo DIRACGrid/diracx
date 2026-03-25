@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import tomllib
-from collections import defaultdict
 from importlib.metadata import PackageNotFoundError, distribution, entry_points
 
 import pytest
@@ -10,14 +9,14 @@ from diracx.core.extensions import DiracEntryPoint
 
 
 def get_installed_entry_points():
-    """Retrieve the installed entry points from the environment."""
+    """Retrieve the installed entry points from the environment as a flat set."""
     entry_pts = entry_points()
-    diracx_eps = defaultdict(dict)
+    result = set()
     for group in entry_pts.groups:
         if DiracEntryPoint.CORE in group:
             for ep in entry_pts.select(group=group):
-                diracx_eps[group][ep.name] = ep.value
-    return dict(diracx_eps)
+                result.add((group, ep.name, ep.value))
+    return result
 
 
 def get_entry_points_from_toml(toml_file):
@@ -28,20 +27,28 @@ def get_entry_points_from_toml(toml_file):
     return package_name, pyproject.get("project", {}).get("entry-points", {})
 
 
-def get_current_entry_points(repo_base) -> bool:
-    """Create current entry points dict for comparison."""
-    current_eps = {}
-    for toml_file in repo_base.glob("diracx-*/pyproject.toml"):
+def get_current_entry_points(repo_base) -> set:
+    """Create current entry points set for comparison."""
+    result = set()
+    toml_globs = [
+        repo_base.glob("diracx-*/pyproject.toml"),
+        repo_base.glob("extensions/*/*/pyproject.toml"),
+    ]
+    for toml_file in (f for g in toml_globs for f in g):
         package_name, entry_pts = get_entry_points_from_toml(f"{toml_file}")
         # Ignore packages that are not installed
         try:
             distribution(package_name)
         except PackageNotFoundError:
             continue
-        # Merge the entry points
-        for key, value in entry_pts.items():
-            current_eps[key] = current_eps.get(key, {}) | value
-    return current_eps
+        for group, eps in entry_pts.items():
+            for name, value in eps.items():
+                result.add((group, name, value))
+    return result
+
+
+def _format_entry_points(eps):
+    return {f"{g}:{n}={v}" for g, n, v in eps}
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -59,13 +66,13 @@ def verify_entry_points(request, pytestconfig):
     else:
         return
 
-    installed_eps = set(get_installed_entry_points())
-    current_eps = set(get_current_entry_points(repo_base))
+    installed_eps = get_installed_entry_points()
+    current_eps = get_current_entry_points(repo_base)
 
     if installed_eps != current_eps:
         pytest.fail(
             "Project and installed entry-points are not consistent. "
-            "You should run `pip install -r requirements-dev.txt`"
-            f"{installed_eps-current_eps=}",
-            f"{current_eps-installed_eps=}",
+            "You should run `pip install -r requirements-dev.txt` "
+            f"installed-only={_format_entry_points(installed_eps - current_eps)} "
+            f"project-only={_format_entry_points(current_eps - installed_eps)}",
         )
