@@ -3,8 +3,9 @@ from __future__ import annotations
 from sqlalchemy import select
 
 from diracx.core.models.rss import (
-    BannedStatus,
     ComputeElementStatus,
+    FTSStatus,
+    ResourceType,
     StorageElementStatus,
     map_status,
 )
@@ -25,25 +26,27 @@ class ResourceStatusDB(BaseSQLDB):
 
     metadata = RSSBase.metadata
 
-    async def get_site_status(
-        self, name: str, statustype: str = "all", vo: str = "all"
-    ) -> SiteStatusModel:
+    async def get_site_status(self, name: str, vo: str = "all") -> SiteStatusModel:
         stmt = select(SiteStatus.status, SiteStatus.reason).where(
             SiteStatus.name == name,
-            SiteStatus.statustype == statustype,
+            SiteStatus.statustype == "all",
             SiteStatus.vo == vo,
         )
         result = await self.conn.execute(stmt)
         row = result.first()
         if not row:
-            return SiteStatusModel(all=BannedStatus(allowed=False, reason="Not found"))
+            raise ValueError(f"Site {name} not found")
 
         return SiteStatusModel(all=map_status(row.Status, row.Reason))
 
-    async def get_compute_status(
-        self, name: str, vo: str = "all"
-    ) -> ComputeElementStatus:
-        stmt = select(ResourceStatus.status, ResourceStatus.reason).where(
+    async def get_resource_status(
+        self,
+        name: str,
+        vo: str = "all",
+    ) -> ComputeElementStatus | FTSStatus:
+        stmt = select(
+            ResourceStatus.status, ResourceStatus.reason, ResourceStatus.elementtype
+        ).where(
             ResourceStatus.name == name,
             ResourceStatus.statustype == "all",
             ResourceStatus.vo == vo,
@@ -52,11 +55,16 @@ class ResourceStatusDB(BaseSQLDB):
         row = result.first()
 
         if not row:
-            return ComputeElementStatus(
-                all=BannedStatus(allowed=False, reason="Not found")
-            )
+            raise ValueError(f"Resource {name} not found")
 
-        return ComputeElementStatus(all=map_status(row.Status, row.Reason))
+        element_type = ResourceType(row.ElementType)
+
+        if element_type == ResourceType.Compute:
+            return ComputeElementStatus(all=map_status(row.Status, row.Reason))
+        if element_type == ResourceType.FTS:
+            return FTSStatus(all=map_status(row.Status, row.Reason))
+
+        raise ValueError(f"Unexpected resource type {element_type}")
 
     async def get_storage_status(
         self, name: str, vo: str = "all"
@@ -72,7 +80,7 @@ class ResourceStatusDB(BaseSQLDB):
             row = result.first()
 
             if not row:
-                return BannedStatus(allowed=False, reason="Not found")
+                raise ValueError(f"StorageElement {name} not found")
 
             return map_status(row.Status, row.Reason)
 

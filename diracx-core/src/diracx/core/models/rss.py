@@ -29,9 +29,9 @@ ResourceStatus = Annotated[
 
 
 class ResourceType(StrEnum):
-    Site = "Site"
     Compute = "ComputeElement"
     Storage = "StorageElement"
+    FTS = "FTS"
 
 
 class StorageElementStatus(BaseModel):
@@ -42,6 +42,10 @@ class StorageElementStatus(BaseModel):
 
 
 class ComputeElementStatus(BaseModel):
+    all: ResourceStatus
+
+
+class FTSStatus(BaseModel):
     all: ResourceStatus
 
 
