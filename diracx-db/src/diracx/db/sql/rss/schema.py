@@ -84,10 +84,6 @@ class ResourceStatus(ElementStatusBase, RSSBase):
     __tablename__ = "ResourceStatus"
 
 
-class NodeStatus(ElementStatusBase, RSSBase):
-    __tablename__ = "NodeStatus"
-
-
 # tables with schema defined in ElementStatusBaseWithID
 
 
@@ -105,11 +101,3 @@ class ResourceLog(ElementStatusBaseWithID, RSSBase):
 
 class ResourceHistory(ElementStatusBaseWithID, RSSBase):
     __tablename__ = "ResourceHistory"
-
-
-class NodeLog(ElementStatusBaseWithID, RSSBase):
-    __tablename__ = "NodeLog"
-
-
-class NodeHistory(ElementStatusBaseWithID, RSSBase):
-    __tablename__ = "NodeHistory"

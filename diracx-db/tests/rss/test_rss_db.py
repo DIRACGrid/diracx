@@ -10,6 +10,7 @@ from diracx.core.models.rss import (
     AllowedStatus,
     BannedStatus,
     ComputeElementStatus,
+    FTSStatus,
     StorageElementStatus,
     map_status,
 )
@@ -76,17 +77,14 @@ async def test_site_status(rss_db: ResourceStatusDB):
     assert bool(result.all) is True
 
     # Test with an unknow Site (should not be found)
-    async with rss_db as rss_db:
-        result = await rss_db.get_site_status("UnknownSite")
-    assert isinstance(result, SiteStatusModel)
-    assert isinstance(result.all, BannedStatus)
-    assert bool(result.all) is False
-    assert result.all.reason == "Not found"
+    with pytest.raises(ValueError, match="Site Unknown not found"):
+        async with rss_db as rss_db:
+            await rss_db.get_site_status("Unknown")
 
 
-async def test_compute_status(rss_db: ResourceStatusDB):
-    # Insert a test Compute Element
+async def test_resource_status(rss_db: ResourceStatusDB):
     async with rss_db.engine.begin() as conn:
+        # Insert a test Compute Element
         await conn.execute(
             insert(rss_db.metadata.tables["ResourceStatus"]).values(
                 Name="TestCompute",
@@ -101,21 +99,60 @@ async def test_compute_status(rss_db: ResourceStatusDB):
                 TokenOwner="test",
             )
         )
+        # Insert a test FTS
+        await conn.execute(
+            insert(rss_db.metadata.tables["ResourceStatus"]).values(
+                Name="TestFTS",
+                StatusType="all",
+                VO="all",
+                Status="Active",
+                Reason="All good",
+                DateEffective=_NOW,
+                TokenExpiration=_FAR,
+                LastCheckTime=_NOW,
+                ElementType="FTS",
+                TokenOwner="test",
+            )
+        )
+        # Insert a wrong test
+        await conn.execute(
+            insert(rss_db.metadata.tables["ResourceStatus"]).values(
+                Name="WrongTest",
+                StatusType="all",
+                VO="all",
+                Status="Active",
+                Reason="All good",
+                DateEffective=_NOW,
+                TokenExpiration=_FAR,
+                LastCheckTime=_NOW,
+                ElementType="WrongTest",
+                TokenOwner="WrongTest",
+            )
+        )
 
     # Test with the test Compute Element (should be found)
     async with rss_db as rss_db:
-        result = await rss_db.get_compute_status("TestCompute")
+        result = await rss_db.get_resource_status("TestCompute")
     assert isinstance(result, ComputeElementStatus)
     assert isinstance(result.all, AllowedStatus)
     assert bool(result.all) is True
 
-    # Test with an unknow Compute Element (should not be found)
+    # Test with the test FTS (should be found)
     async with rss_db as rss_db:
-        result = await rss_db.get_compute_status("UnknownCompute")
-    assert isinstance(result, ComputeElementStatus)
-    assert isinstance(result.all, BannedStatus)
-    assert bool(result.all) is False
-    assert result.all.reason == "Not found"
+        result = await rss_db.get_resource_status("TestFTS")
+    assert isinstance(result, FTSStatus)
+    assert isinstance(result.all, AllowedStatus)
+    assert bool(result.all) is True
+
+    # Test with a wrong Resource type
+    with pytest.raises(ValueError, match="not a valid ResourceType"):
+        async with rss_db as rss_db:
+            await rss_db.get_resource_status("WrongTest")
+
+    # Test with an unknow Resource (should not be found)
+    with pytest.raises(ValueError, match="Resource Unknown not found"):
+        async with rss_db as rss_db:
+            await rss_db.get_resource_status("Unknown")
 
 
 async def test_storage_status(rss_db: ResourceStatusDB):
@@ -151,18 +188,6 @@ async def test_storage_status(rss_db: ResourceStatusDB):
     assert bool(result.remove) is True
 
     # Test with an unknow Storage Element (should not be found)
-    async with rss_db as rss_db:
-        result = await rss_db.get_storage_status("UnknownStorage")
-    assert isinstance(result, StorageElementStatus)
-    assert isinstance(result.read, BannedStatus)
-    assert isinstance(result.write, BannedStatus)
-    assert isinstance(result.check, BannedStatus)
-    assert isinstance(result.remove, BannedStatus)
-    assert bool(result.read) is False
-    assert bool(result.write) is False
-    assert bool(result.check) is False
-    assert bool(result.remove) is False
-    assert result.read.reason == "Not found"
-    assert result.write.reason == "Not found"
-    assert result.check.reason == "Not found"
-    assert result.remove.reason == "Not found"
+    with pytest.raises(ValueError, match="StorageElement Unknown not found"):
+        async with rss_db as rss_db:
+            await rss_db.get_storage_status("Unknown")
