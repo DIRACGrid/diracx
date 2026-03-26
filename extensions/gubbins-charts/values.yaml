@@ -9,4 +9,7 @@ diracx:
   global:
     images:
       tag: "dev"
-      services: gubbins/services
+      services:
+        repository: gubbins/services
+      client:
+        repository: gubbins/client

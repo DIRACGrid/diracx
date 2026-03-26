@@ -124,7 +124,7 @@ def instrument_otel(app: FastAPI) -> None:
     # # override logger format which with trace id and span id
     # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
 
-    LoggingInstrumentor().instrument(set_logging_format=False)
+    LoggingInstrumentor().instrument(set_logging_format=True)
 
     logger_provider = LoggerProvider(resource=resource)
     _logs.set_logger_provider(logger_provider)

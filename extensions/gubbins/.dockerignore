@@ -1,0 +1,9 @@
+# Pixi environments (can be very large)
+.pixi/
+
+# Documentation build output
+site/
+
+# Python build artifacts
+*.egg-info/
+__pycache__/
