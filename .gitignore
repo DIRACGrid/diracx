@@ -97,6 +97,9 @@ docs/source/_build
 
 # pixi environments
 .pixi
+
+# run_local.sh state
+.run-local-env
 *.egg-info
 docs/templates/_builtin_markdown.jinja
 

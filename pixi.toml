@@ -12,6 +12,9 @@ python-gfal2 = "*"
 m2crypto = "*"
 # opentelemetry-api requires importlib-metadata<8.8.0
 importlib-metadata = "<8.8.0"
+# Dependencies for run_local.sh
+redis-server = "*"
+seaweedfs = "*"
 
 # DiracX features for providing dependencies
 [feature.diracx.pypi-dependencies]
@@ -33,6 +36,8 @@ diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
 diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
 # opentelemetry-api requires importlib-metadata<8.8.0
 importlib-metadata = "<8.8.0"
+[feature.diracx-tasks.pypi-dependencies]
+diracx-tasks = { path = "diracx-tasks", editable = true, extras = ["testing"] }
 
 # DiracX features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
@@ -60,6 +65,9 @@ description = "Run the tests for diracx-logic"
 [feature.task-diracx-routers.tasks.pytest-diracx-routers]
 cmd = "cd diracx-routers/ && pytest"
 description = "Run the tests for diracx-routers"
+[feature.task-diracx-tasks.tasks.pytest-diracx-tasks]
+cmd = "cd diracx-tasks/ && pytest"
+description = "Run the tests for diracx-tasks"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
@@ -79,6 +87,8 @@ gubbins-db = { path = "extensions/gubbins/gubbins-db", editable = true, extras =
 gubbins-logic = { path = "extensions/gubbins/gubbins-logic", editable = true, extras = ["testing"] }
 [feature.gubbins-routers.pypi-dependencies]
 gubbins-routers = { path = "extensions/gubbins/gubbins-routers", editable = true, extras = ["testing"] }
+[feature.gubbins-tasks.pypi-dependencies]
+gubbins-tasks = { path = "extensions/gubbins/gubbins-tasks", editable = true, extras = ["testing"] }
 
 # Gubbins features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
@@ -86,6 +96,12 @@ gubbins-routers = { path = "extensions/gubbins/gubbins-routers", editable = true
 [feature.task-gubbins.tasks.pytest-gubbins]
 cmd = "cd extensions/gubbins/ && pytest"
 description = "Run the tests for gubbins"
+[feature.task-gubbins.tasks.tutorial-reset]
+cmd = "python scripts/tutorial_reset.py"
+description = "Strip tutorial code from gubbins for the advanced tutorial"
+[feature.task-gubbins.tasks.test-tutorial]
+cmd = "cd extensions/gubbins/ && pytest -k my_pilot"
+description = "Run only the advanced tutorial tests"
 [feature.task-gubbins-core.tasks.pytest-gubbins-core]
 cmd = "cd extensions/gubbins/gubbins-core/ && pytest"
 description = "Run the tests for gubbins-core"
@@ -107,6 +123,20 @@ description = "Run the tests for gubbins-logic"
 [feature.task-gubbins-routers.tasks.pytest-gubbins-routers]
 cmd = "cd extensions/gubbins/gubbins-routers/ && pytest"
 description = "Run the tests for gubbins-routers"
+[feature.task-gubbins-tasks.tasks.pytest-gubbins-tasks]
+cmd = "cd extensions/gubbins/gubbins-tasks/ && pytest"
+description = "Run the tests for gubbins-tasks"
+
+# Features for running DiracX locally
+[feature.run-local.tasks.local-start]
+cmd = "bash run_local.sh"
+description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"
+[feature.run-local.tasks.local-tasks]
+cmd = "bash run_local_tasks.sh"
+description = "Run diracx-task-run with the local environment variables"
+[feature.run-local.tasks.local-shell]
+cmd = "bash run_local_shell.sh"
+description = "Open a shell with the local DiracX environment configured"
 
 # Features for generating the documentation
 [feature.mkdocs.dependencies]
@@ -167,6 +197,7 @@ mdformat-gfm = "*"
 mdformat-black = "*"
 diracx-core = { path = "diracx-core", editable = true }
 diracx-routers = { path = "diracx-routers", editable = true }
+diracx-tasks = { path = "diracx-tasks", editable = true }
 # Settings documentation task
 [feature.settings-doc.tasks.generate-settings-doc]
 cmd = "python scripts/generate_settings_docs.py"
@@ -174,35 +205,40 @@ description = "Auto-discover and generate settings documentation with validation
 
 [environments]
 # DiracX environments
-default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "settings-doc"], solve-group = "diracx"}
+default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "diracx-tasks", "settings-doc"], solve-group = "diracx"}
 diracx-core = {features = ["task-diracx-core", "diracx-core"], solve-group = "diracx"}
 diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-cli = {features = ["task-diracx-cli", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-client = {features = ["task-diracx-client", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-db = {features = ["task-diracx-db", "diracx-db", "diracx-core"], solve-group = "diracx"}
 diracx-logic = {features = ["task-diracx-logic", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
-diracx-routers = {features = ["task-diracx-routers", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+diracx-routers = {features = ["task-diracx-routers", "diracx-routers", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+diracx-tasks = {features = ["task-diracx-tasks", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 
 # Gubbins environments
-default-gubbins = {features = ["task-gubbins", "diracx", "gubbins", "diracx-core", "gubbins-core", "diracx-api", "gubbins-api", "diracx-cli", "gubbins-cli", "diracx-client", "gubbins-client", "diracx-db", "gubbins-db", "diracx-logic", "gubbins-logic", "diracx-routers", "gubbins-routers"], solve-group = "gubbins"}
+default-gubbins = {features = ["task-gubbins", "run-local", "diracx", "gubbins", "diracx-core", "gubbins-core", "diracx-api", "gubbins-api", "diracx-cli", "gubbins-cli", "diracx-client", "gubbins-client", "diracx-db", "gubbins-db", "diracx-logic", "gubbins-logic", "diracx-routers", "gubbins-routers", "diracx-tasks", "gubbins-tasks"], solve-group = "gubbins"}
 gubbins-core = {features = ["task-gubbins-core", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-api = {features = ["task-gubbins-api", "diracx-api", "gubbins-api", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-cli = {features = ["task-gubbins-cli", "diracx-cli", "gubbins-cli", "diracx-api", "gubbins-api", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-client = {features = ["task-gubbins-client", "diracx-client", "gubbins-client", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-db = {features = ["task-gubbins-db", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 gubbins-logic = {features = ["task-gubbins-logic", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
-gubbins-routers = {features = ["task-gubbins-routers", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-routers = {features = ["task-gubbins-routers", "diracx-routers", "gubbins-routers", "gubbins-tasks", "diracx-tasks", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+gubbins-tasks = {features = ["task-gubbins-tasks", "gubbins-tasks", "diracx-tasks", "gubbins-logic", "diracx-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 
 # Container environments - same solve group as dev ensures version parity
-container-services = {features = ["container", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+container-services = {features = ["container", "diracx-routers", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+container-tasks = {features = ["container", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 container-client = {features = ["container", "diracx", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 
 # Gubbins container environments
-gubbins-container-services = {features = ["container", "gubbins-routers", "gubbins-logic", "gubbins-db", "gubbins-core", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "gubbins"}
+gubbins-container-services = {features = ["container", "gubbins-routers", "gubbins-tasks", "gubbins-logic", "gubbins-db", "gubbins-core", "diracx-routers", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "gubbins"}
+gubbins-container-tasks = {features = ["container", "gubbins-tasks", "gubbins-logic", "gubbins-db", "gubbins-core", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "gubbins"}
 gubbins-container-client = {features = ["container", "gubbins", "gubbins-cli", "gubbins-api", "gubbins-client", "gubbins-core", "diracx", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "gubbins"}
 
-diracx-generate-client = {features = ["client-gen", "diracx-client", "diracx-routers", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
-gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-client", "diracx-routers", "gubbins-routers", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
+# Client generation environments
+diracx-generate-client = {features = ["client-gen", "diracx-client", "diracx-routers", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-client", "diracx-routers", "gubbins-routers", "diracx-tasks", "gubbins-tasks", "diracx-logic", "gubbins-logic", "diracx-db", "gubbins-db", "diracx-core", "gubbins-core"], solve-group = "gubbins"}
 
 # Tooling environments
 mkdocs = {features = ["mkdocs"], no-default-feature = true}
@@ -220,6 +256,7 @@ depends-on = [
   { task = "pytest-diracx-db", environment = "diracx-db" },
   { task = "pytest-diracx-logic", environment = "diracx-logic" },
   { task = "pytest-diracx-routers", environment = "diracx-routers" },
+  { task = "pytest-diracx-tasks", environment = "diracx-tasks" },
 ]
 
 [tasks.pytest-gubbins-all-one-by-one]
@@ -232,4 +269,5 @@ depends-on = [
   { task = "pytest-gubbins-db", environment = "gubbins-db" },
   { task = "pytest-gubbins-logic", environment = "gubbins-logic" },
   { task = "pytest-gubbins-routers", environment = "gubbins-routers" },
+  { task = "pytest-gubbins-tasks", environment = "gubbins-tasks" },
 ]

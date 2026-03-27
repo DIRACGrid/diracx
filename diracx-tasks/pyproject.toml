@@ -1,0 +1,62 @@
+[project]
+name = "diracx-tasks"
+description = "Asynchronous task system for DiracX"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = []
+license = {text = "GPL-3.0-only"}
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "diracx-core",
+    "diracx-db",
+    "diracx-logic",
+    "fastapi>=0.121.0",
+    "redis[hiredis]",
+    "msgpack",
+    "opentelemetry-api",
+    "python-dateutil",
+    "croniter",
+    "pydantic >=2.10",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["diracx-testing", "fakeredis"]
+
+[project.scripts]
+diracx-task-run = "diracx.tasks.task_run:main"
+
+[project.entry-points."diracx.dbs.sql"]
+TaskDB = "diracx.tasks.plumbing.persistence:TaskDB"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+root = ".."
+
+[tool.hatch.build.targets.sdist.force-include]
+"../LICENSE" = "LICENSE"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/diracx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--cov=diracx.tasks", "--cov-report=term-missing",
+    "-pdiracx.testing",
+    "--import-mode=importlib",
+]
+asyncio_mode = "auto"

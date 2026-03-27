@@ -30,6 +30,7 @@ class DiracEntryPoint(StrEnum):
     MIN_CLIENT_VERSION = "diracx.min_client_version"
     RESOURCES = "diracx.resources"
     SERVICES = "diracx.services"
+    LOCK_OBJECT_TYPES = "diracx.lock_object_types"
 
 
 @cached(cache=LRUCache(maxsize=1))

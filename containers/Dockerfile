@@ -13,6 +13,7 @@ COPY diracx-client/ diracx-client/
 COPY diracx-core/ diracx-core/
 COPY diracx-db/ diracx-db/
 COPY diracx-logic/ diracx-logic/
+COPY diracx-tasks/ diracx-tasks/
 COPY diracx-routers/ diracx-routers/
 COPY diracx-testing/ diracx-testing/
 COPY pyproject.toml ./
@@ -23,6 +24,7 @@ COPY extensions/gubbins/gubbins-client/ extensions/gubbins/gubbins-client/
 COPY extensions/gubbins/gubbins-core/ extensions/gubbins/gubbins-core/
 COPY extensions/gubbins/gubbins-db/ extensions/gubbins/gubbins-db/
 COPY extensions/gubbins/gubbins-logic/ extensions/gubbins/gubbins-logic/
+COPY extensions/gubbins/gubbins-tasks/ extensions/gubbins/gubbins-tasks/
 COPY extensions/gubbins/gubbins-routers/ extensions/gubbins/gubbins-routers/
 COPY extensions/gubbins/gubbins-testing/ extensions/gubbins/gubbins-testing/
 COPY extensions/gubbins/pyproject.toml extensions/gubbins/

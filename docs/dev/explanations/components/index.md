@@ -55,6 +55,7 @@ flowchart BT
     cli -. uses .-> core
     logic -- calls --> dbs
     routers -- calls --> logic
+    routers -- re-exports --> tasks
     tasks -- calls --> logic & api
     client -- calls through OpenAPI --> routers
     api -- calls --> client

@@ -92,6 +92,11 @@ nav:
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
+      - Tasks:
+        - admin/how-to/tasks/index.md
+        - Configure: admin/how-to/tasks/configure.md
+        - Run a task manually: admin/how-to/tasks/run-task-manually.md
+        - Operate: admin/how-to/tasks/operate.md
     - Explanations:
       - admin/explanations/index.md
       - Auth in DiracX: admin/explanations/auth-with-diracx.md
@@ -103,15 +108,18 @@ nav:
       - Databases: admin/explanations/database-management.md
       - Sandbox Store: admin/explanations/sandbox-store.md
       - Web release process: admin/explanations/manage-web-release.md
+      - Tasks: admin/explanations/tasks.md
     - Tutorials:
       - admin/tutorials/index.md
       - Authentication: admin/tutorials/authentication.md
+      - Monitor tasks: admin/tutorials/monitor-tasks.md
     - Reference:
       - admin/reference/index.md
       - Security Model: admin/reference/security_model.md
       - Settings and Preferences: admin/reference/settings-and-preferences.md
       - Environment variables: admin/reference/env-variables.md
       - Charts values: admin/reference/values.md
+      - Tasks configuration: admin/reference/tasks-configuration.md
       - RUN_PROD.md
       - SSO.md
 
@@ -122,10 +130,19 @@ nav:
       - Backend:
           - Getting started: dev/tutorials/getting-started.md
           - Larger developments: dev/tutorials/larger-developments.md
-          - Advanced tutorial: dev/tutorials/advanced-tutorial.md
-          - Making changes: dev/tutorials/making-changes.md
+          - Advanced tutorial:
+              - dev/tutorials/advanced-tutorial/index.md
+              - Design: dev/tutorials/advanced-tutorial/design.md
+              - Database: dev/tutorials/advanced-tutorial/database.md
+              - Logic: dev/tutorials/advanced-tutorial/logic.md
+              - Tasks: dev/tutorials/advanced-tutorial/tasks.md
+              - Router: dev/tutorials/advanced-tutorial/router.md
+              - Testing:
+                  - Database: dev/tutorials/advanced-tutorial/testing-database.md
+                  - Tasks: dev/tutorials/advanced-tutorial/testing-tasks.md
+                  - Router: dev/tutorials/advanced-tutorial/testing-router.md
+              - Running locally: dev/tutorials/advanced-tutorial/running-locally.md
           - Run a full DiracX instance locally: dev/tutorials/run-locally.md
-          - Play with auth: dev/tutorials/play-with-auth.md
       - Frontend:
           - Web:
               - Getting started: dev/tutorials/web-getting-started.md
@@ -143,6 +160,8 @@ nav:
           - dev/how-to/add-functionality/index.md
           - New route or router: dev/how-to/add-a-route.md
           - New task: dev/how-to/add-a-task.md
+          - Spawn a task: dev/how-to/spawn-a-task.md
+          - Use task callbacks: dev/how-to/use-task-callbacks.md
           - New DB: dev/how-to/add-a-db.md
           - New settings: dev/how-to/add-a-setting.md
           - Add a test: dev/how-to/add-a-test.md
@@ -175,6 +194,10 @@ nav:
           - Testing: dev/explanations/testing.md
           - Extensions: dev/explanations/extensions.md
           - Designing functionality: dev/explanations/designing-functionality.md
+          - Tasks:
+              - dev/explanations/tasks/index.md
+              - Class details: dev/explanations/tasks/class-details.md
+              - Broker lifecycle: dev/explanations/tasks/broker-lifecycle.md
       - Frontend:
           - CLI:
               - API: dev/explanations/components/api.md
@@ -198,11 +221,15 @@ nav:
           - Entrypoints: dev/reference/entrypoints.md
           - Security policies: dev/reference/security-policies.md
           - Security properties: dev/reference/security-properties.md
+          - Tasks: dev/reference/tasks.md
       - Frontend:
           - CLI:
               - Client metapathfinder: dev/reference/client-metapathfinder.md
           - Web:
               - Coding conventions: dev/reference/web-coding-conventions.md
+    - Architecture Design Records:
+      - adr/index.md
+      - DX-ADR-001 - Tasks: adr/DX-ADR-001_tasks.md
 
 markdown_extensions:
   - admonition
@@ -221,7 +248,8 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ['.']
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span

@@ -13,6 +13,7 @@ COPY gubbins-client/ gubbins-client/
 COPY gubbins-core/ gubbins-core/
 COPY gubbins-db/ gubbins-db/
 COPY gubbins-logic/ gubbins-logic/
+COPY gubbins-tasks/ gubbins-tasks/
 COPY gubbins-routers/ gubbins-routers/
 COPY gubbins-testing/ gubbins-testing/
 COPY pyproject.toml ./
