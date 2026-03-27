@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "diracx-tasks",
     "gubbins-db",
+    "gubbins-logic",
 ]
 dynamic = ["version"]
 

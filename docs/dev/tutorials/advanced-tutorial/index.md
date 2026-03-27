@@ -51,9 +51,10 @@ pixi run test-tutorial
 
 1. [**Design**](design.md) — Think through the domain before writing code
 2. [**Database**](database.md) — Implement MyPilotDB with SQLAlchemy
-3. [**Tasks**](tasks.md) — Implement the four task types
-4. [**Router**](router.md) — Add a minimal HTTP API
-5. [**Testing the database**](testing-database.md) — Verify schema and queries
-6. [**Testing the tasks**](testing-tasks.md) — Mock, lock, and execute
-7. [**Testing the router**](testing-router.md) — Test client infrastructure
-8. [**Running locally**](running-locally.md) — Run the system end-to-end
+3. [**Logic**](logic.md) — Extract business logic into the logic layer
+4. [**Tasks**](tasks.md) — Implement the four task types
+5. [**Router**](router.md) — Add a minimal HTTP API
+6. [**Testing the database**](testing-database.md) — Verify schema and queries
+7. [**Testing the tasks**](testing-tasks.md) — Mock, lock, and execute
+8. [**Testing the router**](testing-router.md) — Test client infrastructure
+9. [**Running locally**](running-locally.md) — Run the system end-to-end

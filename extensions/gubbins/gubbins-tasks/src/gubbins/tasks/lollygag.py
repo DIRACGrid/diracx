@@ -24,6 +24,8 @@ from diracx.tasks.plumbing.locks import BaseLock, MutexLock
 from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 from diracx.tasks.plumbing.schedules import CronSchedule, IntervalSeconds
 
+from gubbins.logic.lollygag.lollygag import get_owner_object, insert_owner_object
+
 from .depends import LollygagDB
 from .lock_types import LOLLYGAG
 
@@ -53,7 +55,7 @@ class SyncOwnersTask(BaseTask):
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> int:
-        owner_id = await lollygag_db.insert_owner(self.owner_name)
+        owner_id = await insert_owner_object(lollygag_db, self.owner_name)
         logger.info("Synced owner %s (id=%d)", self.owner_name, owner_id)
         return owner_id
 
@@ -69,7 +71,7 @@ class OwnerCleanupTask(PeriodicBaseTask):
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> list[str]:
-        owners = await lollygag_db.get_owner()
+        owners = await get_owner_object(lollygag_db)
         logger.info("Current owners: %s", owners)
         return owners
 
@@ -89,6 +91,6 @@ class OwnerReportTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> list[str]:
-        owners = await lollygag_db.get_owner()
+        owners = await get_owner_object(lollygag_db)
         logger.info("VO %s owner report: %s", self.vo, owners)
         return owners

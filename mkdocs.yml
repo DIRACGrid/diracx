@@ -134,6 +134,7 @@ nav:
               - dev/tutorials/advanced-tutorial/index.md
               - Design: dev/tutorials/advanced-tutorial/design.md
               - Database: dev/tutorials/advanced-tutorial/database.md
+              - Logic: dev/tutorials/advanced-tutorial/logic.md
               - Tasks: dev/tutorials/advanced-tutorial/tasks.md
               - Router: dev/tutorials/advanced-tutorial/router.md
               - Testing:

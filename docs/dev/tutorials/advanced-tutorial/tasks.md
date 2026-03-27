@@ -1,8 +1,9 @@
 # Part 3: Tasks
 
-Now we implement the four tasks from our design. We'll build them
-progressively, from simplest to most complex, so you can see how each
-task pattern works.
+Now we implement the four tasks from our design. Each task is a thin
+orchestration wrapper that delegates business logic to the
+[logic layer](logic.md) we built in the previous part. We'll build
+them progressively, from simplest to most complex.
 
 ## Custom lock type
 
@@ -50,13 +51,17 @@ The key imports to note:
 - **`NoRetry`** — A retry policy that skips retries entirely
 - **`CronSchedule` / `IntervalSeconds`** — Schedule types for periodic
     tasks
+- **`gubbins.logic.my_pilots`** — Business logic functions from the
+    [logic layer](logic.md). Tasks delegate to these rather than
+    implementing logic inline.
 - **`MyPilotDB`** (from `depends`) — The dependency-injected database
     type from Part 2
 
 ## MyPilotTask — one-shot submission
 
-The simplest task. It receives a CE name, checks the success rate, and
-either submits a pilot or raises an error.
+The simplest task. It receives a CE name and delegates to
+`submit_pilot()` from the logic layer, which checks the CE's success
+rate and either submits a pilot or raises `PilotSubmissionError`.
 
 <!-- blacken-docs:off -->
 
@@ -127,9 +132,10 @@ pilots are checked independently.
     each with its `vo` set automatically.
 - **`IntervalSeconds(30)`** — Runs every 30 seconds per VO (as opposed
     to `CronSchedule` which uses wall-clock times).
-- **State transitions** — Moves `SUBMITTED → RUNNING` immediately, then
-    probabilistically transitions `RUNNING → DONE` or `RUNNING → FAILED`
-    based on the CE's success rate.
+- **Delegates to logic** — Calls `transition_pilot_states()` which
+    moves `SUBMITTED → RUNNING` immediately, then probabilistically
+    transitions `RUNNING → DONE` or `RUNNING → FAILED` based on the
+    CE's success rate.
 
 ## MySubmitPilotsTask — VO-aware periodic, spawns children
 

@@ -6,6 +6,7 @@ Demonstrates:
 - VO-aware periodic tasks with IntervalSeconds schedule
 - Spawning child tasks from a periodic parent
 - Custom ``LockedObjectType`` (``MY_PILOT``) for domain-specific locking
+- Calling business logic from ``gubbins.logic.my_pilots``
 """
 
 # --8<-- [start:my_pilot_task_imports]
@@ -13,7 +14,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-import random
 from typing import Any
 
 from diracx.tasks.plumbing.base_task import (
@@ -27,7 +27,12 @@ from diracx.tasks.plumbing.locks import BaseLock, MutexLock
 from diracx.tasks.plumbing.retry_policies import NoRetry
 from diracx.tasks.plumbing.schedules import CronSchedule, IntervalSeconds
 
-from gubbins.db.sql.my_pilot_db.schema import MyPilotStatus
+from gubbins.logic.my_pilots import (
+    get_available_ces,
+    get_pilot_summary,
+    submit_pilot,
+    transition_pilot_states,
+)
 
 from .depends import MyPilotDB
 from .my_pilot_lock_types import MY_PILOT
@@ -41,10 +46,10 @@ logger = logging.getLogger(__name__)
 class MyPilotTask(BaseTask):
     """Submit a single pilot to a compute element.
 
-    Reads the CE's success_rate from the database and uses it to
-    determine whether the submission succeeds.  On failure, an
-    exception is raised.  No retry is configured — the periodic
-    parent will naturally resubmit on the next cycle.
+    Delegates to ``gubbins.logic.my_pilots.submit_pilot`` which reads
+    the CE's success_rate and determines whether the submission
+    succeeds.  No retry is configured — the periodic parent will
+    naturally resubmit on the next cycle.
     """
 
     ce_name: str
@@ -61,13 +66,7 @@ class MyPilotTask(BaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> int:
-        success_rate = await my_pilot_db.get_ce_success_rate(self.ce_name)
-        if random.random() >= success_rate:
-            raise RuntimeError(
-                f"Pilot submission to {self.ce_name} failed "
-                f"(success_rate={success_rate})"
-            )
-        pilot_id = await my_pilot_db.submit_pilot(self.ce_name)
+        pilot_id = await submit_pilot(my_pilot_db, self.ce_name)
         logger.info("Submitted pilot %d to %s", pilot_id, self.ce_name)
         return pilot_id
 
@@ -88,7 +87,7 @@ class MyPilotReportTask(PeriodicBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> dict[str, int]:
-        summary = await my_pilot_db.get_pilot_summary()
+        summary = await get_pilot_summary(my_pilot_db)
         logger.info("Pilot summary: %s", summary)
         return summary
 
@@ -101,8 +100,9 @@ class MyPilotReportTask(PeriodicBaseTask):
 class MyCheckPilotsTask(PeriodicVoAwareBaseTask):
     """Periodically check and transition pilot states.
 
-    Queries pilots in SUBMITTED/RUNNING state and probabilistically
-    transitions them based on the CE's success_rate.
+    Delegates to ``gubbins.logic.my_pilots.transition_pilot_states``
+    which queries pilots in SUBMITTED/RUNNING state and
+    probabilistically transitions them based on the CE's success_rate.
     """
 
     vo: str
@@ -112,24 +112,7 @@ class MyCheckPilotsTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> None:
-        # Transition SUBMITTED -> RUNNING
-        submitted = await my_pilot_db.get_pilots_by_status(MyPilotStatus.SUBMITTED)
-        for pilot in submitted:
-            await my_pilot_db.update_pilot_status(
-                pilot["pilot_id"], MyPilotStatus.RUNNING
-            )
-            logger.info("Pilot %d now RUNNING", pilot["pilot_id"])
-
-        # Transition RUNNING -> DONE or FAILED
-        running = await my_pilot_db.get_pilots_by_status(MyPilotStatus.RUNNING)
-        for pilot in running:
-            success_rate = await my_pilot_db.get_ce_success_rate(pilot["ce_name"])
-            if random.random() < success_rate:
-                new_status = MyPilotStatus.DONE
-            else:
-                new_status = MyPilotStatus.FAILED
-            await my_pilot_db.update_pilot_status(pilot["pilot_id"], new_status)
-            logger.info("Pilot %d -> %s", pilot["pilot_id"], new_status)
+        await transition_pilot_states(my_pilot_db)
 
 
 # --8<-- [end:my_check_pilots_task]
@@ -151,7 +134,7 @@ class MySubmitPilotsTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> int:
-        available_ces = await my_pilot_db.get_available_ces()
+        available_ces = await get_available_ces(my_pilot_db)
         spawned = 0
         for ce in available_ces:
             for _ in range(ce["available_slots"]):

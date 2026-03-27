@@ -10,6 +10,7 @@ from diracx.tasks.plumbing.lock_registry import LockedObjectType
 from diracx.tasks.plumbing.locks import MutexLock
 from diracx.tasks.plumbing.retry_policies import NoRetry
 
+from gubbins.logic.my_pilots import PilotSubmissionError
 from gubbins.tasks.my_pilot_lock_types import MY_PILOT
 from gubbins.tasks.my_pilots import (
     MyCheckPilotsTask,
@@ -80,7 +81,7 @@ async def test_my_pilot_task_execute_failure():
     mock_db = AsyncMock()
     mock_db.get_ce_success_rate = AsyncMock(return_value=0.0)
 
-    with pytest.raises(RuntimeError, match="failed"):
+    with pytest.raises(PilotSubmissionError, match="failed"):
         await task.execute(my_pilot_db=mock_db)
 
     mock_db.submit_pilot.assert_not_called()

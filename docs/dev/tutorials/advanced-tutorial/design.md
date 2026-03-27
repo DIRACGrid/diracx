@@ -45,9 +45,10 @@ We need four tasks:
 ```mermaid
 graph TD
     A[MySubmitPilotsTask<br/>periodic, VO-aware] -->|spawns| B[MyPilotTask<br/>one-shot]
-    C[MyCheckPilotsTask<br/>periodic, VO-aware] -->|transitions| D[(MyPilotDB)]
-    B -->|writes| D
-    E[MyPilotReportTask<br/>periodic, cron] -->|reads| D
+    B -->|calls| L[gubbins.logic.my_pilots]
+    C[MyCheckPilotsTask<br/>periodic, VO-aware] -->|calls| L
+    E[MyPilotReportTask<br/>periodic, cron] -->|calls| L
+    L -->|reads/writes| D[(MyPilotDB)]
 ```
 
 ## Locking strategy
@@ -74,4 +75,4 @@ a transformation task).
 ## What's next
 
 With the design in hand, we'll start implementing. The order is:
-database → tasks → router → tests.
+database → logic → tasks → router → tests.
