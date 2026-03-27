@@ -159,22 +159,11 @@ jobs:
           demo_args+=("--exit-when-done")
           demo_args+=("--ci-values" "../diracx-charts/demo/ci_values.yaml")
 
-          declare -a demo_source_dirs=("$PWD")
-
           # Download helm/kubectl/kind first
           ../diracx-charts/run_demo.sh --only-download-deps
 
           if [ ${{ matrix.extension }} == 'gubbins' ]; then
             demo_args+=("--set-value" "diracx.developer.autoReload=false")
-
-            # We have to copy the code to another directory
-            # and make it a git repository by itself because otherwise the
-            # root in the pyproject do not make sense once mounted
-            # in the containers.
-            cp -r ./extensions/gubbins /tmp/
-            sed -i 's@../..@.@g' /tmp/gubbins/pyproject.toml
-            sed -i 's@../../@@g' /tmp/gubbins/gubbins-*/pyproject.toml
-            git init /tmp/gubbins/
 
             # Copy gubbins-charts to a temporary location and build dependencies
             cp -r ./extensions/gubbins-charts /tmp/
@@ -189,7 +178,6 @@ jobs:
             demo_args+=("--load-docker-image" "ghcr.io/gubbins/services:dev")
             demo_args+=("--load-docker-image" "ghcr.io/gubbins/client:dev")
             demo_args+=("--prune-loaded-images")
-            demo_source_dirs+=("/tmp/gubbins/")
           elif [ ${{ matrix.extension }} != 'diracx' ]; then
             echo "Unknown extension: ${{ matrix.extension }}"
             exit 1
@@ -203,7 +191,7 @@ jobs:
 
           # Run the demo with the provided arguments
           set -x
-          ../diracx-charts/run_demo.sh "${demo_args[@]}" "${demo_source_dirs[@]}"
+          ../diracx-charts/run_demo.sh "${demo_args[@]}"
       - name: Debugging information
         if: always()
         run: .github/scripts/collect-k8s-debug-info.sh "$PWD/../diracx-charts/.demo" "${{ matrix.extension == 'gubbins' && 'gubbins' || 'diracx' }}"
