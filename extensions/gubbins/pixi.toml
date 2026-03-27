@@ -32,7 +32,7 @@ gubbins-logic = { path = "./gubbins-logic", editable = true, extras = ["testing"
 [feature.gubbins-routers.pypi-dependencies]
 gubbins-routers = { path = "./gubbins-routers", editable = true, extras = ["testing"] }
 # opentelemetry-api requires importlib-metadata<8.8.0
-importlib-metadata = "<8.8.0"
+importlib-metadata = "<9.0.1"
 
 # Gubbins features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-gubbins-core -vvv --pdb" passes the arguments as expected.
