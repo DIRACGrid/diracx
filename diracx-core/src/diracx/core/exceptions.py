@@ -70,6 +70,12 @@ class SandboxNotFoundError(DiracError):
         )
 
 
+class ResourceNotFoundError(DiracError):
+    def __init__(self, name: str, detail: str | None = None):
+        self.name: str = name
+        super().__init__(f"{name} not found" + (f" ({detail})" if detail else ""))
+
+
 class SandboxAlreadyAssignedError(DiracError):
     def __init__(self, pfn: str, se_name: str, detail: str | None = None):
         self.pfn: str = pfn

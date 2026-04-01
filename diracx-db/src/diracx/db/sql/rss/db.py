@@ -1,17 +1,9 @@
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.engine import Row
 
-from diracx.core.models.rss import (
-    ComputeElementStatus,
-    FTSStatus,
-    ResourceType,
-    StorageElementStatus,
-    map_status,
-)
-from diracx.core.models.rss import (
-    SiteStatus as SiteStatusModel,
-)
+from diracx.core.exceptions import ResourceNotFoundError
 
 from ..utils import BaseSQLDB
 from .schema import (
@@ -26,67 +18,35 @@ class ResourceStatusDB(BaseSQLDB):
 
     metadata = RSSBase.metadata
 
-    async def get_site_status(self, name: str, vo: str = "all") -> SiteStatusModel:
+    async def get_site_status(self, name: str, vo: str = "all") -> tuple[str, str]:
         stmt = select(SiteStatus.status, SiteStatus.reason).where(
             SiteStatus.name == name,
             SiteStatus.statustype == "all",
             SiteStatus.vo == vo,
         )
         result = await self.conn.execute(stmt)
-        row = result.first()
+        row = result.one_or_none()
         if not row:
-            raise ValueError(f"Site {name} not found")
+            raise ResourceNotFoundError(name)
 
-        return SiteStatusModel(all=map_status(row.Status, row.Reason))
+        return row.Status, row.Reason
 
     async def get_resource_status(
         self,
         name: str,
+        statustypes: list[str] = ["all"],
         vo: str = "all",
-    ) -> ComputeElementStatus | FTSStatus:
+    ) -> dict[str, Row]:
         stmt = select(
-            ResourceStatus.status, ResourceStatus.reason, ResourceStatus.elementtype
+            ResourceStatus.status, ResourceStatus.reason, ResourceStatus.statustype
         ).where(
             ResourceStatus.name == name,
-            ResourceStatus.statustype == "all",
+            ResourceStatus.statustype.in_(statustypes),
             ResourceStatus.vo == vo,
         )
         result = await self.conn.execute(stmt)
-        row = result.first()
+        rows = result.all()
 
-        if not row:
-            raise ValueError(f"Resource {name} not found")
-
-        element_type = ResourceType(row.ElementType)
-
-        if element_type == ResourceType.Compute:
-            return ComputeElementStatus(all=map_status(row.Status, row.Reason))
-        if element_type == ResourceType.FTS:
-            return FTSStatus(all=map_status(row.Status, row.Reason))
-
-        raise ValueError(f"Unexpected resource type {element_type}")
-
-    async def get_storage_status(
-        self, name: str, vo: str = "all"
-    ) -> StorageElementStatus:
-        async def get_status(statustype: str):
-            stmt = select(ResourceStatus.status, ResourceStatus.reason).where(
-                ResourceStatus.name == name,
-                ResourceStatus.statustype == statustype,
-                ResourceStatus.vo == vo,
-            )
-
-            result = await self.conn.execute(stmt)
-            row = result.first()
-
-            if not row:
-                raise ValueError(f"StorageElement {name} not found")
-
-            return map_status(row.Status, row.Reason)
-
-        return StorageElementStatus(
-            read=await get_status("ReadAccess"),
-            write=await get_status("WriteAccess"),
-            check=await get_status("CheckAccess"),
-            remove=await get_status("RemoveAccess"),
-        )
+        if not rows:
+            raise ResourceNotFoundError(name)
+        return {row.StatusType: row for row in rows}
