@@ -11,7 +11,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 import diracx.core.models
-from diracx.core.models._types import UTCDatetime, _validate_utc
+from diracx.core.models.types import UTCDatetime, _validate_utc
 
 
 class SampleModel(BaseModel):
@@ -80,7 +80,7 @@ def _collect_model_classes() -> list[type[BaseModel]]:
     for _importer, modname, _ispkg in pkgutil.walk_packages(
         package.__path__, prefix=package.__name__ + "."
     ):
-        if modname.endswith("._types"):
+        if modname.endswith(".types"):
             continue
         module = importlib.import_module(modname)
         for _name, obj in inspect.getmembers(module, inspect.isclass):

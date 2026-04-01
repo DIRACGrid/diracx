@@ -35,17 +35,17 @@ def main(token_keystore: str):
     jti = uuid7()
     expires_at = uuid7_to_datetime(jti) + timedelta(seconds=expires_in)
 
-    access_payload: AccessTokenPayload = {
-        "sub": f"{vo}:{sub}",
-        "vo": vo,
-        "iss": settings.token_issuer,
-        "dirac_properties": dirac_properties,
-        "jti": str(jti),
-        "preferred_username": preferred_username,
-        "dirac_group": dirac_group,
-        "exp": expires_at,
-        "dirac_policies": {},
-    }
+    access_payload = AccessTokenPayload(
+        sub=f"{vo}:{sub}",
+        vo=vo,
+        iss=settings.token_issuer,
+        dirac_properties=dirac_properties,
+        jti=str(jti),
+        preferred_username=preferred_username,
+        dirac_group=dirac_group,
+        exp=expires_at,
+        dirac_policies={},
+    )
     token = TokenResponse(
         access_token=create_token(access_payload, settings),
         expires_in=expires_in,

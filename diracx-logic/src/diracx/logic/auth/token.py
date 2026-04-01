@@ -332,14 +332,14 @@ async def exchange_token(
         refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
             minutes=refresh_token_expire_minutes
         )
-        refresh_payload = {
-            "jti": str(refresh_jti),
-            "exp": refresh_exp,
+        refresh_payload = RefreshTokenPayload(
+            jti=str(refresh_jti),
+            exp=refresh_exp,
             # legacy_exchange is used to indicate that the original refresh token
             # was obtained from the legacy_exchange endpoint
-            "legacy_exchange": legacy_exchange,
-            "dirac_policies": {},
-        }
+            legacy_exchange=legacy_exchange,
+            dirac_policies={},
+        )
 
     # Generate access token payload
     # For now, the access token is only used to access DIRAC services,
@@ -348,22 +348,22 @@ async def exchange_token(
     access_exp = uuid7_to_datetime(access_jti) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    access_payload: AccessTokenPayload = {
-        "sub": sub,
-        "vo": vo,
-        "iss": settings.token_issuer,
-        "dirac_properties": list(properties),
-        "jti": str(access_jti),
-        "preferred_username": preferred_username,
-        "dirac_group": dirac_group,
-        "exp": access_exp,
-        "dirac_policies": {},
-    }
+    access_payload = AccessTokenPayload(
+        sub=sub,
+        vo=vo,
+        iss=settings.token_issuer,
+        dirac_properties=list(properties),
+        jti=str(access_jti),
+        preferred_username=preferred_username,
+        dirac_group=dirac_group,
+        exp=access_exp,
+        dirac_policies={},
+    )
 
     return access_payload, refresh_payload
 
 
-def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
+def create_token(payload: TokenPayload | dict, settings: AuthSettings) -> str:
     """Create a JWT token with the given payload and settings."""
     signing_key = None
     for key in settings.token_keystore.jwks.keys:
@@ -377,9 +377,10 @@ def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
     if not signing_key:
         raise ValueError("No signing key found in JWKS")
 
+    claims = payload.model_dump() if isinstance(payload, TokenPayload) else payload
     return jwt.encode(
         header={"alg": signing_key.get("alg"), "kid": signing_key.get("kid")},
-        claims=cast(Claims, payload),
+        claims=cast(Claims, claims),
         key=settings.token_keystore.jwks,
         algorithms=settings.token_allowed_algorithms,
     )

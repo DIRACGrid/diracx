@@ -9,12 +9,11 @@ from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import TypedDict
 
-from ._types import UTCDatetime
+from .types import UTCDatetime
 
 
-class InsertedJob(TypedDict):
+class InsertedJob(BaseModel):
     JobID: int
     Status: str
     MinorStatus: str

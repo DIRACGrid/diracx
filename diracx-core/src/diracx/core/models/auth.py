@@ -5,7 +5,7 @@ from enum import StrEnum
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
-from ._types import UTCDatetime
+from .types import UTCDatetime
 
 
 class UserInfo(BaseModel):
@@ -56,7 +56,7 @@ class OpenIDConfiguration(TypedDict):
     code_challenge_methods_supported: list[str]
 
 
-class TokenPayload(TypedDict):
+class TokenPayload(BaseModel):
     jti: str
     exp: UTCDatetime
     dirac_policies: dict
