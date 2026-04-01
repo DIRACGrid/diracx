@@ -35,7 +35,7 @@ def get_repo_path(config_repo_str: str) -> Path:
 
 
 def get_config_from_repo_path(repo_path: Path) -> Config:
-    return ConfigSource.create_from_url(backend_url=repo_path).read_config()
+    return ConfigSource.create_from_url(backend_url=repo_path).read()
 
 
 @app.command()
