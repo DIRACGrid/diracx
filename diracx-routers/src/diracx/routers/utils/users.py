@@ -15,8 +15,9 @@ from uuid_utils import UUID as _UUID
 
 from diracx.core.models.auth import UserInfo
 from diracx.core.properties import SecurityProperty
+from diracx.core.settings import AuthSettings
 from diracx.logic.auth.utils import read_token
-from diracx.routers.dependencies import AuthSettings
+from diracx.routers.dependencies import auto_inject
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ class AuthorizedUserInfo(AuthInfo, UserInfo):
     pass
 
 
+@auto_inject
 async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,

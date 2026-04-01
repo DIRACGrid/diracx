@@ -9,7 +9,9 @@ import logging
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
 
-from ..dependencies import AuthDB, Config
+from diracx.db.sql import AuthDB
+from diracx.routers.dependencies import Config
+
 from ..fastapi_classes import DiracxRouter
 
 logger = logging.getLogger(__name__)

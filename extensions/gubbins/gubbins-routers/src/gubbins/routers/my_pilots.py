@@ -17,7 +17,7 @@ from diracx.routers.fastapi_classes import DiracxRouter
 from diracx.routers.utils.users import AuthorizedUserInfo
 from fastapi import Depends
 
-from gubbins.db.sql import MyPilotDB as _MyPilotDB
+from gubbins.db.sql import MyPilotDB
 
 
 class ActionType(StrEnum):
@@ -38,8 +38,6 @@ class MyPilotsAccessPolicy(BaseAccessPolicy):
 
 
 CheckMyPilotsPolicyCallable = Annotated[Callable, Depends(MyPilotsAccessPolicy.check)]
-
-MyPilotDB = Annotated[_MyPilotDB, Depends(_MyPilotDB.transaction)]
 
 router = DiracxRouter()
 

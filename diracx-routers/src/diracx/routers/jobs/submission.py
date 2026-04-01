@@ -7,13 +7,10 @@ from fastapi import Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from diracx.core.models.job import InsertedJob
+from diracx.db.sql import JobDB, JobLoggingDB
 from diracx.logic.jobs.submission import submit_jdl_jobs as submit_jdl_jobs_bl
+from diracx.routers.dependencies import Config
 
-from ..dependencies import (
-    Config,
-    JobDB,
-    JobLoggingDB,
-)
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable

@@ -7,6 +7,8 @@ from typing import Any, Callable, TypeVar, cast
 from fastapi import APIRouter, FastAPI
 from starlette.routing import Route
 
+from diracx.tasks.plumbing.depends import auto_inject
+
 T = TypeVar("T")
 
 
@@ -94,6 +96,8 @@ class DiracxRouter(APIRouter):
     # https://github.com/tiangolo/fastapi/discussions/8489
 
     def add_api_route(self, path: str, endpoint: Callable[..., Any], **kwargs):
+        endpoint = auto_inject(endpoint)
+
         route_index = self._get_route_index_by_path_and_methods(
             path, set(kwargs.get("methods", []))
         )

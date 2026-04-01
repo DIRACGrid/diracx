@@ -20,14 +20,17 @@ from diracx.core.models.auth import (
     RefreshTokenPayload,
     TokenResponse,
 )
+from diracx.core.settings import AuthSettings
+from diracx.db.sql import AuthDB
 from diracx.logic.auth.token import create_token
 from diracx.logic.auth.token import get_oidc_token as get_oidc_token_bl
 from diracx.logic.auth.token import (
     perform_legacy_exchange as perform_legacy_exchange_bl,
 )
 from diracx.routers.access_policies import BaseAccessPolicy
+from diracx.routers.dependencies import Config
 
-from ..dependencies import AuthDB, AuthSettings, AvailableSecurityProperties, Config
+from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)

@@ -40,12 +40,11 @@ DiracX extensively utilizes FastAPI's dependency injection. For detailed informa
 
 ### Settings
 
-- **Settings classes** are Pydantic models that load service configuration from the environment and are wrapped with `add_settings_annotation` for FastAPI to handle them.
+- **Settings classes** are Pydantic models that load service configuration from the environment. Subclasses of `ServiceSettingsBase` are auto-detected by the dependency injection system — simply use the class as a type annotation and it will be wrapped with `Depends(cls.create)` automatically.
 
 Example:
 
 ```python
-@add_settings_annotation
 class AuthSettings(ServiceSettingsBase):
     """Settings for the authentication service."""
 
@@ -67,6 +66,9 @@ Available environment variables:
 Usage example:
 
 ```python
+from diracx.core.settings import AuthSettings
+
+
 @router.get("/openid-configuration")
 async def get_openid_configuration(settings: AuthSettings):
     ...
@@ -106,12 +108,12 @@ The `Config` object is cached efficiently between requests and automatically ref
 
 ### SQL Databases
 
-To depend on a SQL-backed database, use the classes in `diracx.routers.dependencies`. The connection is managed through a central pool, with transactions opened for the duration of a request. Successful requests commit the transaction, while requests with HTTP status code `>=400` roll back the transaction. Connections are returned to the pool for reuse.
+To depend on a SQL-backed database, import the DB class directly from its package. The dependency injection system auto-detects `BaseSQLDB` subclasses and wraps them with `Depends(cls.transaction, scope="function")`. The connection is managed through a central pool, with transactions opened for the duration of a request. Successful requests commit the transaction, while requests with HTTP status code `>=400` roll back the transaction. Connections are returned to the pool for reuse.
 
 Example:
 
 ```python
-from diracx.routers.dependencies import JobDB, JobLoggingDB
+from diracx.db.sql import JobDB, JobLoggingDB
 
 
 @router.delete("/{job_id}")
@@ -122,7 +124,7 @@ async def delete_single_job(job_db: JobDB, job_logging_db: JobLoggingDB):
 There are advanced and uncommon scenarios where committing a transaction is necessary even when returning an error response (e.g., revoking tokens in the database and returning an error to a potentially malicious user). In such cases, explicitly committing the transaction before raising an exception is crucial. Without this explicit commit, the intended changes would be rolled back along with the transaction, leading to unintended consequences:
 
 ```python
-from diracx.routers.dependencies import AuthDB
+from diracx.db.sql import AuthDB
 
 
 @router.post("/token")
@@ -143,12 +145,12 @@ Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/p
 
 ### OpenSearch Databases
 
-Connecting to an OpenSearch database is similar to an SQL database, with connections being pooled automatically. However, there is no automatic transaction/rollback behavior.
+Connecting to an OpenSearch database is similar to an SQL database, with connections being pooled automatically. `BaseOSDB` subclasses are auto-detected and wrapped with `Depends(cls.session, scope="function")`. There is no automatic transaction/rollback behavior.
 
 Example:
 
 ```python
-from diracx.routers.dependencies import JobParametersDB
+from diracx.db.os import JobParametersDB
 
 
 @router.post("/search", responses=EXAMPLE_RESPONSES)

@@ -12,7 +12,7 @@ from diracx.tasks.plumbing.base_task import BaseTask
 from diracx.tasks.plumbing.enums import Priority, Size
 from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 
-from .depends import LollygagDB
+from gubbins.db.sql import LollygagDB
 
 
 @dataclasses.dataclass
@@ -44,20 +44,6 @@ Add the task to a `diracx.tasks.<category>` entry point group in your package's 
 [project.entry-points."diracx.tasks.lollygag"]
 SyncOwnersTask = "gubbins.tasks.lollygag:SyncOwnersTask"
 ```
-
-### Add dependency injection types
-
-If the task depends on a database that doesn't already have a dependency injection annotation, add one in a `depends.py` module:
-
-```python
-from typing import Annotated
-from diracx.tasks.plumbing.depends import DBDepends
-from gubbins.db.sql import LollygagDB as _LollygagDB
-
-LollygagDB = Annotated[_LollygagDB, DBDepends(_LollygagDB.transaction)]
-```
-
-The `DBDepends` helper wraps the database class so the worker can resolve it at execution time, matching the same pattern used in `diracx.routers`.
 
 ### Custom locks
 

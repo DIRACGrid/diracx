@@ -141,7 +141,7 @@ The framework lives in `diracx-tasks` under `diracx.tasks.plumbing`. Domain-spec
 | `plumbing/persistence/dlq.py`      | `TaskDB` — SQL-backed dead-letter queue for tasks marked `dlq_eligible`                                 |
 | `plumbing/base_task.py`            | `BaseTask`, `PeriodicBaseTask`, `PeriodicVoAwareBaseTask` base classes                                  |
 | `plumbing/lock_registry.py`        | `LockedObjectType` registry and `register_locked_object_type()`                                         |
-| `plumbing/depends.py`              | Dependency injection type annotations shared between tasks and routers                                  |
+| `plumbing/depends.py`              | Auto-detection of DB/Settings dependencies (`auto_inject_depends`) shared between tasks and routers     |
 
 ### Environment variables
 
@@ -167,6 +167,6 @@ Extensions define tasks in their own packages and register them via entry points
 
 - **Tasks** are registered under `diracx.tasks.<category>` (e.g. `diracx.tasks.lollygag`).
 - **Custom lock types** are registered under `diracx.lock_object_types` by calling `register_locked_object_type()` at module level.
-- **Dependency injection types** for new databases are defined in a `depends.py` using `DBDepends` from `diracx.tasks.plumbing.depends`.
+- **Dependency injection** for databases and settings is handled automatically — `auto_inject_depends` in `diracx.tasks.plumbing.depends` detects `BaseSQLDB`, `BaseOSDB`, and `ServiceSettingsBase` subclasses and wraps them with the appropriate `Depends` annotation. Task code should import DB classes directly from their defining packages (e.g. `from gubbins.db.sql import LollygagDB`).
 
 See the [how-to guide](../../how-to/add-a-task.md) for a step-by-step walkthrough.

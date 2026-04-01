@@ -42,13 +42,14 @@ Here we allow all authenticated users — in a real system you'd check
 
 ### DB dependency
 
-!!! tip "The `Annotated[DB, Depends(DB.transaction)]` pattern"
+!!! tip "Auto-injected database dependencies"
 
-    This is the standard way to inject a database connection in DiracX
-    routers. `Depends(DB.transaction)` opens a transaction when the request
-    starts and commits it on success (or rolls back on error). The
-    `Annotated` type alias makes the dependency reusable across multiple
-    endpoint signatures.
+    Database classes (`BaseSQLDB` subclasses) are auto-detected by
+    `DiracxRouter.add_api_route`. Simply type-annotate a parameter with
+    the DB class and it will be wrapped with
+    `Depends(cls.transaction, scope="function")` automatically, which
+    opens a transaction when the request starts and commits on success
+    (or rolls back on error).
 
 ### Endpoints
 
@@ -73,18 +74,6 @@ Access policy entry point:
 ```toml title="gubbins-routers/pyproject.toml"
 --8<-- "extensions/gubbins/gubbins-routers/pyproject.toml:my_pilots_access_policy_entry_point"
 ```
-
-## Update package exports
-
-Re-export the DB dependency:
-
-<!-- blacken-docs:off -->
-
-```python title="gubbins-routers/src/gubbins/routers/dependencies.py"
---8<-- "extensions/gubbins/gubbins-routers/src/gubbins/routers/dependencies.py:my_pilots_router_depends"
-```
-
-<!-- blacken-docs:on -->
 
 ## Checkpoint
 

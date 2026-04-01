@@ -165,6 +165,12 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @classmethod
     def transaction(cls) -> Self:
+        """Dependency injection sentinel: overridden at startup to yield a DB inside a transaction."""
+        raise NotImplementedError("This should never be called")
+
+    @classmethod
+    def no_transaction(cls) -> Self:
+        """Dependency injection sentinel: overridden at startup to yield a DB without a transaction."""
         raise NotImplementedError("This should never be called")
 
     @property

@@ -84,12 +84,11 @@ covers the broader architecture.
 
 Create an empty `my_pilot_db/__init__.py` file in the same directory.
 
-## Register the entry point, export, and dependency
+## Register the entry point and export
 
-The next three steps connect your database to the rest of DiracX. Each
-step serves a different purpose in the registration pipeline.
+The next two steps connect your database to the rest of DiracX.
 
-!!! note "Why three registration steps?"
+!!! note "Why two registration steps?"
 
     1. **Entry point** (in `pyproject.toml`) — Tells DiracX's plugin
         system that this DB exists. The entry point name becomes the DB's
@@ -97,9 +96,10 @@ step serves a different purpose in the registration pipeline.
     2. **Package export** (in `__init__.py`) — Makes the DB class
         importable from the top-level package so other code (routers,
         tasks) can reference it.
-    3. **Dependency injection** (in `depends.py`) — Creates an
-        `Annotated` type that FastAPI and the task worker can resolve
-        automatically, wrapping the DB in a transaction context.
+
+    Dependency injection is handled automatically — `auto_inject_depends`
+    detects `BaseSQLDB` subclasses and wraps them with the appropriate
+    `Depends` annotation. No manual `Annotated` wrapper is needed.
 
     See [Entrypoints](../../reference/entrypoints.md) and
     [Dependency injection](../../reference/dependency-injection.md)
@@ -122,20 +122,6 @@ Add under `[project.entry-points."diracx.dbs.sql"]`:
 ```
 
 <!-- blacken-docs:on -->
-
-### Dependency injection
-
-<!-- blacken-docs:off -->
-
-```python title="gubbins-tasks/src/gubbins/tasks/depends.py"
---8<-- "extensions/gubbins/gubbins-tasks/src/gubbins/tasks/depends.py:my_pilots_depends"
-```
-
-<!-- blacken-docs:on -->
-
-The `DBDepends` wrapper ensures the transaction commits before the HTTP
-response is sent. When used in task code, the same type annotation lets
-the task worker inject a database connection automatically.
 
 ### Helm chart
 
