@@ -61,12 +61,12 @@ async def mint_token(
             dirac_refresh_policies[policy_name] = refresh_extra
 
     # Create the access token
-    access_payload["dirac_policies"] = dirac_access_policies
+    access_payload.dirac_policies = dirac_access_policies
     access_token = create_token(access_payload, settings)
 
     # Create the refresh token
     if refresh_payload:
-        refresh_payload["dirac_policies"] = dirac_refresh_policies
+        refresh_payload.dirac_policies = dirac_refresh_policies
         refresh_token = create_token(refresh_payload, settings)
     elif existing_refresh_token:
         refresh_token = existing_refresh_token

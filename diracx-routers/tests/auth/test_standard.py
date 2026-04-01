@@ -26,7 +26,7 @@ from diracx.core.exceptions import AuthorizationError
 from diracx.core.models.auth import GrantType
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.core.settings import AuthSettings
-from diracx.logic.auth.token import create_token
+from diracx.logic.auth.token import _sign_token_payload
 from diracx.logic.auth.utils import (
     _server_metadata_cache,
     decrypt_state,
@@ -583,7 +583,7 @@ async def test_refresh_token_expired(
     )
 
     # Encode it differently
-    new_refresh_token = create_token(refresh_payload, test_auth_settings)
+    new_refresh_token = _sign_token_payload(refresh_payload, test_auth_settings)
 
     request_data = {
         "grant_type": "refresh_token",
@@ -622,7 +622,7 @@ async def test_access_token_expired(
     )
 
     # Encode it differently
-    new_access_token = create_token(access_payload, test_auth_settings)
+    new_access_token = _sign_token_payload(access_payload, test_auth_settings)
 
     headers = {"Authorization": f"Bearer {new_access_token}"}
 
@@ -652,7 +652,7 @@ async def test_invalid_access_token_signature(
     )
 
     # Encode it differently
-    new_access_token = create_token(access_payload, test_auth_settings)
+    new_access_token = _sign_token_payload(access_payload, test_auth_settings)
 
     # JWT tokens are structured as: header.payload.signature
     parts = new_access_token.split(".")
@@ -736,7 +736,7 @@ async def test_refresh_token_rotated_expiration_time(
     )
 
     # Encode it differently
-    new_refresh_token = create_token(refresh_payload, test_auth_settings)
+    new_refresh_token = _sign_token_payload(refresh_payload, test_auth_settings)
 
     request_data = {
         "grant_type": "refresh_token",
@@ -790,7 +790,7 @@ async def test_refresh_token_invalid(test_client, auth_httpx_mock: HTTPXMock):
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
         ],
     )
-    new_refresh_token = create_token(refresh_payload, new_auth_settings)
+    new_refresh_token = _sign_token_payload(refresh_payload, new_auth_settings)
 
     # Make sure it is different from the initial refresh token
     assert initial_refresh_token != new_refresh_token
@@ -857,13 +857,13 @@ async def test_keystore(test_client):
     # Encode/Decode with the keystore: should not work
     # because Ed25519 is not part of the allowed algorithms
     with pytest.raises(UnsupportedAlgorithmError):
-        token = create_token(payload, auth_settings)
+        token = _sign_token_payload(payload, auth_settings)
 
     # Add Ed25519 to the allowed algorithms
     auth_settings.token_allowed_algorithms.append("Ed25519")
 
     # Encode/Decode with the keystore: should work
-    token = create_token(payload, auth_settings)
+    token = _sign_token_payload(payload, auth_settings)
     await verify_dirac_refresh_token(token, auth_settings)
 
     # Add the rsa key to the keystore
@@ -881,25 +881,25 @@ async def test_keystore(test_client):
     )
 
     # Encode/Decode with the keystore: should work
-    token = create_token(payload, auth_settings)
+    token = _sign_token_payload(payload, auth_settings)
     await verify_dirac_refresh_token(token, auth_settings)
 
     # Remove 'sign' operation from the RSA key:
     # should still work because ed25519_key is still there
     auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("sign")
-    token = create_token(payload, auth_settings)
+    token = _sign_token_payload(payload, auth_settings)
     await verify_dirac_refresh_token(token, auth_settings)
 
     # Remove 'verify' operation from the RSA key:
     # should still work because RSA key is still in the keystore
     auth_settings.token_keystore.jwks.keys[1].get("key_ops").remove("verify")
-    token = create_token(payload, auth_settings)
+    token = _sign_token_payload(payload, auth_settings)
     await verify_dirac_refresh_token(token, auth_settings)
 
     # Remove RSA key from the keystore:
     # should still work except decoding the token signed with the RSA key
     auth_settings.token_keystore.jwks.keys.pop(1)
-    ed_signed_token = create_token(payload, auth_settings)
+    ed_signed_token = _sign_token_payload(payload, auth_settings)
     await verify_dirac_refresh_token(ed_signed_token, auth_settings)
 
     # Remove 'sign' operation from the OPK key:
@@ -907,7 +907,7 @@ async def test_keystore(test_client):
     auth_settings.token_keystore.jwks.keys[0].get("key_ops").remove("sign")
 
     with pytest.raises(ValueError):
-        create_token(payload, auth_settings)
+        _sign_token_payload(payload, auth_settings)
 
     # But we can still verify the token
     await verify_dirac_refresh_token(ed_signed_token, auth_settings)
@@ -918,7 +918,7 @@ async def test_keystore(test_client):
 
     with pytest.raises(ValueError):
         # This should raise an error because the key is not usable for verifying
-        create_token(payload, auth_settings)
+        _sign_token_payload(payload, auth_settings)
 
     with pytest.raises(UnsupportedKeyOperationError):
         await verify_dirac_refresh_token(ed_signed_token, auth_settings)
@@ -928,7 +928,7 @@ async def test_keystore(test_client):
 
     with pytest.raises(ValueError):
         # This should raise an error because there is no key in the keystore
-        create_token(payload, auth_settings)
+        _sign_token_payload(payload, auth_settings)
 
     # This should raise an error because there is no key in the keystore
     with pytest.raises(InvalidKeyIdError):

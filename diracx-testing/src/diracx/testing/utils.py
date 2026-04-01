@@ -342,7 +342,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def normal_user(self):
         from diracx.core.properties import NORMAL_USER
-        from diracx.routers.auth.token import create_token
+        from diracx.logic.auth.token import _sign_token_payload
 
         with self.unauthenticated() as client:
             payload = {
@@ -356,7 +356,7 @@ class ClientFactory:
                 "dirac_group": "test_group",
                 "vo": "lhcb",
             }
-            token = create_token(payload, self.test_auth_settings)
+            token = _sign_token_payload(payload, self.test_auth_settings)
 
             client.headers["Authorization"] = f"Bearer {token}"
             client.dirac_token_payload = payload
@@ -365,7 +365,7 @@ class ClientFactory:
     @contextlib.contextmanager
     def admin_user(self):
         from diracx.core.properties import JOB_ADMINISTRATOR
-        from diracx.routers.auth.token import create_token
+        from diracx.logic.auth.token import _sign_token_payload
 
         with self.unauthenticated() as client:
             payload = {
@@ -377,7 +377,7 @@ class ClientFactory:
                 "dirac_group": "test_group",
                 "vo": "lhcb",
             }
-            token = create_token(payload, self.test_auth_settings)
+            token = _sign_token_payload(payload, self.test_auth_settings)
             client.headers["Authorization"] = f"Bearer {token}"
             client.dirac_token_payload = payload
             yield client

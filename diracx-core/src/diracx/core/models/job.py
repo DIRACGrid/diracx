@@ -5,19 +5,19 @@ They are shared between the client components (cli, api) and services components
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import TypedDict
+
+from .types import UTCDatetime
 
 
-class InsertedJob(TypedDict):
+class InsertedJob(BaseModel):
     JobID: int
     Status: str
     MinorStatus: str
-    TimeStamp: datetime
+    TimeStamp: UTCDatetime
 
 
 class HeartbeatData(BaseModel, extra="forbid"):
@@ -39,7 +39,7 @@ class JobCommand(BaseModel):
 class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
     """Some of the most important parameters that can be set for a job."""
 
-    timestamp: datetime | None = None
+    timestamp: UTCDatetime | None = None
     cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
     norm_cpu_time_s: int | None = Field(None, alias="NormCPUTime(s)")
     total_cpu_time_s: int | None = Field(None, alias="TotalCPUTime(s)")
@@ -84,12 +84,12 @@ class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
     owner: str | None = Field(None, alias="Owner")
     owner_group: str | None = Field(None, alias="OwnerGroup")
     vo: str | None = Field(None, alias="VO")
-    submission_time: datetime | None = Field(None, alias="SubmissionTime")
-    reschedule_time: datetime | None = Field(None, alias="RescheduleTime")
-    last_update_time: datetime | None = Field(None, alias="LastUpdateTime")
-    start_exec_time: datetime | None = Field(None, alias="StartExecTime")
-    heart_beat_time: datetime | None = Field(None, alias="HeartBeatTime")
-    end_exec_time: datetime | None = Field(None, alias="EndExecTime")
+    submission_time: UTCDatetime | None = Field(None, alias="SubmissionTime")
+    reschedule_time: UTCDatetime | None = Field(None, alias="RescheduleTime")
+    last_update_time: UTCDatetime | None = Field(None, alias="LastUpdateTime")
+    start_exec_time: UTCDatetime | None = Field(None, alias="StartExecTime")
+    heart_beat_time: UTCDatetime | None = Field(None, alias="HeartBeatTime")
+    end_exec_time: UTCDatetime | None = Field(None, alias="EndExecTime")
     status: str | None = Field(None, alias="Status")
     minor_status: str | None = Field(None, alias="MinorStatus")
     application_status: str | None = Field(None, alias="ApplicationStatus")
@@ -131,7 +131,7 @@ class JobLoggingRecord(BaseModel):
     status: JobStatus | Literal["idem"]
     minor_status: str
     application_status: str
-    date: datetime
+    date: UTCDatetime
     source: str
 
 
@@ -149,7 +149,7 @@ class LimitedJobStatusReturn(BaseModel):
 
 
 class JobStatusReturn(LimitedJobStatusReturn):
-    StatusTime: datetime
+    StatusTime: UTCDatetime
     Source: str
 
 
@@ -160,10 +160,10 @@ class SetJobStatusReturn(BaseModel):
         Status: JobStatus | None = None
         MinorStatus: str | None = None
         ApplicationStatus: str | None = None
-        HeartBeatTime: datetime | None = None
-        StartExecTime: datetime | None = None
-        EndExecTime: datetime | None = None
-        LastUpdateTime: datetime | None = None
+        HeartBeatTime: UTCDatetime | None = None
+        StartExecTime: UTCDatetime | None = None
+        EndExecTime: UTCDatetime | None = None
+        LastUpdateTime: UTCDatetime | None = None
 
     success: dict[int, SetJobStatusReturnSuccess]
     failed: dict[int, dict[str, str]]
