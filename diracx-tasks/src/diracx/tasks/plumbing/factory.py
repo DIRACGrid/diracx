@@ -112,7 +112,9 @@ async def task_wrapper(  # noqa: D417
         if held_locks:
             watchdog_task = asyncio.create_task(_lock_watchdog(held_locks, stop_event))
 
-        result = await task.execute(**kwargs)
+        # Subclasses define execute() with varying signatures for dependency
+        # injection, so it can't be declared on BaseTask without LSP violations.
+        result = await task.execute(**kwargs)  # type: ignore[attr-defined]
         return result
     finally:
         if watchdog_task is not None:
@@ -135,7 +137,9 @@ def wrap_task(cls: type[BaseTask]) -> Callable[..., Any]:
 
     Also attaches ``_dependant`` for FastAPI dependency resolution.
     """
-    execute_sig = signature(cls.execute, eval_str=True)
+    # Subclasses define execute() with varying signatures for dependency
+    # injection, so it can't be declared on BaseTask without LSP violations.
+    execute_sig = signature(cls.execute, eval_str=True)  # type: ignore[attr-defined]
     execute_params = list(execute_sig.parameters.values())
     if execute_params and execute_params[0].name == "self":
         execute_params = execute_params[1:]
