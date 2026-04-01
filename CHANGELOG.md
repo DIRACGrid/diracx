@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.12](https://github.com/DIRACGrid/diracx/compare/v0.0.11...v0.0.12) (2026-04-01)
+
+
+### Features
+
+* replace container base images with pixi-managed environments ([#810](https://github.com/DIRACGrid/diracx/issues/810)) ([7cae3ca](https://github.com/DIRACGrid/diracx/commit/7cae3ca756a6356607a4590a6ada8f1c44cd0207))
+
+
+### Bug Fixes
+
+* remove source dir mounts from integration tests ([#864](https://github.com/DIRACGrid/diracx/issues/864)) ([07c549d](https://github.com/DIRACGrid/diracx/commit/07c549d6735cbd6574b6df1e81c0bcd44428642e))
+
+
+### Miscellaneous Chores
+
+* release 0.0.12 ([05ec538](https://github.com/DIRACGrid/diracx/commit/05ec5380257f9dd46aa14fd23602b8244b08b89d))
+
 ## [0.0.11](https://github.com/DIRACGrid/diracx/compare/v0.0.10...v0.0.11) (2026-03-24)
 
 
