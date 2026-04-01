@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel
 from typing_extensions import TypedDict
+
+from ._types import UTCDatetime
 
 
 class UserInfo(BaseModel):
@@ -57,7 +58,7 @@ class OpenIDConfiguration(TypedDict):
 
 class TokenPayload(TypedDict):
     jti: str
-    exp: datetime
+    exp: UTCDatetime
     dirac_policies: dict
 
 
