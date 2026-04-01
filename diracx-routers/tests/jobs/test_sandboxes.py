@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from diracx.core.settings import AuthSettings
-from diracx.routers.auth.token import create_token
+from diracx.logic.auth.token import _sign_token_payload
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -67,7 +67,7 @@ def test_upload_then_download(
     # Modify the authorization payload to be another user
     other_user_payload = deepcopy(normal_user_client.dirac_token_payload)
     other_user_payload["preferred_username"] = "other_user"
-    other_user_token = create_token(other_user_payload, test_auth_settings)
+    other_user_token = _sign_token_payload(other_user_payload, test_auth_settings)
 
     # Make sure another user can't download the sandbox
     # The fact that another user cannot download the sandbox

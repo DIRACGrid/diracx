@@ -363,8 +363,13 @@ async def exchange_token(
     return access_payload, refresh_payload
 
 
-def create_token(payload: TokenPayload | dict, settings: AuthSettings) -> str:
+def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
     """Create a JWT token with the given payload and settings."""
+    return _sign_token_payload(payload.model_dump(), settings)
+
+
+def _sign_token_payload(claims: dict, settings: AuthSettings) -> str:
+    """Sign a raw claims dict as a JWT. Used by create_token and tests."""
     signing_key = None
     for key in settings.token_keystore.jwks.keys:
         key_ops = key.get("key_ops")
@@ -377,7 +382,6 @@ def create_token(payload: TokenPayload | dict, settings: AuthSettings) -> str:
     if not signing_key:
         raise ValueError("No signing key found in JWKS")
 
-    claims = payload.model_dump() if isinstance(payload, TokenPayload) else payload
     return jwt.encode(
         header={"alg": signing_key.get("alg"), "kid": signing_key.get("kid")},
         claims=cast(Claims, claims),
