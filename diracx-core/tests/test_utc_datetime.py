@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import importlib
+import inspect
+import pkgutil
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from diracx.core.models._types import UTCDatetime
+import diracx.core.models
+from diracx.core.models._types import UTCDatetime, _validate_utc
 
 
 class SampleModel(BaseModel):
@@ -59,3 +63,56 @@ class TestUTCDatetimeRejectsNonUTC:
     def test_naive_iso_string(self):
         with pytest.raises(ValidationError):
             SampleModel(ts="2024-01-01T12:00:00")
+
+
+def _is_datetime_type(annotation: type) -> bool:
+    """Check if an annotation is datetime or a subclass of datetime."""
+    try:
+        return isinstance(annotation, type) and issubclass(annotation, datetime)
+    except TypeError:
+        return False
+
+
+def _collect_model_classes() -> list[type[BaseModel]]:
+    """Discover all BaseModel subclasses in diracx.core.models."""
+    models = []
+    package = diracx.core.models
+    for _importer, modname, _ispkg in pkgutil.walk_packages(
+        package.__path__, prefix=package.__name__ + "."
+    ):
+        if modname.endswith("._types"):
+            continue
+        module = importlib.import_module(modname)
+        for _name, obj in inspect.getmembers(module, inspect.isclass):
+            if (
+                issubclass(obj, BaseModel)
+                and obj is not BaseModel
+                and obj.__module__ == modname
+            ):
+                models.append(obj)
+    return models
+
+
+def _check_field_uses_utc_validator(model: type[BaseModel], field_name: str) -> bool:
+    """Check that a datetime field has the _validate_utc AfterValidator."""
+    field_info = model.model_fields[field_name]
+    return any(getattr(m, "func", None) is _validate_utc for m in field_info.metadata)
+
+
+def test_all_datetime_fields_use_utc_datetime():
+    """Ensure no pydantic model in diracx.core.models uses bare datetime.
+
+    Every datetime field must use UTCDatetime to enforce UTC validation.
+    """
+    violations = []
+    for model in _collect_model_classes():
+        for field_name, field_info in model.model_fields.items():
+            if not _is_datetime_type(field_info.annotation):
+                continue
+            if not _check_field_uses_utc_validator(model, field_name):
+                violations.append(f"{model.__name__}.{field_name}")
+
+    assert not violations, (
+        "The following fields use bare datetime instead of UTCDatetime:\n"
+        + "\n".join(f"  - {v}" for v in violations)
+    )
