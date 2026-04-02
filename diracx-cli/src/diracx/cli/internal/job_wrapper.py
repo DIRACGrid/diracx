@@ -33,15 +33,30 @@ async def main():
 
     # Fetch workflow_id, CWL, and params from diracX API using the job_id
     from diracx.client.aio import AsyncDiracClient
+    from diracx.core.models.search import ScalarSearchOperator, ScalarSearchSpec
 
     async with AsyncDiracClient() as client:
         # Get workflow_id and params from job attributes
-        job_attrs = await client.jobs.get_single_job(job_id)
-        workflow_id = getattr(job_attrs, "workflow_id", None)
-        workflow_params = getattr(job_attrs, "workflow_params", None)
+        results = await client.jobs.search(
+            parameters=["JobID", "WorkflowID", "WorkflowParams"],
+            search=[
+                ScalarSearchSpec(
+                    parameter="JobID",
+                    operator=ScalarSearchOperator.EQUAL,
+                    value=str(job_id),
+                )
+            ],
+        )
+        if not results:
+            logging.error("Job %d not found", job_id)
+            sys.exit(1)
+
+        job_attrs = results[0]
+        workflow_id = job_attrs.get("WorkflowID")
+        workflow_params = job_attrs.get("WorkflowParams")
 
         if not workflow_id:
-            logging.error("Job %d has no workflow_id", job_id)
+            logging.error("Job %d has no WorkflowID", job_id)
             sys.exit(1)
 
         # Fetch CWL definition
