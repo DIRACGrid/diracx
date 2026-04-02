@@ -11,6 +11,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing_extensions import Annotated
@@ -65,7 +66,9 @@ class Workflows(JobDBBase):
     workflow_id: Mapped[str] = mapped_column("WorkflowID", String(64), primary_key=True)
     cwl: Mapped[str] = mapped_column("CWL", Text)
     persistent: Mapped[bool] = mapped_column("Persistent", Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column("CreatedAt", SmarterDateTime())
+    created_at: Mapped[datetime] = mapped_column(
+        "CreatedAt", SmarterDateTime(), server_default=text("(UTC_TIMESTAMP())")
+    )
 
 
 class Jobs(JobDBBase):

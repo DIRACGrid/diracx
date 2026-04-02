@@ -11,16 +11,12 @@ import sys
 import tempfile
 from typing import Any
 
-import DIRAC  # type: ignore[import-untyped]
 from cwl_utils.parser import load_document_by_uri
 from cwl_utils.parser.cwl_v1_2_utils import load_inputfile
 from ruamel.yaml import YAML
 
-if os.getenv("DIRAC_PROTO_LOCAL") != "1":
-    DIRAC.initialize()
-
-from dirac_cwl.job.job_wrapper import JobWrapper
-from dirac_cwl.submission_models import JobModel
+from diracx.api.job_wrapper import JobWrapper
+from diracx.core.models.cwl_submission import JobModel
 
 
 async def main():
@@ -85,6 +81,10 @@ def setup_diracx() -> None:
     """Get a DiracX client instance with the current user's credentials."""
     from pathlib import Path
 
+    import DIRAC  # type: ignore[import-untyped]
+
+    DIRAC.initialize()
+
     from DIRAC import gConfig
     from DIRAC.Core.Security.Locations import (
         getDefaultProxyLocation,  # type: ignore[import-untyped]
@@ -114,6 +114,6 @@ def setup_diracx() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    if os.getenv("DIRAC_PROTO_LOCAL") != "1":
-        setup_diracx()
+
+    setup_diracx()
     sys.exit(asyncio.run(main()))
