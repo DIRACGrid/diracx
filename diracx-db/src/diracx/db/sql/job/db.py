@@ -24,6 +24,7 @@ from .schema import (
     JobDBBase,
     JobJDLs,
     Jobs,
+    Workflows,
 )
 
 
@@ -286,3 +287,46 @@ class JobDB(BaseSQLDB):
             JobCommand(job_id=cmd.JobID, command=cmd.Command, arguments=cmd.Arguments)
             for cmd in commands
         ]
+
+    async def insert_workflow(
+        self, workflow_id: str, cwl: str, persistent: bool = False
+    ) -> bool:
+        """Insert a workflow if it doesn't already exist. Returns True if inserted."""
+        # Check if already exists (content-addressed, immutable)
+        stmt = select(Workflows.workflow_id).where(Workflows.workflow_id == workflow_id)
+        result = await self.conn.execute(stmt)
+        if result.first() is not None:
+            return False
+
+        await self.conn.execute(
+            insert(Workflows).values(
+                WorkflowID=workflow_id,
+                CWL=cwl,
+                Persistent=persistent,
+                CreatedAt=datetime.now(tz=timezone.utc),
+            )
+        )
+        return True
+
+    async def get_workflow(self, workflow_id: str) -> str:
+        """Get the CWL content for a workflow by its ID."""
+        stmt = select(Workflows.cwl).where(Workflows.workflow_id == workflow_id)
+        result = await self.conn.execute(stmt)
+        row = result.first()
+        if row is None:
+            raise InvalidQueryError(f"Workflow {workflow_id} not found")
+        return row[0]
+
+    async def set_workflow_ref(
+        self,
+        job_id: int,
+        workflow_id: str,
+        workflow_params: dict | None = None,
+    ) -> None:
+        """Set the workflow reference and params on a job."""
+        stmt = (
+            update(Jobs)
+            .where(Jobs.job_id == job_id)
+            .values(WorkflowID=workflow_id, WorkflowParams=workflow_params)
+        )
+        await self.conn.execute(stmt)
