@@ -103,9 +103,9 @@ def _validate_guid(value: str) -> str:
     """Validate GUID checksum format.
 
     The format is 8-4-4-4-12 hexadecimal digits with hyphens (UUID format).
+    The original case is preserved to avoid mismatches with downstream systems.
     Example: 6032CB7C-32DC-EC11-9A66-D85ED3091D71
     """
-    value = value.upper()
     if len(value) != 36:
         raise ValueError(
             f"GUID checksum must be 36 characters long (including hyphens), got {len(value)}: {value}"
@@ -113,7 +113,9 @@ def _validate_guid(value: str) -> str:
 
     # Validate UUID format: 8-4-4-4-12 with hyphens
     if not re.match(
-        r"^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$", value
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        value,
+        re.IGNORECASE,
     ):
         raise ValueError(f"GUID checksum must follow format 8-4-4-4-12 (UUID): {value}")
 
