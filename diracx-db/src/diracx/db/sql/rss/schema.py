@@ -20,8 +20,6 @@ class RSSBase(DeclarativeBase):
 
 
 class ElementStatusBase:
-    """Prototype for tables."""
-
     __table_args__ = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 
     name: Mapped[str64] = mapped_column("Name", primary_key=True)
@@ -45,9 +43,9 @@ class ElementStatusBase:
 
 
 class ElementStatusBaseWithID(ElementStatusBase):
-    """Prototype for tables.
+    """Almost the same as ElementStatusBase.
 
-    This is almost the same as ElementStatusBase, with the following differences:
+    Differences:
     - there's an autoincrement ID column which is also the primary key
     - the name and statusType components are not part of the primary key
     """
