@@ -11,9 +11,6 @@ class IOSource(BaseModel):
     """Reference to a CWL input or output by its ID."""
 
     source: str
-    path: str | None = (
-        None  # relative path within job working directory (input_sandbox only)
-    )
 
 
 class OutputDataEntry(BaseModel):
