@@ -14,9 +14,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # This is obvious
     "diracx-logic",
-    # We should add something else
+    "gubbins-db",
 ]
 
 dynamic = ["version"]

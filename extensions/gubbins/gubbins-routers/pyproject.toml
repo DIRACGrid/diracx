@@ -14,9 +14,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # This is obvious
     "diracx-routers",
-    # We should add something else
+    "gubbins-tasks",
 ]
 
 dynamic = ["version"]
@@ -35,9 +34,15 @@ types = [
 [project.entry-points."diracx.services"]
 lollygag = "gubbins.routers.lollygag:router"
 ".well-known" = "gubbins.routers.well_known:router"
+# --8<-- [start:my_pilots_service_entry_point]
+my_pilots = "gubbins.routers.my_pilots:router"
+# --8<-- [end:my_pilots_service_entry_point]
 
 [project.entry-points."diracx.access_policies"]
 lollygag = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
+# --8<-- [start:my_pilots_access_policy_entry_point]
+my_pilots = "gubbins.routers.my_pilots:MyPilotsAccessPolicy"
+# --8<-- [end:my_pilots_access_policy_entry_point]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

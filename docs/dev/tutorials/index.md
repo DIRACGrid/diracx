@@ -1,15 +1,14 @@
 # Tutorials
 
 Step-by-step guides to help you get started with DiracX development.
+These are designed to be followed in order, each building on the previous.
 
 ## Backend
 
-- [Getting started](getting-started.md) — Set up your development environment and run DiracX locally
-- [Larger developments](larger-developments.md) — Working on bigger changes
-- [Advanced tutorial](advanced-tutorial.md) — Deeper dive into DiracX internals
-- [Making changes](making-changes.md) — How to make and test changes
+- [Getting started](getting-started.md) — Set up your development environment and make your first change
+- [Larger developments](larger-developments.md) — Understand the package structure and develop across multiple packages
+- [Advanced tutorial](advanced-tutorial/index.md) — Build a complete toy pilot submission system from scratch
 - [Run a full DiracX instance locally](run-locally.md) — Deploy the full stack on your machine
-- [Play with auth](play-with-auth.md) — Explore the authentication system
 
 ## Frontend
 

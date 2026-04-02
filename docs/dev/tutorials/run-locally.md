@@ -20,10 +20,6 @@ Before starting the demo requires:
 
 1. Commercial use of Docker Desktop is subject to restrictions, if this is a problem for you we would be happy to accept contributions to adapt the demo to support alternate container runtimes. Please [open an issue](https://github.com/DIRACGrid/diracx-charts/issues/new).
 
-!!! tip
-
-    If you're not interested in developing DiracX, check out the [administrator guide](../../admin/tutorials/run_locally.md).
-
 ## Getting the code
 
 First clone your fork of the `diracx` and `diracx-charts` repos:

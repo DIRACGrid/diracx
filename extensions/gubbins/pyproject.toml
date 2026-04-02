@@ -65,6 +65,7 @@ ignore = [
     "B008",
     "B006",
     "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+    "S311", # bandit: pseudo-random generators — gubbins uses them for simulation, not crypto
 ]
 
 
@@ -81,22 +82,24 @@ extend-immutable-calls = [
 
 [tool.mypy]
 files = [
-#    "gubbins-api/src/**/*.py",
+    "gubbins-api/src/**/*.py",
     "gubbins-cli/src/**/*.py",
     "gubbins-client/src/**/_patch.py",
     "gubbins-client/src/gubbins/client/patches/**/*.py",
-#    "gubbins-core/src/**/*.py",
+    "gubbins-core/src/**/*.py",
     "gubbins-db/src/**/*.py",
     "gubbins-logic/src/**/*.py",
+    "gubbins-tasks/src/**/*.py",
     "gubbins-routers/src/**/*.py",
 ]
 mypy_path = [
-#    "$MYPY_CONFIG_FILE_DIR/gubbins-api/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-api/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-cli/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-client/src",
-#    "$MYPY_CONFIG_FILE_DIR/gubbins-core/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-core/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-db/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-logic/src",
+    "$MYPY_CONFIG_FILE_DIR/gubbins-tasks/src",
     "$MYPY_CONFIG_FILE_DIR/gubbins-routers/src",
 ]
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
@@ -118,6 +121,7 @@ testpaths = [
     "gubbins-core/tests",
     "gubbins-db/tests",
     "gubbins-routers/tests",
+    "gubbins-tasks/tests",
 ]
 addopts = [
     "-v",

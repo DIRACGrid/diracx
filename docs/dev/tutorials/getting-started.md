@@ -302,7 +302,6 @@ In this case we know that the import can be moved to the top of the file, at whi
 Congratulations! You now know all of the basics of how to develop DiracX.
 If you're not sure what to do next we recommend:
 
-- More information about how to [contribute to DiracX](../how-to/contribute.md)
-- Read about the [design of DiracX](../how-to/contribute.md)
-- Learn how-to [run a fully featured DiracX instance locally](../tutorials/run-locally.md).
+- Continue with [Larger developments](larger-developments.md) to understand the package structure and how to work across multiple packages.
+- More information about how to [contribute to DiracX](../how-to/contribute.md).
 - Search this documentation for terms related to what you want to develop (e.g. "add route").

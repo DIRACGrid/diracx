@@ -17,6 +17,7 @@ dependencies = [
     "diracx-core",
     "diracx-logic",
     "diracx-db",
+    "diracx-tasks",
     "python-dotenv",    # TODO: We might not need this
     "python-multipart",
     "fastapi>=0.121.0",
