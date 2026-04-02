@@ -5,10 +5,13 @@ from typing import Optional
 
 import sqlalchemy.types as types
 from sqlalchemy import (
+    JSON,
+    Boolean,
     ForeignKey,
     Index,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing_extensions import Annotated
@@ -55,6 +58,17 @@ class AccountedFlagEnum(types.TypeDecorator):
             return "Failed"
         else:
             raise NotImplementedError(f"Unknown {value=}")
+
+
+class Workflows(JobDBBase):
+    __tablename__ = "Workflows"
+
+    workflow_id: Mapped[str] = mapped_column("WorkflowID", String(64), primary_key=True)
+    cwl: Mapped[str] = mapped_column("CWL", Text)
+    persistent: Mapped[bool] = mapped_column("Persistent", Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        "CreatedAt", SmarterDateTime(), server_default=text("(UTC_TIMESTAMP())")
+    )
 
 
 class Jobs(JobDBBase):
@@ -110,6 +124,14 @@ class Jobs(JobDBBase):
     accounted_flag: Mapped[bool | str] = mapped_column(
         "AccountedFlag", AccountedFlagEnum(), default=False
     )
+    workflow_id: Mapped[Optional[str]] = mapped_column(
+        "WorkflowID",
+        ForeignKey("Workflows.WorkflowID"),
+        default=None,
+    )
+    workflow_params: Mapped[Optional[dict]] = mapped_column(
+        "WorkflowParams", JSON, default=None
+    )
 
     __table_args__ = (
         Index("JobType", "JobType"),
@@ -122,6 +144,7 @@ class Jobs(JobDBBase):
         Index("ApplicationStatus", "ApplicationStatus"),
         Index("StatusSite", "Status", "Site"),
         Index("LastUpdateTime", "LastUpdateTime"),
+        Index("WorkflowID", "WorkflowID"),
     )
 
 

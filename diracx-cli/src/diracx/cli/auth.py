@@ -11,7 +11,7 @@ from typing import Annotated, Optional
 
 import typer
 
-from diracx.client.aio import AsyncDiracClient
+from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
 
 # See https://github.com/DIRACGrid/diracx/issues/578
 from diracx.client.models import DeviceFlowErrorResponse  # type: ignore [attr-defined]
