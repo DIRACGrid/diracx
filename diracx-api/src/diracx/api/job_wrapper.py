@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""Job wrapper for executing CWL workflows with DIRAC."""
+"""Job wrapper for executing CWL workflows with DIRAC.
+
+WARNING: Do not import cwltool in this module.
+cwltool is mypyc-compiled and must be patched before first import.
+CWL execution happens via dirac-cwl-run subprocess.
+"""
 
 from __future__ import annotations
 
@@ -24,11 +29,9 @@ from cwl_utils.parser.cwl_v1_2 import (
 from DIRACCommon.Core.Utilities.ReturnValues import (  # type: ignore[import-untyped]
     returnValueOrRaise,
 )
-from rich.text import Text
 from ruamel.yaml import YAML
 
-from diracx.api.cwl_utility import get_lfns
-from diracx.api.job_report import JobMinorStatus, JobReport, JobStatus
+from diracx.api.job_report import JobReport
 from diracx.api.jobs import create_sandbox, download_sandbox
 from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
 from diracx.core.exceptions import WorkflowProcessingError
@@ -39,6 +42,7 @@ from diracx.core.models.commands import (
 )
 from diracx.core.models.cwl import JobHint
 from diracx.core.models.cwl_submission import JobInputModel, JobModel
+from diracx.core.models.job import JobMinorStatus, JobStatus
 
 # -----------------------------------------------------------------------------
 # JobWrapper
@@ -55,6 +59,9 @@ class JobWrapper:
         self._preprocess_commands: list[PreProcessCommand] = []
         self._postprocess_commands: list[PostProcessCommand] = []
         self._output_sandbox: list[str] = []
+        self._input_data_sources: list[str] = []
+        self._input_sandbox_sources: list[str] = []
+        self._replica_map_path: Path | None = None
         self._job_path: Path = Path()
         self._job_id = job_id
         src = "JobWrapper"
@@ -65,19 +72,58 @@ class JobWrapper:
         )
 
     async def __download_input_sandbox(
-        self, arguments: JobInputModel, job_path: Path
+        self, inputs: JobInputModel, job_hint: JobHint, job_path: Path
     ) -> None:
-        """Download the files from the sandbox store.
+        """Download input sandbox files using the dirac:Job hint's source references.
 
-        :param arguments: Job input model containing sandbox information.
+        Each ``input_sandbox`` entry in the hint references a CWL input by ID.
+        The files are downloaded from the sandbox store and placed at the
+        optional relative ``path`` within the job working directory.
+
+        :param inputs: The job input model containing CWL input values.
+        :param job_hint: The dirac:Job hint with input_sandbox config.
         :param job_path: Path to the job working directory.
         """
-        assert arguments.sandbox is not None
+        if not job_hint.input_sandbox:
+            return
+
         self._job_report.set_job_status(
             minor_status=JobMinorStatus.DOWNLOADING_INPUT_SANDBOX
         )
-        for sandbox in arguments.sandbox:
-            await download_sandbox(sandbox, job_path)
+
+        for ref in job_hint.input_sandbox:
+            cwl_value = inputs.cwl.get(ref.source)
+            if cwl_value is None:
+                continue
+
+            # Determine destination directory
+            dest_dir = job_path
+            if ref.path:
+                dest_dir = job_path / ref.path
+                dest_dir.mkdir(parents=True, exist_ok=True)
+
+            # Extract file paths from CWL value
+            file_paths = self.__extract_file_paths_from_cwl_value(cwl_value)
+            for file_path in file_paths:
+                await download_sandbox(file_path, dest_dir)
+
+        logger.info("Input sandbox files downloaded successfully")
+
+    @staticmethod
+    def __extract_file_paths_from_cwl_value(cwl_value: Any) -> list[str]:
+        """Extract file paths/sandbox IDs from a CWL input value."""
+        paths: list[str] = []
+        if not isinstance(cwl_value, list):
+            cwl_value = [cwl_value]
+        for item in cwl_value:
+            path = None
+            if isinstance(item, dict):
+                path = item.get("path") or item.get("location")
+            elif hasattr(item, "path"):
+                path = item.path
+            if path and isinstance(path, str):
+                paths.append(path)
+        return paths
 
     async def __upload_output_sandbox(
         self,
@@ -112,20 +158,22 @@ class JobWrapper:
     async def __download_input_data(
         self, inputs: JobInputModel, job_path: Path
     ) -> dict[str, Path | list[Path]]:
-        """Download LFNs into the job working directory.
+        """Download LFNs into the job working directory and build a replica map.
 
-        :param JobInputModel inputs:
-            The job input model containing ``lfns_input``, a mapping from input names to one or more LFN paths.
-        :param Path job_path:
-            Path to the job working directory where files will be copied.
+        Uses ``self._input_data_sources`` (from the dirac:Job hint) to identify
+        which CWL inputs contain LFN references, then resolves the actual LFN
+        paths from the CWL input values.
 
-        :return dict[str, Path | list[Path]]:
-            A dictionary mapping each input name to the corresponding downloaded
-            file path(s) located in the working directory.
+        :param inputs: The job input model containing CWL input values.
+        :param job_path: Path to the job working directory.
+        :return: Mapping of input names to downloaded local file paths.
         """
         from DIRAC.DataManagementSystem.Client.DataManager import (
             DataManager,  # type: ignore[import-untyped]
         )
+
+        if not self._input_data_sources:
+            return {}
 
         new_paths: dict[str, Path | list[Path]] = {}
         self._job_report.set_job_status(
@@ -134,24 +182,121 @@ class JobWrapper:
 
         datamanager = DataManager()
 
-        lfns_inputs = get_lfns(inputs.cwl)
+        # Extract LFNs from CWL inputs using the hint's source references
+        lfns_by_input: dict[str, list[str]] = {}
+        for source_id in self._input_data_sources:
+            cwl_value = inputs.cwl.get(source_id)
+            if cwl_value is None:
+                continue
+            lfns = self.__extract_lfns_from_cwl_value(cwl_value)
+            if lfns:
+                lfns_by_input[source_id] = lfns
 
-        if lfns_inputs:
-            for input_name, lfns in lfns_inputs.items():
-                res = returnValueOrRaise(datamanager.getFile(lfns, str(job_path)))
-                if res["Failed"]:
-                    raise RuntimeError(f"Could not get files : {res['Failed']}")
-                paths = res["Successful"]
-                if paths and isinstance(lfns, list):
-                    new_paths[input_name] = [
-                        Path(paths[lfn]).relative_to(job_path.resolve())
-                        for lfn in paths
-                    ]
-                elif paths and isinstance(lfns, str):
-                    new_paths[input_name] = Path(paths[lfns]).relative_to(
-                        job_path.resolve()
-                    )
+        if not lfns_by_input:
+            return {}
+
+        # Collect all LFNs for replica map generation
+        all_lfns = [lfn for lfns in lfns_by_input.values() for lfn in lfns]
+        if all_lfns:
+            self.__build_replica_map(datamanager, all_lfns, job_path)
+
+        # Download files
+        for input_name, lfns in lfns_by_input.items():
+            res = returnValueOrRaise(datamanager.getFile(lfns, str(job_path)))
+            if res["Failed"]:
+                raise RuntimeError(f"Could not get files: {res['Failed']}")
+            paths = res["Successful"]
+            if paths:
+                downloaded = [
+                    Path(paths[lfn]).relative_to(job_path.resolve())
+                    for lfn in lfns
+                    if lfn in paths
+                ]
+                if len(downloaded) == 1:
+                    new_paths[input_name] = downloaded[0]
+                else:
+                    new_paths[input_name] = downloaded
+
         return new_paths
+
+    @staticmethod
+    def __extract_lfns_from_cwl_value(cwl_value: Any) -> list[str]:
+        """Extract LFN paths from a CWL input value.
+
+        CWL File values can be:
+        - {"class": "File", "path": "LFN:/path/to/file"}
+        - [{"class": "File", "path": "LFN:/path/to/file"}, ...]
+        - A cwl_utils File object with a .path attribute
+        """
+        lfns: list[str] = []
+        if not isinstance(cwl_value, list):
+            cwl_value = [cwl_value]
+        for item in cwl_value:
+            path = None
+            if isinstance(item, dict):
+                path = item.get("path") or item.get("location")
+            elif hasattr(item, "path"):
+                path = item.path
+            if path and isinstance(path, str):
+                # Normalize LFN: prefix
+                lfns.append(
+                    path.removeprefix("LFN:") if path.startswith("LFN:") else path
+                )
+        return lfns
+
+    def __build_replica_map(self, datamanager, lfns: list[str], job_path: Path) -> None:
+        """Query replica info and write a replica_map.json for dirac-cwl-run.
+
+        Uses DataManager's FileCatalog to get replicas and file metadata,
+        then builds a ReplicaMap model matching dirac-cwl's expected format.
+        """
+        from diracx.core.models.replica_map import ReplicaMap
+
+        # Get active replicas with URLs: {lfn: {se: pfn_url}}
+        replica_result = returnValueOrRaise(
+            datamanager.getActiveReplicas(lfns, getUrl=True)
+        )
+        successful_replicas = replica_result.get("Successful", {})
+
+        if not successful_replicas:
+            return
+
+        # Get file metadata (size, checksum, GUID)
+        metadata_result = datamanager.fileCatalog.getFileMetadata(
+            list(successful_replicas.keys())
+        )
+        metadata = {}
+        if metadata_result["OK"]:
+            metadata = metadata_result["Value"].get("Successful", {})
+
+        entries: dict[str, dict] = {}
+        for lfn, se_pfn_map in successful_replicas.items():
+            replicas = [{"url": pfn, "se": se} for se, pfn in se_pfn_map.items()]
+            if not replicas:
+                continue
+
+            entry: dict[str, Any] = {"replicas": replicas}
+
+            lfn_meta = metadata.get(lfn, {})
+            if "Size" in lfn_meta:
+                entry["size_bytes"] = lfn_meta["Size"]
+            checksum: dict[str, str] = {}
+            if "Checksum" in lfn_meta:
+                checksum["adler32"] = lfn_meta["Checksum"]
+            if "GUID" in lfn_meta:
+                checksum["guid"] = lfn_meta["GUID"]
+            if checksum:
+                entry["checksum"] = checksum
+
+            entries[lfn] = entry
+
+        if entries:
+            replica_map = ReplicaMap.model_validate(entries)
+            replica_map_path = job_path / "replica_map.json"
+            with open(replica_map_path, "w") as f:
+                f.write(replica_map.model_dump_json(indent=2))
+            self._replica_map_path = replica_map_path
+            logger.info("Built replica map with %d entries", len(entries))
 
     def __update_inputs(
         self, inputs: JobInputModel, updates: dict[str, Path | list[Path]]
@@ -215,45 +360,44 @@ class JobWrapper:
         self,
         executable: CommandLineTool | Workflow | ExpressionTool,
         arguments: JobInputModel | None,
-    ) -> list[str]:
+        job_hint: JobHint,
+    ) -> None:
         """Pre-process the job before execution.
 
-        :return: True if the job is pre-processed successfully, False otherwise
+        Writes the CWL task and parameters to disk, downloads input sandbox
+        and input data as declared in the dirac:Job hint.
         """
         logger = logging.getLogger("JobWrapper - Pre-process")
 
-        # Prepare the task for cwltool
-        logger.info("Preparing the task for cwltool...")
-        command = ["cwltool", "--parallel"]
-
+        # Write CWL task to file
+        logger.info("Preparing the task...")
         task_dict = save(executable)
         task_path = self._job_path / "task.cwl"
         with open(task_path, "w") as task_file:
             YAML().dump(task_dict, task_file)
-        command.append(str(task_path.name))
 
         if arguments:
-            if arguments.sandbox:
-                # Download the files from the sandbox store
-                logger.info("Downloading the files from the sandbox store...")
-                await self.__download_input_sandbox(arguments, self._job_path)
-                logger.info("Files downloaded successfully!")
+            # Download input sandbox using hint source references
+            if job_hint.input_sandbox:
+                logger.info("Downloading input sandbox files...")
+                await self.__download_input_sandbox(arguments, job_hint, self._job_path)
 
-            updates = await self.__download_input_data(arguments, self._job_path)
-            self.__update_inputs(arguments, updates)
+            # Download input data (LFNs) using hint source references
+            if job_hint.input_data:
+                updates = await self.__download_input_data(arguments, self._job_path)
+                self.__update_inputs(arguments, updates)
 
-            logger.info("Preparing the parameters for cwltool...")
+            # Write input parameters to file
+            logger.info("Preparing the parameters...")
             parameter_dict = save(cast(Saveable, arguments.cwl))
             parameter_path = self._job_path / "parameter.cwl"
             with open(parameter_path, "w") as parameter_file:
                 YAML().dump(parameter_dict, parameter_file)
-            command.append(str(parameter_path.name))
 
         if self._preprocess_commands:
             await self.__run_preprocess_commands(self._job_path)
 
         await self._job_report.commit()
-        return command
 
     async def post_process(
         self,
@@ -317,7 +461,12 @@ class JobWrapper:
         The ``type`` field determines which commands are attached.
         I/O config from the hint is used to configure commands.
         """
-        # Extract I/O config from the hint
+        # Extract input I/O config from the hint
+        self._input_data_sources = [ref.source for ref in job_hint.input_data]
+        self._input_sandbox_sources = [ref.source for ref in job_hint.input_sandbox]
+        self._output_sandbox = [ref.source for ref in job_hint.output_sandbox]
+
+        # Extract output I/O config from the hint
         output_paths = {
             entry.source: entry.output_path for entry in job_hint.output_data
         }
@@ -326,8 +475,6 @@ class JobWrapper:
             output_se.extend(entry.output_se)
         output_se = list(set(output_se))
 
-        self._output_sandbox = [ref.source for ref in job_hint.output_sandbox]
-
         # Build post-process commands — output storage
         if output_paths:
             self._postprocess_commands.append(
@@ -335,7 +482,7 @@ class JobWrapper:
             )
 
     async def run_job(self, job: JobModel) -> bool:
-        """Execute a given CWL workflow using cwltool.
+        """Execute a given CWL workflow using dirac-cwl run via subprocess.
 
         This is the equivalent of the DIRAC JobWrapper.
 
@@ -355,8 +502,17 @@ class JobWrapper:
         try:
             # Pre-process the job
             logger.info("Pre-processing Task...")
-            command = await self.pre_process(job.task, job.input)
+            await self.pre_process(job.task, job.input, job_hint)
             logger.info("Task pre-processed successfully!")
+
+            # Build dirac-cwl-run command (different interface from cwltool)
+            task_file = self._job_path / "task.cwl"
+            param_file = self._job_path / "parameter.cwl"
+            command = ["dirac-cwl-run", str(task_file.name)]
+            if param_file.exists():
+                command.append(str(param_file.name))
+            if self._replica_map_path and self._replica_map_path.exists():
+                command.extend(["--replica-map", str(self._replica_map_path.name)])
 
             # Execute the task
             logger.info("Executing Task: %s", command)
@@ -367,9 +523,7 @@ class JobWrapper:
             )
 
             if result.returncode != 0:
-                logger.error(
-                    "Error in executing workflow:\n%s", Text.from_ansi(result.stderr)
-                )
+                logger.error("Error in executing workflow:\n%s", result.stderr)
                 self._job_report.set_job_status(
                     JobStatus.COMPLETING, minor_status=JobMinorStatus.APP_ERRORS
                 )
