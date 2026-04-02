@@ -63,10 +63,9 @@ def test_job_hint_rejects_invalid_schema_version():
         JobHint(schema_version="99.0")
 
 
-def test_io_source_with_path():
-    ref = IOSource(source="config_files", path="conf/")
+def test_io_source():
+    ref = IOSource(source="config_files")
     assert ref.source == "config_files"
-    assert ref.path == "conf/"
 
 
 def test_output_data_entry_default_se():

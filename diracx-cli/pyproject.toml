@@ -35,6 +35,7 @@ types = [
 
 [project.scripts]
 dirac = "diracx.cli:app"
+dirac-cwl-run = "diracx.api.executor.__main__:cli"
 
 [project.entry-points."diracx.cli"]
 jobs = "diracx.cli.jobs:app"
