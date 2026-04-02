@@ -7,6 +7,7 @@ translating to JDL (transition period), and storing workflow references.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 from typing import Any, TypeAlias, Union
 
@@ -36,8 +37,14 @@ CWLTask: TypeAlias = Union[CommandLineTool, Workflow, ExpressionTool]
 
 
 def compute_workflow_id(cwl_yaml: str) -> str:
-    """Content-address a CWL workflow by its SHA-256 hash."""
-    return hashlib.sha256(cwl_yaml.encode()).hexdigest()
+    """Content-address a CWL workflow by its SHA-256 hash.
+
+    The YAML is parsed and re-serialized as sorted JSON before hashing,
+    so whitespace, comments, and key ordering differences don't produce
+    distinct workflow IDs.
+    """
+    canonical = json.dumps(yaml.safe_load(cwl_yaml), sort_keys=True)
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def parse_cwl(cwl_yaml: str) -> CWLTask:
