@@ -14,6 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "cachetools",
+    "cwl-utils",
     "diraccommon >=9.0.18",
     "diracx-core",
     "diracx-db",

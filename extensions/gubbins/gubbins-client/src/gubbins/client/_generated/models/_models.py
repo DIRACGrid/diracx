@@ -184,6 +184,38 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
+class CWLJobSubmission(_serialization.Model):
+    """Request body for CWL job submission.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar workflow: Workflow. Required.
+    :vartype workflow: str
+    :ivar inputs: Inputs.
+    :vartype inputs: list[dict[str, any]]
+    """
+
+    _validation = {
+        "workflow": {"required": True},
+    }
+
+    _attribute_map = {
+        "workflow": {"key": "workflow", "type": "str"},
+        "inputs": {"key": "inputs", "type": "[{object}]"},
+    }
+
+    def __init__(self, *, workflow: str, inputs: list[dict[str, Any]] = [], **kwargs: Any) -> None:
+        """
+        :keyword workflow: Workflow. Required.
+        :paramtype workflow: str
+        :keyword inputs: Inputs.
+        :paramtype inputs: list[dict[str, any]]
+        """
+        super().__init__(**kwargs)
+        self.workflow = workflow
+        self.inputs = inputs
+
+
 class ExtendedMetadata(_serialization.Model):
     """ExtendedMetadata.
 
