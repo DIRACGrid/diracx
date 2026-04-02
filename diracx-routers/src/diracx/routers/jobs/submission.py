@@ -3,8 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-import yaml
-from fastapi import Body, Depends, HTTPException, UploadFile
+from fastapi import Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from diracx.core.models.job import InsertedJob
@@ -77,69 +76,35 @@ async def submit_jdl_jobs(
     return inserted_jobs
 
 
-ALLOWED_CWL_CONTENT_TYPES = {
-    "application/x-yaml",
-    "text/yaml",
-    "text/x-yaml",
-    "application/yaml",
-    "application/octet-stream",  # common default for file uploads
-}
+class CWLJobSubmission(BaseModel):
+    """Request body for CWL job submission."""
+
+    workflow: str  # CWL workflow definition as YAML string
+    inputs: list[dict] = []  # Per-job input parameters; each dict produces one job
 
 
 @router.post("/")
 async def submit_cwl_jobs(
-    workflow: UploadFile,
+    body: CWLJobSubmission,
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
     config: Config,
-    inputs: list[UploadFile] = [],
 ) -> list[InsertedJob]:
     """Submit CWL workflow jobs.
 
-    Accepts a CWL workflow file and zero or more input YAML files.
-    Each input YAML produces a separate job. If no inputs are provided,
-    a single job is created with no input parameters.
+    Accepts a CWL workflow definition (YAML string) and zero or more
+    input parameter dicts. Each input dict produces a separate job.
+    If no inputs are provided, a single job is created with no input parameters.
     """
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
 
-    # Check MIME types
-    if workflow.content_type and workflow.content_type not in ALLOWED_CWL_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Workflow file must be YAML, got '{workflow.content_type}'",
-        )
-    for input_file in inputs:
-        if (
-            input_file.content_type
-            and input_file.content_type not in ALLOWED_CWL_CONTENT_TYPES
-        ):
-            raise HTTPException(
-                status_code=HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
-                detail=f"Input file '{input_file.filename}' must be YAML, got '{input_file.content_type}'",
-            )
-
-    cwl_yaml = (await workflow.read()).decode()
-
-    # Parse input YAMLs into dicts
-    input_params_list: list[dict | None] = []
-    if inputs:
-        for input_file in inputs:
-            content = (await input_file.read()).decode()
-            try:
-                input_params_list.append(yaml.safe_load(content))
-            except yaml.YAMLError as e:
-                raise HTTPException(
-                    status_code=HTTPStatus.BAD_REQUEST,
-                    detail=f"Invalid input YAML '{input_file.filename}': {e}",
-                ) from e
-    else:
-        input_params_list = [None]
+    input_params_list: list[dict | None] = list(body.inputs) if body.inputs else [None]
 
     try:
         inserted_jobs = await submit_cwl_jobs_bl(
-            cwl_yaml,
+            body.workflow,
             input_params_list,
             job_db=job_db,
             job_logging_db=job_logging_db,
