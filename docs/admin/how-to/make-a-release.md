@@ -25,6 +25,31 @@ Execute the following points in the presented order.
 
 At this stage, there is a new `diracx` and `diracx-chart` release.
 
+# How to make a new DiracX-Web release
+
+Execute the following points in the presented order.
+
+1. Find the `release-please` [pull request](https://github.com/DIRACGrid/diracx-web/pulls?q=is%3Apr+is%3Aopen+%22chore%28main%29%3A+release%22) for your release. If you can't find it, it means that the currently existing latest release includes already all code changes.
+
+2. Review the release number **and** the content of the changelog
+
+    - If you need to change the release number, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-do-i-change-the-version-number)
+
+    ```bash
+    git commit --allow-empty -m "chore: release 0.0.3" -m "Release-As: v0.0.3"
+    git push upstream HEAD:main
+    ```
+
+    - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
+
+3. Merge the `release-please` PR
+
+4. Check the [deployment action](https://github.com/DIRACGrid/diracx-web/actions/workflows/deployment.yml?query=event%3Apush)
+
+5. When the above is finished, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml) in `diracx-charts` is successful
+
+At this stage, there is a new `diracx-web` release and `diracx-chart` release.
+
 ## Making the extension release
 
 Making a release of an extension depends on how the extension has been set up. Below are recommended workflows:

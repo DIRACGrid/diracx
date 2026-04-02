@@ -92,7 +92,7 @@ nav:
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md
-      - Make a release: dev/how-to/make-a-release.md
+      - Make a release: admin/how-to/make-a-release.md
     - Explanations:
       - admin/explanations/index.md
       - Auth in DiracX: admin/explanations/auth-with-diracx.md
@@ -112,7 +112,7 @@ nav:
       - Security Model: admin/reference/security_model.md
       - Settings and Preferences: admin/reference/settings-and-preferences.md
       - Environment variables: admin/reference/env-variables.md
-      - Making and deploying releases: dev/reference/making-releases.md
+      - Making and deploying releases: admin/reference/making-releases.md
       - Charts values: admin/reference/values.md
       - RUN_PROD.md
       - SSO.md

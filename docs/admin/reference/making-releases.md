@@ -52,7 +52,11 @@ flowchart LR
 
 ## diracx release
 
-Releases are managed by `ReleasePlease`. The token used to perform it belongs to `diracbot` github user
+Releases are managed by `ReleasePlease`. The token used to perform it belongs to `DIRACGridBot` github user.
+
+!!! info "Why a bot token?"
+
+    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment and chart update jobs.
 
 A new release creates:
 
@@ -68,6 +72,21 @@ You can force a specific version number following the [doc](https://github.com/g
 git commit --allow-empty -m "chore: release 0.0.3" -m "Release-As: v0.0.3"
 git push upstream HEAD:main
 ```
+
+## diracx-web release
+
+Releases are managed by `ReleasePlease`. The token used to perform it belongs to `DIRACGridBot` github user, same as `diracx`.
+
+!!! info "Why a bot token?"
+
+    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment and chart update jobs.
+
+A new release creates:
+
+- a [github release](https://github.com/DIRACGrid/diracx-web/releases)
+- an [npm release](https://www.npmjs.com/package/@dirac-grid/diracx-web-components) for `diracx-web-components`
+- new [docker images](https://github.com/DIRACGrid/diracx-web/)
+- updated [Storybook documentation](https://diracgrid.github.io/diracx-web/) on GitHub Pages
 
 ## diracx-charts releases
 
