@@ -4,11 +4,17 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
   pull_request:
     branches:
       - main
     paths-ignore:
-      - 'CHANGELOG.md'
+      - '**.md'
+      - 'docs/**'
+      - 'mkdocs.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
