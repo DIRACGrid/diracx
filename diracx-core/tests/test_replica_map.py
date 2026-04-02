@@ -112,17 +112,17 @@ class TestValidateGUID:
         )
 
     def test_valid_guid_lowercase(self):
-        """Test that valid lowercase GUID is normalized to uppercase."""
+        """Test that valid lowercase GUID is preserved as-is."""
         assert (
             _validate_guid("6032cb7c-32dc-ec11-9a66-d85ed3091d71")
-            == "6032CB7C-32DC-EC11-9A66-D85ED3091D71"
+            == "6032cb7c-32dc-ec11-9a66-d85ed3091d71"
         )
 
     def test_valid_guid_mixed_case(self):
-        """Test that valid mixed case GUID is normalized to uppercase."""
+        """Test that valid mixed case GUID is preserved as-is."""
         assert (
             _validate_guid("6032cb7C-32DC-ec11-9A66-d85eD3091d71")
-            == "6032CB7C-32DC-EC11-9A66-D85ED3091D71"
+            == "6032cb7C-32DC-ec11-9A66-d85eD3091d71"
         )
 
     def test_guid_wrong_length_raises_error(self):
