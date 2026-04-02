@@ -53,9 +53,14 @@ def test_job_hint_full():
     assert hint.output_data[0].output_se == ["SE-TAPE"]
 
 
-def test_job_hint_requires_schema_version():
+def test_job_hint_default_schema_version():
+    hint = JobHint()
+    assert hint.schema_version == "1.0"
+
+
+def test_job_hint_rejects_invalid_schema_version():
     with pytest.raises(ValidationError):
-        JobHint()
+        JobHint(schema_version="99.0")
 
 
 def test_io_source_with_path():
@@ -203,7 +208,7 @@ def test_extract_job_hint_missing():
 def test_unsupported_schema_version():
     cwl = MINIMAL_CWL.replace('schema_version: "1.0"', 'schema_version: "99.0"')
     task = parse_cwl(cwl)
-    with pytest.raises(ValueError, match="Unsupported dirac:Job schema_version"):
+    with pytest.raises(ValidationError):
         extract_job_hint(task)
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -35,7 +37,7 @@ class JobHint(BaseModel):
     consistent with CWL's own referencing conventions.
     """
 
-    schema_version: str  # required, e.g. "1.0"
+    schema_version: Literal["1.0"] = "1.0"
 
     # Scheduling (DIRAC-specific, no CWL equivalent)
     priority: int = 5

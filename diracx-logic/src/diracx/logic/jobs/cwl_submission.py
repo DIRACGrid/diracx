@@ -32,8 +32,6 @@ from .submission import submit_jdl_jobs
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSIONS = {"1.0"}
-
 CWLTask: TypeAlias = Union[CommandLineTool, Workflow, ExpressionTool]
 
 
@@ -49,16 +47,8 @@ def parse_cwl(cwl_yaml: str) -> CWLTask:
 
 
 def extract_job_hint(task: CWLTask) -> JobHint:
-    """Extract and validate the dirac:Job hint from a CWL task."""
-    job_hint = JobHint.from_cwl(task)
-
-    if job_hint.schema_version not in SUPPORTED_SCHEMA_VERSIONS:
-        raise ValueError(
-            f"Unsupported dirac:Job schema_version '{job_hint.schema_version}'. "
-            f"Supported: {SUPPORTED_SCHEMA_VERSIONS}"
-        )
-
-    return job_hint
+    """Extract the dirac:Job hint from a CWL task, or return defaults if absent."""
+    return JobHint.from_cwl(task)
 
 
 def _extract_id(cwl_id: str) -> str:
