@@ -105,17 +105,18 @@ class JobWrapper:
             # Extract file paths from CWL value
             file_paths = self.__extract_file_paths_from_cwl_value(cwl_value)
             for file_path in file_paths:
-                if file_path.startswith("SB:"):
-                    pfn, rel_path = self.parse_sb_path(file_path)
-                    # Download + extract once per unique PFN
-                    if pfn not in downloaded_pfns:
-                        await download_sandbox(pfn, job_path)
-                        downloaded_pfns.add(pfn)
-                    # Map the full SB: path to the local extracted file
-                    sandbox_mappings[file_path] = job_path / rel_path
-                else:
-                    # Non-SB paths: download directly (backward compat)
-                    await download_sandbox(file_path, job_path)
+                if not file_path.startswith("SB:"):
+                    logger.warning(
+                        "Skipping non-SB: path in input_sandbox: %s", file_path
+                    )
+                    continue
+                pfn, rel_path = self.parse_sb_path(file_path)
+                # Download + extract once per unique PFN
+                if pfn not in downloaded_pfns:
+                    await download_sandbox(pfn, job_path)
+                    downloaded_pfns.add(pfn)
+                # Map the full SB: path to the local extracted file
+                sandbox_mappings[file_path] = job_path / rel_path
 
         logger.info("Input sandbox files downloaded successfully")
         return sandbox_mappings
@@ -267,10 +268,10 @@ class JobWrapper:
             elif hasattr(item, "path"):
                 path = item.path
             if path and isinstance(path, str):
-                # Normalize LFN: prefix
-                lfns.append(
-                    path.removeprefix("LFN:") if path.startswith("LFN:") else path
-                )
+                if not path.startswith("LFN:"):
+                    logger.warning("Skipping non-LFN path in input_data: %s", path)
+                    continue
+                lfns.append(path.removeprefix("LFN:"))
         return lfns
 
     def __build_replica_map(self, datamanager, lfns: list[str], job_path: Path) -> None:
