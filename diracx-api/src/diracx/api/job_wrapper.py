@@ -77,8 +77,8 @@ class JobWrapper:
         """Download input sandbox files using the dirac:Job hint's source references.
 
         Each ``input_sandbox`` entry in the hint references a CWL input by ID.
-        The files are downloaded from the sandbox store and placed at the
-        optional relative ``path`` within the job working directory.
+        The files are downloaded from the sandbox store and extracted into
+        the job working directory.
 
         :param inputs: The job input model containing CWL input values.
         :param job_hint: The dirac:Job hint with input_sandbox config.
@@ -96,16 +96,10 @@ class JobWrapper:
             if cwl_value is None:
                 continue
 
-            # Determine destination directory
-            dest_dir = job_path
-            if ref.path:
-                dest_dir = job_path / ref.path
-                dest_dir.mkdir(parents=True, exist_ok=True)
-
             # Extract file paths from CWL value
             file_paths = self.__extract_file_paths_from_cwl_value(cwl_value)
             for file_path in file_paths:
-                await download_sandbox(file_path, dest_dir)
+                await download_sandbox(file_path, job_path)
 
         logger.info("Input sandbox files downloaded successfully")
 
