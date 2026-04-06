@@ -95,9 +95,11 @@ def main(  # noqa: B008
         if replica_map:
             logger.info("Replica map: %s", replica_map)
 
-        # Prevent our logger from duplicating cwltool output
+        # Prevent our logger from duplicating cwltool output.
+        # Use stderr so that only the cwltool JSON output goes to stdout,
+        # allowing the caller to reliably parse it with json.loads().
         logger.propagate = False
-        handler = logging.StreamHandler(sys.stdout)
+        handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
