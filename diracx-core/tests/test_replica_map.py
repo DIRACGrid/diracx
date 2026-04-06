@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from diracx.core.models.replica_map import (
     ReplicaMap,
@@ -31,6 +32,48 @@ class TestValidateLFN:
         """Test that LFN: prefix alone raises ValueError."""
         with pytest.raises(ValueError, match="LFN cannot be empty"):
             _validate_lfn("LFN:")
+
+
+class TestValidateSBRef:
+    """Tests for SB: sandbox reference validation in replica map keys."""
+
+    def test_sb_ref_accepted_as_key(self):
+        """SB: prefixed paths should be valid replica map keys."""
+        sb_key = "SB:SandboxSE|/S3/diracx-sandbox-store/sha256:abc123.tar.zst#helper.sh"
+        replica_map = ReplicaMap(
+            root={
+                sb_key: {
+                    "replicas": [{"url": "file:///tmp/job/helper.sh", "se": "local"}],
+                }
+            }
+        )
+        assert sb_key in replica_map.root
+
+    def test_sb_ref_empty_rejected(self):
+        """Empty SB: reference should be rejected."""
+        with pytest.raises(ValidationError, match="Sandbox reference cannot be empty"):
+            ReplicaMap(
+                root={
+                    "SB:": {
+                        "replicas": [{"url": "file:///tmp/f.txt", "se": "local"}],
+                    }
+                }
+            )
+
+    def test_sb_ref_preserves_prefix(self):
+        """SB: prefix should be preserved as part of the key."""
+        sb_key = "SB:SandboxSE|/S3/store/sha256:def456.tar.zst#config/app.yaml"
+        replica_map = ReplicaMap(
+            root={
+                sb_key: {
+                    "replicas": [
+                        {"url": "file:///tmp/job/config/app.yaml", "se": "local"}
+                    ],
+                }
+            }
+        )
+        entry = replica_map[sb_key]
+        assert str(entry.replicas[0].url) == "file:///tmp/job/config/app.yaml"
 
 
 class TestValidatePFN:

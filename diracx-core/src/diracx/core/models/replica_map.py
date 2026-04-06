@@ -54,10 +54,17 @@ from pydantic import (
 
 
 def _validate_lfn(value: str) -> str:
-    """Validate and normalize Logical File Name.
+    """Validate and normalize Logical File Name or Sandbox reference.
 
     Removes LFN: prefix if present and ensures it's a valid absolute path or a filename without slashes.
+    SB: prefixed values are sandbox references — stored with prefix as the key.
     """
+    # SB: paths are sandbox references — pass through with prefix
+    if value.startswith("SB:"):
+        if len(value) <= 3:
+            raise ValueError("Sandbox reference cannot be empty")
+        return value
+
     value = value.removeprefix("LFN:")
     if not value:
         raise ValueError("LFN cannot be empty")
