@@ -73,23 +73,29 @@ class JobWrapper:
 
     async def __download_input_sandbox(
         self, inputs: JobInputModel, job_hint: JobHint, job_path: Path
-    ) -> None:
-        """Download input sandbox files using the dirac:Job hint's source references.
+    ) -> dict[str, Path]:
+        """Download input sandbox files and return SB: → local path mappings.
 
-        Each ``input_sandbox`` entry in the hint references a CWL input by ID.
-        The files are downloaded from the sandbox store and extracted into
-        the job working directory.
+        Parses SB: prefixed paths from CWL input values (identified via the
+        hint's input_sandbox source references), downloads and extracts sandbox
+        tars (cached per unique PFN), and returns a mapping of SB: paths to
+        their local extracted file paths for replica map injection.
 
         :param inputs: The job input model containing CWL input values.
         :param job_hint: The dirac:Job hint with input_sandbox config.
         :param job_path: Path to the job working directory.
+        :return: Dict mapping SB: path strings to local file Paths.
         """
+        sandbox_mappings: dict[str, Path] = {}
         if not job_hint.input_sandbox:
-            return
+            return sandbox_mappings
 
         self._job_report.set_job_status(
             minor_status=JobMinorStatus.DOWNLOADING_INPUT_SANDBOX
         )
+
+        # Cache: download each sandbox tar only once
+        downloaded_pfns: set[str] = set()
 
         for ref in job_hint.input_sandbox:
             cwl_value = inputs.cwl.get(ref.source)
@@ -99,9 +105,20 @@ class JobWrapper:
             # Extract file paths from CWL value
             file_paths = self.__extract_file_paths_from_cwl_value(cwl_value)
             for file_path in file_paths:
-                await download_sandbox(file_path, job_path)
+                if file_path.startswith("SB:"):
+                    pfn, rel_path = self.parse_sb_path(file_path)
+                    # Download + extract once per unique PFN
+                    if pfn not in downloaded_pfns:
+                        await download_sandbox(pfn, job_path)
+                        downloaded_pfns.add(pfn)
+                    # Map the full SB: path to the local extracted file
+                    sandbox_mappings[file_path] = job_path / rel_path
+                else:
+                    # Non-SB paths: download directly (backward compat)
+                    await download_sandbox(file_path, job_path)
 
         logger.info("Input sandbox files downloaded successfully")
+        return sandbox_mappings
 
     @staticmethod
     def __extract_file_paths_from_cwl_value(cwl_value: Any) -> list[str]:
@@ -118,6 +135,24 @@ class JobWrapper:
             if path and isinstance(path, str):
                 paths.append(path)
         return paths
+
+    @staticmethod
+    def parse_sb_path(path: str) -> tuple[str, str]:
+        """Parse an SB: path into sandbox PFN and relative path.
+
+        Format: SB:<sandbox_pfn>#<relative_path_inside_tar>
+
+        :param path: SB:-prefixed path string
+        :return: Tuple of (sandbox_pfn, relative_path)
+        :raises ValueError: If path is not a valid SB: reference
+        """
+        if not path.startswith("SB:"):
+            raise ValueError(f"Not an SB: path: {path}")
+        rest = path.removeprefix("SB:")
+        if "#" not in rest:
+            raise ValueError(f"SB: path missing '#' fragment separator: {path}")
+        pfn, rel_path = rest.split("#", 1)
+        return pfn, rel_path
 
     async def __upload_output_sandbox(
         self,
@@ -292,6 +327,45 @@ class JobWrapper:
             self._replica_map_path = replica_map_path
             logger.info("Built replica map with %d entries", len(entries))
 
+    def _add_sandbox_entries_to_replica_map(
+        self, sandbox_mappings: dict[str, Path], job_path: Path
+    ) -> None:
+        """Inject sandbox file mappings into the replica map JSON.
+
+        Each entry maps an SB: path to a local file:// URL so the CWL executor
+        can resolve sandbox files through the same replica map as LFN files.
+
+        :param sandbox_mappings: Dict of SB: path → local extracted file Path
+        :param job_path: Job working directory
+        """
+        from diracx.core.models.replica_map import ReplicaMap
+
+        # Load existing replica map or start fresh
+        entries: dict[str, dict] = {}
+        if self._replica_map_path and self._replica_map_path.exists():
+            existing = ReplicaMap.model_validate_json(
+                self._replica_map_path.read_text()
+            )
+            entries = {
+                k: json.loads(v.model_dump_json()) for k, v in existing.root.items()
+            }
+
+        # Add sandbox entries
+        for sb_path, local_path in sandbox_mappings.items():
+            entries[sb_path] = {
+                "replicas": [{"url": local_path.as_uri(), "se": "local"}],
+            }
+
+        if entries:
+            replica_map = ReplicaMap.model_validate(entries)
+            replica_map_path = job_path / "replica_map.json"
+            with open(replica_map_path, "w") as f:
+                f.write(replica_map.model_dump_json(indent=2))
+            self._replica_map_path = replica_map_path
+            logger.info(
+                "Added %d sandbox entries to replica map", len(sandbox_mappings)
+            )
+
     def __update_inputs(
         self, inputs: JobInputModel, updates: dict[str, Path | list[Path]]
     ):
@@ -371,15 +445,24 @@ class JobWrapper:
             YAML().dump(task_dict, task_file)
 
         if arguments:
-            # Download input sandbox using hint source references
+            # Download input sandbox and collect SB: → local path mappings
+            sandbox_mappings: dict[str, Path] = {}
             if job_hint.input_sandbox:
                 logger.info("Downloading input sandbox files...")
-                await self.__download_input_sandbox(arguments, job_hint, self._job_path)
+                sandbox_mappings = await self.__download_input_sandbox(
+                    arguments, job_hint, self._job_path
+                )
 
             # Download input data (LFNs) using hint source references
             if job_hint.input_data:
                 updates = await self.__download_input_data(arguments, self._job_path)
                 self.__update_inputs(arguments, updates)
+
+            # Inject sandbox entries into replica map
+            if sandbox_mappings:
+                self._add_sandbox_entries_to_replica_map(
+                    sandbox_mappings, self._job_path
+                )
 
             # Write input parameters to file
             logger.info("Preparing the parameters...")
