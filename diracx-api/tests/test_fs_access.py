@@ -176,3 +176,58 @@ class TestSBResolution:
         """size() should return file size for SB: path."""
         sb_path = "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh"
         assert fs_access_with_sb.size(sb_path) == sandbox_file.stat().st_size
+
+
+@pytest.fixture
+def fs_access_with_remote_lfn(tmp_path: Path) -> DiracReplicaMapFsAccess:
+    """FsAccess with an LFN that resolves to a remote (root://) URL."""
+    replica_map = ReplicaMap(
+        root={
+            "/lhcb/data/remote.dst": {
+                "replicas": [
+                    {
+                        "url": "root://eoslhcb.cern.ch//eos/lhcb/data/remote.dst",
+                        "se": "CERN-EOS",
+                    }
+                ],
+                "size_bytes": 2048,
+            }
+        }
+    )
+    return DiracReplicaMapFsAccess(str(tmp_path), replica_map=replica_map)
+
+
+class TestLFNResolution:
+    def test_resolve_lfn_remote_url(self, fs_access_with_remote_lfn):
+        """LFN resolving to a root:// URL should be marked as remote."""
+        resolved, is_remote = fs_access_with_remote_lfn._resolve_path(
+            "LFN:/lhcb/data/remote.dst"
+        )
+        assert is_remote is True
+        assert "root://" in resolved
+
+    def test_exists_remote_lfn_returns_true(self, fs_access_with_remote_lfn):
+        """exists() should return True for a remote LFN without touching the filesystem."""
+        assert fs_access_with_remote_lfn.exists("LFN:/lhcb/data/remote.dst") is True
+
+    def test_size_from_replica_map(self, fs_access_with_remote_lfn):
+        """size() should return size_bytes from the replica map entry."""
+        assert fs_access_with_remote_lfn.size("LFN:/lhcb/data/remote.dst") == 2048
+
+    def test_lfn_not_in_map_returns_cleaned_path(self, tmp_path: Path):
+        """Missing LFN should resolve to path without the LFN: prefix."""
+        fs = DiracReplicaMapFsAccess(str(tmp_path), replica_map=ReplicaMap(root={}))
+        resolved, is_remote = fs._resolve_path("LFN:/lhcb/data/missing.dst")
+        assert resolved == "/lhcb/data/missing.dst"
+        assert is_remote is False
+
+    def test_glob_remote_lfn_returns_original(self, fs_access_with_remote_lfn):
+        """glob() should return the original LFN: path for remote LFNs."""
+        lfn_path = "LFN:/lhcb/data/remote.dst"
+        result = fs_access_with_remote_lfn.glob(lfn_path)
+        assert result == [lfn_path]
+
+    def test_open_remote_lfn_raises(self, fs_access_with_remote_lfn):
+        """open() should raise ValueError for a remote LFN."""
+        with pytest.raises(ValueError, match="Cannot open remote file"):
+            fs_access_with_remote_lfn.open("LFN:/lhcb/data/remote.dst", "r")
