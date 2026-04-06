@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, cast
 
-from cwltool.pathmapper import MapperEnt, PathMapper
+from cwltool.pathmapper import MapperEnt, PathMapper, uri_file_path
 from cwltool.utils import CWLObjectType
 
 from diracx.core.models.replica_map import ReplicaMap
@@ -64,27 +64,38 @@ class DiracPathMapper(PathMapper):
         tgt = str(obj.get("location", ""))
         logger.debug("DiracPathMapper.visit: processing location=%s", tgt)
 
-        # Check if this is an LFN that we need to resolve
-        if tgt.startswith("LFN:") and obj.get("class") == "File":
-            # Extract the LFN (without the LFN: prefix)
-            lfn = tgt[4:]  # Remove "LFN:" prefix
-            logger.debug("DiracPathMapper.visit: Found LFN=%s", lfn)
+        # Check if this is an LFN or SB: reference that we need to resolve
+        if (tgt.startswith("LFN:") or tgt.startswith("SB:")) and obj.get(
+            "class"
+        ) == "File":
+            # For LFN: entries, the replica map key is the bare path (without "LFN:" prefix).
+            # For SB: entries, the replica map key is the full "SB:..." string.
+            if tgt.startswith("LFN:"):
+                lookup_key = tgt[4:]  # Remove "LFN:" prefix
+            else:
+                lookup_key = tgt  # SB: key includes the prefix
+            logger.debug("DiracPathMapper.visit: Found LFN/SB key=%s", lookup_key)
 
             # Look up in replica map to resolve to PFN
-            if lfn in self.replica_map.root:
-                entry = self.replica_map[lfn]
+            if lookup_key in self.replica_map.root:
+                entry = self.replica_map[lookup_key]
                 if entry.replicas:
                     # Get the first replica's URL (can be file:// or root:// or https:// etc.)
                     pfn = str(entry.replicas[0].url)
-                    logger.info("DiracPathMapper: Resolved LFN:%s -> %s", lfn, pfn)
+                    logger.info("DiracPathMapper: Resolved %s -> %s", lookup_key, pfn)
 
-                    # For LFN-resolved files, we don't download or stage them
-                    # We just map the original LFN location to the PFN
-                    # The PFN will be used directly by the tools (via xrootd, https, etc.)
-                    # Set both resolved and target to the PFN so CWL uses it directly
+                    # cwltool uses MapperEnt.target as the path passed to the command
+                    # (set via file_o["path"] = pathmapper.mapper(location)[1]).
+                    # For local file:// URLs we must convert to a plain filesystem path;
+                    # for remote protocols (root://, https://) the URL is used as-is.
+                    if pfn.startswith("file://"):
+                        target = uri_file_path(pfn)
+                    else:
+                        target = pfn
+
                     self._pathmap[tgt] = MapperEnt(
                         resolved=pfn,  # The physical URL/path
-                        target=pfn,  # Use the PFN directly (not a staging path)
+                        target=target,  # Local path for file://, URL for remote protocols
                         type="File",
                         staged=False,  # We're not staging/copying this file
                     )
@@ -113,14 +124,14 @@ class DiracPathMapper(PathMapper):
 
                 else:
                     logger.warning(
-                        "DiracPathMapper: LFN %s in replica map but has no replicas",
-                        lfn,
+                        "DiracPathMapper: %s in replica map but has no replicas",
+                        lookup_key,
                     )
             else:
-                # LFN not in replica map - this will likely fail later
+                # LFN/SB not in replica map - this will likely fail later
                 logger.error(
-                    "DiracPathMapper: LFN %s NOT in replica map! Available LFNs: %s",
-                    lfn,
+                    "DiracPathMapper: %s NOT in replica map! Available keys: %s",
+                    lookup_key,
                     list(self.replica_map.root.keys())[:5],
                 )
 
@@ -147,3 +158,20 @@ class DiracPathMapper(PathMapper):
 
         # For non-LFN files or when LFN resolution failed, delegate to parent class
         super().visit(obj, stagedir, basedir, copy, staged)
+
+    def mapper(self, src: str) -> MapperEnt:
+        """Return the MapperEnt for a given source URI.
+
+        Extends the base implementation to handle DIRAC-specific URI schemes
+        (LFN:, SB:) that may contain ``#`` fragment identifiers. cwltool's base
+        ``mapper()`` treats ``#`` as a separator and tries to look up the prefix
+        before appending the fragment to the target path, which is incorrect for
+        SB: keys where the full key (including fragment) is stored in _pathmap.
+        We intercept those cases and return the stored entry directly.
+        """
+        # If the full key is already present, return it directly (handles SB: keys
+        # with '#' fragments that are stored under the full key).
+        if src in self._pathmap:
+            return self._pathmap[src]
+        # Fall back to cwltool's default fragment-stripping logic for all other URIs.
+        return super().mapper(src)
