@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from diracx.api.executor.fs_access import DiracReplicaMapFsAccess
+from diracx.cli.executor.fs_access import DiracReplicaMapFsAccess
 from diracx.core.models.replica_map import ReplicaMap
 
 

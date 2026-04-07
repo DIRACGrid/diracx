@@ -14,6 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "diraccfg",  # TODO: Should this be an extra
+    "cwltool",
     "diracx-api",
     "diracx-client",
     "diracx-core",
@@ -35,10 +36,10 @@ types = [
 
 [project.scripts]
 dirac = "diracx.cli:app"
-dirac-cwl-run = "diracx.api.executor.__main__:cli"
+dirac-cwl-run = "diracx.cli.executor.__main__:cli"
 
 [project.entry-points."diracx.cli"]
-jobs = "diracx.cli.jobs:app"
+job = "diracx.cli.job:app"
 config = "diracx.cli.config:app"
 
 [project.entry-points."diracx.cli.hidden"]

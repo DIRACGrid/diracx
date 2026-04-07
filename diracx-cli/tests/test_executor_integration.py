@@ -12,14 +12,10 @@ PATH (e.g. in a virtualenv without the diracx-cli package installed).
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
-
-# Skip the whole module if cwltool is not available
-cwltool = pytest.importorskip("cwltool", reason="cwltool not installed")
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,11 +44,6 @@ arguments:
 """
 
 
-def _skip_if_no_dirac_cwl_run():
-    if not shutil.which("dirac-cwl-run"):
-        pytest.skip("dirac-cwl-run not found on PATH")
-
-
 def _run(args: list[str], cwd: Path, timeout: int = 120) -> subprocess.CompletedProcess:
     return subprocess.run(
         args,
@@ -74,8 +65,6 @@ def test_basic_execution_with_replica_map(tmp_path):
     Proves: mypyc patch → executor init → replica map loading → LFN
     resolution → CWL execution → output file produced.
     """
-    _skip_if_no_dirac_cwl_run()
-
     # 1. Create a local input file with known content
     input_content = "hello from integration test\n"
     local_input = tmp_path / "local_input.txt"
@@ -148,8 +137,6 @@ def test_execution_without_replica_map(tmp_path):
     Proves that baseline CWL execution works through the dirac-cwl-run entry
     point even when no replica map is provided.
     """
-    _skip_if_no_dirac_cwl_run()
-
     # 1. Create a local input file
     input_content = "baseline cwl execution test\n"
     local_input = tmp_path / "local_input.txt"
@@ -204,8 +191,6 @@ def test_sb_reference_in_replica_map(tmp_path):
     The SB: key in the replica map is mapped to a local file. Proves that
     sandbox references are handled correctly through the replica map.
     """
-    _skip_if_no_dirac_cwl_run()
-
     # 1. Create the real local file the SB: entry will point to
     input_content = "sandbox file content for integration test\n"
     local_file = tmp_path / "extracted_helper.txt"
