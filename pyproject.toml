@@ -141,6 +141,10 @@ ignore_missing_imports = true
 module = 'sh.*'
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = 'diracx.cli.*'
+disable_error_code = ["attr-defined"]
+
 [tool.pytest.ini_options]
 minversion = "8"
 log_cli_level = "INFO"
