@@ -168,6 +168,13 @@ def test_rewrite_array_mixed() -> None:
     }
 
 
+def test_rewrite_sb_not_rewritten() -> None:
+    inputs = {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
+    pfn_map: dict[Path, str] = {}
+    result = rewrite_sandbox_refs(inputs, pfn_map)
+    assert result == {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
+
+
 def test_rewrite_non_file_values_preserved() -> None:
     inputs = {
         "count": 42,
