@@ -3,20 +3,11 @@
 This test exercises the complete JobWrapper lifecycle with:
 - A real CWL CommandLineTool (executed via dirac-cwl-run)
 - Mocked external services (DataManager, sandbox download/upload, JobReport, client)
-- Real cwl_utils and ruamel.yaml (NOT mocked)
-
-Requirements:
-- ``dirac-cwl-run`` must be on PATH (skipped if not)
-- ``cwltool`` must be importable (skipped if not)
-
-Design note: conftest.py pre-loads and saves references to real cwl_utils and
-ruamel.yaml objects before other test files can overwrite sys.modules entries.
-This test uses those saved references to load job_wrapper with real types.
+- Real cwl_utils and ruamel.yaml
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import shutil
 import sys
@@ -39,140 +30,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 # ---------------------------------------------------------------------------
-# Import real module references saved by conftest.py before any mocking.
-# conftest.py is always loaded before test modules, so these are guaranteed
-# to be the real implementations. We access conftest via sys.modules since
-# pytest installs it there automatically.
+# Direct imports — all dependencies are available in the test environment
 # ---------------------------------------------------------------------------
 
-_conftest = sys.modules.get("conftest") or sys.modules.get("diracx-api/tests/conftest")
-# Fallback: if conftest is not in sys.modules under 'conftest', search by path
-if _conftest is None:
-    for _key, _mod in list(sys.modules.items()):
-        if hasattr(_mod, "_REAL_MODULES") and hasattr(_mod, "_REAL_CWL_PARSER"):
-            _conftest = _mod
-            break
+import cwl_utils.parser.cwl_v1_2 as _cwl_v1_2  # noqa: E402
 
-assert _conftest is not None, (
-    "conftest module not found in sys.modules — "
-    "ensure conftest.py is in the tests directory"
-)
+import diracx.api.job_wrapper as _jw_mod  # noqa: E402
+from diracx.api.job_wrapper import JobWrapper  # noqa: E402
 
-_REAL_MODULES = _conftest._REAL_MODULES
-_real_cwl_parser = _conftest._REAL_CWL_PARSER
-_real_cwl_v1_2 = _conftest._REAL_CWL_V1_2
-_real_ruamel_yaml = _conftest._REAL_RUAMEL_YAML
-
-# The real CommandLineTool class (may differ from sys.modules version if mocked)
-_RealCommandLineTool = _REAL_MODULES["cwl_utils.parser.cwl_v1_2.CommandLineTool"]
-
-# ---------------------------------------------------------------------------
-# Mock ONLY the modules that are unavailable or need stubbing.
-# cwl_utils and ruamel.yaml are real — do NOT mock them.
-# ---------------------------------------------------------------------------
-
-
-def _ensure_mock(name: str) -> types.ModuleType:
-    if name not in sys.modules:
-        sys.modules[name] = types.ModuleType(name)
-    return sys.modules[name]
-
-
-_MOCK_ONLY = [
-    "DIRACCommon",
-    "DIRACCommon.Core",
-    "DIRACCommon.Core.Utilities",
-    "DIRACCommon.Core.Utilities.ReturnValues",
-    "diracx.api.job_report",
-    "diracx.api.jobs",
-    "diracx.client",
-    "diracx.client.aio",
-]
-
-for _name in _MOCK_ONLY:
-    _mod = _ensure_mock(_name)
-
-    if _name == "DIRACCommon.Core.Utilities.ReturnValues":
-        # returnValueOrRaise must return result["Value"]
-        def _return_value_or_raise(result):  # noqa: E301
-            if not result.get("OK", False):
-                raise RuntimeError(result.get("Message", "DIRAC error"))
-            return result["Value"]
-
-        _mod.returnValueOrRaise = _return_value_or_raise  # type: ignore[attr-defined]
-
-    elif _name == "diracx.api.job_report":
-        _mod.JobReport = MagicMock  # type: ignore[attr-defined]
-
-    elif _name == "diracx.api.jobs":
-        _mod.create_sandbox = None  # type: ignore[attr-defined]
-        _mod.download_sandbox = None  # type: ignore[attr-defined]
-
-    elif _name == "diracx.client.aio":
-        _mod.AsyncDiracClient = MagicMock  # type: ignore[attr-defined]
-
-
-def _load_job_wrapper() -> types.ModuleType:
-    """Load job_wrapper.py with real cwl_utils/ruamel.yaml in sys.modules.
-
-    Temporarily restores real module objects (saved by conftest.py) into
-    sys.modules so that job_wrapper.py's imports bind real implementations.
-    After loading, sys.modules entries are restored to whatever mocks are there.
-    """
-    # Save current (potentially mocked) state
-    saved: dict[str, types.ModuleType | None] = {}
-    real_names = ["cwl_utils.parser", "cwl_utils.parser.cwl_v1_2", "ruamel.yaml"]
-    for name in real_names:
-        saved[name] = sys.modules.get(name)
-
-    # Restore real module objects and fix mocked attributes
-    sys.modules["cwl_utils.parser"] = _real_cwl_parser
-    # Restore .save on the parser module (test_job_wrapper.py sets it to None)
-    _real_cwl_parser.save = _REAL_MODULES["cwl_utils.parser.save"]  # type: ignore[attr-defined]
-    sys.modules["cwl_utils.parser.cwl_v1_2"] = _real_cwl_v1_2
-    # Restore class attributes (test_job_wrapper.py overwrites them)
-    for attr in ("CommandLineTool", "File", "Workflow", "ExpressionTool", "Saveable"):
-        setattr(
-            _real_cwl_v1_2, attr, _REAL_MODULES[f"cwl_utils.parser.cwl_v1_2.{attr}"]
-        )
-    sys.modules["ruamel.yaml"] = _real_ruamel_yaml
-    # Restore YAML class (test_job_wrapper.py sets it to None)
-    _real_ruamel_yaml.YAML = _REAL_MODULES["ruamel.yaml.YAML"]  # type: ignore[attr-defined]
-
-    try:
-        path = (
-            Path(__file__).resolve().parent.parent
-            / "src"
-            / "diracx"
-            / "api"
-            / "job_wrapper.py"
-        )
-        spec = importlib.util.spec_from_file_location(
-            "diracx.api.job_wrapper_integ", path
-        )
-        assert spec is not None and spec.loader is not None
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = mod
-        spec.loader.exec_module(mod)
-        return mod
-    finally:
-        # Restore whatever was in sys.modules before
-        for name in real_names:
-            if saved[name] is None:
-                sys.modules.pop(name, None)
-            else:
-                sys.modules[name] = saved[name]
-
-
-_jw_mod = _load_job_wrapper()
-JobWrapper = _jw_mod.JobWrapper
-
-
-# ---------------------------------------------------------------------------
-# CWL tool builder — uses the real CommandLineTool from conftest references
-# ---------------------------------------------------------------------------
-
-CommandLineTool = _RealCommandLineTool
+CommandLineTool = _cwl_v1_2.CommandLineTool
 
 
 def _build_cwl_tool() -> CommandLineTool:
@@ -261,63 +127,26 @@ class TestJobWrapperIntegration:
         helper_script: Path = job_files["helper_script"]
 
         # ------------------------------------------------------------------
-        # Build the CWL task.
-        # JobModel Pydantic validation checks isinstance(task, CommandLineTool)
-        # where CommandLineTool comes from cwl_submission's import. We must
-        # ensure cwl_submission uses the same class as _build_cwl_tool().
-        # Temporarily restore real cwl_utils so cwl_submission re-loads with
-        # the real types, then create the model.
+        # Build the CWL task and job model.
         # ------------------------------------------------------------------
-        saved_parser = sys.modules.get("cwl_utils.parser")
-        saved_v1_2 = sys.modules.get("cwl_utils.parser.cwl_v1_2")
-        sys.modules["cwl_utils.parser"] = _real_cwl_parser
-        _real_cwl_parser.save = _REAL_MODULES["cwl_utils.parser.save"]  # type: ignore[attr-defined]
-        sys.modules["cwl_utils.parser.cwl_v1_2"] = _real_cwl_v1_2
-        for _attr in (
-            "CommandLineTool",
-            "File",
-            "Workflow",
-            "ExpressionTool",
-            "Saveable",
-        ):
-            setattr(
-                _real_cwl_v1_2,
-                _attr,
-                _REAL_MODULES[f"cwl_utils.parser.cwl_v1_2.{_attr}"],
-            )
+        from diracx.core.models.cwl_submission import JobInputModel, JobModel
 
-        # Force cwl_submission to reload with real types
-        sys.modules.pop("diracx.core.models.cwl_submission", None)
+        task = _build_cwl_tool()
 
-        try:
-            from diracx.core.models.cwl_submission import JobInputModel, JobModel
-
-            task = _build_cwl_tool()
-
-            job_input = JobInputModel(
-                sandbox=None,
-                cwl={
-                    "input_file": {
-                        "class": "File",
-                        "path": "LFN:/test/data/input.txt",
-                    },
-                    "helper_script": {
-                        "class": "File",
-                        "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
-                    },
+        job_input = JobInputModel(
+            sandbox=None,
+            cwl={
+                "input_file": {
+                    "class": "File",
+                    "path": "LFN:/test/data/input.txt",
                 },
-            )
-            job_model = JobModel(task=task, input=job_input)
-        finally:
-            # Restore mocked state
-            if saved_parser is None:
-                sys.modules.pop("cwl_utils.parser", None)
-            else:
-                sys.modules["cwl_utils.parser"] = saved_parser
-            if saved_v1_2 is None:
-                sys.modules.pop("cwl_utils.parser.cwl_v1_2", None)
-            else:
-                sys.modules["cwl_utils.parser.cwl_v1_2"] = saved_v1_2
+                "helper_script": {
+                    "class": "File",
+                    "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
+                },
+            },
+        )
+        job_model = JobModel(task=task, input=job_input)
 
         # ------------------------------------------------------------------
         # Mock: download_sandbox — copies helper script into job_path

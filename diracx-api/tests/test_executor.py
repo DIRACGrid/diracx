@@ -1,196 +1,17 @@
-"""Unit tests for DiracExecutor, DiracPathMapper, and DiracCommandLineTool.
-
-cwltool is an optional runtime dependency (not installed in test env),
-so we mock the necessary cwltool modules and load executor.py, pathmapper.py,
-and tool.py directly by file path — bypassing __init__.py (which triggers the
-mypyc compat patch and imports cwltool-heavy modules).
-"""
+"""Unit tests for DiracExecutor, DiracPathMapper, and DiracCommandLineTool."""
 # ruff: noqa: N803, N818  # Stub classes mirror cwltool's camelCase API
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 import types
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+import diracx.api.executor.tool as _tool_mod
+from diracx.api.executor.executor import DiracExecutor
+from diracx.api.executor.fs_access import DiracReplicaMapFsAccess  # noqa: F401
+from diracx.api.executor.pathmapper import DiracPathMapper
+from diracx.api.executor.tool import DiracCommandLineTool, dirac_make_tool
 from diracx.core.models.replica_map import ReplicaMap
-
-# ---------------------------------------------------------------------------
-# Provide minimal cwltool stubs so modules can be imported without cwltool
-# ---------------------------------------------------------------------------
-
-
-def _ensure_mock(name: str) -> types.ModuleType:
-    if name not in sys.modules:
-        sys.modules[name] = types.ModuleType(name)
-    return sys.modules[name]
-
-
-# Only install mocks if cwltool is not genuinely available
-try:
-    import cwltool.executors  # noqa: F401
-
-    _cwltool_available = True
-except ImportError:
-    _cwltool_available = False
-
-
-if not _cwltool_available:
-    # ---- cwltool.executors ----
-    class _SingleJobExecutor:
-        """Minimal stub for cwltool.executors.SingleJobExecutor."""
-
-        def __init__(self):
-            self.output_dirs = set()
-
-        def output_callback(self, *args, **kwargs):
-            pass
-
-    _mod_executors = _ensure_mock("cwltool.executors")
-    _mod_executors.SingleJobExecutor = _SingleJobExecutor  # type: ignore[attr-defined]
-
-    # ---- cwltool.context ----
-    class _RuntimeContext:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-            self.builder = None
-            self.validate_only = False
-            self.basedir = "/"
-
-    class _LoadingContext:
-        pass
-
-    _mod_context = _ensure_mock("cwltool.context")
-    _mod_context.RuntimeContext = _RuntimeContext  # type: ignore[attr-defined]
-    _mod_context.LoadingContext = _LoadingContext  # type: ignore[attr-defined]
-
-    # ---- cwltool.errors ----
-    class _WorkflowException(Exception):
-        pass
-
-    _mod_errors = _ensure_mock("cwltool.errors")
-    _mod_errors.WorkflowException = _WorkflowException  # type: ignore[attr-defined]
-
-    # ---- cwltool.job ----
-    class _CommandLineJob:
-        def __init__(self, name="test_job", outdir=None):
-            self.name = name
-            self.outdir = outdir
-            self.builder = types.SimpleNamespace(job={})
-
-        def run(self, runtime_context):
-            pass
-
-    _mod_job = _ensure_mock("cwltool.job")
-    _mod_job.CommandLineJob = _CommandLineJob  # type: ignore[attr-defined]
-
-    # ---- cwltool.workflow_job ----
-    _mod_workflow_job = _ensure_mock("cwltool.workflow_job")
-    _mod_workflow_job.WorkflowJob = type("WorkflowJob", (), {})  # type: ignore[attr-defined]
-
-    # ---- cwltool.process ----
-    _mod_process = _ensure_mock("cwltool.process")
-    _mod_process.Process = type("Process", (), {})  # type: ignore[attr-defined]
-
-    # ---- cwltool.stdfsaccess ----
-    class _StdFsAccess:
-        def __init__(self, basedir: str):
-            self.basedir = basedir
-
-    _mod_stdfsaccess = _ensure_mock("cwltool.stdfsaccess")
-    _mod_stdfsaccess.StdFsAccess = _StdFsAccess  # type: ignore[attr-defined]
-
-    # ---- cwltool.utils ----
-    _mod_utils = _ensure_mock("cwltool.utils")
-    _mod_utils.CWLOutputType = object  # type: ignore[attr-defined]
-    _mod_utils.CWLObjectType = dict  # type: ignore[attr-defined]
-
-    # ---- cwltool.pathmapper ----
-    class _MapperEnt:
-        def __init__(self, resolved, target, type, staged):
-            self.resolved = resolved
-            self.target = target
-            self.type = type
-            self.staged = staged
-
-    class _PathMapper:
-        def __init__(self, referenced_files, basedir, stagedir, separateDirs=True):
-            self._pathmap: dict = {}
-            self._referenced_files = referenced_files
-            self.basedir = basedir
-            self.stagedir = stagedir
-
-        def visit(self, obj, stagedir, basedir, copy=False, staged=False):
-            pass
-
-        def visitlisting(self, listing, stagedir, basedir, copy=False, staged=False):
-            for item in listing:
-                self.visit(item, stagedir, basedir, copy=copy, staged=staged)
-
-    _mod_pathmapper = _ensure_mock("cwltool.pathmapper")
-    _mod_pathmapper.MapperEnt = _MapperEnt  # type: ignore[attr-defined]
-    _mod_pathmapper.PathMapper = _PathMapper  # type: ignore[attr-defined]
-
-    # ---- cwltool.command_line_tool ----
-    class _CommandLineTool:
-        def __init__(self, toolpath_object, loadingContext):
-            pass
-
-        @staticmethod
-        def make_path_mapper(reffiles, stagedir, runtimeContext, separateDirs):
-            return _PathMapper(reffiles, runtimeContext.basedir, stagedir, separateDirs)
-
-    _mod_clt = _ensure_mock("cwltool.command_line_tool")
-    _mod_clt.CommandLineTool = _CommandLineTool  # type: ignore[attr-defined]
-
-    # ---- cwltool.workflow ----
-    def _default_make_tool(toolpath_object, loadingContext):
-        return types.SimpleNamespace(toolpath_object=toolpath_object)
-
-    _mod_workflow = _ensure_mock("cwltool.workflow")
-    _mod_workflow.default_make_tool = _default_make_tool  # type: ignore[attr-defined]
-
-    # ---- ruamel.yaml.comments (used by tool.py) ----
-    _ensure_mock("ruamel")
-    _ensure_mock("ruamel.yaml")
-    _mod_ryc = _ensure_mock("ruamel.yaml.comments")
-    _mod_ryc.CommentedMap = dict  # type: ignore[attr-defined]
-
-
-# ---------------------------------------------------------------------------
-# Load modules directly by file path, bypassing __init__.py
-# ---------------------------------------------------------------------------
-
-_EXECUTOR_BASE = (
-    Path(__file__).resolve().parent.parent / "src" / "diracx" / "api" / "executor"
-)
-
-
-def _load_module(filename: str, module_name: str):
-    path = _EXECUTOR_BASE / filename
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-# Load fs_access first (executor.py imports it via relative import)
-_fs_mod = _load_module("fs_access.py", "diracx.api.executor.fs_access")
-# Load pathmapper
-_pm_mod = _load_module("pathmapper.py", "diracx.api.executor.pathmapper")
-DiracPathMapper = _pm_mod.DiracPathMapper
-# Load executor
-_ex_mod = _load_module("executor.py", "diracx.api.executor.executor")
-DiracExecutor = _ex_mod.DiracExecutor
-# Load tool
-_tool_mod = _load_module("tool.py", "diracx.api.executor.tool")
-DiracCommandLineTool = _tool_mod.DiracCommandLineTool
-dirac_make_tool = _tool_mod.dirac_make_tool
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -328,12 +149,6 @@ class TestPrepareJobReplicaMap:
 
     def _make_job(self, inputs: dict, outdir: str) -> object:
         """Create a minimal CommandLineJob-like object."""
-        job = object.__new__(
-            _ex_mod.CommandLineJob
-            if hasattr(_ex_mod, "CommandLineJob")
-            else type("Job", (), {})
-        )
-        # Use a SimpleNamespace approach
         job = types.SimpleNamespace(
             name="test_job",
             outdir=outdir,
@@ -627,8 +442,6 @@ class TestDiracCommandLineTool:
         The test verifies routing: the factory creates a DiracCommandLineTool for
         toolpath_objects whose class is 'CommandLineTool'.
         """
-        from unittest.mock import MagicMock, patch
-
         toolpath = {"class": "CommandLineTool", "baseCommand": "echo"}
         loading_ctx = types.SimpleNamespace()
         sentinel = MagicMock(spec=DiracCommandLineTool)
@@ -641,8 +454,6 @@ class TestDiracCommandLineTool:
 
     def test_dirac_make_tool_delegates_workflow(self):
         """dirac_make_tool should delegate non-CommandLineTool classes to default_make_tool."""
-        from unittest.mock import MagicMock, patch
-
         toolpath = {"class": "Workflow", "steps": []}
         loading_ctx = types.SimpleNamespace()
         sentinel = MagicMock()
@@ -655,8 +466,6 @@ class TestDiracCommandLineTool:
 
     def test_dirac_make_tool_delegates_expression_tool(self):
         """dirac_make_tool delegates ExpressionTool to default_make_tool."""
-        from unittest.mock import MagicMock, patch
-
         toolpath = {"class": "ExpressionTool"}
         loading_ctx = types.SimpleNamespace()
         sentinel = MagicMock()

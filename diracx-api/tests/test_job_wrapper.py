@@ -1,95 +1,13 @@
-"""Tests for JobWrapper command building, output parsing, and replica map wiring.
-
-job_wrapper.py has heavy runtime dependencies (cwl_utils, DIRACCommon,
-ruamel.yaml, diracx.client) that are not installed in the test environment.
-We mock the unavailable modules at import time, then load job_wrapper.py
-directly so we can test the pure-logic methods without those dependencies.
-"""
+"""Tests for JobWrapper command building, output parsing, and replica map wiring."""
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
-import types
 from pathlib import Path
 
+from diracx.api.job_wrapper import JobWrapper
 from diracx.core.models.commands import StoreOutputDataCommand
 from diracx.core.models.cwl import IOSource, JobHint, OutputDataEntry
-
-# ---------------------------------------------------------------------------
-# Mock unavailable modules so job_wrapper.py can be imported
-# ---------------------------------------------------------------------------
-
-
-def _ensure_mock(name: str) -> types.ModuleType:
-    if name not in sys.modules:
-        sys.modules[name] = types.ModuleType(name)
-    return sys.modules[name]
-
-
-_MOCK_MODULES = [
-    "cwl_utils",
-    "cwl_utils.parser",
-    "cwl_utils.parser.cwl_v1_2",
-    "DIRACCommon",
-    "DIRACCommon.Core",
-    "DIRACCommon.Core.Utilities",
-    "DIRACCommon.Core.Utilities.ReturnValues",
-    "ruamel",
-    "ruamel.yaml",
-    "diracx.api.job_report",
-    "diracx.api.jobs",
-    "diracx.client",
-    "diracx.client.aio",
-]
-
-for _name in _MOCK_MODULES:
-    _mod = _ensure_mock(_name)
-    if _name == "cwl_utils.parser":
-        _mod.save = None  # type: ignore[attr-defined]
-    elif _name == "cwl_utils.parser.cwl_v1_2":
-        for _attr in (
-            "CommandLineTool",
-            "ExpressionTool",
-            "File",
-            "Saveable",
-            "Workflow",
-        ):
-            setattr(_mod, _attr, type(_attr, (), {}))
-    elif _name == "DIRACCommon.Core.Utilities.ReturnValues":
-        _mod.returnValueOrRaise = None  # type: ignore[attr-defined]
-    elif _name == "ruamel.yaml":
-        _mod.YAML = None  # type: ignore[attr-defined]
-    elif _name == "diracx.api.job_report":
-        _mod.JobReport = None  # type: ignore[attr-defined]
-    elif _name == "diracx.api.jobs":
-        _mod.create_sandbox = None  # type: ignore[attr-defined]
-        _mod.download_sandbox = None  # type: ignore[attr-defined]
-    elif _name == "diracx.client.aio":
-        _mod.AsyncDiracClient = None  # type: ignore[attr-defined]
-
-
-def _load_job_wrapper():
-    """Load job_wrapper.py directly, bypassing package __init__ chains."""
-    path = (
-        Path(__file__).resolve().parent.parent
-        / "src"
-        / "diracx"
-        / "api"
-        / "job_wrapper.py"
-    )
-    spec = importlib.util.spec_from_file_location("diracx.api.job_wrapper", path)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_jw_mod = _load_job_wrapper()
-JobWrapper = _jw_mod.JobWrapper
-
 
 # ---------------------------------------------------------------------------
 # Helper to create a bare JobWrapper instance (bypasses __init__)
