@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "cwltool",
+    "cwl-utils",
     "diracx-client",
     "diracx-core",
     "httpx",

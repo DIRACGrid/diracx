@@ -6,11 +6,11 @@ from __future__ import annotations
 import types
 from unittest.mock import MagicMock, patch
 
-import diracx.api.executor.tool as _tool_mod
-from diracx.api.executor.executor import DiracExecutor
-from diracx.api.executor.fs_access import DiracReplicaMapFsAccess  # noqa: F401
-from diracx.api.executor.pathmapper import DiracPathMapper
-from diracx.api.executor.tool import DiracCommandLineTool, dirac_make_tool
+import diracx.cli.executor.tool as _tool_mod
+from diracx.cli.executor.executor import DiracExecutor
+from diracx.cli.executor.fs_access import DiracReplicaMapFsAccess  # noqa: F401
+from diracx.cli.executor.pathmapper import DiracPathMapper
+from diracx.cli.executor.tool import DiracCommandLineTool, dirac_make_tool
 from diracx.core.models.replica_map import ReplicaMap
 
 # ---------------------------------------------------------------------------

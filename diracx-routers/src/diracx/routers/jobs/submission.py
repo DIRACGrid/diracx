@@ -4,7 +4,7 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import Body, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from diracx.core.models.job import InsertedJob
 from diracx.db.sql import JobDB, JobLoggingDB
@@ -81,6 +81,21 @@ class CWLJobSubmission(BaseModel):
 
     workflow: str  # CWL workflow definition as YAML string
     inputs: list[dict] = []  # Per-job input parameters; each dict produces one job
+    range_param: str | None = None
+    range_start: int | None = None
+    range_end: int | None = None
+    range_step: int | None = None
+    base_inputs: dict | None = None
+
+    @model_validator(mode="after")
+    def validate_mutual_exclusion(self):
+        has_inputs = bool(self.inputs)
+        has_range = self.range_param is not None
+        if has_inputs and has_range:
+            raise ValueError("'inputs' and 'range_param' are mutually exclusive")
+        if has_range and self.range_end is None:
+            raise ValueError("'range_end' is required when 'range_param' is set")
+        return self
 
 
 @router.post("/")
@@ -99,6 +114,20 @@ async def submit_cwl_jobs(
     If no inputs are provided, a single job is created with no input parameters.
     """
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
+
+    # Handle range expansion
+    if body.range_param:
+        from diracx.logic.jobs.cwl_submission import expand_range_inputs
+
+        # range_end is guaranteed non-None here by the model validator
+        assert body.range_end is not None
+        body.inputs = expand_range_inputs(
+            range_param=body.range_param,
+            range_start=body.range_start or 0,
+            range_end=body.range_end,
+            range_step=body.range_step or 1,
+            base_inputs=body.base_inputs,
+        )
 
     input_params_list: list[dict | None] = list(body.inputs) if body.inputs else [None]
 
