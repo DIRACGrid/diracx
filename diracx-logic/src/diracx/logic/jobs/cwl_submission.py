@@ -78,6 +78,22 @@ def _validate_cwl_id(
         )
 
 
+def expand_range_inputs(
+    *,
+    range_param: str,
+    range_start: int,
+    range_end: int,
+    range_step: int,
+    base_inputs: dict | None,
+) -> list[dict]:
+    """Expand a range spec into a list of input dicts.
+
+    Each dict is base_inputs | {range_param: index}.
+    """
+    base = base_inputs or {}
+    return [{**base, range_param: i} for i in range(range_start, range_end, range_step)]
+
+
 def cwl_to_jdl(
     task: CWLTask,
     job_hint: JobHint,

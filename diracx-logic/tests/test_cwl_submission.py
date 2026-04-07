@@ -281,3 +281,46 @@ def test_cwl_to_jdl_bad_source_reference():
     hint = extract_job_hint(task)
     with pytest.raises(ValueError, match="nonexistent_input"):
         cwl_to_jdl(task, hint, None)
+
+
+class TestRangeExpansion:
+    """Tests for server-side range expansion."""
+
+    def test_basic_range(self):
+        from diracx.logic.jobs.cwl_submission import expand_range_inputs
+
+        result = expand_range_inputs(
+            range_param="seed",
+            range_start=0,
+            range_end=5,
+            range_step=1,
+            base_inputs={"message": "hello"},
+        )
+        assert len(result) == 5
+        assert result[0] == {"message": "hello", "seed": 0}
+        assert result[4] == {"message": "hello", "seed": 4}
+
+    def test_range_with_step(self):
+        from diracx.logic.jobs.cwl_submission import expand_range_inputs
+
+        result = expand_range_inputs(
+            range_param="seed",
+            range_start=0,
+            range_end=10,
+            range_step=2,
+            base_inputs=None,
+        )
+        assert len(result) == 5
+        assert [r["seed"] for r in result] == [0, 2, 4, 6, 8]
+
+    def test_range_no_base_inputs(self):
+        from diracx.logic.jobs.cwl_submission import expand_range_inputs
+
+        result = expand_range_inputs(
+            range_param="idx",
+            range_start=0,
+            range_end=3,
+            range_step=1,
+            base_inputs=None,
+        )
+        assert result == [{"idx": 0}, {"idx": 1}, {"idx": 2}]
