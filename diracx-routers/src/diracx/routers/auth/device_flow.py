@@ -18,6 +18,8 @@ from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
 from diracx.core.models.auth import InitiateDeviceFlowResponse
+from diracx.core.settings import AuthSettings
+from diracx.db.sql import AuthDB
 from diracx.logic.auth.device_flow import do_device_flow as do_device_flow_bl
 from diracx.logic.auth.device_flow import (
     finish_device_flow as finish_device_flow_bl,
@@ -25,13 +27,9 @@ from diracx.logic.auth.device_flow import (
 from diracx.logic.auth.device_flow import (
     initiate_device_flow as initiate_device_flow_bl,
 )
+from diracx.routers.dependencies import Config
 
-from ..dependencies import (
-    AuthDB,
-    AuthSettings,
-    AvailableSecurityProperties,
-    Config,
-)
+from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter
 
 logger = logging.getLogger(__name__)

@@ -11,6 +11,8 @@ from diracx.core.models.sandbox import (
     SandboxInfo,
     SandboxUploadResponse,
 )
+from diracx.core.settings import SandboxStoreSettings
+from diracx.db.sql import JobDB, SandboxMetadataDB
 from diracx.logic.jobs.sandboxes import SANDBOX_PFN_REGEX
 from diracx.logic.jobs.sandboxes import (
     assign_sandbox_to_job as assign_sandbox_to_job_bl,
@@ -25,7 +27,6 @@ from diracx.logic.jobs.sandboxes import (
     unassign_jobs_sandboxes as unassign_jobs_sandboxes_bl,
 )
 
-from ..dependencies import JobDB, SandboxMetadataDB, SandboxStoreSettings
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import (

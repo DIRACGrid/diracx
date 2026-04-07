@@ -27,6 +27,7 @@ from diracx.tasks.plumbing.locks import BaseLock, MutexLock
 from diracx.tasks.plumbing.retry_policies import NoRetry
 from diracx.tasks.plumbing.schedules import CronSchedule, IntervalSeconds
 
+from gubbins.db.sql import MyPilotDB
 from gubbins.logic.my_pilots import (
     get_available_ces,
     get_pilot_summary,
@@ -34,7 +35,6 @@ from gubbins.logic.my_pilots import (
     transition_pilot_states,
 )
 
-from .depends import MyPilotDB
 from .my_pilot_lock_types import MY_PILOT
 
 logger = logging.getLogger(__name__)

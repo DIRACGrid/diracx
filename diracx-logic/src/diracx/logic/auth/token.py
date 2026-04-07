@@ -193,7 +193,7 @@ async def get_oidc_token_info_from_refresh_flow(
             # Revoke all the user tokens from the subject
             await auth_db.revoke_user_refresh_tokens(sub)
 
-            # Commit here, otherwise the revokation operation will not be taken into account
+            # Commit here, otherwise the revocation operation will not be taken into account
             # as we return an error to the user
             await auth_db.conn.commit()
 

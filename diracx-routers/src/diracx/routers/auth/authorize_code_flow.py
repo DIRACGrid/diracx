@@ -16,19 +16,17 @@ from fastapi import (
 )
 
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
+from diracx.core.settings import AuthSettings
+from diracx.db.sql import AuthDB
 from diracx.logic.auth.authorize_code_flow import (
     complete_authorization_flow as complete_authorization_flow_bl,
 )
 from diracx.logic.auth.authorize_code_flow import (
     initiate_authorization_flow as initiate_authorization_flow_bl,
 )
+from diracx.routers.dependencies import Config
 
-from ..dependencies import (
-    AuthDB,
-    AuthSettings,
-    AvailableSecurityProperties,
-    Config,
-)
+from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter
 
 logger = logging.getLogger(__name__)

@@ -13,6 +13,8 @@ from diracx.core.models.job import (
     JobStatusUpdate,
     SetJobStatusReturn,
 )
+from diracx.db.os import JobParametersDB
+from diracx.db.sql import JobDB, JobLoggingDB, TaskQueueDB
 from diracx.logic.jobs.status import add_heartbeat as add_heartbeat_bl
 from diracx.logic.jobs.status import get_job_commands as get_job_commands_bl
 from diracx.logic.jobs.status import reschedule_jobs as reschedule_jobs_bl
@@ -20,14 +22,8 @@ from diracx.logic.jobs.status import (
     set_job_parameters_or_attributes as set_job_parameters_or_attributes_bl,
 )
 from diracx.logic.jobs.status import set_job_statuses as set_job_statuses_bl
+from diracx.routers.dependencies import Config
 
-from ..dependencies import (
-    Config,
-    JobDB,
-    JobLoggingDB,
-    JobParametersDB,
-    TaskQueueDB,
-)
 from ..fastapi_classes import DiracxRouter
 from .access_policies import ActionType, CheckWMSPolicyCallable
 

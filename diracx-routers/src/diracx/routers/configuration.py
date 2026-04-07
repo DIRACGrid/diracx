@@ -11,8 +11,9 @@ from fastapi import (
     status,
 )
 
+from diracx.routers.dependencies import Config
+
 from .access_policies import open_access
-from .dependencies import Config
 from .fastapi_classes import DiracxRouter
 
 logger = logging.getLogger(__name__)

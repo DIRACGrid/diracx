@@ -54,8 +54,8 @@ The key imports to note:
 - **`gubbins.logic.my_pilots`** — Business logic functions from the
     [logic layer](logic.md). Tasks delegate to these rather than
     implementing logic inline.
-- **`MyPilotDB`** (from `depends`) — The dependency-injected database
-    type from Part 2
+- **`MyPilotDB`** (from `gubbins.db.sql`) — The database class from
+    Part 2, auto-detected by the dependency injection system
 
 ## MyPilotTask — one-shot submission
 

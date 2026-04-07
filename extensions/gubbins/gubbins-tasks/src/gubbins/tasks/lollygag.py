@@ -24,9 +24,9 @@ from diracx.tasks.plumbing.locks import BaseLock, MutexLock
 from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 from diracx.tasks.plumbing.schedules import CronSchedule, IntervalSeconds
 
+from gubbins.db.sql import LollygagDB
 from gubbins.logic.lollygag.lollygag import get_owner_object, insert_owner_object
 
-from .depends import LollygagDB
 from .lock_types import LOLLYGAG
 
 logger = logging.getLogger(__name__)

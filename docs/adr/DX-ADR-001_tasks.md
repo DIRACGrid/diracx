@@ -84,10 +84,12 @@ class AnotherExampleTask(BaseTask, BaseModel):
 #### Dependency Injection
 
 Subclasses of `BaseTask` can define additional arguments which are passed at task-execution time in a similar way to FastAPI's dependency injection system used in `diracx-routers`.
-These are defined as arguments to `BaseTask.execute` and are expected to be type annotated with a class which is registered in the dependency injection system.
+These are defined as arguments to `BaseTask.execute` and are expected to be type annotated with a DB class or settings class.
+The `auto_inject_depends` function in `diracx.tasks.plumbing.depends` automatically detects `BaseSQLDB` subclasses, `BaseOSDB` subclasses, and `ServiceSettingsBase` subclasses and wraps them with the appropriate `Depends` annotation.
 
 ```python
-from diracx.tasks.depends import AuthSettings, JobDB
+from diracx.core.settings import AuthSettings
+from diracx.db.sql import JobDB
 
 
 class ExampleTask(BaseTask):
@@ -96,7 +98,11 @@ class ExampleTask(BaseTask):
         pass
 ```
 
-The classes which have been annotated for dependency injection are re-exported in `diracx.routers.depends`.
+This auto-detection is applied in three places:
+
+- In tasks: called by `wrap_task` in `diracx.tasks.plumbing.factory`
+- In routers: called by `DiracxRouter.add_api_route`
+- In sub-dependency functions: applied via the `@auto_inject` decorator
 
 #### Locking
 
@@ -387,7 +393,9 @@ The three size classes (`SMALL`, `MEDIUM`, `LARGE`) exist to allow independent w
 
 ### Dependency Injection
 
-`diracx.routers.depends` re-exports `diracx.tasks.depends` due to the following reasoning:
+DB classes, OS DB classes, and `ServiceSettingsBase` subclasses are auto-detected by `auto_inject_depends` in `diracx.tasks.plumbing.depends`. This means route handlers, task `execute()` methods, and sub-dependency functions can simply type-annotate their parameters with the bare class (e.g. `job_db: JobDB`) and the framework wraps them with the appropriate `Depends` call automatically.
+
+`diracx.routers.dependencies` re-exports from `diracx.tasks.plumbing.depends` due to the following reasoning:
 
 - We don't want `diracx-logic`/`diracx-db` to depend on `fastapi`
 - `diracx-tasks` shouldn't depend on `diracx-routers`

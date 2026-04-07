@@ -1,17 +1,21 @@
 # Dependency injection
 
-DiracX uses [FastAPI's dependency injection system](https://fastapi.tiangolo.com/tutorial/dependencies/) to provide dependencies to API route handlers. Dependencies are injected as function parameters using Python's `Annotated` type hints.
+DiracX uses [FastAPI's dependency injection system](https://fastapi.tiangolo.com/tutorial/dependencies/) to provide dependencies to API route handlers. Dependencies are injected as function parameters using Python's type hints.
+
+DB classes, OS DB classes, and `ServiceSettingsBase` subclasses are **auto-detected** by `auto_inject_depends` in `diracx.tasks.plumbing.depends`. This means you can simply type-annotate parameters with the bare class and the framework wraps them with the appropriate `Depends` call automatically. This auto-detection is applied:
+
+- In routers: by `DiracxRouter.add_api_route`
+- In tasks: by `wrap_task` in `diracx.tasks.plumbing.factory`
+- In sub-dependency functions: via the `@auto_inject` decorator
 
 ## Available dependencies
 
-DiracX provides several types of dependencies that can be injected into route handlers:
-
 ### Database connections
 
-Database connections are automatically managed through dependency injection with automatic transaction handling:
+Database connections are automatically managed through dependency injection with automatic transaction handling. Import DB classes directly from their defining packages:
 
 ```python
-from diracx.routers.dependencies import JobDB, AuthDB, JobLoggingDB
+from diracx.db.sql import JobDB, JobLoggingDB
 
 
 @router.get("/jobs/{job_id}")
@@ -27,15 +31,15 @@ async def get_job(
 
 Available database dependencies:
 
-| Dependency          | Underlying Class                  | Description                          |
-| ------------------- | --------------------------------- | ------------------------------------ |
-| `JobDB`             | `diracx.db.sql.JobDB`             | Job management database              |
-| `AuthDB`            | `diracx.db.sql.AuthDB`            | Authentication database              |
-| `JobLoggingDB`      | `diracx.db.sql.JobLoggingDB`      | Job logging database                 |
-| `PilotAgentsDB`     | `diracx.db.sql.PilotAgentsDB`     | Pilot agents database                |
-| `SandboxMetadataDB` | `diracx.db.sql.SandboxMetadataDB` | Sandbox metadata database            |
-| `TaskQueueDB`       | `diracx.db.sql.TaskQueueDB`       | Task queue database                  |
-| `JobParametersDB`   | `diracx.db.os.JobParametersDB`    | Job parameters (OpenSearch) database |
+| Class               | Package         | Description                          |
+| ------------------- | --------------- | ------------------------------------ |
+| `JobDB`             | `diracx.db.sql` | Job management database              |
+| `AuthDB`            | `diracx.db.sql` | Authentication database              |
+| `JobLoggingDB`      | `diracx.db.sql` | Job logging database                 |
+| `PilotAgentsDB`     | `diracx.db.sql` | Pilot agents database                |
+| `SandboxMetadataDB` | `diracx.db.sql` | Sandbox metadata database            |
+| `TaskQueueDB`       | `diracx.db.sql` | Task queue database                  |
+| `JobParametersDB`   | `diracx.db.os`  | Job parameters (OpenSearch) database |
 
 #### Connection Pool Management
 
@@ -67,19 +71,20 @@ SQL database connections have automatic transaction handling:
 - **Failed requests** (HTTP status >= 400) automatically roll back the transaction
 - **Connections** are returned to the pool for reuse
 
-Each database dependency is defined as:
+The auto-detection applies the following rules:
 
 ```python
-# SQL databases use .transaction() for automatic transaction handling
-JobDB = Annotated[_JobDB, Depends(_JobDB.transaction)]
-
-# OpenSearch databases use .session() (no automatic transactions)
-JobParametersDB = Annotated[_JobParametersDB, Depends(_JobParametersDB.session)]
+# SQL databases -> Depends(cls.transaction, scope="function")
+# OpenSearch databases -> Depends(cls.session, scope="function")
+# Settings classes -> Depends(cls.create)
 ```
 
 For advanced scenarios requiring explicit transaction commits (e.g., revoking tokens before returning an error):
 
 ```python
+from diracx.db.sql import AuthDB
+
+
 @router.post("/token")
 async def token(auth_db: AuthDB):
     if refresh_token_attributes["status"] == RefreshTokenStatus.REVOKED:
@@ -93,14 +98,32 @@ async def token(auth_db: AuthDB):
         raise HTTPException(status_code=401)
 ```
 
+For cases where a database connection is needed without a transaction (e.g., a task that manages its own transactions in batches), use the `NoTransaction` marker:
+
+```python
+from typing import Annotated
+
+from diracx.db.sql import SandboxMetadataDB
+from diracx.tasks.plumbing.depends import NoTransaction
+
+
+async def execute(
+    self,
+    sandbox_metadata_db: Annotated[SandboxMetadataDB, NoTransaction()],
+) -> int:
+    # Caller manages transactions manually
+    ...
+```
+
 For more details on the underlying database classes, see the [Database Components](../explanations/components/db.md) documentation.
 
 ### Configuration and settings
 
-Configuration and application settings are injected using dedicated dependencies:
+Configuration and application settings are injected using dedicated dependencies. Settings classes that inherit from `ServiceSettingsBase` are auto-detected. `Config` must be imported from `diracx.routers.dependencies`:
 
 ```python
-from diracx.routers.dependencies import Config, AuthSettings
+from diracx.core.settings import AuthSettings
+from diracx.routers.dependencies import Config
 
 
 @router.get("/config-info")
@@ -116,22 +139,14 @@ async def get_config_info(
 
 Available configuration dependencies:
 
-| Dependency             | Underlying Class                            | Description                   |
-| ---------------------- | ------------------------------------------- | ----------------------------- |
-| `Config`               | `diracx.core.config.Config`                 | DiracX configuration          |
-| `AuthSettings`         | `diracx.core.settings.AuthSettings`         | Authentication settings       |
-| `DevelopmentSettings`  | `diracx.core.settings.DevelopmentSettings`  | Development-specific settings |
-| `SandboxStoreSettings` | `diracx.core.settings.SandboxStoreSettings` | Sandbox storage settings      |
+| Class                  | Package                       | Description                   |
+| ---------------------- | ----------------------------- | ----------------------------- |
+| `Config`               | `diracx.routers.dependencies` | DiracX configuration          |
+| `AuthSettings`         | `diracx.core.settings`        | Authentication settings       |
+| `DevelopmentSettings`  | `diracx.core.settings`        | Development-specific settings |
+| `SandboxStoreSettings` | `diracx.core.settings`        | Sandbox storage settings      |
 
-Each configuration dependency is defined as:
-
-```python
-# Configuration uses ConfigSource.create
-Config = Annotated[_Config, Depends(ConfigSource.create)]
-
-# Settings use the .create() class method
-AuthSettings = Annotated[_AuthSettings, Depends(_AuthSettings.create)]
-```
+`Config` is special because it doesn't inherit from `ServiceSettingsBase` and uses `ConfigSource.create` as its dependency factory. It is the only dependency that requires importing a pre-wrapped `Annotated` type.
 
 For more details on configuration and settings classes, see the [Configuration](configuration.md) documentation.
 
@@ -182,6 +197,7 @@ async def get_properties(
 Access policies provide fine-grained authorization control:
 
 ```python
+from diracx.db.sql import JobDB
 from diracx.routers.jobs.access_policies import CheckWMSPolicyCallable, ActionType
 
 
@@ -201,10 +217,9 @@ async def create_job(
 
 ### Settings dependencies
 
-For custom settings classes that inherit from `BaseSettings`, use the `add_settings_annotation` helper from `diracx.routers.dependencies`:
+Custom settings classes that inherit from `ServiceSettingsBase` are auto-detected. Simply define the class and use it as a type annotation:
 
 ```python
-from diracx.routers.dependencies import add_settings_annotation
 from diracx.core.settings import ServiceSettingsBase
 
 
@@ -216,25 +231,22 @@ class MyCustomSettings(ServiceSettingsBase):
         return cls()
 
 
-# Create the dependency
-MySettings = add_settings_annotation(MyCustomSettings)
-
-
 @router.get("/my-endpoint")
-async def my_endpoint(settings: MySettings) -> dict:
+async def my_endpoint(settings: MyCustomSettings) -> dict:
     return {"custom_option": settings.custom_option}
 ```
 
 ### Database dependencies
 
-Database dependencies follow the pattern of using the `.transaction()` class method:
+Database dependencies are also auto-detected. Any `BaseSQLDB` subclass used as a type annotation will automatically get wrapped with `Depends(cls.transaction, scope="function")`:
 
 ```python
-from typing import Annotated
-from fastapi import Depends
+from my_extension.db.sql import MyCustomDB
 
-# Database classes should have a .transaction() class method
-MyCustomDB = Annotated[MyCustomDBClass, Depends(MyCustomDBClass.transaction)]
+
+@router.get("/my-data")
+async def get_data(db: MyCustomDB) -> dict:
+    ...
 ```
 
 ## Complete example
@@ -242,9 +254,9 @@ MyCustomDB = Annotated[MyCustomDBClass, Depends(MyCustomDBClass.transaction)]
 Here's a complete example showing multiple dependency types:
 
 ```python
-from typing import Annotated
-from fastapi import Depends
-from diracx.routers.dependencies import Config, JobDB, AuthSettings
+from diracx.core.settings import AuthSettings
+from diracx.db.sql import JobDB
+from diracx.routers.dependencies import Config
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from diracx.routers.auth.utils import has_properties
 from diracx.core.properties import NORMAL_USER

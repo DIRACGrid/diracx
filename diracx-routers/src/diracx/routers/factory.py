@@ -201,6 +201,9 @@ def create_app_inner(
                 app.dependency_overrides[sql_db_class.transaction] = partial(
                     db_transaction, sql_db
                 )
+                app.dependency_overrides[sql_db_class.no_transaction] = partial(
+                    db_no_transaction, sql_db
+                )
 
             # At least one DB works, so we do not fail the startup
             fail_startup = False
@@ -481,6 +484,11 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2]:
         if reason := await is_db_unavailable(db):
             raise DBUnavailableError(reason)
         yield db
+
+
+async def db_no_transaction(db: T2) -> AsyncGenerator[T2]:
+    """Yield a DB instance without entering a transaction."""
+    yield db
 
 
 class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):

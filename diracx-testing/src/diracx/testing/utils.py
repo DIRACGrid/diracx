@@ -239,7 +239,7 @@ class ClientFactory:
         self.app.lifetime_functions = []
         for obj in self.all_lifetime_functions:
             assert isinstance(
-                obj.__self__, (ServiceSettingsBase, BaseSQLDB, BaseOSDB, ConfigSource)
+                obj.__self__, (ServiceSettingsBase, BaseSQLDB, BaseOSDB)
             ), obj
 
     @contextlib.contextmanager
@@ -284,9 +284,10 @@ class ClientFactory:
         from diracx.testing.mock_osdb import MockOSDBMixin
 
         for k, v in self.app.dependency_overrides.items():
-            # Ignore dependency overrides which aren't BaseSQLDB.transaction or BaseOSDB.session
+            # Ignore dependency overrides which aren't BaseSQLDB.transaction/no_transaction or BaseOSDB.session
             if isinstance(v, UnavailableDependency) or k.__func__ not in (
                 BaseSQLDB.transaction.__func__,
+                BaseSQLDB.no_transaction.__func__,
                 BaseOSDB.session.__func__,
             ):
                 continue

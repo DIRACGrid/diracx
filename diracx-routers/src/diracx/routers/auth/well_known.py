@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import Request
 
 from diracx.core.models.auth import Metadata, OpenIDConfiguration
+from diracx.core.settings import AuthSettings
 from diracx.logic.auth.well_known import (
     get_installation_metadata as get_installation_metadata_bl,
 )
@@ -12,8 +13,8 @@ from diracx.logic.auth.well_known import (
 from diracx.logic.auth.well_known import (
     get_openid_configuration as get_openid_configuration_bl,
 )
+from diracx.routers.dependencies import Config
 
-from ..dependencies import AuthSettings, Config
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False, path_root="")

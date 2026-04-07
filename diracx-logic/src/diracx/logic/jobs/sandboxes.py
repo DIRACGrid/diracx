@@ -210,7 +210,7 @@ async def clean_sandboxes(
     3. Deletes from DB
 
     Args:
-        sandbox_metadata_db: Database connection (not yet entered).
+        sandbox_metadata_db: Database connection (not in a transaction).
         settings: Sandbox store settings with S3 client.
 
     Returns:

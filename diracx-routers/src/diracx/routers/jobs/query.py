@@ -10,16 +10,13 @@ from diracx.core.models.search import (
     SummaryParams,
 )
 from diracx.core.properties import JOB_ADMINISTRATOR
+from diracx.db.os import JobParametersDB
+from diracx.db.sql import JobDB, JobLoggingDB
 from diracx.logic.jobs.query import MAX_PER_PAGE
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
+from diracx.routers.dependencies import Config
 
-from ..dependencies import (
-    Config,
-    JobDB,
-    JobLoggingDB,
-    JobParametersDB,
-)
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
 from .access_policies import ActionType, CheckWMSPolicyCallable

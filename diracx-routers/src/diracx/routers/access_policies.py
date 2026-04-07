@@ -31,7 +31,8 @@ from diracx.core.models.auth import (
     AccessTokenPayload,
     RefreshTokenPayload,
 )
-from diracx.routers.dependencies import DevelopmentSettings
+from diracx.core.settings import DevelopmentSettings
+from diracx.routers.dependencies import auto_inject
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 if "annotations" in globals():
@@ -107,6 +108,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
         return {}, {}
 
 
+@auto_inject
 def check_permissions(
     policy: Callable,
     policy_name: str,

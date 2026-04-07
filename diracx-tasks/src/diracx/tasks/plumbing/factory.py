@@ -27,6 +27,7 @@ from diracx.core.extensions import select_from_extension
 from ._redis_types import LockCoordinator
 from .base_task import BaseTask
 from .broker.models import TaskBinding
+from .depends import auto_inject_depends
 from .locks import BaseLimiter, BaseLock
 
 T = TypeVar("T")
@@ -146,6 +147,7 @@ def wrap_task(cls: type[BaseTask]) -> Callable[..., Any]:
         for p in execute_params
         if p.kind not in (Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL)
     ]
+    execute_params = auto_inject_depends(execute_params)
 
     parameters = [
         Parameter("args", Parameter.POSITIONAL_ONLY, default=()),
@@ -272,6 +274,11 @@ async def _db_context(db: _T_DB) -> AsyncIterator[_T_DB]:
         yield db
 
 
+async def _db_no_transaction(db: _T_DB) -> AsyncIterator[_T_DB]:
+    """Yield a DB instance without entering a transaction."""
+    yield db
+
+
 @asynccontextmanager
 async def setup_dependency_overrides(
     task_dependants: Iterable[Dependant] = (),
@@ -297,6 +304,9 @@ async def setup_dependency_overrides(
             await stack.enter_async_context(sql_db.engine_context())
             for sql_db_class in sql_db_classes:
                 overrides[sql_db_class.transaction] = partial(_db_context, sql_db)
+                overrides[sql_db_class.no_transaction] = partial(
+                    _db_no_transaction, sql_db
+                )
 
         # --- OS databases ---
         for db_name, conn_kwargs in BaseOSDB.available_urls().items():

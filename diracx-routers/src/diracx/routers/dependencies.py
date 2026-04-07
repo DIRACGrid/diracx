@@ -1,4 +1,4 @@
-"""Router DI types — re-exported from the canonical definitions in diracx-tasks."""
+"""Router dependency injection types — re-exported from the canonical definitions in diracx-tasks."""
 
 from __future__ import annotations
 

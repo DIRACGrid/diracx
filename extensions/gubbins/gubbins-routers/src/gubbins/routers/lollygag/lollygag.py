@@ -5,12 +5,9 @@ It uses the the Lollygag AccessPolicy (which itself requires the Gubbins propert
 
 from __future__ import annotations
 
-from typing import Annotated
-
 from diracx.routers.fastapi_classes import DiracxRouter
-from fastapi import Depends
 
-from gubbins.db.sql import LollygagDB as _LollygagDB
+from gubbins.db.sql import LollygagDB
 from gubbins.logic.lollygag.lollygag import (
     get_gubbins_secrets as get_gubbins_secrets_bl,
 )
@@ -20,10 +17,6 @@ from gubbins.logic.lollygag.lollygag import (
 )
 
 from .access_policy import ActionType, CheckLollygagPolicyCallable
-
-# Define the dependency at the top, so you don't have to
-# be so verbose in your routes
-LollygagDB = Annotated[_LollygagDB, Depends(_LollygagDB.transaction)]
 
 router = DiracxRouter()
 

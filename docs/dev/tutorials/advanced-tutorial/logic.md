@@ -49,9 +49,8 @@ Key points:
     scheduling concerns.
 - **Custom exception** — `PilotSubmissionError` replaces a generic
     `RuntimeError`, making error handling more precise in callers.
-- **DB type hints** — Functions use the raw `MyPilotDB` class (not the
-    DI-annotated type from `depends.py`). At runtime, the injected
-    instance is the same object either way.
+- **DB type hints** — Functions use the raw `MyPilotDB` class directly.
+    The dependency injection system auto-detects DB classes at runtime.
 
 ## Update dependencies
 
