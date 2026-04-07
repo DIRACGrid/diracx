@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = ["BaseTask", "PeriodicBaseTask", "PeriodicVoAwareBaseTask"]
 
 import dataclasses
-from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -18,8 +17,13 @@ if TYPE_CHECKING:
     from .broker.models import TaskBinding
 
 
-class BaseTask(ABC):
-    """Base class for all DiracX tasks."""
+class BaseTask:
+    """Base class for all DiracX tasks.
+
+    Implementations must define an "async def execute(self, ...)" method, where
+    the signature of "execute" determines what dependencies are injected by
+    the worker.
+    """
 
     priority: ClassVar[Priority] = Priority.NORMAL
     size: ClassVar[Size] = Size.MEDIUM
@@ -55,11 +59,6 @@ class BaseTask(ABC):
             RateLimiter(TASK, self.__class__.__name__),
             ConcurrencyLimiter(TASK, self.__class__.__name__),
         ]
-
-    @abstractmethod
-    async def execute(self, **kwargs: Any) -> Any:
-        """Run the task logic."""
-        ...
 
     def serialize(self) -> tuple[Any, ...]:
         """Serialize the task to a tuple of arguments for reconstruction."""
