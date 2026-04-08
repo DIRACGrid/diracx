@@ -193,6 +193,16 @@ class CWLJobSubmission(_serialization.Model):
     :vartype workflow: str
     :ivar inputs: Inputs.
     :vartype inputs: list[dict[str, any]]
+    :ivar range_param: Range Param.
+    :vartype range_param: str
+    :ivar range_start: Range Start.
+    :vartype range_start: int
+    :ivar range_end: Range End.
+    :vartype range_end: int
+    :ivar range_step: Range Step.
+    :vartype range_step: int
+    :ivar base_inputs: Base Inputs.
+    :vartype base_inputs: dict[str, any]
     """
 
     _validation = {
@@ -202,18 +212,49 @@ class CWLJobSubmission(_serialization.Model):
     _attribute_map = {
         "workflow": {"key": "workflow", "type": "str"},
         "inputs": {"key": "inputs", "type": "[{object}]"},
+        "range_param": {"key": "range_param", "type": "str"},
+        "range_start": {"key": "range_start", "type": "int"},
+        "range_end": {"key": "range_end", "type": "int"},
+        "range_step": {"key": "range_step", "type": "int"},
+        "base_inputs": {"key": "base_inputs", "type": "{object}"},
     }
 
-    def __init__(self, *, workflow: str, inputs: list[dict[str, Any]] = [], **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *,
+        workflow: str,
+        inputs: list[dict[str, Any]] = [],
+        range_param: Optional[str] = None,
+        range_start: Optional[int] = None,
+        range_end: Optional[int] = None,
+        range_step: Optional[int] = None,
+        base_inputs: Optional[dict[str, Any]] = None,
+        **kwargs: Any
+    ) -> None:
         """
         :keyword workflow: Workflow. Required.
         :paramtype workflow: str
         :keyword inputs: Inputs.
         :paramtype inputs: list[dict[str, any]]
+        :keyword range_param: Range Param.
+        :paramtype range_param: str
+        :keyword range_start: Range Start.
+        :paramtype range_start: int
+        :keyword range_end: Range End.
+        :paramtype range_end: int
+        :keyword range_step: Range Step.
+        :paramtype range_step: int
+        :keyword base_inputs: Base Inputs.
+        :paramtype base_inputs: dict[str, any]
         """
         super().__init__(**kwargs)
         self.workflow = workflow
         self.inputs = inputs
+        self.range_param = range_param
+        self.range_start = range_start
+        self.range_end = range_end
+        self.range_step = range_step
+        self.base_inputs = base_inputs
 
 
 class ExtendedMetadata(_serialization.Model):
