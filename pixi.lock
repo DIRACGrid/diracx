@@ -20529,8 +20529,8 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./
   name: diracx
-  version: 0.0.13.dev34+gfc393207c
-  sha256: 1f78b10647ef5e2e13a5438ef3c7f2ac2c051773bf180e30f00fdc45a328425f
+  version: 0.0.13.dev45+gc5f3454f6.d20260407
+  sha256: 1a70ba4eae5fa52cea1a3500785791bbb25aa252da73bdeaea184a7c48e2d873
   requires_dist:
   - diracx-api
   - diracx-cli
@@ -20552,8 +20552,8 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-cli
   name: diracx-cli
-  version: 0.0.13.dev36+gc3a632a57
-  sha256: 0c957813ce731ef8f247dc9b27b0242a8ebec8a14fc3e93ccde95ad4c299e03d
+  version: 0.0.13.dev48+g700504c6e.d20260408
+  sha256: baf99c5201ca980162488b229dbe0e5f8d73e29f805f0adf103ddef1b08d94bf
   requires_dist:
   - cwltool
   - diraccfg
