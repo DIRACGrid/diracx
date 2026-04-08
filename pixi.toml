@@ -207,7 +207,7 @@ description = "Auto-discover and generate settings documentation with validation
 # DiracX environments
 default = {features = ["task-diracx", "diracx", "diracx-core", "diracx-api", "diracx-cli", "diracx-client", "diracx-db", "diracx-logic", "diracx-routers", "diracx-tasks", "settings-doc"], solve-group = "diracx"}
 diracx-core = {features = ["task-diracx-core", "diracx-core"], solve-group = "diracx"}
-diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
+diracx-api = {features = ["task-diracx-api", "diracx-api", "diracx-cli", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-cli = {features = ["task-diracx-cli", "diracx-cli", "diracx-api", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-client = {features = ["task-diracx-client", "diracx-client", "diracx-core"], solve-group = "diracx"}
 diracx-db = {features = ["task-diracx-db", "diracx-db", "diracx-core"], solve-group = "diracx"}
