@@ -15,25 +15,11 @@ import types
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-# ---------------------------------------------------------------------------
-# Skip guards
-# ---------------------------------------------------------------------------
-
-pytest.importorskip("cwltool", reason="cwltool not installed")
-
-dirac_cwl_run = shutil.which("dirac-cwl-run")
-pytestmark = pytest.mark.skipif(
-    dirac_cwl_run is None,
-    reason="dirac-cwl-run not on PATH",
-)
-
 # ---------------------------------------------------------------------------
 # Direct imports — all dependencies are available in the test environment
 # ---------------------------------------------------------------------------
-
 import cwl_utils.parser.cwl_v1_2 as _cwl_v1_2  # noqa: E402
+import pytest
 
 import diracx.api.job_wrapper as _jw_mod  # noqa: E402
 from diracx.api.job_wrapper import JobWrapper  # noqa: E402
