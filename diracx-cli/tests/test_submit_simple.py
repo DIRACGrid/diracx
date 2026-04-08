@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
-from diracx.cli import app as main_app
 from diracx.cli._submission.simple import detect_sandbox_files, generate_cwl
+from diracx.cli.job import app as job_app
 
 runner = CliRunner()
 
@@ -85,12 +85,12 @@ class TestSubmitCommand:
         (tmp_path / "script.py").write_text("print('hello')")
 
         with patch(
-            "diracx.cli.submit.submit_cwl", new_callable=AsyncMock
+            "diracx.cli.job.submit.cmd.submit_cwl", new_callable=AsyncMock
         ) as mock_submit:
             mock_submit.return_value = [MagicMock(job_id=1001, status="Submitting")]
             result = runner.invoke(
-                main_app,
-                ["submit", "python script.py", "-y"],
+                job_app,
+                ["submit", "cmd", "python script.py", "-y"],
             )
 
         assert result.exit_code == 0, result.output
@@ -103,13 +103,14 @@ class TestSubmitCommand:
         (tmp_path / "config.json").write_text("{}")
 
         with patch(
-            "diracx.cli.submit.submit_cwl", new_callable=AsyncMock
+            "diracx.cli.job.submit.cmd.submit_cwl", new_callable=AsyncMock
         ) as mock_submit:
             mock_submit.return_value = [MagicMock(job_id=1001, status="Submitting")]
             result = runner.invoke(
-                main_app,
+                job_app,
                 [
                     "submit",
+                    "cmd",
                     "echo hello",
                     "--sandbox",
                     str(tmp_path / "config.json"),

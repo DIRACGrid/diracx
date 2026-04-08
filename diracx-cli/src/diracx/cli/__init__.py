@@ -3,12 +3,8 @@ from __future__ import annotations
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 
 from .auth import app
-from .submit import register_submit
 
 __all__ = ("app",)
-
-# Register top-level submit command
-register_submit(app)
 
 # Load all the sub commands
 cli_names = set(

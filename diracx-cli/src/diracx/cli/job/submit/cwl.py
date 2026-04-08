@@ -7,7 +7,7 @@ from typing import Annotated
 
 import typer
 
-from .._submission.pipeline import submit_cwl
+from ..._submission.pipeline import submit_cwl
 from . import app
 
 
@@ -21,14 +21,14 @@ providing input values (one job per file, or one job per YAML document).
 Workflow inputs can also be passed as CLI arguments after a -- separator.
 These are parsed against the workflow's declared input parameters:
 
-  dirac cwl submit workflow.cwl -- --message "hello" --count 42
+  dirac job submit cwl workflow.cwl -- --message "hello" --count 42
 
 Combine file inputs with CLI overrides:
 
-  dirac cwl submit workflow.cwl base.yaml -- --message "override"
+  dirac job submit cwl workflow.cwl base.yaml -- --message "override"
 """,
 )
-async def submit(
+async def cwl(
     ctx: typer.Context,
     workflow: Annotated[Path, typer.Argument(help="CWL workflow file (.cwl)")],
     range: Annotated[

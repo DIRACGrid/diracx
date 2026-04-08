@@ -40,9 +40,7 @@ dirac-cwl-run = "diracx.cli.executor.__main__:cli"
 
 [project.entry-points."diracx.cli"]
 job = "diracx.cli.job:app"
-jobs = "diracx.cli.jobs:app"
 config = "diracx.cli.config:app"
-cwl = "diracx.cli.cwl:app"
 
 [project.entry-points."diracx.cli.hidden"]
 internal = "diracx.cli.internal:app"
