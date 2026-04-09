@@ -14,6 +14,7 @@ import logging
 import random
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -614,12 +615,25 @@ class JobWrapper:
             stdout_task = asyncio.create_task(_collect_stdout())
 
             stderr_lines: list[str] = []
+            last_commit = time.monotonic()
             async for raw in proc.stderr:
                 line = raw.decode().rstrip("\n")
                 stderr_lines.append(line)
                 print(line, file=sys.stderr, flush=True)
                 self._job_report.set_job_status(application_status=line)
+                now = time.monotonic()
+                if now - last_commit >= 2.0:
+                    try:
+                        await self._job_report.commit()
+                    except Exception:
+                        logger.warning("Failed to commit status update", exc_info=True)
+                    last_commit = now
+
+            # Flush any remaining status updates
+            try:
                 await self._job_report.commit()
+            except Exception:
+                logger.warning("Failed to commit final status update", exc_info=True)
 
             stdout_bytes = await stdout_task
             stdout_text = stdout_bytes.decode()
