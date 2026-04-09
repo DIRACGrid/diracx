@@ -13,6 +13,7 @@ import logging
 import random
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -596,19 +597,34 @@ class JobWrapper:
             logger.info("Executing Task: %s", command)
             self._job_report.set_job_status(minor_status=JobMinorStatus.APPLICATION)
             await self._job_report.commit()
-            result = subprocess.run(  # noqa: S603
-                command, capture_output=True, text=True, cwd=self._job_path
+            proc = subprocess.Popen(  # noqa: S603
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=self._job_path,
             )
 
-            if result.returncode != 0:
-                logger.error("Error in executing workflow:\n%s", result.stderr)
+            stderr_lines: list[str] = []
+            assert proc.stderr is not None  # guaranteed by stderr=PIPE
+            for line in proc.stderr:
+                line = line.rstrip("\n")
+                stderr_lines.append(line)
+                print(line, file=sys.stderr, flush=True)
+                self._job_report.set_job_status(application_status=line)
+                await self._job_report.commit()
+
+            assert proc.stdout is not None  # guaranteed by stdout=PIPE
+            stdout_text = proc.stdout.read()
+            proc.wait()
+
+            if proc.returncode != 0:
+                logger.error(
+                    "Error in executing workflow:\n%s", "\n".join(stderr_lines)
+                )
                 self._job_report.set_job_status(
                     JobStatus.COMPLETING,
                     minor_status=JobMinorStatus.APP_ERRORS,
-                    application_status=(
-                        f"{getattr(job.task, 'label', None) or 'CWL task'}"
-                        f" failed (exit {result.returncode})"
-                    ),
                 )
                 self._job_report.set_job_status(JobStatus.FAILED)
                 return False
@@ -616,14 +632,13 @@ class JobWrapper:
             self._job_report.set_job_status(
                 JobStatus.COMPLETING,
                 minor_status=JobMinorStatus.APP_SUCCESS,
-                application_status=f"{getattr(job.task, 'label', None) or 'CWL task'} completed",
             )
             # Post-process the job
             logger.info("Post-processing Task...")
             if await self.post_process(
-                result.returncode,
-                result.stdout,
-                result.stderr,
+                proc.returncode,
+                stdout_text,
+                "\n".join(stderr_lines),
             ):
                 logger.info("Task post-processed successfully!")
                 self._job_report.set_job_status(
