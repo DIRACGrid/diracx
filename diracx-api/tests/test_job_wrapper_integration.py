@@ -67,7 +67,7 @@ def _build_cwl_tool() -> CommandLineTool:
                 "type": "stdout",
             }
         ],
-        stdout="std.out",
+        stdout="stdout.log",
         id=None,
         requirements=None,
     )
@@ -290,8 +290,8 @@ class TestJobWrapperIntegration:
         sb_key = "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh"
         assert sb_key in replica_map, f"replica_map must contain SB key {sb_key}"
 
-        # Output file (std.out) must exist in job dir
-        assert (job_path / "std.out").exists(), "std.out output file must exist"
+        # Output file (stdout.log) must exist in job dir
+        assert (job_path / "stdout.log").exists(), "stdout.log output file must exist"
 
         # Verify stderr lines were streamed as ApplicationStatus
         app_status_calls = [
@@ -433,7 +433,7 @@ class TestJobWrapperIntegration:
         fake_proc = MagicMock()
         fake_proc.stderr = _FakeStderr([f"{line}\n".encode() for line in known_stderr])
         fake_proc.stdout = _FakeStdout(
-            b'{"stdout_log": {"class": "File", "path": "std.out"}}'
+            b'{"stdout_log": {"class": "File", "path": "stdout.log"}}'
         )
         fake_proc.returncode = 0
         fake_proc.wait = AsyncMock(return_value=0)
@@ -442,7 +442,7 @@ class TestJobWrapperIntegration:
         async def mock_create_subprocess(*args, **kwargs):
             cwd = kwargs.get("cwd")
             if cwd:
-                (Path(cwd) / "std.out").write_text("Hello from LFN data file\n")
+                (Path(cwd) / "stdout.log").write_text("Hello from LFN data file\n")
             return fake_proc
 
         class _AbsPathWrapper(JobWrapper):
