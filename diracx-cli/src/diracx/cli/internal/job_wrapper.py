@@ -19,25 +19,6 @@ from diracx.api.job_wrapper import JobWrapper
 from diracx.core.models.cwl_submission import JobModel
 
 
-def _extract_sandbox_pfns(params: dict) -> list[str]:
-    """Extract SB: PFN strings from CWL File references in job params."""
-    pfns: list[str] = []
-    for value in params.values():
-        items = (
-            [value]
-            if isinstance(value, dict)
-            else value
-            if isinstance(value, list)
-            else []
-        )
-        for item in items:
-            if isinstance(item, dict) and item.get("class") == "File":
-                path = item.get("path", "")
-                if path.startswith("SB:"):
-                    pfns.append(path)
-    return pfns
-
-
 async def main():
     """Execute the job wrapper for a given job model.
 
@@ -102,12 +83,7 @@ async def main():
     # If workflow_params were stored, use them as CWL inputs
     if workflow_params:
         cwl_inputs_obj = load_inputfile(workflow_params)
-        # Extract sandbox PFNs from inputs (File values with SB: prefix)
-        sandbox_pfns = _extract_sandbox_pfns(workflow_params)
-        job_model_dict["input"] = {
-            "sandbox": sandbox_pfns or None,
-            "cwl": cwl_inputs_obj,
-        }
+        job_model_dict["input"] = {"sandbox": None, "cwl": cwl_inputs_obj}
 
     job = JobModel.model_validate(job_model_dict)
     job_wrapper = JobWrapper(job_id)
