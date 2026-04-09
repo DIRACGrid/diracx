@@ -48,10 +48,10 @@ from diracx.core.models.cwl_submission import JobInputModel, JobModel
 from diracx.core.models.job import JobMinorStatus, JobStatus
 
 # cwltool lifecycle patterns worth reporting as ApplicationStatus.
-# Matches: [job X] completed ..., [X] start, [workflow] starting X,
-# [X] will be skipped, [job X] exited with status, [X] Iteration N ...
-# The match group captures from the bracket onward, stripping log prefixes.
+# Anchored to a log-level prefix to avoid false positives from user output.
+# Group 1 captures from the bracket onward, stripping the prefix.
 _CWLTOOL_STATUS_RE = re.compile(
+    r"(?:INFO|WARNING|ERROR) "
     r"(\[(?:job |step )?[^\]]+\]"
     r" (?:completed \w+|start(?:ing \S+)?|will be skipped"
     r"|exited with status: \d+|was terminated by signal: \w+"
@@ -636,7 +636,7 @@ class JobWrapper:
                 # Only report lifecycle transitions as ApplicationStatus
                 match = _CWLTOOL_STATUS_RE.search(line)
                 if match:
-                    self._job_report.set_job_status(application_status=match.group(0))
+                    self._job_report.set_job_status(application_status=match.group(1))
                     now = time.monotonic()
                     if now - last_commit >= 2.0:
                         try:
