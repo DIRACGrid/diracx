@@ -25,11 +25,11 @@ async def main():
     Fetches the CWL workflow definition and input parameters from the
     diracX API using the WorkflowID stored in the job config JSON.
     """
-    if len(sys.argv) != 3:
-        logging.error("2 arguments required, <json-file> <jobID>")
+    if len(sys.argv) < 2:
+        logging.error("Usage: job_wrapper.py <jobID>")
         sys.exit(1)
 
-    job_id = int(sys.argv[2])
+    job_id = int(sys.argv[-1])
 
     # Fetch workflow_id, CWL, and params from diracX API using the job_id
     from diracx.client.aio import AsyncDiracClient
