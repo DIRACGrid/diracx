@@ -560,7 +560,7 @@ class JobWrapper:
             )
 
     async def run_job(self, job: JobModel) -> bool:
-        """Execute a given CWL workflow using dirac-cwl run via subprocess.
+        """Execute a given CWL workflow using dirac-cwl-run via subprocess.
 
         This is the equivalent of the DIRAC JobWrapper.
 
@@ -603,13 +603,20 @@ class JobWrapper:
             if result.returncode != 0:
                 logger.error("Error in executing workflow:\n%s", result.stderr)
                 self._job_report.set_job_status(
-                    JobStatus.COMPLETING, minor_status=JobMinorStatus.APP_ERRORS
+                    JobStatus.COMPLETING,
+                    minor_status=JobMinorStatus.APP_ERRORS,
+                    application_status=(
+                        f"{getattr(job.task, 'label', None) or 'CWL task'}"
+                        f" failed (exit {result.returncode})"
+                    ),
                 )
                 self._job_report.set_job_status(JobStatus.FAILED)
                 return False
             logger.info("Task executed successfully!")
             self._job_report.set_job_status(
-                JobStatus.COMPLETING, minor_status=JobMinorStatus.APP_SUCCESS
+                JobStatus.COMPLETING,
+                minor_status=JobMinorStatus.APP_SUCCESS,
+                application_status=f"{getattr(job.task, 'label', None) or 'CWL task'} completed",
             )
             # Post-process the job
             logger.info("Post-processing Task...")
