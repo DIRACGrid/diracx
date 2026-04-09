@@ -101,6 +101,9 @@ def setup_diracx() -> None:
     DIRAC.initialize()
 
     from DIRAC import gConfig
+    from DIRAC.Core.Security.DiracX import (
+        diracxTokenFromPEM,  # type: ignore[import-untyped]
+    )
     from DIRAC.Core.Security.Locations import (
         getDefaultProxyLocation,  # type: ignore[import-untyped]
     )
@@ -112,7 +115,7 @@ def setup_diracx() -> None:
     os.environ["DIRACX_URL"] = diracx_url
 
     proxy_location = getDefaultProxyLocation()
-    diracx_token = DIRAC.Core.Security.DiracX.diracxTokenFromPEM(proxy_location)
+    diracx_token = diracxTokenFromPEM(proxy_location)
     if not diracx_token:
         raise ValueError(f"No diracx token in the proxy file {proxy_location}")
 
