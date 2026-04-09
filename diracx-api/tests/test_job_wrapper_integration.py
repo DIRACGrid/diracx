@@ -301,10 +301,16 @@ class TestJobWrapperIntegration:
             and call.args == ()
             and set(call.kwargs.keys()) == {"application_status"}
         ]
-        # cwltool emits stderr lines; at least some should have been relayed
+        # cwltool emits lifecycle lines; at least one should have been relayed
         assert len(app_status_calls) > 0, (
-            "stderr lines should be relayed as ApplicationStatus via set_job_status"
+            "cwltool lifecycle lines should be relayed as ApplicationStatus"
         )
+        # Verify no log level prefixes leak into ApplicationStatus
+        for call in app_status_calls:
+            status = call.kwargs["application_status"]
+            assert status.startswith("["), (
+                f"ApplicationStatus should start with '[', got: {status!r}"
+            )
 
     async def test_stderr_lines_stored_as_application_status(
         self, job_files, monkeypatch, tmp_path
@@ -400,10 +406,17 @@ class TestJobWrapperIntegration:
         job_path = tmp_path / "workernode" / "1234"
         job_path.mkdir(parents=True)
 
-        # Mock async subprocess to emit known stderr lines
+        # Mock async subprocess to emit known stderr lines.
+        # Mix lifecycle lines (matched by _STATUS_RE) with noise lines (not matched).
         known_stderr = [
-            "INFO [cwltool] Running step1",
-            "WARNING [cwltool] Disk almost full",
+            "INFO Resolved '/tmp/task.cwl' to 'file:///tmp/task.cwl'",
+            "INFO [job echo_job] /tmp/xyz$ echo hello",
+            "INFO [job echo_job] completed success",
+            "INFO Final process status is success",
+        ]
+        # Only lifecycle lines become ApplicationStatus, with log prefix stripped
+        expected_statuses = [
+            "[job echo_job] completed success",
         ]
 
         class _FakeStderr:
@@ -475,14 +488,11 @@ class TestJobWrapperIntegration:
             and call.args == ()
             and set(call.kwargs.keys()) == {"application_status"}
         ]
-        assert streamed_statuses == known_stderr, (
-            f"Expected stderr lines {known_stderr} as ApplicationStatus, got {streamed_statuses}"
+        assert streamed_statuses == expected_statuses, (
+            f"Expected lifecycle lines {expected_statuses} as ApplicationStatus, "
+            f"got {streamed_statuses}"
         )
 
-        # Verify commit() was called after each stderr line (at minimum)
-        # commit is called in pre_process, in the streaming loop, and in post_process
-        # so it should be called at least len(known_stderr) times
-        assert job_report_mock.commit.call_count >= len(known_stderr), (
-            f"commit() should be called at least {len(known_stderr)} times, "
-            f"got {job_report_mock.commit.call_count}"
-        )
+        # commit() is called in pre_process, after the streaming loop (flush),
+        # and in post_process — at least once for the flush
+        assert job_report_mock.commit.call_count >= 1

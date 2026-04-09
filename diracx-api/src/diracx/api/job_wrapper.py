@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 import shutil
 import sys
 import time
@@ -45,6 +46,17 @@ from diracx.core.models.commands import (
 from diracx.core.models.cwl import JobHint
 from diracx.core.models.cwl_submission import JobInputModel, JobModel
 from diracx.core.models.job import JobMinorStatus, JobStatus
+
+# cwltool lifecycle patterns worth reporting as ApplicationStatus.
+# Matches: [job X] completed ..., [X] start, [workflow] starting X,
+# [X] will be skipped, [job X] exited with status, [X] Iteration N ...
+# The match group captures from the bracket onward, stripping log prefixes.
+_CWLTOOL_STATUS_RE = re.compile(
+    r"(\[(?:job |step )?[^\]]+\]"
+    r" (?:completed \w+|start(?:ing \S+)?|will be skipped"
+    r"|exited with status: \d+|was terminated by signal: \w+"
+    r"|Iteration \d+ completed \w+))"
+)
 
 # -----------------------------------------------------------------------------
 # JobWrapper
@@ -619,15 +631,22 @@ class JobWrapper:
             async for raw in proc.stderr:
                 line = raw.decode().rstrip("\n")
                 stderr_lines.append(line)
+                # Always re-emit to stderr for Watchdog peek
                 print(line, file=sys.stderr, flush=True)
-                self._job_report.set_job_status(application_status=line)
-                now = time.monotonic()
-                if now - last_commit >= 2.0:
-                    try:
-                        await self._job_report.commit()
-                    except Exception:
-                        logger.warning("Failed to commit status update", exc_info=True)
-                    last_commit = now
+                # Only report lifecycle transitions as ApplicationStatus
+                match = _CWLTOOL_STATUS_RE.search(line)
+                if match:
+                    self._job_report.set_job_status(application_status=match.group(0))
+                    now = time.monotonic()
+                    if now - last_commit >= 2.0:
+                        try:
+                            await self._job_report.commit()
+                        except Exception:
+                            logger.warning(
+                                "Failed to commit status update",
+                                exc_info=True,
+                            )
+                        last_commit = now
 
             # Flush any remaining status updates
             try:
