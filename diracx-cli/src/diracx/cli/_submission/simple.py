@@ -46,8 +46,13 @@ def generate_cwl(
             }
         ],
         "baseCommand": ["bash", "-c", command],
+        "stdout": "stdout.log",
+        "stderr": "stderr.log",
         "inputs": [],
-        "outputs": [],
+        "outputs": [
+            {"id": "stdout_log", "type": "stdout"},
+            {"id": "stderr_log", "type": "stderr"},
+        ],
         "$namespaces": {"dirac": "https://diracgrid.org/cwl#"},
     }
 

@@ -74,6 +74,15 @@ class TestGenerateCWL:
         cwl = generate_cwl(command="echo hello", sandbox_files=[])
         assert cwl["baseCommand"] == ["bash", "-c", "echo hello"]
 
+    def test_captures_stdout_stderr(self):
+        """Generated CWL should capture tool stdout/stderr to log files."""
+        cwl = generate_cwl(command="echo hello", sandbox_files=[])
+        assert cwl["stdout"] == "stdout.log"
+        assert cwl["stderr"] == "stderr.log"
+        output_ids = {o["id"] for o in cwl["outputs"]}
+        assert "stdout_log" in output_ids
+        assert "stderr_log" in output_ids
+
     def test_label_derived_from_command(self):
         cwl = generate_cwl(command="python my_script.py", sandbox_files=[])
         assert "my_script" in cwl.get("label", "") or "python" in cwl.get("label", "")
