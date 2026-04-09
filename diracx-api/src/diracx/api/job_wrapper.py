@@ -14,6 +14,7 @@ import random
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -605,8 +606,19 @@ class JobWrapper:
                 cwd=self._job_path,
             )
 
-            stderr_lines: list[str] = []
+            # Read stdout in background to avoid pipe deadlock
+            stdout_result: list[str] = []
+
+            def _read_stdout() -> None:
+                assert proc.stdout is not None
+                stdout_result.append(proc.stdout.read())
+
+            stdout_thread = threading.Thread(target=_read_stdout)
+            stdout_thread.start()
+
+            # Stream stderr line-by-line
             assert proc.stderr is not None  # guaranteed by stderr=PIPE
+            stderr_lines: list[str] = []
             for line in proc.stderr:
                 line = line.rstrip("\n")
                 stderr_lines.append(line)
@@ -614,8 +626,8 @@ class JobWrapper:
                 self._job_report.set_job_status(application_status=line)
                 await self._job_report.commit()
 
-            assert proc.stdout is not None  # guaranteed by stdout=PIPE
-            stdout_text = proc.stdout.read()
+            stdout_thread.join()
+            stdout_text = stdout_result[0] if stdout_result else ""
             proc.wait()
 
             if proc.returncode != 0:
@@ -625,6 +637,7 @@ class JobWrapper:
                 self._job_report.set_job_status(
                     JobStatus.COMPLETING,
                     minor_status=JobMinorStatus.APP_ERRORS,
+                    application_status=f"failed (exit {proc.returncode})",
                 )
                 self._job_report.set_job_status(JobStatus.FAILED)
                 return False
