@@ -120,9 +120,23 @@ def cwl_to_jdl(
     task_label = getattr(task, "label", None)
     task_id = getattr(task, "id", None)
     if task_label:
-        jdl_fields["JobName"] = task_label
+        job_name = task_label
     elif task_id and task_id != ".":
-        jdl_fields["JobName"] = task_id.split("#")[-1].split("/")[-1]
+        job_name = task_id.split("#")[-1].split("/")[-1]
+    else:
+        job_name = "cwl-job"
+
+    # Append parametric key=value pairs to job name for disambiguation
+    if input_params:
+        scalars = [
+            f"{k}={v}"
+            for k, v in input_params.items()
+            if isinstance(v, (int, float, str))
+        ]
+        if scalars:
+            job_name = f"{job_name} ({', '.join(scalars)})"
+
+    jdl_fields["JobName"] = job_name
 
     # Extract from CWL requirements (standard CWL, not dirac:Job)
     tags = set(job_hint.tags or [])
