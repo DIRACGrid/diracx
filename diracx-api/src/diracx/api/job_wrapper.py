@@ -8,11 +8,14 @@ CWL execution happens via dirac-cwl-run subprocess.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import random
+import re
 import shutil
-import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -43,6 +46,17 @@ from diracx.core.models.commands import (
 from diracx.core.models.cwl import JobHint
 from diracx.core.models.cwl_submission import JobInputModel, JobModel
 from diracx.core.models.job import JobMinorStatus, JobStatus
+
+# cwltool lifecycle patterns worth reporting as ApplicationStatus.
+# Anchored to a log-level prefix to avoid false positives from user output.
+# Group 1 captures from the bracket onward, stripping the prefix.
+_CWLTOOL_STATUS_RE = re.compile(
+    r"(?:INFO|WARNING|ERROR) "
+    r"(\[(?:job |step )?[^\]]+\]"
+    r" (?:completed \w+|start(?:ing \S+)?|will be skipped"
+    r"|exited with status: \d+|was terminated by signal: \w+"
+    r"|Iteration \d+ completed \w+))"
+)
 
 # -----------------------------------------------------------------------------
 # JobWrapper
@@ -560,7 +574,7 @@ class JobWrapper:
             )
 
     async def run_job(self, job: JobModel) -> bool:
-        """Execute a given CWL workflow using dirac-cwl run via subprocess.
+        """Execute a given CWL workflow using dirac-cwl-run via subprocess.
 
         This is the equivalent of the DIRAC JobWrapper.
 
@@ -596,27 +610,76 @@ class JobWrapper:
             logger.info("Executing Task: %s", command)
             self._job_report.set_job_status(minor_status=JobMinorStatus.APPLICATION)
             await self._job_report.commit()
-            result = subprocess.run(  # noqa: S603
-                command, capture_output=True, text=True, cwd=self._job_path
+            proc = await asyncio.create_subprocess_exec(  # noqa: S603
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=self._job_path,
             )
+            assert proc.stderr is not None  # guaranteed by stderr=PIPE
+            assert proc.stdout is not None  # guaranteed by stdout=PIPE
 
-            if result.returncode != 0:
-                logger.error("Error in executing workflow:\n%s", result.stderr)
+            # Stream stderr line-by-line while collecting stdout concurrently
+            async def _collect_stdout() -> bytes:
+                assert proc.stdout is not None
+                return await proc.stdout.read()
+
+            stdout_task = asyncio.create_task(_collect_stdout())
+
+            stderr_lines: list[str] = []
+            last_commit = time.monotonic()
+            async for raw in proc.stderr:
+                line = raw.decode().rstrip("\n")
+                stderr_lines.append(line)
+                # Always re-emit to stderr for Watchdog peek
+                print(line, file=sys.stderr, flush=True)
+                # Only report lifecycle transitions as ApplicationStatus
+                match = _CWLTOOL_STATUS_RE.search(line)
+                if match:
+                    self._job_report.set_job_status(application_status=match.group(1))
+                    now = time.monotonic()
+                    if now - last_commit >= 2.0:
+                        try:
+                            await self._job_report.commit()
+                        except Exception:
+                            logger.warning(
+                                "Failed to commit status update",
+                                exc_info=True,
+                            )
+                        last_commit = now
+
+            # Flush any remaining status updates
+            try:
+                await self._job_report.commit()
+            except Exception:
+                logger.warning("Failed to commit final status update", exc_info=True)
+
+            stdout_bytes = await stdout_task
+            stdout_text = stdout_bytes.decode()
+            await proc.wait()
+
+            if proc.returncode != 0:
+                logger.error(
+                    "Error in executing workflow:\n%s", "\n".join(stderr_lines)
+                )
                 self._job_report.set_job_status(
-                    JobStatus.COMPLETING, minor_status=JobMinorStatus.APP_ERRORS
+                    JobStatus.COMPLETING,
+                    minor_status=JobMinorStatus.APP_ERRORS,
+                    application_status=f"failed (exit {proc.returncode})",
                 )
                 self._job_report.set_job_status(JobStatus.FAILED)
                 return False
             logger.info("Task executed successfully!")
             self._job_report.set_job_status(
-                JobStatus.COMPLETING, minor_status=JobMinorStatus.APP_SUCCESS
+                JobStatus.COMPLETING,
+                minor_status=JobMinorStatus.APP_SUCCESS,
             )
             # Post-process the job
             logger.info("Post-processing Task...")
             if await self.post_process(
-                result.returncode,
-                result.stdout,
-                result.stderr,
+                proc.returncode,
+                stdout_text,
+                "\n".join(stderr_lines),
             ):
                 logger.info("Task post-processed successfully!")
                 self._job_report.set_job_status(
