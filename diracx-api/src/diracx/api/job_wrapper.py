@@ -8,13 +8,12 @@ CWL execution happens via dirac-cwl-run subprocess.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import random
 import shutil
-import subprocess
 import sys
-import threading
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -598,37 +597,33 @@ class JobWrapper:
             logger.info("Executing Task: %s", command)
             self._job_report.set_job_status(minor_status=JobMinorStatus.APPLICATION)
             await self._job_report.commit()
-            proc = subprocess.Popen(  # noqa: S603
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+            proc = await asyncio.create_subprocess_exec(  # noqa: S603
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 cwd=self._job_path,
             )
-
-            # Read stdout in background to avoid pipe deadlock
-            stdout_result: list[str] = []
-
-            def _read_stdout() -> None:
-                assert proc.stdout is not None
-                stdout_result.append(proc.stdout.read())
-
-            stdout_thread = threading.Thread(target=_read_stdout)
-            stdout_thread.start()
-
-            # Stream stderr line-by-line
             assert proc.stderr is not None  # guaranteed by stderr=PIPE
+            assert proc.stdout is not None  # guaranteed by stdout=PIPE
+
+            # Stream stderr line-by-line while collecting stdout concurrently
+            async def _collect_stdout() -> bytes:
+                assert proc.stdout is not None
+                return await proc.stdout.read()
+
+            stdout_task = asyncio.create_task(_collect_stdout())
+
             stderr_lines: list[str] = []
-            for line in proc.stderr:
-                line = line.rstrip("\n")
+            async for raw in proc.stderr:
+                line = raw.decode().rstrip("\n")
                 stderr_lines.append(line)
                 print(line, file=sys.stderr, flush=True)
                 self._job_report.set_job_status(application_status=line)
                 await self._job_report.commit()
 
-            stdout_thread.join()
-            stdout_text = stdout_result[0] if stdout_result else ""
-            proc.wait()
+            stdout_bytes = await stdout_task
+            stdout_text = stdout_bytes.decode()
+            await proc.wait()
 
             if proc.returncode != 0:
                 logger.error(

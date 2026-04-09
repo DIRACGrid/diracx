@@ -400,22 +400,46 @@ class TestJobWrapperIntegration:
         job_path = tmp_path / "workernode" / "1234"
         job_path.mkdir(parents=True)
 
-        # Mock Popen to emit known stderr lines
+        # Mock async subprocess to emit known stderr lines
         known_stderr = [
             "INFO [cwltool] Running step1",
             "WARNING [cwltool] Disk almost full",
         ]
+
+        class _FakeStderr:
+            """Async iterator that yields encoded stderr lines."""
+
+            def __init__(self, lines: list[bytes]):
+                self._iter = iter(lines)
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                try:
+                    return next(self._iter)
+                except StopIteration:
+                    raise StopAsyncIteration from None
+
+        class _FakeStdout:
+            """Async reader that returns encoded stdout."""
+
+            def __init__(self, data: bytes):
+                self._data = data
+
+            async def read(self) -> bytes:
+                return self._data
+
         fake_proc = MagicMock()
-        fake_proc.stderr = iter([line + "\n" for line in known_stderr])
-        fake_proc.stdout = MagicMock()
-        fake_proc.stdout.read.return_value = (
-            '{"stdout_log": {"class": "File", "path": "std.out"}}'
+        fake_proc.stderr = _FakeStderr([f"{line}\n".encode() for line in known_stderr])
+        fake_proc.stdout = _FakeStdout(
+            b'{"stdout_log": {"class": "File", "path": "std.out"}}'
         )
         fake_proc.returncode = 0
-        fake_proc.wait.return_value = 0
+        fake_proc.wait = AsyncMock(return_value=0)
 
-        # Create the expected output file so post_process doesn't fail
-        def create_output_on_popen(*args, **kwargs):
+        # Create the expected output file when subprocess is spawned
+        async def mock_create_subprocess(*args, **kwargs):
             cwd = kwargs.get("cwd")
             if cwd:
                 (Path(cwd) / "std.out").write_text("Hello from LFN data file\n")
@@ -432,7 +456,9 @@ class TestJobWrapperIntegration:
             patch.object(_jw_mod.shutil, "rmtree", lambda p, **kw: None),
             patch("random.randint", return_value=1234),
             patch.object(
-                _jw_mod.subprocess, "Popen", side_effect=create_output_on_popen
+                _jw_mod.asyncio,
+                "create_subprocess_exec",
+                side_effect=mock_create_subprocess,
             ),
         ):
             wrapper = _AbsPathWrapper(job_id=42)
