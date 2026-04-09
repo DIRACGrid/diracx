@@ -25,11 +25,11 @@ async def main():
     Fetches the CWL workflow definition and input parameters from the
     diracX API using the WorkflowID stored in the job config JSON.
     """
-    if len(sys.argv) != 3:
-        logging.error("2 arguments required, <json-file> <jobID>")
+    if len(sys.argv) < 2:
+        logging.error("Usage: job_wrapper.py <jobID>")
         sys.exit(1)
 
-    job_id = int(sys.argv[2])
+    job_id = int(sys.argv[-1])
 
     # Fetch workflow_id, CWL, and params from diracX API using the job_id
     from diracx.client.aio import AsyncDiracClient
@@ -70,7 +70,12 @@ async def main():
     with tempfile.NamedTemporaryFile("w+", suffix=".cwl", delete=False) as f:
         YAML().dump(task_dict, f)
         f.flush()
-        task_obj = load_document_by_uri(f.name)
+        cwl_path = f.name
+
+    try:
+        task_obj = load_document_by_uri(cwl_path)
+    finally:
+        os.unlink(cwl_path)
 
     # Build job model
     job_model_dict: dict[str, Any] = {"task": task_obj, "input": None}
@@ -101,6 +106,9 @@ def setup_diracx() -> None:
     DIRAC.initialize()
 
     from DIRAC import gConfig
+    from DIRAC.Core.Security.DiracX import (
+        diracxTokenFromPEM,  # type: ignore[import-untyped]
+    )
     from DIRAC.Core.Security.Locations import (
         getDefaultProxyLocation,  # type: ignore[import-untyped]
     )
@@ -112,7 +120,7 @@ def setup_diracx() -> None:
     os.environ["DIRACX_URL"] = diracx_url
 
     proxy_location = getDefaultProxyLocation()
-    diracx_token = DIRAC.Core.Security.DiracX.diracxTokenFromPEM(proxy_location)
+    diracx_token = diracxTokenFromPEM(proxy_location)
     if not diracx_token:
         raise ValueError(f"No diracx token in the proxy file {proxy_location}")
 

@@ -11,7 +11,7 @@ from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
 from diracx.client.models import CWLJobSubmission  # type: ignore[attr-defined]
 
 from .confirm import build_summary, needs_confirmation, prompt_confirmation
-from .inputs import parse_cli_args, parse_input_files
+from .inputs import parse_cli_args, parse_input_files, parse_range
 from .sandbox import (
     group_jobs_by_sandbox,
     rewrite_sandbox_refs,
@@ -86,12 +86,21 @@ async def submit_cwl(
         else:
             jobs = [cli_input]
 
-    # 3. Handle range
-    # TODO: Task 8 — range fields not yet in CWLJobSubmission model
+    # 3. Handle range — server-side expansion
     if range_spec:
-        raise NotImplementedError(
-            "Range submission requires server-side model changes (Task 8)"
-        )
+        param, start, end, step = parse_range(range_spec)
+        base_inputs = jobs[0] if jobs else None
+
+        async with AsyncDiracClient() as client:
+            body = CWLJobSubmission(
+                workflow=cwl_yaml,
+                range_param=param,
+                range_start=start,
+                range_end=end,
+                range_step=step,
+                base_inputs=base_inputs,
+            )
+            return await client.jobs.submit_cwl_jobs(body)
 
     # 4. Sandbox processing
     if not jobs:
