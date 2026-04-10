@@ -16,10 +16,10 @@ import yaml
 if TYPE_CHECKING:
     from diraccfg.cfg import CFGAsDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typer import Option
 
-from diracx.core.config import Config, Field, SupportInfo
+from diracx.core.config import Config, SupportInfo
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 
 from ..utils import AsyncTyper
