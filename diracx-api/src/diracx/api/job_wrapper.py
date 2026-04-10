@@ -370,7 +370,7 @@ class JobWrapper:
         # Add sandbox entries
         for sb_path, local_path in sandbox_mappings.items():
             entries[sb_path] = {
-                "replicas": [{"url": local_path.as_uri(), "se": "local"}],
+                "replicas": [{"url": local_path.resolve().as_uri(), "se": "local"}],
             }
 
         if entries:

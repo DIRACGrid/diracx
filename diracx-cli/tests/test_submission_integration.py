@@ -62,7 +62,7 @@ class TestIntegration:
             ]
         )
 
-        fake_pfn = "SB:SandboxSE|/S3/bucket/sha256:abc123.tar.zst"
+        fake_sb_ref = "SB:SandboxSE|/S3/bucket/sha256:abc123.tar.zst"
 
         with (
             patch(
@@ -71,7 +71,7 @@ class TestIntegration:
             patch(
                 "diracx.api.jobs.create_sandbox",
                 new_callable=AsyncMock,
-                return_value=fake_pfn,
+                return_value=fake_sb_ref,
             ),
         ):
             mock_client_cls.return_value.__aenter__ = AsyncMock(
@@ -90,7 +90,7 @@ class TestIntegration:
         assert len(results) == 1
         call_body = mock_client.jobs.submit_cwl_jobs.call_args[0][0]
         submitted_inputs = call_body.inputs[0]
-        assert submitted_inputs["script"]["path"] == fake_pfn
+        assert submitted_inputs["script"]["path"] == f"{fake_sb_ref}#run.py"
         assert submitted_inputs["message"] == "integration test"
 
     async def test_submit_with_lfn_no_sandbox(self, tmp_path):
@@ -165,7 +165,7 @@ class TestIntegration:
             ]
         )
 
-        fake_pfn = "SB:SandboxSE|/S3/bucket/sha256:shared.tar.zst"
+        fake_sb_ref = "SB:SandboxSE|/S3/bucket/sha256:shared.tar.zst"
 
         with (
             patch(
@@ -174,7 +174,7 @@ class TestIntegration:
             patch(
                 "diracx.api.jobs.create_sandbox",
                 new_callable=AsyncMock,
-                return_value=fake_pfn,
+                return_value=fake_sb_ref,
             ) as mock_create_sb,
         ):
             mock_client_cls.return_value.__aenter__ = AsyncMock(
