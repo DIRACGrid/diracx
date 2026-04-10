@@ -193,10 +193,12 @@ def cwl_to_jdl(
             if input_params and ref.source in input_params:
                 val = input_params[ref.source]
                 if isinstance(val, dict) and "path" in val:
-                    sandbox_files.append(val["path"])
+                    # Strip #fragment (file-inside-archive) — server only
+                    # knows the sandbox PFN without it
+                    sandbox_files.append(val["path"].split("#")[0])
                 elif isinstance(val, list):
                     sandbox_files.extend(
-                        item["path"]
+                        item["path"].split("#")[0]
                         for item in val
                         if isinstance(item, dict) and "path" in item
                     )
