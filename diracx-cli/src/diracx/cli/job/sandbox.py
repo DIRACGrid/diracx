@@ -34,7 +34,10 @@ async def _get_output_sb_refs(job_id: int) -> list[str]:
 async def _download_sandbox_bytes(sb_ref: str) -> bytes:
     """Download a sandbox tar archive and return the raw bytes."""
     async with AsyncDiracClient() as client:
-        res = await client.jobs.get_sandbox_file(pfn=sb_ref)
+        # Strip SB:SE| prefix — the server accepts just the /S3/... path,
+        # and the generated client regex has a typo that rejects "SB:"
+        pfn = sb_ref.split("|", 1)[-1] if "|" in sb_ref else sb_ref
+        res = await client.jobs.get_sandbox_file(pfn=pfn)
     async with httpx.AsyncClient() as http_client:
         response = await http_client.get(res.url)
         response.raise_for_status()
