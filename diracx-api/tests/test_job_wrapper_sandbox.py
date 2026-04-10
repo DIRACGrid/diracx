@@ -18,17 +18,17 @@ class TestParseSBPath:
     """Test the SB: path parsing logic."""
 
     def test_parse_sb_path(self):
-        """Parse SB: path into PFN and relative path."""
+        """Parse SB: path into sandbox reference and relative path."""
         sb_path = "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst#helper.sh"
-        pfn, rel_path = JobWrapper.parse_sb_path(sb_path)
-        assert pfn == "SandboxSE|/S3/store/sha256:abc123.tar.zst"
+        sb_ref, rel_path = JobWrapper.parse_sb_path(sb_path)
+        assert sb_ref == "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst"
         assert rel_path == "helper.sh"
 
     def test_parse_sb_path_nested(self):
         """Parse SB: path with nested relative path."""
         sb_path = "SB:SandboxSE|/S3/store/sha256:def456.tar.zst#config/db.yaml"
-        pfn, rel_path = JobWrapper.parse_sb_path(sb_path)
-        assert pfn == "SandboxSE|/S3/store/sha256:def456.tar.zst"
+        sb_ref, rel_path = JobWrapper.parse_sb_path(sb_path)
+        assert sb_ref == "SB:SandboxSE|/S3/store/sha256:def456.tar.zst"
         assert rel_path == "config/db.yaml"
 
     def test_parse_sb_path_no_fragment(self):

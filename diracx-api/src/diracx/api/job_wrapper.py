@@ -92,13 +92,13 @@ class JobWrapper:
 
         Parses SB: prefixed paths from CWL input values (identified via the
         hint's input_sandbox source references), downloads and extracts sandbox
-        tars (cached per unique PFN), and returns a mapping of SB: paths to
-        their local extracted file paths for replica map injection.
+        tars (cached per unique SB: reference), and returns a mapping of full
+        SB: URIs to their local extracted file paths for replica map injection.
 
         :param inputs: The job input model containing CWL input values.
         :param job_hint: The dirac:Job hint with input_sandbox config.
         :param job_path: Path to the job working directory.
-        :return: Dict mapping SB: path strings to local file Paths.
+        :return: Dict mapping SB: URI strings to local file Paths.
         """
         sandbox_mappings: dict[str, Path] = {}
         if not job_hint.input_sandbox:
@@ -109,7 +109,7 @@ class JobWrapper:
         )
 
         # Cache: download each sandbox tar only once
-        downloaded_pfns: set[str] = set()
+        downloaded_sb_refs: set[str] = set()
 
         for ref in job_hint.input_sandbox:
             cwl_value = inputs.cwl.get(ref.source)
@@ -124,12 +124,12 @@ class JobWrapper:
                         "Skipping non-SB: path in input_sandbox: %s", file_path
                     )
                     continue
-                pfn, rel_path = self.parse_sb_path(file_path)
-                # Download + extract once per unique PFN
-                if pfn not in downloaded_pfns:
-                    await download_sandbox(pfn, job_path)
-                    downloaded_pfns.add(pfn)
-                # Map the full SB: path to the local extracted file
+                sb_ref, rel_path = self.parse_sb_path(file_path)
+                # Download + extract once per unique sandbox reference
+                if sb_ref not in downloaded_sb_refs:
+                    await download_sandbox(sb_ref, job_path)
+                    downloaded_sb_refs.add(sb_ref)
+                # Map the full SB: URI to the local extracted file
                 sandbox_mappings[file_path] = job_path / rel_path
 
         logger.info("Input sandbox files downloaded successfully")
@@ -153,21 +153,23 @@ class JobWrapper:
 
     @staticmethod
     def parse_sb_path(path: str) -> tuple[str, str]:
-        """Parse an SB: path into sandbox PFN and relative path.
+        """Parse an SB: URI into sandbox reference and relative path.
 
-        Format: SB:<sandbox_pfn>#<relative_path_inside_tar>
+        Format: SB:<se_name>|<s3_path>#<relative_path_inside_tar>
 
-        :param path: SB:-prefixed path string
-        :return: Tuple of (sandbox_pfn, relative_path)
+        The SB: prefix is preserved in the returned reference — it is
+        the canonical form used by the DiracX API for sandbox operations.
+
+        :param path: Full SB: URI string (e.g. ``SB:SandboxSE|/S3/...#file.sh``)
+        :return: Tuple of (sb_ref, relative_path) where sb_ref includes ``SB:``
         :raises ValueError: If path is not a valid SB: reference
         """
         if not path.startswith("SB:"):
             raise ValueError(f"Not an SB: path: {path}")
-        rest = path.removeprefix("SB:")
-        if "#" not in rest:
+        if "#" not in path:
             raise ValueError(f"SB: path missing '#' fragment separator: {path}")
-        pfn, rel_path = rest.split("#", 1)
-        return pfn, rel_path
+        sb_ref, rel_path = path.split("#", 1)
+        return sb_ref, rel_path
 
     async def __upload_output_sandbox(
         self,

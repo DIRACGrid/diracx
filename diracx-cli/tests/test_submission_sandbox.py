@@ -134,8 +134,10 @@ def test_group_mixed_local_and_lfn_lfns_dont_affect_grouping() -> None:
 
 def test_rewrite_single_file() -> None:
     inputs = {"infile": {"class": "File", "path": "/local/file.txt"}}
-    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst"}
-    result = rewrite_sandbox_refs(inputs, pfn_map)
+    sb_ref_map = {
+        Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst"
+    }
+    result = rewrite_sandbox_refs(inputs, sb_ref_map)
     assert result == {
         "infile": {
             "class": "File",
@@ -146,8 +148,8 @@ def test_rewrite_single_file() -> None:
 
 def test_rewrite_lfn_not_rewritten() -> None:
     inputs = {"infile": {"class": "File", "path": "LFN:/grid/file.root"}}
-    pfn_map: dict[Path, str] = {}
-    result = rewrite_sandbox_refs(inputs, pfn_map)
+    sb_ref_map: dict[Path, str] = {}
+    result = rewrite_sandbox_refs(inputs, sb_ref_map)
     assert result == {"infile": {"class": "File", "path": "LFN:/grid/file.root"}}
 
 
@@ -159,11 +161,11 @@ def test_rewrite_array_mixed() -> None:
             {"class": "File", "path": "/local/c.txt"},
         ]
     }
-    pfn_map = {
+    sb_ref_map = {
         Path("/local/a.txt"): "SB:SandboxSE|/S3/store/sha256:aaa.tar.zst",
         Path("/local/c.txt"): "SB:SandboxSE|/S3/store/sha256:ccc.tar.zst",
     }
-    result = rewrite_sandbox_refs(inputs, pfn_map)
+    result = rewrite_sandbox_refs(inputs, sb_ref_map)
     assert result == {
         "files": [
             {
@@ -181,8 +183,8 @@ def test_rewrite_array_mixed() -> None:
 
 def test_rewrite_sb_not_rewritten() -> None:
     inputs = {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
-    pfn_map: dict[Path, str] = {}
-    result = rewrite_sandbox_refs(inputs, pfn_map)
+    sb_ref_map: dict[Path, str] = {}
+    result = rewrite_sandbox_refs(inputs, sb_ref_map)
     assert result == {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
 
 
@@ -192,8 +194,8 @@ def test_rewrite_non_file_values_preserved() -> None:
         "name": "hello",
         "infile": {"class": "File", "path": "/local/file.txt"},
     }
-    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
-    result = rewrite_sandbox_refs(inputs, pfn_map)
+    sb_ref_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
+    result = rewrite_sandbox_refs(inputs, sb_ref_map)
     assert result["count"] == 42
     assert result["name"] == "hello"
     assert result["infile"] == {
@@ -204,8 +206,8 @@ def test_rewrite_non_file_values_preserved() -> None:
 
 def test_rewrite_does_not_mutate_input() -> None:
     original = {"infile": {"class": "File", "path": "/local/file.txt"}}
-    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
-    result = rewrite_sandbox_refs(original, pfn_map)
+    sb_ref_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
+    result = rewrite_sandbox_refs(original, sb_ref_map)
     # Original must be unchanged
     assert original["infile"]["path"] == "/local/file.txt"
     assert (

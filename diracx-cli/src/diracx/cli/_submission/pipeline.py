@@ -42,14 +42,14 @@ async def _upload_sandboxes(
     """Upload sandboxes and rewrite File references in job inputs."""
     from diracx.api.jobs import create_sandbox
 
-    pfn_map: dict[Path, str] = {}
+    sb_ref_map: dict[Path, str] = {}
     for file_set, _job_indices in sandbox_groups:
         paths = sorted(file_set)
-        pfn = await create_sandbox(paths, client=client)
+        sb_ref = await create_sandbox(paths, client=client)
         for p in paths:
-            pfn_map[p] = pfn
+            sb_ref_map[p] = sb_ref
 
-    return [rewrite_sandbox_refs(job, pfn_map) for job in jobs]
+    return [rewrite_sandbox_refs(job, sb_ref_map) for job in jobs]
 
 
 async def submit_cwl(

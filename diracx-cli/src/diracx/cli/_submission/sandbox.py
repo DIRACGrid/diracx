@@ -80,20 +80,20 @@ def group_jobs_by_sandbox(
     return list(groups.items())
 
 
-def _rewrite_file_obj(file_obj: dict, pfn_map: dict[Path, str]) -> dict:
-    """Return a new File dict with the path rewritten if found in pfn_map."""
+def _rewrite_file_obj(file_obj: dict, sb_ref_map: dict[Path, str]) -> dict:
+    """Return a new File dict with the path rewritten if found in sb_ref_map."""
     path_str: str = file_obj["path"]
     if path_str.startswith("LFN:") or path_str.startswith("SB:"):
         return file_obj
     local = Path(path_str)
-    if local in pfn_map:
+    if local in sb_ref_map:
         # Append #filename so the wrapper can extract the file from the archive
-        return {**file_obj, "path": f"{pfn_map[local]}#{local.name}"}
+        return {**file_obj, "path": f"{sb_ref_map[local]}#{local.name}"}
     return file_obj
 
 
-def rewrite_sandbox_refs(inputs: dict, pfn_map: dict[Path, str]) -> dict:
-    """Return a new inputs dict with local File paths replaced by SB: PFN references.
+def rewrite_sandbox_refs(inputs: dict, sb_ref_map: dict[Path, str]) -> dict:
+    """Return a new inputs dict with local File paths replaced by SB: references.
 
     LFN: and SB: paths pass through unchanged.
     Non-File values pass through unchanged.
@@ -102,12 +102,12 @@ def rewrite_sandbox_refs(inputs: dict, pfn_map: dict[Path, str]) -> dict:
     result: dict = {}
     for key, value in inputs.items():
         if _is_file_obj(value):
-            result[key] = _rewrite_file_obj(value, pfn_map)
+            result[key] = _rewrite_file_obj(value, sb_ref_map)
         elif isinstance(value, list):
             new_list = []
             for item in value:
                 if _is_file_obj(item):
-                    new_list.append(_rewrite_file_obj(item, pfn_map))
+                    new_list.append(_rewrite_file_obj(item, sb_ref_map))
                 else:
                     new_list.append(item)
             result[key] = new_list
