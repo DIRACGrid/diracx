@@ -87,7 +87,8 @@ def _rewrite_file_obj(file_obj: dict, pfn_map: dict[Path, str]) -> dict:
         return file_obj
     local = Path(path_str)
     if local in pfn_map:
-        return {**file_obj, "path": pfn_map[local]}
+        # Append #filename so the wrapper can extract the file from the archive
+        return {**file_obj, "path": f"{pfn_map[local]}#{local.name}"}
     return file_obj
 
 

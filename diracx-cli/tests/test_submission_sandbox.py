@@ -134,9 +134,14 @@ def test_group_mixed_local_and_lfn_lfns_dont_affect_grouping() -> None:
 
 def test_rewrite_single_file() -> None:
     inputs = {"infile": {"class": "File", "path": "/local/file.txt"}}
-    pfn_map = {Path("/local/file.txt"): "SB:abc123/file.txt"}
+    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst"}
     result = rewrite_sandbox_refs(inputs, pfn_map)
-    assert result == {"infile": {"class": "File", "path": "SB:abc123/file.txt"}}
+    assert result == {
+        "infile": {
+            "class": "File",
+            "path": "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst#file.txt",
+        }
+    }
 
 
 def test_rewrite_lfn_not_rewritten() -> None:
@@ -155,15 +160,21 @@ def test_rewrite_array_mixed() -> None:
         ]
     }
     pfn_map = {
-        Path("/local/a.txt"): "SB:pfn1/a.txt",
-        Path("/local/c.txt"): "SB:pfn2/c.txt",
+        Path("/local/a.txt"): "SB:SandboxSE|/S3/store/sha256:aaa.tar.zst",
+        Path("/local/c.txt"): "SB:SandboxSE|/S3/store/sha256:ccc.tar.zst",
     }
     result = rewrite_sandbox_refs(inputs, pfn_map)
     assert result == {
         "files": [
-            {"class": "File", "path": "SB:pfn1/a.txt"},
+            {
+                "class": "File",
+                "path": "SB:SandboxSE|/S3/store/sha256:aaa.tar.zst#a.txt",
+            },
             {"class": "File", "path": "LFN:/grid/b.root"},
-            {"class": "File", "path": "SB:pfn2/c.txt"},
+            {
+                "class": "File",
+                "path": "SB:SandboxSE|/S3/store/sha256:ccc.tar.zst#c.txt",
+            },
         ]
     }
 
@@ -181,17 +192,22 @@ def test_rewrite_non_file_values_preserved() -> None:
         "name": "hello",
         "infile": {"class": "File", "path": "/local/file.txt"},
     }
-    pfn_map = {Path("/local/file.txt"): "SB:abc/file.txt"}
+    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
     result = rewrite_sandbox_refs(inputs, pfn_map)
     assert result["count"] == 42
     assert result["name"] == "hello"
-    assert result["infile"] == {"class": "File", "path": "SB:abc/file.txt"}
+    assert result["infile"] == {
+        "class": "File",
+        "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt",
+    }
 
 
 def test_rewrite_does_not_mutate_input() -> None:
     original = {"infile": {"class": "File", "path": "/local/file.txt"}}
-    pfn_map = {Path("/local/file.txt"): "SB:abc/file.txt"}
+    pfn_map = {Path("/local/file.txt"): "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"}
     result = rewrite_sandbox_refs(original, pfn_map)
     # Original must be unchanged
     assert original["infile"]["path"] == "/local/file.txt"
-    assert result["infile"]["path"] == "SB:abc/file.txt"
+    assert (
+        result["infile"]["path"] == "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt"
+    )
