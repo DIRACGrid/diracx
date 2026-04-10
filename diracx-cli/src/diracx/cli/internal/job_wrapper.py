@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import sys
-import tempfile
+from pathlib import Path
 from typing import Any
 
 from cwl_utils.parser import load_document_by_uri
@@ -67,15 +67,11 @@ async def main():
     yaml_doc = YAML()
     task_dict = yaml_doc.load(cwl_yaml)
 
-    with tempfile.NamedTemporaryFile("w+", suffix=".cwl", delete=False) as f:
+    cwl_path = Path.cwd() / f"{workflow_id[:8]}.cwl"
+    with open(cwl_path, "w") as f:
         YAML().dump(task_dict, f)
-        f.flush()
-        cwl_path = f.name
 
-    try:
-        task_obj = load_document_by_uri(cwl_path)
-    finally:
-        os.unlink(cwl_path)
+    task_obj = load_document_by_uri(str(cwl_path))
 
     # Build job model
     job_model_dict: dict[str, Any] = {"task": task_obj, "input": None}
