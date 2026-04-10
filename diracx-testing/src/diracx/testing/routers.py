@@ -25,7 +25,7 @@ def create_app():
      * replaces the parameter DBs with sqlite-backed versions
     """
     from diracx.db.os.utils import BaseOSDB
-    from diracx.routers import create_app
+    from diracx.routers.factory import create_app
 
     BaseOSDB.available_implementations = partial(
         fake_available_osdb_implementations,

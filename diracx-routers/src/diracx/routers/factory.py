@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = []
+__all__ = ["DIRACX_MIN_CLIENT_VERSION", "create_app", "create_app_inner"]
 
 import inspect
 import logging
