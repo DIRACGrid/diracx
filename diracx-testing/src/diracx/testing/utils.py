@@ -173,8 +173,8 @@ class ClientFactory:
         from diracx.core.settings import ServiceSettingsBase
         from diracx.db.os.utils import BaseOSDB
         from diracx.db.sql.utils import BaseSQLDB
-        from diracx.routers import create_app_inner
         from diracx.routers.access_policies import BaseAccessPolicy
+        from diracx.routers.factory import create_app_inner
 
         from .mock_osdb import fake_available_osdb_implementations
 
