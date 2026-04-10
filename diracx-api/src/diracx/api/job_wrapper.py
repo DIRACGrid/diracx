@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""Job wrapper for executing CWL workflows with DIRAC.
-
-"""
+"""Job wrapper for executing CWL workflows with DIRAC."""
 
 from __future__ import annotations
 
