@@ -187,14 +187,14 @@ class JobWrapper:
                 JobStatus.COMPLETING,
                 minor_status=JobMinorStatus.UPLOADING_OUTPUT_SANDBOX,
             )
-            sb_path = Path(await create_sandbox(outputs_to_sandbox))
+            sb_ref = await create_sandbox(outputs_to_sandbox)
             logger.info(
                 "Successfully stored output %s in Sandbox %s",
                 self._output_sandbox,
-                sb_path,
+                sb_ref,
             )
             await self._diracx_client.jobs.assign_sandbox_to_job(
-                self._job_id, f'"{sb_path}"'
+                self._job_id, f'"{sb_ref}"'
             )
             self._job_report.set_job_status(
                 JobStatus.COMPLETING,

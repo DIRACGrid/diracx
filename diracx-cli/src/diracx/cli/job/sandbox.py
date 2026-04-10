@@ -28,7 +28,8 @@ app = AsyncTyper(help="Output sandbox operations.")
 async def _get_output_sb_refs(job_id: int) -> list[str]:
     """Return the list of SB: references for a job's output sandbox."""
     async with AsyncDiracClient() as client:
-        return await client.jobs.get_job_sandbox(job_id, SandboxType.OUTPUT)
+        refs = await client.jobs.get_job_sandbox(job_id, SandboxType.OUTPUT)
+        return [r for r in (refs or []) if r is not None]
 
 
 async def _download_sandbox_bytes(sb_ref: str) -> bytes:
