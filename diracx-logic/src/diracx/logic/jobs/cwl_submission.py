@@ -224,15 +224,23 @@ def cwl_to_jdl(
             jdl_fields["InputData"] = lfns
 
     # OutputSandbox
+    sandbox_outputs: list[str] = []
+
+    # Auto-collect stdout/stderr filenames declared in CWL
+    if hasattr(task, "stdout") and task.stdout:
+        sandbox_outputs.append(task.stdout)
+    if hasattr(task, "stderr") and task.stderr:
+        sandbox_outputs.append(task.stderr)
+
     if job_hint.output_sandbox:
-        sandbox_outputs = []
         for ref in job_hint.output_sandbox:
             _validate_cwl_id(ref.source, cwl_output_ids, "output", ["File", "File[]"])
             out = cwl_output_ids[ref.source]
             if hasattr(out, "outputBinding") and out.outputBinding:
                 sandbox_outputs.append(out.outputBinding.glob)
-        if sandbox_outputs:
-            jdl_fields["OutputSandbox"] = sandbox_outputs
+
+    if sandbox_outputs:
+        jdl_fields["OutputSandbox"] = sandbox_outputs
 
     # OutputData (per-output SE and path)
     if job_hint.output_data:
