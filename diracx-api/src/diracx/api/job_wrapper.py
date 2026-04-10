@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """Job wrapper for executing CWL workflows with DIRAC.
 
-WARNING: Do not import cwltool in this module.
-cwltool is mypyc-compiled and must be patched before first import.
-CWL execution happens via dirac-cwl-run subprocess.
 """
 
 from __future__ import annotations
