@@ -5,7 +5,7 @@ from http import HTTPStatus
 import pytest
 from packaging.version import Version, parse
 
-from diracx.routers import DIRACX_MIN_CLIENT_VERSION
+from diracx.routers.factory import DIRACX_MIN_CLIENT_VERSION
 
 pytestmark = pytest.mark.enabled_dependencies(
     [

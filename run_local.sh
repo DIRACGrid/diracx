@@ -170,7 +170,7 @@ if ! wait_for_service "Redis" "$redis_pid" "${tmp_dir}/logs/redis.log" \
 fi
 
 # Start application services
-uvicorn --factory diracx.testing.routers:create_app --reload > "${tmp_dir}/logs/uvicorn.log" 2>&1 &
+uvicorn --factory diracx.testing.routers.factory:create_app --reload > "${tmp_dir}/logs/uvicorn.log" 2>&1 &
 diracx_pid=$!
 diracx-task-run scheduler > "${tmp_dir}/logs/scheduler.log" 2>&1 &
 scheduler_pid=$!
@@ -195,7 +195,7 @@ all_log_files=(
 all_commands=(
   "weed mini -dir=${tmp_dir}/seaweedfs -s3.config=${tmp_dir}/seaweedfs_s3.json"
   "redis-server --port 6379 --save \"\" --appendonly no"
-  "uvicorn --factory diracx.testing.routers:create_app --reload"
+  "uvicorn --factory diracx.testing.routers.factory:create_app --reload"
   "diracx-task-run scheduler"
   "diracx-task-run worker --worker-size small --max-concurrent-tasks 1"
   "diracx-task-run worker --worker-size medium --max-concurrent-tasks 1"
