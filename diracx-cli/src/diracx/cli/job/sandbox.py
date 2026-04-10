@@ -18,6 +18,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from diracx.client.aio import AsyncDiracClient
+from diracx.client.models import SandboxType
 
 from ..utils import AsyncTyper
 
@@ -27,7 +28,7 @@ app = AsyncTyper(help="Output sandbox operations.")
 async def _get_output_sb_refs(job_id: int) -> list[str]:
     """Return the list of SB: references for a job's output sandbox."""
     async with AsyncDiracClient() as client:
-        return await client.jobs.get_job_sandbox(job_id, "output")
+        return await client.jobs.get_job_sandbox(job_id, SandboxType.OUTPUT)
 
 
 async def _download_sandbox_bytes(sb_ref: str) -> bytes:
