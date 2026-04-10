@@ -4,7 +4,6 @@ from __future__ import annotations
 
 __all__ = [
     # Schema
-    "BaseModel",
     "Config",
     "DIRACConfig",
     "GroupConfig",
@@ -23,7 +22,6 @@ __all__ = [
 ]
 
 from .schema import (
-    BaseModel,
     Config,
     DIRACConfig,
     GroupConfig,
