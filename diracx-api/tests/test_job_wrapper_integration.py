@@ -139,18 +139,18 @@ class TestJobWrapperIntegration:
         # ------------------------------------------------------------------
         sandbox_calls: list[tuple[str, Path]] = []
 
-        async def mock_download_sandbox(pfn: str, job_path: Path) -> None:
-            sandbox_calls.append((pfn, job_path))
+        async def mock_download_sandbox(sb_ref: str, job_path: Path) -> None:
+            sandbox_calls.append((sb_ref, job_path))
             dest = job_path / "helper.sh"
             shutil.copy(helper_script, dest)
 
         monkeypatch.setattr(_jw_mod, "download_sandbox", mock_download_sandbox)
 
         # ------------------------------------------------------------------
-        # Mock: create_sandbox — returns a fake SB path
+        # Mock: create_sandbox — returns a fake SB: reference
         # ------------------------------------------------------------------
         async def mock_create_sandbox(files) -> str:
-            return "SandboxSE|/S3/store/sha256:output.tar.zst"
+            return "SB:SandboxSE|/S3/store/sha256:output.tar.zst"
 
         monkeypatch.setattr(_jw_mod, "create_sandbox", mock_create_sandbox)
 
@@ -259,10 +259,10 @@ class TestJobWrapperIntegration:
         # ------------------------------------------------------------------
         assert result is True, "run_job should return True on success"
 
-        # Verify sandbox download was called with the right PFN
+        # Verify sandbox download was called with the right SB: reference
         assert len(sandbox_calls) == 1
-        pfn_called, _ = sandbox_calls[0]
-        assert pfn_called == "SandboxSE|/S3/store/sha256:abc.tar.zst"
+        sb_ref_called, _ = sandbox_calls[0]
+        assert sb_ref_called == "SB:SandboxSE|/S3/store/sha256:abc.tar.zst"
 
         # Verify DataManager.getFile was called with the correct LFN
         dm_mock.getFile.assert_called_once()
@@ -279,7 +279,7 @@ class TestJobWrapperIntegration:
         # Inspect job directory (preserved since rmtree was mocked)
         assert job_path.exists(), "job_path should still exist (rmtree mocked)"
         assert (job_path / "task.cwl").exists(), "task.cwl must be written"
-        assert (job_path / "parameter.cwl").exists(), "parameter.cwl must be written"
+        assert (job_path / "parameter.yaml").exists(), "parameter.yaml must be written"
 
         # replica_map.json must exist with both LFN and SB: entries
         replica_map_path = job_path / "replica_map.json"
@@ -343,13 +343,13 @@ class TestJobWrapperIntegration:
         job_model = JobModel(task=task, input=job_input)
 
         # Mock download_sandbox and create_sandbox
-        async def mock_download_sandbox(pfn, job_path):
+        async def mock_download_sandbox(sb_ref, job_path):
             shutil.copy(helper_script, job_path / "helper.sh")
 
         monkeypatch.setattr(_jw_mod, "download_sandbox", mock_download_sandbox)
 
         async def mock_create_sandbox(files):
-            return "SandboxSE|/S3/store/sha256:output.tar.zst"
+            return "SB:SandboxSE|/S3/store/sha256:output.tar.zst"
 
         monkeypatch.setattr(_jw_mod, "create_sandbox", mock_create_sandbox)
 
