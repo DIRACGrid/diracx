@@ -15,6 +15,7 @@ from . import app
 
 
 @app.async_command(
+    context_settings={"allow_extra_args": True, "allow_interspersed_args": False},
     help="""Submit a simple command to the grid.
 
 Runs COMMAND on a worker node. Local files referenced in the command
@@ -23,12 +24,13 @@ are automatically detected and shipped as input sandboxes.
 Use --sandbox for additional files not mentioned in the command.
 
 Examples:
-  dirac job submit cmd "python my_script.py"
-  dirac job submit cmd "python my_script.py" --sandbox config.json
+  dirac job submit cmd echo hello
+  dirac job submit cmd python my_script.py --sandbox config.json
+  dirac job submit cmd -- ls -la /tmp
 """,
 )
 async def cmd(
-    command: Annotated[str, typer.Argument(help="Shell command to run on the grid")],
+    ctx: typer.Context,
     sandbox: Annotated[
         list[Path],
         typer.Option("--sandbox", help="Additional local files to ship"),
@@ -38,6 +40,11 @@ async def cmd(
     ] = False,
 ):
     """Submit a simple command to the grid."""
+    if not ctx.args:
+        print("Error: No command provided.")
+        raise typer.Exit(1)
+    command = " ".join(ctx.args)
+
     # Auto-detect files from command
     auto_files = detect_sandbox_files(command)
     all_sandbox = list(set(auto_files + sandbox))

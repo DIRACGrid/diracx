@@ -99,7 +99,7 @@ class TestSubmitCommand:
             mock_submit.return_value = [MagicMock(job_id=1001, status="Submitting")]
             result = runner.invoke(
                 job_app,
-                ["submit", "cmd", "python script.py", "-y"],
+                ["submit", "cmd", "-y", "python", "script.py"],
             )
 
         assert result.exit_code == 0, result.output
@@ -120,10 +120,11 @@ class TestSubmitCommand:
                 [
                     "submit",
                     "cmd",
-                    "echo hello",
                     "--sandbox",
                     str(tmp_path / "config.json"),
                     "-y",
+                    "echo",
+                    "hello",
                 ],
             )
 
