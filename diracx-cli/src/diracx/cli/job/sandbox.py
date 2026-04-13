@@ -52,7 +52,8 @@ def _open_tar(data: bytes) -> tarfile.TarFile:
     fh.seek(0)
     if magic.startswith(b"\x28\xb5\x2f\xfd"):
         dctx = zstandard.ZstdDecompressor()
-        decompressed = dctx.decompress(data)
+        reader = dctx.stream_reader(io.BytesIO(data))
+        decompressed = reader.read()
         return tarfile.open(fileobj=io.BytesIO(decompressed), mode="r")
     return tarfile.open(fileobj=fh, mode="r")
 
