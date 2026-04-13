@@ -279,7 +279,7 @@ class TestJobWrapperIntegration:
         # Inspect job directory (preserved since rmtree was mocked)
         assert job_path.exists(), "job_path should still exist (rmtree mocked)"
         assert (job_path / "task.cwl").exists(), "task.cwl must be written"
-        assert (job_path / "parameter.cwl").exists(), "parameter.cwl must be written"
+        assert (job_path / "parameter.yaml").exists(), "parameter.yaml must be written"
 
         # replica_map.json must exist with both LFN and SB: entries
         replica_map_path = job_path / "replica_map.json"

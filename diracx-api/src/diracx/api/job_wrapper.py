@@ -479,7 +479,7 @@ class JobWrapper:
             # Write input parameters to file
             logger.info("Preparing the parameters...")
             parameter_dict = save(cast(Saveable, arguments.cwl))
-            parameter_path = self._job_path / "parameter.cwl"
+            parameter_path = self._job_path / "parameter.yaml"
             with open(parameter_path, "w") as parameter_file:
                 YAML().dump(parameter_dict, parameter_file)
 
@@ -584,6 +584,16 @@ class JobWrapper:
         job_hint = JobHint.from_cwl(job.task)
         self._build_commands_from_hint(job_hint)
 
+        # Auto-collect CWL stdout/stderr type outputs for the output sandbox.
+        # cwl_utils stores output IDs as full URIs (e.g.
+        # file:///path/to/task.cwl#stdout_log) — rsplit extracts the bare name.
+        for out in getattr(job.task, "outputs", None) or []:
+            out_type = getattr(out, "type_", None) or getattr(out, "type", None)
+            if out_type in ("stdout", "stderr"):
+                out_id = getattr(out, "id", "").rsplit("#", 1)[-1]
+                if out_id and out_id not in self._output_sandbox:
+                    self._output_sandbox.append(out_id)
+
         # Isolate the job in a specific directory
         self._job_path = Path(".") / "workernode" / f"{random.randint(1000, 9999)}"  # noqa: S311
         self._job_path.mkdir(parents=True, exist_ok=True)
@@ -596,8 +606,13 @@ class JobWrapper:
 
             # Build dirac-cwl-run command (different interface from cwltool)
             task_file = self._job_path / "task.cwl"
-            param_file = self._job_path / "parameter.cwl"
-            command = ["dirac-cwl-run", str(task_file.name)]
+            param_file = self._job_path / "parameter.yaml"
+            command = [
+                "dirac-cwl-run",
+                str(task_file.name),
+                "--tmpdir-prefix",
+                str(self._job_path.resolve()) + "/",
+            ]
             if param_file.exists():
                 command.append(str(param_file.name))
             if self._replica_map_path and self._replica_map_path.exists():
