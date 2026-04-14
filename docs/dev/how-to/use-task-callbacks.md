@@ -7,7 +7,7 @@ The callback system provides a fan-out/fan-in pattern: spawn multiple child task
 Use `CallbackSpawner` to schedule children and a callback together:
 
 ```python
-from diracx.tasks.plumbing.depends import CallbackSpawner
+from diracx.tasks.depends import CallbackSpawner
 
 
 class OrchestrationTask(BaseTask):
@@ -40,7 +40,7 @@ The children are scheduled immediately. When the last child completes, the worke
 `CallbackSpawner` is a dependency injection type resolved by the worker. Declare it as a typed parameter in `execute()`:
 
 ```python
-from diracx.tasks.plumbing.depends import CallbackSpawner
+from diracx.tasks.depends import CallbackSpawner
 
 
 class MyTask(BaseTask):
