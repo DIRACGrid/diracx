@@ -138,6 +138,15 @@ jobs:
             PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-services' || 'gubbins-container-services' }}
           tags: ghcr.io/${{ matrix.extension == 'diracx' && 'diracgrid/diracx' || 'gubbins' }}/services:dev
           outputs: type=docker,dest=/tmp/services_image.tar
+      - name: Build tasks image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        with:
+          context: .
+          file: containers/Dockerfile
+          build-args: |
+            PIXI_ENV=${{ matrix.extension == 'diracx' && 'container-tasks' || 'gubbins-container-tasks' }}
+          tags: ghcr.io/${{ matrix.extension == 'diracx' && 'diracgrid/diracx' || 'gubbins' }}/tasks:dev
+          outputs: type=docker,dest=/tmp/tasks_image.tar
       - name: Build client image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         with:
@@ -151,6 +160,8 @@ jobs:
         run: |
           docker load --input /tmp/services_image.tar
           rm -f /tmp/services_image.tar
+          docker load --input /tmp/tasks_image.tar
+          rm -f /tmp/tasks_image.tar
           docker load --input /tmp/client_image.tar
           rm -f /tmp/client_image.tar
           docker builder prune -af || true
@@ -182,6 +193,7 @@ jobs:
             demo_args+=("--extension-chart-path" "/tmp/gubbins-charts")
             demo_args+=("--ci-values" "./extensions/gubbins_values.yaml")
             demo_args+=("--load-docker-image" "ghcr.io/gubbins/services:dev")
+            demo_args+=("--load-docker-image" "ghcr.io/gubbins/tasks:dev")
             demo_args+=("--load-docker-image" "ghcr.io/gubbins/client:dev")
             demo_args+=("--prune-loaded-images")
           elif [ ${{ matrix.extension }} != 'diracx' ]; then
@@ -191,6 +203,7 @@ jobs:
             demo_args+=("--set-value" "developer.autoReload=false")
             demo_args+=("--set-value" "global.imagePullPolicy=IfNotPresent")
             demo_args+=("--load-docker-image" "ghcr.io/diracgrid/diracx/services:dev")
+            demo_args+=("--load-docker-image" "ghcr.io/diracgrid/diracx/tasks:dev")
             demo_args+=("--load-docker-image" "ghcr.io/diracgrid/diracx/client:dev")
             demo_args+=("--prune-loaded-images")
           fi
