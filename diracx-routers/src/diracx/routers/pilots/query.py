@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastapi import Body, Depends, Query, Response
 
 from diracx.core.models.search import SearchParams, SummaryParams
+from diracx.core.properties import SERVICE_ADMINISTRATOR
 from diracx.db.sql import PilotAgentsDB
 from diracx.logic.pilots.query import MAX_PER_PAGE
 from diracx.logic.pilots.query import search as search_bl
@@ -19,6 +20,14 @@ from .access_policies import (
 )
 
 router = DiracxRouter()
+
+
+def _vo_constraint_for(user_info: AuthorizedUserInfo) -> str | None:
+    """Return the VO filter to apply for this user, or None for admins."""
+    if SERVICE_ADMINISTRATOR in user_info.properties:
+        return None
+    return user_info.vo
+
 
 EXAMPLE_SEARCHES = {
     "Show all": {
@@ -42,6 +51,15 @@ EXAMPLE_SEARCHES = {
             "sort": [{"parameter": "PilotID", "direction": "asc"}],
         },
     },
+    "Pilots that ran a given job": {
+        "summary": "Pilots that ran a given job",
+        "description": (
+            "Find all pilots that have run a specific job. `JobID` is a "
+            "pseudo-parameter resolved through `JobToPilotMapping` into a "
+            "`PilotID` filter; only `eq` and `in` operators are supported."
+        ),
+        "value": {"search": [{"parameter": "JobID", "operator": "eq", "value": 42}]},
+    },
 }
 
 
@@ -55,17 +73,9 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
                         "PilotID": 3,
                         "SubmissionTime": "2023-05-25T07:03:35.602654",
                         "LastUpdateTime": "2023-05-25T07:03:35.602656",
-                        "Status": "RUNNING",
+                        "Status": "Running",
                         "GridType": "Dirac",
                         "BenchMark": 1.0,
-                    },
-                    {
-                        "PilotID": 5,
-                        "SubmissionTime": "2023-06-25T07:03:35.602654",
-                        "LastUpdateTime": "2023-07-25T07:03:35.602652",
-                        "Status": "RUNNING",
-                        "GridType": "Dirac",
-                        "BenchMark": 63.1,
                     },
                 ]
             }
@@ -80,28 +90,6 @@ EXAMPLE_RESPONSES: dict[int | str, dict[str, Any]] = {
             }
         },
         "model": list[dict[str, Any]],
-        "content": {
-            "application/json": {
-                "example": [
-                    {
-                        "PilotID": 3,
-                        "SubmissionTime": "2023-05-25T07:03:35.602654",
-                        "LastUpdateTime": "2023-05-25T07:03:35.602656",
-                        "Status": "RUNNING",
-                        "GridType": "Dirac",
-                        "BenchMark": 1.0,
-                    },
-                    {
-                        "PilotID": 5,
-                        "SubmissionTime": "2023-06-25T07:03:35.602654",
-                        "LastUpdateTime": "2023-07-25T07:03:35.602652",
-                        "Status": "RUNNING",
-                        "GridType": "Dirac",
-                        "BenchMark": 63.1,
-                    },
-                ]
-            }
-        },
     },
 }
 
@@ -118,29 +106,30 @@ async def search(
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)  # type: ignore
     ] = None,
 ) -> list[dict[str, Any]]:
-    """Retrieve information about pilots."""
-    # Inspired by /api/jobs/query
-    await check_permissions(action=ActionType.READ_PILOT_FIELDS)
+    """Retrieve information about pilots.
+
+    Normal users see only their own VO's pilots. Service administrators see
+    pilots from all VOs.
+
+    A `JobID` pseudo-parameter is also accepted in the `search` filter
+    list (operators `eq` / `in` only): it is transparently resolved
+    through `JobToPilotMapping` into a `PilotID` filter, allowing
+    callers to ask "pilots that ran this job" through the same endpoint.
+    """
+    await check_permissions(action=ActionType.READ_PILOT_METADATA)
 
     total, pilots = await search_bl(
         pilot_db=pilot_db,
-        user_vo=user_info.vo,
+        vo_constraint=_vo_constraint_for(user_info),
         page=page,
         per_page=per_page,
         body=body,
     )
 
-    # Set the Content-Range header if needed
-    # https://datatracker.ietf.org/doc/html/rfc7233#section-4
-
-    # No pilots found but there are pilots for the requested search
-    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.4
+    # RFC 7233 Content-Range handling, matching /api/jobs/search
     if len(pilots) == 0 and total > 0:
         response.headers["Content-Range"] = f"pilots */{total}"
         response.status_code = HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE
-
-    # The total number of pilots is greater than the number of pilots returned
-    # https://datatracker.ietf.org/doc/html/rfc7233#section-4.2
     elif len(pilots) < total:
         first_idx = per_page * (page - 1)
         last_idx = min(first_idx + len(pilots), total) - 1 if total > 0 else 0
@@ -149,18 +138,101 @@ async def search(
     return pilots
 
 
-@router.post("/summary")
+EXAMPLE_SUMMARY = {
+    "Show all": {
+        "summary": "Show all",
+        "description": "Shows all pilots the current user has access to.",
+        "value": {"grouping": [], "search": []},
+    },
+    "Group by Status": {
+        "summary": "Group the pilots by Status.",
+        "description": "We get all the unique pilot statuses and the number of pilots in each one.",
+        "value": {"grouping": ["Status"]},
+    },
+    "Group by GridSite with Search": {
+        "summary": "Group the pilots by GridSite and filter by status.",
+        "description": "We get all the unique GridSites where the status is 'Running'. We also get the number "
+        "of pilots in each site.",
+        "value": {
+            "grouping": ["GridSite"],
+            "search": [{"parameter": "Status", "operator": "eq", "value": "Running"}],
+        },
+    },
+}
+
+EXAMPLE_SUMMARY_RESPONSES = {
+    200: {
+        "description": "Results of the request",
+        "content": {
+            "application/json": {
+                "examples": {
+                    "without_grouping": {
+                        "summary": "Results without grouping parameters",
+                        "description": "Shows all pilots when no grouping is specified",
+                        "value": [
+                            {
+                                "PilotID": 1,
+                                "Status": "Running",
+                                "GridType": "Dirac",
+                                "GridSite": "Site_1",
+                                "DestinationSite": "Site_1",
+                                "VO": "diracAdmin",
+                                "SubmissionTime": "2025-07-15T07:15:57",
+                                "LastUpdateTime": "2025-07-15T07:15:57",
+                                "BenchMark": 1.0,
+                                "count": 1,
+                            },
+                            {
+                                "PilotID": 2,
+                                "Status": "Done",
+                                "GridType": "Dirac",
+                                "GridSite": "Site_2",
+                                "DestinationSite": "Site_2",
+                                "VO": "diracAdmin",
+                                "SubmissionTime": "2025-07-15T07:15:57",
+                                "LastUpdateTime": "2025-07-15T07:15:57",
+                                "BenchMark": 1.0,
+                                "count": 1,
+                            },
+                        ],
+                    },
+                    "with_grouping": {
+                        "summary": "Results with grouping parameters",
+                        "description": "Shows grouped results when grouping parameters are specified",
+                        "value": [
+                            {"Status": "Running", "count": 4000},
+                            {"Status": "Done", "count": 2000},
+                            {"Status": "Failed", "count": 1000},
+                            {"Status": "Aborted", "count": 1000},
+                            {"Status": "Submitted", "count": 20},
+                            {"Status": "Waiting", "count": 20},
+                        ],
+                    },
+                }
+            }
+        },
+    }
+}
+
+
+@router.post("/summary", responses=EXAMPLE_SUMMARY_RESPONSES)
 async def summary(
     pilot_db: PilotAgentsDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    body: SummaryParams,
     check_permissions: CheckPilotManagementPolicyCallable,
+    body: Annotated[
+        SummaryParams, Body(openapi_examples=EXAMPLE_SUMMARY)  # type: ignore
+    ],
 ):
-    """Show information suitable for plotting."""
-    await check_permissions(action=ActionType.READ_PILOT_FIELDS)
+    """Aggregate pilot counts suitable for plotting.
+
+    Normal users see only their own VO's pilots. Service administrators see
+    pilots from all VOs.
+    """
+    await check_permissions(action=ActionType.READ_PILOT_METADATA)
 
     return await summary_bl(
         pilot_db=pilot_db,
         body=body,
-        vo=user_info.vo,
+        vo_constraint=_vo_constraint_for(user_info),
     )

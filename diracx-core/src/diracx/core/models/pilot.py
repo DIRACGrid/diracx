@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PilotStatus(StrEnum):
@@ -18,16 +18,30 @@ class PilotStatus(StrEnum):
     UNKNOWN = "Unknown"
 
 
-class PilotFieldsMapping(BaseModel, extra="forbid"):
-    """All the fields that a user can modify on a Pilot (except PilotStamp)."""
+class PilotMetadata(BaseModel, extra="forbid"):
+    """Mutable metadata attached to a pilot.
 
-    PilotStamp: str
-    StatusReason: str | None = None
-    Status: PilotStatus | None = None
-    BenchMark: float | None = None
-    DestinationSite: str | None = None
-    Queue: str | None = None
-    GridSite: str | None = None
-    GridType: str | None = None
-    AccountingSent: bool | None = None
-    CurrentJobID: int | None = None
+    ``PilotStamp`` identifies the pilot and cannot be changed. Every other
+    field is optional; when absent it is left untouched by an update.
+    """
+
+    PilotStamp: str = Field(description="Immutable stamp identifying the pilot.")
+    StatusReason: str | None = Field(
+        default=None, description="Human-readable reason for the current status."
+    )
+    Status: PilotStatus | None = Field(
+        default=None, description="Current pilot status."
+    )
+    BenchMark: float | None = Field(default=None, description="Pilot benchmark value.")
+    DestinationSite: str | None = Field(default=None, description="Destination site.")
+    Queue: str | None = Field(default=None, description="Batch queue name.")
+    GridSite: str | None = Field(default=None, description="Grid site.")
+    GridType: str | None = Field(default=None, description="Grid type.")
+    AccountingSent: bool | None = Field(
+        default=None,
+        description="Whether accounting has been sent for this pilot.",
+    )
+    CurrentJobID: int | None = Field(
+        default=None,
+        description="ID of the job currently running on this pilot.",
+    )

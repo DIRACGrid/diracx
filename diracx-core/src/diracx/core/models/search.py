@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel
@@ -25,7 +24,7 @@ class VectorSearchOperator(StrEnum):
 class ScalarSearchSpec(TypedDict):
     parameter: str
     operator: ScalarSearchOperator
-    value: str | int | datetime
+    value: str | int
 
 
 class VectorSearchSpec(TypedDict):

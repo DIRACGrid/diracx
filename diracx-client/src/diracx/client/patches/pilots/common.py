@@ -1,23 +1,21 @@
-"""Utilities which are common to the sync and async pilots operator patches."""
+"""Utilities shared by the sync and async pilots operator patches."""
 
 from __future__ import annotations
 
 __all__ = [
-    "make_search_body",
     "SearchKwargs",
-    "make_summary_body",
+    "make_search_body",
     "SummaryKwargs",
-    "AddPilotStampsKwargs",
-    "make_add_pilot_stamps_body",
-    "UpdatePilotFieldsKwargs",
-    "make_update_pilot_fields_body"
+    "make_summary_body",
+    "RegisterPilotsKwargs",
+    "make_register_pilots_body",
 ]
 
 import json
 from io import BytesIO
-from typing import Any, IO, TypedDict, Unpack, cast, Literal
+from typing import IO, Any, Literal, TypedDict, Unpack, cast
 
-from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
+from diracx.core.models.pilot import PilotStatus
 from diracx.core.models.search import SearchSpec
 
 
@@ -29,6 +27,8 @@ class ResponseExtra(TypedDict, total=False):
 
 
 # ------------------ Search ------------------
+
+
 class SearchBody(TypedDict, total=False):
     parameters: list[str] | None
     search: list[SearchSpec] | None
@@ -44,8 +44,8 @@ class SearchKwargs(SearchBody, SearchExtra): ...
 
 
 class UnderlyingSearchArgs(ResponseExtra, total=False):
-    # FIXME: The autorest-generated has a bug that it expected IO[bytes] despite
-    # the code being generated to support IO[bytes] | bytes.
+    # FIXME: The autorest-generated operation expects IO[bytes] despite its
+    # signature advertising IO[bytes] | bytes.
     body: IO[bytes]
 
 
@@ -62,19 +62,21 @@ def make_search_body(**kwargs: Unpack[SearchKwargs]) -> UnderlyingSearchArgs:
     result.update(cast(SearchExtra, kwargs))
     return result
 
+
 # ------------------ Summary ------------------
+
 
 class SummaryBody(TypedDict, total=False):
     grouping: list[str]
-    search: list[str]
+    search: list[SearchSpec]
 
 
 class SummaryKwargs(SummaryBody, ResponseExtra): ...
 
 
 class UnderlyingSummaryArgs(ResponseExtra, total=False):
-    # FIXME: The autorest-generated has a bug that it expected IO[bytes] despite
-    # the code being generated to support IO[bytes] | bytes.
+    # FIXME: The autorest-generated operation expects IO[bytes] despite its
+    # signature advertising IO[bytes] | bytes.
     body: IO[bytes]
 
 
@@ -91,57 +93,53 @@ def make_summary_body(**kwargs: Unpack[SummaryKwargs]) -> UnderlyingSummaryArgs:
     result.update(cast(ResponseExtra, kwargs))
     return result
 
-# ------------------ AddPilotStamps ------------------
 
-class AddPilotStampsBody(TypedDict, total=False):
+# ------------------ Register pilots ------------------
+
+
+class RegisterPilotsBody(TypedDict, total=False):
     pilot_stamps: list[str]
+    vo: str
     grid_type: str
     grid_site: str
+    destination_site: str
     pilot_references: dict[str, str]
     pilot_status: PilotStatus
-    vo: str
 
-class AddPilotStampsKwargs(AddPilotStampsBody, ResponseExtra): ...
 
-class UnderlyingAddPilotStampsArgs(ResponseExtra, total=False):
-    # FIXME: The autorest-generated has a bug that it expected IO[bytes] despite
-    # the code being generated to support IO[bytes] | bytes.
+class RegisterPilotsKwargs(RegisterPilotsBody, ResponseExtra): ...
+
+
+class UnderlyingRegisterPilotsArgs(ResponseExtra, total=False):
+    # FIXME: The autorest-generated operation expects IO[bytes] despite its
+    # signature advertising IO[bytes] | bytes.
     body: IO[bytes]
 
-def make_add_pilot_stamps_body(**kwargs: Unpack[AddPilotStampsKwargs]) -> UnderlyingAddPilotStampsArgs:
-    body: AddPilotStampsBody = {}
-    for key in AddPilotStampsBody.__optional_keys__:
+
+def make_register_pilots_body(
+    **kwargs: Unpack[RegisterPilotsKwargs],
+) -> UnderlyingRegisterPilotsArgs:
+    body: RegisterPilotsBody = {}
+    for key in RegisterPilotsBody.__optional_keys__:
         if key not in kwargs:
             continue
-        key = cast(Literal["pilot_stamps", "grid_type", "grid_site", "pilot_references", "pilot_status", "vo"], key)
+        key = cast(
+            Literal[
+                "pilot_stamps",
+                "vo",
+                "grid_type",
+                "grid_site",
+                "destination_site",
+                "pilot_references",
+                "pilot_status",
+            ],
+            key,
+        )
         value = kwargs.pop(key)
         if value is not None:
             body[key] = value
-    result: UnderlyingAddPilotStampsArgs = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
-    result.update(cast(ResponseExtra, kwargs))
-    return result
-
-# ------------------ UpdatePilotFields ------------------
-
-class UpdatePilotFieldsBody(TypedDict, total=False):
-    pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
-
-class UpdatePilotFieldsKwargs(UpdatePilotFieldsBody, ResponseExtra): ...
-
-class UnderlyingUpdatePilotFields(ResponseExtra, total=False):
-    # FIXME: The autorest-generated has a bug that it expected IO[bytes] despite
-    # the code being generated to support IO[bytes] | bytes.
-    body: IO[bytes]
-
-def make_update_pilot_fields_body(**kwargs: Unpack[UpdatePilotFieldsKwargs]) -> UnderlyingUpdatePilotFields:
-    body: UpdatePilotFieldsBody = {}
-    for key in UpdatePilotFieldsBody.__optional_keys__:
-        if key not in kwargs:
-            continue
-        key = cast(Literal["pilot_stamps_to_fields_mapping"], key)
-        value = kwargs.pop(key)
-        if value is not None:
-            body[key] = value
-    result: UnderlyingUpdatePilotFields = {"body": BytesIO(json.dumps(body).encode("utf-8"))}
+    result: UnderlyingRegisterPilotsArgs = {
+        "body": BytesIO(json.dumps(body).encode("utf-8"))
+    }
     result.update(cast(ResponseExtra, kwargs))
     return result

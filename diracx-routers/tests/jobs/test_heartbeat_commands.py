@@ -19,6 +19,8 @@ pytestmark = pytest.mark.enabled_dependencies(
         "WMSAccessPolicy",
         "DevelopmentSettings",
         "JobParametersDB",
+        "PilotAgentsDB",
+        "PilotManagementAccessPolicy",
     ]
 )
 
