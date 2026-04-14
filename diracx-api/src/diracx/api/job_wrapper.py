@@ -11,6 +11,7 @@ import re
 import shutil
 import sys
 import time
+from collections import deque
 from pathlib import Path
 from typing import Any, Sequence, cast
 
@@ -29,6 +30,7 @@ from DIRACCommon.Core.Utilities.ReturnValues import (  # type: ignore[import-unt
 )
 from ruamel.yaml import YAML
 
+from diracx.api.job_monitor import JobMonitor, KillCommandReceived, send_final_heartbeat
 from diracx.api.job_report import JobReport
 from diracx.api.jobs import create_sandbox, download_sandbox
 from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
@@ -607,16 +609,40 @@ class JobWrapper:
             # Build dirac-cwl-run command (different interface from cwltool)
             task_file = self._job_path / "task.cwl"
             param_file = self._job_path / "parameter.yaml"
-            command = [
+            cwl_command = [
                 "dirac-cwl-run",
                 str(task_file.name),
                 "--tmpdir-prefix",
                 str(self._job_path.resolve()) + "/",
             ]
             if param_file.exists():
-                command.append(str(param_file.name))
+                cwl_command.append(str(param_file.name))
             if self._replica_map_path and self._replica_map_path.exists():
-                command.extend(["--replica-map", str(self._replica_map_path.name)])
+                cwl_command.extend(["--replica-map", str(self._replica_map_path.name)])
+
+            # Wrap with prmon for resource monitoring
+            # TODO: replace with CS config options
+            heartbeat_interval = 60.0
+            prmon_interval = 30
+            stall_window = 1800.0  # seconds (30 minutes)
+
+            prmon_tsv = self._job_path / "prmon.txt"
+            if shutil.which("prmon") is None:
+                raise RuntimeError(
+                    "prmon not found in PATH — required for job monitoring (part of DIRACOS2)"
+                )
+            # Use just filenames — subprocess CWD is already job_path
+            command = [
+                "prmon",
+                "--interval",
+                str(prmon_interval),
+                "--filename",
+                "prmon.txt",
+                "--json-summary",
+                "prmon.json",
+                "--",
+                *cwl_command,
+            ]
 
             # Execute the task
             logger.info("Executing Task: %s", command)
@@ -631,6 +657,21 @@ class JobWrapper:
             assert proc.stderr is not None  # guaranteed by stderr=PIPE
             assert proc.stdout is not None  # guaranteed by stdout=PIPE
 
+            # Shared deque for cwltool stderr — monitor reads it for peek content
+            cwltool_stderr: deque[str] = deque(maxlen=100)
+
+            # Start the job monitor as a concurrent task
+            monitor = JobMonitor(
+                pid=proc.pid,
+                job_path=self._job_path,
+                job_report=self._job_report,
+                cwltool_stderr=cwltool_stderr,
+                heartbeat_interval=heartbeat_interval,
+                prmon_tsv_path=prmon_tsv,
+                stall_window=stall_window,
+            )
+            monitor_task = asyncio.create_task(monitor.run())
+
             # Stream stderr line-by-line while collecting stdout concurrently
             async def _collect_stdout() -> bytes:
                 assert proc.stdout is not None
@@ -643,6 +684,7 @@ class JobWrapper:
             async for raw in proc.stderr:
                 line = raw.decode().rstrip("\n")
                 stderr_lines.append(line)
+                cwltool_stderr.append(line)  # feed monitor's peek buffer
                 # Always re-emit to stderr for Watchdog peek
                 print(line, file=sys.stderr, flush=True)
                 # Only report lifecycle transitions as ApplicationStatus
@@ -669,6 +711,21 @@ class JobWrapper:
             stdout_bytes = await stdout_task
             stdout_text = stdout_bytes.decode()
             await proc.wait()
+
+            # Stop the monitor
+            monitor_task.cancel()
+            try:
+                await monitor_task
+            except (asyncio.CancelledError, KillCommandReceived):
+                pass
+
+            # Send final heartbeat with exit metrics
+            await send_final_heartbeat(
+                job_path=self._job_path,
+                job_report=self._job_report,
+                cwltool_stderr=cwltool_stderr,
+                prmon_tsv_path=prmon_tsv,
+            )
 
             if proc.returncode != 0:
                 logger.error(
@@ -705,6 +762,14 @@ class JobWrapper:
         except Exception:
             logger.exception("JobWrapper: Failed to execute workflow")
             self._job_report.set_job_status(JobStatus.FAILED)
+            if "monitor_task" in locals():
+                monitor_task.cancel()
+                try:
+                    await monitor_task
+                except (asyncio.CancelledError, KillCommandReceived):
+                    pass
+                except Exception:
+                    logger.warning("Error stopping monitor task", exc_info=True)
             return False
         finally:
             # Commit all stored job reports
