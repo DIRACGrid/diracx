@@ -12,17 +12,12 @@ from __future__ import annotations
 __all__ = [
     "AuthOperations",
     "JobsOperations",
+    "PilotsOperations",
 ]  # Add all objects you want publicly available to users at this package level
 
 from ....patches.auth.aio import AuthOperations
 from ....patches.jobs.aio import JobsOperations
-
-try:
-    from ....patches.pilots.aio import PilotsOperations
-
-    __all__.append("PilotsOperations")
-except ImportError:
-    pass
+from ....patches.pilots.aio import PilotsOperations
 
 
 def patch_sdk():

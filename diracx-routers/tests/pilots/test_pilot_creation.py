@@ -1,22 +1,17 @@
+"""Router-level tests for pilot register / update / delete."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import pytest
-from sqlalchemy import update
 
-from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
-from diracx.db.sql import PilotAgentsDB
-from diracx.db.sql.pilots.schema import PilotAgents
+from diracx.core.models.pilot import PilotMetadata, PilotStatus
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
-        "PilotCredentialsAccessPolicy",
         "DevelopmentSettings",
         "AuthDB",
         "AuthSettings",
         "ConfigSource",
-        "BaseAccessPolicy",
         "PilotAgentsDB",
         "PilotManagementAccessPolicy",
         "JobDB",
@@ -24,7 +19,6 @@ pytestmark = pytest.mark.enabled_dependencies(
 )
 
 MAIN_VO = "lhcb"
-N = 100
 
 
 @pytest.fixture
@@ -33,249 +27,121 @@ def normal_test_client(client_factory):
         yield client
 
 
-async def test_create_pilots(normal_test_client):
-    # Lots of request, to validate that it returns the credentials in the same order as the input references
-    pilot_stamps = [f"stamps_{i}" for i in range(N)]
-
-    #  -------------- Bulk insert --------------
-    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
+async def test_register_then_duplicate_then_success(normal_test_client):
+    """Registering an existing stamp is rejected with 409; a fresh one still succeeds."""
+    pilot_stamps = [f"stamps_{i}" for i in range(5)]
 
     r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
+        "/api/pilots/", json={"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
     )
-
     assert r.status_code == 200, r.json()
 
-    #  -------------- Register a pilot that already exists, and one that does not --------------
-
-    body = {
-        "pilot_stamps": [pilot_stamps[0], pilot_stamps[0] + "_new_one"],
-        "vo": MAIN_VO,
-    }
-
+    # Mix of existing and new stamps: whole batch is rejected
     r = normal_test_client.post(
         "/api/pilots/",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
+        json={
+            "pilot_stamps": [pilot_stamps[0], "stamps_new"],
+            "vo": MAIN_VO,
         },
     )
-
-    assert r.status_code == 409
-    assert (
-        r.json()["detail"]
-        == f"The following pilots already exist: {{'{pilot_stamps[0]}'}}"
-    )
-
-    #  -------------- Register a pilot that does not exists **but** was called before in an error --------------
-    # To prove that, if I tried to register a pilot that does not exist with one that already exists,
-    # i can normally add the one that did not exist before (it should not have added it before)
-    body = {"pilot_stamps": [pilot_stamps[0] + "_new_one"], "vo": MAIN_VO}
-
-    r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
-
-    assert r.status_code == 200
-
-
-async def test_create_pilot_and_delete_it(normal_test_client):
-    pilot_stamp = "stamps_1"
-
-    #  -------------- Insert --------------
-    body = {"pilot_stamps": [pilot_stamp], "vo": MAIN_VO}
-
-    # Create a pilot
-    r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
-    )
-
-    assert r.status_code == 200, r.json()
-
-    #  -------------- Duplicate --------------
-    # Duplicate because it exists, should have 409
-    r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
-    )
-
     assert r.status_code == 409, r.json()
 
-    #  -------------- Delete --------------
-    params = {"pilot_stamps": [pilot_stamp]}
-
-    # We delete the pilot
-    r = normal_test_client.delete(
-        "/api/pilots/",
-        params=params,
+    # The new stamp alone was NOT committed by the failing call above
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamps": ["stamps_new"], "vo": MAIN_VO}
     )
+    assert r.status_code == 200, r.json()
 
+
+async def test_register_delete_by_stamp_roundtrip(normal_test_client):
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamps": ["stamp_a"], "vo": MAIN_VO}
+    )
+    assert r.status_code == 200
+
+    r = normal_test_client.delete("/api/pilots/", params={"pilot_stamps": ["stamp_a"]})
     assert r.status_code == 204
 
-    #  -------------- Insert --------------
-    # Create a the same pilot, but works because it does not exist anymore
+    # Now the stamp is free again
     r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
+        "/api/pilots/", json={"pilot_stamps": ["stamp_a"], "vo": MAIN_VO}
     )
+    assert r.status_code == 200
 
-    assert r.status_code == 200, r.json()
 
-
-async def test_create_pilot_and_modify_it(normal_test_client):
-    pilot_stamps = ["stamps_1", "stamp_2"]
-
-    #  -------------- Insert --------------
-    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
-
-    # Create pilots
+async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
+    """PATCH /pilots/metadata supports heterogeneous field subsets per row."""
+    stamps = ["stamp_m1", "stamp_m2"]
     r = normal_test_client.post(
-        "/api/pilots/",
-        json=body,
+        "/api/pilots/", json={"pilot_stamps": stamps, "vo": MAIN_VO}
     )
+    assert r.status_code == 200
 
-    assert r.status_code == 200, r.json()
-
-    #  -------------- Modify --------------
-    # We modify only the first pilot
-    body = {
-        "pilot_stamps_to_fields_mapping": [
-            PilotFieldsMapping(
-                PilotStamp=pilot_stamps[0],
-                BenchMark=1.0,
-                StatusReason="NewReason",
-                AccountingSent=True,
-                Status=PilotStatus.WAITING,
-            ).model_dump(exclude_unset=True)
-        ]
-    }
-
-    r = normal_test_client.patch("/api/pilots/metadata", json=body)
-
-    assert r.status_code == 204
-
-    body = {
-        "parameters": [],
-        "search": [],
-        "sort": [],
-        "distinct": True,
-    }
-
-    r = normal_test_client.post("/api/pilots/search", json=body)
-    assert r.status_code == 200, r.json()
-    pilot1 = r.json()[0]
-    pilot2 = r.json()[1]
-
-    assert pilot1["BenchMark"] == 1.0
-    assert pilot1["StatusReason"] == "NewReason"
-    assert pilot1["AccountingSent"]
-    assert pilot1["Status"] == PilotStatus.WAITING
-
-    assert pilot2["BenchMark"] != pilot1["BenchMark"]
-    assert pilot2["StatusReason"] != pilot1["StatusReason"]
-    assert pilot2["AccountingSent"] != pilot1["AccountingSent"]
-    assert pilot2["Status"] != pilot1["Status"]
-
-
-@pytest.mark.asyncio
-async def test_delete_pilots_by_age_and_stamp(normal_test_client):
-    # Generate 100 pilot stamps
-    pilot_stamps = [f"stamp_{i}" for i in range(100)]
-
-    # -------------- Insert all pilots --------------
-    body = {"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
-    r = normal_test_client.post("/api/pilots/", json=body)
-    assert r.status_code == 200, r.json()
-
-    # -------------- Modify last 50 pilots' fields --------------
-    to_modify = pilot_stamps[50:]
-    mappings = []
-    for idx, stamp in enumerate(to_modify):
-        # First 25 of modified set to ABORTED, others to WAITING
-        status = PilotStatus.ABORTED if idx < 25 else PilotStatus.WAITING
-        mapping = PilotFieldsMapping(
-            PilotStamp=stamp,
-            BenchMark=idx + 0.1,
-            StatusReason=f"Reason_{idx}",
-            AccountingSent=(idx % 2 == 0),
-            Status=status,
-        ).model_dump(exclude_unset=True)
-        mappings.append(mapping)
-
+    # stamp_m1 updates only BenchMark; stamp_m2 only Status
     r = normal_test_client.patch(
         "/api/pilots/metadata",
-        json={"pilot_stamps_to_fields_mapping": mappings},
+        json={
+            "pilot_metadata": [
+                PilotMetadata(PilotStamp="stamp_m1", BenchMark=1.0).model_dump(
+                    exclude_unset=True
+                ),
+                PilotMetadata(
+                    PilotStamp="stamp_m2", Status=PilotStatus.WAITING
+                ).model_dump(exclude_unset=True),
+            ]
+        },
     )
-    assert r.status_code == 204
+    assert r.status_code == 204, r.json()
 
-    # -------------- Directly set SubmissionTime to March 14, 2003 for last 50 --------------
-    old_date = datetime(2003, 3, 14, tzinfo=timezone.utc)
-    # Access DB session from normal_test_client fixtures
-    db = normal_test_client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
-
-    async with db:
-        stmt = (
-            update(PilotAgents)
-            .where(PilotAgents.pilot_stamp.in_(to_modify))
-            .values(SubmissionTime=old_date)
-        )
-        await db.conn.execute(stmt)
-        await db.conn.commit()
-
-    # -------------- Verify all 100 pilots exist --------------
-    search_body = {"parameters": [], "search": [], "sort": [], "distinct": True}
-    r = normal_test_client.post("/api/pilots/search", json=search_body)
-    assert r.status_code == 200, r.json()
-    assert len(r.json()) == 100
-
-    # -------------- 1) Delete only old aborted pilots  (25 expected) --------------
-    # age_in_days large enough to include 2003-03-14
-    r = normal_test_client.delete(
-        "/api/pilots/",
-        params={"age_in_days": 15, "delete_only_aborted": True},
-    )
-    assert r.status_code == 204
-    # Expect 75 remaining
-    r = normal_test_client.post("/api/pilots/search", json=search_body)
-    assert len(r.json()) == 75
-
-    # -------------- 2) Delete all old pilots (remaining 25 old) --------------
-    r = normal_test_client.delete(
-        "/api/pilots/",
-        params={"age_in_days": 15},
-    )
-    assert r.status_code == 204
-
-    # Expect 50 remaining
-    r = normal_test_client.post("/api/pilots/search", json=search_body)
-    assert len(r.json()) == 50
-
-    # -------------- 3) Delete one recent pilot by stamp --------------
-    one_stamp = pilot_stamps[10]
-    r = normal_test_client.delete("/api/pilots/", params={"pilot_stamps": [one_stamp]})
-    assert r.status_code == 204
-    # Expect 49 remaining
-    r = normal_test_client.post("/api/pilots/search", json=search_body)
-    assert len(r.json()) == 49
-
-    # -------------- 4) Delete all remaining pilots --------------
-    # Collect remaining stamps
-    remaining = [p["PilotStamp"] for p in r.json()]
-    r = normal_test_client.delete("/api/pilots/", params={"pilot_stamps": remaining})
-    assert r.status_code == 204
-    # Expect none remaining
-    r = normal_test_client.post("/api/pilots/search", json=search_body)
+    r = normal_test_client.post("/api/pilots/search", json={})
     assert r.status_code == 200
-    assert len(r.json()) == 0
+    by_stamp = {p["PilotStamp"]: p for p in r.json()}
+    assert by_stamp["stamp_m1"]["BenchMark"] == 1.0
+    assert by_stamp["stamp_m1"]["Status"] == PilotStatus.SUBMITTED  # untouched
+    assert by_stamp["stamp_m2"]["Status"] == PilotStatus.WAITING
+    assert by_stamp["stamp_m2"]["BenchMark"] == 0.0  # untouched
 
-    # -------------- 5) Attempt deleting unknown pilot, expect 400 --------------
+
+async def test_delete_unknown_stamp_is_a_noop(normal_test_client):
+    """Deleting an unknown stamp is a safe no-op under the test harness.
+
+    The test harness replaces `PilotManagementAccessPolicy` with
+    `AlwaysAllowAccessPolicy`, so the real policy's unknown-stamp 404
+    branch is exercised by the dedicated policy unit test
+    (`test_access_policy.py`). Here we only verify the router path does
+    not explode and is safely idempotent.
+    """
     r = normal_test_client.delete(
-        "/api/pilots/", params={"pilot_stamps": ["unknown_stamp"]}
+        "/api/pilots/", params={"pilot_stamps": ["does_not_exist"]}
     )
     assert r.status_code == 204
+
+
+async def test_delete_requires_at_least_one_stamp(normal_test_client):
+    """DELETE with no stamps must return 422 (FastAPI validation)."""
+    r = normal_test_client.delete("/api/pilots/")
+    assert r.status_code == 422, r.json()
+
+
+async def test_unknown_query_params_do_not_trigger_deletion(normal_test_client):
+    """Age-based cleanup is handled by the task worker, not the HTTP API.
+
+    The router must NOT accept age_in_days; any such param is either
+    ignored by FastAPI or returns 422 on unexpected query usage. The key
+    observation is that passing `age_in_days` alone (without
+    `pilot_stamps`) must not silently wipe pilots.
+    """
+    # Create a pilot to ensure there's something that could be deleted
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamps": ["stamp_safe"], "vo": MAIN_VO}
+    )
+    assert r.status_code == 200
+
+    # age_in_days alone is rejected because pilot_stamps is required
+    r = normal_test_client.delete("/api/pilots/", params={"age_in_days": 1})
+    assert r.status_code == 422
+
+    # Our pilot is still there
+    r = normal_test_client.post("/api/pilots/search", json={})
+    assert r.status_code == 200
+    assert any(p["PilotStamp"] == "stamp_safe" for p in r.json())

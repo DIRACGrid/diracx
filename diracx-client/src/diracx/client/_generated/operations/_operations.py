@@ -565,7 +565,7 @@ def build_jobs_submit_jdl_jobs_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_add_pilot_stamps_request(**kwargs: Any) -> HttpRequest:
+def build_pilots_register_pilots_request(**kwargs: Any) -> HttpRequest:
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
@@ -582,30 +582,19 @@ def build_pilots_add_pilot_stamps_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_pilots_delete_pilots_request(
-    *,
-    pilot_stamps: Optional[list[str]] = None,
-    age_in_days: Optional[int] = None,
-    delete_only_aborted: bool = False,
-    **kwargs: Any
-) -> HttpRequest:
+def build_pilots_delete_pilots_request(*, pilot_stamps: list[str], **kwargs: Any) -> HttpRequest:
     _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
 
     # Construct URL
     _url = "/api/pilots/"
 
     # Construct parameters
-    if pilot_stamps is not None:
-        _params["pilot_stamps"] = _SERIALIZER.query("pilot_stamps", pilot_stamps, "[str]")
-    if age_in_days is not None:
-        _params["age_in_days"] = _SERIALIZER.query("age_in_days", age_in_days, "int")
-    if delete_only_aborted is not None:
-        _params["delete_only_aborted"] = _SERIALIZER.query("delete_only_aborted", delete_only_aborted, "bool")
+    _params["pilot_stamps"] = _SERIALIZER.query("pilot_stamps", pilot_stamps, "[str]")
 
     return HttpRequest(method="DELETE", url=_url, params=_params, **kwargs)
 
 
-def build_pilots_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:
+def build_pilots_update_pilot_metadata_request(**kwargs: Any) -> HttpRequest:  # pylint: disable=name-too-long
     _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
 
     content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
@@ -617,29 +606,6 @@ def build_pilots_update_pilot_fields_request(**kwargs: Any) -> HttpRequest:
         _headers["Content-Type"] = _SERIALIZER.header("content_type", content_type, "str")
 
     return HttpRequest(method="PATCH", url=_url, headers=_headers, **kwargs)
-
-
-def build_pilots_get_pilot_jobs_request(
-    *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
-) -> HttpRequest:
-    _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
-    _params = case_insensitive_dict(kwargs.pop("params", {}) or {})
-
-    accept = _headers.pop("Accept", "application/json")
-
-    # Construct URL
-    _url = "/api/pilots/jobs"
-
-    # Construct parameters
-    if pilot_stamp is not None:
-        _params["pilot_stamp"] = _SERIALIZER.query("pilot_stamp", pilot_stamp, "str")
-    if job_id is not None:
-        _params["job_id"] = _SERIALIZER.query("job_id", job_id, "int")
-
-    # Construct headers
-    _headers["Accept"] = _SERIALIZER.header("accept", accept, "str")
-
-    return HttpRequest(method="GET", url=_url, params=_params, headers=_headers, **kwargs)
 
 
 def build_pilots_search_request(*, page: int = 1, per_page: int = 100, **kwargs: Any) -> HttpRequest:
@@ -2572,6 +2538,12 @@ class JobsOperations:
         By default, the search will return all jobs the user has access to, and all the fields
         of the job will be returned.
 
+        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
+        filter list (operators ``eq`` / ``in`` only): it is transparently
+        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
+        allowing callers to ask "jobs run by this pilot" through the same
+        endpoint.
+
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
         :keyword page: Default value is 1.
@@ -2612,6 +2584,12 @@ class JobsOperations:
         By default, the search will return all jobs the user has access to, and all the fields
         of the job will be returned.
 
+        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
+        filter list (operators ``eq`` / ``in`` only): it is transparently
+        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
+        allowing callers to ask "jobs run by this pilot" through the same
+        endpoint.
+
         :param body: Default value is None.
         :type body: IO[bytes]
         :keyword page: Default value is 1.
@@ -2650,6 +2628,12 @@ class JobsOperations:
 
         By default, the search will return all jobs the user has access to, and all the fields
         of the job will be returned.
+
+        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
+        filter list (operators ``eq`` / ``in`` only): it is transparently
+        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
+        allowing callers to ask "jobs run by this pilot" through the same
+        endpoint.
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -2958,17 +2942,17 @@ class PilotsOperations:
         self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
 
     @overload
-    def add_pilot_stamps(
-        self, body: _models.BodyPilotsAddPilotStamps, *, content_type: str = "application/json", **kwargs: Any
+    def register_pilots(
+        self, body: _models.BodyPilotsRegisterPilots, *, content_type: str = "application/json", **kwargs: Any
     ) -> Any:
-        """Add Pilot Stamps.
+        """Register Pilots.
 
-        Endpoint where a you can create pilots with their references.
+        Register a batch of pilots with their references.
 
-        If a pilot stamp already exists, it will block the insertion.
+        If any stamp already exists, the whole batch is rejected with a 409.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsAddPilotStamps
+        :type body: ~_generated.models.BodyPilotsRegisterPilots
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -2978,12 +2962,12 @@ class PilotsOperations:
         """
 
     @overload
-    def add_pilot_stamps(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
-        """Add Pilot Stamps.
+    def register_pilots(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
+        """Register Pilots.
 
-        Endpoint where a you can create pilots with their references.
+        Register a batch of pilots with their references.
 
-        If a pilot stamp already exists, it will block the insertion.
+        If any stamp already exists, the whole batch is rejected with a 409.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2996,15 +2980,15 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def add_pilot_stamps(self, body: Union[_models.BodyPilotsAddPilotStamps, IO[bytes]], **kwargs: Any) -> Any:
-        """Add Pilot Stamps.
+    def register_pilots(self, body: Union[_models.BodyPilotsRegisterPilots, IO[bytes]], **kwargs: Any) -> Any:
+        """Register Pilots.
 
-        Endpoint where a you can create pilots with their references.
+        Register a batch of pilots with their references.
 
-        If a pilot stamp already exists, it will block the insertion.
+        If any stamp already exists, the whole batch is rejected with a 409.
 
-        :param body: Is either a BodyPilotsAddPilotStamps type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsAddPilotStamps or IO[bytes]
+        :param body: Is either a BodyPilotsRegisterPilots type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsRegisterPilots or IO[bytes]
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3029,9 +3013,9 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsAddPilotStamps")
+            _json = self._serialize.body(body, "BodyPilotsRegisterPilots")
 
-        _request = build_pilots_add_pilot_stamps_request(
+        _request = build_pilots_register_pilots_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3060,35 +3044,20 @@ class PilotsOperations:
 
     @distributed_trace
     def delete_pilots(  # pylint: disable=inconsistent-return-statements
-        self,
-        *,
-        pilot_stamps: Optional[list[str]] = None,
-        age_in_days: Optional[int] = None,
-        delete_only_aborted: bool = False,
-        **kwargs: Any
+        self, *, pilot_stamps: list[str], **kwargs: Any
     ) -> None:
         """Delete Pilots.
 
-        Endpoint to delete a pilot.
+        Delete pilots by stamp.
 
-        Two features:
+        Deletes the pilot rows as well as their logs and job associations.
 
+        Age-based retention cleanup is deliberately *not* exposed here: it is
+        handled by the maintenance task worker. See
+        ``diracx.logic.pilots.management.delete_pilots``.
 
-        #. Or you provide pilot_stamps, so you can delete pilots by their stamp
-        #. Or you provide age_in_days, so you can delete pilots that lived more than age_in_days days.
-
-        Note: If you delete a pilot, its logs and its associations with jobs WILL be deleted.
-
-        :keyword pilot_stamps: Stamps of the pilots we want to delete. Default value is None.
+        :keyword pilot_stamps: Stamps of the pilots to delete. Required.
         :paramtype pilot_stamps: list[str]
-        :keyword age_in_days: The number of days that define the maximum age of pilots to be
-         deleted.Pilots older than this age will be considered for deletion. Default value is None.
-        :paramtype age_in_days: int
-        :keyword delete_only_aborted: Flag indicating whether to only delete pilots whose status is
-         'Aborted'.If set to True, only pilots with the 'Aborted' status will be deleted.It is set by
-         default as True to avoid any mistake.This flag is only used for deletion by time. Default value
-         is False.
-        :paramtype delete_only_aborted: bool
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3108,8 +3077,6 @@ class PilotsOperations:
 
         _request = build_pilots_delete_pilots_request(
             pilot_stamps=pilot_stamps,
-            age_in_days=age_in_days,
-            delete_only_aborted=delete_only_aborted,
             headers=_headers,
             params=_params,
         )
@@ -3130,17 +3097,18 @@ class PilotsOperations:
             return cls(pipeline_response, None, {})  # type: ignore
 
     @overload
-    def update_pilot_fields(
-        self, body: _models.BodyPilotsUpdatePilotFields, *, content_type: str = "application/json", **kwargs: Any
+    def update_pilot_metadata(
+        self, body: _models.BodyPilotsUpdatePilotMetadata, *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
-        """Update Pilot Fields.
+        """Update Pilot Metadata.
 
-        Modify a field of a pilot.
+        Update pilot metadata (status, benchmark, etc.).
 
-        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
+        identifies the row and cannot be changed.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsUpdatePilotFields
+        :type body: ~_generated.models.BodyPilotsUpdatePilotMetadata
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3150,12 +3118,13 @@ class PilotsOperations:
         """
 
     @overload
-    def update_pilot_fields(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
-        """Update Pilot Fields.
+    def update_pilot_metadata(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
+        """Update Pilot Metadata.
 
-        Modify a field of a pilot.
+        Update pilot metadata (status, benchmark, etc.).
 
-        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
+        identifies the row and cannot be changed.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3168,17 +3137,18 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def update_pilot_fields(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[_models.BodyPilotsUpdatePilotFields, IO[bytes]], **kwargs: Any
+    def update_pilot_metadata(  # pylint: disable=inconsistent-return-statements
+        self, body: Union[_models.BodyPilotsUpdatePilotMetadata, IO[bytes]], **kwargs: Any
     ) -> None:
-        """Update Pilot Fields.
+        """Update Pilot Metadata.
 
-        Modify a field of a pilot.
+        Update pilot metadata (status, benchmark, etc.).
 
-        Note: Only the fields in PilotFieldsMapping are mutable, except for the PilotStamp.
+        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
+        identifies the row and cannot be changed.
 
-        :param body: Is either a BodyPilotsUpdatePilotFields type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsUpdatePilotFields or IO[bytes]
+        :param body: Is either a BodyPilotsUpdatePilotMetadata type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.BodyPilotsUpdatePilotMetadata or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3203,9 +3173,9 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsUpdatePilotFields")
+            _json = self._serialize.body(body, "BodyPilotsUpdatePilotMetadata")
 
-        _request = build_pilots_update_pilot_fields_request(
+        _request = build_pilots_update_pilot_metadata_request(
             content_type=content_type,
             json=_json,
             content=_content,
@@ -3228,61 +3198,6 @@ class PilotsOperations:
         if cls:
             return cls(pipeline_response, None, {})  # type: ignore
 
-    @distributed_trace
-    def get_pilot_jobs(
-        self, *, pilot_stamp: Optional[str] = None, job_id: Optional[int] = None, **kwargs: Any
-    ) -> list[int]:
-        """Get Pilot Jobs.
-
-        Endpoint only for admins, to get jobs of a pilot.
-
-        :keyword pilot_stamp: The stamp of the pilot. Default value is None.
-        :paramtype pilot_stamp: str
-        :keyword job_id: The ID of the job. Default value is None.
-        :paramtype job_id: int
-        :return: list of int
-        :rtype: list[int]
-        :raises ~azure.core.exceptions.HttpResponseError:
-        """
-        error_map: MutableMapping = {
-            401: ClientAuthenticationError,
-            404: ResourceNotFoundError,
-            409: ResourceExistsError,
-            304: ResourceNotModifiedError,
-        }
-        error_map.update(kwargs.pop("error_map", {}) or {})
-
-        _headers = kwargs.pop("headers", {}) or {}
-        _params = kwargs.pop("params", {}) or {}
-
-        cls: ClsType[list[int]] = kwargs.pop("cls", None)
-
-        _request = build_pilots_get_pilot_jobs_request(
-            pilot_stamp=pilot_stamp,
-            job_id=job_id,
-            headers=_headers,
-            params=_params,
-        )
-        _request.url = self._client.format_url(_request.url)
-
-        _stream = False
-        pipeline_response: PipelineResponse = self._client._pipeline.run(  # pylint: disable=protected-access
-            _request, stream=_stream, **kwargs
-        )
-
-        response = pipeline_response.http_response
-
-        if response.status_code not in [200]:
-            map_error(status_code=response.status_code, response=response, error_map=error_map)
-            raise HttpResponseError(response=response)
-
-        deserialized = self._deserialize("[int]", pipeline_response.http_response)
-
-        if cls:
-            return cls(pipeline_response, deserialized, {})  # type: ignore
-
-        return deserialized  # type: ignore
-
     @overload
     def search(
         self,
@@ -3296,6 +3211,14 @@ class PilotsOperations:
         """Search.
 
         Retrieve information about pilots.
+
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
+
+        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
+        list (operators ``eq`` / ``in`` only): it is transparently resolved
+        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
+        callers to ask "pilots that ran this job" through the same endpoint.
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -3325,6 +3248,14 @@ class PilotsOperations:
 
         Retrieve information about pilots.
 
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
+
+        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
+        list (operators ``eq`` / ``in`` only): it is transparently resolved
+        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
+        callers to ask "pilots that ran this job" through the same endpoint.
+
         :param body: Default value is None.
         :type body: IO[bytes]
         :keyword page: Default value is 1.
@@ -3351,6 +3282,14 @@ class PilotsOperations:
         """Search.
 
         Retrieve information about pilots.
+
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
+
+        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
+        list (operators ``eq`` / ``in`` only): it is transparently resolved
+        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
+        callers to ask "pilots that ran this job" through the same endpoint.
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -3425,7 +3364,10 @@ class PilotsOperations:
     def summary(self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Aggregate pilot counts suitable for plotting.
+
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -3441,7 +3383,10 @@ class PilotsOperations:
     def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Aggregate pilot counts suitable for plotting.
+
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3457,7 +3402,10 @@ class PilotsOperations:
     def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Show information suitable for plotting.
+        Aggregate pilot counts suitable for plotting.
+
+        Normal users see only their own VO's pilots. Service administrators see
+        pilots from all VOs.
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]

@@ -1,9 +1,4 @@
-"""Patches for the autorest-generated pilots client.
-
-This file can be used to customize the generated code for the pilots client.
-When adding new classes to this file, make sure to also add them to the
-__all__ list in the corresponding file in the patches directory.
-"""
+"""Patches for the autorest-generated sync pilots client."""
 
 from __future__ import annotations
 
@@ -17,14 +12,12 @@ from azure.core.tracing.decorator import distributed_trace
 
 from ..._generated.operations._operations import PilotsOperations as _PilotsOperations
 from .common import (
-    make_search_body,
-    make_summary_body,
-    make_add_pilot_stamps_body,
-    make_update_pilot_fields_body,
+    RegisterPilotsKwargs,
     SearchKwargs,
     SummaryKwargs,
-    AddPilotStampsKwargs,
-    UpdatePilotFieldsKwargs
+    make_register_pilots_body,
+    make_search_body,
+    make_summary_body,
 )
 
 # We're intentionally ignoring overrides here because we want to change the interface.
@@ -34,20 +27,15 @@ from .common import (
 class PilotsOperations(_PilotsOperations):
     @distributed_trace
     def search(self, **kwargs: Unpack[SearchKwargs]) -> list[dict[str, Any]]:
-        """TODO"""
+        """Search for pilots matching the provided filters."""
         return super().search(**make_search_body(**kwargs))
 
     @distributed_trace
     def summary(self, **kwargs: Unpack[SummaryKwargs]) -> list[dict[str, Any]]:
-        """TODO"""
+        """Return pilot counts aggregated by the requested columns."""
         return super().summary(**make_summary_body(**kwargs))
 
     @distributed_trace
-    def add_pilot_stamps(self, **kwargs: Unpack[AddPilotStampsKwargs]) -> None:
-        """TODO"""
-        return super().add_pilot_stamps(**make_add_pilot_stamps_body(**kwargs))
-
-    @distributed_trace
-    def update_pilot_fields(self, **kwargs: Unpack[UpdatePilotFieldsKwargs]) -> None:
-        """TODO"""
-        return super().update_pilot_fields(**make_update_pilot_fields_body(**kwargs))
+    def register_pilots(self, **kwargs: Unpack[RegisterPilotsKwargs]) -> None:
+        """Register a batch of pilots."""
+        return super().register_pilots(**make_register_pilots_body(**kwargs))

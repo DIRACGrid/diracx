@@ -23,6 +23,8 @@ pytestmark = pytest.mark.enabled_dependencies(
         "ConfigSource",
         "TaskQueueDB",
         "DevelopmentSettings",
+        "PilotAgentsDB",
+        "PilotManagementAccessPolicy",
     ]
 )
 
