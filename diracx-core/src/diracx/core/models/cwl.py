@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -32,22 +32,25 @@ class JobHint(BaseModel):
 
     I/O fields reference CWL input/output IDs via ``source:`` syntax,
     consistent with CWL's own referencing conventions.
+
+    Matching is expressed via a list of matching specification documents
+    in the ``matcher`` field. Each document describes an environment the
+    job can run in (OR semantics across documents).
     """
 
     schema_version: Literal["1.0"] = "1.0"
 
-    # Scheduling (DIRAC-specific, no CWL equivalent)
-    priority: int = 5
-    cpu_work: int | None = None  # HS06-seconds → JDL CPUTime
-    platform: str | None = None
-    sites: list[str] | None = None
-    banned_sites: list[str] | None = None
-    tags: list[str] | None = None  # merged with auto-derived tags
+    # Matching specification documents (OR semantics across docs)
+    matcher: list[Any] = []
+
+    # JDL escape hatch (transition period)
+    legacy_jdl: dict[str, Any] = {}
 
     # Job metadata
     type: str = "User"
     group: str = ""
     log_level: str = "INFO"
+    priority: int = 5
 
     # I/O: reference CWL input/output IDs via source:
     input_sandbox: list[IOSource] = []

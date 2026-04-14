@@ -9,16 +9,14 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from enum import Enum
 from typing import Any, TypeAlias, Union
 
 import yaml
 from cwl_utils.parser import load_document_by_yaml
 from cwl_utils.parser.cwl_v1_2 import (
     CommandLineTool,
-    CUDARequirement,
     ExpressionTool,
-    MPIRequirement,
-    ResourceRequirement,
     Workflow,
 )
 
@@ -34,6 +32,90 @@ from .submission import submit_jdl_jobs
 logger = logging.getLogger(__name__)
 
 CWLTask: TypeAlias = Union[CommandLineTool, Workflow, ExpressionTool]
+
+
+class RequirementDisposition(Enum):
+    """How each CWL Requirement class is handled at submission."""
+
+    PASS_THROUGH = "pass_through"  # noqa: S105
+    SUPPORTED = "supported"
+    REJECTED = "rejected"
+
+
+REQUIREMENT_WHITELIST: dict[str, RequirementDisposition] = {
+    # Pass-through: execution-only, no matcher impact
+    "InlineJavascriptRequirement": RequirementDisposition.PASS_THROUGH,
+    "SchemaDefRequirement": RequirementDisposition.PASS_THROUGH,
+    "InitialWorkDirRequirement": RequirementDisposition.PASS_THROUGH,
+    "EnvVarRequirement": RequirementDisposition.PASS_THROUGH,
+    "ShellCommandRequirement": RequirementDisposition.PASS_THROUGH,
+    "LoadListingRequirement": RequirementDisposition.PASS_THROUGH,
+    "InplaceUpdateRequirement": RequirementDisposition.PASS_THROUGH,
+    "WorkReuse": RequirementDisposition.PASS_THROUGH,
+    "NetworkAccess": RequirementDisposition.PASS_THROUGH,
+    "SubworkflowFeatureRequirement": RequirementDisposition.PASS_THROUGH,
+    "ScatterFeatureRequirement": RequirementDisposition.PASS_THROUGH,
+    "MultipleInputFeatureRequirement": RequirementDisposition.PASS_THROUGH,
+    "StepInputExpressionRequirement": RequirementDisposition.PASS_THROUGH,
+    # Rejected
+    "DockerRequirement": RequirementDisposition.REJECTED,
+    "MPIRequirement": RequirementDisposition.REJECTED,
+    "SoftwareRequirement": RequirementDisposition.REJECTED,
+}
+
+
+def _get_requirement_class_name(req) -> str:
+    """Extract the class name from a CWL requirement object or dict."""
+    if isinstance(req, dict):
+        return req.get("class", "")
+    return type(req).__name__
+
+
+def validate_requirements(task: CWLTask) -> None:
+    """Check all CWL requirements and hints against the whitelist.
+
+    Raises ValueError if any requirement is rejected or unknown.
+    """
+    all_reqs: list[object] = []
+    for attr in ("requirements", "hints"):
+        items = getattr(task, attr, None) or []
+        all_reqs.extend(items)
+
+    for req in all_reqs:
+        class_name = _get_requirement_class_name(req)
+
+        # Skip the dirac:Job hint — it's ours, not a CWL requirement
+        if class_name in ("dirac:Job", ""):
+            continue
+
+        disposition = REQUIREMENT_WHITELIST.get(class_name)
+
+        if disposition is None:
+            raise ValueError(
+                f"CWL Requirement '{class_name}' is not supported. "
+                f"Supported requirements: {sorted(REQUIREMENT_WHITELIST.keys())}"
+            )
+
+        if disposition == RequirementDisposition.REJECTED:
+            raise ValueError(
+                f"CWL Requirement '{class_name}' is not supported for "
+                f"DIRAC CWL jobs and cannot be used."
+            )
+
+
+def build_matcher_docs(task: CWLTask, job_hint: JobHint) -> list[dict]:
+    """Build matcher specification documents from the hint and CWL requirements.
+
+    - Starts from job_hint.matcher (or [{}] if empty/absent).
+    - Broadcasts supported CWL Requirement fields into every doc.
+    - Detects conflicts between CWL Requirements and matcher doc values.
+    """
+    docs = [dict(d) for d in job_hint.matcher] if job_hint.matcher else [{}]
+
+    # Currently no SUPPORTED requirements — this is the extension point.
+    # When a requirement is promoted to SUPPORTED, add its broadcast logic here.
+
+    return docs
 
 
 def compute_workflow_id(cwl_yaml: str) -> str:
@@ -97,12 +179,13 @@ def expand_range_inputs(
 def cwl_to_jdl(
     task: CWLTask,
     job_hint: JobHint,
+    matcher_docs: list[dict],
     input_params: dict | None,
 ) -> str:
-    """Convert a CWL task with dirac:Job hint into a JDL string.
+    """Convert a CWL task with matcher docs into a JDL string.
 
     This is a transition-period function -- once JDL is retired,
-    job attributes are populated directly from the hint + CWL.
+    job attributes are populated directly from matcher docs.
     """
     jdl_fields: dict[str, Any] = {
         "Executable": "dirac-cwl-exec",
@@ -110,11 +193,6 @@ def cwl_to_jdl(
         "Priority": job_hint.priority,
         "LogLevel": job_hint.log_level,
     }
-
-    if job_hint.cpu_work:
-        jdl_fields["CPUTime"] = job_hint.cpu_work
-    if job_hint.platform:
-        jdl_fields["Platform"] = job_hint.platform
 
     # Derive JobName from CWL label/id
     task_label = getattr(task, "label", None)
@@ -138,44 +216,51 @@ def cwl_to_jdl(
 
     jdl_fields["JobName"] = job_name
 
-    # Extract from CWL requirements (standard CWL, not dirac:Job)
-    tags = set(job_hint.tags or [])
-    for req in getattr(task, "requirements", None) or []:
-        if isinstance(req, ResourceRequirement):
-            if req.coresMin:
-                jdl_fields["MinNumberOfProcessors"] = int(req.coresMin)
-            if req.coresMax:
-                jdl_fields["MaxNumberOfProcessors"] = int(req.coresMax)
-            if req.ramMin:
-                jdl_fields["MinRAM"] = int(req.ramMin)
-            if req.ramMax:
-                jdl_fields["MaxRAM"] = int(req.ramMax)
-        elif isinstance(req, CUDARequirement):
-            tags.add("GPU")
-        elif isinstance(req, MPIRequirement):
-            raise NotImplementedError(
-                "MPIRequirement is not yet supported for DIRAC CWL jobs"
-            )
+    if job_hint.group:
+        jdl_fields["JobGroup"] = job_hint.group
 
-    # Auto-derive processor tags
+    # Extract fields from matcher docs for JDL (best-effort, lossy)
+    if matcher_docs:
+        first_doc = matcher_docs[0]
+
+        if "site" in first_doc:
+            # Collect all unique sites across all matcher docs
+            sites = list({d["site"] for d in matcher_docs if "site" in d})
+            jdl_fields["Site"] = sites
+
+        if "cpu-work" in first_doc:
+            jdl_fields["CPUTime"] = first_doc["cpu-work"]
+
+        if "wall-time" in first_doc:
+            jdl_fields["MaxWallTime"] = first_doc["wall-time"]
+
+        cpu = first_doc.get("cpu", {})
+        if isinstance(cpu, dict) and "num-cores" in cpu:
+            cores = cpu["num-cores"]
+            if isinstance(cores, dict):
+                if "min" in cores and cores["min"] is not None:
+                    jdl_fields["MinNumberOfProcessors"] = cores["min"]
+                if "max" in cores and cores["max"] is not None:
+                    jdl_fields["MaxNumberOfProcessors"] = cores["max"]
+            else:
+                jdl_fields["MinNumberOfProcessors"] = cores
+                jdl_fields["MaxNumberOfProcessors"] = cores
+
+        gpu = first_doc.get("gpu", {})
+        if gpu:
+            tags = {"GPU"}
+            jdl_fields["Tags"] = list(set(jdl_fields.get("Tags", [])) | tags)
+
+    # Auto-derive processor tags from JDL fields
+    tags = set(jdl_fields.get("Tags", []))
     min_proc = jdl_fields.get("MinNumberOfProcessors", 1)
     max_proc = jdl_fields.get("MaxNumberOfProcessors")
     if min_proc and min_proc > 1:
         tags.add("MultiProcessor")
     if min_proc and max_proc and min_proc == max_proc:
         tags.add(f"{min_proc}Processors")
-
     if tags:
         jdl_fields["Tags"] = list(tags)
-
-    # Sites
-    if job_hint.sites:
-        jdl_fields["Site"] = job_hint.sites
-    if job_hint.banned_sites:
-        jdl_fields["BannedSites"] = job_hint.banned_sites
-
-    if job_hint.group:
-        jdl_fields["JobGroup"] = job_hint.group
 
     # Resolve I/O from CWL input/output source IDs
     cwl_input_ids = {
@@ -193,8 +278,6 @@ def cwl_to_jdl(
             if input_params and ref.source in input_params:
                 val = input_params[ref.source]
                 if isinstance(val, dict) and "path" in val:
-                    # Strip #fragment (file-inside-archive) — server only
-                    # knows the sandbox PFN without it
                     sandbox_files.append(val["path"].split("#")[0])
                 elif isinstance(val, list):
                     sandbox_files.extend(
@@ -225,8 +308,6 @@ def cwl_to_jdl(
 
     # OutputSandbox
     sandbox_outputs: list[str] = []
-
-    # Auto-collect stdout/stderr filenames declared in CWL
     if hasattr(task, "stdout") and task.stdout:
         sandbox_outputs.append(task.stdout)
     if hasattr(task, "stderr") and task.stderr:
@@ -257,6 +338,9 @@ def cwl_to_jdl(
             jdl_fields["OutputPath"] = job_hint.output_data[0].output_path
             jdl_fields["OutputSE"] = list(all_ses)
 
+    # Merge legacy_jdl last (user overrides everything)
+    jdl_fields.update(job_hint.legacy_jdl)
+
     return _format_as_jdl(jdl_fields)
 
 
@@ -284,19 +368,26 @@ async def submit_cwl_jobs(
     user_info: UserInfo,
     config: Config,
 ) -> list[InsertedJob]:
-    """Submit CWL jobs: store workflow once, create one job per input YAML."""
+    """Submit CWL jobs: validate, build matcher docs, store workflow, create jobs."""
     workflow_id = compute_workflow_id(cwl_yaml)
 
     # INSERT IF NOT EXISTS — idempotent, content-addressed
     await job_db.insert_workflow(workflow_id, cwl_yaml, persistent=False)
 
     task = parse_cwl(cwl_yaml)
+
+    # Validate all CWL requirements against the whitelist
+    validate_requirements(task)
+
     job_hint = extract_job_hint(task)
+
+    # Build matcher docs from hint + supported CWL requirements
+    matcher_docs = build_matcher_docs(task, job_hint)
 
     inserted: list[InsertedJob] = []
     for input_params in input_yamls:
         # Generate JDL for transition period
-        jdl = cwl_to_jdl(task, job_hint, input_params)
+        jdl = cwl_to_jdl(task, job_hint, matcher_docs, input_params)
 
         # Submit via existing pipeline
         jobs = await submit_jdl_jobs(
