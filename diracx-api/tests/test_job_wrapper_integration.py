@@ -398,6 +398,7 @@ class TestJobWrapperIntegration:
         job_report_mock = MagicMock()
         job_report_mock.set_job_status = MagicMock()
         job_report_mock.commit = AsyncMock()
+        job_report_mock.send_heartbeat = AsyncMock(return_value=[])
 
         diracx_client_mock = MagicMock()
         diracx_client_mock.jobs.assign_sandbox_to_job = AsyncMock()
@@ -444,6 +445,7 @@ class TestJobWrapperIntegration:
                 return self._data
 
         fake_proc = MagicMock()
+        fake_proc.pid = 99999
         fake_proc.stderr = _FakeStderr([f"{line}\n".encode() for line in known_stderr])
         fake_proc.stdout = _FakeStdout(
             b'{"stdout_log": {"class": "File", "path": "stdout.log"}}'
@@ -627,6 +629,7 @@ class TestJobWrapperIntegration:
                 return self._data
 
         fake_proc = MagicMock()
+        fake_proc.pid = 99999
         fake_proc.stderr = _FakeStderr([f"{line}\n".encode() for line in known_stderr])
         fake_proc.stdout = _FakeStdout(
             b'{"stdout_log": {"class": "File", "path": "stdout.log"}}'
