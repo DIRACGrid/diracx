@@ -96,6 +96,35 @@ def build_peek_content(
     return "\n".join(list(cwltool_stderr)[-max_lines:])
 
 
+async def send_final_heartbeat(
+    *,
+    job_path: Path,
+    job_report: JobReport,
+    cwltool_stderr: deque[str],
+    prmon_tsv_path: Path,
+) -> None:
+    """Send one final heartbeat with exit metrics.
+
+    Called after the subprocess exits and the monitor is cancelled.
+    Uses the last row of the prmon TSV (which includes final totals).
+    """
+    prmon_row = parse_prmon_tsv(prmon_tsv_path)
+    if prmon_row is None:
+        logger.info("No prmon data — skipping final heartbeat")
+        return
+
+    peek = build_peek_content(cwltool_stderr)
+    data = build_heartbeat_data(
+        prmon_row=prmon_row,
+        job_path=job_path,
+        peek_content=peek,
+    )
+    try:
+        await job_report.send_heartbeat(data)
+    except Exception:
+        logger.warning("Failed to send final heartbeat", exc_info=True)
+
+
 class StallDetector:
     """Detect stalled jobs via CPU/wall-clock ratio over a rolling window.
 

@@ -30,7 +30,7 @@ from DIRACCommon.Core.Utilities.ReturnValues import (  # type: ignore[import-unt
 )
 from ruamel.yaml import YAML
 
-from diracx.api.job_monitor import JobMonitor, KillCommandReceived
+from diracx.api.job_monitor import JobMonitor, KillCommandReceived, send_final_heartbeat
 from diracx.api.job_report import JobReport
 from diracx.api.jobs import create_sandbox, download_sandbox
 from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
@@ -719,6 +719,17 @@ class JobWrapper:
                 await monitor_task
             except (asyncio.CancelledError, KillCommandReceived):
                 pass
+
+            # Send final heartbeat with exit metrics
+            try:
+                await send_final_heartbeat(
+                    job_path=self._job_path,
+                    job_report=self._job_report,
+                    cwltool_stderr=cwltool_stderr,
+                    prmon_tsv_path=prmon_tsv,
+                )
+            except Exception:
+                logger.warning("Failed to send final heartbeat", exc_info=True)
 
             if proc.returncode != 0:
                 logger.error(

@@ -249,3 +249,36 @@ async def test_job_monitor_handles_kill_command(
         assert killpg_calls[1][1] == signal.SIGKILL
     finally:
         _jm_mod.os.killpg = original_killpg  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
+    """send_final_heartbeat should send one heartbeat with prmon exit data."""
+    from diracx.api.job_monitor import send_final_heartbeat
+
+    await send_final_heartbeat(
+        job_path=tmp_path,
+        job_report=mock_job_report,
+        cwltool_stderr=deque(["INFO [job test] completed success"]),
+        prmon_tsv_path=prmon_tsv,
+    )
+
+    assert mock_job_report.send_heartbeat.call_count == 1
+    data = mock_job_report.send_heartbeat.call_args[0][0]
+    assert isinstance(data, HeartbeatData)
+    assert data.CPUConsumed == 20.0
+
+
+@pytest.mark.asyncio
+async def test_send_final_heartbeat_no_prmon(tmp_path: Path, mock_job_report):
+    """send_final_heartbeat should not crash if prmon data is missing."""
+    from diracx.api.job_monitor import send_final_heartbeat
+
+    await send_final_heartbeat(
+        job_path=tmp_path,
+        job_report=mock_job_report,
+        cwltool_stderr=deque(),
+        prmon_tsv_path=tmp_path / "nonexistent.txt",
+    )
+
+    assert mock_job_report.send_heartbeat.call_count == 0
