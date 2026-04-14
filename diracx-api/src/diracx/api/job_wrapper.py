@@ -628,14 +628,15 @@ class JobWrapper:
 
             prmon_tsv = self._job_path / "prmon.txt"
             if shutil.which("prmon") is not None:
+                # Use just filenames — subprocess CWD is already job_path
                 command = [
                     "prmon",
                     "--interval",
                     str(prmon_interval),
                     "--filename",
-                    str(prmon_tsv),
+                    "prmon.txt",
                     "--json-summary",
-                    str(self._job_path / "prmon.json"),
+                    "prmon.json",
                     "--",
                     *cwl_command,
                 ]
