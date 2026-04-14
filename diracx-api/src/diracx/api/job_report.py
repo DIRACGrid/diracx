@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
-from diracx.core.models.job import JobMinorStatus, JobStatus, JobStatusUpdate
+from diracx.core.models.job import (
+    HeartbeatData,
+    JobCommand,
+    JobMinorStatus,
+    JobStatus,
+    JobStatusUpdate,
+)
 
 
 class JobReport:
@@ -49,6 +55,14 @@ class JobReport:
                 ).model_dump()
             }
         )
+
+    async def send_heartbeat(self, metrics: HeartbeatData) -> list[JobCommand]:
+        """Send a heartbeat with metrics and return any pending commands.
+
+        :param metrics: Resource metrics to report.
+        :return: List of commands from the server (e.g. Kill).
+        """
+        return await self._client.jobs.add_heartbeat({str(self.job_id): metrics})
 
     async def send_stored_status_info(self):
         """Send all the accumulated job status information."""
