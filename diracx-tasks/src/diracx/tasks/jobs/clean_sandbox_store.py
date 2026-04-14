@@ -8,12 +8,11 @@ from typing import Annotated
 from diracx.core.settings import SandboxStoreSettings
 from diracx.db.sql import SandboxMetadataDB
 from diracx.logic.jobs.sandboxes import clean_sandboxes
+from diracx.tasks.depends import NoTransaction
 from diracx.tasks.plumbing.base_task import PeriodicBaseTask
 from diracx.tasks.plumbing.enums import Priority, Size
 from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 from diracx.tasks.plumbing.schedules import CronSchedule
-
-from .depends import NoTransaction
 
 
 @dataclasses.dataclass
