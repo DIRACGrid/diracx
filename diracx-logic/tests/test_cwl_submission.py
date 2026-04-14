@@ -7,10 +7,12 @@ from pydantic import ValidationError
 
 from diracx.core.models.cwl import IOSource, JobHint, OutputDataEntry
 from diracx.logic.jobs.cwl_submission import (
+    build_matcher_docs,
     compute_workflow_id,
     cwl_to_jdl,
     extract_job_hint,
     parse_cwl,
+    validate_requirements,
 )
 
 # --- Model tests ---
@@ -21,8 +23,8 @@ def test_job_hint_defaults():
     assert hint.priority == 5
     assert hint.type == "User"
     assert hint.log_level == "INFO"
-    assert hint.cpu_work is None
-    assert hint.sites is None
+    assert hint.matcher == []
+    assert hint.legacy_jdl == {}
     assert hint.input_sandbox == []
     assert hint.output_data == []
 
@@ -31,11 +33,11 @@ def test_job_hint_full():
     hint = JobHint(
         schema_version="1.0",
         priority=3,
-        cpu_work=864000,
-        platform="x86_64-el9",
-        sites=["LCG.CERN.cern"],
-        banned_sites=["LCG.RAL.uk"],
-        tags=["GPU"],
+        matcher=[
+            {"site": "LCG.CERN.cern", "cpu": {"architecture": {"name": "x86_64"}}},
+            {"site": "LCG.RAL.uk", "tags": "cvmfs:lhcb"},
+        ],
+        legacy_jdl={"CPUTime": 864000},
         type="MCSimulation",
         group="lhcb_mc",
         input_data=[IOSource(source="input_lfns")],
@@ -47,8 +49,9 @@ def test_job_hint_full():
             )
         ],
     )
-    assert hint.cpu_work == 864000
-    assert hint.sites == ["LCG.CERN.cern"]
+    assert len(hint.matcher) == 2
+    assert hint.matcher[0]["site"] == "LCG.CERN.cern"
+    assert hint.legacy_jdl == {"CPUTime": 864000}
     assert len(hint.output_data) == 1
     assert hint.output_data[0].output_se == ["SE-TAPE"]
 
@@ -103,11 +106,10 @@ hints:
     schema_version: "1.0"
     type: User
     priority: 3
-    cpu_work: 100000
-    sites:
-      - LCG.CERN.cern
-    banned_sites:
-      - LCG.RAL.uk
+    matcher:
+      - site: "LCG.CERN.cern"
+    legacy_jdl:
+      CPUTime: 100000
 
 requirements:
   - class: ResourceRequirement
@@ -195,7 +197,8 @@ def test_extract_job_hint():
     assert hint.schema_version == "1.0"
     assert hint.type == "User"
     assert hint.priority == 3
-    assert hint.cpu_work == 100000
+    assert len(hint.matcher) == 1
+    assert hint.matcher[0]["site"] == "LCG.CERN.cern"
 
 
 def test_extract_job_hint_missing():
@@ -217,40 +220,42 @@ def test_unsupported_schema_version():
 def test_cwl_to_jdl_basic():
     task = parse_cwl(MINIMAL_CWL)
     hint = extract_job_hint(task)
-    jdl = cwl_to_jdl(task, hint, None)
+    matcher_docs = build_matcher_docs(task, hint)
+    jdl = cwl_to_jdl(task, hint, matcher_docs, None)
 
     assert 'Executable = "dirac-cwl-exec"' in jdl
     assert 'JobType = "User"' in jdl
     assert "Priority = 3" in jdl
-    assert "CPUTime = 100000" in jdl
     assert 'JobName = "test-job"' in jdl
-    assert "MinNumberOfProcessors = 2" in jdl
-    assert "MaxNumberOfProcessors = 4" in jdl
-    assert "MinRAM = 2048" in jdl
     assert '"LCG.CERN.cern"' in jdl
-    assert '"LCG.RAL.uk"' in jdl
+    # legacy_jdl CPUTime should be merged in
+    assert "CPUTime = 100000" in jdl
 
 
-def test_cwl_to_jdl_multiprocessor_tags():
+def test_cwl_to_jdl_legacy_jdl_override():
+    """legacy_jdl fields are merged into the JDL output."""
     task = parse_cwl(MINIMAL_CWL)
     hint = extract_job_hint(task)
-    jdl = cwl_to_jdl(task, hint, None)
+    matcher_docs = build_matcher_docs(task, hint)
+    jdl = cwl_to_jdl(task, hint, matcher_docs, None)
 
-    assert '"MultiProcessor"' in jdl
+    assert "CPUTime = 100000" in jdl
 
 
 def test_cwl_to_jdl_output_sandbox():
     task = parse_cwl(CWL_WITH_IO)
     hint = extract_job_hint(task)
-    jdl = cwl_to_jdl(task, hint, None)
+    matcher_docs = build_matcher_docs(task, hint)
+    jdl = cwl_to_jdl(task, hint, matcher_docs, None)
 
-    assert '"std.err"' in jdl  # output sandbox from stderr_log
+    assert '"std.err"' in jdl
 
 
 def test_cwl_to_jdl_output_data():
     task = parse_cwl(CWL_WITH_IO)
     hint = extract_job_hint(task)
-    jdl = cwl_to_jdl(task, hint, None)
+    matcher_docs = build_matcher_docs(task, hint)
+    jdl = cwl_to_jdl(task, hint, matcher_docs, None)
 
     assert '"result.root"' in jdl
     assert "OutputPath" in jdl
@@ -260,6 +265,7 @@ def test_cwl_to_jdl_output_data():
 def test_cwl_to_jdl_input_data_with_params():
     task = parse_cwl(CWL_WITH_IO)
     hint = extract_job_hint(task)
+    matcher_docs = build_matcher_docs(task, hint)
     params = {
         "input_lfns": [
             {"class": "File", "path": "LFN:/lhcb/data/file1.root"},
@@ -267,7 +273,7 @@ def test_cwl_to_jdl_input_data_with_params():
         ],
         "helper_script": {"class": "File", "path": "helper.sh"},
     }
-    jdl = cwl_to_jdl(task, hint, params)
+    jdl = cwl_to_jdl(task, hint, matcher_docs, params)
 
     assert "LFN:/lhcb/data/file1.root" in jdl
     assert "LFN:/lhcb/data/file2.root" in jdl
@@ -279,8 +285,9 @@ def test_cwl_to_jdl_bad_source_reference():
     cwl = CWL_WITH_IO.replace("source: helper_script", "source: nonexistent_input")
     task = parse_cwl(cwl)
     hint = extract_job_hint(task)
+    matcher_docs = build_matcher_docs(task, hint)
     with pytest.raises(ValueError, match="nonexistent_input"):
-        cwl_to_jdl(task, hint, None)
+        cwl_to_jdl(task, hint, matcher_docs, None)
 
 
 class TestRangeExpansion:
@@ -324,3 +331,129 @@ class TestRangeExpansion:
             base_inputs=None,
         )
         assert result == [{"idx": 0}, {"idx": 1}, {"idx": 2}]
+
+
+# --- Requirement whitelist tests ---
+
+CWL_WITH_INLINE_JS = """\
+cwlVersion: v1.2
+class: CommandLineTool
+label: js-tool
+baseCommand: echo
+
+requirements:
+  - class: InlineJavascriptRequirement
+
+hints:
+  - class: dirac:Job
+    schema_version: "1.0"
+
+inputs:
+  - id: msg
+    type: string
+outputs: []
+
+$namespaces:
+  dirac: "https://diracgrid.org/cwl#"
+"""
+
+CWL_WITH_DOCKER = """\
+cwlVersion: v1.2
+class: CommandLineTool
+label: docker-tool
+baseCommand: echo
+
+requirements:
+  - class: DockerRequirement
+    dockerPull: ubuntu:22.04
+
+hints:
+  - class: dirac:Job
+    schema_version: "1.0"
+
+inputs: []
+outputs: []
+
+$namespaces:
+  dirac: "https://diracgrid.org/cwl#"
+"""
+
+CWL_WITH_MPI = """\
+cwlVersion: v1.2
+class: CommandLineTool
+label: mpi-tool
+baseCommand: echo
+
+requirements:
+  - class: MPIRequirement
+    processes: 4
+
+hints:
+  - class: dirac:Job
+    schema_version: "1.0"
+
+inputs: []
+outputs: []
+
+$namespaces:
+  dirac: "https://diracgrid.org/cwl#"
+  cwltool: "http://commonwl.org/cwltool#"
+"""
+
+
+def test_validate_requirements_pass_through():
+    """Pass-through requirements should be accepted."""
+    task = parse_cwl(CWL_WITH_INLINE_JS)
+    validate_requirements(task)  # Should not raise
+
+
+def test_validate_requirements_rejects_docker():
+    """DockerRequirement should be rejected."""
+    task = parse_cwl(CWL_WITH_DOCKER)
+    with pytest.raises(ValueError, match="DockerRequirement"):
+        validate_requirements(task)
+
+
+def test_validate_requirements_rejects_mpi():
+    """MPIRequirement should be rejected."""
+    task = parse_cwl(CWL_WITH_MPI)
+    with pytest.raises(ValueError, match="MPIRequirement"):
+        validate_requirements(task)
+
+
+def test_validate_requirements_no_requirements():
+    """A CWL with no requirements should pass validation."""
+    task = parse_cwl(CWL_NO_HINT)
+    validate_requirements(task)  # Should not raise
+
+
+class TestBuildMatcherDocs:
+    """Tests for building matcher docs from hint + CWL requirements."""
+
+    def test_no_matcher_no_requirements(self):
+        """No matcher key and no supported requirements -> [{}]."""
+        hint = JobHint()
+        task = parse_cwl(CWL_NO_HINT)
+        docs = build_matcher_docs(task, hint)
+        assert docs == [{}]
+
+    def test_matcher_passed_through(self):
+        """Matcher docs from hint are preserved."""
+        hint = JobHint(
+            matcher=[
+                {"site": "SiteA", "tags": "cvmfs:lhcb"},
+                {"site": "SiteB"},
+            ]
+        )
+        task = parse_cwl(CWL_NO_HINT)
+        docs = build_matcher_docs(task, hint)
+        assert len(docs) == 2
+        assert docs[0] == {"site": "SiteA", "tags": "cvmfs:lhcb"}
+        assert docs[1] == {"site": "SiteB"}
+
+    def test_empty_matcher_list(self):
+        """Empty matcher list -> [{}]."""
+        hint = JobHint(matcher=[])
+        task = parse_cwl(CWL_NO_HINT)
+        docs = build_matcher_docs(task, hint)
+        assert docs == [{}]
