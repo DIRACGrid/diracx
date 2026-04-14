@@ -721,15 +721,12 @@ class JobWrapper:
                 pass
 
             # Send final heartbeat with exit metrics
-            try:
-                await send_final_heartbeat(
-                    job_path=self._job_path,
-                    job_report=self._job_report,
-                    cwltool_stderr=cwltool_stderr,
-                    prmon_tsv_path=prmon_tsv,
-                )
-            except Exception:
-                logger.warning("Failed to send final heartbeat", exc_info=True)
+            await send_final_heartbeat(
+                job_path=self._job_path,
+                job_report=self._job_report,
+                cwltool_stderr=cwltool_stderr,
+                prmon_tsv_path=prmon_tsv,
+            )
 
             if proc.returncode != 0:
                 logger.error(
