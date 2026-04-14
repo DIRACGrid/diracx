@@ -104,7 +104,7 @@ For cases where a database connection is needed without a transaction (e.g., a t
 from typing import Annotated
 
 from diracx.db.sql import SandboxMetadataDB
-from diracx.tasks.plumbing.depends import NoTransaction
+from diracx.tasks.depends import NoTransaction
 
 
 async def execute(
