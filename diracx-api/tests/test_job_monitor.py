@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 from collections import deque
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from diracx.core.models.job import HeartbeatData
+from diracx.core.models.job import HeartbeatData, JobCommand
 
 
 @pytest.fixture
@@ -162,3 +165,85 @@ def test_stall_detector_ignores_early_samples():
     detector = StallDetector(window_seconds=1800, threshold=0.05)
     # Single sample with zero CPU — window not yet filled
     assert detector.check(cpu_seconds=0.0, wall_seconds=60.0) is False
+
+
+# --- Task 5: JobMonitor tests ---
+
+
+@pytest.fixture
+def mock_job_report():
+    """Create a mock JobReport with send_heartbeat."""
+    report = MagicMock()
+    report.send_heartbeat = AsyncMock(return_value=[])
+    report.set_job_status = MagicMock()
+    report.commit = AsyncMock()
+    return report
+
+
+@pytest.mark.asyncio
+async def test_job_monitor_sends_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
+    """JobMonitor.run should send at least one heartbeat before being cancelled."""
+    from diracx.api.job_monitor import JobMonitor
+
+    monitor = JobMonitor(
+        pid=os.getpid(),
+        job_path=tmp_path,
+        job_report=mock_job_report,
+        cwltool_stderr=deque(),
+        heartbeat_interval=0.1,  # fast for testing
+        prmon_tsv_path=prmon_tsv,
+    )
+
+    task = asyncio.create_task(monitor.run())
+    await asyncio.sleep(0.3)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+    assert mock_job_report.send_heartbeat.call_count >= 1
+    call_args = mock_job_report.send_heartbeat.call_args
+    data = call_args[0][0]
+    assert isinstance(data, HeartbeatData)
+    assert data.CPUConsumed == 20.0  # from prmon_tsv fixture
+
+
+@pytest.mark.asyncio
+async def test_job_monitor_handles_kill_command(
+    tmp_path: Path, mock_job_report, prmon_tsv
+):
+    """JobMonitor should raise KillCommandReceived when server sends Kill."""
+    import signal
+
+    from diracx.api.job_monitor import JobMonitor, KillCommandReceived
+
+    kill_cmd = JobCommand(job_id=42, command="Kill")
+    mock_job_report.send_heartbeat = AsyncMock(return_value=[kill_cmd])
+
+    monitor = JobMonitor(
+        pid=os.getpid(),
+        job_path=tmp_path,
+        job_report=mock_job_report,
+        cwltool_stderr=deque(),
+        heartbeat_interval=0.1,
+        prmon_tsv_path=prmon_tsv,
+        kill_grace_period=0.1,  # fast for testing
+    )
+
+    killpg_calls: list[tuple[int, int]] = []
+
+    def mock_killpg(pgid, sig):
+        killpg_calls.append((pgid, sig))
+
+    import diracx.api.job_monitor as _jm_mod
+
+    original_killpg = _jm_mod.os.killpg
+    _jm_mod.os.killpg = mock_killpg  # type: ignore[attr-defined]
+    try:
+        with pytest.raises(KillCommandReceived):
+            await asyncio.wait_for(monitor.run(), timeout=5.0)
+
+        assert any(sig == signal.SIGTERM for _, sig in killpg_calls)
+    finally:
+        _jm_mod.os.killpg = original_killpg  # type: ignore[attr-defined]
