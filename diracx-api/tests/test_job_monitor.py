@@ -128,3 +128,37 @@ def test_build_peek_content_truncates():
     assert "line-199" not in content
     assert "line-200" in content
     assert "line-999" in content
+
+
+# --- Task 4: Stall detection tests ---
+
+
+def test_stall_detector_not_stalled():
+    """StallDetector should not trigger when CPU ratio is healthy."""
+    from diracx.api.job_monitor import StallDetector
+
+    detector = StallDetector(window_seconds=300, threshold=0.05)
+    # Simulate 6 samples at 60s intervals — 50% CPU utilisation
+    for i in range(1, 7):
+        assert detector.check(cpu_seconds=30.0 * i, wall_seconds=60.0 * i) is False
+
+
+def test_stall_detector_stalled():
+    """StallDetector should trigger when CPU ratio stays below threshold."""
+    from diracx.api.job_monitor import StallDetector
+
+    detector = StallDetector(window_seconds=300, threshold=0.05)
+    # Simulate 6 samples at 60s intervals — 1% CPU utilisation
+    for i in range(1, 6):
+        detector.check(cpu_seconds=0.6 * i, wall_seconds=60.0 * i)
+    # At i=5, wall=300s which fills the window. Next sample should trigger.
+    assert detector.check(cpu_seconds=3.6, wall_seconds=360.0) is True
+
+
+def test_stall_detector_ignores_early_samples():
+    """StallDetector should not trigger before the window is filled."""
+    from diracx.api.job_monitor import StallDetector
+
+    detector = StallDetector(window_seconds=1800, threshold=0.05)
+    # Single sample with zero CPU — window not yet filled
+    assert detector.check(cpu_seconds=0.0, wall_seconds=60.0) is False

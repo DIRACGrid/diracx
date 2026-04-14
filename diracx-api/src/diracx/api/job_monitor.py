@@ -91,3 +91,55 @@ def build_peek_content(
     duplicated here.
     """
     return "\n".join(list(cwltool_stderr)[-max_lines:])
+
+
+class StallDetector:
+    """Detect stalled jobs via CPU/wall-clock ratio over a rolling window.
+
+    Reads cumulative CPU time (utime + stime) and wall clock time (wtime)
+    from prmon metrics each heartbeat cycle. A job is stalled when the
+    ratio stays below *threshold* for at least *window_seconds*.
+    """
+
+    def __init__(
+        self,
+        window_seconds: float = 1800,
+        threshold: float = 0.05,
+    ) -> None:
+        self._window = window_seconds
+        self._threshold = threshold
+        self._first_cpu: float | None = None
+        self._first_wall: float | None = None
+        self._stalled_since: float | None = None
+
+    def check(self, *, cpu_seconds: float, wall_seconds: float) -> bool:
+        """Record a sample and return True if the job is stalled.
+
+        :param cpu_seconds: Cumulative CPU time (prmon utime + stime).
+        :param wall_seconds: Cumulative wall clock time (prmon wtime).
+        """
+        if self._first_cpu is None:
+            self._first_cpu = cpu_seconds
+            self._first_wall = wall_seconds
+            return False
+
+        assert self._first_wall is not None
+        delta_wall = wall_seconds - self._first_wall
+        if delta_wall <= 0:
+            return False
+
+        delta_cpu = cpu_seconds - self._first_cpu
+        ratio = delta_cpu / delta_wall
+
+        if ratio >= self._threshold:
+            # Healthy — reset window start
+            self._first_cpu = cpu_seconds
+            self._first_wall = wall_seconds
+            self._stalled_since = None
+            return False
+
+        # Below threshold
+        if self._stalled_since is None:
+            self._stalled_since = self._first_wall
+
+        return (wall_seconds - self._stalled_since) >= self._window
