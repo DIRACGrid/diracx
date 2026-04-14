@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.13](https://github.com/DIRACGrid/diracx/compare/v0.0.12...v0.0.13) (2026-04-14)
+
+
+### Features
+
+* add diracx-tasks ([#842](https://github.com/DIRACGrid/diracx/issues/842)) ([63d3a01](https://github.com/DIRACGrid/diracx/commit/63d3a011adaee1da3d892dc2be39b40d6b05c161))
+* add task to clean sandbox store ([#883](https://github.com/DIRACGrid/diracx/issues/883)) ([ab38f04](https://github.com/DIRACGrid/diracx/commit/ab38f040aa120e8fb03109bfd8c7a8c9e0326cc9))
+* **core:** strict UTC datetime validation for pydantic models ([#477](https://github.com/DIRACGrid/diracx/issues/477)) ([ed3d934](https://github.com/DIRACGrid/diracx/commit/ed3d934ceb34e587f0f8746ca3978337d86e5e1d))
+
+
+### Bug Fixes
+
+* **core:** preserve GUID case in replica map validation ([#880](https://github.com/DIRACGrid/diracx/issues/880)) ([c6f0a37](https://github.com/DIRACGrid/diracx/commit/c6f0a37ae7d8198aebef8b1f90a9f965b384e866))
+
+
+### Miscellaneous Chores
+
+* release 0.0.13 ([2a49bc8](https://github.com/DIRACGrid/diracx/commit/2a49bc86ef0b9be601b9db8e10d59869bc944baa))
+
 ## [0.0.12](https://github.com/DIRACGrid/diracx/compare/v0.0.11...v0.0.12) (2026-04-01)
 
 
