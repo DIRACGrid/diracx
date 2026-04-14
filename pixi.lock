@@ -20568,19 +20568,8 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./
   name: diracx
-  version: 0.0.13.dev45+gc5f3454f6.d20260407
-  sha256: 1a70ba4eae5fa52cea1a3500785791bbb25aa252da73bdeaea184a7c48e2d873
-  requires_dist:
-  - diracx-api
-  - diracx-cli
-  - diracx-client
-  - diracx-core
-  - diracx-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: ./
-  name: diracx
-  version: 0.0.13.dev47+g32a33a22e.d20260408
-  sha256: 1a70ba4eae5fa52cea1a3500785791bbb25aa252da73bdeaea184a7c48e2d873
+  version: 0.0.13.dev22+gf9133d2fd
+  sha256: b0bae4530ab6b088720374e4702da560e7d954c9aa8bb7490d3fc97cd2c5f3c1
   requires_dist:
   - diracx-api
   - diracx-cli
@@ -20590,19 +20579,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-api
   name: diracx-api
-  version: 0.0.13.dev36+gc3a632a57
-  sha256: a786ee91cad97b279574bb785c9914a1e9bdf0fa1adfd8acdffb56c6a544e039
-  requires_dist:
-  - cwl-utils
-  - diracx-client
-  - diracx-core
-  - httpx
-  - zstandard
-  - diracx-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: ./diracx-api
-  name: diracx-api
-  version: 0.0.13.dev47+g32a33a22e.d20260408
+  version: 0.0.13.dev22+gf9133d2fd
   sha256: a786ee91cad97b279574bb785c9914a1e9bdf0fa1adfd8acdffb56c6a544e039
   requires_dist:
   - cwl-utils
@@ -20614,25 +20591,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-cli
   name: diracx-cli
-  version: 0.0.13.dev47+g32a33a22e.d20260408
-  sha256: baf99c5201ca980162488b229dbe0e5f8d73e29f805f0adf103ddef1b08d94bf
-  requires_dist:
-  - cwltool
-  - diraccfg
-  - diracx-api
-  - diracx-client
-  - diracx-core
-  - gitpython
-  - pydantic>=2.10
-  - pyyaml
-  - rich
-  - typer>=0.15.4
-  - diracx-testing ; extra == 'testing'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: ./diracx-cli
-  name: diracx-cli
-  version: 0.0.13.dev48+g700504c6e.d20260408
+  version: 0.0.13.dev22+gf9133d2fd
   sha256: baf99c5201ca980162488b229dbe0e5f8d73e29f805f0adf103ddef1b08d94bf
   requires_dist:
   - cwltool
@@ -20662,32 +20621,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-core
   name: diracx-core
-  version: 0.0.13.dev36+gc3a632a57
-  sha256: 22efc5b821bcd5debc27bd9cffdc817957d08d0cfabc47c1c6d87e81b8d79bb6
-  requires_dist:
-  - aiobotocore>=2.15
-  - botocore>=1.35
-  - cachetools
-  - cwl-utils
-  - diraccommon>=9.0.18
-  - email-validator
-  - gitpython
-  - joserfc>=1.5.0
-  - pydantic-settings
-  - pydantic>=2.10
-  - pyyaml
-  - sh
-  - diracx-testing ; extra == 'testing'
-  - moto[server] ; extra == 'testing'
-  - botocore-stubs ; extra == 'types'
-  - types-aiobotocore-s3 ; extra == 'types'
-  - types-aiobotocore[essential] ; extra == 'types'
-  - types-cachetools ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: ./diracx-core
-  name: diracx-core
-  version: 0.0.13.dev47+g32a33a22e.d20260408
+  version: 0.0.13.dev22+gf9133d2fd
   sha256: 22efc5b821bcd5debc27bd9cffdc817957d08d0cfabc47c1c6d87e81b8d79bb6
   requires_dist:
   - aiobotocore>=2.15
@@ -20758,7 +20692,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-logic
   name: diracx-logic
-  version: 0.0.13.dev34+gfc393207c
+  version: 0.0.13.dev22+gf9133d2fd
   sha256: ed958757040a708005450b9e47f850838a87d57bb9c0989ffb3748e6e9f020d6
   requires_dist:
   - cachetools
@@ -20806,8 +20740,8 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-tasks
   name: diracx-tasks
-  version: 0.0.13.dev34+gfc393207c
-  sha256: 752189cc698d17c76e8c240a4a82f6593a5dc040545c29a504753de135b1bd6b
+  version: 0.0.13.dev22+gf9133d2fd
+  sha256: 47ecbf1d4db5442abf0cb47de03b0c0ce7064cfb0f9ff9bf009c9a2041d02db1
   requires_dist:
   - croniter
   - diracx-core
