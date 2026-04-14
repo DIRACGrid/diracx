@@ -10,7 +10,7 @@ from __future__ import annotations
 
 __all__ = ["get_installation_metadata"]
 
-from diracx.routers.auth import router as diracx_wellknown_router
+from diracx.routers.auth.well_known import router as diracx_wellknown_router
 from diracx.routers.fastapi_classes import DiracxRouter
 
 from gubbins.core.models import ExtendedMetadata
