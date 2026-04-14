@@ -19,7 +19,7 @@ Adding a new policy:
 
 from __future__ import annotations
 
-__all__ = ["BaseAccessPolicy", "check_permissions"]
+__all__ = ["BaseAccessPolicy", "check_permissions", "open_access"]
 
 import functools
 import os
