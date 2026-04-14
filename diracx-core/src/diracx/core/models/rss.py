@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 class AllowedStatus(BaseModel):
     allowed: Literal[True]
-    warnings: list[str] = []
+    warnings: str | None = None
 
     def __bool__(self) -> bool:
         return True
@@ -55,19 +55,3 @@ class SiteStatus(BaseModel):
 
 ALLOWED = {"Active", "Degraded"}
 BANNED = {"Banned", "Probing", "Error", "Unknown"}
-
-
-def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
-    if db_status in ALLOWED:
-        return AllowedStatus(allowed=True)
-
-    if db_status in BANNED:
-        return BannedStatus(
-            allowed=False,
-            reason=reason or db_status,
-        )
-
-    return BannedStatus(
-        allowed=False,
-        reason=f"Unknown status: {db_status}",
-    )

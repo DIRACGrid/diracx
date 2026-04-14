@@ -21,7 +21,7 @@ class ResourceStatusDB(BaseSQLDB):
     async def get_site_status(self, name: str, vo: str = "all") -> tuple[str, str]:
         stmt = select(SiteStatus.status, SiteStatus.reason).where(
             SiteStatus.name == name,
-            SiteStatus.statustype == "all",
+            SiteStatus.status_type == "all",
             SiteStatus.vo == vo,
         )
         result = await self.conn.execute(stmt)
@@ -34,14 +34,16 @@ class ResourceStatusDB(BaseSQLDB):
     async def get_resource_status(
         self,
         name: str,
-        statustypes: list[str] = ["all"],
+        status_types: list[str] | None = None,
         vo: str = "all",
     ) -> dict[str, Row]:
+        if not status_types:
+            status_types = ["all"]
         stmt = select(
-            ResourceStatus.status, ResourceStatus.reason, ResourceStatus.statustype
+            ResourceStatus.status, ResourceStatus.reason, ResourceStatus.status_type
         ).where(
             ResourceStatus.name == name,
-            ResourceStatus.statustype.in_(statustypes),
+            ResourceStatus.status_type.in_(status_types),
             ResourceStatus.vo == vo,
         )
         result = await self.conn.execute(stmt)

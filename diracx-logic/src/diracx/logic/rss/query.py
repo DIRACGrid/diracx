@@ -1,15 +1,38 @@
 from __future__ import annotations
 
 from diracx.core.models.rss import (
+    ALLOWED,
+    BANNED,
+    AllowedStatus,
+    BannedStatus,
     ComputeElementStatus,
     FTSStatus,
+    ResourceStatus,
     StorageElementStatus,
-    map_status,
 )
 from diracx.core.models.rss import (
     SiteStatus as SiteStatusModel,
 )
 from diracx.db.sql import ResourceStatusDB
+
+
+def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
+    if db_status in ALLOWED:
+        return AllowedStatus(
+            allowed=True,
+            warnings=reason or db_status if db_status == "Degraded" else None,
+        )
+
+    if db_status in BANNED:
+        return BannedStatus(
+            allowed=False,
+            reason=reason or db_status,
+        )
+
+    return BannedStatus(
+        allowed=False,
+        reason=f"Unknown status: {db_status}",
+    )
 
 
 async def get_site_status(

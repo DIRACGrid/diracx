@@ -40,15 +40,15 @@ async def test_site_status(rss_db: ResourceStatusDB):
         )
 
     # Test with the test Site (should be found)
-    async with rss_db as rss_db:
-        status, reason = await rss_db.get_site_status("TestSite")
+    async with rss_db as db:
+        status, reason = await db.get_site_status("TestSite")
     assert status == "Active"
     assert reason == "All good"
 
     # Test with an unknow Site (should not be found)
     with pytest.raises(ResourceNotFoundError):
-        async with rss_db as rss_db:
-            await rss_db.get_site_status("Unknown")
+        async with rss_db as db:
+            await db.get_site_status("Unknown")
 
 
 async def test_resource_status(rss_db: ResourceStatusDB):
@@ -101,22 +101,22 @@ async def test_resource_status(rss_db: ResourceStatusDB):
             )
 
     # Test with the test Compute Element (should be found)
-    async with rss_db as rss_db:
-        result = await rss_db.get_resource_status("TestCompute")
+    async with rss_db as db:
+        result = await db.get_resource_status("TestCompute")
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
 
     # Test with the test FTS (should be found)
-    async with rss_db as rss_db:
-        result = await rss_db.get_resource_status("TestFTS")
+    async with rss_db as db:
+        result = await db.get_resource_status("TestFTS")
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
 
     # Test with the test Storage Element (should be found)
-    async with rss_db as rss_db:
-        result = await rss_db.get_resource_status(
+    async with rss_db as db:
+        result = await db.get_resource_status(
             "TestStorage", ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
         )
     assert set(result.keys()) == {
@@ -131,5 +131,5 @@ async def test_resource_status(rss_db: ResourceStatusDB):
 
     # Test with an unknow Resource (should not be found)
     with pytest.raises(ResourceNotFoundError):
-        async with rss_db as rss_db:
-            await rss_db.get_resource_status("Unknown")
+        async with rss_db as db:
+            await db.get_resource_status("Unknown")
