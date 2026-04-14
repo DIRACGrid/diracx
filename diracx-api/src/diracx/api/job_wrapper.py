@@ -632,6 +632,9 @@ class JobWrapper:
                     "prmon not found in PATH — required for job monitoring (part of DIRACOS2)"
                 )
             # Use just filenames — subprocess CWD is already job_path
+            # TODO: explore prmon_compress_output.py on-the-fly inside the job wrapper, increase sample rate
+            # TODO: use a FIFO (named pipe) for prmon output to avoid disk I/O overhead and enable real-time monitoring
+            # TODO: use prmon_compress_output on the named pipe
             command = [
                 "prmon",
                 "--interval",
