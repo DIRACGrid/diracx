@@ -5,20 +5,18 @@ __all__ = ["PilotAgentsDB"]
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import bindparam
+from sqlalchemy import case, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql import delete, insert, update
+from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
     PilotNotFoundError,
 )
-from diracx.core.models.pilot import PilotFieldsMapping, PilotStatus
+from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.core.models.search import SearchSpec, SortSpec
 
-from ..utils import (
-    BaseSQLDB,
-)
+from ..utils import BaseSQLDB
 from .schema import (
     JobToPilotMapping,
     PilotAgents,
@@ -28,13 +26,11 @@ from .schema import (
 
 
 class PilotAgentsDB(BaseSQLDB):
-    """PilotAgentsDB class is a front-end to the PilotAgents Database."""
+    """Front-end to the PilotAgents database."""
 
     metadata = PilotAgentsDBBase.metadata
 
-    # ----------------------------- Insert Functions -----------------------------
-
-    async def add_pilots(
+    async def register_pilots(
         self,
         pilot_stamps: list[str],
         vo: str,
@@ -44,16 +40,16 @@ class PilotAgentsDB(BaseSQLDB):
         pilot_references: dict[str, str] | None = None,
         status: str = PilotStatus.SUBMITTED,
     ):
-        """Bulk add pilots in the DB.
+        """Bulk-register pilots.
 
-        If we can't find a pilot_reference associated with a stamp, we take the stamp by default.
+        If a stamp has no entry in `pilot_references` the stamp is used as
+        the reference.
         """
         if pilot_references is None:
             pilot_references = {}
 
         now = datetime.now(tz=timezone.utc)
 
-        # Prepare the list of dictionaries for bulk insertion
         values = [
             {
                 "PilotJobReference": pilot_references.get(stamp, stamp),
@@ -69,125 +65,103 @@ class PilotAgentsDB(BaseSQLDB):
             for stamp in pilot_stamps
         ]
 
-        # Insert multiple rows in a single execute call and use 'returning' to get primary keys
-        stmt = insert(PilotAgents).values(values)  # Assuming 'id' is the primary key
+        await self.conn.execute(insert(PilotAgents).values(values))
 
-        await self.conn.execute(stmt)
-
-    async def add_jobs_to_pilot(self, job_to_pilot_mapping: list[dict[str, Any]]):
+    async def assign_jobs_to_pilot(self, job_to_pilot_mapping: list[dict[str, Any]]):
         """Associate a pilot with jobs.
 
-        job_to_pilot_mapping format:
-            job_to_pilot_mapping = [{"PilotID": pilot_id, "JobID": job_id, "StartTime": now}]
-
-        Raises:
-        - PilotNotFoundError if a pilot_id is not associated with a pilot.
-        - PilotAlreadyAssociatedWithJobError if the pilot is already associated with one of the given jobs.
-        - NotImplementedError if the integrity error is not caught.
-
-        **Important note**: We assume that a job exists.
-
+        Each entry has the shape `{"PilotID": ..., "JobID": ..., "StartTime": ...}`.
+        Raises PilotNotFoundError if any pilot is missing, and
+        PilotAlreadyAssociatedWithJobError on duplicates. Caller must
+        ensure the jobs exist.
         """
-        # Insert multiple rows in a single execute call
         stmt = insert(JobToPilotMapping).values(job_to_pilot_mapping)
 
         try:
             await self.conn.execute(stmt)
         except IntegrityError as e:
-            if "foreign key" in str(e.orig).lower():
+            msg = str(e.orig).lower()
+            if "foreign key" in msg:
                 raise PilotNotFoundError(
-                    detail="at least one of these pilots do not exist",
+                    detail="at least one of these pilots does not exist",
                 ) from e
-
-            if (
-                "duplicate entry" in str(e.orig).lower()
-                or "unique constraint" in str(e.orig).lower()
-            ):
+            if "duplicate entry" in msg or "unique constraint" in msg:
                 raise PilotAlreadyAssociatedWithJobError(
-                    detail="at least one of these pilots is already associated with a given job."
+                    detail=(
+                        "at least one of these pilots is already associated "
+                        "with a given job."
+                    )
                 ) from e
-
-            # Other errors to catch
-            raise NotImplementedError(
-                "Engine Specific error not caught" + str(e)
-            ) from e
-
-    # ----------------------------- Delete Functions -----------------------------
+            raise
 
     async def delete_pilots(self, pilot_ids: list[int]):
-        """Destructive function. Delete pilots."""
-        stmt = delete(PilotAgents).where(PilotAgents.pilot_id.in_(pilot_ids))
-
-        await self.conn.execute(stmt)
+        """Destructive. Delete pilots by ID."""
+        await self.conn.execute(
+            delete(PilotAgents).where(PilotAgents.pilot_id.in_(pilot_ids))
+        )
 
     async def remove_jobs_from_pilots(self, pilot_ids: list[int]):
-        """Destructive function. De-associate jobs and pilots."""
-        stmt = delete(JobToPilotMapping).where(
-            JobToPilotMapping.pilot_id.in_(pilot_ids)
+        """Destructive. De-associate jobs and pilots."""
+        await self.conn.execute(
+            delete(JobToPilotMapping).where(JobToPilotMapping.pilot_id.in_(pilot_ids))
         )
-
-        await self.conn.execute(stmt)
 
     async def delete_pilot_logs(self, pilot_ids: list[int]):
-        """Destructive function. Remove logs from pilots."""
-        stmt = delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
-
-        await self.conn.execute(stmt)
-
-    # ----------------------------- Update Functions -----------------------------
-
-    async def update_pilot_fields(
-        self, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
-    ):
-        """Bulk update pilots with a mapping.
-
-        pilot_stamps_to_fields_mapping format:
-
-            [
-                {
-                    "PilotStamp": pilot_stamp,
-                    "BenchMark": bench_mark,
-                    "StatusReason": pilot_reason,
-                    "AccountingSent": accounting_sent,
-                    "Status": status,
-                    "CurrentJobID": current_job_id,
-                    "Queue": queue,
-                    ...
-                }
-            ]
-
-        The mapping helps to update multiple fields at a time.
-
-        Raises PilotNotFoundError if one of the pilots is not found.
-        """
-        stmt = (
-            update(PilotAgents)
-            .where(PilotAgents.pilot_stamp == bindparam("b_pilot_stamp"))
-            .values(
-                {
-                    key: bindparam(key)
-                    for key in pilot_stamps_to_fields_mapping[0]
-                    .model_dump(exclude_none=True)
-                    .keys()
-                    if key != "PilotStamp"
-                }
-            )
+        """Destructive. Remove pilot logs."""
+        await self.conn.execute(
+            delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
         )
 
-        values = [
-            {
-                **{"b_pilot_stamp": mapping.PilotStamp},
-                **mapping.model_dump(exclude={"PilotStamp"}, exclude_none=True),
-            }
-            for mapping in pilot_stamps_to_fields_mapping
-        ]
+    async def update_pilot_metadata(self, pilot_metadata: list[PilotMetadata]):
+        """Bulk-update pilot metadata.
 
-        res = await self.conn.execute(stmt, values)
+        Each PilotMetadata entry may set a different subset of fields;
+        unset fields (None) are preserved. Uses a per-column CASE
+        expression to support heterogeneous updates, matching the pattern
+        in JobDB.set_job_attributes. Raises PilotNotFoundError if any of
+        the pilot stamps is not found.
+        """
+        if not pilot_metadata:
+            return
 
-        if res.rowcount != len(pilot_stamps_to_fields_mapping):
-            raise PilotNotFoundError("at least one of the given pilot does not exist.")
+        updates_by_stamp: dict[str, dict[str, Any]] = {
+            m.PilotStamp: m.model_dump(exclude={"PilotStamp"}, exclude_none=True)
+            for m in pilot_metadata
+        }
 
-    # ----------------------------- Search Functions -----------------------------
+        columns = {col for fields in updates_by_stamp.values() for col in fields}
+        if not columns:
+            return
+
+        case_expressions = {
+            column: case(
+                *[
+                    (
+                        PilotAgents.__table__.c.PilotStamp == stamp,
+                        literal(
+                            fields[column],
+                            type_=PilotAgents.__table__.c[column].type,
+                        )
+                        if not isinstance(fields[column], expression.FunctionElement)
+                        else fields[column],
+                    )
+                    for stamp, fields in updates_by_stamp.items()
+                    if column in fields
+                ],
+                else_=getattr(PilotAgents.__table__.c, column),
+            )
+            for column in columns
+        }
+
+        stmt = (
+            update(PilotAgents)
+            .values(**case_expressions)
+            .where(PilotAgents.__table__.c.PilotStamp.in_(updates_by_stamp.keys()))
+        )
+        result = await self.conn.execute(stmt)
+
+        if result.rowcount != len(updates_by_stamp):
+            raise PilotNotFoundError("at least one of the given pilots does not exist.")
 
     async def search_pilots(
         self,
@@ -198,7 +172,7 @@ class PilotAgentsDB(BaseSQLDB):
         distinct: bool = False,
         per_page: int = 100,
         page: int | None = None,
-    ) -> tuple[int, list[dict[Any, Any]]]:
+    ) -> tuple[int, list[dict[str, Any]]]:
         """Search for pilot information in the database."""
         return await self._search(
             table=PilotAgents,
@@ -210,29 +184,41 @@ class PilotAgentsDB(BaseSQLDB):
             page=page,
         )
 
-    async def search_pilot_to_job_mapping(
-        self,
-        parameters: list[str] | None,
-        search: list[SearchSpec],
-        sorts: list[SortSpec],
-        *,
-        distinct: bool = False,
-        per_page: int = 100,
-        page: int | None = None,
-    ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for jobs that are associated with pilots."""
-        return await self._search(
-            table=JobToPilotMapping,
-            parameters=parameters,
-            search=search,
-            sorts=sorts,
-            distinct=distinct,
-            per_page=per_page,
-            page=page,
-        )
-
     async def pilot_summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
-        """Get a summary of the pilots."""
+        """Aggregate pilot counts by the requested columns."""
         return await self._summary(table=PilotAgents, group_by=group_by, search=search)
+
+    async def job_ids_for_stamps(self, pilot_stamps: list[str]) -> list[int]:
+        """Return the IDs of jobs that have run on any of the given pilot stamps.
+
+        Single round-trip SQL join over JobToPilotMapping and PilotAgents
+        (both live in the same metadata, so the join is legitimate at the
+        DB layer).
+        """
+        if not pilot_stamps:
+            return []
+        stmt = (
+            select(JobToPilotMapping.job_id)
+            .join(
+                PilotAgents,
+                PilotAgents.pilot_id == JobToPilotMapping.pilot_id,
+            )
+            .where(PilotAgents.pilot_stamp.in_(pilot_stamps))
+            .distinct()
+        )
+        result = await self.conn.execute(stmt)
+        return [row[0] for row in result]
+
+    async def pilot_ids_for_job_ids(self, job_ids: list[int]) -> list[int]:
+        """Return the IDs of pilots that have run any of the given jobs."""
+        if not job_ids:
+            return []
+        stmt = (
+            select(JobToPilotMapping.pilot_id)
+            .where(JobToPilotMapping.job_id.in_(job_ids))
+            .distinct()
+        )
+        result = await self.conn.execute(stmt)
+        return [row[0] for row in result]

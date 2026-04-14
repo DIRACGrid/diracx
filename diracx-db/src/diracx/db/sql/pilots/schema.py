@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     Double,
@@ -49,10 +48,10 @@ class PilotAgents(PilotAgentsDBBase):
     vo: Mapped[str128] = mapped_column("VO")
     grid_type: Mapped[str32] = mapped_column("GridType", default="LCG")
     benchmark: Mapped[float] = mapped_column("BenchMark", Double, default=0.0)
-    submission_time: Mapped[Optional[datetime]] = mapped_column(
+    submission_time: Mapped[datetime | None] = mapped_column(
         "SubmissionTime", SmarterDateTime
     )
-    last_update_time: Mapped[Optional[datetime]] = mapped_column(
+    last_update_time: Mapped[datetime | None] = mapped_column(
         "LastUpdateTime", SmarterDateTime
     )
     status: Mapped[str32] = mapped_column("Status", default=PilotStatus.UNKNOWN)

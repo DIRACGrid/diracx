@@ -11,7 +11,7 @@ from diracx.core.models.search import (
 )
 from diracx.core.properties import JOB_ADMINISTRATOR
 from diracx.db.os import JobParametersDB
-from diracx.db.sql import JobDB, JobLoggingDB
+from diracx.db.sql import JobDB, JobLoggingDB, PilotAgentsDB
 from diracx.logic.jobs.query import MAX_PER_PAGE
 from diracx.logic.jobs.query import search as search_bl
 from diracx.logic.jobs.query import summary as summary_bl
@@ -43,6 +43,20 @@ EXAMPLE_SEARCHES = {
                 {"parameter": "JobID", "operator": "in", "values": ["6", "2", "3"]}
             ],
             "sort": [{"parameter": "JobID", "direction": "asc"}],
+        },
+    },
+    "Jobs run on a given pilot": {
+        "summary": "Jobs run on a given pilot",
+        "description": (
+            "Find all jobs that have run on a specific pilot. `PilotStamp` "
+            "is a pseudo-parameter resolved through `JobToPilotMapping` "
+            "into a `JobID` filter; only `eq` and `in` operators are "
+            "supported."
+        ),
+        "value": {
+            "search": [
+                {"parameter": "PilotStamp", "operator": "eq", "value": "abc-123"}
+            ]
         },
     },
 }
@@ -123,6 +137,7 @@ async def search(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
     job_logging_db: JobLoggingDB,
+    pilot_db: PilotAgentsDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckWMSPolicyCallable,
     response: Response,
@@ -143,6 +158,12 @@ async def search(
 
     By default, the search will return all jobs the user has access to, and all the fields
     of the job will be returned.
+
+    A `PilotStamp` pseudo-parameter is also accepted in the `search`
+    filter list (operators `eq` / `in` only): it is transparently
+    resolved through `JobToPilotMapping` into a `JobID` filter,
+    allowing callers to ask "jobs run by this pilot" through the same
+    endpoint.
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 
@@ -155,6 +176,7 @@ async def search(
         job_db=job_db,
         job_parameters_db=job_parameters_db,
         job_logging_db=job_logging_db,
+        pilot_db=pilot_db,
         preferred_username=preferred_username,
         vo=user_info.vo,
         page=page,

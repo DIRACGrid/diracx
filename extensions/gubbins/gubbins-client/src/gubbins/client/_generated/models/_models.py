@@ -184,12 +184,12 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
-class BodyPilotsAddPilotStamps(_serialization.Model):
-    """Body_pilots_add_pilot_stamps.
+class BodyPilotsRegisterPilots(_serialization.Model):
+    """Body_pilots_register_pilots.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+    :ivar pilot_stamps: Stamps of the pilots to create. Required.
     :vartype pilot_stamps: list[str]
     :ivar vo: Pilot virtual organization. Required.
     :vartype vo: str
@@ -201,8 +201,8 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
     :vartype destination_site: str
     :ivar pilot_references: Association of a pilot reference with a pilot stamp.
     :vartype pilot_references: dict[str, str]
-    :ivar pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting", "Running",
-     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :ivar pilot_status: Initial status of the pilots. Known values are: "Submitted", "Waiting",
+     "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
     :vartype pilot_status: str or ~_generated.models.PilotStatus
     """
 
@@ -234,7 +234,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword pilot_stamps: List of the pilot stamps we want to add to the db. Required.
+        :keyword pilot_stamps: Stamps of the pilots to create. Required.
         :paramtype pilot_stamps: list[str]
         :keyword vo: Pilot virtual organization. Required.
         :paramtype vo: str
@@ -246,7 +246,7 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         :paramtype destination_site: str
         :keyword pilot_references: Association of a pilot reference with a pilot stamp.
         :paramtype pilot_references: dict[str, str]
-        :keyword pilot_status: Status of the pilots. Known values are: "Submitted", "Waiting",
+        :keyword pilot_status: Initial status of the pilots. Known values are: "Submitted", "Waiting",
          "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
         :paramtype pilot_status: str or ~_generated.models.PilotStatus
         """
@@ -260,31 +260,30 @@ class BodyPilotsAddPilotStamps(_serialization.Model):
         self.pilot_status = pilot_status
 
 
-class BodyPilotsUpdatePilotFields(_serialization.Model):
-    """Body_pilots_update_pilot_fields.
+class BodyPilotsUpdatePilotMetadata(_serialization.Model):
+    """Body_pilots_update_pilot_metadata.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change. Required.
-    :vartype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
+    :ivar pilot_metadata: Pilot metadata mappings to apply. Required.
+    :vartype pilot_metadata: list[~_generated.models.PilotMetadata]
     """
 
     _validation = {
-        "pilot_stamps_to_fields_mapping": {"required": True},
+        "pilot_metadata": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_stamps_to_fields_mapping": {"key": "pilot_stamps_to_fields_mapping", "type": "[PilotFieldsMapping]"},
+        "pilot_metadata": {"key": "pilot_metadata", "type": "[PilotMetadata]"},
     }
 
-    def __init__(self, *, pilot_stamps_to_fields_mapping: list["_models.PilotFieldsMapping"], **kwargs: Any) -> None:
+    def __init__(self, *, pilot_metadata: list["_models.PilotMetadata"], **kwargs: Any) -> None:
         """
-        :keyword pilot_stamps_to_fields_mapping: (pilot_stamp, pilot_fields) mapping to change.
-         Required.
-        :paramtype pilot_stamps_to_fields_mapping: list[~_generated.models.PilotFieldsMapping]
+        :keyword pilot_metadata: Pilot metadata mappings to apply. Required.
+        :paramtype pilot_metadata: list[~_generated.models.PilotMetadata]
         """
         super().__init__(**kwargs)
-        self.pilot_stamps_to_fields_mapping = pilot_stamps_to_fields_mapping
+        self.pilot_metadata = pilot_metadata
 
 
 class ExtendedMetadata(_serialization.Model):
@@ -1053,31 +1052,34 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
-class PilotFieldsMapping(_serialization.Model):
-    """All the fields that a user can modify on a Pilot (except PilotStamp).
+class PilotMetadata(_serialization.Model):
+    """Mutable metadata attached to a pilot.
+
+    ``PilotStamp`` identifies the pilot and cannot be changed. Every other
+    field is optional; when absent it is left untouched by an update.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_stamp: Pilotstamp. Required.
+    :ivar pilot_stamp: Immutable stamp identifying the pilot. Required.
     :vartype pilot_stamp: str
-    :ivar status_reason: Statusreason.
+    :ivar status_reason: Human-readable reason for the current status.
     :vartype status_reason: str
-    :ivar status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
-     "Failed", "Deleted", "Aborted", and "Unknown".
+    :ivar status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
     :vartype status: str or ~_generated.models.PilotStatus
-    :ivar bench_mark: Benchmark.
+    :ivar bench_mark: Pilot benchmark value.
     :vartype bench_mark: float
-    :ivar destination_site: Destinationsite.
+    :ivar destination_site: Destination site.
     :vartype destination_site: str
-    :ivar queue: Queue.
+    :ivar queue: Batch queue name.
     :vartype queue: str
-    :ivar grid_site: Gridsite.
+    :ivar grid_site: Grid site.
     :vartype grid_site: str
-    :ivar grid_type: Gridtype.
+    :ivar grid_type: Grid type.
     :vartype grid_type: str
-    :ivar accounting_sent: Accountingsent.
+    :ivar accounting_sent: Whether accounting has been sent for this pilot.
     :vartype accounting_sent: bool
-    :ivar current_job_id: Currentjobid.
+    :ivar current_job_id: ID of the job currently running on this pilot.
     :vartype current_job_id: int
     """
 
@@ -1114,26 +1116,26 @@ class PilotFieldsMapping(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword pilot_stamp: Pilotstamp. Required.
+        :keyword pilot_stamp: Immutable stamp identifying the pilot. Required.
         :paramtype pilot_stamp: str
-        :keyword status_reason: Statusreason.
+        :keyword status_reason: Human-readable reason for the current status.
         :paramtype status_reason: str
-        :keyword status: PilotStatus. Known values are: "Submitted", "Waiting", "Running", "Done",
-         "Failed", "Deleted", "Aborted", and "Unknown".
+        :keyword status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
+         "Done", "Failed", "Deleted", "Aborted", and "Unknown".
         :paramtype status: str or ~_generated.models.PilotStatus
-        :keyword bench_mark: Benchmark.
+        :keyword bench_mark: Pilot benchmark value.
         :paramtype bench_mark: float
-        :keyword destination_site: Destinationsite.
+        :keyword destination_site: Destination site.
         :paramtype destination_site: str
-        :keyword queue: Queue.
+        :keyword queue: Batch queue name.
         :paramtype queue: str
-        :keyword grid_site: Gridsite.
+        :keyword grid_site: Grid site.
         :paramtype grid_site: str
-        :keyword grid_type: Gridtype.
+        :keyword grid_type: Grid type.
         :paramtype grid_type: str
-        :keyword accounting_sent: Accountingsent.
+        :keyword accounting_sent: Whether accounting has been sent for this pilot.
         :paramtype accounting_sent: bool
-        :keyword current_job_id: Currentjobid.
+        :keyword current_job_id: ID of the job currently running on this pilot.
         :paramtype current_job_id: int
         """
         super().__init__(**kwargs)

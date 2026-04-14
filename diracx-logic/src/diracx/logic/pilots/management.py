@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
-from diracx.core.models.pilot import PilotFieldsMapping
+from diracx.core.models.pilot import PilotMetadata, PilotStatus
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    ScalarSearchSpec,
+    SearchSpec,
+)
 from diracx.db.sql import PilotAgentsDB
 
-from .query import (
-    get_outdated_pilots,
-    get_pilot_ids_by_stamps,
-    get_pilot_jobs_ids_by_pilot_id,
-    get_pilots_by_stamp,
-)
+from .query import get_pilots_by_stamp
 
 
 async def register_new_pilots(
@@ -24,21 +25,27 @@ async def register_new_pilots(
     status: str,
     pilot_job_references: dict[str, str] | None,
 ):
-    # [IMPORTANT] Check unicity of pilot stamps
-    # If a pilot already exists, we raise an error (transaction will rollback)
+    """Register a batch of new pilots.
+
+    Raises `PilotAlreadyExistsError` if any stamp already exists.
+
+    Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
+    constraint on `PilotStamp` (only a non-unique key), so a concurrent
+    registration of the same stamp from two processes could race past this
+    check. In practice pilot stamps are cryptographically random UUIDs,
+    making the collision window negligible.
+    """
     existing_pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db, pilot_stamps=pilot_stamps
     )
 
-    # If we found pilots from the list, this means some pilots already exist
-    if len(existing_pilots) > 0:
+    if existing_pilots:
         found_keys = {pilot["PilotStamp"] for pilot in existing_pilots}
-
         raise PilotAlreadyExistsError(
             f"The following pilots already exist: {found_keys}"
         )
 
-    await pilot_db.add_pilots(
+    await pilot_db.register_pilots(
         pilot_stamps=pilot_stamps,
         vo=vo,
         grid_type=grid_type,
@@ -51,72 +58,119 @@ async def register_new_pilots(
 
 async def delete_pilots(
     pilot_db: PilotAgentsDB,
+    *,
     pilot_stamps: list[str] | None = None,
     age_in_days: int | None = None,
     delete_only_aborted: bool = True,
     vo_constraint: str | None = None,
 ):
-    if pilot_stamps:
-        pilot_ids = await get_pilot_ids_by_stamps(
-            pilot_db=pilot_db, pilot_stamps=pilot_stamps, allow_missing=True
-        )
-    else:
-        assert age_in_days
-        assert vo_constraint
+    """Delete pilots by stamps or by age.
 
-        cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)
+    Exactly one of `pilot_stamps` or `age_in_days` must be provided.
 
-        pilots = await get_outdated_pilots(
+    The age-based branch is used by the maintenance task worker (not exposed
+    on the public router). `vo_constraint` scopes an age-based deletion to
+    a single VO; pass `None` for cross-VO cleanup.
+    """
+    if pilot_stamps is not None:
+        pilots = await get_pilots_by_stamp(
             pilot_db=pilot_db,
-            cutoff_date=cutoff_date,
-            only_aborted=delete_only_aborted,
+            pilot_stamps=pilot_stamps,
             parameters=["PilotID"],
+        )
+        pilot_ids = [p["PilotID"] for p in pilots]
+    elif age_in_days is not None:
+        pilot_ids = await _list_pilots_for_age_cleanup(
+            pilot_db=pilot_db,
+            age_in_days=age_in_days,
+            delete_only_aborted=delete_only_aborted,
             vo_constraint=vo_constraint,
         )
+    else:
+        raise ValueError("Exactly one of pilot_stamps or age_in_days must be provided.")
 
-        pilot_ids = [pilot["PilotID"] for pilot in pilots]
+    if not pilot_ids:
+        return
 
     await pilot_db.remove_jobs_from_pilots(pilot_ids)
     await pilot_db.delete_pilot_logs(pilot_ids)
     await pilot_db.delete_pilots(pilot_ids)
 
 
-async def update_pilots_fields(
-    pilot_db: PilotAgentsDB, pilot_stamps_to_fields_mapping: list[PilotFieldsMapping]
+async def _list_pilots_for_age_cleanup(
+    pilot_db: PilotAgentsDB,
+    age_in_days: int,
+    delete_only_aborted: bool,
+    vo_constraint: str | None,
+) -> list[int]:
+    """Return pilot IDs older than `age_in_days`.
+
+    Internal helper for age-based cleanup. The cutoff is compared server-side
+    via the search layer; the datetime is serialised as an ISO-8601 string to
+    avoid widening the search-spec type for this one caller.
+    """
+    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=age_in_days)).isoformat()
+
+    search: list[SearchSpec] = [
+        ScalarSearchSpec(
+            parameter="SubmissionTime",
+            operator=ScalarSearchOperator.LESS_THAN,
+            value=cutoff,
+        ),
+    ]
+    if vo_constraint is not None:
+        search.append(
+            ScalarSearchSpec(
+                parameter="VO",
+                operator=ScalarSearchOperator.EQUAL,
+                value=vo_constraint,
+            )
+        )
+    if delete_only_aborted:
+        search.append(
+            ScalarSearchSpec(
+                parameter="Status",
+                operator=ScalarSearchOperator.EQUAL,
+                value=PilotStatus.ABORTED,
+            )
+        )
+
+    _, pilots = await pilot_db.search_pilots(
+        parameters=["PilotID"],
+        search=search,
+        sorts=[],
+    )
+    return [p["PilotID"] for p in pilots]
+
+
+async def update_pilots_metadata(
+    pilot_db: PilotAgentsDB,
+    pilot_metadata: list[PilotMetadata],
 ):
-    await pilot_db.update_pilot_fields(pilot_stamps_to_fields_mapping)
+    """Bulk-update pilot metadata."""
+    await pilot_db.update_pilot_metadata(pilot_metadata)
 
 
-async def add_jobs_to_pilot(
+async def assign_jobs_to_pilot(
     pilot_db: PilotAgentsDB, pilot_stamp: str, job_ids: list[int]
 ):
-    pilot_ids = await get_pilot_ids_by_stamps(
-        pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
+    """Associate jobs with a pilot identified by its stamp."""
+    pilots = await get_pilots_by_stamp(
+        pilot_db=pilot_db,
+        pilot_stamps=[pilot_stamp],
+        parameters=["PilotID"],
     )
-    pilot_id = pilot_ids[0]
+    if not pilots:
+        raise PilotNotFoundError(detail=f"pilot {pilot_stamp!r} does not exist")
+    pilot_id = pilots[0]["PilotID"]
 
-    now = datetime.now(tz=timezone.utc)
-
-    # Prepare the list of dictionaries for bulk insertion
-    job_to_pilot_mapping = [
-        {"PilotID": pilot_id, "JobID": job_id, "StartTime": now} for job_id in job_ids
+    job_to_pilot_mapping: list[dict[str, Any]] = [
+        {
+            "PilotID": pilot_id,
+            "JobID": job_id,
+            "StartTime": datetime.now(tz=timezone.utc),
+        }
+        for job_id in job_ids
     ]
 
-    await pilot_db.add_jobs_to_pilot(
-        job_to_pilot_mapping=job_to_pilot_mapping,
-    )
-
-
-async def get_pilot_jobs_ids_by_stamp(
-    pilot_db: PilotAgentsDB, pilot_stamp: str
-) -> list[int]:
-    """Fetch pilot jobs by stamp."""
-    try:
-        pilot_ids = await get_pilot_ids_by_stamps(
-            pilot_db=pilot_db, pilot_stamps=[pilot_stamp]
-        )
-        pilot_id = pilot_ids[0]
-    except PilotNotFoundError:
-        return []
-
-    return await get_pilot_jobs_ids_by_pilot_id(pilot_db=pilot_db, pilot_id=pilot_id)
+    await pilot_db.assign_jobs_to_pilot(job_to_pilot_mapping=job_to_pilot_mapping)

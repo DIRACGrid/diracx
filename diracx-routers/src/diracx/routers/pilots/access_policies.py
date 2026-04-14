@@ -16,17 +16,21 @@ from diracx.routers.utils.users import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):
-    # Change some pilot fields
+    # Change pilot metadata (status, fields, etc.). Admin-only by default;
+    # legacy pilot X.509 identities can be allowed via `allow_legacy_pilots`.
     MANAGE_PILOTS = auto()
-    # Read some pilot info
-    READ_PILOT_FIELDS = auto()
+    # Read pilot metadata. Normal users can read their own VO's pilots;
+    # `SERVICE_ADMINISTRATOR` can read across VOs.
+    READ_PILOT_METADATA = auto()
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
     """Pilot management access policy.
 
-    * Every user can access data about his VO
-    * An administrator can modify a pilot.
+    * Every user can read pilots from their own VO.
+    * Service administrators can read across VOs and manage pilots.
+    * Legacy X.509 pilot identities may be allowed to manage themselves when
+      `allow_legacy_pilots=True` is passed by the route.
     """
 
     @staticmethod
@@ -42,82 +46,81 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         job_ids: list[int] | None = None,
         allow_legacy_pilots: bool = False,
     ):
-        assert action, "action is a mandatory parameter"
+        # Authorization is VO-scoped, not bound to the caller's
+        # own pilot stamp. This mirrors DIRAC's PilotManagerHandler, which has
+        # no ownership check either.
+        if action is None:
+            raise ValueError("action is a mandatory parameter")
 
-        # Users can query
-        # NOTE: Add into queries a VO constraint
-        # To manage pilots, user have to be an admin
-        # In some special cases (described with allow_legacy_pilots), we can allow pilots
         if action == ActionType.MANAGE_PILOTS:
-            # To make it clear, we separate
-            is_an_admin = SERVICE_ADMINISTRATOR in user_info.properties
-            is_a_pilot_if_allowed = (
+            is_admin = SERVICE_ADMINISTRATOR in user_info.properties
+            is_legacy_pilot = (
                 allow_legacy_pilots and GENERIC_PILOT in user_info.properties
             )
-
-            if not is_an_admin and not is_a_pilot_if_allowed:
+            if not is_admin and not is_legacy_pilot:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have the permission to manage pilots.",
+                    detail="Insufficient permissions to manage pilots.",
                 )
 
-        if action == ActionType.READ_PILOT_FIELDS:
+        if action == ActionType.READ_PILOT_METADATA:
             if GENERIC_PILOT in user_info.properties:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Pilots can't read other pilots info.",
+                    detail="Pilots cannot read other pilots' metadata.",
                 )
 
-        #
-        # Additional checks if job_ids or pilot_stamps are provided
-        #
-
-        # First, if job_ids are provided, we check who is the owner
-        if job_db and job_ids:
-            job_owners = await job_db.summary(
-                ["Owner", "VO"],
-                [
+        # If job IDs are provided, verify the user owns all of them.
+        # Using a direct search (rather than summary/aggregate equality) is
+        # clearer and gives a distinct 404 vs 403 on missing jobs.
+        if job_db is not None and job_ids:
+            _, owner_rows = await job_db.search(
+                parameters=["Owner", "VO"],
+                search=[
                     VectorSearchSpec(
                         parameter="JobID",
                         operator=VectorSearchOperator.IN,
                         values=job_ids,
                     )
                 ],
+                sorts=[],
+                per_page=len(set(job_ids)),
             )
-
-            expected_owner = {
-                "Owner": user_info.preferred_username,
-                "VO": user_info.vo,
-                "count": len(set(job_ids)),
-            }
-            # All the jobs belong to the user doing the query
-            # and all of them are present
-            if not job_owners == [expected_owner]:
+            if len(owner_rows) != len(set(job_ids)):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="One or more jobs do not exist.",
+                )
+            if not all(
+                row["Owner"] == user_info.preferred_username
+                and row["VO"] == user_info.vo
+                for row in owner_rows
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have the rights to modify a pilot.",
+                    detail=(
+                        "Insufficient permissions to access all of the provided jobs."
+                    ),
                 )
 
-        # This is for example when we submit pilots, we use the user VO, so no need to verify
-        if pilot_db and pilot_stamps:
-            # Else, check its VO
+        # If pilot stamps are provided, verify they all belong to the user's VO.
+        if pilot_db is not None and pilot_stamps:
             pilots = await get_pilots_by_stamp(
                 pilot_db=pilot_db,
                 pilot_stamps=pilot_stamps,
                 parameters=["VO"],
-                allow_missing=True,
             )
-
-            if len(pilots) != len(pilot_stamps):
+            if len(pilots) != len(set(pilot_stamps)):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_404_NOT_FOUND,
                     detail="At least one pilot does not exist.",
                 )
-
             if not all(pilot["VO"] == user_info.vo for pilot in pilots):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have access to all pilots.",
+                    detail=(
+                        "Insufficient permissions to access all of the provided pilots."
+                    ),
                 )
 
 
