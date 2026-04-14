@@ -8,6 +8,7 @@ This test exercises the complete JobWrapper lifecycle with:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import sys
@@ -245,10 +246,27 @@ class TestJobWrapperIntegration:
         # ------------------------------------------------------------------
         # Instantiate and run
         # ------------------------------------------------------------------
+        # Strip prmon prefix from the command so the real subprocess
+        # runs dirac-cwl-run directly (prmon is not installed locally)
+        _real_create_subprocess = asyncio.create_subprocess_exec
+
+        async def _strip_prmon(*args, **kwargs):
+            args_list = list(args)
+            if args_list and args_list[0] == "prmon" and "--" in args_list:
+                sep = args_list.index("--")
+                args_list = args_list[sep + 1 :]
+            return await _real_create_subprocess(*args_list, **kwargs)
+
         with (
             patch.object(_jw_mod, "AsyncDiracClient", return_value=diracx_client_mock),
             patch.object(_jw_mod, "JobReport", return_value=job_report_mock),
             patch.object(_jw_mod.shutil, "rmtree", mock_rmtree),
+            patch.object(_jw_mod.shutil, "which", return_value="/usr/bin/prmon"),
+            patch.object(
+                _jw_mod.asyncio,
+                "create_subprocess_exec",
+                side_effect=_strip_prmon,
+            ),
             patch("random.randint", return_value=1234),
         ):
             wrapper = _AbsPathWrapper(job_id=42)
@@ -469,6 +487,7 @@ class TestJobWrapperIntegration:
             patch.object(_jw_mod, "AsyncDiracClient", return_value=diracx_client_mock),
             patch.object(_jw_mod, "JobReport", return_value=job_report_mock),
             patch.object(_jw_mod.shutil, "rmtree", lambda p, **kw: None),
+            patch.object(_jw_mod.shutil, "which", return_value="/usr/bin/prmon"),
             patch("random.randint", return_value=1234),
             patch.object(
                 _jw_mod.asyncio,
@@ -647,6 +666,7 @@ class TestJobWrapperIntegration:
             patch.object(_jw_mod, "AsyncDiracClient", return_value=diracx_client_mock),
             patch.object(_jw_mod, "JobReport", return_value=job_report_mock),
             patch.object(_jw_mod.shutil, "rmtree", lambda p, **kw: None),
+            patch.object(_jw_mod.shutil, "which", return_value="/usr/bin/prmon"),
             patch("random.randint", return_value=1234),
             patch.object(
                 _jw_mod.asyncio,

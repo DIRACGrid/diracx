@@ -627,24 +627,22 @@ class JobWrapper:
             stall_window = 1800.0  # seconds (30 minutes)
 
             prmon_tsv = self._job_path / "prmon.txt"
-            if shutil.which("prmon") is not None:
-                # Use just filenames — subprocess CWD is already job_path
-                command = [
-                    "prmon",
-                    "--interval",
-                    str(prmon_interval),
-                    "--filename",
-                    "prmon.txt",
-                    "--json-summary",
-                    "prmon.json",
-                    "--",
-                    *cwl_command,
-                ]
-            else:
-                logger.warning(
-                    "prmon not found; running dirac-cwl-run without resource monitoring"
+            if shutil.which("prmon") is None:
+                raise RuntimeError(
+                    "prmon not found in PATH — required for job monitoring (part of DIRACOS2)"
                 )
-                command = cwl_command
+            # Use just filenames — subprocess CWD is already job_path
+            command = [
+                "prmon",
+                "--interval",
+                str(prmon_interval),
+                "--filename",
+                "prmon.txt",
+                "--json-summary",
+                "prmon.json",
+                "--",
+                *cwl_command,
+            ]
 
             # Execute the task
             logger.info("Executing Task: %s", command)
