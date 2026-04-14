@@ -1,8 +1,6 @@
-# Can't using PEP-604 with typer: https://github.com/tiangolo/typer/issues/348
-# from __future__ import annotations
 from __future__ import annotations
 
-__all__ = ("app",)
+__all__: list[str] = []
 
 import json
 import re
@@ -10,7 +8,7 @@ from typing import Annotated, cast
 
 from rich.console import Console
 from rich.table import Table
-from typer import FileText, Option
+from typer import Option
 
 from diracx.client.aio import AsyncDiracClient
 from diracx.core.models.search import (
@@ -20,10 +18,7 @@ from diracx.core.models.search import (
 )
 from diracx.core.preferences import OutputFormats, get_diracx_preferences
 
-from .utils import AsyncTyper
-
-app = AsyncTyper()
-
+from . import app
 
 available_operators = (
     f"Scalar operators: {', '.join([op.value for op in ScalarSearchOperator])}. "
@@ -47,42 +42,6 @@ def parse_condition(value: str) -> SearchSpec:
         }
     else:
         raise ValueError(f"Unknown operator {operator}")
-
-
-@app.async_command()
-async def search(
-    parameter: list[str] = [
-        "JobID",
-        "Status",
-        "MinorStatus",
-        "ApplicationStatus",
-        "JobGroup",
-        "Site",
-        "JobName",
-        "Owner",
-        "LastUpdateTime",
-    ],
-    condition: Annotated[
-        list[str], Option(help=f'Example: "JobID eq 1000". {available_operators}')
-    ] = [],
-    all: bool = False,
-    page: int = 1,
-    per_page: int = 10,
-):
-    search_specs = [parse_condition(cond) for cond in condition]
-    async with AsyncDiracClient() as api:
-        jobs, content_range = await api.jobs.search(
-            parameters=None if all else parameter,
-            search=search_specs if search_specs else None,
-            page=page,
-            per_page=per_page,
-            cls=lambda _, jobs, headers: (
-                jobs,
-                ContentRange(headers.get("Content-Range", "jobs")),
-            ),
-        )
-
-    display(jobs, cast(ContentRange, content_range))
 
 
 class ContentRange:
@@ -154,9 +113,36 @@ def display_rich(data, content_range: ContentRange) -> None:
 
 
 @app.async_command()
-async def submit(jdl: list[FileText]):
+async def search(
+    parameter: list[str] = [
+        "JobID",
+        "Status",
+        "MinorStatus",
+        "ApplicationStatus",
+        "JobGroup",
+        "Site",
+        "JobName",
+        "Owner",
+        "LastUpdateTime",
+    ],
+    condition: Annotated[
+        list[str], Option(help=f'Example: "JobID eq 1000". {available_operators}')
+    ] = [],
+    all: bool = False,
+    page: int = 1,
+    per_page: int = 10,
+):
+    search_specs = [parse_condition(cond) for cond in condition]
     async with AsyncDiracClient() as api:
-        jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
-    print(
-        f"Inserted {len(jobs)} jobs with ids: {','.join(map(str, (job.job_id for job in jobs)))}"
-    )
+        jobs, content_range = await api.jobs.search(
+            parameters=None if all else parameter,
+            search=search_specs if search_specs else None,
+            page=page,
+            per_page=per_page,
+            cls=lambda _, jobs, headers: (
+                jobs,
+                ContentRange(headers.get("Content-Range", "jobs")),
+            ),
+        )
+
+    display(jobs, cast(ContentRange, content_range))

@@ -4,7 +4,7 @@ __all__ = ("with_client",)
 
 from functools import wraps
 
-from diracx.client.aio import AsyncDiracClient
+from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
 
 
 def with_client(func):

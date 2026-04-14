@@ -266,7 +266,7 @@ class OperationsConfig(BaseModel):
     """Configuration for job description defaults and limits."""
     Services: ServicesConfig = ServicesConfig()
     """Configuration for various DIRAC services."""
-    SoftwareDistModule: str = "LocalSoftwareDist"
+    SoftwareDistModule: str = ""
     """Module used for software distribution."""
 
     Cloud: MutableMapping[str, Any] | None = None

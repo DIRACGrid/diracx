@@ -100,3 +100,7 @@ class JobError(DiracError):
 
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
+
+
+class WorkflowProcessingError(Exception):
+    """Workflow exception raised during pre and post processing steps."""
