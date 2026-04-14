@@ -244,6 +244,8 @@ async def test_job_monitor_handles_kill_command(
         with pytest.raises(KillCommandReceived):
             await asyncio.wait_for(monitor.run(), timeout=5.0)
 
-        assert any(sig == signal.SIGTERM for _, sig in killpg_calls)
+        assert len(killpg_calls) == 2
+        assert killpg_calls[0][1] == signal.SIGTERM
+        assert killpg_calls[1][1] == signal.SIGKILL
     finally:
         _jm_mod.os.killpg = original_killpg  # type: ignore[attr-defined]

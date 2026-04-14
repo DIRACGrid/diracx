@@ -203,8 +203,8 @@ class JobMonitor:
         try:
             pgid = os.getpgid(self._pid)
             os.killpg(pgid, sig)
-        except ProcessLookupError:
-            logger.debug("Process %d already gone", self._pid)
+        except OSError:
+            logger.debug("Could not signal process %d", self._pid)
 
     async def run(self) -> None:
         """Run the monitor loop until cancelled or a kill/stall triggers.
