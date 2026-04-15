@@ -95,7 +95,7 @@ generation and verification.
 
 ### `DIRACX_SERVICE_AUTH_TOKEN_ALLOWED_ALGORITHMS`
 
-*Optional*, default value: `['RS256', 'EdDSA', 'Ed25519']`
+*Optional*, default value: `['RS256', 'Ed25519']`
 
 List of allowed cryptographic algorithms for JWT token signing.
 
