@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from diracx.cli._submission.sandbox import (
     group_jobs_by_sandbox,
     rewrite_sandbox_refs,
     scan_file_references,
+    validate_file_references,
 )
 
 # ---------------------------------------------------------------------------
@@ -23,14 +26,14 @@ def test_scan_single_local_file() -> None:
 
 
 def test_scan_lfn_passthrough() -> None:
-    inputs = {"infile": {"class": "File", "path": "LFN:/grid/path/file.root"}}
+    inputs = {"infile": {"class": "File", "location": "LFN:/grid/path/file.root"}}
     local_files, lfns = scan_file_references(inputs)
     assert local_files == []
     assert lfns == ["LFN:/grid/path/file.root"]
 
 
 def test_scan_sb_ignored() -> None:
-    inputs = {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
+    inputs = {"infile": {"class": "File", "location": "SB:some-pfn/file.txt"}}
     local_files, lfns = scan_file_references(inputs)
     assert local_files == []
     assert lfns == []
@@ -40,7 +43,7 @@ def test_scan_file_array_mixed_local_and_lfn() -> None:
     inputs = {
         "files": [
             {"class": "File", "path": "/local/a.txt"},
-            {"class": "File", "path": "LFN:/grid/b.root"},
+            {"class": "File", "location": "LFN:/grid/b.root"},
             {"class": "File", "path": "/local/c.txt"},
         ]
     }
@@ -61,7 +64,7 @@ def test_scan_nested_mixed() -> None:
         "scalar": 99,
         "single": {"class": "File", "path": "/local/file.txt"},
         "multi": [
-            {"class": "File", "path": "LFN:/grid/remote.root"},
+            {"class": "File", "location": "LFN:/grid/remote.root"},
         ],
     }
     local_files, lfns = scan_file_references(inputs)
@@ -101,7 +104,7 @@ def test_group_different_files_per_job() -> None:
 
 def test_group_no_local_files_returns_empty() -> None:
     jobs = [
-        {"f": {"class": "File", "path": "LFN:/grid/a.root"}},
+        {"f": {"class": "File", "location": "LFN:/grid/a.root"}},
         {"count": 5},
     ]
     groups = group_jobs_by_sandbox(jobs)
@@ -113,11 +116,11 @@ def test_group_mixed_local_and_lfn_lfns_dont_affect_grouping() -> None:
     jobs = [
         {
             "local": {"class": "File", "path": "/data/shared.txt"},
-            "remote": {"class": "File", "path": "LFN:/grid/a.root"},
+            "remote": {"class": "File", "location": "LFN:/grid/a.root"},
         },
         {
             "local": {"class": "File", "path": "/data/shared.txt"},
-            "remote": {"class": "File", "path": "LFN:/grid/b.root"},
+            "remote": {"class": "File", "location": "LFN:/grid/b.root"},
         },
     ]
     groups = group_jobs_by_sandbox(jobs)
@@ -141,23 +144,23 @@ def test_rewrite_single_file() -> None:
     assert result == {
         "infile": {
             "class": "File",
-            "path": "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst#file.txt",
+            "location": "SB:SandboxSE|/S3/store/sha256:abc123.tar.zst#file.txt",
         }
     }
 
 
 def test_rewrite_lfn_not_rewritten() -> None:
-    inputs = {"infile": {"class": "File", "path": "LFN:/grid/file.root"}}
+    inputs = {"infile": {"class": "File", "location": "LFN:/grid/file.root"}}
     sb_ref_map: dict[Path, str] = {}
     result = rewrite_sandbox_refs(inputs, sb_ref_map)
-    assert result == {"infile": {"class": "File", "path": "LFN:/grid/file.root"}}
+    assert result == {"infile": {"class": "File", "location": "LFN:/grid/file.root"}}
 
 
 def test_rewrite_array_mixed() -> None:
     inputs = {
         "files": [
             {"class": "File", "path": "/local/a.txt"},
-            {"class": "File", "path": "LFN:/grid/b.root"},
+            {"class": "File", "location": "LFN:/grid/b.root"},
             {"class": "File", "path": "/local/c.txt"},
         ]
     }
@@ -170,22 +173,22 @@ def test_rewrite_array_mixed() -> None:
         "files": [
             {
                 "class": "File",
-                "path": "SB:SandboxSE|/S3/store/sha256:aaa.tar.zst#a.txt",
+                "location": "SB:SandboxSE|/S3/store/sha256:aaa.tar.zst#a.txt",
             },
-            {"class": "File", "path": "LFN:/grid/b.root"},
+            {"class": "File", "location": "LFN:/grid/b.root"},
             {
                 "class": "File",
-                "path": "SB:SandboxSE|/S3/store/sha256:ccc.tar.zst#c.txt",
+                "location": "SB:SandboxSE|/S3/store/sha256:ccc.tar.zst#c.txt",
             },
         ]
     }
 
 
 def test_rewrite_sb_not_rewritten() -> None:
-    inputs = {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
+    inputs = {"infile": {"class": "File", "location": "SB:some-pfn/file.txt"}}
     sb_ref_map: dict[Path, str] = {}
     result = rewrite_sandbox_refs(inputs, sb_ref_map)
-    assert result == {"infile": {"class": "File", "path": "SB:some-pfn/file.txt"}}
+    assert result == {"infile": {"class": "File", "location": "SB:some-pfn/file.txt"}}
 
 
 def test_rewrite_non_file_values_preserved() -> None:
@@ -200,7 +203,7 @@ def test_rewrite_non_file_values_preserved() -> None:
     assert result["name"] == "hello"
     assert result["infile"] == {
         "class": "File",
-        "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt",
+        "location": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt",
     }
 
 
@@ -211,5 +214,59 @@ def test_rewrite_does_not_mutate_input() -> None:
     # Original must be unchanged
     assert original["infile"]["path"] == "/local/file.txt"
     assert (
-        result["infile"]["path"] == "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt"
+        result["infile"]["location"]
+        == "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#file.txt"
     )
+    assert "path" not in result["infile"]
+
+
+# ---------------------------------------------------------------------------
+# validate_file_references
+# ---------------------------------------------------------------------------
+
+
+def test_validate_accepts_local_path() -> None:
+    inputs = {"infile": {"class": "File", "path": "/local/file.txt"}}
+    validate_file_references(inputs)  # no error
+
+
+def test_validate_accepts_lfn_in_location() -> None:
+    inputs = {"infile": {"class": "File", "location": "LFN:/grid/file.root"}}
+    validate_file_references(inputs)  # no error
+
+
+def test_validate_accepts_sb_in_location() -> None:
+    inputs = {"infile": {"class": "File", "location": "SB:SE|/S3/abc#run.sh"}}
+    validate_file_references(inputs)  # no error
+
+
+def test_validate_rejects_lfn_in_path() -> None:
+    inputs = {"data": {"class": "File", "path": "LFN:/grid/file.root"}}
+    with pytest.raises(ValueError, match="Use 'location'"):
+        validate_file_references(inputs)
+
+
+def test_validate_rejects_sb_in_path() -> None:
+    inputs = {"script": {"class": "File", "path": "SB:SE|/S3/abc#run.sh"}}
+    with pytest.raises(ValueError, match="Use 'location'"):
+        validate_file_references(inputs)
+
+
+def test_validate_accepts_mixed_correct_usage() -> None:
+    inputs = {
+        "local": {"class": "File", "path": "/data/file.txt"},
+        "remote": {"class": "File", "location": "LFN:/grid/file.root"},
+        "count": 42,
+    }
+    validate_file_references(inputs)  # no error
+
+
+def test_validate_rejects_lfn_in_array() -> None:
+    inputs = {
+        "files": [
+            {"class": "File", "location": "LFN:/grid/a.root"},
+            {"class": "File", "path": "LFN:/grid/b.root"},
+        ]
+    }
+    with pytest.raises(ValueError, match="Use 'location'"):
+        validate_file_references(inputs)

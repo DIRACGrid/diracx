@@ -59,7 +59,13 @@ def parse_range(range_str: str) -> tuple[str, int, int, int]:
 
 
 def _file_type(value: str) -> dict[str, str]:
-    """Argparse type converter for CWL File inputs."""
+    """Argparse type converter for CWL File inputs.
+
+    URI schemes (``LFN:``, ``SB:``) go into ``location`` per the CWL spec;
+    local filesystem paths go into ``path``.
+    """
+    if value.startswith(("LFN:", "SB:")):
+        return {"class": "File", "location": value}
     return {"class": "File", "path": value}
 
 
