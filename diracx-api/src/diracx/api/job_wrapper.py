@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import random
 import re
 import shutil
@@ -33,6 +34,7 @@ from ruamel.yaml import YAML
 from diracx.api.job_monitor import JobMonitor, KillCommandReceived, send_final_heartbeat
 from diracx.api.job_report import JobReport
 from diracx.api.jobs import create_sandbox, download_sandbox
+from diracx.api.prmon_reader import PrmonFifoReader
 from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
 from diracx.core.exceptions import WorkflowProcessingError
 from diracx.core.models.commands import (
@@ -141,7 +143,7 @@ class JobWrapper:
         for item in cwl_value:
             path = None
             if isinstance(item, dict):
-                path = item.get("path") or item.get("location")
+                path = item.get("location") or item.get("path")
             elif hasattr(item, "path"):
                 path = item.path
             if path and isinstance(path, str):
@@ -267,9 +269,9 @@ class JobWrapper:
         """Extract LFN paths from a CWL input value.
 
         CWL File values can be:
-        - {"class": "File", "path": "LFN:/path/to/file"}
-        - [{"class": "File", "path": "LFN:/path/to/file"}, ...]
-        - A cwl_utils File object with a .path attribute
+        - {"class": "File", "location": "LFN:/path/to/file"}
+        - [{"class": "File", "location": "LFN:/path/to/file"}, ...]
+        - A cwl_utils File object with a .location or .path attribute
         """
         lfns: list[str] = []
         if not isinstance(cwl_value, list):
@@ -277,7 +279,7 @@ class JobWrapper:
         for item in cwl_value:
             path = None
             if isinstance(item, dict):
-                path = item.get("path") or item.get("location")
+                path = item.get("location") or item.get("path")
             elif hasattr(item, "path"):
                 path = item.path
             if path and isinstance(path, str):
@@ -425,7 +427,9 @@ class JobWrapper:
             The dict of the list of filepaths for each output
         """
         outputted_files: dict[str, str | Path | Sequence[str | Path]] = {}
-        outputs = json.loads(stdout)
+        # Use raw_decode to tolerate trailing non-JSON data (e.g. prmon
+        # warnings written to stdout after the CWL JSON output).
+        outputs, _ = json.JSONDecoder().raw_decode(stdout.lstrip())
         for output, files in outputs.items():
             if not files:
                 continue
@@ -623,24 +627,29 @@ class JobWrapper:
             # Wrap with prmon for resource monitoring
             # TODO: replace with CS config options
             heartbeat_interval = 60.0
-            prmon_interval = 30
+            prmon_interval = 1
             stall_window = 1800.0  # seconds (30 minutes)
 
-            prmon_tsv = self._job_path / "prmon.txt"
             if shutil.which("prmon") is None:
                 raise RuntimeError(
-                    "prmon not found in PATH — required for job monitoring (part of DIRACOS2)"
+                    "prmon not found in PATH -- required for job monitoring (part of DIRACOS2)"
                 )
-            # Use just filenames — subprocess CWD is already job_path
-            # TODO: explore prmon_compress_output.py on-the-fly inside the job wrapper, increase sample rate
-            # TODO: use a FIFO (named pipe) for prmon output to avoid disk I/O overhead and enable real-time monitoring
-            # TODO: use prmon_compress_output on the named pipe
+
+            # Create FIFO for streaming prmon output (no large TSV on disk)
+            prmon_fifo = self._job_path / "prmon_fifo"
+            os.mkfifo(prmon_fifo)
+            fifo_reader = PrmonFifoReader(prmon_fifo)
+            reader_task = asyncio.create_task(fifo_reader.run())
+
+            # Use just filenames -- subprocess CWD is already job_path
             command = [
                 "prmon",
                 "--interval",
                 str(prmon_interval),
+                "--fast-memmon",
+                "--units",
                 "--filename",
-                "prmon.txt",
+                "prmon_fifo",
                 "--json-summary",
                 "prmon.json",
                 "--",
@@ -660,7 +669,7 @@ class JobWrapper:
             assert proc.stderr is not None  # guaranteed by stderr=PIPE
             assert proc.stdout is not None  # guaranteed by stdout=PIPE
 
-            # Shared deque for cwltool stderr — monitor reads it for peek content
+            # Shared deque for cwltool stderr -- monitor reads it for peek content
             cwltool_stderr: deque[str] = deque(maxlen=100)
 
             # Start the job monitor as a concurrent task
@@ -670,7 +679,7 @@ class JobWrapper:
                 job_report=self._job_report,
                 cwltool_stderr=cwltool_stderr,
                 heartbeat_interval=heartbeat_interval,
-                prmon_tsv_path=prmon_tsv,
+                fifo_reader=fifo_reader,
                 stall_window=stall_window,
             )
             monitor_task = asyncio.create_task(monitor.run())
@@ -722,13 +731,23 @@ class JobWrapper:
             except (asyncio.CancelledError, KillCommandReceived):
                 pass
 
+            # Wait for FIFO reader to finish (EOF from prmon exit)
+            reader_task.cancel()
+            try:
+                await reader_task
+            except asyncio.CancelledError:
+                pass
+
             # Send final heartbeat with exit metrics
             await send_final_heartbeat(
                 job_path=self._job_path,
                 job_report=self._job_report,
                 cwltool_stderr=cwltool_stderr,
-                prmon_tsv_path=prmon_tsv,
+                fifo_reader=fifo_reader,
             )
+
+            # Write compressed time-series for output sandbox
+            fifo_reader.write_compressed(self._job_path / "prmon_compressed.txt")
 
             if proc.returncode != 0:
                 logger.error(
@@ -773,10 +792,22 @@ class JobWrapper:
                     pass
                 except Exception:
                     logger.warning("Error stopping monitor task", exc_info=True)
+            if "reader_task" in locals():
+                reader_task.cancel()
+                try:
+                    await reader_task
+                except asyncio.CancelledError:
+                    pass
             return False
         finally:
             # Commit all stored job reports
             await self._job_report.commit()
-            # Clean up
+            # Clean up FIFO
+            if "prmon_fifo" in locals():
+                try:
+                    prmon_fifo.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            # Clean up job directory
             if self._job_path.exists():
                 shutil.rmtree(self._job_path)
