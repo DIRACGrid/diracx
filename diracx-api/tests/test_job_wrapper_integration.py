@@ -125,11 +125,11 @@ class TestJobWrapperIntegration:
             cwl={
                 "input_file": {
                     "class": "File",
-                    "path": "LFN:/test/data/input.txt",
+                    "location": "LFN:/test/data/input.txt",
                 },
                 "helper_script": {
                     "class": "File",
-                    "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
+                    "location": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
                 },
             },
         )
@@ -350,11 +350,11 @@ class TestJobWrapperIntegration:
             cwl={
                 "input_file": {
                     "class": "File",
-                    "path": "LFN:/test/data/input.txt",
+                    "location": "LFN:/test/data/input.txt",
                 },
                 "helper_script": {
                     "class": "File",
-                    "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
+                    "location": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
                 },
             },
         )
@@ -531,10 +531,10 @@ class TestJobWrapperIntegration:
         job_input = JobInputModel(
             sandbox=None,
             cwl={
-                "input_file": {"class": "File", "path": "LFN:/test/data/input.txt"},
+                "input_file": {"class": "File", "location": "LFN:/test/data/input.txt"},
                 "helper_script": {
                     "class": "File",
-                    "path": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
+                    "location": "SB:SandboxSE|/S3/store/sha256:abc.tar.zst#helper.sh",
                 },
             },
         )

@@ -268,8 +268,8 @@ def test_cwl_to_jdl_input_data_with_params():
     matcher_docs = build_matcher_docs(task, hint)
     params = {
         "input_lfns": [
-            {"class": "File", "path": "LFN:/lhcb/data/file1.root"},
-            {"class": "File", "path": "LFN:/lhcb/data/file2.root"},
+            {"class": "File", "location": "LFN:/lhcb/data/file1.root"},
+            {"class": "File", "location": "LFN:/lhcb/data/file2.root"},
         ],
         "helper_script": {"class": "File", "path": "helper.sh"},
     }
@@ -288,6 +288,23 @@ def test_cwl_to_jdl_bad_source_reference():
     matcher_docs = build_matcher_docs(task, hint)
     with pytest.raises(ValueError, match="nonexistent_input"):
         cwl_to_jdl(task, hint, matcher_docs, None)
+
+
+def test_validate_rejects_lfn_in_path():
+    """Server-side validation rejects LFN: in 'path' field."""
+    from diracx.logic.jobs.cwl_submission import _validate_file_inputs
+
+    params = {"data": {"class": "File", "path": "LFN:/lhcb/data/file.root"}}
+    with pytest.raises(ValueError, match="Use 'location'"):
+        _validate_file_inputs(params)
+
+
+def test_validate_accepts_lfn_in_location():
+    """Server-side validation accepts LFN: in 'location' field."""
+    from diracx.logic.jobs.cwl_submission import _validate_file_inputs
+
+    params = {"data": {"class": "File", "location": "LFN:/lhcb/data/file.root"}}
+    _validate_file_inputs(params)  # no error
 
 
 class TestRangeExpansion:

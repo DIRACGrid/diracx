@@ -140,6 +140,32 @@ def extract_job_hint(task: CWLTask) -> JobHint:
     return JobHint.from_cwl(task)
 
 
+_URI_PREFIXES = ("LFN:", "SB:")
+
+
+def _get_file_ref(val: dict) -> str:
+    """Return the file reference from a CWL File dict, preferring ``location``."""
+    return val.get("location") or val.get("path", "")
+
+
+def _validate_file_inputs(input_params: dict | None) -> None:
+    """Reject CWL File objects that put URI schemes in ``path`` instead of ``location``."""
+    if not input_params:
+        return
+    for key, value in input_params.items():
+        items = value if isinstance(value, list) else [value]
+        for item in items:
+            if isinstance(item, dict) and item.get("class") == "File":
+                path_val = item.get("path", "")
+                if isinstance(path_val, str) and path_val.startswith(_URI_PREFIXES):
+                    raise ValueError(
+                        f"CWL File input '{key}' has a URI scheme in 'path' "
+                        f"({path_val!r}). Use 'location' for LFN: and SB: "
+                        f"references — 'path' is reserved for local "
+                        f"filesystem paths."
+                    )
+
+
 def _extract_id(cwl_id: str) -> str:
     """Extract short ID from CWL full URI (e.g., 'file.cwl#input1' -> 'input1')."""
     return cwl_id.split("#")[-1].split("/")[-1]
@@ -277,13 +303,13 @@ def cwl_to_jdl(
             _validate_cwl_id(ref.source, cwl_input_ids, "input", ["File", "File[]"])
             if input_params and ref.source in input_params:
                 val = input_params[ref.source]
-                if isinstance(val, dict) and "path" in val:
-                    sandbox_files.append(val["path"].split("#")[0])
+                if isinstance(val, dict) and (file_ref := _get_file_ref(val)):
+                    sandbox_files.append(file_ref.split("#")[0])
                 elif isinstance(val, list):
                     sandbox_files.extend(
-                        item["path"].split("#")[0]
+                        file_ref.split("#")[0]
                         for item in val
-                        if isinstance(item, dict) and "path" in item
+                        if isinstance(item, dict) and (file_ref := _get_file_ref(item))
                     )
         if sandbox_files:
             jdl_fields["InputSandbox"] = sandbox_files
@@ -295,13 +321,13 @@ def cwl_to_jdl(
             _validate_cwl_id(ref.source, cwl_input_ids, "input", ["File", "File[]"])
             if input_params and ref.source in input_params:
                 val = input_params[ref.source]
-                if isinstance(val, dict) and "path" in val:
-                    lfns.append(val["path"])
+                if isinstance(val, dict) and (file_ref := _get_file_ref(val)):
+                    lfns.append(file_ref)
                 elif isinstance(val, list):
                     lfns.extend(
-                        item["path"]
+                        file_ref
                         for item in val
-                        if isinstance(item, dict) and "path" in item
+                        if isinstance(item, dict) and (file_ref := _get_file_ref(item))
                     )
         if lfns:
             jdl_fields["InputData"] = lfns
@@ -386,6 +412,9 @@ async def submit_cwl_jobs(
 
     inserted: list[InsertedJob] = []
     for input_params in input_yamls:
+        # Validate File references (LFN:/SB: must be in location, not path)
+        _validate_file_inputs(input_params)
+
         # Generate JDL for transition period
         jdl = cwl_to_jdl(task, job_hint, matcher_docs, input_params)
 

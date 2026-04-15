@@ -16,6 +16,7 @@ from .sandbox import (
     group_jobs_by_sandbox,
     rewrite_sandbox_refs,
     scan_file_references,
+    validate_file_references,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,11 @@ async def submit_cwl(
             )
             return await client.jobs.submit_cwl_jobs(body)
 
-    # 4. Sandbox processing
+    # 4. Validate File references (LFN:/SB: must be in location, not path)
+    for job in jobs:
+        validate_file_references(job)
+
+    # 5. Sandbox processing
     if not jobs:
         jobs = [{}]
 

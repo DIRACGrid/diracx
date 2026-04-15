@@ -90,7 +90,8 @@ class TestIntegration:
         assert len(results) == 1
         call_body = mock_client.jobs.submit_cwl_jobs.call_args[0][0]
         submitted_inputs = call_body.inputs[0]
-        assert submitted_inputs["script"]["path"] == f"{fake_sb_ref}#run.py"
+        assert submitted_inputs["script"]["location"] == f"{fake_sb_ref}#run.py"
+        assert "path" not in submitted_inputs["script"]
         assert submitted_inputs["message"] == "integration test"
 
     async def test_submit_with_lfn_no_sandbox(self, tmp_path):
@@ -101,7 +102,7 @@ class TestIntegration:
         inputs_file.write_text(
             yaml.dump(
                 {
-                    "script": {"class": "File", "path": "LFN:/lhcb/scripts/run.py"},
+                    "script": {"class": "File", "location": "LFN:/lhcb/scripts/run.py"},
                     "message": "lfn test",
                 }
             )
@@ -134,7 +135,7 @@ class TestIntegration:
 
         call_body = mock_client.jobs.submit_cwl_jobs.call_args[0][0]
         submitted_inputs = call_body.inputs[0]
-        assert submitted_inputs["script"]["path"] == "LFN:/lhcb/scripts/run.py"
+        assert submitted_inputs["script"]["location"] == "LFN:/lhcb/scripts/run.py"
 
     async def test_multi_doc_yaml_parametric(self, tmp_path):
         """Multi-doc YAML creates multiple jobs sharing one sandbox."""

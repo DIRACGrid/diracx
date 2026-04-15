@@ -11,16 +11,48 @@ def _is_file_obj(value: Any) -> bool:
     return isinstance(value, dict) and value.get("class") == "File"
 
 
-def _classify_path(path_str: str) -> tuple[Path | None, str | None]:
-    """Classify a CWL File path string.
+def _get_file_ref(file_obj: dict) -> str:
+    """Return the file reference string from a CWL File object.
 
-    Returns (local_path, lfn) where exactly one is set, or both None for SB: paths.
+    Checks ``location`` first (for URI schemes), then ``path`` (for local files).
     """
-    if path_str.startswith("LFN:"):
-        return None, path_str
-    if path_str.startswith("SB:"):
+    return file_obj.get("location") or file_obj.get("path", "")
+
+
+def _classify_ref(ref: str) -> tuple[Path | None, str | None]:
+    """Classify a CWL File reference string.
+
+    Returns (local_path, lfn) where exactly one is set, or both None for SB: refs.
+    """
+    if ref.startswith("LFN:"):
+        return None, ref
+    if ref.startswith("SB:"):
         return None, None
-    return Path(path_str), None
+    return Path(ref), None
+
+
+_URI_PREFIXES = ("LFN:", "SB:")
+
+
+def validate_file_references(inputs: dict) -> None:
+    """Reject CWL File objects that put URI schemes in ``path`` instead of ``location``.
+
+    Per the CWL spec, ``path`` is a local filesystem path while ``location``
+    is an IRI that identifies the resource.  ``LFN:`` and ``SB:`` are custom
+    URI schemes and must be placed in ``location``.
+    """
+    for key, value in inputs.items():
+        items = value if isinstance(value, list) else [value]
+        for item in items:
+            if _is_file_obj(item):
+                path_val = item.get("path", "")
+                if isinstance(path_val, str) and path_val.startswith(_URI_PREFIXES):
+                    raise ValueError(
+                        f"CWL File input '{key}' has a URI scheme in 'path' "
+                        f"({path_val!r}). Use 'location' for LFN: and SB: "
+                        f"references — 'path' is reserved for local "
+                        f"filesystem paths."
+                    )
 
 
 def scan_file_references(inputs: dict) -> tuple[list[Path], list[str]]:
@@ -28,8 +60,8 @@ def scan_file_references(inputs: dict) -> tuple[list[Path], list[str]]:
 
     Returns:
         local_files: paths to local files (no LFN: or SB: prefix)
-        lfns: LFN: prefixed path strings
-    SB: paths are silently ignored (already uploaded).
+        lfns: LFN: prefixed location strings
+    SB: refs are silently ignored (already uploaded).
     Non-File values are skipped.
 
     """
@@ -38,8 +70,8 @@ def scan_file_references(inputs: dict) -> tuple[list[Path], list[str]]:
 
     for value in inputs.values():
         if _is_file_obj(value):
-            path_str: str = value["path"]
-            local, lfn = _classify_path(path_str)
+            ref = _get_file_ref(value)
+            local, lfn = _classify_ref(ref)
             if local is not None:
                 local_files.append(local)
             elif lfn is not None:
@@ -47,8 +79,8 @@ def scan_file_references(inputs: dict) -> tuple[list[Path], list[str]]:
         elif isinstance(value, list):
             for item in value:
                 if _is_file_obj(item):
-                    path_str = item["path"]
-                    local, lfn = _classify_path(path_str)
+                    ref = _get_file_ref(item)
+                    local, lfn = _classify_ref(ref)
                     if local is not None:
                         local_files.append(local)
                     elif lfn is not None:
@@ -81,14 +113,20 @@ def group_jobs_by_sandbox(
 
 
 def _rewrite_file_obj(file_obj: dict, sb_ref_map: dict[Path, str]) -> dict:
-    """Return a new File dict with the path rewritten if found in sb_ref_map."""
-    path_str: str = file_obj["path"]
-    if path_str.startswith("LFN:") or path_str.startswith("SB:"):
+    """Return a new File dict with the local path replaced by an SB: location.
+
+    The SB: reference is a URI and goes into ``location`` per the CWL spec.
+    The ``path`` key is removed since the file no longer exists locally.
+    """
+    ref = _get_file_ref(file_obj)
+    if ref.startswith(("LFN:", "SB:")):
         return file_obj
-    local = Path(path_str)
+    local = Path(ref)
     if local in sb_ref_map:
         # Append #filename so the wrapper can extract the file from the archive
-        return {**file_obj, "path": f"{sb_ref_map[local]}#{local.name}"}
+        result = {k: v for k, v in file_obj.items() if k != "path"}
+        result["location"] = f"{sb_ref_map[local]}#{local.name}"
+        return result
     return file_obj
 
 
