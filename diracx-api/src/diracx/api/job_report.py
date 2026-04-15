@@ -62,7 +62,9 @@ class JobReport:
         :param metrics: Resource metrics to report.
         :return: List of commands from the server (e.g. Kill).
         """
-        return await self._client.jobs.add_heartbeat({str(self.job_id): metrics})
+        return await self._client.jobs.add_heartbeat(
+            {str(self.job_id): metrics.model_dump()}
+        )
 
     async def send_stored_status_info(self):
         """Send all the accumulated job status information."""
