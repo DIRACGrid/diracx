@@ -293,7 +293,11 @@ class TestDiracPathMapper:
         return mapper
 
     def test_lfn_resolved_to_pfn(self):
-        """LFN: location should be mapped to its PFN in _pathmap."""
+        """LFN: location should be mapped to its PFN in _pathmap.
+
+        The target (which cwltool assigns to path) must be a local filesystem
+        path — not a file:// URI.
+        """
         replica_map = _make_replica_map(
             ("/lhcb/data/file.dst", "file:///storage/file.dst")
         )
@@ -303,6 +307,7 @@ class TestDiracPathMapper:
         assert "LFN:/lhcb/data/file.dst" in mapper._pathmap
         entry = mapper._pathmap["LFN:/lhcb/data/file.dst"]
         assert "/storage/file.dst" in entry.resolved
+        assert entry.target == "/storage/file.dst"
 
     def test_multiple_replicas_picks_first(self):
         """When multiple replicas exist, the first one is used."""
@@ -359,7 +364,11 @@ class TestDiracPathMapper:
         assert obj["size"] == 9999
 
     def test_remote_url_mapped_directly(self):
-        """root:// URLs should be mapped directly without staging."""
+        """root:// URLs should be mapped directly without staging.
+
+        The target must be the raw URL — cwltool passes it as a command-line
+        argument for direct xrootd access.
+        """
         mapper = self._make_mapper(ReplicaMap(root={}))
         obj = {
             "class": "File",
@@ -370,6 +379,7 @@ class TestDiracPathMapper:
         assert loc in mapper._pathmap
         entry = mapper._pathmap[loc]
         assert entry.resolved == loc
+        assert entry.target == loc
         assert entry.staged is False
 
     def test_missing_lfn_does_not_add_to_pathmap(self):
@@ -398,6 +408,43 @@ class TestDiracPathMapper:
         obj = {"class": "File", "location": "LFN:/lhcb/data/file.dst"}
         mapper.visit(obj, "/stagedir", "/basedir")
         entry = mapper._pathmap["LFN:/lhcb/data/file.dst"]
+        assert entry.staged is False
+
+    def test_sb_resolved_to_local_path(self):
+        """SB: location should resolve to a local filesystem path via replica map."""
+        sb_key = "SB:SandboxSE|/S3/store/sha256:abc#run.sh"
+        root = {sb_key: {"replicas": [{"url": "file:///job/run.sh", "se": "local"}]}}
+        replica_map = ReplicaMap(root=root)
+        mapper = self._make_mapper(replica_map)
+        obj = {"class": "File", "location": sb_key}
+        mapper.visit(obj, "/stagedir", "/basedir")
+        assert sb_key in mapper._pathmap
+        entry = mapper._pathmap[sb_key]
+        assert entry.target == "/job/run.sh"
+        assert entry.staged is False
+
+    def test_lfn_with_https_pfn(self):
+        """LFN resolving to https:// PFN should pass URL through as target."""
+        replica_map = _make_replica_map(
+            ("/lhcb/data/file.dst", "https://storage.cern.ch/file.dst")
+        )
+        mapper = self._make_mapper(replica_map)
+        obj = {"class": "File", "location": "LFN:/lhcb/data/file.dst"}
+        mapper.visit(obj, "/stagedir", "/basedir")
+        entry = mapper._pathmap["LFN:/lhcb/data/file.dst"]
+        assert entry.target == "https://storage.cern.ch/file.dst"
+        assert entry.staged is False
+
+    def test_lfn_with_xrootd_pfn(self):
+        """LFN resolving to root:// PFN should pass URL through as target."""
+        replica_map = _make_replica_map(
+            ("/lhcb/data/file.dst", "root://eoslhcb.cern.ch//eos/file.dst")
+        )
+        mapper = self._make_mapper(replica_map)
+        obj = {"class": "File", "location": "LFN:/lhcb/data/file.dst"}
+        mapper.visit(obj, "/stagedir", "/basedir")
+        entry = mapper._pathmap["LFN:/lhcb/data/file.dst"]
+        assert entry.target == "root://eoslhcb.cern.ch//eos/file.dst"
         assert entry.staged is False
 
 
