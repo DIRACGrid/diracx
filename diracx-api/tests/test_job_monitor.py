@@ -270,3 +270,21 @@ async def test_send_final_heartbeat_no_prmon(tmp_path: Path, mock_job_report):
     )
 
     assert mock_job_report.send_heartbeat.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_send_final_heartbeat_reader_no_data(tmp_path: Path, mock_job_report):
+    """send_final_heartbeat should skip when reader has no data yet."""
+    from diracx.api.job_monitor import send_final_heartbeat
+
+    reader = MagicMock()
+    reader.latest_row = None
+
+    await send_final_heartbeat(
+        job_path=tmp_path,
+        job_report=mock_job_report,
+        cwltool_stderr=deque(),
+        fifo_reader=reader,
+    )
+
+    assert mock_job_report.send_heartbeat.call_count == 0
