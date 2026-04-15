@@ -144,6 +144,8 @@ class JobWrapper:
             path = None
             if isinstance(item, dict):
                 path = item.get("location") or item.get("path")
+            elif hasattr(item, "location"):
+                path = item.location or getattr(item, "path", None)
             elif hasattr(item, "path"):
                 path = item.path
             if path and isinstance(path, str):
@@ -280,6 +282,8 @@ class JobWrapper:
             path = None
             if isinstance(item, dict):
                 path = item.get("location") or item.get("path")
+            elif hasattr(item, "location"):
+                path = item.location or getattr(item, "path", None)
             elif hasattr(item, "path"):
                 path = item.path
             if path and isinstance(path, str):
