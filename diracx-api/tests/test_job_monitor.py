@@ -14,63 +14,49 @@ from diracx.core.models.job import HeartbeatData, JobCommand
 
 
 @pytest.fixture
-def prmon_tsv(tmp_path: Path) -> Path:
-    """Create a prmon TSV file with two sample rows."""
-    tsv = tmp_path / "prmon.txt"
-    header = (
-        "Time\twtime\tpss\trss\tswap\tvmem\t"
-        "rchar\tread_bytes\twchar\twrite_bytes\t"
-        "rx_bytes\trx_packets\ttx_bytes\ttx_packets\t"
-        "stime\tutime\tnprocs\tnthreads"
-    )
-    row1 = "1713000030\t30\t15000\t20000\t0\t50000\t100\t200\t300\t400\t0\t0\t0\t0\t2\t8\t1\t4"
-    row2 = "1713000060\t60\t18000\t24000\t0\t55000\t200\t400\t600\t800\t0\t0\t0\t0\t4\t16\t1\t4"
-    tsv.write_text(f"{header}\n{row1}\n{row2}\n")
-    return tsv
+def mock_fifo_reader():
+    """Create a mock PrmonFifoReader with sample data pre-loaded."""
+    reader = MagicMock()
+    reader.latest_row = {
+        "Time": 1713000060,
+        "wtime": 60,
+        "pss": 18000,
+        "rss": 24000,
+        "swap": 0,
+        "vmem": 55000,
+        "rchar": 200,
+        "read_bytes": 400,
+        "wchar": 600,
+        "write_bytes": 800,
+        "rx_bytes": 0,
+        "rx_packets": 0,
+        "tx_bytes": 0,
+        "tx_packets": 0,
+        "stime": 4,
+        "utime": 16,
+        "nprocs": 1,
+        "nthreads": 4,
+    }
+    reader.compressed_series = [reader.latest_row]
+    return reader
 
 
-def test_parse_prmon_tsv(prmon_tsv: Path):
-    """parse_prmon_tsv should return latest row as a dict with correct types."""
-    from diracx.api.job_monitor import parse_prmon_tsv
-
-    row = parse_prmon_tsv(prmon_tsv)
-    assert row is not None
-    assert row["wtime"] == 60
-    assert row["pss"] == 18000  # KB
-    assert row["rss"] == 24000  # KB
-    assert row["vmem"] == 55000  # KB
-    assert row["utime"] == 16  # seconds
-    assert row["stime"] == 4  # seconds
-
-
-def test_parse_prmon_tsv_missing_file(tmp_path: Path):
-    """parse_prmon_tsv returns None for a missing file."""
-    from diracx.api.job_monitor import parse_prmon_tsv
-
-    result = parse_prmon_tsv(tmp_path / "nonexistent.txt")
-    assert result is None
-
-
-def test_parse_prmon_tsv_header_only(tmp_path: Path):
-    """parse_prmon_tsv returns None if the file has only a header."""
-    from diracx.api.job_monitor import parse_prmon_tsv
-
-    tsv = tmp_path / "prmon.txt"
-    tsv.write_text(
-        "Time\twtime\tpss\trss\tswap\tvmem\t"
-        "rchar\tread_bytes\twchar\twrite_bytes\t"
-        "rx_bytes\trx_packets\ttx_bytes\ttx_packets\t"
-        "stime\tutime\tnprocs\tnthreads\n"
-    )
-    assert parse_prmon_tsv(tsv) is None
-
-
-def test_build_heartbeat_data(prmon_tsv: Path, tmp_path: Path):
+def test_build_heartbeat_data(tmp_path: Path):
     """build_heartbeat_data should map prmon metrics to HeartbeatData fields."""
-    from diracx.api.job_monitor import build_heartbeat_data, parse_prmon_tsv
+    from diracx.api.job_monitor import build_heartbeat_data
 
-    row = parse_prmon_tsv(prmon_tsv)
-    assert row is not None
+    row = {
+        "Time": 1713000060,
+        "wtime": 60,
+        "pss": 18000,
+        "rss": 24000,
+        "swap": 0,
+        "vmem": 55000,
+        "stime": 4,
+        "utime": 16,
+        "nprocs": 1,
+        "nthreads": 4,
+    }
     data = build_heartbeat_data(
         prmon_row=row,
         job_path=tmp_path,
@@ -181,7 +167,9 @@ def mock_job_report():
 
 
 @pytest.mark.asyncio
-async def test_job_monitor_sends_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
+async def test_job_monitor_sends_heartbeat(
+    tmp_path: Path, mock_job_report, mock_fifo_reader
+):
     """JobMonitor.run should send at least one heartbeat before being cancelled."""
     from diracx.api.job_monitor import JobMonitor
 
@@ -190,8 +178,8 @@ async def test_job_monitor_sends_heartbeat(tmp_path: Path, mock_job_report, prmo
         job_path=tmp_path,
         job_report=mock_job_report,
         cwltool_stderr=deque(),
-        heartbeat_interval=0.1,  # fast for testing
-        prmon_tsv_path=prmon_tsv,
+        heartbeat_interval=0.1,
+        fifo_reader=mock_fifo_reader,
     )
 
     task = asyncio.create_task(monitor.run())
@@ -206,12 +194,12 @@ async def test_job_monitor_sends_heartbeat(tmp_path: Path, mock_job_report, prmo
     call_args = mock_job_report.send_heartbeat.call_args
     data = call_args[0][0]
     assert isinstance(data, HeartbeatData)
-    assert data.CPUConsumed == 20.0  # from prmon_tsv fixture
+    assert data.CPUConsumed == 20.0
 
 
 @pytest.mark.asyncio
 async def test_job_monitor_handles_kill_command(
-    tmp_path: Path, mock_job_report, prmon_tsv
+    tmp_path: Path, mock_job_report, mock_fifo_reader
 ):
     """JobMonitor should raise KillCommandReceived when server sends Kill."""
     import signal
@@ -227,8 +215,8 @@ async def test_job_monitor_handles_kill_command(
         job_report=mock_job_report,
         cwltool_stderr=deque(),
         heartbeat_interval=0.1,
-        prmon_tsv_path=prmon_tsv,
-        kill_grace_period=0.1,  # fast for testing
+        fifo_reader=mock_fifo_reader,
+        kill_grace_period=0.1,
     )
 
     killpg_calls: list[tuple[int, int]] = []
@@ -252,7 +240,7 @@ async def test_job_monitor_handles_kill_command(
 
 
 @pytest.mark.asyncio
-async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
+async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, mock_fifo_reader):
     """send_final_heartbeat should send one heartbeat with prmon exit data."""
     from diracx.api.job_monitor import send_final_heartbeat
 
@@ -260,7 +248,7 @@ async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
         job_path=tmp_path,
         job_report=mock_job_report,
         cwltool_stderr=deque(["INFO [job test] completed success"]),
-        prmon_tsv_path=prmon_tsv,
+        fifo_reader=mock_fifo_reader,
     )
 
     assert mock_job_report.send_heartbeat.call_count == 1
@@ -271,14 +259,14 @@ async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, prmon_tsv):
 
 @pytest.mark.asyncio
 async def test_send_final_heartbeat_no_prmon(tmp_path: Path, mock_job_report):
-    """send_final_heartbeat should not crash if prmon data is missing."""
+    """send_final_heartbeat should not crash if there is no reader."""
     from diracx.api.job_monitor import send_final_heartbeat
 
     await send_final_heartbeat(
         job_path=tmp_path,
         job_report=mock_job_report,
         cwltool_stderr=deque(),
-        prmon_tsv_path=tmp_path / "nonexistent.txt",
+        fifo_reader=None,
     )
 
     assert mock_job_report.send_heartbeat.call_count == 0

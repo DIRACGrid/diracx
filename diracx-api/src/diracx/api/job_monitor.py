@@ -10,32 +10,13 @@ from collections import deque
 from pathlib import Path
 
 from diracx.api.job_report import JobReport
+from diracx.api.prmon_reader import PrmonFifoReader
 from diracx.core.models.job import HeartbeatData
 
 logger = logging.getLogger(__name__)
 
 # TODO: replace with CS config options
 PEEK_LINES = 800
-
-
-def parse_prmon_tsv(path: Path) -> dict[str, int] | None:
-    """Parse the latest row from a prmon TSV time-series file.
-
-    Returns a dict mapping column names to integer values, or None if the
-    file is missing or has no data rows.
-    """
-    try:
-        text = path.read_text()
-    except FileNotFoundError:
-        return None
-
-    lines = text.strip().splitlines()
-    if len(lines) < 2:
-        return None
-
-    headers = lines[0].split("\t")
-    values = lines[-1].split("\t")
-    return {h: int(v) for h, v in zip(headers, values)}
 
 
 def build_heartbeat_data(
@@ -101,21 +82,16 @@ async def send_final_heartbeat(
     job_path: Path,
     job_report: JobReport,
     cwltool_stderr: deque[str],
-    prmon_tsv_path: Path,
+    fifo_reader: PrmonFifoReader | None = None,
 ) -> None:
-    """Send one final heartbeat with exit metrics.
-
-    Called after the subprocess exits and the monitor is cancelled.
-    Uses the last row of the prmon TSV (which includes final totals).
-    """
-    prmon_row = parse_prmon_tsv(prmon_tsv_path)
-    if prmon_row is None:
-        logger.info("No prmon data — skipping final heartbeat")
+    """Send one final heartbeat with exit metrics."""
+    if fifo_reader is None or fifo_reader.latest_row is None:
+        logger.info("No prmon data -- skipping final heartbeat")
         return
 
     peek = build_peek_content(cwltool_stderr)
     data = build_heartbeat_data(
-        prmon_row=prmon_row,
+        prmon_row=fifo_reader.latest_row,
         job_path=job_path,
         peek_content=peek,
     )
@@ -188,16 +164,15 @@ class JobMonitor:
     subprocess. Cancel the task when the subprocess exits.
 
     Note: prmon is launched as a wrapper around the command (not as a sidecar),
-    so this class does not manage the prmon process. It only reads the prmon TSV
-    file that prmon writes during execution.
+    so this class does not manage the prmon process. It reads metrics from a
+    PrmonFifoReader that streams data from the prmon FIFO pipe.
 
     :param pid: PID of the subprocess (the prmon wrapper process).
     :param job_path: Working directory of the job.
     :param job_report: JobReport instance for sending heartbeats.
     :param cwltool_stderr: Shared deque of cwltool stderr lines.
     :param heartbeat_interval: Seconds between heartbeat cycles.
-    :param prmon_tsv_path: Path to the prmon TSV time-series file.
-        Defaults to ``job_path / "prmon.txt"``.
+    :param fifo_reader: PrmonFifoReader instance for reading prmon metrics.
     :param stall_window: Stall detection window in seconds (default 1800).
     :param stall_threshold: CPU/wall ratio below which a job is stalled.
     :param kill_grace_period: Seconds between SIGTERM and SIGKILL.
@@ -211,7 +186,7 @@ class JobMonitor:
         job_report: JobReport,
         cwltool_stderr: deque[str],
         heartbeat_interval: float = 60.0,
-        prmon_tsv_path: Path | None = None,
+        fifo_reader: PrmonFifoReader | None = None,
         stall_window: float = 1800.0,
         stall_threshold: float = 0.05,
         kill_grace_period: float = 30.0,
@@ -221,7 +196,7 @@ class JobMonitor:
         self._job_report = job_report
         self._cwltool_stderr = cwltool_stderr
         self._interval = heartbeat_interval
-        self._prmon_tsv = prmon_tsv_path or (job_path / "prmon.txt")
+        self._fifo_reader = fifo_reader
         self._stall_detector = StallDetector(
             window_seconds=stall_window, threshold=stall_threshold
         )
@@ -251,12 +226,12 @@ class JobMonitor:
                 logger.warning("Heartbeat cycle failed", exc_info=True)
 
     async def _heartbeat_cycle(self) -> None:
-        """One iteration: collect metrics from prmon TSV, send, check."""
-        # 1. Parse prmon metrics
-        prmon_row = parse_prmon_tsv(self._prmon_tsv)
-        if prmon_row is None:
-            logger.debug("No prmon data yet — skipping heartbeat")
+        """One iteration: collect metrics from prmon FIFO reader, send, check."""
+        # 1. Read prmon metrics from FIFO reader
+        if self._fifo_reader is None or self._fifo_reader.latest_row is None:
+            logger.debug("No prmon data yet -- skipping heartbeat")
             return
+        prmon_row = self._fifo_reader.latest_row
 
         # 2. Build peek content
         peek = build_peek_content(self._cwltool_stderr)
