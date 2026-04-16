@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Pre-commit hook for checking __all__ dunder in __init__.py files."""
 
 from __future__ import annotations
