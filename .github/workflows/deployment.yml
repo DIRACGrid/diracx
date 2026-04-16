@@ -235,6 +235,9 @@ jobs:
         run: |
           cd diracx-charts
 
+          # Update the diagram to reflect the updated version number
+          pixi run generate-diagram
+
           # Stage all changes
           git add -A
 
