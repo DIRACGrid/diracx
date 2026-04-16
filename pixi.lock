@@ -5,8 +5,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -641,8 +639,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -1364,8 +1360,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -2030,8 +2024,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -2818,8 +2810,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -3600,8 +3590,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -4205,8 +4193,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -4831,8 +4817,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -5430,8 +5414,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -6017,8 +5999,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -6640,8 +6620,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -7413,8 +7391,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -8039,8 +8015,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -8755,8 +8729,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -9414,8 +9386,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -10031,8 +10001,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -10672,8 +10640,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -11280,8 +11246,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -11934,8 +11898,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -12675,8 +12637,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -13356,8 +13316,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -13949,8 +13907,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -14581,8 +14537,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -15375,8 +15329,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -16013,8 +15965,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -16747,8 +16697,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -17421,8 +17369,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -17610,8 +17556,6 @@ environments:
   pre-commit:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -17739,8 +17683,6 @@ environments:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
     - https://pypi.org/simple
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -18129,8 +18071,6 @@ environments:
   shellcheck:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    options:
-      pypi-prerelease-mode: if-necessary-or-explicit
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/shellcheck-0.11.0-ha770c72_1.conda
@@ -19375,7 +19315,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./
   name: diracx
-  version: 0.0.12.dev28+gd37244d03.d20260414
+  version: 0.0.14.dev19+g0fdbb2524.d20260415
   sha256: 410903a3be93f06d98b9df3cd204f3a92c585c3f4424516134f6b7272630536b
   requires_dist:
   - diracx-api
@@ -19384,9 +19324,10 @@ packages:
   - diracx-core
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-api
   name: diracx-api
-  version: 0.0.8.dev48+g803066000.d20260219
+  version: 0.0.9.dev27+g2080aff1c
   sha256: fce056f16b4ca37c0b2847bf95cf7cf02d2f75b1bc63793efd3fc959dfbc0cb9
   requires_dist:
   - diracx-client
@@ -19395,9 +19336,10 @@ packages:
   - zstandard
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-cli
   name: diracx-cli
-  version: 0.0.8.dev48+g803066000.d20260219
+  version: 0.0.9.dev27+g2080aff1c
   sha256: a9c02d48d01723886e3f95b1379cf844587bbca1cc354e629dc221266fbeef8c
   requires_dist:
   - diraccfg
@@ -19412,9 +19354,10 @@ packages:
   - diracx-testing ; extra == 'testing'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-client
   name: diracx-client
-  version: 0.0.8.dev48+g803066000.d20260219
+  version: 0.0.9.dev27+g2080aff1c
   sha256: 3d974bce5bd5a086bb1e8e6263dbab10927dfc446d4ff44836433a18508bd727
   requires_dist:
   - azure-core
@@ -19424,9 +19367,10 @@ packages:
   - pyjwt
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-core
   name: diracx-core
-  version: 0.0.8.dev57+g6e00ac8af.d20260303
+  version: 0.0.14.dev19+g0fdbb2524.d20260415
   sha256: febb534a1a976612961f00cc690f64ff4f4f6ecef7a649fb1413602b3bb9f6fd
   requires_dist:
   - aiobotocore>=2.15
@@ -19448,30 +19392,7 @@ packages:
   - types-cachetools ; extra == 'types'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
-- pypi: ./diracx-core
-  name: diracx-core
-  version: 0.0.13.dev10+ge74cb7c97.d20260408
-  sha256: febb534a1a976612961f00cc690f64ff4f4f6ecef7a649fb1413602b3bb9f6fd
-  requires_dist:
-  - aiobotocore>=2.15
-  - botocore>=1.35
-  - cachetools
-  - diraccommon>=9.0.18
-  - email-validator
-  - gitpython
-  - joserfc>=1.5.0
-  - pydantic-settings
-  - pydantic>=2.10
-  - pyyaml
-  - sh
-  - diracx-testing ; extra == 'testing'
-  - moto[server] ; extra == 'testing'
-  - botocore-stubs ; extra == 'types'
-  - types-aiobotocore-s3 ; extra == 'types'
-  - types-aiobotocore[essential] ; extra == 'types'
-  - types-cachetools ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
+  editable: true
 - pypi: https://files.pythonhosted.org/packages/28/74/e003b78633339e76e4c6bcebb32afbb25edf49fb33ea9b0122a03727e5e0/diracx_db-0.0.11-py3-none-any.whl
   name: diracx-db
   version: 0.0.11
@@ -19489,7 +19410,7 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./diracx-db
   name: diracx-db
-  version: 0.0.12.dev28+gd37244d03.d20260414
+  version: 0.0.14.dev19+g0fdbb2524.d20260415
   sha256: 0402c3f91690a1f037958327773e3558b58e389f44a8bb25b0ee0445134322db
   requires_dist:
   - diracx-core
@@ -19502,22 +19423,7 @@ packages:
   - freezegun ; extra == 'testing'
   - types-python-dateutil ; extra == 'types'
   requires_python: '>=3.11'
-- pypi: ./diracx-logic
-  name: diracx-logic
-  version: 0.0.8.dev48+g803066000.d20260219
-  sha256: e7e3d6391b7d5b6d4ce909ef500ac152b149c7c48f80802320a0baead3e9ba3e
-  requires_dist:
-  - cachetools
-  - diraccommon>=9.0.18
-  - diracx-core
-  - diracx-db
-  - joserfc
-  - pydantic>=2.10
-  - uuid-utils
-  - diracx-testing ; extra == 'testing'
-  - freezegun ; extra == 'testing'
-  - types-cachetools ; extra == 'types'
-  requires_python: '>=3.11'
+  editable: true
 - pypi: https://files.pythonhosted.org/packages/81/2c/9f35d11768e62a54b0f78e0effccc907645584641d82ad6bd3a70a185cc8/diracx_logic-0.0.11-py3-none-any.whl
   name: diracx-logic
   version: 0.0.11
@@ -19534,10 +19440,27 @@ packages:
   - freezegun ; extra == 'testing'
   - types-cachetools ; extra == 'types'
   requires_python: '>=3.11'
+- pypi: ./diracx-logic
+  name: diracx-logic
+  version: 0.0.14.dev19+g0fdbb2524.d20260415
+  sha256: e7e3d6391b7d5b6d4ce909ef500ac152b149c7c48f80802320a0baead3e9ba3e
+  requires_dist:
+  - cachetools
+  - diraccommon>=9.0.18
+  - diracx-core
+  - diracx-db
+  - joserfc
+  - pydantic>=2.10
+  - uuid-utils
+  - diracx-testing ; extra == 'testing'
+  - freezegun ; extra == 'testing'
+  - types-cachetools ; extra == 'types'
+  requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-routers
   name: diracx-routers
-  version: 0.0.12.dev24+g958c51ca2
-  sha256: 0077513713e84925ecc3c53259ecf985514b40dfe1d7688eace6e048bfe3b727
+  version: 0.0.14.dev19+g0fdbb2524.d20260416
+  sha256: 05f5dbdea13c5b0d305713d7ff55a719f7fffc79b8c54f941956239c4c9a8976
   requires_dist:
   - cachetools
   - diracx-core
@@ -19565,40 +19488,10 @@ packages:
   - types-python-dateutil ; extra == 'types'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
-- pypi: ./diracx-routers
-  name: diracx-routers
-  version: 0.0.13.dev10+ge74cb7c97.d20260408
-  sha256: 0077513713e84925ecc3c53259ecf985514b40dfe1d7688eace6e048bfe3b727
-  requires_dist:
-  - cachetools
-  - diracx-core
-  - diracx-db
-  - diracx-logic
-  - diracx-tasks
-  - fastapi>=0.121.0
-  - httpx
-  - joserfc
-  - opentelemetry-api>=1.40.0
-  - opentelemetry-exporter-otlp>=1.40.0
-  - opentelemetry-instrumentation-fastapi>=0.61b0
-  - opentelemetry-instrumentation-logging>=0.61b0
-  - opentelemetry-sdk>=1.40.0
-  - pydantic>=2.10
-  - python-dotenv
-  - python-multipart
-  - uvicorn
-  - diracx-testing ; extra == 'testing'
-  - freezegun ; extra == 'testing'
-  - moto[server] ; extra == 'testing'
-  - pyjwt ; extra == 'testing'
-  - pytest-httpx ; extra == 'testing'
-  - types-cachetools ; extra == 'types'
-  - types-python-dateutil ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-tasks
   name: diracx-tasks
-  version: 0.0.12.dev28+gd37244d03.d20260414
+  version: 0.0.14.dev19+g0fdbb2524.d20260415
   sha256: 47ecbf1d4db5442abf0cb47de03b0c0ce7064cfb0f9ff9bf009c9a2041d02db1
   requires_dist:
   - croniter
@@ -19614,27 +19507,10 @@ packages:
   - diracx-testing ; extra == 'testing'
   - fakeredis ; extra == 'testing'
   requires_python: '>=3.11'
-- pypi: ./diracx-tasks
-  name: diracx-tasks
-  version: 0.0.13.dev10+ge74cb7c97.d20260408
-  sha256: 47ecbf1d4db5442abf0cb47de03b0c0ce7064cfb0f9ff9bf009c9a2041d02db1
-  requires_dist:
-  - croniter
-  - diracx-core
-  - diracx-db
-  - diracx-logic
-  - fastapi>=0.121.0
-  - msgpack
-  - opentelemetry-api
-  - pydantic>=2.10
-  - python-dateutil
-  - redis[hiredis]
-  - diracx-testing ; extra == 'testing'
-  - fakeredis ; extra == 'testing'
-  requires_python: '>=3.11'
+  editable: true
 - pypi: ./diracx-testing
   name: diracx-testing
-  version: 0.0.8.dev48+g803066000.d20260219
+  version: 0.0.9.dev27+g2080aff1c
   sha256: 9e7f8dc219ef9a81e9d5b14c0140344ee1ddabc65222a18f17faf5b5becce456
   requires_dist:
   - httpx
@@ -19647,6 +19523,7 @@ packages:
   - pytest-xdist
   - uuid-utils
   requires_python: '>=3.11'
+  editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/distlib-0.4.0-pyhd8ed1ab_0.conda
   sha256: 6d977f0b2fc24fee21a9554389ab83070db341af6d6f09285360b2e09ef8b26e
   md5: 003b8ba0a94e2f1e117d0bd46aebc901
@@ -20345,23 +20222,25 @@ packages:
   timestamp: 1748320218212
 - pypi: ./extensions/gubbins
   name: gubbins
-  version: 0.0.12.dev24+g958c51ca2
+  version: 0.0.14.dev19+g0fdbb2524
   sha256: 005a02b3df8d030f0ff43a321b2a5b7c177ecca059d331a8b93c77a100ad0ceb
   requires_dist:
   - gubbins-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-api
   name: gubbins-api
-  version: 0.0.3.dev14+gddc563104.d20260121
+  version: 0.0.3.dev5+gc265a4736
   sha256: 31031bdd61bfe53d391e1650c0cba042fb300b6143f7aae66b5848f4ee3276af
   requires_dist:
   - diracx-api
   - diracx-api[testing] ; extra == 'testing'
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-cli
   name: gubbins-cli
-  version: 0.0.3.dev14+gddc563104.d20260121
+  version: 0.0.3.dev5+gc265a4736
   sha256: fbb038cf5c271ae96149106087c18c6ce27e5578d565d3de6d376d20707ffc8f
   requires_dist:
   - diracx-cli
@@ -20369,18 +20248,20 @@ packages:
   - diracx-testing ; extra == 'testing'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-client
   name: gubbins-client
-  version: 0.0.3.dev14+gddc563104.d20260121
+  version: 0.0.3.dev5+gc265a4736
   sha256: 7873beaff1c5895c83282bf16de842c97cc13c5033a3f2e039a84ff0aa9e7cec
   requires_dist:
   - diracx-client
   - diracx-client[testing] ; extra == 'testing'
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-core
   name: gubbins-core
-  version: 0.0.3.dev14+gddc563104.d20260121
+  version: 0.0.3.dev5+gc265a4736
   sha256: 27daa6103085f4e4438b5ece4b3422b224ffb9fe4b39c93aae7a5c4ae40884ec
   requires_dist:
   - diracx-core
@@ -20389,18 +20270,20 @@ packages:
   - types-cachetools ; extra == 'types'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-db
   name: gubbins-db
-  version: 0.0.12.dev24+g958c51ca2
+  version: 0.0.14.dev19+g0fdbb2524
   sha256: 423f2a5336b71eee661db826234b2a1e22e0920da3cd66ab795372caef174d05
   requires_dist:
   - diracx-db
   - diracx-testing ; extra == 'testing'
   - gubbins-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-logic
   name: gubbins-logic
-  version: 0.0.12.dev24+g958c51ca2
+  version: 0.0.14.dev19+g0fdbb2524
   sha256: ce4627c8c026fdbdbfaa11a8b1ff1cd4e206abb53983d2e13e2459ca8c5a9b69
   requires_dist:
   - diracx-logic
@@ -20412,9 +20295,10 @@ packages:
   - types-python-dateutil ; extra == 'types'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-routers
   name: gubbins-routers
-  version: 0.0.12.dev24+g958c51ca2
+  version: 0.0.14.dev19+g0fdbb2524
   sha256: ad9b00b4ea222fe7b5b2913455e9d817b8e72d8ce2ecd240f2732f4992c29951
   requires_dist:
   - diracx-routers
@@ -20429,9 +20313,10 @@ packages:
   - types-python-dateutil ; extra == 'types'
   - types-pyyaml ; extra == 'types'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-tasks
   name: gubbins-tasks
-  version: 0.0.12.dev24+g958c51ca2
+  version: 0.0.14.dev19+g0fdbb2524
   sha256: c2b53c4c625ffc5745b191eb68a1df61a7fe89cfb2a12a31f17dc8985543c1e1
   requires_dist:
   - diracx-tasks
@@ -20441,13 +20326,15 @@ packages:
   - fakeredis ; extra == 'testing'
   - gubbins-testing ; extra == 'testing'
   requires_python: '>=3.11'
+  editable: true
 - pypi: ./extensions/gubbins/gubbins-testing
   name: gubbins-testing
-  version: 0.0.3.dev14+gddc563104.d20260121
+  version: 0.0.3.dev5+gc265a4736
   sha256: 2247538bbb010522cc9675f0146807d553c7fafe71a219795ea5bb2a46dcf2e0
   requires_dist:
   - diracx-testing
   requires_python: '>=3.11'
+  editable: true
 - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
   name: h11
   version: 0.16.0
