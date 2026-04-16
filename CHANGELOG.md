@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.0.14](https://github.com/DIRACGrid/diracx/compare/v0.0.13...v0.0.14) (2026-04-16)
+
+
+### Features
+
+* add Docker image for tasks ([#887](https://github.com/DIRACGrid/diracx/issues/887)) ([bbd2f5d](https://github.com/DIRACGrid/diracx/commit/bbd2f5da5626e1901f2e79ac8a2e13b795dbf48e))
+* add RSS data models (SQLAlchemy + Pydantic) ([#857](https://github.com/DIRACGrid/diracx/issues/857)) ([d8805ea](https://github.com/DIRACGrid/diracx/commit/d8805eaaefff471a1afcc2788c0ac3d4e2d9c0c8))
+
+
+### Bug Fixes
+
+* drop support for EdDSA keys ([#885](https://github.com/DIRACGrid/diracx/issues/885)) ([a3ff003](https://github.com/DIRACGrid/diracx/commit/a3ff003a6a54686df03afcf6c74c2da30487d283))
+
+
+### Miscellaneous Chores
+
+* release 0.0.14 ([e43cd50](https://github.com/DIRACGrid/diracx/commit/e43cd50923cfbf3067a6c6ca594d060fe8ac60a8))
+
 ## [0.0.13](https://github.com/DIRACGrid/diracx/compare/v0.0.12...v0.0.13) (2026-04-14)
 
 
