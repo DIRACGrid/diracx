@@ -83,14 +83,17 @@ nav:
         - admin/how-to/install/index.md
         - Minimal requirements: admin/how-to/install/minimal-requirements.md
         - Installing kubernetes: admin/how-to/install/install-kubernetes.md
-        - Preparing a container node: admin/how-to/install/prepare-container-node.md
         - Convert CS: admin/how-to/install/convert-cs.md
         - Installing DiracX: admin/how-to/install/installing.md
-        - Installing DiracX in a Container: admin/how-to/install/installing-in-a-container.md
         - Connect DIRAC to DiracX: admin/how-to/install/connect.md
         - Register the admin VO: admin/how-to/install/register-the-admin-vo.md
         - Register a VO: admin/how-to/install/register-a-vo.md
         - Embracing DiracX: admin/how-to/install/embracing.md
+      - Installation without Kubernetes:
+        - admin/how-to/install-without-kubernetes/index.md
+        - Minimal requirements: admin/how-to/install-without-kubernetes/minimal-requirements.md
+        - Preparing a container node: admin/how-to/install-without-kubernetes/prepare-container-node.md
+        - Installing DiracX in a Container: admin/how-to/install-without-kubernetes/installing-in-a-container.md
       - Debugging: admin/how-to/debugging.md
       - Upgrading: admin/how-to/upgrading.md
       - Rotate a secret: admin/how-to/rotate-a-secret.md

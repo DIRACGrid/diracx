@@ -1,14 +1,15 @@
 # Minimal requirements
 
-In order to run DiracX in production we recommend having:
+In order to run DiracX alongside an existing DIRAC v9 installation without a Kubernetes cluster, we recommend having:
 
 - **DIRAC v9**: DiracX can not yet work standalone, but alongside an existing DIRAC v9 installation. Note that DIRAC v9 has as dependencies:
     - **MySQL** Minimum MySQL version 8 or MariaDB equivalent.
     - **OpenSearch** version 2 or 3.
 - **S3-compatible storage** for storing jobs' sandboxes
 - An **IdP** supporting OAuth/OIDC (e.g. [Indigo IAM](https://indigo-iam.github.io/))
+- A host on which to run the DiracX containers. See [Prepare a node for container deployment](prepare-container-node.md) for how to set it up.
 
-At the time of writing, the only fully supported way of running DiracX is through **[Kubernetes](https://kubernetes.io/docs/tutorials/kubernetes-basics/)**. If you need to decouple your DIRAC v9 upgrade from a Kubernetes deployment, see [Installation without Kubernetes](../install-without-kubernetes/index.md).
+This container-based deployment has only been tested in conjunction with a DIRAC v9.0 deployment.
 
 The following chapters will *NOT* cover:
 
