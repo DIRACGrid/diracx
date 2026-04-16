@@ -1,6 +1,6 @@
 # Preparing a node for container deployment
 
-!!! warning "This is for container deployment only. For kubernetes deployment please refer to [Installing kubernetes](install-kubernetes.md)."
+!!! warning "This is for container deployment only. For kubernetes deployment please refer to [Installing kubernetes](/docs/admin/how-to/install/install-kubernetes.md)."
 
 ## Podman
 
@@ -28,8 +28,8 @@ The same ports need to the specified in the yaml files used to steer the contain
 
 ## Create the DiracXAuthDB
 
-At this point we also create the DiracXAuthDB. You can refer to the documentation [here](installing.md#create-the-diracxauthdb)
+At this point we also create the DiracXAuthDB. You can refer to the documentation [here](/docs/admin/how-to/install/installing.md#create-the-diracxauthdb)
 
 Note: The username and password will then re-appear in the `diracx.env` connection strings for the databases.
 
-You can now continue to [Convert CS](convert-cs.md). After this please read [Installing DiracX](installing.md) for some background information before proceeding to [Installing DiracX in a container](installing-in-a-container.md).
+You can now continue to [Convert CS](/docs/admin/how-to/install/convert-cs.md). After this please read [Installing DiracX](/docs/admin/how-to/install/installing.md) for some background information before proceeding to [Installing DiracX in a container](installing-in-a-container.md).

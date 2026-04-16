@@ -1,6 +1,6 @@
 # Installing DiracX in a container
 
-!!! warning "This is for container deployment only. For kubernetes deployment please refer to [Installing DiracX](installing.md)."
+!!! warning "This is for container deployment only. For kubernetes deployment please refer to [Installing DiracX](/docs/admin/how-to/install/installing.md)."
 
 ## Notes
 
