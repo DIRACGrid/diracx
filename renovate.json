@@ -2,7 +2,14 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "minimumReleaseAge": "7 days",
+  "lockFileMaintenance": { "enabled": true },
   "packageRules": [
+    {
+      "description": "Group pixi lockfile maintenance into a single PR",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "matchManagers": ["pixi"],
+      "groupName": "pixi lockfile maintenance"
+    },
     {
       "description": "Group all GitHub Actions updates together",
       "matchManagers": ["github-actions"],
