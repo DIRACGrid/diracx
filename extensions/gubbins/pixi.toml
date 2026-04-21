@@ -32,7 +32,7 @@ gubbins-logic = { path = "./gubbins-logic", editable = true, extras = ["testing"
 [feature.gubbins-routers.pypi-dependencies]
 gubbins-routers = { path = "./gubbins-routers", editable = true, extras = ["testing"] }
 # opentelemetry-api requires importlib-metadata<8.8.0
-importlib-metadata = "<8.8.0"
+importlib-metadata = "<9.0.1"
 [feature.gubbins-tasks.pypi-dependencies]
 gubbins-tasks = { path = "./gubbins-tasks", editable = true, extras = ["testing"] }
 
