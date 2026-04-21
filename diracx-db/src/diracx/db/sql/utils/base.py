@@ -273,8 +273,8 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         stmt = select(*columns)
 
-        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
-        stmt = apply_sort_constraints(table.__table__.columns.__getitem__, stmt, sorts)
+        stmt = apply_search_filters(table.__table__, stmt, search)
+        stmt = apply_sort_constraints(table.__table__, stmt, sorts)
 
         if distinct:
             stmt = stmt.distinct()
@@ -314,7 +314,7 @@ class BaseSQLDB(metaclass=ABCMeta):
         count_col = pk_columns[0]
 
         stmt = select(*columns, func.count(count_col).label("count"))
-        stmt = apply_search_filters(table.__table__.columns.__getitem__, stmt, search)
+        stmt = apply_search_filters(table.__table__, stmt, search)
         stmt = stmt.group_by(*columns)
 
         # Execute the query
@@ -453,10 +453,10 @@ def _build_datetime_range_multi_expr(
     )
 
 
-def apply_search_filters(column_mapping, stmt, search):
+def apply_search_filters(table, stmt, search):
     for query in search:
         try:
-            column = column_mapping(query["parameter"])
+            column = table.columns[query["parameter"]]
         except KeyError as e:
             raise InvalidQueryError(f"Unknown column {query['parameter']}") from e
 
@@ -525,11 +525,11 @@ def apply_search_filters(column_mapping, stmt, search):
     return stmt
 
 
-def apply_sort_constraints(column_mapping, stmt, sorts):
+def apply_sort_constraints(table, stmt, sorts):
     sort_columns = []
     for sort in sorts or []:
         try:
-            column = column_mapping(sort["parameter"])
+            column = table.columns[sort["parameter"]]
         except KeyError as e:
             raise InvalidQueryError(
                 f"Cannot sort by {sort['parameter']}: unknown column"

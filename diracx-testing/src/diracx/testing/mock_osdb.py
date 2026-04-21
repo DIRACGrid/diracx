@@ -128,14 +128,10 @@ class MockOSDBMixin:
                 stmt = stmt.distinct()
 
             # Apply filtering
-            stmt = sql_utils.apply_search_filters(
-                self._table.columns.__getitem__, stmt, search
-            )
+            stmt = sql_utils.apply_search_filters(self._table, stmt, search)
 
             # Apply sorting
-            stmt = sql_utils.apply_sort_constraints(
-                self._table.columns.__getitem__, stmt, sorts
-            )
+            stmt = sql_utils.apply_sort_constraints(self._table, stmt, sorts)
 
             # Apply pagination
             if page is not None:
