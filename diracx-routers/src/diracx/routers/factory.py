@@ -508,10 +508,9 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 # This is not managed here.
 
                 raise HTTPException(
-                    status_code=HTTPStatus.UPGRADE_REQUIRED,
-                    detail=f"Client version ({client_version})"
-                    f"not recent enough (>= {self.min_client_version})."
-                    "Upgrade.",
+                    status_code=HTTPStatus.PRECONDITION_FAILED,
+                    detail=f"Client version {client_version} is not compatible with the server. "
+                    f"Upgrade to a version >= {self.min_client_version}.",
                 )
         except HTTPException as exc:
             # Return a JSONResponse because the HTTPException
