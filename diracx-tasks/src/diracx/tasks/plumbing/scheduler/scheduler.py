@@ -66,6 +66,8 @@ return promoted
 """
 
 DELAYED_ZSET_KEY = "diracx:tasks:delayed"
+SCHEDULE_DUMP_INTERVAL_SECONDS = 600
+SCHEDULE_DUMP_MAX_ENTRIES = 20
 
 
 async def schedule_delayed(
@@ -124,6 +126,8 @@ class TaskScheduler:
         )
         # Mapping of (task_class_name, vo_or_empty) -> next_scheduled_time
         self._next_runs: dict[tuple[str, str], datetime] = {}
+        self._schedule_dump_interval_seconds = SCHEDULE_DUMP_INTERVAL_SECONDS
+        self._last_schedule_dump_at: datetime | None = None
         # Cached ZSET size for OTel observable gauge
         self._delayed_zset_size: int = 0
         _meter.create_observable_gauge(
@@ -134,6 +138,7 @@ class TaskScheduler:
 
     async def startup(self) -> None:
         await self.broker.startup()
+        self._log_task_registry_awareness()
         logger.info("Scheduler started")
 
     async def shutdown(self) -> None:
@@ -201,6 +206,9 @@ class TaskScheduler:
                 await asyncio.gather(*coros)
 
             self._next_runs.update(due_updates)
+            if self._should_dump_schedule_snapshot(now):
+                self._log_next_schedules_snapshot("periodic")
+                self._last_schedule_dump_at = now
 
             try:
                 await asyncio.wait_for(finish_event.wait(), timeout=self.check_interval)
@@ -256,15 +264,24 @@ class TaskScheduler:
     def _compute_initial_schedules(self) -> None:
         """Compute the initial next-run times for all periodic tasks."""
         vos = self.load_vos()
+        non_periodic_count = 0
+        disabled_count = 0
+        periodic_count = 0
+        vo_aware_count = 0
+        scheduled_entries = 0
 
         for task_name, task_cls in self.task_registry.items():
             if not issubclass(task_cls, PeriodicBaseTask):
+                non_periodic_count += 1
                 continue
+            periodic_count += 1
             if not getattr(task_cls, "_enabled", True):
+                disabled_count += 1
                 continue
             schedule = task_cls.default_schedule
 
             if issubclass(task_cls, PeriodicVoAwareBaseTask):
+                vo_aware_count += 1
                 if not vos:
                     logger.warning(
                         "No VOs configured, skipping VO-aware task %s",
@@ -273,8 +290,22 @@ class TaskScheduler:
                     continue
                 for vo in vos:
                     self.add_vo_schedule(task_name, vo, schedule.next_occurrence())
+                    scheduled_entries += 1
             else:
                 self._next_runs[(task_name, "")] = schedule.next_occurrence()
+                scheduled_entries += 1
+
+        logger.info(
+            "Initial periodic schedules computed: entries=%d periodic=%d "
+            "vo_aware=%d disabled=%d non_periodic=%d vos=%d",
+            scheduled_entries,
+            periodic_count,
+            vo_aware_count,
+            disabled_count,
+            non_periodic_count,
+            len(vos),
+        )
+        self._log_next_schedules_snapshot("initial")
 
     def add_vo_schedule(self, task_name: str, vo: str, next_run: datetime) -> None:
         """Register a VO-specific periodic task schedule."""
@@ -413,6 +444,86 @@ class TaskScheduler:
             for key in list(self._next_runs):
                 if key[1] in removed:
                     del self._next_runs[key]
+
+            logger.info(
+                "Reconciled VO schedules: tracked_entries=%d added_vos=%d removed_vos=%d",
+                len(self._next_runs),
+                len(added),
+                len(removed),
+            )
+            self._log_next_schedules_snapshot("config_reconcile")
+
+    def _log_task_registry_awareness(self) -> None:
+        """Log which tasks are known to the scheduler."""
+        periodic_enabled: list[str] = []
+        vo_aware_enabled: list[str] = []
+        disabled_periodic: list[str] = []
+        non_periodic: list[str] = []
+
+        for task_name, task_cls in self.task_registry.items():
+            if not issubclass(task_cls, PeriodicBaseTask):
+                non_periodic.append(task_name)
+                continue
+            if not getattr(task_cls, "_enabled", True):
+                disabled_periodic.append(task_name)
+                continue
+            periodic_enabled.append(task_name)
+            if issubclass(task_cls, PeriodicVoAwareBaseTask):
+                vo_aware_enabled.append(task_name)
+
+        periodic_enabled.sort()
+        vo_aware_enabled.sort()
+        disabled_periodic.sort()
+        non_periodic.sort()
+
+        logger.info(
+            "Scheduler task registry: total=%d periodic_enabled=%d "
+            "vo_aware_enabled=%d periodic_disabled=%d non_periodic=%d",
+            len(self.task_registry),
+            len(periodic_enabled),
+            len(vo_aware_enabled),
+            len(disabled_periodic),
+            len(non_periodic),
+        )
+        if periodic_enabled:
+            logger.info("Scheduler periodic tasks: %s", periodic_enabled)
+        if vo_aware_enabled:
+            logger.info("Scheduler VO-aware periodic tasks: %s", vo_aware_enabled)
+        if disabled_periodic:
+            logger.info("Scheduler disabled periodic tasks: %s", disabled_periodic)
+        if non_periodic:
+            logger.info("Scheduler non-periodic tasks in registry: %s", non_periodic)
+
+    def _should_dump_schedule_snapshot(self, now: datetime) -> bool:
+        if self._last_schedule_dump_at is None:
+            return True
+        elapsed = (now - self._last_schedule_dump_at).total_seconds()
+        return elapsed >= self._schedule_dump_interval_seconds
+
+    def _log_next_schedules_snapshot(self, source: str) -> None:
+        """Log a bounded, sorted dump of upcoming schedules."""
+        if not self._next_runs:
+            logger.info("Next schedule snapshot (%s): no tracked schedules", source)
+            return
+
+        upcoming = sorted(self._next_runs.items(), key=lambda item: item[1])
+        shown = upcoming[:SCHEDULE_DUMP_MAX_ENTRIES]
+        rendered = [
+            {
+                "task": task_name,
+                "vo": vo or "N/A",
+                "next_run": next_run.isoformat(),
+            }
+            for (task_name, vo), next_run in shown
+        ]
+
+        logger.info(
+            "Next schedule snapshot (%s): tracked=%d shown=%d entries=%s",
+            source,
+            len(upcoming),
+            len(rendered),
+            rendered,
+        )
 
     # ------------------------------------------------------------------
     # OTel observable gauge callback
