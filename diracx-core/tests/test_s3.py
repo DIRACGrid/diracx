@@ -92,9 +92,17 @@ async def test_presigned_upload_moto(moto_s3):
     assert r.status_code == 204, r.text
 
     # Make sure the object is actually there
-    response = await moto_s3.list_objects(Bucket=BUCKET_NAME)
-    for obj in response["Contents"]:
-        assert obj["Key"] == key
+    get_info = await moto_s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": BUCKET_NAME, "Key": key},
+        ExpiresIn=3600,
+    )
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            get_info,
+        )
+
+    assert r.content == file_content
 
 
 @pytest.fixture(scope="function")
