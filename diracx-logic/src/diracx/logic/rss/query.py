@@ -35,36 +35,50 @@ def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
     )
 
 
-async def get_site_status(
-    resource_status_db: ResourceStatusDB, name: str, vo: str
-) -> SiteStatusModel:
-    status, reason = await resource_status_db.get_site_status(name, vo)
-    return SiteStatusModel(all=map_status(status, reason))
+async def get_site_statuses(
+    resource_status_db: ResourceStatusDB, vo: str
+) -> dict[str, SiteStatusModel]:
+    rows = await resource_status_db.get_site_statuses(vo)
+    return {
+        name: SiteStatusModel(all=map_status(status, reason))
+        for name, status, reason in rows
+    }
 
 
-async def get_compute_status(
-    resource_status_db: ResourceStatusDB, name: str, vo: str
-) -> ComputeElementStatus:
-    rows = await resource_status_db.get_resource_status(name, ["all"], vo)
-    return ComputeElementStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
+async def get_compute_statuses(
+    resource_status_db: ResourceStatusDB, vo: str
+) -> dict[str, ComputeElementStatus]:
+    all_rows = await resource_status_db.get_resource_statuses(["all"], vo)
+    return {
+        name: ComputeElementStatus(
+            all=map_status(rows["all"].Status, rows["all"].Reason)
+        )
+        for name, rows in all_rows.items()
+    }
 
 
-async def get_fts_status(
-    resource_status_db: ResourceStatusDB, name: str, vo: str
-) -> FTSStatus:
-    rows = await resource_status_db.get_resource_status(name, ["all"], vo)
-    return FTSStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
+async def get_fts_statuses(
+    resource_status_db: ResourceStatusDB, vo: str
+) -> dict[str, FTSStatus]:
+    all_rows = await resource_status_db.get_resource_statuses(["all"], vo)
+    return {
+        name: FTSStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
+        for name, rows in all_rows.items()
+    }
 
 
-async def get_storage_status(
-    resource_status_db: ResourceStatusDB, name: str, vo: str
-) -> StorageElementStatus:
-    rows = await resource_status_db.get_resource_status(
-        name, ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"], vo
+async def get_storage_statuses(
+    resource_status_db: ResourceStatusDB, vo: str
+) -> dict[str, StorageElementStatus]:
+    all_rows = await resource_status_db.get_resource_statuses(
+        ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"], vo
     )
-    return StorageElementStatus(
-        read=map_status(rows["ReadAccess"].Status, rows["ReadAccess"].Reason),
-        write=map_status(rows["WriteAccess"].Status, rows["WriteAccess"].Reason),
-        check=map_status(rows["CheckAccess"].Status, rows["CheckAccess"].Reason),
-        remove=map_status(rows["RemoveAccess"].Status, rows["RemoveAccess"].Reason),
-    )
+    return {
+        name: StorageElementStatus(
+            read=map_status(rows["ReadAccess"].Status, rows["ReadAccess"].Reason),
+            write=map_status(rows["WriteAccess"].Status, rows["WriteAccess"].Reason),
+            check=map_status(rows["CheckAccess"].Status, rows["CheckAccess"].Reason),
+            remove=map_status(rows["RemoveAccess"].Status, rows["RemoveAccess"].Reason),
+        )
+        for name, rows in all_rows.items()
+    }
