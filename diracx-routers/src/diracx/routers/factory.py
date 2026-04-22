@@ -508,7 +508,7 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 # This is not managed here.
 
                 raise HTTPException(
-                    status_code=HTTPStatus.PRECONDITION_FAILED,
+                    status_code=HTTPStatus.BAD_REQUEST,
                     detail=f"Client version {client_version} is not compatible with the server. "
                     f"Upgrade to a version >= {self.min_client_version}.",
                 )
