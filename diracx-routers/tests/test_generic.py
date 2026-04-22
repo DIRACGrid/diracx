@@ -62,7 +62,7 @@ def test_min_client_version_lower_than_expected(test_client):
     )
 
     r = test_client.get("/", headers={"DiracX-Client-Version": lower_version_than_min})
-    assert r.status_code == HTTPStatus.UPGRADE_REQUIRED
+    assert r.status_code == HTTPStatus.BAD_REQUEST
     assert str(min_client_version) in r.json()["detail"]
 
 
