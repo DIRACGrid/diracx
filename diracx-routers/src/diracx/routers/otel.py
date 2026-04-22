@@ -124,7 +124,10 @@ def instrument_otel(app: FastAPI) -> None:
     # # override logger format which with trace id and span id
     # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
 
-    LoggingInstrumentor().instrument(set_logging_format=True)
+    # When set to True, the logs are too noisy to be read from the pods.
+    # Moreover, the data can't be ingested by CERN Opentelemtry
+    # setup. To be investigated
+    LoggingInstrumentor().instrument(set_logging_format=False)
 
     logger_provider = LoggerProvider(resource=resource)
     _logs.set_logger_provider(logger_provider)
@@ -136,7 +139,15 @@ def instrument_otel(app: FastAPI) -> None:
     )
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
-    handler.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
+    # We need to give some default values for these keys, otherwise the service crashes
+    # https://github.com/DIRACGrid/diracx/pull/847/
+    # handler.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
+    default_format = dict.fromkeys(
+        ["otelTraceID", "otelSpanID", "otelServiceName", "otelTraceSampled"], "Default"
+    )
+    handler.setFormatter(
+        logging.Formatter(DEFAULT_LOGGING_FORMAT, defaults=default_format)
+    )
     # Add the handler to diracx and all uvicorn logger
     # Note adding it to just 'uvicorn' or the root logger
     # is not enough because uvicorn sets propagate=False
