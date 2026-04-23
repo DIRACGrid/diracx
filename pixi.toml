@@ -35,7 +35,7 @@ diracx-logic = { path = "diracx-logic", editable = true, extras = ["testing"] }
 [feature.diracx-routers.pypi-dependencies]
 diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"] }
 # opentelemetry-api requires importlib-metadata<8.8.0
-importlib-metadata = "<8.8.0"
+importlib-metadata = "<9.0.1"
 [feature.diracx-tasks.pypi-dependencies]
 diracx-tasks = { path = "diracx-tasks", editable = true, extras = ["testing"] }
 
