@@ -39,7 +39,7 @@ RUN pixi run -e ${PIXI_ENV} python -c " \
         '/entrypoint.sh' \
     )" && chmod +x /entrypoint.sh
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ARG PIXI_ENV=container-services
 ENV PIXI_ENV=${PIXI_ENV}
