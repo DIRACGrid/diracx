@@ -92,14 +92,14 @@ async def test_presigned_upload_moto(moto_s3):
     assert r.status_code == 204, r.text
 
     # Make sure the object is actually there
-    get_info = await moto_s3.generate_presigned_url(
+    url = await moto_s3.generate_presigned_url(
         "get_object",
         Params={"Bucket": BUCKET_NAME, "Key": key},
         ExpiresIn=3600,
     )
     async with httpx.AsyncClient() as client:
         r = await client.get(
-            get_info,
+            url,
         )
 
     assert r.content == file_content
@@ -123,8 +123,14 @@ async def test_bucket(minio_client):
     await minio_client.create_bucket(Bucket=bucket_name)
     yield bucket_name
     objects = await minio_client.list_objects(Bucket=bucket_name)
-    for obj in objects.get("Contents", []):
-        await minio_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
+    if objects.get("Contents", []):
+        await minio_client.delete_objects(
+            Bucket=bucket_name,
+            Delete={
+                "Objects": [{"Key": obj["Key"]} for obj in objects.get("Contents", [])]
+            },
+        )
+
     await minio_client.delete_bucket(Bucket=bucket_name)
 
 
