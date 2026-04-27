@@ -460,26 +460,37 @@ class TestDiracCommandLineTool:
         ctx = types.SimpleNamespace(basedir="/base", replica_map=replica_map)
         return ctx
 
+    # make_path_mapper is now an instance method (no @staticmethod) so that
+    # subclass dispatch survives mypyc-compiled cwltool. The implementation
+    # doesn't access ``self`` — any value is fine for these unit tests.
+    _SELF: object = None
+
     def test_make_path_mapper_with_replica_map_returns_dirac_mapper(self):
         """When replica_map is set on context, make_path_mapper returns DiracPathMapper."""
         replica_map = _make_replica_map(
             ("/lhcb/data/file.dst", "file:///storage/file.dst")
         )
         ctx = self._make_runtime_context(replica_map=replica_map)
-        mapper = DiracCommandLineTool.make_path_mapper([], "/stagedir", ctx, True)
+        mapper = DiracCommandLineTool.make_path_mapper(
+            self._SELF, [], "/stagedir", ctx, True
+        )
         assert isinstance(mapper, DiracPathMapper)
 
     def test_make_path_mapper_without_replica_map_returns_default(self):
         """When no replica_map is on context, make_path_mapper returns base PathMapper."""
         ctx = types.SimpleNamespace(basedir="/base")  # no replica_map attr
-        mapper = DiracCommandLineTool.make_path_mapper([], "/stagedir", ctx, True)
+        mapper = DiracCommandLineTool.make_path_mapper(
+            self._SELF, [], "/stagedir", ctx, True
+        )
         # Should NOT be a DiracPathMapper — should be the plain PathMapper
         assert not isinstance(mapper, DiracPathMapper)
 
     def test_make_path_mapper_replica_map_none_returns_default(self):
         """replica_map=None on context falls through to plain PathMapper."""
         ctx = self._make_runtime_context(replica_map=None)
-        mapper = DiracCommandLineTool.make_path_mapper([], "/stagedir", ctx, True)
+        mapper = DiracCommandLineTool.make_path_mapper(
+            self._SELF, [], "/stagedir", ctx, True
+        )
         assert not isinstance(mapper, DiracPathMapper)
 
     def test_dirac_make_tool_commandlinetool_returns_dirac_instance(self):
