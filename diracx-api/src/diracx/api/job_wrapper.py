@@ -294,7 +294,7 @@ class JobWrapper:
         return lfns
 
     def __build_replica_map(self, datamanager, lfns: list[str], job_path: Path) -> None:
-        """Query replica info and write a replica_map.json for dirac-cwl-run.
+        """Query replica info and write a replica_map.json for dirac-cwl-runner.
 
         Uses DataManager's FileCatalog to get replicas and file metadata,
         then builds a ReplicaMap model matching dirac-cwl's expected format.
@@ -581,7 +581,7 @@ class JobWrapper:
             )
 
     async def run_job(self, job: JobModel) -> bool:
-        """Execute a given CWL workflow using dirac-cwl-run via subprocess.
+        """Execute a given CWL workflow using dirac-cwl-runner via subprocess.
 
         This is the equivalent of the DIRAC JobWrapper.
 
@@ -614,11 +614,11 @@ class JobWrapper:
             await self.pre_process(job.task, job.input, job_hint)
             logger.info("Task pre-processed successfully!")
 
-            # Build dirac-cwl-run command (different interface from cwltool)
+            # Build dirac-cwl-runner command (different interface from cwltool)
             task_file = self._job_path / "task.cwl"
             param_file = self._job_path / "parameter.yaml"
             cwl_command = [
-                "dirac-cwl-run",
+                "dirac-cwl-runner",
                 str(task_file.name),
                 "--tmpdir-prefix",
                 str(self._job_path.resolve()) + "/",

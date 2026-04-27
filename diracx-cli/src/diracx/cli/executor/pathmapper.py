@@ -11,7 +11,7 @@ from cwltool.utils import CWLObjectType
 
 from diracx.core.models.replica_map import ReplicaMap
 
-logger = logging.getLogger("dirac-cwl-run")
+logger = logging.getLogger("dirac-cwl-runner")
 
 
 class DiracPathMapper(PathMapper):

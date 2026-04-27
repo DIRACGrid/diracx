@@ -296,7 +296,7 @@ class TestReplicaMapWiring:
         task_file.write_text("class: CommandLineTool\n")
         param_file.write_text("{}\n")
 
-        command = ["dirac-cwl-run", str(task_file.name)]
+        command = ["dirac-cwl-runner", str(task_file.name)]
         if param_file.exists():
             command.append(str(param_file.name))
         if wrapper._replica_map_path and wrapper._replica_map_path.exists():

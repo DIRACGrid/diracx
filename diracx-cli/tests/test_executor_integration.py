@@ -1,11 +1,11 @@
-"""Integration tests for the dirac-cwl-run subprocess.
+"""Integration tests for the dirac-cwl-runner subprocess.
 
-These tests run ``dirac-cwl-run`` as a real subprocess to prove the full
+These tests run ``dirac-cwl-runner`` as a real subprocess to prove the full
 executor stack works end-to-end: mypyc patch → executor init → replica map
 loading → LFN resolution → CWL execution → output files.
 
 cwltool is required for these tests. If it is not installed the entire module
-is skipped. Individual tests are also skipped if ``dirac-cwl-run`` is not on
+is skipped. Individual tests are also skipped if ``dirac-cwl-runner`` is not on
 PATH (e.g. in a virtualenv without the diracx-cli package installed).
 """
 
@@ -95,10 +95,10 @@ def test_basic_execution_with_replica_map(tmp_path):
     outdir = tmp_path / "output"
     outdir.mkdir()
 
-    # 6. Run dirac-cwl-run
+    # 6. Run dirac-cwl-runner
     result = _run(
         [
-            "dirac-cwl-run",
+            "dirac-cwl-runner",
             str(cwl_file),
             str(inputs_yaml),
             "--outdir",
@@ -112,7 +112,7 @@ def test_basic_execution_with_replica_map(tmp_path):
     # Provide debug output on failure
     if result.returncode != 0:
         pytest.fail(
-            f"dirac-cwl-run failed with exit code {result.returncode}\n"
+            f"dirac-cwl-runner failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
         )
@@ -134,7 +134,7 @@ def test_basic_execution_with_replica_map(tmp_path):
 def test_execution_without_replica_map(tmp_path):
     """Run a CWL cp-tool using a plain local file (no LFN, no replica map).
 
-    Proves that baseline CWL execution works through the dirac-cwl-run entry
+    Proves that baseline CWL execution works through the dirac-cwl-runner entry
     point even when no replica map is provided.
     """
     # 1. Create a local input file
@@ -156,10 +156,10 @@ def test_execution_without_replica_map(tmp_path):
     outdir = tmp_path / "output"
     outdir.mkdir()
 
-    # 5. Run dirac-cwl-run (no --replica-map)
+    # 5. Run dirac-cwl-runner (no --replica-map)
     result = _run(
         [
-            "dirac-cwl-run",
+            "dirac-cwl-runner",
             str(cwl_file),
             str(inputs_yaml),
             "--outdir",
@@ -170,7 +170,7 @@ def test_execution_without_replica_map(tmp_path):
 
     if result.returncode != 0:
         pytest.fail(
-            f"dirac-cwl-run failed with exit code {result.returncode}\n"
+            f"dirac-cwl-runner failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
         )
@@ -222,10 +222,10 @@ def test_sb_reference_in_replica_map(tmp_path):
     outdir = tmp_path / "output"
     outdir.mkdir()
 
-    # 7. Run dirac-cwl-run
+    # 7. Run dirac-cwl-runner
     result = _run(
         [
-            "dirac-cwl-run",
+            "dirac-cwl-runner",
             str(cwl_file),
             str(inputs_yaml),
             "--outdir",
@@ -238,7 +238,7 @@ def test_sb_reference_in_replica_map(tmp_path):
 
     if result.returncode != 0:
         pytest.fail(
-            f"dirac-cwl-run failed with exit code {result.returncode}\n"
+            f"dirac-cwl-runner failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
         )

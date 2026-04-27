@@ -1,6 +1,6 @@
 """CLI tool for running CWL workflows with the DIRAC executor.
 
-Invoked as ``dirac-cwl-run`` on the worker node. Handles mypyc
+Invoked as ``dirac-cwl-runner`` on the worker node. Handles mypyc
 compatibility, replica map management, and cwltool integration.
 """
 
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import typer
 
-logger = logging.getLogger("dirac-cwl-run")
+logger = logging.getLogger("dirac-cwl-runner")
 
 app = typer.Typer(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True}

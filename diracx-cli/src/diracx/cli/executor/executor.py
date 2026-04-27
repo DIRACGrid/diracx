@@ -21,7 +21,7 @@ from diracx.core.models.replica_map import ReplicaMap
 
 from .fs_access import DiracReplicaMapFsAccess
 
-logger = logging.getLogger("dirac-cwl-run")
+logger = logging.getLogger("dirac-cwl-runner")
 
 
 class DiracExecutor(SingleJobExecutor):
