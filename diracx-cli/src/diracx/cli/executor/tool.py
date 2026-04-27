@@ -19,7 +19,7 @@ from ruamel.yaml.comments import CommentedMap
 
 from .pathmapper import DiracPathMapper
 
-logger = logging.getLogger("dirac-cwl-run")
+logger = logging.getLogger("dirac-cwl-runner")
 
 
 class DiracCommandLineTool(CommandLineTool):
@@ -30,8 +30,13 @@ class DiracCommandLineTool(CommandLineTool):
     falling back to the default PathMapper otherwise.
     """
 
-    @staticmethod
+    # NOTE: cwltool's base method is @staticmethod, but overriding as an
+    # instance method matters under mypyc-compiled cwltool: instance dispatch
+    # goes through the MRO descriptor protocol, while @staticmethod calls on
+    # `self` may be inlined as a direct C call to the base implementation.
+    # Toil uses the same instance-method pattern in src/toil/cwl/cwltoil.py.
     def make_path_mapper(
+        self,
         reffiles: list[CWLObjectType],
         stagedir: str,
         runtimeContext,
