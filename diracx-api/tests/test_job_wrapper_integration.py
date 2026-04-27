@@ -1,7 +1,7 @@
 """Integration tests for JobWrapper: full pre_process -> run_job -> post_process chain.
 
 This test exercises the complete JobWrapper lifecycle with:
-- A real CWL CommandLineTool (executed via dirac-cwl-run)
+- A real CWL CommandLineTool (executed via dirac-cwl-runner)
 - Mocked external services (DataManager, sandbox download/upload, JobReport, client)
 - Real cwl_utils and ruamel.yaml
 """
@@ -247,7 +247,7 @@ class TestJobWrapperIntegration:
         # Instantiate and run
         # ------------------------------------------------------------------
         # Strip prmon prefix from the command so the real subprocess
-        # runs dirac-cwl-run directly (prmon is not installed locally)
+        # runs dirac-cwl-runner directly (prmon is not installed locally)
         _real_create_subprocess = asyncio.create_subprocess_exec
 
         async def _strip_prmon(*args, **kwargs):
@@ -622,7 +622,7 @@ class TestJobWrapperIntegration:
         # Patch in the job_wrapper module's namespace (direct import binding)
         monkeypatch.setattr(_jw_mod, "JobMonitor", _TrackingMonitor)
 
-        # Mock subprocess so run_job completes without needing prmon or dirac-cwl-run
+        # Mock subprocess so run_job completes without needing prmon or dirac-cwl-runner
         known_stderr = [
             "INFO [job cat_job] completed success",
         ]
