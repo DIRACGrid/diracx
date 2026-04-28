@@ -168,7 +168,7 @@ jobs:
           docker image ls -a
       - name: Start demo
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          git clone -b "diracx-issue-426-__all__-in-__init__" https://github.com/AcquaDiGiorgio/diracx-charts.git ../diracx-charts
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")
