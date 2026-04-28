@@ -37,6 +37,8 @@ pytestmark = pytest.mark.enabled_dependencies(
         "WMSAccessPolicy",
         "DevelopmentSettings",
         "JobParametersDB",
+        "PilotAgentsDB",
+        "PilotManagementAccessPolicy",
     ]
 )
 
@@ -917,3 +919,125 @@ def test_summary_doc_example(normal_user_client: TestClient, valid_job_id: int):
 
     assert r.status_code == 200, r.json()
     assert len(r.json()) == 1
+
+
+# ---------------------------------------------------------------------------
+# Cross-table search: PilotStamp pseudo-parameter on POST /api/jobs/search
+# ---------------------------------------------------------------------------
+
+
+async def _assign_pilot_to_jobs(client, stamp: str, job_ids: list[int]) -> None:
+    """Insert JobToPilotMapping rows directly.
+
+    The router does not expose a public endpoint for pilot-job association
+    (deliberately — it waits for the DiracX pilot token story). Tests reach
+    into the app's dependency override to insert the rows via the DB layer.
+    """
+    from diracx.db.sql import PilotAgentsDB
+    from diracx.logic.pilots.management import assign_jobs_to_pilot
+
+    db = client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+    async with db:
+        await assign_jobs_to_pilot(pilot_db=db, pilot_stamp=stamp, job_ids=job_ids)
+
+
+async def _register_pilot(client, stamp: str) -> None:
+    r = client.post(
+        "/api/pilots/",
+        json={"pilot_stamps": [stamp], "vo": "lhcb"},
+    )
+    assert r.status_code == 200, r.json()
+
+
+async def test_jobs_search_by_pilot_stamp_eq(normal_user_client):
+    """A ``PilotStamp`` eq filter on /jobs/search returns the jobs that ran on that pilot."""
+    r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL for _ in range(3)])
+    assert r.status_code == 200, r.json()
+    job_ids = [j["JobID"] for j in r.json()]
+
+    await _register_pilot(normal_user_client, "stamp-eq")
+    await _assign_pilot_to_jobs(
+        normal_user_client, "stamp-eq", [job_ids[0], job_ids[1]]
+    )
+
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {"parameter": "PilotStamp", "operator": "eq", "value": "stamp-eq"}
+            ]
+        },
+    )
+    assert r.status_code == 200, r.json()
+    returned = sorted(j["JobID"] for j in r.json())
+    assert returned == sorted([job_ids[0], job_ids[1]])
+
+
+async def test_jobs_search_by_pilot_stamp_in_multiple(normal_user_client):
+    """An ``in`` filter over several stamps returns the union of their jobs."""
+    r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL for _ in range(4)])
+    assert r.status_code == 200, r.json()
+    job_ids = [j["JobID"] for j in r.json()]
+
+    await _register_pilot(normal_user_client, "stamp-in-a")
+    await _register_pilot(normal_user_client, "stamp-in-b")
+    await _assign_pilot_to_jobs(normal_user_client, "stamp-in-a", [job_ids[0]])
+    await _assign_pilot_to_jobs(
+        normal_user_client, "stamp-in-b", [job_ids[1], job_ids[2]]
+    )
+
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {
+                    "parameter": "PilotStamp",
+                    "operator": "in",
+                    "values": ["stamp-in-a", "stamp-in-b"],
+                }
+            ]
+        },
+    )
+    assert r.status_code == 200, r.json()
+    returned = sorted(j["JobID"] for j in r.json())
+    assert returned == sorted([job_ids[0], job_ids[1], job_ids[2]])
+
+
+def test_jobs_search_by_unknown_pilot_stamp_returns_empty(normal_user_client):
+    """An unknown stamp resolves to an empty job list; the caller gets ``[]``."""
+    r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL])
+    assert r.status_code == 200, r.json()
+
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [{"parameter": "PilotStamp", "operator": "eq", "value": "nope"}]
+        },
+    )
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_jobs_search_combining_pilot_stamp_and_job_id_raises(normal_user_client):
+    """Combining a ``PilotStamp`` pseudo-filter with a real ``JobID`` filter is refused."""
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [
+                {"parameter": "PilotStamp", "operator": "eq", "value": "any"},
+                {"parameter": "JobID", "operator": "eq", "value": 1},
+            ]
+        },
+    )
+    assert r.status_code in (400, 422), r.json()
+
+
+def test_jobs_search_pilot_stamp_unsupported_operator_raises(normal_user_client):
+    """Operators other than ``eq`` / ``in`` on ``PilotStamp`` are refused."""
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [{"parameter": "PilotStamp", "operator": "neq", "value": "any"}]
+        },
+    )
+    assert r.status_code in (400, 422), r.json()

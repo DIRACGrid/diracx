@@ -6,15 +6,18 @@
 
 Follow our quickstart for examples: https://aka.ms/azsdk/python/dpcodegen/python/customize
 """
+
 from __future__ import annotations
 
 __all__ = [
     "AuthOperations",
     "JobsOperations",
+    "PilotsOperations",
 ]  # Add all objects you want publicly available to users at this package level
 
 from ....patches.auth.aio import AuthOperations
 from ....patches.jobs.aio import JobsOperations
+from ....patches.pilots.aio import PilotsOperations
 
 
 def patch_sdk():
