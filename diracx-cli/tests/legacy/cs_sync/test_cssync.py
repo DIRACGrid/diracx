@@ -6,7 +6,7 @@ import yaml
 from typer.testing import CliRunner
 
 from diracx.cli import app
-from diracx.core.config.schema import Config
+from diracx.core.config import Config
 
 runner = CliRunner()
 

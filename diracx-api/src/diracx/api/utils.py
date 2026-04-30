@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ("with_client",)
+__all__ = ["with_client"]
 
 from functools import wraps
 

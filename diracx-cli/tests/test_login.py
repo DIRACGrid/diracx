@@ -6,7 +6,7 @@ from diracx import cli
 
 
 async def test_login(monkeypatch, capfd, cli_env):
-    from diracx.testing import test_login
+    from diracx.testing.utils import test_login
 
     return await test_login(monkeypatch, capfd, cli_env)
 

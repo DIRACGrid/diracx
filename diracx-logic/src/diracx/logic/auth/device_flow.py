@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from diracx.core.config import Config
-from diracx.core.models.auth import GrantType, InitiateDeviceFlowResponse
+from diracx.core.models import GrantType, InitiateDeviceFlowResponse
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB

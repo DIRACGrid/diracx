@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from diracx.db.sql.job.db import JobDB
 from sqlalchemy import insert, select
 

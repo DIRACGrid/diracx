@@ -23,18 +23,18 @@ from uuid_utils import uuid7
 
 from diracx.core.config import Config
 from diracx.core.exceptions import AuthorizationError
-from diracx.core.models.auth import GrantType
+from diracx.core.models import GrantType
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.core.settings import AuthSettings
 from diracx.logic.auth.token import _sign_token_payload
-from diracx.logic.auth.utils import (
-    _server_metadata_cache,
+from diracx.logic.auth import (
     decrypt_state,
     encrypt_state,
     get_server_metadata,
     parse_and_validate_scope,
     verify_dirac_refresh_token,
 )
+from diracx.logic.auth.utils import _server_metadata_cache
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 pytestmark = pytest.mark.enabled_dependencies(
