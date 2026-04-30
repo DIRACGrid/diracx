@@ -37,8 +37,7 @@ async def get_server_metadata(url: str):
         async with httpx.AsyncClient() as c:
             res = await c.get(url)
             if res.status_code != 200:
-                # TODO: Better error handling
-                raise NotImplementedError(res)
+                raise IAMServerError("Failed to retrieve IAM server metadata")
             server_metadata = res.json()
             _server_metadata_cache[url] = server_metadata
     return server_metadata

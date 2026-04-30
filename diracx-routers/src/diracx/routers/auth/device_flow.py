@@ -15,6 +15,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import RedirectResponse
+from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
 from diracx.core.models.auth import InitiateDeviceFlowResponse
@@ -101,14 +102,33 @@ async def do_device_flow(
     device flow.
     (note: it can't be put as parameter or in the URL)
     """
-    authorization_flow_url = await do_device_flow_bl(
-        request_url=str(request.url.replace(query="")),
-        auth_db=auth_db,
-        user_code=user_code,
-        config=config,
-        available_properties=available_properties,
-        settings=settings,
-    )
+    try:
+        authorization_flow_url = await do_device_flow_bl(
+            request_url=str(request.url.replace(query="")),
+            auth_db=auth_db,
+            user_code=user_code,
+            config=config,
+            available_properties=available_properties,
+            settings=settings,
+        )
+    except NoResultFound as e:
+        logger.warning("Invalid or expired user_code: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.args[0],
+        ) from e
+    except ValueError as e:
+        logger.warning("Invalid scope during device flow: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.args[0],
+        ) from e
+    except IAMServerError as e:
+        logger.warning("IAM server error during device flow: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=e.args[0],
+        ) from e
     return RedirectResponse(authorization_flow_url)
 
 

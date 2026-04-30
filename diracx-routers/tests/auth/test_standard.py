@@ -22,7 +22,7 @@ from pytest_httpx import HTTPXMock
 from uuid_utils import uuid7
 
 from diracx.core.config import Config
-from diracx.core.exceptions import AuthorizationError
+from diracx.core.exceptions import AuthorizationError, IAMServerError
 from diracx.core.models.auth import GrantType
 from diracx.core.properties import NORMAL_USER, PROXY_MANAGEMENT, SecurityProperty
 from diracx.core.settings import AuthSettings
@@ -1453,3 +1453,54 @@ def test_encrypt_decrypt_state_invalid_state(fernet_key):
     with pytest.raises(AuthorizationError) as exc_info:
         decrypt_state(state, fernet_key)
     assert exc_info.value.detail == "Invalid state"
+
+
+async def test_do_device_flow_invalid_user_code(test_client):
+    """Test that an invalid user_code returns an error 400."""
+    r = test_client.get("/api/auth/device", params={"user_code": "INVALID"})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "No row was found when one was required"
+
+
+async def test_do_device_flow_invalid_scope(test_client, monkeypatch):
+    """Test that an invalid scope returns an error 400."""
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "scope": "vo:lhcb group:lhcb_user property:NormalUser",
+        },
+    )
+    user_code = r.json()["user_code"]
+
+    def fake_invalid_scope(*args, **kwargs):
+        raise ValueError("Invalid scope")
+
+    monkeypatch.setattr(
+        "diracx.logic.auth.device_flow.parse_and_validate_scope", fake_invalid_scope
+    )
+    r = test_client.get("/api/auth/device", params={"user_code": user_code})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Invalid scope"
+
+
+async def test_do_device_flow_iam_server_error(test_client, monkeypatch):
+    """Test that an IAM server error returns an error 502."""
+    r = test_client.post(
+        "/api/auth/device",
+        params={
+            "client_id": DIRAC_CLIENT_ID,
+            "scope": "vo:lhcb group:lhcb_user property:NormalUser",
+        },
+    )
+    user_code = r.json()["user_code"]
+
+    def fake_iam_server_error(*args, **kwargs):
+        raise IAMServerError("IAM error")
+
+    monkeypatch.setattr(
+        "diracx.logic.auth.utils.get_server_metadata", fake_iam_server_error
+    )
+    r = test_client.get("/api/auth/device", params={"user_code": user_code})
+    assert r.status_code == 502
+    assert r.json()["detail"] == "IAM error"
