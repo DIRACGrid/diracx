@@ -38,7 +38,7 @@ jobs:
       - name: Clone DIRAC
         run: |
           pip install typer pyyaml gitpython packaging
-          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          git clone https://github.com/AcquaDiGiorgio/DIRAC.git -b "diracx-issue-426-__all__-in-__init__" /tmp/DIRACRepo
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
       - name: Prepare environment
         run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes" --diracx-src-dir "${GITHUB_WORKSPACE}"
