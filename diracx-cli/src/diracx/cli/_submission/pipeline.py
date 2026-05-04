@@ -30,17 +30,29 @@ def _extract_cwl_inputs(cwl: dict) -> list[dict]:
     return inputs
 
 
-def _apply_input_defaults(jobs: list[dict], cwl_inputs: list[dict]) -> list[dict]:
-    """Backfill workflow input defaults into jobs that don't override them.
+def _apply_sandbox_defaults(
+    jobs: list[dict], cwl: dict, cwl_inputs: list[dict]
+) -> list[dict]:
+    """Backfill workflow input defaults referenced by dirac:Job.input_sandbox.
 
-    cwltool applies these on the worker, but the submission side needs them
-    earlier so dirac:Job.input_sandbox sources resolve to concrete File
-    objects when the user hasn't supplied an inputs file or CLI override.
-    Without this, declared defaults like ``default: { class: File, path: ... }``
-    silently fail to upload to the sandbox.
+    Sandbox upload walks the inputs dict for File refs; if the user didn't
+    supply a value and the workflow declares a File default, we have to
+    inject it here so the file actually gets uploaded. Limited to ids that
+    input_sandbox references, so non-sandbox inputs stay untouched and the
+    JDL the server generates from input_params doesn't change shape.
     """
+    referenced: set[str] = set()
+    for hint in cwl.get("hints", []) or []:
+        if isinstance(hint, dict) and hint.get("class") == "dirac:Job":
+            for ref in hint.get("input_sandbox", []) or []:
+                if isinstance(ref, dict) and "source" in ref:
+                    referenced.add(ref["source"])
+    if not referenced:
+        return jobs
     defaults = {
-        i["id"]: i["default"] for i in cwl_inputs if "id" in i and "default" in i
+        i["id"]: i["default"]
+        for i in cwl_inputs
+        if "id" in i and "default" in i and i["id"] in referenced
     }
     if not defaults:
         return jobs
@@ -106,10 +118,6 @@ async def submit_cwl(
         else:
             jobs = [cli_input]
 
-    # Backfill workflow input defaults so dirac:Job.input_sandbox can resolve
-    # to concrete Files when the user hasn't supplied that input explicitly.
-    jobs = _apply_input_defaults(jobs, cwl_inputs)
-
     # 3. Handle range — server-side expansion
     if range_spec:
         param, start, end, step = parse_range(range_spec)
@@ -130,7 +138,9 @@ async def submit_cwl(
     for job in jobs:
         validate_file_references(job)
 
-    # 5. Sandbox processing
+    # 5. Sandbox processing — inject sandbox-referenced workflow defaults so
+    # they're visible to the upload step and end up as SB: refs in the body.
+    jobs = _apply_sandbox_defaults(jobs, cwl, cwl_inputs)
     if not jobs:
         jobs = [{}]
 
