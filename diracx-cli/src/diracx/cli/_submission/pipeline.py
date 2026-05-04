@@ -30,6 +30,25 @@ def _extract_cwl_inputs(cwl: dict) -> list[dict]:
     return inputs
 
 
+def _apply_input_defaults(jobs: list[dict], cwl_inputs: list[dict]) -> list[dict]:
+    """Backfill workflow input defaults into jobs that don't override them.
+
+    cwltool applies these on the worker, but the submission side needs them
+    earlier so dirac:Job.input_sandbox sources resolve to concrete File
+    objects when the user hasn't supplied an inputs file or CLI override.
+    Without this, declared defaults like ``default: { class: File, path: ... }``
+    silently fail to upload to the sandbox.
+    """
+    defaults = {
+        i["id"]: i["default"] for i in cwl_inputs if "id" in i and "default" in i
+    }
+    if not defaults:
+        return jobs
+    if not jobs:
+        return [defaults]
+    return [{**defaults, **job} for job in jobs]
+
+
 def _extract_label(cwl: dict) -> str:
     """Extract the workflow label, falling back to 'unnamed'."""
     return cwl.get("label", "unnamed")
@@ -86,6 +105,10 @@ async def submit_cwl(
             jobs = [{**job, **cli_input} for job in jobs]
         else:
             jobs = [cli_input]
+
+    # Backfill workflow input defaults so dirac:Job.input_sandbox can resolve
+    # to concrete Files when the user hasn't supplied that input explicitly.
+    jobs = _apply_input_defaults(jobs, cwl_inputs)
 
     # 3. Handle range — server-side expansion
     if range_spec:
