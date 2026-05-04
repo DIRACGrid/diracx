@@ -150,20 +150,17 @@ Available configuration dependencies:
 
 For more details on configuration and settings classes, see the [Configuration](configuration.md) documentation.
 
-### User authentication and authorization
+### User authentication
 
 User information and authentication are handled through specialized dependencies:
 
 ```python
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from diracx.routers.auth.utils import has_properties
-from diracx.core.properties import JOB_ADMINISTRATOR
 
 
 @router.post("/admin-action")
 async def admin_action(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    _: Annotated[None, has_properties(JOB_ADMINISTRATOR)],
 ) -> dict:
     return {"user": user_info.preferred_username, "vo": user_info.vo}
 ```
@@ -173,9 +170,8 @@ Authentication dependencies:
 | Function                    | Module                       | Description                                      |
 | --------------------------- | ---------------------------- | ------------------------------------------------ |
 | `verify_dirac_access_token` | `diracx.routers.utils.users` | Verifies JWT tokens and returns user information |
-| `has_properties(property)`  | `diracx.routers.auth.utils`  | Checks if user has specific DIRAC properties     |
 
-These functions handle JWT token validation and property-based authorization checks.
+This function handle JWT token validation.
 
 ### Security properties
 
@@ -258,8 +254,7 @@ from diracx.core.settings import AuthSettings
 from diracx.db.sql import JobDB
 from diracx.routers.dependencies import Config
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
-from diracx.routers.auth.utils import has_properties
-from diracx.core.properties import NORMAL_USER
+from diracx.routers.jobs.access_policies import CheckWMSPolicyCallable, ActionType
 
 
 @router.post("/submit-job")
@@ -269,9 +264,11 @@ async def submit_job(
     auth_settings: AuthSettings,
     job_db: JobDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    _: Annotated[None, has_properties(NORMAL_USER)],
+    check_permissions: CheckWMSPolicyCallable,
 ) -> dict:
     """Submit a job with full dependency injection."""
+    # Check if user can create jobs
+    await check_permissions(action=ActionType.CREATE, job_db=job_db)
     # All dependencies are automatically injected and managed
     job_id = await job_db.insert_job(job_definition, user_info.preferred_username)
 
