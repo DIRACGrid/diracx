@@ -96,9 +96,9 @@ def main(  # noqa: B008
         # node is absent. Set CWL_SINGULARITY_CACHE to point at a pre-staged
         # node_alpine.sif on CVMFS to avoid the network pull.
         class _SingularityNodeJSEngine(NodeJSEngine):
-            def eval(self, scan, **kwargs):
+            def eval(self, *args, **kwargs):
                 kwargs.setdefault("container_engine", "singularity")
-                return super().eval(scan, **kwargs)
+                return super().eval(*args, **kwargs)
 
         set_js_engine(_SingularityNodeJSEngine())
 
