@@ -13,6 +13,7 @@ __all__ = [
     "OperationsConfig",
     "RegistryConfig",
     "RemoteGitConfigSource",
+    "ResourceStatusSource",
     "SerializableSet",
     "SupportInfo",
     "UserConfig",
@@ -35,5 +36,6 @@ from .sources import (
     ConfigSourceUrl,
     LocalGitConfigSource,
     RemoteGitConfigSource,
+    ResourceStatusSource,
     is_running_in_async_context,
 )
