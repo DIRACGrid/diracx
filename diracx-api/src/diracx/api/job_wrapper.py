@@ -645,14 +645,27 @@ class JobWrapper:
             logger.info("Executing Task: %s", command)
             self._job_report.set_job_status(minor_status=JobMinorStatus.APPLICATION)
             await self._job_report.commit()
-            # HACK: cwl_utils.sandboxjs hardcodes a PATH lookup for `nodejs`/
-            # `node` to evaluate $(inputs[...]) JS expressions, with no env
-            # var or flag to override. DIRACOS doesn't ship node yet, so
-            # prepend a CVMFS-bundled node to PATH for this subprocess only.
-            # Remove once nodejs lands in DIRACOS proper.
+            # HACK: PATH augmentation for the cwltool subprocess only.
+            #
+            #  1. CVMFS-bundled node, because cwl_utils.sandboxjs hardcodes
+            #     a PATH lookup for `nodejs`/`node` to evaluate $(inputs[...])
+            #     JS expressions and DIRACOS doesn't ship nodejs. Remove
+            #     when nodejs lands in DIRACOS proper.
+            #
+            #  2. HACK ALERT: the job working directory itself, to make up
+            #     for lb-prod-run-rs not being installed on the worker.
+            #     The binary arrives via dirac:Job.input_sandbox and lands
+            #     at `<job_path>/lb-prod-run-rs` after extraction, but each
+            #     CommandLineTool's `baseCommand: [lb-prod-run-rs]` resolves
+            #     against PATH, not the job dir. Remove when the binary is
+            #     either (a) installed on workers via DIRACOS / CVMFS, or
+            #     (b) declared as a typed File input on each tool and staged
+            #     via InitialWorkDirRequirement.
             proc_env = os.environ.copy()
             proc_env["PATH"] = (
                 "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3886/stable/linux-64/bin:"
+                + str(self._job_path.resolve())
+                + ":"
                 + proc_env.get("PATH", "")
             )
             proc = await asyncio.create_subprocess_exec(  # noqa: S603
