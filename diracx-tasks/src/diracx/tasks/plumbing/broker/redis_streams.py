@@ -138,6 +138,28 @@ class RedisStreamBroker:
 
         return _ack
 
+    def _renew_generator(
+        self, msg_id: str | bytes, queue_name: str | bytes
+    ) -> Callable[[], Awaitable[None]]:
+        """Return a coroutine that resets the PEL idle timer for a message.
+
+        Calls XCLAIM with min-idle-time=0, which always succeeds and resets
+        the idle clock — preventing the autoclaim loop from reclaiming a
+        message that is still being actively processed.
+        """
+
+        async def _renew() -> None:
+            async with Redis(connection_pool=self.connection_pool) as redis:
+                await redis.xclaim(
+                    queue_name,
+                    self.consumer_group_name,
+                    self.consumer_name,
+                    min_idle_time=0,
+                    message_ids=[msg_id],
+                )
+
+        return _renew
+
     async def listen(self) -> AsyncGenerator[ReceivedMessage, None]:
         """Yield messages from streams in strict priority order.
 
@@ -163,6 +185,9 @@ class RedisStreamBroker:
                         yield ReceivedMessage(
                             data=msg[b"data"],
                             ack=self._ack_generator(msg_id=msg_id, queue_name=stream),
+                            renew=self._renew_generator(
+                                msg_id=msg_id, queue_name=stream
+                            ),
                         )
 
                 # Reclaim unacknowledged messages (throttled to idle_timeout interval)
@@ -187,16 +212,20 @@ class RedisStreamBroker:
                         )
 
                         if pending[1]:
-                            logger.debug(
-                                "Reclaimed %d unacked messages from %s",
+                            logger.info(
+                                "Reclaimed %d unacked messages from %s (message ids: %s)",
                                 len(pending[1]),
                                 sname,
+                                [msg_id for msg_id, msg in pending[1]],
                             )
 
                         for msg_id, msg in pending[1]:
                             yield ReceivedMessage(
                                 data=msg[b"data"],
                                 ack=self._ack_generator(
+                                    msg_id=msg_id, queue_name=sname
+                                ),
+                                renew=self._renew_generator(
                                     msg_id=msg_id, queue_name=sname
                                 ),
                             )
