@@ -81,11 +81,26 @@ def main(  # noqa: B008
 
     try:
         # mypyc patch is applied by __init__.py before these imports
+        from cwl_utils.sandboxjs import NodeJSEngine, set_js_engine
         from cwltool.context import LoadingContext
         from cwltool.main import main as cwltool_main
 
         from . import DiracExecutor
         from .tool import dirac_make_tool
+
+        # Evaluate inline-JS expressions via Apptainer/Singularity (which DIRAC
+        # workers have) rather than Docker (which they don't). cwl_utils ships
+        # this code path in NodeJSEngine.new_js_proc — we just default the
+        # container_engine on every eval(). If a node binary is on PATH it
+        # is used in preference; the container fallback only kicks in when
+        # node is absent. Set CWL_SINGULARITY_CACHE to point at a pre-staged
+        # node_alpine.sif on CVMFS to avoid the network pull.
+        class _SingularityNodeJSEngine(NodeJSEngine):
+            def eval(self, scan, **kwargs):
+                kwargs.setdefault("container_engine", "singularity")
+                return super().eval(scan, **kwargs)
+
+        set_js_engine(_SingularityNodeJSEngine())
 
         dirac_executor = DiracExecutor(global_map_path=replica_map)
 
