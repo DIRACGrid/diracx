@@ -47,6 +47,7 @@ auth = "diracx.routers.auth:router"
 config = "diracx.routers.configuration:router"
 health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
+rss = "diracx.routers.rss:router"
 
 [project.entry-points."diracx.access_policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
@@ -86,6 +87,5 @@ asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
 ]
-
 
 asyncio_default_fixture_loop_scope = "function"
