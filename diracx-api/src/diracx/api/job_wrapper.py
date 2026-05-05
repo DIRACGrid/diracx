@@ -14,18 +14,8 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Sequence, cast
+from typing import Any, Sequence
 
-from cwl_utils.parser import (
-    save,
-)
-from cwl_utils.parser.cwl_v1_2 import (
-    CommandLineTool,
-    ExpressionTool,
-    File,
-    Saveable,
-    Workflow,
-)
 from DIRACCommon.Core.Utilities.ReturnValues import (  # type: ignore[import-untyped]
     returnValueOrRaise,
 )
@@ -43,7 +33,6 @@ from diracx.core.models.commands import (
     StoreOutputDataCommand,
 )
 from diracx.core.models.cwl import JobHint
-from diracx.core.models.cwl_submission import JobInputModel, JobModel
 from diracx.core.models.job import JobMinorStatus, JobStatus
 
 # cwltool lifecycle patterns worth reporting as ApplicationStatus.
@@ -85,7 +74,7 @@ class JobWrapper:
         )
 
     async def __download_input_sandbox(
-        self, inputs: JobInputModel, job_hint: JobHint, job_path: Path
+        self, inputs: dict[str, Any], job_hint: JobHint, job_path: Path
     ) -> dict[str, Path]:
         """Download input sandbox files and return SB: → local path mappings.
 
@@ -111,7 +100,7 @@ class JobWrapper:
         downloaded_sb_refs: set[str] = set()
 
         for ref in job_hint.input_sandbox:
-            cwl_value = inputs.cwl.get(ref.source)
+            cwl_value = inputs.get(ref.source)
             if cwl_value is None:
                 continue
 
@@ -203,7 +192,7 @@ class JobWrapper:
             )
 
     async def __download_input_data(
-        self, inputs: JobInputModel, job_path: Path
+        self, inputs: dict[str, Any], job_path: Path
     ) -> dict[str, Path | list[Path]]:
         """Download LFNs into the job working directory and build a replica map.
 
@@ -232,7 +221,7 @@ class JobWrapper:
         # Extract LFNs from CWL inputs using the hint's source references
         lfns_by_input: dict[str, list[str]] = {}
         for source_id in self._input_data_sources:
-            cwl_value = inputs.cwl.get(source_id)
+            cwl_value = inputs.get(source_id)
             if cwl_value is None:
                 continue
             lfns = self.__extract_lfns_from_cwl_value(cwl_value)
@@ -387,37 +376,29 @@ class JobWrapper:
             )
 
     def __update_inputs(
-        self, inputs: JobInputModel, updates: dict[str, Path | list[Path]]
+        self, inputs: dict[str, Any], updates: dict[str, Path | list[Path]]
     ):
-        """Update CWL job inputs with new file paths.
+        """Replace File entries in the inputs dict with downloaded local paths.
 
-        This method updates the `inputs.cwl` object by replacing or adding
-        file paths for each input specified in `updates`. It supports both
-        single files and lists of files.
-
-        :param inputs: The job input model whose `cwl` dictionary will be updated.
-        :type inputs: JobInputModel
-        :param updates: Dictionary mapping input names to their corresponding local file
-            paths. Each value can be a single `Path` or a list of `Path` objects.
-        :type updates: dict[str, Path | list[Path]]
-
-        .. note::
-           This method is typically called after downloading LFNs
-           using `download_lfns` to ensure that the CWL job inputs reference
-           the correct local files.
+        Existing File entries have their ``path`` flattened to the basename
+        (matching cwltool's working-dir staging convention). Each entry in
+        *updates* is then written as a fresh ``{class: File, path: ...}``
+        dict (or list thereof) under its input id.
         """
-        for _, value in inputs.cwl.items():
+        for value in inputs.values():
             files = value if isinstance(value, list) else [value]
             for file in files:
-                if isinstance(file, File) and file.path:
-                    file.path = Path(file.path).name
+                if (
+                    isinstance(file, dict)
+                    and file.get("class") == "File"
+                    and file.get("path")
+                ):
+                    file["path"] = Path(file["path"]).name
         for input_name, path in updates.items():
             if isinstance(path, Path):
-                inputs.cwl[input_name] = File(path=str(path))
+                inputs[input_name] = {"class": "File", "path": str(path)}
             else:
-                inputs.cwl[input_name] = []
-                for p in path:
-                    inputs.cwl[input_name].append(File(path=str(p)))
+                inputs[input_name] = [{"class": "File", "path": str(p)} for p in path]
 
     def __parse_output_filepaths(
         self, stdout: str
@@ -448,37 +429,32 @@ class JobWrapper:
 
     async def pre_process(
         self,
-        executable: CommandLineTool | Workflow | ExpressionTool,
-        arguments: JobInputModel | None,
+        params: dict[str, Any] | None,
         job_hint: JobHint,
-    ) -> None:
-        """Pre-process the job before execution.
+    ) -> Path | None:
+        """Download input sandbox/data and (re)write the parameters file.
 
-        Writes the CWL task and parameters to disk, downloads input sandbox
-        and input data as declared in the dirac:Job hint.
+        Returns the path to the rewritten parameters file (or None if no
+        params were supplied). The workflow YAML is already on disk —
+        dirac-cwl-runner is pointed at it directly.
         """
         logger = logging.getLogger("JobWrapper - Pre-process")
-
-        # Write CWL task to file
         logger.info("Preparing the task...")
-        task_dict = save(executable)
-        task_path = self._job_path / "task.cwl"
-        with open(task_path, "w") as task_file:
-            YAML().dump(task_dict, task_file)
 
-        if arguments:
+        params_path: Path | None = None
+        if params is not None:
             # Download input sandbox and collect SB: → local path mappings
             sandbox_mappings: dict[str, Path] = {}
             if job_hint.input_sandbox:
                 logger.info("Downloading input sandbox files...")
                 sandbox_mappings = await self.__download_input_sandbox(
-                    arguments, job_hint, self._job_path
+                    params, job_hint, self._job_path
                 )
 
             # Download input data (LFNs) using hint source references
             if job_hint.input_data:
-                updates = await self.__download_input_data(arguments, self._job_path)
-                self.__update_inputs(arguments, updates)
+                updates = await self.__download_input_data(params, self._job_path)
+                self.__update_inputs(params, updates)
 
             # Inject sandbox entries into replica map
             if sandbox_mappings:
@@ -486,17 +462,17 @@ class JobWrapper:
                     sandbox_mappings, self._job_path
                 )
 
-            # Write input parameters to file
+            # Write the (possibly mutated) parameters file for dirac-cwl-runner.
             logger.info("Preparing the parameters...")
-            parameter_dict = save(cast(Saveable, arguments.cwl))
-            parameter_path = self._job_path / "parameter.yaml"
-            with open(parameter_path, "w") as parameter_file:
-                YAML().dump(parameter_dict, parameter_file)
+            params_path = self._job_path / "parameter.yaml"
+            with open(params_path, "w") as f:
+                YAML().dump(params, f)
 
         if self._preprocess_commands:
             await self.__run_preprocess_commands(self._job_path)
 
         await self._job_report.commit()
+        return params_path
 
     async def post_process(
         self,
@@ -580,51 +556,56 @@ class JobWrapper:
                 StoreOutputDataCommand(output_paths=output_paths, output_se=output_se)
             )
 
-    async def run_job(self, job: JobModel) -> bool:
-        """Execute a given CWL workflow using dirac-cwl-runner via subprocess.
+    async def run_job(
+        self, workflow_path: Path, params_path: Path | None = None
+    ) -> bool:
+        """Execute a CWL workflow via dirac-cwl-runner.
 
-        This is the equivalent of the DIRAC JobWrapper.
-
-        :param job: The job model containing workflow and inputs.
-        :return: True if the job is executed successfully, False otherwise.
+        :param workflow_path: Path to the CWL workflow file on disk.
+        :param params_path: Path to the CWL parameters file on disk
+            (None if the workflow takes no inputs).
+        :return: True on success, False on failure.
         """
         logger = logging.getLogger("JobWrapper")
 
-        # Extract dirac:Job hint and build commands from type + I/O config
-        job_hint = JobHint.from_cwl(job.task)
+        # Parse the workflow once for hint extraction and stdout/stderr
+        # auto-collection. After that the dict is dropped — dirac-cwl-runner
+        # reads the workflow file directly.
+        workflow = YAML().load(workflow_path.read_text())
+        job_hint = JobHint.from_cwl(workflow)
         self._build_commands_from_hint(job_hint)
 
-        # Auto-collect CWL stdout/stderr type outputs for the output sandbox.
-        # cwl_utils stores output IDs as full URIs (e.g.
-        # file:///path/to/task.cwl#stdout_log) — rsplit extracts the bare name.
-        for out in getattr(job.task, "outputs", None) or []:
-            out_type = getattr(out, "type_", None) or getattr(out, "type", None)
-            if out_type in ("stdout", "stderr"):
-                out_id = getattr(out, "id", "").rsplit("#", 1)[-1]
+        for out in workflow.get("outputs") or []:
+            if not isinstance(out, dict):
+                continue
+            if out.get("type") in ("stdout", "stderr"):
+                out_id = (out.get("id") or "").rsplit("#", 1)[-1]
                 if out_id and out_id not in self._output_sandbox:
                     self._output_sandbox.append(out_id)
+
+        # Read the input parameters (if any) so pre_process can mutate them
+        # with downloaded sandbox/LFN paths before writing them back out.
+        params: dict[str, Any] | None = None
+        if params_path is not None:
+            params = YAML().load(params_path.read_text())
 
         # Isolate the job in a specific directory
         self._job_path = Path(".") / "workernode" / f"{random.randint(1000, 9999)}"  # noqa: S311
         self._job_path.mkdir(parents=True, exist_ok=True)
 
         try:
-            # Pre-process the job
             logger.info("Pre-processing Task...")
-            await self.pre_process(job.task, job.input, job_hint)
+            updated_params_path = await self.pre_process(params, job_hint)
             logger.info("Task pre-processed successfully!")
 
-            # Build dirac-cwl-runner command (different interface from cwltool)
-            task_file = self._job_path / "task.cwl"
-            param_file = self._job_path / "parameter.yaml"
             cwl_command = [
                 "dirac-cwl-runner",
-                str(task_file.name),
+                str(workflow_path.resolve()),
                 "--tmpdir-prefix",
                 str(self._job_path.resolve()) + "/",
             ]
-            if param_file.exists():
-                cwl_command.append(str(param_file.name))
+            if updated_params_path is not None:
+                cwl_command.append(str(updated_params_path.name))
             if self._replica_map_path and self._replica_map_path.exists():
                 cwl_command.extend(["--replica-map", str(self._replica_map_path.name)])
 

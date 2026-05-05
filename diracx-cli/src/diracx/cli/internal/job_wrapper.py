@@ -9,34 +9,24 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
-from cwl_utils.parser import load_document_by_uri
-from cwl_utils.parser.cwl_v1_2_utils import load_inputfile
 from ruamel.yaml import YAML
 
 from diracx.api.job_wrapper import JobWrapper
-from diracx.core.models.cwl_submission import JobModel
 
 
 async def main():
-    """Execute the job wrapper for a given job model.
-
-    Fetches the CWL workflow definition and input parameters from the
-    diracX API using the WorkflowID stored in the job config JSON.
-    """
+    """Fetch a job's workflow + params from the diracX API and run it."""
     if len(sys.argv) < 2:
         logging.error("Usage: job_wrapper.py <jobID>")
         sys.exit(1)
 
     job_id = int(sys.argv[-1])
 
-    # Fetch workflow_id, CWL, and params from diracX API using the job_id
     from diracx.client.aio import AsyncDiracClient
     from diracx.core.models.search import ScalarSearchOperator, ScalarSearchSpec
 
     async with AsyncDiracClient() as client:
-        # Get workflow_id and params from job attributes
         results = await client.jobs.search(
             parameters=["JobID", "WorkflowID", "WorkflowParams"],
             search=[
@@ -51,40 +41,29 @@ async def main():
             logging.error("Job %d not found", job_id)
             sys.exit(1)
 
-        job_attrs = results[0]
-        workflow_id = job_attrs.get("WorkflowID")
-        workflow_params = job_attrs.get("WorkflowParams")
+        workflow_id = results[0].get("WorkflowID")
+        workflow_params = results[0].get("WorkflowParams")
 
         if not workflow_id:
             logging.error("Job %d has no WorkflowID", job_id)
             sys.exit(1)
 
-        # Fetch CWL definition
-        workflow_response = await client.jobs.get_workflow(workflow_id)
-        cwl_yaml = workflow_response["cwl"]
+        cwl_yaml = (await client.jobs.get_workflow(workflow_id))["cwl"]
 
-    # Parse CWL
-    yaml_doc = YAML()
-    task_dict = yaml_doc.load(cwl_yaml)
+    # Write the workflow to disk verbatim — no parse, no round-trip.
+    workflow_path = Path.cwd() / f"{workflow_id[:8]}.cwl"
+    workflow_path.write_text(cwl_yaml)
 
-    cwl_path = Path.cwd() / f"{workflow_id[:8]}.cwl"
-    with open(cwl_path, "w") as f:
-        YAML().dump(task_dict, f)
-
-    task_obj = load_document_by_uri(str(cwl_path))
-
-    # Build job model
-    job_model_dict: dict[str, Any] = {"task": task_obj, "input": None}
-
-    # If workflow_params were stored, use them as CWL inputs
+    # Write the input parameters file if any. workflow_params is already
+    # a dict pulled from the Job DB, so just dump it.
+    params_path = None
     if workflow_params:
-        cwl_inputs_obj = load_inputfile(workflow_params)
-        job_model_dict["input"] = {"sandbox": None, "cwl": cwl_inputs_obj}
+        params_path = Path.cwd() / "parameters.yaml"
+        with open(params_path, "w") as f:
+            YAML().dump(workflow_params, f)
 
-    job = JobModel.model_validate(job_model_dict)
     job_wrapper = JobWrapper(job_id)
-
-    res = await job_wrapper.run_job(job)
+    res = await job_wrapper.run_job(workflow_path, params_path)
     if res:
         logging.info("Job done.")
         return 0

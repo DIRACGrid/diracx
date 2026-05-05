@@ -60,8 +60,14 @@ class JobHint(BaseModel):
 
     @classmethod
     def from_cwl(cls, cwl_object) -> JobHint:
-        """Extract a JobHint from a CWL object's hints list."""
-        hints = getattr(cwl_object, "hints", []) or []
+        """Extract a JobHint from a CWL document's ``hints`` list.
+
+        Accepts either a parsed cwl_utils object or the raw dict.
+        """
+        if isinstance(cwl_object, dict):
+            hints = cwl_object.get("hints") or []
+        else:
+            hints = getattr(cwl_object, "hints", None) or []
         for hint in hints:
             if isinstance(hint, dict) and hint.get("class") == "dirac:Job":
                 data = {k: v for k, v in hint.items() if k != "class"}
