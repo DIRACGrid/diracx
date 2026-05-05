@@ -83,7 +83,7 @@ def parse_cli_args(cwl_inputs: list[dict[str, Any]], args: list[str]) -> dict[st
 
     for inp in cwl_inputs:
         inp_id: str = inp["id"]
-        inp_type: str = inp["type"]
+        inp_type = inp["type"]
         flag = f"--{inp_id}"
 
         if inp_type == "boolean":
@@ -99,8 +99,12 @@ def parse_cli_args(cwl_inputs: list[dict[str, Any]], args: list[str]) -> dict[st
                 default=None,
             )
         else:
+            # Complex types (enums, records, unions) are dicts in the CWL.
+            # Treat them as opaque strings on the CLI — proper typed values
+            # belong in an inputs.yml; this path just allows overriding by
+            # name without crashing on unhashable dict keys.
             type_map: dict[str, type] = {"string": str, "int": int, "float": float}
-            py_type = type_map.get(inp_type, str)
+            py_type = type_map.get(inp_type, str) if isinstance(inp_type, str) else str
             parser.add_argument(flag, dest=inp_id, type=py_type, default=None)
 
     namespace = parser.parse_args(args)
