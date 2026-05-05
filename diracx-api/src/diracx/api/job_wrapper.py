@@ -645,11 +645,22 @@ class JobWrapper:
             logger.info("Executing Task: %s", command)
             self._job_report.set_job_status(minor_status=JobMinorStatus.APPLICATION)
             await self._job_report.commit()
+            # HACK: cwl_utils.sandboxjs hardcodes a PATH lookup for `nodejs`/
+            # `node` to evaluate $(inputs[...]) JS expressions, with no env
+            # var or flag to override. DIRACOS doesn't ship node yet, so
+            # prepend a CVMFS-bundled node to PATH for this subprocess only.
+            # Remove once nodejs lands in DIRACOS proper.
+            proc_env = os.environ.copy()
+            proc_env["PATH"] = (
+                "/cvmfs/lhcb.cern.ch/lib/var/lib/LbEnv/3886/stable/linux-64/bin:"
+                + proc_env.get("PATH", "")
+            )
             proc = await asyncio.create_subprocess_exec(  # noqa: S603
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self._job_path,
+                env=proc_env,
             )
             assert proc.stderr is not None  # guaranteed by stderr=PIPE
             assert proc.stdout is not None  # guaranteed by stdout=PIPE
