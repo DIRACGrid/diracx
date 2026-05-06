@@ -213,7 +213,7 @@ class RedisStreamBroker:
 
                         if pending[1]:
                             logger.info(
-                                "Reclaimed %d unacked messages from %s (message ids: %s)",
+                                "Reclaimed %d unacked messages from %s (message-ids: %s)",
                                 len(pending[1]),
                                 sname,
                                 [msg_id for msg_id, msg in pending[1]],
