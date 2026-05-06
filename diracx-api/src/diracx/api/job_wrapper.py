@@ -503,10 +503,22 @@ class JobWrapper:
         status: int,
         stdout: str,
         stderr: str,
-    ):
+    ) -> bool:
         """Post-process the job after execution.
 
-        :return: True if the job is post-processed successfully, False otherwise
+        Runs for both success and failure so cwltool's output JSON is always
+        logged and the output sandbox is attempted even on permanentFail —
+        the latter is essential when cwltool emits partial outputs (e.g. via
+        ``pickValue: all_non_null`` on diagnostic outputs) so users can see
+        *why* a job failed.
+
+        Reports its own infrastructure outcome (parsing/upload/postprocess
+        commands) via the return value. Does **not** treat cwltool's
+        non-zero exit as an exception — that's the caller's policy
+        decision based on the status they passed in.
+
+        :return: True if post-processing infrastructure ran cleanly,
+            False if a postprocess command or upload step failed.
         """
         logger = logging.getLogger("JobWrapper - Post-process")
         logger.info("cwltool exit status: %d", status)
@@ -514,20 +526,26 @@ class JobWrapper:
             "---- cwltool output JSON ----\n%s\n---- end ----", stdout or "<empty>"
         )
 
-        if status != 0:
-            raise RuntimeError(f"Error {status} during the task execution.")
-
-        outputs = self.__parse_output_filepaths(stdout)
+        outputs: dict = {}
+        try:
+            outputs = self.__parse_output_filepaths(stdout)
+        except (ValueError, json.JSONDecodeError) as e:
+            logger.warning("Could not parse cwltool output JSON: %s", e)
         logger.info("Parsed output structure: %s", outputs)
 
         success = True
-
-        if self._postprocess_commands:
+        if status == 0 and self._postprocess_commands:
             success = await self.__run_postprocess_commands(
                 self._job_path, outputs=outputs
             )
 
-        await self.__upload_output_sandbox(outputs=outputs)
+        if outputs:
+            try:
+                await self.__upload_output_sandbox(outputs=outputs)
+            except Exception:
+                logger.exception("Output sandbox upload failed")
+                success = False
+
         await self._job_report.commit()
         return success
 
@@ -794,28 +812,40 @@ class JobWrapper:
                     minor_status=JobMinorStatus.APP_ERRORS,
                     application_status=f"failed (exit {proc.returncode})",
                 )
-                self._job_report.set_job_status(JobStatus.FAILED)
-                return False
-            logger.info("Task executed successfully!")
-            self._job_report.set_job_status(
-                JobStatus.COMPLETING,
-                minor_status=JobMinorStatus.APP_SUCCESS,
-            )
-            # Post-process the job
+            else:
+                logger.info("Task executed successfully!")
+                self._job_report.set_job_status(
+                    JobStatus.COMPLETING,
+                    minor_status=JobMinorStatus.APP_SUCCESS,
+                )
+
+            # Post-process always runs — even on cwltool failure, so we log
+            # the output JSON and attempt the output-sandbox upload (so users
+            # can see *why* a job failed via partial outputs from
+            # `pickValue: all_non_null`).
             logger.info("Post-processing Task...")
-            if await self.post_process(
-                proc.returncode,
+            returncode = proc.returncode if proc.returncode is not None else -1
+            post_ok = await self.post_process(
+                returncode,
                 stdout_text,
                 "\n".join(stderr_lines),
-            ):
-                logger.info("Task post-processed successfully!")
-                self._job_report.set_job_status(
-                    JobStatus.DONE, JobMinorStatus.EXEC_COMPLETE
-                )
-                return True
-            logger.error("Failed to post-process Task")
-            self._job_report.set_job_status(JobStatus.FAILED)
-            return False
+            )
+
+            if returncode != 0:
+                # cwltool failed — job is FAILED regardless of post-process
+                # outcome. Diagnostic upload (if any) already happened inside
+                # post_process.
+                self._job_report.set_job_status(JobStatus.FAILED)
+                return False
+            if not post_ok:
+                logger.error("Post-processing infrastructure failed")
+                self._job_report.set_job_status(JobStatus.FAILED)
+                return False
+            logger.info("Task post-processed successfully!")
+            self._job_report.set_job_status(
+                JobStatus.DONE, JobMinorStatus.EXEC_COMPLETE
+            )
+            return True
 
         except Exception:
             logger.exception("JobWrapper: Failed to execute workflow")
