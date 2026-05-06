@@ -109,10 +109,27 @@ async def peek(
     job_id: Annotated[int, typer.Argument(help="Job ID")],
     filename: Annotated[str, typer.Argument(help="File to display (e.g. stdout.log)")],
     lines: Annotated[
-        int, typer.Option("--lines", "-n", help="Number of lines to show (0=all)")
+        int,
+        typer.Option(
+            "--lines",
+            "-n",
+            help="Number of lines to show in --no-pager mode (0=all)",
+        ),
     ] = 50,
+    no_pager: Annotated[
+        bool,
+        typer.Option(
+            "--no-pager",
+            help="Print directly without paging (use when piping/scripting)",
+        ),
+    ] = False,
 ):
-    """Display the contents of a file from the output sandbox."""
+    """Display the contents of a file from the output sandbox.
+
+    When stdout is a TTY and --no-pager is not given, the output is piped
+    through ``$PAGER`` (default ``less``) so you can scroll. The --lines
+    truncation only applies in --no-pager mode.
+    """
     sb_refs = await _get_output_sb_refs(job_id)
     if not sb_refs:
         print("No output sandbox found for this job.", file=sys.stderr)
@@ -132,18 +149,22 @@ async def peek(
             raise typer.Exit(1)
 
         content = fobj.read().decode(errors="replace")
-        if lines > 0:
+        console = Console()
+        lexer = _guess_syntax(filename)
+        use_pager = not no_pager and sys.stdout.isatty()
+
+        if not use_pager and lines > 0:
             content_lines = content.splitlines()
             if len(content_lines) > lines:
                 content = "\n".join(content_lines[:lines])
                 content += f"\n... ({len(content_lines) - lines} more lines)"
 
-        console = Console()
-        lexer = _guess_syntax(filename)
-        if lexer and lexer != "text":
-            console.print(Syntax(content, lexer))
+        renderable = Syntax(content, lexer) if lexer and lexer != "text" else content
+        if use_pager:
+            with console.pager(styles=True):
+                console.print(renderable)
         else:
-            console.print(content)
+            console.print(renderable)
         return
 
     print(f"File '{filename}' not found in any output sandbox.", file=sys.stderr)
