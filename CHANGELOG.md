@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.14...v0.1.0) (2026-05-06)
+
+
+### Features
+
+* correct logging message ([#911](https://github.com/DIRACGrid/diracx/issues/911)) ([8e4bdff](https://github.com/DIRACGrid/diracx/commit/8e4bdff204d88c54ee2240f5cb4c289139eed54b))
+
+
+### Bug Fixes
+
+* correct the settings for OTEL and add logging in the scheduler ([#904](https://github.com/DIRACGrid/diracx/issues/904)) ([11bf695](https://github.com/DIRACGrid/diracx/commit/11bf695c514c5c59e2e5925e471ae6c25be166ee))
+* handle device flow errors ([#906](https://github.com/DIRACGrid/diracx/issues/906)) ([9f4828c](https://github.com/DIRACGrid/diracx/commit/9f4828c8abbb0ca17353c00f103c549e0b5350ae))
+* stop using UPGRADE_REQUIRED for client version check ([#902](https://github.com/DIRACGrid/diracx/issues/902)) ([346e522](https://github.com/DIRACGrid/diracx/commit/346e5221745846636604b134edffc279388a7f53))
+
 ## [0.0.14](https://github.com/DIRACGrid/diracx/compare/v0.0.13...v0.0.14) (2026-04-16)
 
 
