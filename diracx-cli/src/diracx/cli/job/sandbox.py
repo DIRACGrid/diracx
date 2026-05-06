@@ -161,6 +161,11 @@ async def peek(
 
         renderable = Syntax(content, lexer) if lexer and lexer != "text" else content
         if use_pager:
+            # Pass ANSI/colour codes through to less. Without -R the codes
+            # render as literal "ESC[39m" etc. on screen.
+            import os as _os
+
+            _os.environ.setdefault("LESS", "-R")
             with console.pager(styles=True):
                 console.print(renderable)
         else:
