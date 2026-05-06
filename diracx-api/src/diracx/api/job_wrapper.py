@@ -835,7 +835,9 @@ class JobWrapper:
                 # cwltool failed — job is FAILED regardless of post-process
                 # outcome. Diagnostic upload (if any) already happened inside
                 # post_process.
-                self._job_report.set_job_status(JobStatus.FAILED)
+                self._job_report.set_job_status(
+                    JobStatus.FAILED, JobMinorStatus.APP_ERRORS
+                )
                 return False
             if not post_ok:
                 logger.error("Post-processing infrastructure failed")
