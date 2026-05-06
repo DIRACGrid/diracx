@@ -28,7 +28,7 @@ Occasionally tasks must be scheduled to run at some point in the future, most co
 
 ## What is a task?
 
-Tasks are async Python functions which have extremely low overhead, allowing for many tasks to be spawned for even cheap operations.
+Tasks are Python classes derived from `BaseTask`. Each task class implements an async `execute(...)` method, and task instances can be scheduled with `task.schedule(...)`.
 Tasks can be executed in four different ways:
 
 - **Standalone tasks:** The task performs its work and then returns. For example synchronising the IAM to DiracX configuration queries IAM and then updates the DiracX CS.

@@ -148,7 +148,7 @@ classDiagram
     class RedisStreamBroker {
         9 streams: 3 priorities × 3 sizes
         +enqueue(TaskMessage)
-        +consume(size) ReceivedMessage
+        +listen() AsyncGenerator~ReceivedMessage~
         +startup()
     }
 
@@ -175,6 +175,7 @@ classDiagram
     class ReceivedMessage {
         +data: bytes
         +ack() awaitable
+        +renew() awaitable
     }
 
     class TaskBinding {
@@ -185,8 +186,8 @@ classDiagram
     }
 
     class RedisResultBackend {
-        +store(task_id, TaskResult)
-        +get(task_id) TaskResult
+        +set_result(task_id, TaskResult)
+        +get_result(task_id) TaskResult
     }
 
     RedisStreamBroker ..> TaskMessage : enqueues
@@ -195,7 +196,7 @@ classDiagram
     TaskBinding --> RedisStreamBroker : references
 ```
 
-`TaskMessage` is the wire-protocol message serialized to msgpack. `ReceivedMessage` wraps the raw bytes with an `ack()` callback so the worker can acknowledge the message after processing. `TaskBinding` maps a task class to its broker, providing the `submit()` method used by `BaseTask.schedule()`.
+`TaskMessage` is the wire-protocol message serialized to msgpack. `ReceivedMessage` wraps the raw bytes with `ack()` and `renew()` callbacks: `ack()` acknowledges completion, while `renew()` refreshes ownership of in-flight messages during long executions. `TaskBinding` maps a task class to its broker, providing the `submit()` method used by `BaseTask.schedule()`.
 
 ## Callback subsystem
 

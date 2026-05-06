@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 from time import time
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 import msgpack
 from opentelemetry import metrics, trace
@@ -45,6 +45,28 @@ QUEUE_DONE = b"-1"
 
 # Default backoff for lock contention retries
 _LOCK_RETRY_DELAY_SECONDS = 5
+
+
+async def _message_heartbeat(
+    renew: Callable[[], Awaitable[None]],
+    stop_event: asyncio.Event,
+    interval: float,
+) -> None:
+    """Periodically reset the PEL idle timer while a message is being processed.
+
+    Calls ``renew()`` at ``interval`` seconds so the autoclaim loop never
+    considers the message stale as long as execution is in progress.
+    """
+    while not stop_event.is_set():
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+            return
+        except asyncio.TimeoutError:
+            pass
+        try:
+            await renew()
+        except Exception:
+            logger.warning("Failed to renew message ownership", exc_info=True)
 
 
 class Worker:
@@ -261,22 +283,42 @@ class Worker:
             "Executing task %s (ID: %s)", task_message.task_name, task_message.task_id
         )
 
-        result = await self.run_task(task_func, task_message)
+        # Start heartbeat to keep PEL ownership while the task runs.
+        # Renew at half the idle_timeout so there's always a safety margin.
+        heartbeat_stop = asyncio.Event()
+        heartbeat_interval = self.broker.idle_timeout / 1000 / 2
+        heartbeat_task: asyncio.Task[None] | None = None
+        if isinstance(message, ReceivedMessage):
+            heartbeat_task = asyncio.create_task(
+                _message_heartbeat(message.renew, heartbeat_stop, heartbeat_interval)
+            )
 
-        # Handle failure: retry or dead letter queue
-        if result.is_err:
-            await self._handle_failure(task_message, result)
-        else:
-            await self._handle_success(task_message, result)
-
-        # Always persist the result to the backend
         try:
-            if self.broker.result_backend:
-                await self.broker.result_backend.set_result(
-                    task_message.task_id, result
-                )
-        except Exception:
-            logger.exception("Failed to save result")
+            result = await self.run_task(task_func, task_message)
+
+            # Handle failure: retry or dead letter queue
+            if result.is_err:
+                await self._handle_failure(task_message, result)
+            else:
+                await self._handle_success(task_message, result)
+
+            # Always persist the result to the backend
+            try:
+                if self.broker.result_backend:
+                    await self.broker.result_backend.set_result(
+                        task_message.task_id, result
+                    )
+            except Exception:
+                logger.exception("Failed to save result")
+
+        finally:
+            if heartbeat_task is not None:
+                heartbeat_stop.set()
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
 
         if isinstance(message, ReceivedMessage):
             await message.ack()

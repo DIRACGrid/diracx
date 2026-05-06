@@ -93,6 +93,20 @@ ConcurrencyLimiter(obj, key, *extra_keys, ttl_ms=30000)
 
 `PeriodicBaseTask` overrides this with a `MutexLock` keyed by the task class name, preventing concurrent execution. `PeriodicVoAwareBaseTask` adds the VO name to the lock key, so each VO gets its own mutex.
 
+### Lock watchdog vs message heartbeat
+
+Two independent watchdog-style mechanisms exist while a worker executes tasks:
+
+- **Lock watchdog** (`_lock_watchdog` in `factory.py`) periodically calls `extend()` on acquired locks, so lock TTLs do not expire mid-execution.
+- **Message heartbeat** (`_message_heartbeat` in `worker.py`) periodically renews stream-message ownership while a task is running.
+
+The message heartbeat uses Redis `XCLAIM` with `min_idle_time=0` to reset the pending-entry idle timer for the in-flight message. This prevents `XAUTOCLAIM` from reclaiming a long-running task simply because it exceeded the idle timeout.
+
+These mechanisms protect different things:
+
+- lock watchdog protects lock ownership
+- message heartbeat protects consumer-group message ownership
+
 ______________________________________________________________________
 
 ## Schedules

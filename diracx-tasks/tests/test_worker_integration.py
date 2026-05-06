@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 from diracx.tasks.plumbing.base_task import BaseTask
-from diracx.tasks.plumbing.broker.models import TaskMessage, TaskResult
+from diracx.tasks.plumbing.broker.models import ReceivedMessage, TaskMessage, TaskResult
 from diracx.tasks.plumbing.depends import CallbackSpawner
 from diracx.tasks.plumbing.enums import Priority, Size
 from diracx.tasks.plumbing.factory import wrap_task
@@ -320,6 +321,40 @@ async def test_process_message_acks_on_parse_error(
     )
 
     await worker.process_message(b"not valid msgpack at all!!")
+
+
+async def test_process_message_renews_ownership_while_running(
+    broker, task_class_registry, wrapped_registry
+):
+    """Worker should heartbeat message ownership and ack once done."""
+    worker = Worker(
+        broker=broker,
+        task_registry=wrapped_registry,
+        task_class_registry=task_class_registry,
+    )
+    worker.broker.idle_timeout = 20  # ms
+
+    task_msg = TaskMessage(
+        task_id="t-renew",
+        task_name="test:SuccessTask",
+        labels={"priority": "normal", "size": "small"},
+        task_args=[],
+        task_kwargs={},
+    )
+
+    ack = AsyncMock()
+    renew = AsyncMock()
+    message = ReceivedMessage(data=task_msg.dumpb(), ack=ack, renew=renew)
+
+    async def _slow_run_task(*_args, **_kwargs):
+        await asyncio.sleep(0.05)
+        return TaskResult.from_value("ok", execution_time=0.05)
+
+    with patch.object(worker, "run_task", side_effect=_slow_run_task):
+        await worker.process_message(message)
+
+    assert renew.await_count >= 1
+    ack.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

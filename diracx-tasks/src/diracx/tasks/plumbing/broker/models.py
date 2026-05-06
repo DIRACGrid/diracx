@@ -109,6 +109,7 @@ class ReceivedMessage(BaseModel):
 
     data: bytes
     ack: Callable[[], Awaitable[None]]
+    renew: Callable[[], Awaitable[None]]
 
 
 def _prepare_arg(arg: Any) -> Any:
