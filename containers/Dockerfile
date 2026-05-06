@@ -38,7 +38,7 @@ RUN pixi install --frozen -e ${PIXI_ENV}
 # Generate activation script
 RUN pixi shell-hook -e ${PIXI_ENV} > /activate.sh
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ARG PIXI_ENV=container-services
 ENV PIXI_ENV=${PIXI_ENV}
