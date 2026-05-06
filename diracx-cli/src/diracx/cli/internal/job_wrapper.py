@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import sys
@@ -73,45 +72,27 @@ async def main():
 
 
 def setup_diracx() -> None:
-    """Get a DiracX client instance with the current user's credentials."""
-    from pathlib import Path
+    """Configure DiracX credentials for AsyncDiracClient on the worker.
 
+    Reuses ``DIRAC.Core.Security.DiracX.writeDiracxTokenCache`` so the cache
+    file lands in the same hash-named tmpdir location DiracXClient uses.
+    Exports ``DIRACX_URL`` and ``DIRACX_CREDENTIALS_PATH`` so a no-arg
+    ``AsyncDiracClient()`` picks the credentials up via env-var fallthrough.
+    """
     import DIRAC  # type: ignore[import-untyped]
 
     DIRAC.initialize()
 
-    from DIRAC import gConfig
     from DIRAC.Core.Security.DiracX import (
-        diracxTokenFromPEM,  # type: ignore[import-untyped]
-    )
-    from DIRAC.Core.Security.Locations import (
-        getDefaultProxyLocation,  # type: ignore[import-untyped]
+        writeDiracxTokenCache,  # type: ignore[import-untyped]
     )
 
-    diracx_url = gConfig.getValue("/DiracX/URL")
-    if not diracx_url:
-        raise ValueError("Missing mandatory /DiracX/URL configuration")
-
+    diracx_url, token_file = writeDiracxTokenCache()
     os.environ["DIRACX_URL"] = diracx_url
-
-    proxy_location = getDefaultProxyLocation()
-    diracx_token = diracxTokenFromPEM(proxy_location)
-    if not diracx_token:
-        raise ValueError(f"No diracx token in the proxy file {proxy_location}")
-
-    token_file = Path.home() / ".cache" / "diracx" / "credentials.json"
-    token_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(
-        token_file,
-        "w",
-        encoding="utf-8",
-        opener=lambda p, f: os.open(p, f | os.O_TRUNC, 0o600),
-    ) as f:
-        json.dump(diracx_token, f)
+    os.environ["DIRACX_CREDENTIALS_PATH"] = str(token_file)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
     setup_diracx()
     sys.exit(asyncio.run(main()))
