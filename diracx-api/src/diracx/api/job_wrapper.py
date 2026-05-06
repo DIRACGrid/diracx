@@ -165,14 +165,33 @@ class JobWrapper:
         self,
         outputs: dict[str, str | Path | Sequence[str | Path]],
     ):
+        logger.info(
+            "Output sandbox upload: declared sources=%s, available output keys=%s",
+            self._output_sandbox,
+            list(outputs.keys()),
+        )
         outputs_to_sandbox = []
         for output_name, src_path in outputs.items():
-            if self._output_sandbox and output_name in self._output_sandbox:
+            in_sandbox = bool(
+                self._output_sandbox and output_name in self._output_sandbox
+            )
+            logger.info(
+                "  output %r (in_sandbox=%s) -> %r",
+                output_name,
+                in_sandbox,
+                src_path,
+            )
+            if in_sandbox:
                 if isinstance(src_path, (Path, str)):
                     src_path = [Path(src_path)]
                 for path in src_path:
                     outputs_to_sandbox.append(Path(path))
         if outputs_to_sandbox:
+            logger.info(
+                "Uploading %d file(s) to output sandbox: %s",
+                len(outputs_to_sandbox),
+                outputs_to_sandbox,
+            )
             self._job_report.set_job_status(
                 JobStatus.COMPLETING,
                 minor_status=JobMinorStatus.UPLOADING_OUTPUT_SANDBOX,
@@ -189,6 +208,11 @@ class JobWrapper:
             self._job_report.set_job_status(
                 JobStatus.COMPLETING,
                 minor_status=JobMinorStatus.OUTPUT_SANDBOX_UPLOADED,
+            )
+        else:
+            logger.warning(
+                "Output sandbox upload skipped: no files matched declared sources %s",
+                self._output_sandbox,
             )
 
     async def __download_input_data(
@@ -485,13 +509,16 @@ class JobWrapper:
         :return: True if the job is post-processed successfully, False otherwise
         """
         logger = logging.getLogger("JobWrapper - Post-process")
+        logger.info("cwltool exit status: %d", status)
+        logger.info(
+            "---- cwltool output JSON ----\n%s\n---- end ----", stdout or "<empty>"
+        )
+
         if status != 0:
             raise RuntimeError(f"Error {status} during the task execution.")
 
-        logger.info(stdout)
-        logger.info(stderr)
-
         outputs = self.__parse_output_filepaths(stdout)
+        logger.info("Parsed output structure: %s", outputs)
 
         success = True
 
