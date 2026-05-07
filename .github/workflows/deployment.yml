@@ -220,15 +220,13 @@ jobs:
           echo "current_chart_version=$CURRENT_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "new_chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "diracx_version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Install pre-commit
-        run: |
-          pip install pre-commit
-
+      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        with:
+           working-directory: ./diracx-charts
       - name: Run pre-commit to update README
         run: |
           cd diracx-charts
-          pre-commit run --all-files || true
+          pixi run pre-commit run --all-files || true
 
       - name: Commit and push changes
         if: success()
