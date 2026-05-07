@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from diracx.core.models.job import HeartbeatData, JobCommand
+from diracx.client.models import HeartbeatData, JobCommand  # type: ignore[attr-defined]
 
 
 @pytest.fixture
@@ -64,20 +64,20 @@ def test_build_heartbeat_data(tmp_path: Path):
     )
     assert isinstance(data, HeartbeatData)
     # CPU = utime + stime = 16 + 4 = 20 seconds
-    assert data.CPUConsumed == 20.0
+    assert data.cpu_consumed == 20.0
     # Memory = pss / 1024 = 18000 / 1024
-    assert data.MemoryUsed is not None
-    assert abs(data.MemoryUsed - 18000 / 1024) < 0.01
+    assert data.memory_used is not None
+    assert abs(data.memory_used - 18000 / 1024) < 0.01
     # Vsize = vmem / 1024 = 55000 / 1024
-    assert data.Vsize is not None
-    assert abs(data.Vsize - 55000 / 1024) < 0.01
+    assert data.vsize is not None
+    assert abs(data.vsize - 55000 / 1024) < 0.01
     # WallClockTime = wtime = 60 seconds
-    assert data.WallClockTime == 60.0
+    assert data.wall_clock_time == 60.0
     # AvailableDiskSpace should be set (from os.statvfs)
-    assert data.AvailableDiskSpace is not None
-    assert data.AvailableDiskSpace > 0
+    assert data.available_disk_space is not None
+    assert data.available_disk_space > 0
     # Peek content
-    assert data.StandardOutput == "last lines of output"
+    assert data.standard_output == "last lines of output"
 
 
 # --- Task 3: Peek content tests ---
@@ -194,7 +194,7 @@ async def test_job_monitor_sends_heartbeat(
     call_args = mock_job_report.send_heartbeat.call_args
     data = call_args[0][0]
     assert isinstance(data, HeartbeatData)
-    assert data.CPUConsumed == 20.0
+    assert data.cpu_consumed == 20.0
 
 
 @pytest.mark.asyncio
@@ -254,7 +254,7 @@ async def test_send_final_heartbeat(tmp_path: Path, mock_job_report, mock_fifo_r
     assert mock_job_report.send_heartbeat.call_count == 1
     data = mock_job_report.send_heartbeat.call_args[0][0]
     assert isinstance(data, HeartbeatData)
-    assert data.CPUConsumed == 20.0
+    assert data.cpu_consumed == 20.0
 
 
 @pytest.mark.asyncio

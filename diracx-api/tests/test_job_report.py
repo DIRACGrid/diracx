@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from diracx.api.job_report import JobReport
-from diracx.core.models.job import HeartbeatData, JobCommand
+from diracx.client.models import HeartbeatData, JobCommand  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -19,9 +19,9 @@ async def test_send_heartbeat_returns_commands():
 
     report = JobReport(job_id=42, source="JobWrapper", client=mock_client)
     metrics = HeartbeatData(
-        CPUConsumed=10.5,
-        WallClockTime=60.0,
-        MemoryUsed=512.0,
+        cpu_consumed=10.5,
+        wall_clock_time=60.0,
+        memory_used=512.0,
     )
     commands = await report.send_heartbeat(metrics)
 
@@ -37,7 +37,7 @@ async def test_send_heartbeat_empty_commands():
     mock_client.jobs.add_heartbeat = AsyncMock(return_value=[])
 
     report = JobReport(job_id=42, source="JobWrapper", client=mock_client)
-    metrics = HeartbeatData(WallClockTime=30.0)
+    metrics = HeartbeatData(wall_clock_time=30.0)
     commands = await report.send_heartbeat(metrics)
 
     assert commands == []
@@ -50,7 +50,7 @@ async def test_send_heartbeat_propagates_error():
     mock_client.jobs.add_heartbeat = AsyncMock(side_effect=RuntimeError("API down"))
 
     report = JobReport(job_id=42, source="JobWrapper", client=mock_client)
-    metrics = HeartbeatData(WallClockTime=30.0)
+    metrics = HeartbeatData(wall_clock_time=30.0)
 
     with pytest.raises(RuntimeError, match="API down"):
         await report.send_heartbeat(metrics)

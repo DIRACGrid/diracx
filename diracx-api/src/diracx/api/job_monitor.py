@@ -11,7 +11,7 @@ from pathlib import Path
 
 from diracx.api.job_report import JobReport
 from diracx.api.prmon_reader import PrmonFifoReader
-from diracx.core.models.job import HeartbeatData
+from diracx.client.models import HeartbeatData  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +53,13 @@ def build_heartbeat_data(
         load_avg = None
 
     return HeartbeatData(
-        CPUConsumed=cpu,
-        MemoryUsed=pss_kb / 1024,
-        Vsize=vmem_kb / 1024,
-        WallClockTime=wtime,
-        AvailableDiskSpace=disk_mb,
-        LoadAverage=load_avg,
-        StandardOutput=peek_content,
+        cpu_consumed=cpu,
+        memory_used=pss_kb / 1024,
+        vsize=vmem_kb / 1024,
+        wall_clock_time=wtime,
+        available_disk_space=disk_mb,
+        load_average=load_avg,
+        standard_output=peek_content,
     )
 
 
