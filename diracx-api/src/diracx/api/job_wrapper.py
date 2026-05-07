@@ -436,9 +436,14 @@ class JobWrapper:
             The dict of the list of filepaths for each output
         """
         outputted_files: dict[str, str | Path | Sequence[str | Path]] = {}
-        # Use raw_decode to tolerate trailing non-JSON data (e.g. prmon
-        # warnings written to stdout after the CWL JSON output).
-        outputs, _ = json.JSONDecoder().raw_decode(stdout.lstrip())
+        # Skip leading non-JSON (prmon writes timestamped error lines to
+        # stdout while cwltool runs) and use raw_decode to also tolerate
+        # any trailing non-JSON. cwltool's workflow output is always a
+        # JSON object — find the first '{' and parse from there.
+        start = stdout.find("{")
+        if start < 0:
+            raise ValueError("no JSON object found in cwltool stdout")
+        outputs, _ = json.JSONDecoder().raw_decode(stdout[start:])
         for output, files in outputs.items():
             if not files:
                 continue
