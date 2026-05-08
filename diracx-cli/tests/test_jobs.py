@@ -8,7 +8,8 @@ from io import StringIO
 import pytest
 from pytest import raises
 
-from diracx import cli
+from diracx.cli.job.search import search as job_search
+from diracx.cli.job.submit.jdl import jdl as submit_jdl
 from diracx.core.preferences import get_diracx_preferences
 
 TEST_JDL = """
@@ -42,7 +43,7 @@ async def jdl_file():
 async def test_submit(with_cli_login, jdl_file, capfd):
     """Test submitting a job using a JDL file."""
     with open(jdl_file, "r") as temp_file:
-        await cli.jobs.submit([temp_file])
+        await submit_jdl([temp_file])
 
     cap = capfd.readouterr()
     assert cap.err == ""
@@ -56,12 +57,12 @@ async def test_search(with_cli_login, jdl_file, capfd):
         what_we_submit = x.read()
     jdls = [StringIO(what_we_submit) for _ in range(20)]
 
-    await cli.jobs.submit(jdls)
+    await submit_jdl(jdls)
 
     cap = capfd.readouterr()
 
     # By default the output should be in JSON format as capfd is not a TTY
-    await cli.jobs.search()
+    await job_search()
     cap = capfd.readouterr()
     assert cap.err == ""
     jobs = json.loads(cap.out)
@@ -72,7 +73,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "JobGroup" in jobs[0]
 
     # Change per-page to a very large number to get all the jobs at once: the caption should change
-    await cli.jobs.search(per_page=9999)
+    await job_search(per_page=9999)
     cap = capfd.readouterr()
     assert cap.err == ""
     jobs = json.loads(cap.out)
@@ -83,7 +84,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "JobGroup" in cap.out
 
     # Search for a job that doesn't exist
-    await cli.jobs.search(condition=["Status eq nonexistent"])
+    await job_search(condition=["Status eq nonexistent"])
     cap = capfd.readouterr()
     assert cap.err == ""
     assert "[]" == cap.out.strip()
@@ -92,7 +93,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     get_diracx_preferences.cache_clear()
     os.environ["DIRACX_OUTPUT_FORMAT"] = "RICH"
 
-    await cli.jobs.search()
+    await job_search()
     cap = capfd.readouterr()
     assert cap.err == ""
 
@@ -104,7 +105,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "Showing 0-9 of " in cap.out
 
     # Change per-page to a very large number to get all the jobs at once: the caption should change
-    await cli.jobs.search(per_page=9999)
+    await job_search(per_page=9999)
     cap = capfd.readouterr()
     assert cap.err == ""
 
@@ -116,7 +117,7 @@ async def test_search(with_cli_login, jdl_file, capfd):
     assert "Showing all jobs" in cap.out
 
     # Search for a job that doesn't exist
-    await cli.jobs.search(condition=["Status eq nonexistent"])
+    await job_search(condition=["Status eq nonexistent"])
     cap = capfd.readouterr()
     assert cap.err == ""
     assert "No jobs found" in cap.out

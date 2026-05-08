@@ -14,8 +14,8 @@ from typing import BinaryIO, Literal
 import httpx
 import zstandard
 
-from diracx.client.aio import AsyncDiracClient
-from diracx.client.models import SandboxInfo
+from diracx.client.aio import AsyncDiracClient  # type: ignore[attr-defined]
+from diracx.client.models import SandboxInfo  # type: ignore[attr-defined]
 
 from .utils import with_client
 

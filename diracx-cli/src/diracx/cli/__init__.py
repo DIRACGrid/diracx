@@ -6,7 +6,6 @@ from .auth import app
 
 __all__ = ("app",)
 
-
 # Load all the sub commands
 cli_names = set(
     [
