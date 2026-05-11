@@ -13,8 +13,6 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "aiobotocore>=2.15",
-    "botocore>=1.35",
     "cachetools",
     "email_validator",
     "gitpython",
@@ -23,6 +21,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "sh",
+    "signurlarity >=0.2.2",
     "diraccommon >=9.0.18",
 ]
 dynamic = ["version"]
@@ -33,9 +32,6 @@ testing = [
     "moto[server]",
 ]
 types = [
-    "botocore-stubs",
-    "types-aiobotocore[essential]",
-    "types-aiobotocore-s3",
     "types-cachetools",
     "types-PyYAML",
 ]

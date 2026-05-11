@@ -6,10 +6,10 @@ from datetime import timedelta
 from io import BytesIO
 from typing import AsyncGenerator, Generator
 
-import botocore.exceptions
 import freezegun
 import httpx
 import pytest
+import signurlarity.exceptions
 import sqlalchemy
 
 from diracx.core.exceptions import SandboxNotFoundError
@@ -142,7 +142,10 @@ async def test_upload_and_clean(
     await clean_sandboxes(sandbox_metadata_db, sandbox_settings)
 
     # Check that the sandbox was actually removed from the bucket
-    with pytest.raises(botocore.exceptions.ClientError, match="Not Found"):
+    with pytest.raises(
+        signurlarity.exceptions.PresignError,
+        match="does not exist or is not accessible",
+    ):
         await sandbox_settings.s3_client.head_object(
             Bucket=sandbox_settings.bucket_name, Key=key
         )

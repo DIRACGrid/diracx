@@ -13,14 +13,14 @@ import asyncio
 import base64
 from typing import TYPE_CHECKING, TypedDict, cast
 
-from botocore.errorfactory import ClientError
+from signurlarity.exceptions import NoSuchBucketError, PresignError
 
 from .models.sandbox import ChecksumAlgorithm
 
 if TYPE_CHECKING:
     from typing import TypedDict
 
-    from types_aiobotocore_s3.client import S3Client
+    from signurlarity.aio.client import AsyncClient
 
     class S3Object(TypedDict):
         Key: str
@@ -31,12 +31,12 @@ class S3PresignedPostInfo(TypedDict):
     fields: dict[str, str]
 
 
-async def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
+async def s3_bucket_exists(s3_client: AsyncClient, bucket_name: str) -> bool:
     """Check if a bucket exists in S3."""
     return await _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
 
 
-async def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> bool:
+async def s3_object_exists(s3_client: AsyncClient, bucket_name: str, key: str) -> bool:
     """Check if an object exists in an S3 bucket."""
     return await _s3_exists(s3_client.head_object, Bucket=bucket_name, Key=key)
 
@@ -44,16 +44,46 @@ async def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> b
 async def _s3_exists(method, **kwargs: str) -> bool:
     try:
         await method(**kwargs)
-    except ClientError as e:
-        if e.response["Error"]["Code"] != "404":
-            raise
+    except (NoSuchBucketError, PresignError):
+        # if e.response["Error"]["Code"] != "404":
+        #     raise
         return False
     else:
         return True
 
 
 async def generate_presigned_upload(
-    s3_client: S3Client,
+    s3_client: AsyncClient,
+    bucket_name: str,
+    key: str,
+    checksum_algorithm: ChecksumAlgorithm,
+    checksum: str,
+    size: int,
+    validity_seconds: int,
+) -> S3PresignedPostInfo:
+    """Generate a presigned URL and fields for uploading a file to S3.
+
+    The signature is restricted to only accept data with the given checksum and size.
+    """
+    fields = {
+        "x-amz-checksum-algorithm": checksum_algorithm,
+        f"x-amz-checksum-{checksum_algorithm}": b16_to_b64(checksum),
+    }
+    conditions = [["content-length-range", size, size]] + [
+        {k: v} for k, v in fields.items()
+    ]
+    result = await s3_client.generate_presigned_post(
+        Bucket=bucket_name,
+        Key=key,
+        Fields=fields,
+        Conditions=conditions,
+        ExpiresIn=validity_seconds,
+    )
+    return cast(S3PresignedPostInfo, result)
+
+
+async def generate_presigned_download(
+    s3_client: AsyncClient,
     bucket_name: str,
     key: str,
     checksum_algorithm: ChecksumAlgorithm,
@@ -126,7 +156,7 @@ async def _s3_delete_chunk_with_retry(
                 Bucket=bucket,
                 Delete={"Objects": remaining, "Quiet": True},
             )
-        except ClientError:
+        except NoSuchBucketError:
             if attempt == max_attempts:
                 return {obj["Key"] for obj in remaining}
             await asyncio.sleep(delay)
