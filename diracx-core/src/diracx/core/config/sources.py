@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, Generic, Literal, TypeVar, Union
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -20,8 +20,22 @@ import yaml
 from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from ..exceptions import BadConfigurationVersionError
+from diracx.db.sql.rss.db import ResourceStatusDB
+from diracx.logic.rss.query import (
+    get_compute_statuses,
+    get_fts_statuses,
+    get_site_statuses,
+    get_storage_statuses,
+)
+
+from ..exceptions import BadConfigurationVersionError, ResourceNotFoundError
 from ..extensions import DiracEntryPoint, select_from_extension
+from ..models.rss import (
+    ComputeElementStatus,
+    FTSStatus,
+    SiteStatus,
+    StorageElementStatus,
+)
 from ..utils import TwoLevelCache
 from .schema import Config
 
@@ -304,3 +318,76 @@ class RemoteGitConfigSource(BaseGitConfigSource):
             logger.exception(err)
 
         return super().latest_revision()
+
+
+class ResourceStatusSource(
+    CacheableSource[
+        dict[str, StorageElementStatus]
+        | dict[str, ComputeElementStatus]
+        | dict[str, SiteStatus]
+        | dict[str, FTSStatus]
+    ]
+):
+    """A source that provides the status of a resource."""
+
+    def __init__(
+        self,
+        *,
+        resource_type: Literal["ComputeElement", "StorageElement", "Site", "FTS"],
+        vo: str = "all",
+        resource_status_db: ResourceStatusDB,
+    ) -> None:
+        self.resource_type = resource_type
+        self.vo = vo
+        self.resource_status_db = resource_status_db
+        super().__init__()
+
+    def latest_revision(self) -> tuple[str, datetime]:
+        """Return the latest revision of the resource status.
+
+        This could be a hash of the current status snapshot or the max DateEffective/LastCheckTime.
+        """
+        # Fetch the resource status from the database
+        status_date = asyncio.run(self.resource_status_db.get_status_date(vo=self.vo))
+        # Generate a unique hash for the current status snapshot
+        status_hash = hash(frozenset(status_date))
+        latest_revision = f"rev_{status_hash}"
+
+        modified = status_date.DateEffective
+
+        return latest_revision, modified
+
+    def read_raw(
+        self, hexsha: str, modified: datetime
+    ) -> Union[
+        dict[str, StorageElementStatus],
+        dict[str, ComputeElementStatus],
+        dict[str, SiteStatus],
+        dict[str, FTSStatus],
+    ]:
+        """Read the raw resource status from the database."""
+        # Fetch the resource status from the database
+        status_data = asyncio.run(self.get_status_data())
+        for status in status_data.values():
+            status._hexsha = hexsha
+            status._modified = modified
+        return status_data
+
+    async def get_status_data(self):
+        status_data = None
+        if self.resource_type == "Site":
+            status_data = await get_site_statuses(self.resource_status_db, vo=self.vo)
+        elif self.resource_type == "ComputeElement":
+            status_data = await get_compute_statuses(
+                self.resource_status_db, vo=self.vo
+            )
+        elif self.resource_type == "StorageElement":
+            status_data = await get_storage_statuses(
+                self.resource_status_db, vo=self.vo
+            )
+        elif self.resource_type == "FTS":
+            status_data = await get_fts_statuses(self.resource_status_db, vo=self.vo)
+
+        if not status_data:
+            raise ResourceNotFoundError(f"Resource type {self.resource_type} not found")
+        return status_data

@@ -41,14 +41,17 @@ async def test_site_status(rss_db: ResourceStatusDB):
 
     # Test with the test Site (should be found)
     async with rss_db as db:
-        status, reason = await db.get_site_status("TestSite")
+        rows = await db.get_site_statuses()
+    assert rows
+    name, status, reason = rows[0]
+    assert name == "TestSite"
     assert status == "Active"
     assert reason == "All good"
 
     # Test with an unknow Site (should not be found)
     with pytest.raises(ResourceNotFoundError):
         async with rss_db as db:
-            await db.get_site_status("Unknown")
+            await db.get_site_statuses("Unknown")
 
 
 async def test_resource_status(rss_db: ResourceStatusDB):
@@ -102,34 +105,38 @@ async def test_resource_status(rss_db: ResourceStatusDB):
 
     # Test with the test Compute Element (should be found)
     async with rss_db as db:
-        result = await db.get_resource_status("TestCompute")
+        result = await db.get_resource_statuses()
+    assert "TestCompute" in result
+    result = result["TestCompute"]
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
 
     # Test with the test FTS (should be found)
     async with rss_db as db:
-        result = await db.get_resource_status("TestFTS")
+        result = await db.get_resource_statuses()
+    assert "TestFTS" in result
+    result = result["TestFTS"]
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
 
     # Test with the test Storage Element (should be found)
     async with rss_db as db:
-        result = await db.get_resource_status(
-            "TestStorage", ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
+        result = await db.get_resource_statuses(
+            ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
         )
-    assert set(result.keys()) == {
+    assert set(result["TestStorage"].keys()) == {
         "ReadAccess",
         "WriteAccess",
         "CheckAccess",
         "RemoveAccess",
     }
-    for row in result.values():
+    for row in result["TestStorage"].values():
         assert row.Status == "Active"
         assert row.Reason == "All good"
 
     # Test with an unknow Resource (should not be found)
     with pytest.raises(ResourceNotFoundError):
         async with rss_db as db:
-            await db.get_resource_status("Unknown")
+            await db.get_resource_statuses(vo="Unknown")

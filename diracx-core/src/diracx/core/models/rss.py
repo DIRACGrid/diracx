@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
+
+
+class CachedModel(BaseModel):
+    """Base class for models that are cached."""
+
+    # hash for a unique representation of the status version
+    _hexsha: str = PrivateAttr()
+    # modification date
+    _modified: datetime = PrivateAttr()
 
 
 class AllowedStatus(BaseModel):
@@ -34,22 +44,22 @@ class ResourceType(StrEnum):
     FTS = "FTS"
 
 
-class StorageElementStatus(BaseModel):
+class StorageElementStatus(CachedModel):
     read: ResourceStatus
     write: ResourceStatus
     check: ResourceStatus
     remove: ResourceStatus
 
 
-class ComputeElementStatus(BaseModel):
+class ComputeElementStatus(CachedModel):
     all: ResourceStatus
 
 
-class FTSStatus(BaseModel):
+class FTSStatus(CachedModel):
     all: ResourceStatus
 
 
-class SiteStatus(BaseModel):
+class SiteStatus(CachedModel):
     all: ResourceStatus
 
 
