@@ -1,26 +1,27 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Annotated, Literal, Union, cast
+from enum import StrEnum, auto
+from typing import Annotated, cast
 
 from fastapi import (
     Depends,
     Header,
     HTTPException,
-    Query,
     Response,
     status,
 )
 
-from diracx.core.config.sources import ResourceStatusSource
+from diracx.core.config.sources import Snapshot
 from diracx.core.models.rss import (
     ComputeElementStatus,
     FTSStatus,
     SiteStatus,
     StorageElementStatus,
 )
-from diracx.db.sql.rss.db import ResourceStatusDB
+from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 from .fastapi_classes import DiracxRouter
@@ -31,72 +32,97 @@ LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 router = DiracxRouter()
 
-# Keep track of the ResourceStatusSource instances
-resource_status_sources: dict[tuple[str, str], ResourceStatusSource] = {}
+
+# ---------------------------------------------------------------------------
+# Access policy
+# ---------------------------------------------------------------------------
 
 
-# Override the ResourceStatusSource dependency to use
-async def get_resource_status_source(
-    resource_status_db: ResourceStatusDB,
-    resource_type: Literal[
-        "ComputeElement", "StorageElement", "Site", "FTS"
-    ] = "StorageElement",
-    vo: str = "all",
-) -> ResourceStatusSource:
-    key = (resource_type, vo)
-    if key not in resource_status_sources:
-        logger.debug(f"Creating new ResourceStatusSource for {key}")
-        resource_status_sources[key] = ResourceStatusSource(
-            resource_type=resource_type,
-            vo=vo,
-            resource_status_db=resource_status_db,
-        )
-        # populate the cache
-        resource_status_sources[key].read()
-    else:
-        logger.debug(f"Reusing existing ResourceStatusSource for {key}")
-    return resource_status_sources[key]
+class ActionType(StrEnum):
+    # Create a job or a sandbox
+    CREATE = auto()
+    # Check job status, download a sandbox
+    READ = auto()
+    # Delete, kill, remove, set status, etc of a job
+    # Delete or assign a sandbox
+    MANAGE = auto()
+    # Search
+    QUERY = auto()
+    # Actions from a pilot (e.g. heartbeat)
+    PILOT = auto()
 
 
-async def get_resource_status(
-    response: Response,
-    resource_type: str,
-    vo: str,
-    resource_status_db: ResourceStatusDB,
-    if_none_match: Annotated[str | None, Header()] = None,
-    if_modified_since: Annotated[str | None, Header()] = None,
-) -> Union[
-    dict[str, StorageElementStatus],
-    dict[str, ComputeElementStatus],
-    dict[str, SiteStatus],
-    dict[str, FTSStatus],
-]:
-    """Get the latest status of resources.
+class ResourceStatusAccessPolicy(BaseAccessPolicy):
+    """Policy: any authenticated user may READ resource statuses.
 
-    If If-None-Match header is given and matches the latest ETag, return 304
-
-    If If-Modified-Since is given and is newer than latest,
-        return 304: this is to avoid flip/flopping
+    Write/admin actions are rejected here; VO scoping is the route's responsibility.
+    Registered under ``[project.entry-points."diracx.access_policies"]`` in
+    ``diracx-routers/pyproject.toml`` so the framework can discover it.
     """
-    resource_status_source = await get_resource_status_source(
-        resource_type=resource_type,
-        vo=vo,
-        resource_status_db=resource_status_db,
-    )
-    status_data = await resource_status_source.read_non_blocking()
 
-    last_modified = max(val._modified for val in status_data.values())
+    @staticmethod
+    async def policy(
+        policy_name: str,
+        user_info: AuthorizedUserInfo,
+        /,
+        *,
+        action: ActionType | None = None,
+    ):
+        if action != ActionType.READ:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Resource Status System is read-only.",
+            )
+        # Any authenticated user may read; VO scoping happens in the route.
 
+
+ResourceStatusAccessPolicyCallable = Annotated[
+    Callable, Depends(ResourceStatusAccessPolicy.check)
+]
+
+
+class RSSSnapshotSentinels:
+    @classmethod
+    def get_storage_snapshot(cls) -> Snapshot:
+        raise NotImplementedError
+
+    @classmethod
+    def get_compute_snapshot(cls) -> Snapshot:
+        raise NotImplementedError
+
+    @classmethod
+    def get_site_snapshot(cls) -> Snapshot:
+        raise NotImplementedError
+
+    @classmethod
+    def get_fts_snapshot(cls) -> Snapshot:
+        raise NotImplementedError
+
+
+# ---------------------------------------------------------------------------
+# Shared ETag / 304 helper
+# ---------------------------------------------------------------------------
+
+
+def _apply_cache_headers(
+    response: Response,
+    snapshot: Snapshot,
+    if_none_match: str | None,
+    if_modified_since: str | None,
+) -> None:
+    """Set ETag / Last-Modified headers and raise 304 when appropriate.
+
+    Raises:
+        HTTPException(304): when the client's cached copy is still current.
+    """
     headers = {
-        "ETag": list(status_data.values())[0]._hexsha,
-        "Last-Modified": last_modified.strftime(LAST_MODIFIED_FORMAT),
+        "ETag": snapshot.hexsha,
+        "Last-Modified": snapshot.modified.strftime(LAST_MODIFIED_FORMAT),
     }
 
-    if if_none_match == list(status_data.values())[0]._hexsha:
+    if if_none_match == snapshot.hexsha:
         raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
 
-    # This is to prevent flip/flopping in case
-    # a server gets out of sync with disk
     if if_modified_since:
         try:
             not_before = datetime.strptime(
@@ -107,101 +133,99 @@ async def get_resource_status(
                 "Failed to parse If-Modified-Since header: %s", if_modified_since
             )
         else:
-            if not_before > last_modified:
+            # Guard against flip-flop when a replica is momentarily behind.
+            if not_before > snapshot.modified:
                 raise HTTPException(
                     status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
                 )
 
     response.headers.update(headers)
 
-    return status_data
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 
 @router.get("/storage")
 async def get_storage_status(
     response: Response,
-    resource_status_db: ResourceStatusDB,
+    snapshot: Annotated[Snapshot, Depends(RSSSnapshotSentinels.get_storage_snapshot)],
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: ResourceStatusAccessPolicyCallable,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-):
-    """Get the latest status of storage elements."""
+) -> dict[str, StorageElementStatus]:
+    """Get the latest status of storage elements, scoped to the caller's VO."""
+    await check_permissions(action=ActionType.READ)
+    _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, StorageElementStatus],
-        await get_resource_status(
-            response=response,
-            resource_type="StorageElement",
-            resource_status_db=resource_status_db,
-            vo=user_info.vo,
-            if_none_match=if_none_match,
-            if_modified_since=if_modified_since,
-        ),
+        {
+            name: se
+            for name, se in snapshot.data.items()
+            if getattr(se, "vo", "all") in (user_info.vo, "all")
+        },
     )
 
 
 @router.get("/compute")
 async def get_compute_status(
     response: Response,
-    resource_status_db: ResourceStatusDB,
+    snapshot: Annotated[Snapshot, Depends(RSSSnapshotSentinels.get_compute_snapshot)],
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
+    check_permissions: ResourceStatusAccessPolicyCallable,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-):
-    """Get the latest status of compute elements."""
+) -> dict[str, ComputeElementStatus]:
+    """Get the latest status of compute elements, scoped to the caller's VO."""
+    await check_permissions(action=ActionType.READ)
+    _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, ComputeElementStatus],
-        await get_resource_status(
-            response=response,
-            resource_type="ComputeElement",
-            resource_status_db=resource_status_db,
-            vo=user_info.vo,
-            if_none_match=if_none_match,
-            if_modified_since=if_modified_since,
-        ),
+        {
+            name: ce
+            for name, ce in snapshot.data.items()
+            if getattr(ce, "vo", "all") in (user_info.vo, "all")
+        },
     )
 
 
 @router.get("/site")
 async def get_site_status(
     response: Response,
-    resource_status_db: ResourceStatusDB,
+    snapshot: Annotated[Snapshot, Depends(RSSSnapshotSentinels.get_site_snapshot)],
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    vo: Annotated[str | None, Query()] = None,
+    check_permissions: ResourceStatusAccessPolicyCallable,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-):
-    """Get the latest status of sites."""
-    return cast(
-        dict[str, SiteStatus],
-        await get_resource_status(
-            response=response,
-            resource_type="Site",
-            resource_status_db=resource_status_db,
-            vo=user_info.vo,
-            if_none_match=if_none_match,
-            if_modified_since=if_modified_since,
-        ),
-    )
+) -> dict[str, SiteStatus]:
+    """Get the latest status of sites.
+
+    Sites are always stored with vo="all" so no VO filtering is applied.
+    """
+    await check_permissions(action=ActionType.READ)
+    _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
+    return cast(dict[str, SiteStatus], snapshot.data)
 
 
 @router.get("/fts")
 async def get_fts_status(
     response: Response,
-    resource_status_db: ResourceStatusDB,
+    snapshot: Annotated[Snapshot, Depends(RSSSnapshotSentinels.get_fts_snapshot)],
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    vo: Annotated[str | None, Query()] = None,
+    check_permissions: ResourceStatusAccessPolicyCallable,
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
-):
-    """Get the latest status of FTS servers."""
+) -> dict[str, FTSStatus]:
+    """Get the latest status of FTS servers, scoped to the caller's VO."""
+    await check_permissions(action=ActionType.READ)
+    _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, FTSStatus],
-        await get_resource_status(
-            response=response,
-            resource_type="FTS",
-            resource_status_db=resource_status_db,
-            vo=user_info.vo,
-            if_none_match=if_none_match,
-            if_modified_since=if_modified_since,
-        ),
+        {
+            name: fts
+            for name, fts in snapshot.data.items()
+            if getattr(fts, "vo", "all") in (user_info.vo, "all")
+        },
     )

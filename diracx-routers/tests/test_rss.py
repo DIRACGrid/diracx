@@ -4,10 +4,7 @@ import pytest
 from fastapi import status
 
 pytestmark = pytest.mark.enabled_dependencies(
-    [
-        "AuthSettings",
-        "ResourceStatusDB",
-    ]
+    ["AuthSettings", "ResourceStatusDB", "RSSSnapshotSentinels"]
 )
 
 

@@ -9,10 +9,11 @@ import asyncio
 import logging
 import os
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Generic, Literal, TypeVar, Union
+from typing import Annotated, Generic, TypeVar
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -20,22 +21,9 @@ import yaml
 from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
-from diracx.core.exceptions import BadConfigurationVersionError, ResourceNotFoundError
+from diracx.core.exceptions import BadConfigurationVersionError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models.rss import (
-    ComputeElementStatus,
-    FTSStatus,
-    SiteStatus,
-    StorageElementStatus,
-)
 from diracx.core.utils import TwoLevelCache
-from diracx.db.sql.rss.db import ResourceStatusDB
-from diracx.logic.rss.query import (
-    get_compute_statuses,
-    get_fts_statuses,
-    get_site_statuses,
-    get_storage_statuses,
-)
 
 from .schema import Config
 
@@ -47,14 +35,6 @@ DEFAULT_CS_REV_CACHE_HARD_TTL = 60 * 60
 DEFAULT_CS_CONTENT_HARD_TTL = 15
 
 logger = logging.getLogger(__name__)
-
-
-def is_running_in_async_context():
-    try:
-        asyncio.get_running_loop()
-        return True
-    except RuntimeError:
-        return False
 
 
 def _apply_default_scheme(value: str) -> str:
@@ -73,77 +53,115 @@ ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_sc
 T = TypeVar("T")
 
 
+@dataclass(frozen=True)
+class Snapshot(Generic[T]):
+    """Wraps a cached data payload with its cache metadata.
+
+    Decouples cache plumbing (hexsha, modified) from the data models themselves,
+    replacing the old CachedModel._hexsha / _modified private-attribute pattern.
+    """
+
+    data: T
+    hexsha: str
+    modified: datetime
+
+
 class CacheableSource(Generic[T], metaclass=ABCMeta):
-    """Abstract base class for sources that can be cached.
+    """Abstract base class for async sources that can be cached.
 
     Handles the caching of the latest revision and its content using a two-level cache.
+    Subclasses implement async `latest_revision` and `read_raw`; the base class
+    provides the single-flight refresh logic via asyncio.Event and asyncio.Task.
     """
 
     def __init__(self):
-        # Revision cache is used to store the latest revision and its
-        # modification date. This cache has two TTLs, one which triggers the
-        # background refresh and the other which is results in a hard failure.
-        # This allows us to avoid blocking while the refresh is done, while
-        # maintaining strong guarantees on the data freshness.
+        # Revision cache stores (hexsha → content) with two TTLs.
+        # soft_ttl: triggers a background refresh while serving the stale value.
+        # hard_ttl: absolute deadline; missing it causes a hard miss (await refresh).
         self._revision_cache = TwoLevelCache(
             soft_ttl=DEFAULT_CS_REV_CACHE_SOFT_TTL,
             hard_ttl=DEFAULT_CS_REV_CACHE_HARD_TTL,
             max_workers=1,
             max_items=1,
         )
-        # The content of a given revision can be stored in a simple LRU cache
-        # We keep the last two versions in memory to avoid any potential to flip
-        # flop between two versions when it changes.
+        # Keep the last two content versions so there is no flip-flop during a transition.
         self._content_cache: Cache = LRUCache(maxsize=2)
 
-    @abstractmethod
-    def latest_revision(self) -> tuple[str, datetime]:
-        """Abstract method.
-
-        Must return:
-        * a unique hash as a string, representing the last version
-        * a datetime object corresponding to when the version dates.
-        """
+        # Single-flight refresh state: at most one Task is in flight at a time.
+        self._refresh_task: asyncio.Task | None = None
+        self._refresh_lock = asyncio.Lock()
 
     @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> T:
-        """Abstract method.
+    async def latest_revision(self) -> tuple[str, datetime]:
+        """Return (hexsha, modified) for the current revision."""
 
-        Return the Source object that corresponds to the specific hash
-        The `modified` parameter is just added as a attribute to the source.
+    @abstractmethod
+    async def read_raw(self, hexsha: str, modified: datetime) -> T:
+        """Fetch and return the data for *hexsha*."""
+
+    async def _refresh(self) -> str:
+        """Fetch the latest revision and populate the content cache.
+
+        Returns the hexsha so callers can look up self._content_cache[hexsha].
         """
+        hexsha, modified = await self.latest_revision()
+        if hexsha not in self._content_cache:
+            self._content_cache[hexsha] = await self.read_raw(hexsha, modified)
+        return hexsha
 
-    def read(self) -> T:
-        """Load the source from the backend with appropriate caching.
+    async def _ensure_refresh_task(self) -> asyncio.Task:
+        """Start a background refresh task if one is not already running."""
+        async with self._refresh_lock:
+            if self._refresh_task is None or self._refresh_task.done():
+                self._refresh_task = asyncio.create_task(self._refresh())
+            return self._refresh_task
 
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
+    async def read(self) -> T:
+        """Load the source with caching; awaits a refresh on a hard cache miss.
+
         :raises: git.exc.BadName if version does not exist
         """
         hexsha = self._revision_cache.get(
-            "latest_revision", self._read_work, blocking=True
+            "latest_revision", self._sync_refresh_shim, blocking=True
         )
         return self._content_cache[hexsha]
 
     async def read_non_blocking(self) -> T:
-        """Load the source from the backend with appropriate caching.
+        """Load the source with caching; raises NotReadyError while a refresh is in flight.
 
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
+        Triggers a background refresh when the soft TTL has expired so that
+        subsequent requests benefit from fresh data without paying the latency now.
+
+        :raises: diracx.core.exceptions.NotReadyError if the cache is cold
         """
-        hexsha = self._revision_cache.get(
-            "latest_revision", self._read_work, blocking=False
-        )
-        return self._content_cache[hexsha]
+        # Try the revision cache first (non-blocking).  On a soft-miss or hard-miss
+        # we kick off an async background refresh and either serve stale or raise.
+        try:
+            hexsha = self._revision_cache.get(
+                "latest_revision", self._sync_refresh_shim, blocking=False
+            )
+            return self._content_cache[hexsha]
+        except KeyError:
+            # The revision cache returned a hexsha not yet in the content cache —
+            # shouldn't happen in normal operation; treat as not-ready.
+            pass
 
-    def _read_work(self) -> str:
-        """Work function for the thread pool of `self._revision_cache`.
+        # Hard miss: nothing in either cache yet.  Start (or reuse) a background
+        # refresh task and raise NotReadyError so the router can serve a 503.
+        asyncio.create_task(self._ensure_refresh_task())
+        from diracx.core.exceptions import NotReadyError
 
-        This function ensures that the latest revision is loaded into the
-        content cache before it is admitted into the revision cache.
+        raise NotReadyError("Cache is not yet populated; a refresh is in progress.")
+
+    def _sync_refresh_shim(self) -> str:
+        """Synchronous shim used by TwoLevelCache's thread-pool worker.
+
+        Runs the async _refresh coroutine on the running event loop via
+        run_coroutine_threadsafe so the engine's loop is respected.
         """
-        hexsha, modified = self.latest_revision()
-        if hexsha not in self._content_cache:
-            self._content_cache[hexsha] = self.read_raw(hexsha, modified)
+        loop = asyncio.get_event_loop()
+        future = asyncio.run_coroutine_threadsafe(self._refresh(), loop)
+        hexsha = future.result()
         return hexsha
 
     def clear_caches(self):
@@ -199,22 +217,27 @@ class BaseGitConfigSource(ConfigSource):
         self.remote_url = self.extract_remote_url(backend_url)
         self.git_revision = self.get_git_revision_from_url(backend_url)
 
-    def latest_revision(self) -> tuple[str, datetime]:
+    async def latest_revision(self) -> tuple[str, datetime]:
+        """Return the latest git revision hash and its commit timestamp."""
         try:
-            rev = sh.git(
-                "rev-parse",
-                self.git_revision,
-                _cwd=self.repo_location,
-                _tty_out=False,
-                _async=is_running_in_async_context(),
+            rev = (
+                await asyncio.to_thread(
+                    sh.git,
+                    "rev-parse",
+                    self.git_revision,
+                    _cwd=self.repo_location,
+                    _tty_out=False,
+                )
             ).strip()
-            commit_info = sh.git.show(
-                "-s",
-                "--format=%ct",
-                rev,
-                _cwd=self.repo_location,
-                _tty_out=False,
-                _async=is_running_in_async_context(),
+            commit_info = (
+                await asyncio.to_thread(
+                    sh.git.show,
+                    "-s",
+                    "--format=%ct",
+                    rev,
+                    _cwd=self.repo_location,
+                    _tty_out=False,
+                )
             ).strip()
             modified = datetime.fromtimestamp(int(commit_info), tz=timezone.utc)
         except sh.ErrorReturnCode as e:
@@ -224,15 +247,15 @@ class BaseGitConfigSource(ConfigSource):
         logger.debug("Latest revision for %s is %s with mtime %s", self, rev, modified)
         return rev, modified
 
-    def read_raw(self, hexsha: str, modified: datetime) -> Config:
+    async def read_raw(self, hexsha: str, modified: datetime) -> Config:
         """:param: hexsha commit hash"""
         logger.debug("Reading %s for %s with mtime %s", self, hexsha, modified)
         try:
-            blob = sh.git.show(
+            blob = await asyncio.to_thread(
+                sh.git.show,
                 f"{hexsha}:{DEFAULT_CONFIG_FILE}",
                 _cwd=self.repo_location,
                 _tty_out=False,
-                _async=False,
             )
             raw_obj = yaml.safe_load(blob)
         except sh.ErrorReturnCode as e:
@@ -244,8 +267,6 @@ class BaseGitConfigSource(ConfigSource):
             group=DiracEntryPoint.CORE, name="config"
         )[0].load()
         config = config_class.model_validate(raw_obj)
-        config._hexsha = hexsha
-        config._modified = modified
         return config
 
     def extract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
@@ -310,84 +331,11 @@ class RemoteGitConfigSource(BaseGitConfigSource):
     def __hash__(self):
         return hash(self.repo_location)
 
-    def latest_revision(self) -> tuple[str, datetime]:
+    async def latest_revision(self) -> tuple[str, datetime]:
         logger.debug("Pulling latest version from %s", self)
         try:
-            sh.git.pull(_cwd=self.repo_location, _async=False)
+            await asyncio.to_thread(sh.git.pull, _cwd=self.repo_location)
         except sh.ErrorReturnCode as err:
             logger.exception(err)
 
-        return super().latest_revision()
-
-
-class ResourceStatusSource(
-    CacheableSource[
-        dict[str, StorageElementStatus]
-        | dict[str, ComputeElementStatus]
-        | dict[str, SiteStatus]
-        | dict[str, FTSStatus]
-    ]
-):
-    """A source that provides the status of a resource."""
-
-    def __init__(
-        self,
-        *,
-        resource_type: Literal["ComputeElement", "StorageElement", "Site", "FTS"],
-        vo: str = "all",
-        resource_status_db: ResourceStatusDB,
-    ) -> None:
-        self.resource_type = resource_type
-        self.vo = vo
-        self.resource_status_db = resource_status_db
-        super().__init__()
-
-    def latest_revision(self) -> tuple[str, datetime]:
-        """Return the latest revision of the resource status.
-
-        This could be a hash of the current status snapshot or the max DateEffective/LastCheckTime.
-        """
-        # Fetch the resource status from the database
-        status_date = asyncio.run(self.resource_status_db.get_status_date(vo=self.vo))
-        # Generate a unique hash for the current status snapshot
-        status_hash = hash(frozenset(status_date))
-        latest_revision = f"rev_{status_hash}"
-
-        modified = status_date.DateEffective
-
-        return latest_revision, modified
-
-    def read_raw(
-        self, hexsha: str, modified: datetime
-    ) -> Union[
-        dict[str, StorageElementStatus],
-        dict[str, ComputeElementStatus],
-        dict[str, SiteStatus],
-        dict[str, FTSStatus],
-    ]:
-        """Read the raw resource status from the database."""
-        # Fetch the resource status from the database
-        status_data = asyncio.run(self.get_status_data())
-        for status in status_data.values():
-            status._hexsha = hexsha
-            status._modified = modified
-        return status_data
-
-    async def get_status_data(self):
-        status_data = None
-        if self.resource_type == "Site":
-            status_data = await get_site_statuses(self.resource_status_db, vo=self.vo)
-        elif self.resource_type == "ComputeElement":
-            status_data = await get_compute_statuses(
-                self.resource_status_db, vo=self.vo
-            )
-        elif self.resource_type == "StorageElement":
-            status_data = await get_storage_statuses(
-                self.resource_status_db, vo=self.vo
-            )
-        elif self.resource_type == "FTS":
-            status_data = await get_fts_statuses(self.resource_status_db, vo=self.vo)
-
-        if not status_data:
-            raise ResourceNotFoundError(f"Resource type {self.resource_type} not found")
-        return status_data
+        return await super().latest_revision()

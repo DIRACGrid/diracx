@@ -242,6 +242,8 @@ class ClientFactory:
             all_access_policies=all_access_policies,
         )
 
+        from diracx.routers.rss import RSSSnapshotSentinels
+
         self.all_dependency_overrides = self.app.dependency_overrides.copy()
         self.app.dependency_overrides = {}
         for obj in self.all_dependency_overrides:
@@ -253,6 +255,7 @@ class ClientFactory:
                     BaseOSDB,
                     ConfigSource,
                     BaseAccessPolicy,
+                    RSSSnapshotSentinels,
                 ),
             ), obj
 

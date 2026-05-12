@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from diracx.core.config.sources import ResourceStatusSource
 from diracx.core.exceptions import ResourceNotFoundError
 from diracx.core.models.rss import (
     ComputeElementStatus,
@@ -15,6 +14,7 @@ from diracx.core.models.rss import (
     StorageElementStatus,
 )
 from diracx.db.sql.rss.db import ResourceStatusDB
+from diracx.logic.rss.source import ResourceStatusSource
 
 
 @pytest.fixture
