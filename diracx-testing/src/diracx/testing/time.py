@@ -20,8 +20,8 @@ This functionality is tested in the `diracx-db` tests, specifically in the
 from __future__ import annotations
 
 __all__ = [
-    "mock_sqlite_time",
     "julian_date",
+    "mock_sqlite_time",
 ]
 
 import re

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 __all__ = [
-    "TaskScheduleBase",
-    "IntervalSeconds",
     "CronSchedule",
+    "IntervalSeconds",
     "RRuleSchedule",
+    "TaskScheduleBase",
 ]
 
 from abc import ABC, abstractmethod

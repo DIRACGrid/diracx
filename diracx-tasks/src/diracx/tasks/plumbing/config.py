@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["TasksConfig", "TaskOverride", "PeriodicTaskConfig"]
+__all__ = ["PeriodicTaskConfig", "TaskOverride", "TasksConfig"]
 
 
 from pydantic import BaseModel

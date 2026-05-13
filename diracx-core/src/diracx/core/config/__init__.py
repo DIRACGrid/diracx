@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 __all__ = [
-    # Schema
     "Config",
+    "ConfigSource",
+    "ConfigSourceUrl",
     "DIRACConfig",
     "GroupConfig",
     "IdpConfig",
+    "LocalGitConfigSource",
     "OperationsConfig",
     "RegistryConfig",
+    "RemoteGitConfigSource",
     "SerializableSet",
     "SupportInfo",
     "UserConfig",
-    # Sources
-    "ConfigSource",
-    "ConfigSourceUrl",
-    "LocalGitConfigSource",
-    "RemoteGitConfigSource",
     "is_running_in_async_context",
 ]
 

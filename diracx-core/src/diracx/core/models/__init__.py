@@ -7,20 +7,12 @@ Shared between the client components (cli, api) and services components (db, log
 from __future__ import annotations
 
 __all__ = [
-    # Auth
     "AccessTokenPayload",
+    "ChecksumAlgorithm",
     "GrantType",
     "GroupInfo",
-    "InitiateDeviceFlowResponse",
-    "Metadata",
-    "OpenIDConfiguration",
-    "RefreshTokenPayload",
-    "TokenPayload",
-    "TokenResponse",
-    "TokenTypeHint",
-    "UserInfo",
-    # Job
     "HeartbeatData",
+    "InitiateDeviceFlowResponse",
     "InsertedJob",
     "JobAttributes",
     "JobCommand",
@@ -31,24 +23,27 @@ __all__ = [
     "JobStatus",
     "JobStatusReturn",
     "JobStatusUpdate",
-    "SetJobStatusReturn",
-    # Replica Map
+    "Metadata",
+    "OpenIDConfiguration",
+    "RefreshTokenPayload",
     "ReplicaMap",
-    # Sandbox
-    "ChecksumAlgorithm",
     "SandboxDownloadResponse",
     "SandboxFormat",
     "SandboxInfo",
     "SandboxType",
     "SandboxUploadResponse",
-    # Search
     "ScalarSearchOperator",
     "ScalarSearchSpec",
     "SearchParams",
     "SearchSpec",
+    "SetJobStatusReturn",
     "SortDirection",
     "SortSpec",
     "SummaryParams",
+    "TokenPayload",
+    "TokenResponse",
+    "TokenTypeHint",
+    "UserInfo",
     "VectorSearchOperator",
     "VectorSearchSpec",
 ]

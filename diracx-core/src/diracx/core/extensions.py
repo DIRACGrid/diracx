@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 __all__ = [
+    "DiracEntryPoint",
     "extensions_by_priority",
     "select_from_extension",
     "supports_extending",
-    "DiracEntryPoint",
 ]
 
 from collections import defaultdict

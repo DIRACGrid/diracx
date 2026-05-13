@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 __all__ = [
-    "UnableToAcquireLockError",
-    "StopRetryingError",
-    "TooManyRetriesError",
-    "UnretryableError",
-    "TaskRetryRequestedError",
-    "SendTaskError",
     "ResultIsMissingError",
+    "SendTaskError",
+    "StopRetryingError",
+    "TaskRetryRequestedError",
+    "TooManyRetriesError",
+    "UnableToAcquireLockError",
+    "UnretryableError",
 ]
 
 
