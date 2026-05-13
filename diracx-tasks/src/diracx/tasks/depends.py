@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from diracx.tasks.plumbing.depends import CallbackSpawner, NoTransaction
+__all__ = ["CallbackSpawner", "NoTransaction"]
 
-__all__ = ("CallbackSpawner", "NoTransaction")
+from diracx.tasks.plumbing.depends import CallbackSpawner, NoTransaction

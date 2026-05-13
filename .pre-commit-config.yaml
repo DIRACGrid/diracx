@@ -110,5 +110,5 @@ repos:
         name: Check __all__ dunder in __init__.py files
         language: system
         entry: pixi run -e default python scripts/check_init_files_precommit_hook.py
-        files: ^(diracx-|extensions/gubbins/gubbins-).*__init__\.py$
-        exclude: _generated
+        files: ^(diracx-|extensions/gubbins/gubbins-)[a-z]+/src/[a-z]+/[a-z]+/((.*/)*__init__\.py|[a-zA-Z0-9_]+\.py)$
+        exclude: (test|_generated|__main__)
