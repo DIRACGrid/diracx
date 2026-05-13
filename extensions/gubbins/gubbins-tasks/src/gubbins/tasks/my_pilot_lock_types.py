@@ -6,6 +6,8 @@ Loaded via the ``diracx.lock_object_types`` entry point so that
 
 from __future__ import annotations
 
+__all__ = ["MY_PILOT"]
+
 from diracx.tasks.plumbing.lock_registry import register_locked_object_type
 
 MY_PILOT = register_locked_object_type("my_pilot")

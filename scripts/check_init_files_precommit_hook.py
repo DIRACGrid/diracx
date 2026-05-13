@@ -22,9 +22,14 @@ def main():
 
         # Go through the module
         for node in module_tree.body:
-            # Has to be __all__ = {something} or __all__ += {something}
+            # __all__ = {something} or __all__ += {something}
             if isinstance(node, ast.Assign) or isinstance(node, ast.AugAssign):
-                target = node.targets[0]
+                if isinstance(node, ast.Assign):
+                    target = node.targets[0]
+
+                elif isinstance(node, ast.AugAssign):
+                    target = node.target
+
                 # The target is the __all__ dunder
                 if isinstance(target, ast.Name) and target.id == "__all__":
                     found = True
@@ -32,6 +37,15 @@ def main():
                     if not isinstance(node.value, ast.List):
                         files_not_list_all.append(file)
 
+                    break
+
+            # from {something} import __all__
+            elif isinstance(node, ast.ImportFrom):
+                target = node.names[0]
+
+                # The target is the __all__ dunder
+                if isinstance(target, ast.alias) and target.name == "__all__":
+                    found = True
                     break
 
         if not found:

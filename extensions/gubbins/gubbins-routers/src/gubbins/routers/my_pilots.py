@@ -8,6 +8,8 @@ Demonstrates:
 
 from __future__ import annotations
 
+__all__ = []
+
 from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import Annotated

@@ -9,6 +9,8 @@ Demonstrates:
 
 from __future__ import annotations
 
+__all__ = ["OwnerCleanupTask", "OwnerReportTask", "SyncOwnersTask"]
+
 import dataclasses
 import logging
 from typing import Any
@@ -25,7 +27,7 @@ from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 from diracx.tasks.plumbing.schedules import CronSchedule, IntervalSeconds
 
 from gubbins.db.sql import LollygagDB
-from gubbins.logic.lollygag.lollygag import get_owner_object, insert_owner_object
+from gubbins.logic.lollygag import get_owner_object, insert_owner_object
 
 from .lock_types import LOLLYGAG
 

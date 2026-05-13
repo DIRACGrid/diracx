@@ -6,6 +6,8 @@ Loaded via the ``diracx.lock_object_types`` entry point so that
 
 from __future__ import annotations
 
+__all__ = ["LOLLYGAG"]
+
 from diracx.tasks.plumbing.lock_registry import register_locked_object_type
 
 LOLLYGAG = register_locked_object_type("lollygag")
