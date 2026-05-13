@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 __all__ = [
-    "RetryPolicyBase",
-    "NoRetry",
     "ExponentialBackoff",
+    "NoRetry",
+    "RetryPolicyBase",
 ]
 
 from abc import ABC, abstractmethod

@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+__all__ = [
+    "get_available_ces",
+    "get_pilot_summary",
+    "submit_pilot",
+    "transition_pilot_states",
+    "PilotSubmissionError",
+]
+
 import random
 
 from gubbins.db.sql.my_pilot_db.db import MyPilotDB

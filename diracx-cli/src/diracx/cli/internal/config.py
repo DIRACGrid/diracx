@@ -8,9 +8,10 @@ import typer
 import yaml
 from pydantic import TypeAdapter
 
-from diracx.core.config import ConfigSource, ConfigSourceUrl
-from diracx.core.config.schema import (
+from diracx.core.config import (
     Config,
+    ConfigSource,
+    ConfigSourceUrl,
     DIRACConfig,
     GroupConfig,
     IdpConfig,

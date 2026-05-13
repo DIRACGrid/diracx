@@ -1,8 +1,8 @@
-from diracx.logic.auth.well_known import (
+from diracx.logic.auth import (
     get_installation_metadata as get_general_installation_metadata,
 )
 
-from gubbins.core.config.schema import Config
+from gubbins.core.config import Config
 from gubbins.core.models import ExtendedMetadata
 
 

@@ -7,6 +7,7 @@ create_app loads the environment configuration
 
 from __future__ import annotations
 
-from .factory import DIRACX_MIN_CLIENT_VERSION, create_app, create_app_inner
+# Special case due to a dependency in diracx-charts and DIRAC
+__all__ = ["create_app"]
 
-__all__ = ("create_app", "create_app_inner", "DIRACX_MIN_CLIENT_VERSION")
+from .factory import create_app

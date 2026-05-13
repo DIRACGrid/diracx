@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+__all__ = [
+    "OPENSEARCH_PORT",
+    "DummyOSDB",
+    "DummyOSDB",
+    "DummyOSDB",
+    "require_port_availability",
+]
+
 import socket
 from subprocess import PIPE, Popen, check_output
 

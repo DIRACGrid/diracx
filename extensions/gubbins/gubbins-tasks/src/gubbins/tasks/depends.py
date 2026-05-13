@@ -5,3 +5,5 @@ Task code should import DB classes directly from ``gubbins.db.sql``.
 """
 
 from __future__ import annotations
+
+__all__ = []

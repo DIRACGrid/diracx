@@ -16,8 +16,8 @@ from pydantic import (
 )
 from pydantic.functional_serializers import PlainSerializer
 
-from ..properties import SecurityProperty
-from ..utils import recursive_merge
+from diracx.core.properties import SecurityProperty
+from diracx.core.utils import recursive_merge
 
 # By default the serialization of set doesn't have a well defined ordering so
 # we have to use a custom type to make sure the values are always sorted.

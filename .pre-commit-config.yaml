@@ -8,7 +8,7 @@ default_language_version:
   python: python3
 
 ci:
-  skip: [generate-pixi-docs, settings-doc-check]
+  skip: [generate-pixi-docs, settings-doc-check, check-init-files]
 
 default_stages: [pre-commit]
 
@@ -90,7 +90,7 @@ repos:
     hooks:
       - id: generate-pixi-docs
         name: Generate pixi tasks documentation
-        entry: pixi run -e default python .github/workflows/generate_pixi_tasks_doc.py
+        entry: pixi run -e default python scripts/generate_pixi_tasks_doc.py
         language: system
         pass_filenames: false
         files: ^pixi\.toml$|^pixi\.lock$ # only run if pixi files change
@@ -103,3 +103,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^(diracx-.*/src/diracx/.*/settings\.py|diracx-routers/src/diracx/routers/otel\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
+
+  - repo: local
+    hooks:
+      - id: check-init-files
+        name: Check __all__ dunder in __init__.py files
+        language: system
+        entry: pixi run -e default python scripts/check_init_files_precommit_hook.py
+        files: ^(diracx-|extensions/gubbins/gubbins-)[a-z]+/src/[a-z]+/[a-z]+/((.*/)*__init__\.py|[a-zA-Z0-9_]+\.py)$
+        exclude: (test|_generated|__main__)

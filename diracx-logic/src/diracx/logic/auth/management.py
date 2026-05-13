@@ -7,10 +7,11 @@ import logging
 from uuid_utils import UUID
 
 from diracx.core.exceptions import InvalidCredentialsError
-from diracx.core.models.auth import TokenTypeHint
+from diracx.core.models import TokenTypeHint
 from diracx.core.settings import AuthSettings
 from diracx.db.sql import AuthDB
-from diracx.logic.auth.utils import verify_dirac_refresh_token
+
+from .utils import verify_dirac_refresh_token
 
 logger = logging.getLogger(__name__)
 
