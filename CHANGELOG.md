@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/DIRACGrid/diracx/compare/v0.1.0...v0.1.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* setup pixi in the deployment ci ([#912](https://github.com/DIRACGrid/diracx/issues/912)) ([a27e79b](https://github.com/DIRACGrid/diracx/commit/a27e79b733197d474954dbf4e1a8b10a049346b2))
+
 ## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.14...v0.1.0) (2026-05-06)
 
 
