@@ -245,3 +245,20 @@ jobs:
           environments: ${{ matrix.package }}-generate-client
       - name: Run autorest
         run: pixi run -e ${{ matrix.package }}-generate-client generate-client
+
+  pre-commit:
+    name: pre-commit (with pixi)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        with:
+          run-install: false
+          post-cleanup: false
+      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+        with:
+          cache: false
+          environments: pre-commit
+      - name: Run pre-commit
+        run: pixi run pre-commit run --all-files
