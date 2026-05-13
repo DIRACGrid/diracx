@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 __all__ = [
-    "TaskMessage",
-    "TaskResult",
     "ReceivedMessage",
     "TaskBinding",
+    "TaskMessage",
+    "TaskResult",
     "submit_task",
 ]
 

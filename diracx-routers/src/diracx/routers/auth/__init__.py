@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["verify_dirac_access_token", "create_token", "router"]
+__all__ = ["create_token", "router", "verify_dirac_access_token"]
 
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import verify_dirac_access_token

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 __all__ = [
-    "DummyOSDB",
     "OPENSEARCH_PORT",
     "DummyOSDB",
-    "require_port_availability",
     "DummyOSDB",
+    "DummyOSDB",
+    "require_port_availability",
 ]
 
 import socket

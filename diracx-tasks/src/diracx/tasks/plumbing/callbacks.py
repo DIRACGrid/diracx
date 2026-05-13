@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["spawn_with_callback", "fire_callback"]
+__all__ = ["fire_callback", "spawn_with_callback"]
 
 import asyncio
 import logging
