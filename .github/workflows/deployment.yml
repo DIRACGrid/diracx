@@ -86,7 +86,7 @@ jobs:
           # Also build the diracx metapackage
           python -m build --outdir $PWD/dist .
       - name: 'Upload Artifact'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: diracx-whl
           path: dist/diracx*.whl
@@ -95,7 +95,7 @@ jobs:
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
         if: steps.check-tag.outputs.create-release == 'true'
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
 
   docker:
     needs: deploy-pypi
@@ -109,14 +109,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
       - name: Login to GitHub container registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push services (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -126,7 +126,7 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Build and push tasks (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -136,7 +136,7 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -147,7 +147,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Build and push services (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: containers/Dockerfile
@@ -156,7 +156,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/services:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push tasks (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: containers/Dockerfile
@@ -165,7 +165,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/tasks:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: containers/Dockerfile
@@ -220,7 +220,7 @@ jobs:
           echo "current_chart_version=$CURRENT_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "new_chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "diracx_version=$VERSION" >> $GITHUB_OUTPUT
-      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+      - uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
            working-directory: ./diracx-charts
       - name: Run pre-commit to update README
