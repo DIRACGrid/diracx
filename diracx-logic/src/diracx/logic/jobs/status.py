@@ -123,7 +123,11 @@ async def set_job_statuses(
     # transform JobStateUpdate objects into dicts
     status_dicts = {
         job_id: {
-            key: {k: v for k, v in value.model_dump().items() if v is not None}
+            key: {
+                k: v
+                for k, v in value.model_dump(by_alias=True).items()
+                if v is not None
+            }
             for key, value in status.items()
         }
         for job_id, status in status_changes.items()
@@ -471,7 +475,7 @@ async def reschedule_jobs(
             success[job_id] = {
                 "InputData": jdl,
                 **attribute_changes[job_id],
-                **set_status_result.model_dump(),
+                **set_status_result.model_dump(by_alias=True),
             }
 
     return {"failed": failed, "success": success}
@@ -595,7 +599,9 @@ async def add_heartbeat(
         os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
         for job_id, job_data in data.items():
             sql_data = {}
-            for key, value in job_data.model_dump(exclude_defaults=True).items():
+            for key, value in job_data.model_dump(
+                by_alias=True, exclude_defaults=True
+            ).items():
                 if key in job_db.heartbeat_fields:
                     sql_data[key] = value
                 else:

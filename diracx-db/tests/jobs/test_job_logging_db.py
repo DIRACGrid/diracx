@@ -62,32 +62,32 @@ async def test_insert_records(job_logging_db: JobLoggingDB):
 
         assert len(res) == 50
         # Check the first job - first record
-        assert res[0][0].Status == JobStatus.RECEIVED.value
-        assert res[0][0].MinorStatus == "received_minor_status"
-        assert res[0][0].ApplicationStatus == "application_status"
-        assert res[0][0].StatusTime == date_1
-        assert res[0][0].Source == "pytest"
+        assert res[0][0].status == JobStatus.RECEIVED.value
+        assert res[0][0].minor_status == "received_minor_status"
+        assert res[0][0].application_status == "application_status"
+        assert res[0][0].status_time == date_1
+        assert res[0][0].source == "pytest"
 
         # Check the first job - second record
-        assert res[0][1].Status == JobStatus.SUBMITTING.value
-        assert res[0][1].MinorStatus == "submitted_minor_status"
-        assert res[0][1].ApplicationStatus == "application_status"
-        assert res[0][1].StatusTime == date_2
-        assert res[0][1].Source == "pytest"
+        assert res[0][1].status == JobStatus.SUBMITTING.value
+        assert res[0][1].minor_status == "submitted_minor_status"
+        assert res[0][1].application_status == "application_status"
+        assert res[0][1].status_time == date_2
+        assert res[0][1].source == "pytest"
 
         # Check the first job - third record
-        assert res[0][2].Status == JobStatus.RUNNING.value
-        assert res[0][2].MinorStatus == "running_minor_status"
-        assert res[0][2].ApplicationStatus == "application_status"
-        assert res[0][2].StatusTime == date_3
-        assert res[0][2].Source == "pytest"
+        assert res[0][2].status == JobStatus.RUNNING.value
+        assert res[0][2].minor_status == "running_minor_status"
+        assert res[0][2].application_status == "application_status"
+        assert res[0][2].status_time == date_3
+        assert res[0][2].source == "pytest"
 
         # Check the last job - third record
-        assert res[49][2].Status == JobStatus.RUNNING.value
-        assert res[49][2].MinorStatus == "running_minor_status"
-        assert res[49][2].ApplicationStatus == "application_status"
-        assert res[49][2].StatusTime == date_3
-        assert res[49][2].Source == "pytest"
+        assert res[49][2].status == JobStatus.RUNNING.value
+        assert res[49][2].minor_status == "running_minor_status"
+        assert res[49][2].application_status == "application_status"
+        assert res[49][2].status_time == date_3
+        assert res[49][2].source == "pytest"
 
     async with job_logging_db as job_logging_db:
         res = await job_logging_db.get_wms_time_stamps([1])
