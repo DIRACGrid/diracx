@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Generic, Literal, TypeVar, Union
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field
+
+T = TypeVar("T")
 
 
-class CachedModel(BaseModel):
-    """Base class for models that are cached."""
+@dataclass(frozen=True)
+class Snapshot(Generic[T]):
+    """Wraps a cached data payload with its cache metadata."""
 
-    # hash for a unique representation of the status version
-    _hexsha: str = PrivateAttr()
-    # modification date
-    _modified: datetime = PrivateAttr()
+    data: T
+    hexsha: str
+    modified: datetime
 
 
 class AllowedStatus(BaseModel):
@@ -44,22 +47,22 @@ class ResourceType(StrEnum):
     FTS = "FTS"
 
 
-class StorageElementStatus(CachedModel):
+class StorageElementStatus(BaseModel):
     read: ResourceStatus
     write: ResourceStatus
     check: ResourceStatus
     remove: ResourceStatus
 
 
-class ComputeElementStatus(CachedModel):
+class ComputeElementStatus(BaseModel):
     all: ResourceStatus
 
 
-class FTSStatus(CachedModel):
+class FTSStatus(BaseModel):
     all: ResourceStatus
 
 
-class SiteStatus(CachedModel):
+class SiteStatus(BaseModel):
     all: ResourceStatus
 
 

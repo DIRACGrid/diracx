@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import insert
 
-from diracx.core.exceptions import ResourceNotFoundError
 from diracx.db.sql.rss.db import ResourceStatusDB
 
 _NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -43,15 +42,11 @@ async def test_site_status(rss_db: ResourceStatusDB):
     async with rss_db as db:
         rows = await db.get_site_statuses()
     assert rows
-    name, status, reason = rows[0]
+    name, status, reason, vo = rows[0]
     assert name == "TestSite"
     assert status == "Active"
     assert reason == "All good"
-
-    # Test with an unknow Site (should not be found)
-    with pytest.raises(ResourceNotFoundError):
-        async with rss_db as db:
-            await db.get_site_statuses("Unknown")
+    assert vo == "all"
 
 
 async def test_resource_status(rss_db: ResourceStatusDB):
@@ -111,6 +106,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
+    assert result["all"].VO == "all"
 
     # Test with the test FTS (should be found)
     async with rss_db as db:
@@ -120,6 +116,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert "all" in result
     assert result["all"].Status == "Active"
     assert result["all"].Reason == "All good"
+    assert result["all"].VO == "all"
 
     # Test with the test Storage Element (should be found)
     async with rss_db as db:
@@ -135,8 +132,3 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     for row in result["TestStorage"].values():
         assert row.Status == "Active"
         assert row.Reason == "All good"
-
-    # Test with an unknow Resource (should not be found)
-    with pytest.raises(ResourceNotFoundError):
-        async with rss_db as db:
-            await db.get_resource_statuses(vo="Unknown")

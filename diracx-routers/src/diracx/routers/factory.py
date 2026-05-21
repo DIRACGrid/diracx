@@ -37,9 +37,13 @@ from diracx.db.exceptions import DBUnavailableError
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.rss.db import ResourceStatusDB
 from diracx.db.sql.utils import BaseSQLDB
-from diracx.logic.rss.source import ResourceStatusSource, SiteStatusSource
+from diracx.logic.rss.source import (
+    ComputeElementStatusSource,
+    FTSStatusSource,
+    SiteStatusSource,
+    StorageElementStatusSource,
+)
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
-from diracx.routers.rss import RSSSnapshotSentinels
 
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 from .otel import instrument_otel
@@ -189,7 +193,6 @@ def create_app_inner(
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
 
-    # Track the app-lifetime ResourceStatusDB instance so we can build sources below.
     rss_db_instance: ResourceStatusDB | None = None
 
     for db_name, db_url in database_urls.items():
@@ -213,11 +216,8 @@ def create_app_inner(
                     db_no_transaction, sql_db
                 )
 
-                # Capture the long-lived ResourceStatusDB instance for the RSS sources.
-                # We reuse this instance (not a per-request DI copy) so that the engine's
-                # event loop and the async context manager are managed correctly.
-                if isinstance(sql_db, ResourceStatusDB) and rss_db_instance is None:
-                    rss_db_instance = sql_db
+            if isinstance(sql_db, ResourceStatusDB) and rss_db_instance is None:
+                rss_db_instance = sql_db
 
             # At least one DB works, so we do not fail the startup
             fail_startup = False
@@ -227,39 +227,26 @@ def create_app_inner(
     if fail_startup:
         raise Exception("No SQL database could be initialized, aborting")
 
-    # ---------------------------------------------------------------------------
-    # Wire RSS sources via dependency_overrides — same pattern as ConfigSource.create.
-    #
-    # Each source holds a reference to the *app-lifetime* rss_db_instance; every
-    # refresh calls `async with self._db` so __aenter__ runs on the FastAPI event
-    # loop (the same loop the engine is bound to).  One source per resource type
-    # covers all VOs; per-VO filtering is done in the route.
-    # ---------------------------------------------------------------------------
     if rss_db_instance is not None:
-        compute_source = ResourceStatusSource(
-            db=rss_db_instance, resource_type="ComputeElement"
-        )
-        storage_source = ResourceStatusSource(
-            db=rss_db_instance, resource_type="StorageElement"
-        )
-        fts_source = ResourceStatusSource(db=rss_db_instance, resource_type="FTS")
+        compute_source = ComputeElementStatusSource(db=rss_db_instance)
+        storage_source = StorageElementStatusSource(db=rss_db_instance)
+        fts_source = FTSStatusSource(db=rss_db_instance)
         site_source = SiteStatusSource(db=rss_db_instance)
 
-        app.dependency_overrides[RSSSnapshotSentinels.get_compute_snapshot] = (
-            compute_source.read_non_blocking
-        )
-        app.dependency_overrides[RSSSnapshotSentinels.get_storage_snapshot] = (
+        app.dependency_overrides[StorageElementStatusSource.create] = (
             storage_source.read_non_blocking
         )
-        app.dependency_overrides[RSSSnapshotSentinels.get_fts_snapshot] = (
-            fts_source.read_non_blocking
+        app.dependency_overrides[ComputeElementStatusSource.create] = (
+            compute_source.read_non_blocking
         )
-        app.dependency_overrides[RSSSnapshotSentinels.get_site_snapshot] = (
+        app.dependency_overrides[SiteStatusSource.create] = (
             site_source.read_non_blocking
         )
+        app.dependency_overrides[FTSStatusSource.create] = fts_source.read_non_blocking
     else:
         logger.warning(
-            "ResourceStatusDB not found; RSS endpoints will not be available."
+            "ResourceStatusDB not found in database_urls; "
+            "RSS endpoints will return 503 until it becomes available."
         )
 
     # Add the OpenSearch DBs to the application
