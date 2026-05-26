@@ -4,19 +4,6 @@ These classes live in diracx-logic so they can import from diracx-db without
 violating the project's dependency flow:
 
     routers → logic → db → core
-
-Dependency injection pattern
-----------------------------
-Each source subclass exposes a `create` classmethod used as the FastAPI
-dependency key in the router — the same pattern as ConfigSource.create.
-factory.py overrides each `create` with the corresponding source instance's
-`read_non_blocking`, so routes receive the cached Snapshot directly.
-
-Note on DB usage
-----------------
-Every DB call opens its own connection via `async with self._db as db` because
-these calls happen outside FastAPI's DI pipeline (db_transaction never runs).
-The engine is already open for the app lifetime via engine_context.
 """
 
 from __future__ import annotations
@@ -79,25 +66,13 @@ class ResourceStatusSource(AsyncCacheableSource):
 class StorageElementStatusSource(ResourceStatusSource):
     resource_type = "StorageElement"
 
-    @classmethod
-    async def create(cls) -> Snapshot:
-        raise NotImplementedError("This method should not be called")
-
 
 class ComputeElementStatusSource(ResourceStatusSource):
     resource_type = "ComputeElement"
 
-    @classmethod
-    async def create(cls) -> Snapshot:
-        raise NotImplementedError("This method should not be called")
-
 
 class FTSStatusSource(ResourceStatusSource):
     resource_type = "FTS"
-
-    @classmethod
-    async def create(cls) -> Snapshot:
-        raise NotImplementedError("This method should not be called")
 
 
 class SiteStatusSource(AsyncCacheableSource):
@@ -121,7 +96,3 @@ class SiteStatusSource(AsyncCacheableSource):
         async with self._db as db:
             data = await get_site_statuses(db)
         return Snapshot(data=data, hexsha=hexsha, modified=modified)
-
-    @classmethod
-    async def create(cls) -> Snapshot:
-        raise NotImplementedError("This method should not be called")

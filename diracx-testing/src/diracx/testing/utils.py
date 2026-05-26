@@ -46,7 +46,6 @@ from uuid_utils import uuid7
 
 from diracx.core.extensions import DiracEntryPoint
 from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
-from diracx.logic.rss.source import ResourceStatusSource, SiteStatusSource
 
 if TYPE_CHECKING:
     from diracx.core.settings import (
@@ -254,8 +253,6 @@ class ClientFactory:
                     BaseOSDB,
                     ConfigSource,
                     BaseAccessPolicy,
-                    ResourceStatusSource,
-                    SiteStatusSource,
                 ),
             ), obj
 

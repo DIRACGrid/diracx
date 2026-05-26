@@ -19,13 +19,16 @@ from diracx.core.models.rss import (
     Snapshot,
     StorageElementStatus,
 )
+from diracx.db.sql.rss.db import ResourceStatusDB
 from diracx.logic.rss.source import (
     ComputeElementStatusSource,
     FTSStatusSource,
+    ResourceStatusSource,
     SiteStatusSource,
     StorageElementStatusSource,
 )
 from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
+from diracx.tasks.plumbing.depends import NoTransaction
 
 from ..fastapi_classes import DiracxRouter
 from .access_policies import CheckRSSPolicyCallable
@@ -35,6 +38,34 @@ logger = logging.getLogger(__name__)
 LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 router = DiracxRouter()
+
+
+async def get_snapshot(rss_type, db) -> Snapshot:
+    """Get the status snapshot from the unique ResourceStatusSource instance or create it if it does not exist.
+
+    :param rss_type: The type of the resource status source.
+    :param db: The database instance.
+    :returns: The status snapshot from the unique ResourceStatusSource instance.
+    """
+    sources: dict[str, ResourceStatusSource | SiteStatusSource] = {}
+    if rss_type == "ComputeElementStatus":
+        if rss_type not in sources:
+            sources[rss_type] = ComputeElementStatusSource(db=db)
+        return await sources[rss_type].read()
+    elif rss_type == "StorageElementStatus":
+        if rss_type not in sources:
+            sources[rss_type] = StorageElementStatusSource(db=db)
+        return await sources[rss_type].read()
+    elif rss_type == "FTSStatus":
+        if rss_type not in sources:
+            sources[rss_type] = FTSStatusSource(db=db)
+        return await sources[rss_type].read()
+    elif rss_type == "SiteStatus":
+        if rss_type not in sources:
+            sources[rss_type] = SiteStatusSource(db=db)
+        return await sources[rss_type].read()
+    else:
+        raise ValueError(f"Unknown resource status source type: {rss_type}")
 
 
 def _apply_cache_headers(
@@ -80,11 +111,12 @@ async def get_storage_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckRSSPolicyCallable,
-    snapshot: Annotated[Snapshot, Depends(StorageElementStatusSource.create)],
+    db: Annotated[ResourceStatusDB, NoTransaction()],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, StorageElementStatus]:
     """Get the latest status of storage elements, scoped to the caller's VO."""
+    snapshot = await get_snapshot("StorageElementStatus", db)
     _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, StorageElementStatus],
@@ -97,11 +129,12 @@ async def get_compute_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckRSSPolicyCallable,
-    snapshot: Annotated[Snapshot, Depends(ComputeElementStatusSource.create)],
+    db: Annotated[ResourceStatusDB, NoTransaction()],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, ComputeElementStatus]:
     """Get the latest status of compute elements, scoped to the caller's VO."""
+    snapshot = await get_snapshot("ComputeElementStatus", db)
     _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, ComputeElementStatus],
@@ -114,11 +147,12 @@ async def get_site_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckRSSPolicyCallable,
-    snapshot: Annotated[Snapshot, Depends(SiteStatusSource.create)],
+    db: Annotated[ResourceStatusDB, NoTransaction()],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, SiteStatus]:
     """Get the latest status of sites, scoped to the caller's VO."""
+    snapshot = await get_snapshot("SiteStatus", db)
     _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, SiteStatus],
@@ -131,11 +165,12 @@ async def get_fts_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckRSSPolicyCallable,
-    snapshot: Annotated[Snapshot, Depends(FTSStatusSource.create)],
+    db: Annotated[ResourceStatusDB, NoTransaction()],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, FTSStatus]:
     """Get the latest status of FTS servers, scoped to the caller's VO."""
+    snapshot = await get_snapshot("FTSStatus", db)
     _apply_cache_headers(response, snapshot, if_none_match, if_modified_since)
     return cast(
         dict[str, FTSStatus],

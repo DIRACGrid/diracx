@@ -35,14 +35,7 @@ from diracx.core.settings import ServiceSettingsBase
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailableError
 from diracx.db.os.utils import BaseOSDB
-from diracx.db.sql.rss.db import ResourceStatusDB
 from diracx.db.sql.utils import BaseSQLDB
-from diracx.logic.rss.source import (
-    ComputeElementStatusSource,
-    FTSStatusSource,
-    SiteStatusSource,
-    StorageElementStatusSource,
-)
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
 
 from .fastapi_classes import DiracFastAPI, DiracxRouter
@@ -193,8 +186,6 @@ def create_app_inner(
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
 
-    rss_db_instance: ResourceStatusDB | None = None
-
     for db_name, db_url in database_urls.items():
         try:
             sql_db_classes = BaseSQLDB.available_implementations(db_name)
@@ -216,9 +207,6 @@ def create_app_inner(
                     db_no_transaction, sql_db
                 )
 
-            if isinstance(sql_db, ResourceStatusDB) and rss_db_instance is None:
-                rss_db_instance = sql_db
-
             # At least one DB works, so we do not fail the startup
             fail_startup = False
         except Exception:
@@ -226,28 +214,6 @@ def create_app_inner(
 
     if fail_startup:
         raise Exception("No SQL database could be initialized, aborting")
-
-    if rss_db_instance is not None:
-        compute_source = ComputeElementStatusSource(db=rss_db_instance)
-        storage_source = StorageElementStatusSource(db=rss_db_instance)
-        fts_source = FTSStatusSource(db=rss_db_instance)
-        site_source = SiteStatusSource(db=rss_db_instance)
-
-        app.dependency_overrides[StorageElementStatusSource.create] = (
-            storage_source.read_non_blocking
-        )
-        app.dependency_overrides[ComputeElementStatusSource.create] = (
-            compute_source.read_non_blocking
-        )
-        app.dependency_overrides[SiteStatusSource.create] = (
-            site_source.read_non_blocking
-        )
-        app.dependency_overrides[FTSStatusSource.create] = fts_source.read_non_blocking
-    else:
-        logger.warning(
-            "ResourceStatusDB not found in database_urls; "
-            "RSS endpoints will return 503 until it becomes available."
-        )
 
     # Add the OpenSearch DBs to the application
     available_os_db_classes: set[type[BaseOSDB]] = set()
