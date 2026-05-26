@@ -2,8 +2,8 @@ from __future__ import annotations
 
 __all__ = [
     "EXPIRES_GRACE_SECONDS",
-    "TwoLevelCache",
     "AsyncTwoLevelCache",
+    "TwoLevelCache",
     "batched_async",
     "dotenv_files_from_environment",
     "read_credentials",
