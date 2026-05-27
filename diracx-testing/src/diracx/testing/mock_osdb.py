@@ -36,7 +36,10 @@ class MockOSDBMixin:
         JobParametersDB = type("JobParametersDB", (MockOSDBMixin, JobParametersDB), {})
     """
 
-    def __init__(self, connection_kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self, connection_kwargs: dict[str, Any], *, global_prefix: str = ""
+    ) -> None:
+        super().__init__(connection_kwargs, global_prefix=global_prefix)
         from sqlalchemy import JSON, Column, DateTime, Integer, MetaData, String, Table
 
         # Dynamically create a subclass of BaseSQLDB so we get clearer errors
