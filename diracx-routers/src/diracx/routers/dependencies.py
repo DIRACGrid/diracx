@@ -2,6 +2,20 @@
 
 from __future__ import annotations
 
-# Re-export everything from the canonical location
-from diracx.tasks.plumbing.depends import *  # noqa: F401, F403
-from diracx.tasks.plumbing.depends import __all__  # noqa: F401
+__all__ = [
+    "AvailableSecurityProperties",
+    "CallbackSpawner",
+    "Config",
+    "NoTransaction",
+    "auto_inject",
+    "auto_inject_depends",
+]
+
+from diracx.tasks.plumbing import (
+    AvailableSecurityProperties,
+    CallbackSpawner,
+    Config,
+    NoTransaction,
+    auto_inject,
+    auto_inject_depends,
+)

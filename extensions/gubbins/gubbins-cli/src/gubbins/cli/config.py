@@ -3,6 +3,10 @@ This just shows how to extend and modify an existing CLI
 """
 
 # In order to extend it, just import the app from DiracX
+from __future__ import annotations
+
+__all__ = ["dump"]
+
 from diracx.cli.config import app
 
 

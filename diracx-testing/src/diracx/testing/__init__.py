@@ -1,5 +1,27 @@
 from __future__ import annotations
 
+__all__ = [
+    "ClientFactory",
+    "aio_moto",
+    "cli_env",
+    "client_factory",
+    "demo_dir",
+    "demo_kubectl_env",
+    "demo_urls",
+    "do_device_flow_with_dex",
+    "fernet_key",
+    "private_key",
+    "pytest_addoption",
+    "session_client_factory",
+    "test_auth_settings",
+    "test_dev_settings",
+    "test_login",
+    "test_sandbox_settings",
+    "verify_entry_points",
+    "with_cli_login",
+    "with_config_repo",
+]
+
 from .entrypoints import verify_entry_points
 from .utils import (
     ClientFactory,
@@ -20,26 +42,4 @@ from .utils import (
     test_sandbox_settings,
     with_cli_login,
     with_config_repo,
-)
-
-__all__ = (
-    "verify_entry_points",
-    "ClientFactory",
-    "do_device_flow_with_dex",
-    "test_login",
-    "pytest_addoption",
-    "private_key",
-    "fernet_key",
-    "test_dev_settings",
-    "test_auth_settings",
-    "aio_moto",
-    "test_sandbox_settings",
-    "session_client_factory",
-    "client_factory",
-    "with_config_repo",
-    "demo_dir",
-    "demo_urls",
-    "demo_kubectl_env",
-    "cli_env",
-    "with_cli_login",
 )

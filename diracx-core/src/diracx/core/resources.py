@@ -6,8 +6,8 @@ __all__ = ["find_compatible_platforms"]
 from DIRACCommon.ConfigurationSystem.Client.Helpers.Resources import getDIRACPlatform
 from DIRACCommon.Core.Utilities.ReturnValues import returnValueOrRaise
 
-from diracx.core.config import Config
-from diracx.core.extensions import DiracEntryPoint, supports_extending
+from .config import Config
+from .extensions import DiracEntryPoint, supports_extending
 
 
 @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")

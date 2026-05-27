@@ -6,7 +6,7 @@ from typing import Iterable
 
 from sqlalchemy import delete, func, insert, select
 
-from diracx.core.models.job import JobLoggingRecord, JobStatusReturn
+from diracx.core.models import JobLoggingRecord, JobStatusReturn
 
 from ..utils import BaseSQLDB
 from .schema import JobLoggingDBBase, LoggingInfo

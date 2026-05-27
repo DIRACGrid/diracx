@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from diracx.db.sql.job.db import JobDBBase
 from diracx.db.sql.job.schema import str255
 from sqlalchemy import ForeignKey

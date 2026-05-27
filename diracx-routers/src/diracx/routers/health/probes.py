@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-__all__ = ["router"]
-
 import logging
 
 from fastapi import HTTPException

@@ -46,6 +46,7 @@ select = [
   "S",   # flake8-bandit
   "N",   # pep8-naming
   "INP", # flake8-no-implicit-namespace-packages
+  "RUF022",
 ]
 ignore = [
   "B905",

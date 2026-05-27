@@ -9,6 +9,8 @@ Usage:
 
 from __future__ import annotations
 
+__all__ = []
+
 import argparse
 import asyncio
 import json

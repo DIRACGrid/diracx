@@ -1,4 +1,8 @@
-from diracx.core.models.auth import Metadata
+from __future__ import annotations
+
+from diracx.core.models import Metadata
+
+__all__ = ["ExtendedMetadata"]
 
 
 class ExtendedMetadata(Metadata):

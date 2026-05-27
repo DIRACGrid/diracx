@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["LockedObjectType", "register_locked_object_type", "validate_registry"]
-
 import inspect
 
 # String-based extensible registry for locked object types.

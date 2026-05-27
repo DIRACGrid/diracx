@@ -12,6 +12,13 @@ Demonstrates:
 # --8<-- [start:my_pilot_task_imports]
 from __future__ import annotations
 
+__all__ = [
+    "MyCheckPilotsTask",
+    "MyPilotReportTask",
+    "MyPilotTask",
+    "MySubmitPilotsTask",
+]
+
 import dataclasses
 import logging
 from typing import Any

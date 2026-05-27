@@ -120,9 +120,11 @@ class Owners(Base):
 
 The following structures principles may also be followed:
 
-- `__init__.py` should not contain code, but `__all__`
-- At a package level (router for example) we have one file per system (configuration.py for example)
-- If we need more files (think of jobs, which have the sandbox, the joblogging, etc), we put them in a sub module (e.g routers.job). The code goes in a specific file (job.py, joblogging.py) but we use the the __init__.py to expose the specific file
+- `__init__.py` should not contain code, but `__all__` as a list
+- At a package level (routers for example) we have as few files as possible
+- The package level `__init__.py` should contain an empty `__all__` and the modules at that level should expose their respective public API
+- If the files have much in common (think of jobs, which have the sandbox, the joblogging, etc), we put them in a subpackage (e.g routers.job). The code goes in a specific file (job.py, joblogging.py)
+- At subpackage level, `__init__.py` should expose the public API through the `__all__` list by importing from the modules at that level. These submodules should not contain an `__all__`
 
 See [this issue](https://github.com/DIRACGrid/diracx/issues/268).
 

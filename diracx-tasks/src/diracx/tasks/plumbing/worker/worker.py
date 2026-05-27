@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["Worker"]
-
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta

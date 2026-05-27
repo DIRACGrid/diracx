@@ -54,7 +54,7 @@ sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
-diracx = "diracx.routers:DIRACX_MIN_CLIENT_VERSION"
+diracx = "diracx.routers.factory:DIRACX_MIN_CLIENT_VERSION"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

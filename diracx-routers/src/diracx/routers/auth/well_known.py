@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from diracx.core.models.auth import Metadata, OpenIDConfiguration
+from diracx.core.models import Metadata, OpenIDConfiguration
 from diracx.core.settings import AuthSettings
-from diracx.logic.auth.well_known import (
+from diracx.logic.auth import (
     get_installation_metadata as get_installation_metadata_bl,
 )
-from diracx.logic.auth.well_known import (
+from diracx.logic.auth import (
     get_jwks as get_jwks_bl,
 )
-from diracx.logic.auth.well_known import (
+from diracx.logic.auth import (
     get_openid_configuration as get_openid_configuration_bl,
 )
 from diracx.routers.dependencies import Config

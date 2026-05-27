@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["JobDB"]
-
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Iterable
 
@@ -12,8 +10,7 @@ if TYPE_CHECKING:
 from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import InvalidQueryError
-from diracx.core.models.job import JobCommand
-from diracx.core.models.search import SearchSpec, SortSpec
+from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
 from ..utils import BaseSQLDB, _get_columns
 from ..utils.functions import utcnow

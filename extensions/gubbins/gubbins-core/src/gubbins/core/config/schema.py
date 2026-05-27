@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import MutableMapping
 
-from diracx.core.config.schema import (
+from diracx.core.config import (
     Config as _Config,
 )
-from diracx.core.config.schema import (
+from diracx.core.config import (
     RegistryConfig as _RegistryConfig,
 )
-from diracx.core.config.schema import (
+from diracx.core.config import (
     UserConfig as _UserConfig,
 )
 

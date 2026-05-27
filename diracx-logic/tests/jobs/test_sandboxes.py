@@ -13,11 +13,10 @@ import pytest
 import sqlalchemy
 
 from diracx.core.exceptions import SandboxNotFoundError
-from diracx.core.models.auth import UserInfo
-from diracx.core.models.sandbox import ChecksumAlgorithm, SandboxFormat, SandboxInfo
+from diracx.core.models import ChecksumAlgorithm, SandboxFormat, SandboxInfo, UserInfo
 from diracx.core.settings import SandboxStoreSettings
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
-from diracx.logic.jobs.sandboxes import (
+from diracx.logic.jobs import (
     clean_sandboxes,
     get_sandbox_file,
     initiate_sandbox_upload,

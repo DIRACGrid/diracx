@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+__all__ = ["instrument_otel"]
+
 import logging
 import os
 from typing import Optional

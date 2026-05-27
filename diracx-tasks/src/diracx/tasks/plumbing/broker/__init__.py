@@ -11,11 +11,11 @@ from .redis_streams import RedisStreamBroker
 from .result_backend import RedisResultBackend
 
 __all__ = [
-    "RedisStreamBroker",
+    "ReceivedMessage",
     "RedisResultBackend",
+    "RedisStreamBroker",
+    "TaskBinding",
     "TaskMessage",
     "TaskResult",
-    "ReceivedMessage",
-    "TaskBinding",
     "submit_task",
 ]

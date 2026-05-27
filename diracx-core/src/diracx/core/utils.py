@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 __all__ = [
-    "dotenv_files_from_environment",
-    "serialize_credentials",
-    "read_credentials",
-    "write_credentials",
+    "EXPIRES_GRACE_SECONDS",
     "TwoLevelCache",
     "batched_async",
+    "dotenv_files_from_environment",
+    "read_credentials",
     "recursive_merge",
+    "serialize_credentials",
+    "write_credentials",
 ]
 
 import fcntl
@@ -26,8 +27,8 @@ from typing import Any, AsyncIterable, TypeVar, overload
 
 from cachetools import Cache, TTLCache
 
-from diracx.core.exceptions import NotReadyError
-from diracx.core.models.auth import TokenResponse
+from .exceptions import NotReadyError
+from .models import TokenResponse
 
 logger = logging.getLogger(__name__)
 
