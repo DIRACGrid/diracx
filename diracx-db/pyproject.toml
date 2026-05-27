@@ -65,4 +65,5 @@ addopts = [
 asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+    "os_global_prefix: test for global prefix",
 ]
