@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = [
     "AuthSettings",
     "DevelopmentSettings",
+    "FactorySettings",
     "LocalFileUrl",
     "SandboxStoreSettings",
     "ServiceSettingsBase",
@@ -389,6 +390,11 @@ class FactorySettings(ServiceSettingsBase):
         default="redis://localhost", validation_alias="DIRACX_TASKS_REDIS_URL"
     )
     """The url for the redis server to manage tasks"""
+
+    os_global_prefix: str = Field(
+        default="", validation_alias="DIRACX_FACTORY_OS_GLOBAL_PREFIX"
+    )
+    """Global prefix for OpenSearch database indices."""
 
     enabled_services: dict[str, bool] = Field(default_factory=dict)
     """The following environment variables dictates which routers are enabled."""
