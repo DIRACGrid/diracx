@@ -242,11 +242,14 @@ def create_app_inner(
             app.dependency_overrides[source_cls.create] = source.read
 
     # Add the OpenSearch DBs to the application
+    os_global_prefix = FactorySettings().os_global_prefix
     available_os_db_classes: set[type[BaseOSDB]] = set()
     for db_name, connection_kwargs in os_database_conn_kwargs.items():
         os_db_classes = BaseOSDB.available_implementations(db_name)
         # The first DB is the highest priority one
-        os_db = os_db_classes[0](connection_kwargs=connection_kwargs)
+        os_db = os_db_classes[0](
+            connection_kwargs=connection_kwargs, global_prefix=os_global_prefix
+        )
         app.lifetime_functions.append(os_db.client_context)
         # Add overrides for all the DB classes, including those from extensions
         # This means vanilla DiracX routers get an instance of the extension's DB
