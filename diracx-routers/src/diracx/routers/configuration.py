@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = []
+__all__ = ["router"]
 
 import logging
 from datetime import datetime, timezone

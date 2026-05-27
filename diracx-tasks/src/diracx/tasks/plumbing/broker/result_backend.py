@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["RedisResultBackend"]
-
 import msgpack
 from redis.asyncio import BlockingConnectionPool, Redis
 

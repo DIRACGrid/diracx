@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["TaskScheduler"]
-
 import asyncio
 import logging
 from datetime import UTC, datetime

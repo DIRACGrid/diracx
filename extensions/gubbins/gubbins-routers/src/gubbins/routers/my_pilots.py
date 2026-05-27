@@ -8,7 +8,7 @@ Demonstrates:
 
 from __future__ import annotations
 
-__all__ = []
+__all__ = ["MyPilotsAccessPolicy", "router"]
 
 from collections.abc import Callable
 from enum import StrEnum, auto

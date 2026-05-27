@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-__all__ = ["Priority", "Size"]
-
 from enum import StrEnum
 
 
