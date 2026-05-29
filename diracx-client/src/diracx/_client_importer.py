@@ -1,6 +1,6 @@
 """Register a meta path finder to merger diracx.client with extensions.
 
-This file is intended to be used with _diracx_client_importer.pth which causes
+This file is intended to be used with _xxx_diracx_client_importer.pth which causes
 it to be registered as part of Python's startup process. This is needed as we
 don't know if diracx.client or yourextenstion.client will be imported first and
 resolving this ambiguity results in circular imports if this is handled within

@@ -36,7 +36,10 @@ packages = ["src/diracx"]
 "../LICENSE" = "LICENSE"
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/_diracx_client_importer.pth" = "_diracx_client_importer.pth"
+# We add the xxx in front to make sure that this is the last `pth` imported
+# otherwise we may import it before the "editable install pth" of diracx
+# like _editable_impl_diracx_client.pth
+"src/_diracx_client_importer.pth" = "_xxx_diracx_client_importer.pth"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
