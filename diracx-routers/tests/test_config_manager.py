@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from http import HTTPStatus
+
 import pytest
-from fastapi import status
 
 pytestmark = pytest.mark.enabled_dependencies(
     ["AuthSettings", "ConfigSource", "OpenAccessPolicy"]
@@ -17,12 +18,12 @@ def normal_user_client(client_factory):
 def test_unauthenticated(client_factory):
     with client_factory.unauthenticated() as client:
         response = client.get("/api/config/")
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
 def test_get_config(normal_user_client):
     r = normal_user_client.get("/api/config/")
-    assert r.status_code == status.HTTP_200_OK, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert r.json(), r.text
 
     last_modified = r.headers["Last-Modified"]
@@ -36,7 +37,7 @@ def test_get_config(normal_user_client):
         },
     )
 
-    assert r.status_code == status.HTTP_304_NOT_MODIFIED, r.text
+    assert r.status_code == HTTPStatus.NOT_MODIFIED, r.text
     assert not r.text
 
     # If only an invalid ETAG is passed, we expect a response
@@ -46,7 +47,7 @@ def test_get_config(normal_user_client):
             "If-None-Match": "wrongEtag",
         },
     )
-    assert r.status_code == status.HTTP_200_OK, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert r.json(), r.text
 
     # If an past ETAG and an past timestamp as give, we expect an response
@@ -57,7 +58,7 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "Mon, 1 Apr 2000 00:42:42 GMT",
         },
     )
-    assert r.status_code == status.HTTP_200_OK, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert r.json(), r.text
 
     # If an future ETAG and an new timestamp as give, we expect 304
@@ -68,7 +69,7 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "Mon, 1 Apr 9999 00:42:42 GMT",
         },
     )
-    assert r.status_code == status.HTTP_304_NOT_MODIFIED, r.text
+    assert r.status_code == HTTPStatus.NOT_MODIFIED, r.text
     assert not r.text
 
     # If an invalid ETAG and an invalid modified time, we expect a response
@@ -79,7 +80,7 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "wrong format",
         },
     )
-    assert r.status_code == status.HTTP_200_OK, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert r.json(), r.text
 
     # If the correct ETAG and a past timestamp as give, we expect 304
@@ -90,7 +91,7 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "Mon, 1 Apr 2000 00:42:42 GMT",
         },
     )
-    assert r.status_code == status.HTTP_304_NOT_MODIFIED, r.text
+    assert r.status_code == HTTPStatus.NOT_MODIFIED, r.text
     assert not r.text
 
     # If the correct ETAG and a new timestamp as give, we expect 304
@@ -101,7 +102,7 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "Mon, 1 Apr 9999 00:42:42 GMT",
         },
     )
-    assert r.status_code == status.HTTP_304_NOT_MODIFIED, r.text
+    assert r.status_code == HTTPStatus.NOT_MODIFIED, r.text
     assert not r.text
 
     # If the correct ETAG and an invalid modified time, we expect 304
@@ -112,5 +113,5 @@ def test_get_config(normal_user_client):
             "If-Modified-Since": "wrong format",
         },
     )
-    assert r.status_code == status.HTTP_304_NOT_MODIFIED, r.text
+    assert r.status_code == HTTPStatus.NOT_MODIFIED, r.text
     assert not r.text

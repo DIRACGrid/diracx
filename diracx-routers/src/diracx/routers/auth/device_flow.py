@@ -6,15 +6,14 @@ See docs/admin/explanations/authentication.md
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
 
 from fastapi import (
     HTTPException,
+    RedirectResponse,
     Request,
     Response,
-    responses,
-    status,
 )
-from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
@@ -78,7 +77,7 @@ async def initiate_device_flow(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=e.args[0],
         ) from e
 
@@ -116,19 +115,19 @@ async def do_device_flow(
     except NoResultFound as e:
         logger.warning("Invalid or expired user_code: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=e.args[0],
         ) from e
     except ValueError as e:
         logger.warning("Invalid scope during device flow: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=e.args[0],
         ) from e
     except IAMServerError as e:
         logger.warning("IAM server error during device flow: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=HTTPStatus.BAD_GATEWAY,
             detail=e.args[0],
         ) from e
     return RedirectResponse(authorization_flow_url)
@@ -163,17 +162,17 @@ async def finish_device_flow(
     except IAMServerError as e:
         logger.warning("IAM server error during device flow completion: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=HTTPStatus.BAD_GATEWAY,
             detail=e.args[0],
         ) from e
     except IAMClientError as e:
         logger.warning("IAM client error during device flow completion: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail=e.args[0],
         ) from e
 
-    return responses.RedirectResponse(f"{request_url}/finished")
+    return RedirectResponse(f"{request_url}/finished")
 
 
 @router.get("/device/complete/finished")

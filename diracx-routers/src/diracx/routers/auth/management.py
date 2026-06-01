@@ -7,9 +7,10 @@ to get information about the user's identity.
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Depends, Form, HTTPException, status
+from fastapi import Depends, Form, HTTPException
 from joserfc.errors import DecodeError
 from typing_extensions import TypedDict
 from uuid_utils import UUID
@@ -92,12 +93,12 @@ async def revoke_refresh_token_by_refresh_token(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
     except InvalidCredentialsError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
@@ -124,17 +125,17 @@ async def revoke_refresh_token_by_jti(
         await revoke_refresh_token_by_jti_bl(auth_db, subject, UUID(jti))
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
     except PermissionError as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail=str(e),
         ) from e
     except TokenNotFoundError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=HTTPStatus.NOT_FOUND,
             detail=str(e),
         ) from e
     return "Refresh token revoked"

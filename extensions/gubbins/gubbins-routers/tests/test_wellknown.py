@@ -2,8 +2,9 @@
 Test the extended well_known endpoint
 """
 
+from http import HTTPStatus
+
 import pytest
-from fastapi import status
 
 pytestmark = pytest.mark.enabled_dependencies(
     ["AuthSettings", "ConfigSource", "BaseAccessPolicy", "DevelopmentSettings"]
@@ -23,7 +24,7 @@ async def test_dirac_metadata_is_overwriten(test_client):
     r = test_client.get(
         "/.well-known/dirac-metadata",
     )
-    assert r.status_code == 200, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert "gubbins_secrets" in r.json(), r.json()
 
 
@@ -33,5 +34,5 @@ async def test_openid_configuration_is_not_changed(test_client):
     r = test_client.get(
         "/.well-known/openid-configuration",
     )
-    assert r.status_code == status.HTTP_200_OK, r.json()
+    assert r.status_code == HTTPStatus.OK, r.json()
     assert "authorization_endpoint" in r.json(), r.json()

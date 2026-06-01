@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
+from http import HTTPStatus
 from typing import Annotated, Literal
 
-from fastapi import Depends, Form, Header, HTTPException, status
+from fastapi import Depends, Form, Header, HTTPException
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
@@ -47,7 +48,7 @@ async def mint_token(
     """Enrich the token with policy specific content and mint it."""
     if not refresh_payload and not existing_refresh_token:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Refresh token is not set and no refresh token was provided",
         )
 
@@ -140,12 +141,12 @@ async def get_oidc_token(
         )
     except PendingAuthorizationError as e:
         raise DiracHttpResponseError(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             data={"error": "authorization_pending"},
         ) from e
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
     except (
@@ -153,13 +154,13 @@ async def get_oidc_token(
         JoseError,
     ) as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
     except PermissionError as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail=str(e),
         ) from e
     return await mint_token(
@@ -196,7 +197,7 @@ async def perform_legacy_exchange(
         expected_api_key := os.environ.get("DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY")
     ):
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
             detail="Legacy exchange is not enabled",
         )
 
@@ -214,18 +215,18 @@ async def perform_legacy_exchange(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
     except InvalidCredentialsError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
     except PermissionError as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail=str(e),
         ) from e
     return await mint_token(

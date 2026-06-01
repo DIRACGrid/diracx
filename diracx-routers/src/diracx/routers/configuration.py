@@ -4,13 +4,13 @@ __all__ = ["router"]
 
 import logging
 from datetime import datetime, timezone
+from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import (
     Header,
     HTTPException,
     Response,
-    status,
 )
 
 from diracx.routers.dependencies import Config
@@ -48,7 +48,7 @@ async def serve_config(
     }
 
     if if_none_match == config._hexsha:
-        raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
+        raise HTTPException(status_code=HTTPStatus.NOT_MODIFIED, headers=headers)
 
     # This is to prevent flip/flopping in case
     # a server gets out of sync with disk
@@ -64,7 +64,7 @@ async def serve_config(
         else:
             if not_before > config._modified:
                 raise HTTPException(
-                    status_code=status.HTTP_304_NOT_MODIFIED, headers=headers
+                    status_code=HTTPStatus.NOT_MODIFIED, headers=headers
                 )
 
     response.headers.update(headers)

@@ -8,11 +8,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import StrEnum, auto
+from http import HTTPStatus
 from typing import Annotated
 
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils import AuthorizedUserInfo
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 
 from gubbins.core.properties import GUBBINS_SENSEI
 
@@ -37,7 +38,7 @@ class LollygagAccessPolicy(BaseAccessPolicy):
         assert action, "action is a mandatory parameter"
 
         if action == ActionType.MANAGE and GUBBINS_SENSEI not in user_info.properties:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Streng verboten !!")
+            raise HTTPException(HTTPStatus.FORBIDDEN, detail="Streng verboten !!")
 
 
 CheckLollygagPolicyCallable = Annotated[Callable, Depends(LollygagAccessPolicy.check)]
