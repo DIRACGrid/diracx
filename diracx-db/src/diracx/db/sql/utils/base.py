@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import os
 import re
 from abc import ABCMeta
 from collections.abc import AsyncIterator
@@ -53,8 +52,9 @@ class BaseSQLDB(metaclass=ABCMeta):
     The available databases are discovered by calling `BaseSQLDB.available_urls`.
     This method returns a mapping of database names to connection URLs. The
     available databases are determined by the `diracx.dbs.sql` entrypoint in the
-    `pyproject.toml` file and the connection URLs are taken from the environment
-    variables of the form `DIRACX_DB_URL_<db-name>`.
+    `pyproject.toml` file and the connection URLs are taken from the
+    `sql_dbs` field in FactorySettings, which reads from environment variables
+    of the form `DIRACX_DB_URL_<db-name>`.
 
     If extensions to DiracX are being used, there can be multiple implementations
     of the same database. To list the available implementations use
@@ -125,16 +125,21 @@ class BaseSQLDB(metaclass=ABCMeta):
     def available_urls(cls) -> dict[str, str]:
         """Return a dict of available database urls.
 
-        The list of available URLs is determined by environment variables
+        The list of available URLs is determined by the sql_dbs field
+        in FactorySettings, which reads from environment variables
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
         """
+        from diracx.core.settings import FactorySettings
+
+        factory_settings = FactorySettings()
+        sql_dbs = factory_settings.sql_dbs
+
         db_urls: dict[str, str] = {}
         for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
             db_name = entry_point.name
-            var_name = f"DIRACX_DB_URL_{entry_point.name.upper()}"
-            if var_name in os.environ:
+            # Get the field value from the SqlDBSettings model
+            if db_url := sql_dbs.get(db_name):
                 try:
-                    db_url = os.environ[var_name]
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
                     # pydantic does not allow for underscore in scheme
