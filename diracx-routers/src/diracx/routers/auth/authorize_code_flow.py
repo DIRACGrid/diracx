@@ -11,9 +11,9 @@ from typing import Literal
 
 from fastapi import (
     HTTPException,
-    RedirectResponse,
     Request,
 )
+from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
 from diracx.core.settings import AuthSettings

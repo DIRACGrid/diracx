@@ -10,10 +10,10 @@ from http import HTTPStatus
 
 from fastapi import (
     HTTPException,
-    RedirectResponse,
     Request,
     Response,
 )
+from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import NoResultFound
 
 from diracx.core.exceptions import IAMClientError, IAMServerError
