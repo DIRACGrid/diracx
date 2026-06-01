@@ -22,11 +22,13 @@ import traceback
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Iterable
 
+from diracx.core.settings import FactorySettings
+
 if TYPE_CHECKING:
     from .plumbing._redis_types import LockCoordinator
 
 DEFAULT_REDIS_URL = "redis://localhost"
-REDIS_URL_ENV_VAR = "DIRACX_TASKS_REDIS_URL"
+_factory_settings = FactorySettings()
 
 
 class DebugOptions(StrEnum):
@@ -39,7 +41,8 @@ def _get_redis_url(args: argparse.Namespace) -> str:
     """Resolve Redis URL from CLI arg, env var, or default."""
     if hasattr(args, "redis_url") and args.redis_url:
         return args.redis_url
-    return os.environ.get(REDIS_URL_ENV_VAR, DEFAULT_REDIS_URL)
+
+    return _factory_settings.tasks_redis_url
 
 
 def main() -> None:
@@ -106,7 +109,7 @@ def main() -> None:
         "--redis-url",
         type=str,
         default=None,
-        help=f"Redis URL (default: ${REDIS_URL_ENV_VAR} or {DEFAULT_REDIS_URL})",
+        help=f"Redis URL (default: ${{REDIS_URL_ENV_VAR}} or {DEFAULT_REDIS_URL})",
     )
     submit_parser.set_defaults(
         func=lambda args: asyncio.run(
@@ -131,7 +134,7 @@ def main() -> None:
         "--redis-url",
         type=str,
         default=None,
-        help=f"Redis URL (default: ${REDIS_URL_ENV_VAR} or {DEFAULT_REDIS_URL})",
+        help=f"Redis URL (default: ${{REDIS_URL_ENV_VAR}} or {DEFAULT_REDIS_URL})",
     )
     worker_parser.add_argument(
         "--worker-size",
@@ -158,7 +161,7 @@ def main() -> None:
         "--redis-url",
         type=str,
         default=None,
-        help=f"Redis URL (default: ${REDIS_URL_ENV_VAR} or {DEFAULT_REDIS_URL})",
+        help=f"Redis URL (default: ${{REDIS_URL_ENV_VAR}} or {DEFAULT_REDIS_URL})",
     )
     scheduler_parser.set_defaults(
         func=lambda args: asyncio.run(start_scheduler(redis_url=_get_redis_url(args)))
@@ -240,7 +243,7 @@ async def start_scheduler(redis_url: str) -> None:
     task_classes = load_task_registry()
 
     config = None
-    config_url = os.environ.get("DIRACX_CONFIG_BACKEND_URL")
+    config_url = _factory_settings.config_backend_url
     if config_url:
         from diracx.core.config import ConfigSource
 
@@ -336,7 +339,7 @@ async def call_task(
 
     # Try to connect to Redis for lock acquisition
     redis: LockCoordinator | None = None
-    redis_url = os.environ.get(REDIS_URL_ENV_VAR)
+    redis_url = _factory_settings.tasks_redis_url
     if redis_url:
         from redis.asyncio import Redis
 

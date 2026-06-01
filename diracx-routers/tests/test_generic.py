@@ -13,6 +13,7 @@ pytestmark = pytest.mark.enabled_dependencies(
         "AuthSettings",
         "OpenAccessPolicy",
         "DevelopmentSettings",
+        "FactorySettings",
     ]
 )
 

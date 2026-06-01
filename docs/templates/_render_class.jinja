@@ -38,3 +38,91 @@ Available classes: {{ classes.keys() | map(attribute='__name__') | list | join('
 {% endif %}
 
 {% endmacro %}
+
+{% macro resolve_env_name(field_name, field_info, env_prefix='') -%}
+  {%- set env_name = (env_prefix ~ field_name).upper() -%}
+  {%- if field_info.json_schema_extra is mapping and field_info.json_schema_extra.env -%}
+    {%- set env_name = field_info.json_schema_extra.env -%}
+  {%- endif -%}
+  {%- if field_info.validation_alias -%}
+    {%- set env_name = field_info.validation_alias -%}
+  {%- endif -%}
+  {{- env_name|upper -}}
+{%- endmacro %}
+
+{% macro render_nested_env_entries(nested_model, fallback_entries) %}
+{% if nested_model and nested_model.model_fields is defined %}
+  {% for nested_field_name, nested_field_info in nested_model.model_fields.items() %}
+
+#### `{{ resolve_env_name(nested_field_name, nested_field_info, nested_model.model_config.get('env_prefix', '')) }}`
+
+*{% if nested_field_info.is_required() %}*Required*{% else %}Optional{% endif %}*{% if nested_field_info.default is not none %}, default value: `{{ nested_field_info.default }}`{% endif %}
+
+{% if nested_field_info.description %}
+{{ nested_field_info.description }}
+{% endif %}
+  {% endfor %}
+{% elif fallback_entries is defined and fallback_entries %}
+  {% for entry in fallback_entries %}
+
+#### `{{ entry.env_name|upper }}`
+
+*Optional*, default value: `{{ entry.default }}`
+
+{{ entry.description }}
+  {% endfor %}
+{% endif %}
+{% endmacro %}
+
+{% macro render_factory_settings() %}
+{# Find the FactorySettings class #}
+{% set cls = namespace(found=none) %}
+{% for c, field_list in classes.items() %}
+  {% if c.__name__ == 'FactorySettings' %}
+    {% set cls.found = c %}
+  {% endif %}
+{% endfor %}
+
+{% if cls.found %}
+## {{ cls.found.__name__ }}
+
+{{ cls.found.__doc__ or "*No description available.*" }}
+
+{# Render all fields manually #}
+{% for field_name, field_info in cls.found.model_fields.items() %}
+  {% set env_name = resolve_env_name(field_name, field_info, cls.found.model_config.get('env_prefix', '')) %}
+
+  {# Render the field heading #}
+{% if not loop.first %}
+
+{% endif %}### `{{ env_name|upper }}`
+
+*{% if field_info.is_required() %}*Required*{% else %}Optional{% endif %}*{% if has_default_value(field_info) %}, default value: `{{ fix_str_enum_value(field_info.default) }}`{% endif %}
+
+{% if field_info.description %}
+{{ field_info.description }}
+{% endif %}
+
+  {# Special handling for dynamic map-like fields #}
+  {% if field_name in ('enabled_services', 'opensearch_dbs', 'sql_dbs') %}
+    {% set nested_model = field_info.annotation %}
+    {% set fallback_entries = none %}
+    {% if field_name == 'enabled_services' and factory_enabled_services is defined %}
+      {% set fallback_entries = factory_enabled_services %}
+    {% elif field_name == 'opensearch_dbs' and factory_opensearch_dbs is defined %}
+      {% set fallback_entries = factory_opensearch_dbs %}
+    {% elif field_name == 'sql_dbs' and factory_sql_dbs is defined %}
+      {% set fallback_entries = factory_sql_dbs %}
+    {% endif %}
+
+    {{ render_nested_env_entries(nested_model, fallback_entries) }}
+  {% endif %}
+{% endfor %}
+{% else %}
+{# Class not found - provide a helpful error #}
+**Error: FactorySettings class not found in diracx.core.settings**
+
+Available classes: {{ classes.keys() | map(attribute='__name__') | list | join(', ') }}
+{% endif %}
+
+{% endmacro %}
