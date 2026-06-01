@@ -14,5 +14,7 @@ diracx:
       tag: "dev"
       services:
         repository: gubbins/services
+      tasks:
+        repository: gubbins/tasks
       client:
         repository: gubbins/client
