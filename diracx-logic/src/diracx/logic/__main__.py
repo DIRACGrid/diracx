@@ -91,8 +91,8 @@ async def delete_jwk(args):
 
 
 async def cleanup_authdb(args):
-    """Delete expired tokens and flows from the AuthDB."""
-    logger.info("Deleting expired tokens and flows")
+    """Maintain AuthDB partitions and remove expired flows."""
+    logger.info("Maintaining AuthDB partitions and removing expired flows")
     import os
 
     from diracx.core.settings import AuthSettings
@@ -138,7 +138,7 @@ def parse_args():
     delete_jwk_parser.set_defaults(func=delete_jwk)
 
     cleanup_authdb_parser = subparsers.add_parser(
-        "cleanup-authdb", help="Delete expired tokens and flows from the AuthDB"
+        "cleanup-authdb", help="Maintain AuthDB partitions and remove expired flows"
     )
     cleanup_authdb_parser.set_defaults(func=cleanup_authdb)
 
