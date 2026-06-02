@@ -344,9 +344,9 @@ async def reschedule_jobs(
         else:
             job_attrs["RescheduleCounter"] = int(job_attrs["RescheduleCounter"]) + 1
 
-        reschedule_max = config.Operations[
+        reschedule_max = config.operations[
             job_attrs["VO"]
-        ].Services.JobScheduling.MaxRescheduling
+        ].services.job_scheduling.max_rescheduling
 
         if job_attrs["RescheduleCounter"] > reschedule_max:
             status_changes[job_id] = {

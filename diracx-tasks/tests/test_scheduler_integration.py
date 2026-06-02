@@ -79,7 +79,7 @@ def test_compute_initial_schedules_vo_aware_with_config(broker):
     """VO-aware tasks with config should create one entry per VO."""
     # Mock a Config object with Registry containing VOs
     mock_config = MagicMock()
-    mock_config.Registry = {"lhcb": MagicMock(), "atlas": MagicMock()}
+    mock_config.registry = {"lhcb": MagicMock(), "atlas": MagicMock()}
 
     scheduler = TaskScheduler(
         broker=broker,
@@ -104,7 +104,7 @@ def test_load_vos_without_config(broker):
 def test_load_vos_with_config(broker):
     """load_vos should return VO names from config Registry."""
     mock_config = MagicMock()
-    mock_config.Registry = {"vo1": MagicMock(), "vo2": MagicMock(), "vo3": MagicMock()}
+    mock_config.registry = {"vo1": MagicMock(), "vo2": MagicMock(), "vo3": MagicMock()}
 
     scheduler = TaskScheduler(
         broker=broker, redis_url="redis://unused", config=mock_config

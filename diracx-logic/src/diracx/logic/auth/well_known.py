@@ -17,9 +17,9 @@ async def get_openid_configuration(
 ) -> OpenIDConfiguration:
     """OpenID Connect discovery endpoint."""
     scopes_supported = []
-    for vo in config.Registry:
+    for vo in config.registry:
         scopes_supported.append(f"vo:{vo}")
-        scopes_supported += [f"group:{vo}" for vo in config.Registry[vo].Groups]
+        scopes_supported += [f"group:{vo}" for vo in config.registry[vo].groups]
     scopes_supported += [f"property:{p}" for p in settings.available_properties]
 
     return {
@@ -56,19 +56,19 @@ async def get_installation_metadata(
     metadata: Metadata = {
         "virtual_organizations": {},
     }
-    for vo, vo_info in config.Registry.items():
+    for vo, vo_info in config.registry.items():
         groups: dict[str, GroupInfo] = {
-            group: {"properties": sorted(group_info.Properties)}
-            for group, group_info in vo_info.Groups.items()
+            group: {"properties": sorted(group_info.properties)}
+            for group, group_info in vo_info.groups.items()
         }
         metadata["virtual_organizations"][vo] = {
             "groups": groups,
             "support": {
-                "message": vo_info.Support.Message,
-                "webpage": vo_info.Support.Webpage,
-                "email": vo_info.Support.Email,
+                "message": vo_info.support.message,
+                "webpage": vo_info.support.webpage,
+                "email": vo_info.support.email,
             },
-            "default_group": vo_info.DefaultGroup,
+            "default_group": vo_info.default_group,
         }
 
     return metadata

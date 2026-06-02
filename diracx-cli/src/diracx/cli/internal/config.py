@@ -51,9 +51,9 @@ def generate_cs(config_repo: str):
         raise typer.Exit(1)
 
     config = Config(
-        Registry={},
-        DIRAC=DIRACConfig(),
-        Operations={"Defaults": OperationsConfig()},
+        registry={},
+        dirac=DIRACConfig(),
+        operations={"Defaults": OperationsConfig()},
     )
 
     git.Repo.init(repo_path, initial_branch="master")
@@ -79,21 +79,21 @@ def add_vo(
 
     # A VO should at least contain a default group
     new_registry = RegistryConfig(
-        IdP=IdpConfig(URL=idp_url, ClientID=idp_client_id),
-        DefaultGroup=default_group,
-        Users={},
-        Groups={
+        idp=IdpConfig(url=idp_url, client_id=idp_client_id),
+        default_group=default_group,
+        users={},
+        groups={
             default_group: GroupConfig(
-                Properties={"NormalUser"}, Quota=None, Users=set()
+                properties={"NormalUser"}, quota=None, users=set()
             )
         },
     )
 
-    if vo in config.Registry:
+    if vo in config.registry:
         typer.echo(f"ERROR: VO {vo} already exists", err=True)
         raise typer.Exit(1)
 
-    config.Registry[vo] = new_registry
+    config.registry[vo] = new_registry
 
     update_config_and_commit(
         repo_path=repo_path,
@@ -116,17 +116,17 @@ def add_group(
     repo_path = get_repo_path(config_repo)
     config = get_config_from_repo_path(repo_path)
 
-    new_group = GroupConfig(Properties=set(properties), Quota=None, Users=set())
+    new_group = GroupConfig(properties=set(properties), quota=None, users=set())
 
-    if vo not in config.Registry:
+    if vo not in config.registry:
         typer.echo(f"ERROR: Virtual Organization {vo} does not exist", err=True)
         raise typer.Exit(1)
 
-    if group in config.Registry[vo].Groups.keys():
+    if group in config.registry[vo].groups.keys():
         typer.echo(f"ERROR: Group {group} already exists in {vo}", err=True)
         raise typer.Exit(1)
 
-    config.Registry[vo].Groups[group] = new_group
+    config.registry[vo].groups[group] = new_group
 
     update_config_and_commit(
         repo_path=repo_path, config=config, message=f"Added group {group} in {vo}"
@@ -148,30 +148,30 @@ def add_user(
     repo_path = get_repo_path(config_repo)
     config = get_config_from_repo_path(repo_path)
 
-    new_user = UserConfig(PreferedUsername=preferred_username)
+    new_user = UserConfig(prefered_username=preferred_username)
 
-    if vo not in config.Registry:
+    if vo not in config.registry:
         typer.echo(f"ERROR: Virtual Organization {vo} does not exist", err=True)
         raise typer.Exit(1)
 
-    if sub in config.Registry[vo].Users:
+    if sub in config.registry[vo].users:
         typer.echo(f"ERROR: User {sub} already exists", err=True)
         raise typer.Exit(1)
 
-    config.Registry[vo].Users[sub] = new_user
+    config.registry[vo].users[sub] = new_user
 
     if not groups:
-        groups = [config.Registry[vo].DefaultGroup]
+        groups = [config.registry[vo].default_group]
 
     for group in set(groups):
-        if group not in config.Registry[vo].Groups:
+        if group not in config.registry[vo].groups:
             typer.echo(f"ERROR: Group {group} does not exist in {vo}", err=True)
             raise typer.Exit(1)
-        if sub in config.Registry[vo].Groups[group].Users:
+        if sub in config.registry[vo].groups[group].users:
             typer.echo(f"ERROR: User {sub} already exists in group {group}", err=True)
             raise typer.Exit(1)
 
-        config.Registry[vo].Groups[group].Users.add(sub)
+        config.registry[vo].groups[group].users.add(sub)
 
     update_config_and_commit(
         repo_path=repo_path,
@@ -187,7 +187,9 @@ def update_config_and_commit(repo_path: Path, config: Config, message: str):
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
     yaml_path.write_text(
-        yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))
+        yaml.safe_dump(
+            config.model_dump(exclude_unset=True, mode="json", by_alias=True)
+        )
     )
     repo.index.add([yaml_path.relative_to(repo_path)])
     repo.index.commit(message)

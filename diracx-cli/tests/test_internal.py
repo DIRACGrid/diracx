@@ -74,10 +74,10 @@ def test_generate_cs(tmp_path, protocol):
 def test_add_vo(cs_repo):
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
-    assert TEST_VO in config.Registry
-    assert config.Registry[TEST_VO].DefaultGroup == "user"
-    assert config.Registry[TEST_VO].IdP.URL == "https://idp.invalid"
-    assert config.Registry[TEST_VO].IdP.ClientID == "idp-client-id"
+    assert TEST_VO in config.registry
+    assert config.registry[TEST_VO].default_group == "user"
+    assert config.registry[TEST_VO].idp.url == "https://idp.invalid"
+    assert config.registry[TEST_VO].idp.client_id == "idp-client-id"
 
     # Add a second VO to it
     vo2 = "lhcb"
@@ -98,10 +98,10 @@ def test_add_vo(cs_repo):
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     assert result.exit_code == 0, result.output
 
-    assert vo2 in config.Registry
-    assert config.Registry[vo2].DefaultGroup == "admin"
-    assert config.Registry[vo2].IdP.URL == "https://idp.example.invalid"
-    assert config.Registry[vo2].IdP.ClientID == "idp-client-id2"
+    assert vo2 in config.registry
+    assert config.registry[vo2].default_group == "admin"
+    assert config.registry[vo2].idp.url == "https://idp.example.invalid"
+    assert config.registry[vo2].idp.client_id == "idp-client-id2"
 
     # Try to insert a VO that already exists
     result = runner.invoke(
@@ -123,10 +123,10 @@ def test_add_group(cs_repo):
 
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
-    assert TEST_USER_GROUP in config.Registry[TEST_VO].Groups
-    assert config.Registry[TEST_VO].Groups[TEST_USER_GROUP].JobShare == 1000
-    assert config.Registry[TEST_VO].Groups[TEST_USER_GROUP].Properties == {"NormalUser"}
-    assert config.Registry[TEST_VO].Groups[TEST_USER_GROUP].Users == set()
+    assert TEST_USER_GROUP in config.registry[TEST_VO].groups
+    assert config.registry[TEST_VO].groups[TEST_USER_GROUP].job_share == 1000
+    assert config.registry[TEST_VO].groups[TEST_USER_GROUP].properties == {"NormalUser"}
+    assert config.registry[TEST_VO].groups[TEST_USER_GROUP].users == set()
 
     # Add a second group to it
     result = runner.invoke(
@@ -146,13 +146,13 @@ def test_add_group(cs_repo):
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     assert result.exit_code == 0, result.output
 
-    assert new_group in config.Registry[TEST_VO].Groups
-    assert config.Registry[TEST_VO].Groups[new_group].JobShare == 1000
-    assert config.Registry[TEST_VO].Groups[new_group].Properties == {
+    assert new_group in config.registry[TEST_VO].groups
+    assert config.registry[TEST_VO].groups[new_group].job_share == 1000
+    assert config.registry[TEST_VO].groups[new_group].properties == {
         "AdminUser",
         "NormalUser",
     }
-    assert config.Registry[TEST_VO].Groups[new_group].Users == set()
+    assert config.registry[TEST_VO].groups[new_group].users == set()
 
     # Try to insert a group that already exists
     result = runner.invoke(
@@ -193,8 +193,8 @@ def test_add_user(cs_repo, vo, user_group):
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
 
     # Check the user isn't in it
-    if vo in config.Registry:
-        assert sub not in config.Registry[vo].Users
+    if vo in config.registry:
+        assert sub not in config.registry[vo].users
 
     # Add a user to it
     result = runner.invoke(
@@ -218,7 +218,7 @@ def test_add_user(cs_repo, vo, user_group):
 
     config = ConfigSource.create_from_url(backend_url=cs_repo).read()
     # check the user is defined
-    assert vo in config.Registry
-    assert sub in config.Registry[vo].Users
+    assert vo in config.registry
+    assert sub in config.registry[vo].users
     for group in user_group or [TEST_USER_GROUP]:
-        assert config.Registry[vo].Groups[group].Users == {sub}
+        assert config.registry[vo].groups[group].users == {sub}

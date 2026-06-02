@@ -14,33 +14,33 @@ from diracx.db.sql.job.db import JobDB
 
 def make_job_manifest_config(config: Config, vo: str):
     """Create job manifest configuration for DIRACCommon functions from diracx config."""
-    job_desc = config.Operations[vo].JobDescription
+    job_desc = config.operations[vo].job_description
 
     return {
         "defaultForGroup": {
-            "CPUTime": job_desc.DefaultCPUTime,
-            "Priority": job_desc.DefaultPriority,
+            "CPUTime": job_desc.default_cpu_time,
+            "Priority": job_desc.default_priority,
         },
         "minForGroup": {
-            "CPUTime": job_desc.MinCPUTime,
-            "Priority": job_desc.MinPriority,
+            "CPUTime": job_desc.min_cpu_time,
+            "Priority": job_desc.min_priority,
         },
         "maxForGroup": {
-            "CPUTime": job_desc.MaxCPUTime,
-            "Priority": job_desc.MaxPriority,
+            "CPUTime": job_desc.max_cpu_time,
+            "Priority": job_desc.max_priority,
         },
-        "allowedJobTypesForGroup": job_desc.AllowedJobTypes,
-        "maxInputData": job_desc.MaxInputData,
+        "allowedJobTypesForGroup": job_desc.allowed_job_types,
+        "maxInputData": job_desc.max_input_data,
     }
 
 
 def make_check_and_prepare_job_config(config: Config, vo: str):
     """Create checkAndPrepareJob configuration for DIRACCommon functions from diracx config."""
-    ops = config.Operations[vo]
+    ops = config.operations[vo]
     return {
-        "inputDataPolicyForVO": ops.InputDataPolicy.InputDataModule,
-        "softwareDistModuleForVO": ops.SoftwareDistModule,
-        "defaultCPUTimeForOwnerGroup": ops.JobDescription.DefaultCPUTime,
+        "inputDataPolicyForVO": ops.input_data_policy.input_data_module,
+        "softwareDistModuleForVO": ops.software_dist_module,
+        "defaultCPUTimeForOwnerGroup": ops.job_description.default_cpu_time,
         "getDIRACPlatform": partial(find_compatible_platforms, config=config),
     }
 

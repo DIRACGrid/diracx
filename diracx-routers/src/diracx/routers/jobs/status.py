@@ -108,7 +108,7 @@ async def set_job_statuses(
     if not result.success:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
-            detail=result.model_dump(),
+            detail=result.model_dump(by_alias=True),
         )
 
     return result

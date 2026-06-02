@@ -81,10 +81,10 @@ async def fetch_jwk_set(url: str):
 async def parse_id_token(config, vo, raw_id_token: str):
     """Parse and validate the ID token from IAM."""
     server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
+        config.registry[vo].idp.server_metadata_url
     )
     alg_values = server_metadata.get("id_token_signing_alg_values_supported", ["RS256"])
-    jwk_set = await fetch_jwk_set(config.Registry[vo].IdP.server_metadata_url)
+    jwk_set = await fetch_jwk_set(config.registry[vo].idp.server_metadata_url)
 
     token = jwt.decode(
         raw_id_token,
@@ -95,7 +95,7 @@ async def parse_id_token(config, vo, raw_id_token: str):
         iss={"essential": True, "value": server_metadata["issuer"]},
         # The audience is a required parameter and is the client ID of the application
         # https://openid.net/specs/openid-connect-core-1_0.html#IDToken
-        aud={"essential": True, "values": [config.Registry[vo].IdP.ClientID]},
+        aud={"essential": True, "values": [config.registry[vo].idp.client_id]},
         exp={"essential": True},
         iat={"essential": True},
         sub={"essential": True},
@@ -122,7 +122,7 @@ async def initiate_authorization_flow_with_iam(
     )
 
     server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
+        config.registry[vo].idp.server_metadata_url
     )
 
     # Take these two from CS/.well-known
@@ -138,7 +138,7 @@ async def initiate_authorization_flow_with_iam(
         "response_type=code",
         f"code_challenge={code_challenge}",
         "code_challenge_method=S256",
-        f"client_id={config.Registry[vo].IdP.ClientID}",
+        f"client_id={config.registry[vo].idp.client_id}",
         f"redirect_uri={redirect_uri}",
         "scope=openid%20profile",
         f"state={encrypted_state}",
@@ -152,7 +152,7 @@ async def get_token_from_iam(
 ) -> dict[str, str]:
     """Get the token from the IAM using the code and state. Return the ID token."""
     server_metadata = await get_server_metadata(
-        config.Registry[vo].IdP.server_metadata_url
+        config.registry[vo].idp.server_metadata_url
     )
 
     # Take these two from CS/.well-known
@@ -160,7 +160,7 @@ async def get_token_from_iam(
 
     data = {
         "grant_type": GrantType.authorization_code.value,
-        "client_id": config.Registry[vo].IdP.ClientID,
+        "client_id": config.registry[vo].idp.client_id,
         "code": code,
         "code_verifier": state["code_verifier"],
         "redirect_uri": redirect_uri,
@@ -226,9 +226,9 @@ async def verify_dirac_refresh_token(
 def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:
     """Retrieve all properties of groups a user is registered in."""
     allowed_user_properties = set()
-    for group in config.Registry[vo].Groups:
-        if sub in config.Registry[vo].Groups[group].Users:
-            allowed_user_properties.update(config.Registry[vo].Groups[group].Properties)
+    for group in config.registry[vo].groups:
+        if sub in config.registry[vo].groups[group].users:
+            allowed_user_properties.update(config.registry[vo].groups[group].properties)
     return allowed_user_properties
 
 
@@ -265,7 +265,7 @@ def parse_and_validate_scope(
         raise ValueError(f"Unrecognised scopes: {unrecognised}")
 
     if not vos:
-        available_vo_scopes = [repr(f"vo:{vo}") for vo in config.Registry]
+        available_vo_scopes = [repr(f"vo:{vo}") for vo in config.registry]
         raise ValueError(
             f"No vo scope requested, available values: {' '.join(available_vo_scopes)}"
         )
@@ -273,20 +273,20 @@ def parse_and_validate_scope(
         raise ValueError(f"Only one vo is allowed but got {vos}")
     else:
         vo = vos[0]
-        if vo not in config.Registry:
+        if vo not in config.registry:
             raise ValueError(f"VO {vo} is not known to this installation")
 
     if not groups:
         # TODO: Handle multiple groups correctly
-        group = config.Registry[vo].DefaultGroup
+        group = config.registry[vo].default_group
     elif len(groups) > 1:
         raise ValueError(f"Only one DIRAC group allowed but got {groups}")
     else:
         group = groups[0]
-        if group not in config.Registry[vo].Groups:
+        if group not in config.registry[vo].groups:
             raise ValueError(f"{group} not in {vo} groups")
 
-    allowed_properties = config.Registry[vo].Groups[group].Properties
+    allowed_properties = config.registry[vo].groups[group].properties
     properties.extend([str(p) for p in allowed_properties])
 
     if not set(properties).issubset(available_properties):

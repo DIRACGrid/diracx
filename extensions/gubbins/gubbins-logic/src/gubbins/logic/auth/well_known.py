@@ -13,9 +13,9 @@ async def get_installation_metadata(
     original_metadata = await get_general_installation_metadata(config)
 
     gubbins_user_info: dict[str, list[str | None]] = {}
-    for vo in config.Registry:
+    for vo in config.registry:
         vo_gubbins = [
-            user.GubbinsSpecificInfo for user in config.Registry[vo].Users.values()
+            user.gubbins_specific_info for user in config.registry[vo].users.values()
         ]
         gubbins_user_info[vo] = vo_gubbins
 

@@ -257,7 +257,7 @@ class TaskScheduler:
         if self._config is None:
             logger.warning("No config available, cannot load VOs")
             return []
-        return list(self._config.Registry)
+        return list(self._config.registry)
 
     def _compute_initial_schedules(self) -> None:
         """Compute the initial next-run times for all periodic tasks."""
