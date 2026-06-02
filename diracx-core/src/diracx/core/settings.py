@@ -251,11 +251,12 @@ class AuthSettings(ServiceSettingsBase):
     through a new authentication flow. Default: 60 minutes.
     """
 
-    revoked_refresh_token_retention_minutes: int = 43200
-    """Retention time in minutes for revoked refresh tokens.
+    refresh_token_retention_months: int = 6
+    """Retention time in months for refresh tokens.
 
-    The maximum retention time of refresh tokens after being
-    revoked and before they are deleted. Default: 43200 minutes (30 days).
+    Refresh tokens live in monthly partitions that are dropped once the whole
+    month is older than this many months. It is therefore the longest a refresh
+    token (revoked or not) is kept before removal. Default: 6 months.
     """
 
     available_properties: set[SecurityProperty] = Field(
