@@ -47,7 +47,7 @@ select = [
   "N",   # pep8-naming
   "INP", # flake8-no-implicit-namespace-packages
   "RUF022",
-  "TID251" # flake8-tidy-imports.banned-api
+  "TID251", # flake8-tidy-imports.banned-api
 ]
 ignore = [
   "B905",
@@ -88,7 +88,7 @@ extend-immutable-calls = [
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"fastapi.status".msg = "Use HTTP.Status instead"
+"fastapi.status".msg = "Use http.HTTPStatus instead"
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 120

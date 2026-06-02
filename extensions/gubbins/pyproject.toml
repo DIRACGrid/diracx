@@ -58,6 +58,7 @@ select = [
     "DTZ", # flake8-datetimez
     "S",   # flake8-bandit
     "N",   # pep8-naming
+    "TID251", # flake8-tidy-imports.banned-api
 ]
 
 ignore = [
@@ -68,7 +69,8 @@ ignore = [
     "S311", # bandit: pseudo-random generators — gubbins uses them for simulation, not crypto
 ]
 
-
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"fastapi.status".msg = "Use http.HTTPStatus instead"
 
 [tool.ruff.lint.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
