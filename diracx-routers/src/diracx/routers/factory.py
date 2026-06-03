@@ -16,7 +16,7 @@ from typing import Any, TypeVar, cast
 
 import dotenv
 from cachetools import TTLCache
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.dependencies.models import Dependant
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
@@ -414,7 +414,7 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
         exc_info=True,
     )
     return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        status_code=HTTPStatus.SERVICE_UNAVAILABLE,
         headers={"Retry-After": "10"},
         content={"detail": str(exc)},
     )

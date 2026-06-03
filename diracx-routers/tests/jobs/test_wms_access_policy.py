@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from http import HTTPStatus
+
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from uuid_utils import uuid7
 
 from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
@@ -48,17 +50,17 @@ SANDBOX_POLICY_NAME = "SandboxAccessPolicy_AlthoughItDoesNotMatter"
 async def test_wms_access_policy_weird_user(job_db):
     """USer without NORMAL_USER or JOB_ADMINISTRATION can't do anything."""
     weird_user = AuthorizedUserInfo(properties=[], **base_payload)
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
         await WMSAccessPolicy.policy(
             WMS_POLICY_NAME, weird_user, action=ActionType.CREATE, job_db=job_db
         )
 
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
         await WMSAccessPolicy.policy(
             WMS_POLICY_NAME, weird_user, action=ActionType.QUERY, job_db=job_db
         )
 
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
         await WMSAccessPolicy.policy(
             WMS_POLICY_NAME,
             weird_user,
@@ -91,7 +93,7 @@ async def test_wms_access_policy_create(job_db):
         )
 
     # An admin cannot create any resource
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
         await WMSAccessPolicy.policy(
             WMS_POLICY_NAME, admin_user, action=ActionType.CREATE, job_db=job_db
         )
@@ -183,7 +185,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
             return [{"Owner": "other_owner", "VO": "lhcb", "count": 3}]
 
         monkeypatch.setattr(job_db, "summary", summary_other_owner)
-        with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+        with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,
                 normal_user,
@@ -197,7 +199,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
             return [{"Owner": "preferred_username", "VO": "gridpp", "count": 3}]
 
         monkeypatch.setattr(job_db, "summary", summary_other_vo)
-        with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+        with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,
                 normal_user,
@@ -211,7 +213,7 @@ async def test_wms_access_policy_read_modify(job_db, monkeypatch):
             return [{"Owner": "preferred_username", "VO": "lhcb", "count": 2}]
 
         monkeypatch.setattr(job_db, "summary", summary_other_vo)
-        with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+        with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
             await WMSAccessPolicy.policy(
                 WMS_POLICY_NAME,
                 normal_user,
@@ -242,7 +244,7 @@ async def test_sandbox_access_policy_create(sandbox_metadata_db):
         )
 
     # An admin cannot create any resource
-    with pytest.raises(HTTPException, match=f"{status.HTTP_403_FORBIDDEN}"):
+    with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
         await SandboxAccessPolicy.policy(
             SANDBOX_POLICY_NAME,
             admin_user,

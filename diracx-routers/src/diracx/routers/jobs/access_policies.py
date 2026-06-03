@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import StrEnum, auto
+from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 
 from diracx.core.models import VectorSearchOperator
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
@@ -60,7 +61,7 @@ class WMSAccessPolicy(BaseAccessPolicy):
                     "job_ids is not None with ActionType.CREATE. This shouldn't happen"
                 )
             if NORMAL_USER not in user_info.properties:
-                raise HTTPException(status.HTTP_403_FORBIDDEN)
+                raise HTTPException(HTTPStatus.FORBIDDEN)
             return
 
         if GENERIC_PILOT in user_info.properties and action == ActionType.MANAGE:
@@ -71,7 +72,7 @@ class WMSAccessPolicy(BaseAccessPolicy):
             return
 
         if NORMAL_USER not in user_info.properties:
-            raise HTTPException(status.HTTP_403_FORBIDDEN)
+            raise HTTPException(HTTPStatus.FORBIDDEN)
 
         if action == ActionType.QUERY:
             if job_ids is not None:
@@ -109,7 +110,7 @@ class WMSAccessPolicy(BaseAccessPolicy):
         if job_owners == [expected_owner]:
             return
 
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
+        raise HTTPException(HTTPStatus.FORBIDDEN)
 
 
 CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
@@ -138,14 +139,14 @@ class SandboxAccessPolicy(BaseAccessPolicy):
 
         if action == ActionType.CREATE:
             if NORMAL_USER not in user_info.properties:
-                raise HTTPException(status.HTTP_403_FORBIDDEN)
+                raise HTTPException(HTTPStatus.FORBIDDEN)
             return
 
         if JOB_ADMINISTRATOR in user_info.properties:
             return
 
         if NORMAL_USER not in user_info.properties:
-            raise HTTPException(status.HTTP_403_FORBIDDEN)
+            raise HTTPException(HTTPStatus.FORBIDDEN)
 
         # Getting a sandbox or modifying it
         if pfns:
@@ -158,7 +159,7 @@ class SandboxAccessPolicy(BaseAccessPolicy):
             for pfn in pfns:
                 if not pfn.startswith(required_prefix):
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=HTTPStatus.FORBIDDEN,
                         detail=f"Invalid PFN. PFN must start with {required_prefix}",
                     )
                 # Checking if the user owns the sandbox
@@ -168,7 +169,7 @@ class SandboxAccessPolicy(BaseAccessPolicy):
                 )
                 if not owner_id or owner_id != sandbox_owner_id:
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=HTTPStatus.FORBIDDEN,
                         detail=f"{user_info.preferred_username} is not the owner of the sandbox",
                     )
 

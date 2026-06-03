@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 import re
 import uuid as std_uuid
+from http import HTTPStatus
 from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import OpenIdConnect
 from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
@@ -83,7 +84,7 @@ async def verify_dirac_access_token(
     """
     if not authorization:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail="Authorization header is missing",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -91,7 +92,7 @@ async def verify_dirac_access_token(
         raw_token = match.group(1)
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail="Invalid authorization header",
         )
 
@@ -107,7 +108,7 @@ async def verify_dirac_access_token(
     except JoseError as e:
         logger.warning("Token validation failed: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=HTTPStatus.UNAUTHORIZED,
             detail="Invalid JWT",
         ) from e
 

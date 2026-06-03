@@ -6,14 +6,14 @@ See docs/admin/explanations/authentication.md
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
 from typing import Literal
 
 from fastapi import (
     HTTPException,
     Request,
-    responses,
-    status,
 )
+from fastapi.responses import RedirectResponse
 
 from diracx.core.exceptions import AuthorizationError, IAMClientError, IAMServerError
 from diracx.core.settings import AuthSettings
@@ -48,7 +48,7 @@ async def initiate_authorization_flow(
     config: Config,
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
-) -> responses.RedirectResponse:
+) -> RedirectResponse:
     """Initiate the authorization flow.
 
     It will redirect to the actual OpenID server (IAM, CheckIn) to
@@ -85,11 +85,11 @@ async def initiate_authorization_flow(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
 
-    return responses.RedirectResponse(redirect_uri)
+    return RedirectResponse(redirect_uri)
 
 
 @router.get("/authorize/complete")
@@ -100,7 +100,7 @@ async def complete_authorization_flow(
     auth_db: AuthDB,
     config: Config,
     settings: AuthSettings,
-) -> responses.RedirectResponse:
+) -> RedirectResponse:
     """Complete the authorization flow.
 
     The user is redirected back to the DIRAC auth service after completing the IAM's authorization flow.
@@ -119,17 +119,17 @@ async def complete_authorization_flow(
     except AuthorizationError as e:
         logger.warning("Authorization flow failed with invalid state: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state"
+            status_code=HTTPStatus.BAD_REQUEST, detail="Invalid state"
         ) from e
     except IAMServerError as e:
         logger.warning("IAM server error during authorization flow: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=HTTPStatus.BAD_GATEWAY,
             detail="Failed to contact IAM server",
         ) from e
     except IAMClientError as e:
         logger.warning("IAM client error during authorization flow: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid code"
+            status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid code"
         ) from e
-    return responses.RedirectResponse(redirect_uri)
+    return RedirectResponse(redirect_uri)
