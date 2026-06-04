@@ -20,20 +20,17 @@ from diracx.logic.rss.source import (
     StorageElementStatusSource,
 )
 
+_MAX_DATE = datetime.fromisoformat("2023-01-01T00:00:00+00:00")
+
 
 @pytest.fixture
 def mock_resource_status_db():
     """Fixture to mock the ResourceStatusDB."""
     db = MagicMock(spec=ResourceStatusDB)
-    DateRow = namedtuple("DateRow", ["DateEffective", "DateChecked"])
     db.__aenter__ = AsyncMock(return_value=db)
     db.__aexit__ = AsyncMock(return_value=None)
-    db.get_resource_status_date = AsyncMock(
-        return_value=DateRow(
-            DateEffective=datetime.fromisoformat("2023-01-01T00:00:00+00:00"),
-            DateChecked=datetime.now(timezone.utc),
-        )
-    )
+    db.get_resource_status_date = AsyncMock(return_value=(_MAX_DATE, 4))
+    db.get_site_status_date = AsyncMock(return_value=(_MAX_DATE, 2))
     return db
 
 
@@ -45,11 +42,44 @@ async def test_latest_revision(mock_resource_status_db):
     revision, modified = await source.latest_revision()
 
     # Verify the revision is generated correctly
-    assert revision
-    assert isinstance(modified, datetime)
+    assert revision == f"{_MAX_DATE.isoformat()}-4"
+    assert modified == _MAX_DATE
 
-    # Verify the database call
-    mock_resource_status_db.get_resource_status_date.assert_called_once()
+    # Verify the database call queries this source's status types
+    mock_resource_status_db.get_resource_status_date.assert_awaited_once_with(["all"])
+
+
+async def test_latest_revision_storage_status_types(mock_resource_status_db):
+    """Storage revisions must track the access status types, not "all"."""
+    source = StorageElementStatusSource(db=mock_resource_status_db)
+
+    await source.latest_revision()
+
+    mock_resource_status_db.get_resource_status_date.assert_awaited_once_with(
+        ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
+    )
+
+
+async def test_latest_revision_empty(mock_resource_status_db):
+    """An empty table yields a stable sentinel revision instead of failing."""
+    mock_resource_status_db.get_resource_status_date = AsyncMock(return_value=(None, 0))
+    source = ComputeElementStatusSource(db=mock_resource_status_db)
+
+    revision, modified = await source.latest_revision()
+
+    assert revision == "empty-0"
+    assert modified == datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+async def test_latest_revision_site(mock_resource_status_db):
+    """Test the latest_revision method of SiteStatusSource."""
+    source = SiteStatusSource(db=mock_resource_status_db)
+
+    revision, modified = await source.latest_revision()
+
+    assert revision == f"{_MAX_DATE.isoformat()}-2"
+    assert modified == _MAX_DATE
+    mock_resource_status_db.get_site_status_date.assert_awaited_once_with()
 
 
 async def test_read_raw_site(mock_resource_status_db):

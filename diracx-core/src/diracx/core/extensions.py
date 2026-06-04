@@ -23,6 +23,7 @@ class DiracEntryPoint(StrEnum):
 
     CORE = "diracx"
     ACCESS_POLICY = "diracx.access_policies"
+    CACHEABLE_SOURCES = "diracx.cacheable_sources"
     CLI = "diracx.cli"
     HIDDEN_CLI = "diracx.cli.hidden"
     OS_DB = "diracx.dbs.os"

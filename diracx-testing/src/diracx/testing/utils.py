@@ -168,7 +168,7 @@ class ClientFactory:
         test_sandbox_settings,
         test_dev_settings,
     ):
-        from diracx.core.config import ConfigSource
+        from diracx.core.config import AsyncCacheableSource, ConfigSource
         from diracx.core.extensions import select_from_extension
         from diracx.core.settings import ServiceSettingsBase
         from diracx.db.os.utils import BaseOSDB
@@ -252,6 +252,7 @@ class ClientFactory:
                     BaseSQLDB,
                     BaseOSDB,
                     ConfigSource,
+                    AsyncCacheableSource,
                     BaseAccessPolicy,
                 ),
             ), obj

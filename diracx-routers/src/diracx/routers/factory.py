@@ -185,6 +185,7 @@ def create_app_inner(
     fail_startup = True
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
+    sql_db_instances: dict[type[BaseSQLDB], BaseSQLDB] = {}
 
     for db_name, db_url in database_urls.items():
         try:
@@ -199,6 +200,7 @@ def create_app_inner(
             for sql_db_class in sql_db_classes:
                 assert sql_db_class.transaction not in app.dependency_overrides
                 available_sql_db_classes.add(sql_db_class)
+                sql_db_instances[sql_db_class] = sql_db
 
                 app.dependency_overrides[sql_db_class.transaction] = partial(
                     db_transaction, sql_db
@@ -214,6 +216,28 @@ def create_app_inner(
 
     if fail_startup:
         raise Exception("No SQL database could be initialized, aborting")
+
+    # Instantiate the cacheable sources and override their create methods,
+    # mirroring the ConfigSource wiring above. A single instance is used for
+    # each source so that its caches persist across requests.
+    wired_source_names = set()
+    for entry_point in select_from_extension(group=DiracEntryPoint.CACHEABLE_SOURCES):
+        # The first entry point for a given name is the highest priority one
+        if entry_point.name in wired_source_names:
+            continue
+        wired_source_names.add(entry_point.name)
+        source_cls = entry_point.load()
+        source_db = sql_db_instances.get(source_cls.db_class)
+        if source_db is None:
+            logger.warning(
+                "Cannot wire cacheable source %s: %s is not available",
+                entry_point.name,
+                source_cls.db_class.__name__,
+            )
+            continue
+        source = source_cls(db=source_db)
+        assert source_cls.create not in app.dependency_overrides
+        app.dependency_overrides[source_cls.create] = source.read
 
     # Add the OpenSearch DBs to the application
     available_os_db_classes: set[type[BaseOSDB]] = set()

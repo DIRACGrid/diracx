@@ -132,3 +132,39 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     for row in result["TestStorage"].values():
         assert row.Status == "Active"
         assert row.Reason == "All good"
+
+    # The date queries should return the latest date and the row count
+    async with rss_db as db:
+        max_date, count = await db.get_resource_status_date()
+    assert max_date == _NOW
+    assert count == 2  # TestCompute + TestFTS "all" rows
+
+    async with rss_db as db:
+        max_date, count = await db.get_resource_status_date(
+            ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
+        )
+    assert max_date == _NOW
+    assert count == 4  # TestStorage access rows
+
+
+async def test_empty_tables(rss_db: ResourceStatusDB):
+    """Empty tables yield empty results rather than errors."""
+    async with rss_db as db:
+        assert await db.get_site_statuses() == []
+        assert await db.get_resource_statuses() == {}
+        assert await db.get_resource_status_date() == (None, 0)
+        assert await db.get_site_status_date() == (None, 0)
+
+
+async def test_site_status_date(rss_db: ResourceStatusDB):
+    async with rss_db as db:
+        await db.insert_site_status(
+            name="LCG.CERN.cern",
+            status="Active",
+            vo="lhcb",
+            reason="All good",
+            date_effective=_NOW,
+        )
+        max_date, count = await db.get_site_status_date()
+    assert max_date == _NOW
+    assert count == 1

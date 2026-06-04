@@ -9,10 +9,11 @@ import asyncio
 import logging
 import os
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, ClassVar, Generic, TypeVar
 from urllib.parse import urlparse, urlunparse
 
 import sh
@@ -139,12 +140,25 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
         self._content_cache.clear()
 
 
+@dataclass(frozen=True)
+class Snapshot(Generic[T]):
+    """Wraps a cached data payload with its cache metadata."""
+
+    data: T
+    hexsha: str
+    modified: datetime
+
+
 class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
     """Abstract base class for async sources that can be cached.
 
     Async equivalent of CacheableSource. Uses AsyncTwoLevelCache so populate
     functions are native coroutines.
     """
+
+    #: The database class this source reads from. Used by the application
+    #: factory to instantiate the source with the matching database instance.
+    db_class: ClassVar[type]
 
     def __init__(self):
         self._revision_cache = AsyncTwoLevelCache(
@@ -186,6 +200,17 @@ class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
         """Clear the caches."""
         await self._revision_cache.clear()
         self._content_cache.clear()
+
+    @classmethod
+    async def create(cls) -> T:
+        """Dependency injection stub.
+
+        The application factory instantiates each concrete source and
+        overrides ``cls.create`` with the instance's ``read`` method, so this
+        should never actually be called. Each subclass's bound ``create``
+        classmethod is a distinct dependency key.
+        """
+        raise NotImplementedError(f"{cls.__name__} was not wired by the factory")
 
 
 class ConfigSource(CacheableSource[Config]):

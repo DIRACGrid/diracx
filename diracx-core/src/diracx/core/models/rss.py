@@ -1,22 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Generic, Literal, TypeVar, Union
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
-
-T = TypeVar("T")
-
-
-@dataclass(frozen=True)
-class Snapshot(Generic[T]):
-    """Wraps a cached data payload with its cache metadata."""
-
-    data: T
-    hexsha: str
-    modified: datetime
 
 
 class AllowedStatus(BaseModel):

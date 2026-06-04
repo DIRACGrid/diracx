@@ -16,6 +16,7 @@ __all__ = [
     "RegistryConfig",
     "RemoteGitConfigSource",
     "SerializableSet",
+    "Snapshot",
     "SupportInfo",
     "UserConfig",
     "is_running_in_async_context",
@@ -39,5 +40,6 @@ from .sources import (
     ConfigSourceUrl,
     LocalGitConfigSource,
     RemoteGitConfigSource,
+    Snapshot,
     is_running_in_async_context,
 )

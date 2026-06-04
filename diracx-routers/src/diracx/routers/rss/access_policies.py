@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
@@ -18,10 +18,10 @@ class RSSAccessPolicy(BaseAccessPolicy):
         user_info: AuthorizedUserInfo,
         /,
     ):
-        if user_info.preferred_username:
-            return
-
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
+        # Authentication is already guaranteed by verify_dirac_access_token;
+        # any authenticated user may read resource statuses. VO scoping is
+        # applied in the routes themselves.
+        return
 
 
 CheckRSSPolicyCallable = Annotated[Callable, Depends(RSSAccessPolicy.check)]

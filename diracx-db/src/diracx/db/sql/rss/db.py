@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.engine import Row
-
-from diracx.core.exceptions import ResourceNotFoundError
 
 from ..utils import BaseSQLDB
 from .schema import (
@@ -34,11 +32,7 @@ class ResourceStatusDB(BaseSQLDB):
             SiteStatus.vo,
         ).where(SiteStatus.status_type == "all")
         result = await self.conn.execute(stmt)
-        rows = result.all()
-        if not rows:
-            raise ResourceNotFoundError("Site statuses")
-
-        return [(row.Name, row.Status, row.Reason, row.VO) for row in rows]
+        return [(row.Name, row.Status, row.Reason, row.VO) for row in result.all()]
 
     async def get_resource_statuses(
         self,
@@ -66,13 +60,9 @@ class ResourceStatusDB(BaseSQLDB):
             ResourceStatus.status_type.in_(status_types),
         )
         result = await self.conn.execute(stmt)
-        rows = result.all()
-
-        if not rows:
-            raise ResourceNotFoundError("Resource statuses")
 
         statuses: dict[str, dict[str, Row]] = {}
-        for row in rows:
+        for row in result.all():
             if row.Name not in statuses:
                 statuses[row.Name] = {}
             statuses[row.Name][row.StatusType] = row
@@ -81,54 +71,42 @@ class ResourceStatusDB(BaseSQLDB):
     async def get_resource_status_date(
         self,
         status_types: list[str] | None = None,
-    ) -> Row[tuple[datetime, datetime]]:
-        """Return the most recent DateEffective across all VOs for the given status types.
+    ) -> tuple[datetime | None, int]:
+        """Return the most recent DateEffective and row count for the given status types.
 
         Args:
             status_types: Status type filter. Defaults to ["all"].
 
         Returns:
-            Row with (date_effective, last_check_time) for the most recent entry.
+            (max_date_effective, row_count) across all VOs. The date is None
+            when the table contains no matching rows.
 
         """
         if not status_types:
             status_types = ["all"]
-        stmt = (
-            select(
-                ResourceStatus.date_effective,
-                ResourceStatus.last_check_time,
-            )
-            .where(ResourceStatus.status_type.in_(status_types))
-            .order_by(ResourceStatus.date_effective.desc())
-            .limit(1)
-        )
+        stmt = select(
+            func.max(ResourceStatus.date_effective),
+            func.count(),
+        ).where(ResourceStatus.status_type.in_(status_types))
         result = await self.conn.execute(stmt)
-        row = result.first()
-        if not row:
-            raise ResourceNotFoundError("Resource statuses")
-        return row
+        max_date, count = result.one()
+        return max_date, count
 
-    async def get_site_status_date(self) -> Row[tuple[datetime, datetime]]:
-        """Return the most recent DateEffective from the SiteStatus table across all VOs.
+    async def get_site_status_date(self) -> tuple[datetime | None, int]:
+        """Return the most recent DateEffective and row count from the SiteStatus table.
 
         Returns:
-            Row with (date_effective, last_check_time) for the most recent entry.
+            (max_date_effective, row_count) across all VOs. The date is None
+            when the table contains no matching rows.
 
         """
-        stmt = (
-            select(
-                SiteStatus.date_effective,
-                SiteStatus.last_check_time,
-            )
-            .where(SiteStatus.status_type == "all")
-            .order_by(SiteStatus.date_effective.desc())
-            .limit(1)
-        )
+        stmt = select(
+            func.max(SiteStatus.date_effective),
+            func.count(),
+        ).where(SiteStatus.status_type == "all")
         result = await self.conn.execute(stmt)
-        row = result.first()
-        if not row:
-            raise ResourceNotFoundError("Site statuses")
-        return row
+        max_date, count = result.one()
+        return max_date, count
 
     async def insert_resource_status(
         self,
