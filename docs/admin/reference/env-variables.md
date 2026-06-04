@@ -57,14 +57,15 @@ Expiration time in seconds for authorization code flow.
 The time window during which the authorization code remains valid
 before it must be exchanged for tokens. Default: 5 minutes.
 
-### `DIRACX_SERVICE_AUTH_COMPLETED_FLOW_RETENTION_MINUTES`
+### `DIRACX_SERVICE_AUTH_EXPIRED_FLOW_RETENTION_DAYS`
 
-*Optional*, default value: `60`
+*Optional*, default value: `7`
 
-Retention time in minutes for completed flow.
+Retention time in days for device and authorization flows.
 
-The maximum retention time of flow after being completed
-and before they are deleted. Default: 60 minutes.
+Expired flow rows are deleted (in batches) once they are older than this
+many days. Must be larger than the device and authorization flow expiration
+times so that still-valid flows are never removed. Default: 7 days.
 
 ### `DIRACX_SERVICE_AUTH_STATE_KEY`
 

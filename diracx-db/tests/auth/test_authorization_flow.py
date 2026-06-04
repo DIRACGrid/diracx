@@ -104,17 +104,41 @@ async def test_clean_authorization_flows(auth_db: AuthDB):
         await auth_db.update_authorization_flow_status(code3, FlowStatus.DONE)
         await auth_db.update_authorization_flow_status(code4, FlowStatus.ERROR)
 
-    # Check the number of deleted authorization flow (should be 0)
+    # Nothing is older than the retention window: nothing deleted.
     async with auth_db as auth_db:
-        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=30)
+        deleted_auth = await auth_db.clean_expired_authorization_flows(
+            retention_days=30
+        )
         assert deleted_auth == 0
 
-    # Check the number of deleted authorization flow (should be 4: 1 PENDING, 1 READY, 1 DONE, 1 ERROR)
+    # retention_days=0 deletes everything (1 PENDING, 1 READY, 1 DONE, 1 ERROR).
     async with auth_db as auth_db:
-        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=0)
+        deleted_auth = await auth_db.clean_expired_authorization_flows(retention_days=0)
         assert deleted_auth == 4
 
-    # Check the number of deleted authorization flow (should be 0 because there is nothing left to delete)
+    # Nothing left to delete.
     async with auth_db as auth_db:
-        deleted_auth = await auth_db.clean_expired_authorization_flows(max_retention=0)
+        deleted_auth = await auth_db.clean_expired_authorization_flows(retention_days=0)
         assert deleted_auth == 0
+
+
+async def test_clean_authorization_flows_batched(auth_db: AuthDB):
+    # Insert five flows, then delete them all with a small batch size to
+    # exercise the multi-batch loop (each batch commits its own transaction).
+    async with auth_db as auth_db:
+        for i in range(5):
+            await auth_db.insert_authorization_flow(
+                f"client_id{i}", "scope", "code_challenge", "S256", "redirect_uri"
+            )
+
+    async with auth_db as auth_db:
+        deleted = await auth_db.clean_expired_authorization_flows(
+            retention_days=0, batch_size=2
+        )
+    assert deleted == 5
+
+    async with auth_db as auth_db:
+        deleted = await auth_db.clean_expired_authorization_flows(
+            retention_days=0, batch_size=2
+        )
+    assert deleted == 0

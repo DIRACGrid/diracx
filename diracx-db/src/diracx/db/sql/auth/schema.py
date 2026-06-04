@@ -71,6 +71,8 @@ class DeviceFlows(Base):
     )  # Should be a hash
     id_token: Mapped[Optional[dict[str, Any]]] = mapped_column("IDToken")
 
+    __table_args__ = (Index("index_device_flows_creation_time", creation_time),)
+
 
 class AuthorizationFlows(Base):
     __tablename__ = "AuthorizationFlows"
@@ -86,6 +88,8 @@ class AuthorizationFlows(Base):
     redirect_uri: Mapped[str255] = mapped_column("RedirectURI")
     code: Mapped[Optional[str255]] = mapped_column("Code")  # Should be a hash
     id_token: Mapped[Optional[dict[str, Any]]] = mapped_column("IDToken")
+
+    __table_args__ = (Index("index_authorization_flows_creation_time", creation_time),)
 
 
 class RefreshTokenStatus(Enum):

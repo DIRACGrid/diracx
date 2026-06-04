@@ -76,11 +76,11 @@ async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
     )
 
     auth = await auth_db.clean_expired_authorization_flows(
-        max_retention=settings.completed_flow_retention_minutes,
+        retention_days=settings.expired_flow_retention_days,
     )
     logger.info("Deleted %d expired authorization flows", auth)
 
     device = await auth_db.clean_expired_device_flows(
-        max_retention=settings.completed_flow_retention_minutes,
+        retention_days=settings.expired_flow_retention_days,
     )
     logger.info("Deleted %d expired device flows", device)

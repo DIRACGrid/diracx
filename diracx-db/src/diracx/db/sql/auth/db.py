@@ -38,6 +38,10 @@ logger = logging.getLogger(__name__)
 # of "now" so the ``p_future`` catch-all partition never accumulates rows.
 PARTITION_MONTHS_AHEAD = 12
 
+# Maximum number of flow rows deleted per transaction when cleaning expired
+# device/authorization flows, to bound lock usage on large tables.
+FLOW_DELETE_BATCH_SIZE = 50_000
+
 
 def _month_start(dt: datetime) -> datetime:
     """Truncate ``dt`` to the first instant of its month."""
@@ -473,28 +477,60 @@ class AuthDB(BaseSQLDB):
             len(months_to_drop),
         )
 
-    async def clean_expired_authorization_flows(self, max_retention: int) -> int:
-        """Delete old authorization flows.
+    async def _delete_flows_in_batches(
+        self, table, pk_column, cutoff: datetime, batch_size: int
+    ) -> int:
+        """Delete rows of ``table`` created before ``cutoff`` in batches.
 
-        max_retention: Maximum retention time in minutes for expired authorization flows.
-        Must be bigger than authorization_flow_expiration_seconds.
+        Each batch deletes up to ``batch_size`` rows in its own transaction to
+        bound lock usage on large tables. Returns the number of rows deleted.
         """
-        stmt_auth = delete(AuthorizationFlows).where(
-            AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
-        )
-        res_auth = await self.conn.execute(stmt_auth)
+        total = 0
+        while True:
+            pks = (
+                (
+                    await self.conn.execute(
+                        select(pk_column)
+                        .where(table.creation_time < cutoff)
+                        .limit(batch_size)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if not pks:
+                break
+            await self.conn.execute(delete(table).where(pk_column.in_(pks)))
+            await self.conn.commit()
+            total += len(pks)
+            if len(pks) < batch_size:
+                break
+        return total
 
-        return res_auth.rowcount
+    async def clean_expired_authorization_flows(
+        self, retention_days: int, batch_size: int = FLOW_DELETE_BATCH_SIZE
+    ) -> int:
+        """Delete authorization flows older than ``retention_days`` days.
 
-    async def clean_expired_device_flows(self, max_retention: int) -> int:
-        """Delete old device flows.
-
-        max_retention: Maximum retention time in minutes for expired device flows.
-        Must be bigger than device_flow_expiration_seconds.
+        ``retention_days`` must be bigger than authorization_flow_expiration_seconds.
         """
-        stmt_device = delete(DeviceFlows).where(
-            DeviceFlows.creation_time < substract_date(minutes=max_retention),
+        return await self._delete_flows_in_batches(
+            AuthorizationFlows,
+            AuthorizationFlows.uuid,
+            substract_date(days=retention_days),
+            batch_size,
         )
-        res_device = await self.conn.execute(stmt_device)
 
-        return res_device.rowcount
+    async def clean_expired_device_flows(
+        self, retention_days: int, batch_size: int = FLOW_DELETE_BATCH_SIZE
+    ) -> int:
+        """Delete device flows older than ``retention_days`` days.
+
+        ``retention_days`` must be bigger than device_flow_expiration_seconds.
+        """
+        return await self._delete_flows_in_batches(
+            DeviceFlows,
+            DeviceFlows.user_code,
+            substract_date(days=retention_days),
+            batch_size,
+        )

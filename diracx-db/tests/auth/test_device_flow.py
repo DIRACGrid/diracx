@@ -157,17 +157,37 @@ async def test_clean_device_flows(auth_db: AuthDB):
         await auth_db.update_device_flow_status(device_code3, FlowStatus.DONE)
         await auth_db.update_device_flow_status(device_code4, FlowStatus.ERROR)
 
-    # Check the number of deleted device flows (should be 0)
+    # Nothing is older than the retention window: nothing deleted.
     async with auth_db as auth_db:
-        deleted_device = await auth_db.clean_expired_device_flows(max_retention=30)
+        deleted_device = await auth_db.clean_expired_device_flows(retention_days=30)
         assert deleted_device == 0
 
-    # Check the number of deleted device flows (should be 4: 1 PENDING, 1 READY, 1 DONE, 1 ERROR)
+    # retention_days=0 deletes everything (1 PENDING, 1 READY, 1 DONE, 1 ERROR).
     async with auth_db as auth_db:
-        deleted_device = await auth_db.clean_expired_device_flows(max_retention=0)
+        deleted_device = await auth_db.clean_expired_device_flows(retention_days=0)
         assert deleted_device == 4
 
-    # Check the number of deleted device flow (should be 0 because there is nothing left to delete)
+    # Nothing left to delete.
     async with auth_db as auth_db:
-        deleted_device = await auth_db.clean_expired_device_flows(max_retention=0)
+        deleted_device = await auth_db.clean_expired_device_flows(retention_days=0)
         assert deleted_device == 0
+
+
+async def test_clean_device_flows_batched(auth_db: AuthDB):
+    # Insert five device flows, then delete them all with a small batch size to
+    # exercise the multi-batch loop (each batch commits its own transaction).
+    async with auth_db as auth_db:
+        for i in range(5):
+            await auth_db.insert_device_flow(f"client_id{i}", "scope")
+
+    async with auth_db as auth_db:
+        deleted = await auth_db.clean_expired_device_flows(
+            retention_days=0, batch_size=2
+        )
+    assert deleted == 5
+
+    async with auth_db as auth_db:
+        deleted = await auth_db.clean_expired_device_flows(
+            retention_days=0, batch_size=2
+        )
+    assert deleted == 0
