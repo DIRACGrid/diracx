@@ -534,7 +534,7 @@ def with_config_repo(tmp_path_factory):
             },
         }
     )
-    cs_file.write_text(example_cs.model_dump_json())
+    cs_file.write_text(example_cs.model_dump_json(by_alias=True))
     repo.index.add([cs_file])  # add it to the index
     repo.index.commit("Added a new file")
     yield tmp_path

@@ -29,7 +29,10 @@ SerializableSet = Annotated[
 
 class BaseModel(_BaseModel):
     model_config = ConfigDict(
-        extra="forbid", frozen=True, use_attribute_docstrings=True
+        extra="forbid",
+        frozen=True,
+        use_attribute_docstrings=True,
+        populate_by_name=True,
     )
 
     @model_validator(mode="before")
@@ -56,7 +59,10 @@ class BaseModel(_BaseModel):
             if issubclass(mro_cls, BaseModel) and mro_cls != BaseModel:
                 mro_annotations.update(mro_cls.__annotations__)
 
-        for field, hint in mro_annotations.items():
+        for field_name, field_info in cls.model_fields.items():
+            hint = mro_annotations[field_name]
+            field = field_info.alias or field_name
+
             # Convert comma separated lists to actual lists
             if hint.startswith("set"):
                 raise NotImplementedError("Use SerializableSet instead!")
@@ -78,90 +84,90 @@ class BaseModel(_BaseModel):
 
 
 class UserConfig(BaseModel):
-    PreferedUsername: str
+    prefered_username: str = Field(alias="PreferedUsername")
     """Preferred username for the user account."""
-    DNs: list[str] = []
+    dns: list[str] = Field([], alias="DNs")
     """Distinguished Names of the user's certificates (Mandatory for certificate-based authentication)."""
-    Email: EmailStr | None = None
+    email: EmailStr | None = Field(None, alias="Email")
     """User e-mail address (Mandatory for user registration)."""
-    Suspended: list[str] = []
+    suspended: list[str] = Field([], alias="Suspended")
     """List of VOs where the user is suspended."""
-    Quota: int | None = None
+    quota: int | None = Field(None, alias="Quota")
     """Quota assigned to the user, expressed in MBs."""
 
 
 class GroupConfig(BaseModel):
-    AutoAddVOMS: bool = False
+    auto_add_voms: bool = Field(False, alias="AutoAddVOMS")
     """Controls automatic addition of VOMS extension when creating proxies."""
-    AutoUploadPilotProxy: bool = False
+    auto_upload_pilot_proxy: bool = Field(False, alias="AutoUploadPilotProxy")
     """Controls automatic Proxy upload for Pilot groups."""
-    AutoUploadProxy: bool = False
+    auto_upload_proxy: bool = Field(False, alias="AutoUploadProxy")
     """Controls automatic Proxy upload for users in this group."""
-    JobShare: int = 1000
+    job_share: int = Field(1000, alias="JobShare")
     """Share of computing resources allocated to this group for fair share scheduling."""
-    Properties: SerializableSet[SecurityProperty]
+    properties: SerializableSet[SecurityProperty] = Field(alias="Properties")
     """Group properties (set permissions of the group users).
 
     Examples: NormalUser, GenericPilot, ServiceAdministrator.
     """
-    Quota: int | None = None
+    quota: int | None = Field(None, alias="Quota")
     """Group-specific quota override."""
-    Users: SerializableSet[str]
+    users: SerializableSet[str] = Field(alias="Users")
     """DIRAC user logins that belong to this group."""
-    AllowBackgroundTQs: bool = False
+    allow_background_tqs: bool = Field(False, alias="AllowBackgroundTQs")
     """Allow background Task Queues for this group."""
-    VOMSRole: str | None = None
+    voms_role: str | None = Field(None, alias="VOMSRole")
     """Role of the users in the VO (e.g., '/lhcb' for LHCb VO)."""
-    AutoSyncVOMS: bool = False
+    auto_sync_voms: bool = Field(False, alias="AutoSyncVOMS")
     """Automatically synchronize group membership with VOMS server."""
 
 
 class IdpConfig(BaseModel):
-    URL: str
+    url: str = Field(alias="URL")
     """The authorization server's issuer identifier.
 
     This is a URL that uses the 'https' scheme and has no query or fragment components.
     """
-    ClientID: str
+    client_id: str = Field(alias="ClientID")
     """OAuth 2.0 client identifier received after client registration with the identity provider."""
 
     @property
     def server_metadata_url(self):
-        return f"{self.URL}/.well-known/openid-configuration"
+        return f"{self.url}/.well-known/openid-configuration"
 
 
 class SupportInfo(BaseModel):
-    Email: str | None = None
+    email: str | None = Field(None, alias="Email")
     """Support contact email address."""
-    Webpage: str | None = None
+    webpage: str | None = Field(None, alias="Webpage")
     """Support webpage URL."""
-    Message: str = "Please contact system administrator"
+    message: str = Field("Please contact system administrator", alias="Message")
     """Default support message displayed to users."""
 
 
 class RegistryConfig(BaseModel):
-    IdP: IdpConfig
+    idp: IdpConfig = Field(alias="IdP")
     """Registered identity provider associated with this VO."""
-    Support: SupportInfo = Field(default_factory=SupportInfo)
+    support: SupportInfo = Field(default_factory=SupportInfo, alias="Support")
     """Support contact information for this VO."""
-    DefaultGroup: str
+    default_group: str = Field(alias="DefaultGroup")
     """Default user group to be used for new users in this VO."""
-    DefaultStorageQuota: float = 0
+    default_storage_quota: float = Field(0, alias="DefaultStorageQuota")
     """Default storage quota in GB for users in this VO."""
-    DefaultProxyLifeTime: int = 12 * 60 * 60
+    default_proxy_life_time: int = Field(12 * 60 * 60, alias="DefaultProxyLifeTime")
     """Default proxy time expressed in seconds (default: 43200 = 12 hours)."""
-    VOMSName: str | None = None
+    voms_name: str | None = Field(None, alias="VOMSName")
     """Real VOMS VO name, if this VO is associated with VOMS VO."""
 
-    Users: MutableMapping[str, UserConfig]
+    users: MutableMapping[str, UserConfig] = Field(alias="Users")
     """DIRAC users section, subsections represent the name of the user."""
-    Groups: MutableMapping[str, GroupConfig]
+    groups: MutableMapping[str, GroupConfig] = Field(alias="Groups")
     """DIRAC groups section, subsections represent the name of the group."""
 
     @cached_property
     def _preferred_username_to_sub(self) -> dict[str, str]:
         """Compute reverse lookup map from preferred username to user sub."""
-        return {user.PreferedUsername: sub for sub, user in self.Users.items()}
+        return {user.prefered_username: sub for sub, user in self.users.items()}
 
     def sub_from_preferred_username(self, preferred_username: str) -> str:
         """Get the user sub from the preferred username.
@@ -183,151 +189,195 @@ class RegistryConfig(BaseModel):
 
 
 class DIRACConfig(BaseModel):
-    NoSetup: bool = False
+    no_setup: bool = Field(False, alias="NoSetup")
     """Flag to skip setup procedures during DIRAC initialization. Takes a boolean value. By default false."""
 
 
 class JobMonitoringConfig(BaseModel):
-    GlobalJobsInfo: bool = True
+    global_jobs_info: bool = Field(True, alias="GlobalJobsInfo")
     """Enable global job information monitoring across all VOs."""
 
 
 class JobSchedulingConfig(BaseModel):
-    EnableSharesCorrection: bool = False
+    enable_shares_correction: bool = Field(False, alias="EnableSharesCorrection")
     """Enable correction of job shares based on historical usage."""
-    MaxRescheduling: int = 3
+    max_rescheduling: int = Field(3, alias="MaxRescheduling")
     """Maximum number of times a job can be rescheduled."""
 
 
 class ServicesConfig(BaseModel):
-    Catalogs: MutableMapping[str, Any] | None = None
+    catalogs: MutableMapping[str, Any] | None = Field(None, alias="Catalogs")
     """Configuration for data catalog services."""
-    JobMonitoring: JobMonitoringConfig = JobMonitoringConfig()
+    job_monitoring: JobMonitoringConfig = Field(
+        JobMonitoringConfig(), alias="JobMonitoring"
+    )
     """Job monitoring service configuration."""
-    JobScheduling: JobSchedulingConfig = JobSchedulingConfig()
+    job_scheduling: JobSchedulingConfig = Field(
+        JobSchedulingConfig(), alias="JobScheduling"
+    )
     """Job scheduling service configuration."""
 
 
 class JobDescriptionConfig(BaseModel):
-    DefaultCPUTime: int = 86400
+    default_cpu_time: int = Field(86400, alias="DefaultCPUTime")
     """Default CPU time limit for jobs in seconds (default: 24 hours)."""
-    DefaultPriority: int = 1
+    default_priority: int = Field(1, alias="DefaultPriority")
     """Default job priority."""
-    MinCPUTime: int = 100
+    min_cpu_time: int = Field(100, alias="MinCPUTime")
     """Minimum allowed CPU time for jobs in seconds."""
-    MinPriority: int = 0
+    min_priority: int = Field(0, alias="MinPriority")
     """Minimum allowed job priority."""
-    MaxCPUTime: int = 500000
+    max_cpu_time: int = Field(500000, alias="MaxCPUTime")
     """Maximum allowed CPU time for jobs in seconds."""
-    MaxPriority: int = 10
+    max_priority: int = Field(10, alias="MaxPriority")
     """Maximum allowed job priority."""
-    MaxInputData: int = 100
+    max_input_data: int = Field(100, alias="MaxInputData")
     """Maximum number of input data files per job."""
-    AllowedJobTypes: list[str] = ["User", "Test", "Hospital"]
+    allowed_job_types: list[str] = Field(
+        ["User", "Test", "Hospital"], alias="AllowedJobTypes"
+    )
     """List of allowed job types."""
 
 
 class InputDataPolicyProtocolsConfig(BaseModel):
-    Remote: list[str] = []
+    remote: list[str] = Field([], alias="Remote")
     """List of protocols that should be considered as remote access methods (e.g., 'https', 'gsiftp', 'srm')."""
-    Local: list[str] = []
+    local: list[str] = Field([], alias="Local")
     """List of protocols that should be considered as local access methods (e.g., 'file', 'root')."""
 
 
 class InputDataPolicyConfig(BaseModel):
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(
-        extra="ignore", frozen=True, use_attribute_docstrings=True
+        extra="ignore",
+        frozen=True,
+        use_attribute_docstrings=True,
+        populate_by_name=True,
     )
 
-    Default: str = "Default = DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol"
+    default: str = Field(
+        "Default = DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol",
+        alias="Default",
+    )
     """Default input data access policy. This is the fallback policy when no specific protocol is matched."""
-    Download: str = "DIRAC.WorkloadManagementSystem.Client.DownloadInputData"
+    download: str = Field(
+        "DIRAC.WorkloadManagementSystem.Client.DownloadInputData", alias="Download"
+    )
     """Policy for downloading input data files to the local worker node before job execution."""
-    Protocol: str = "DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol"
+    protocol: str = Field(
+        "DIRAC.WorkloadManagementSystem.Client.InputDataByProtocol", alias="Protocol"
+    )
     """Policy for accessing input data directly via supported protocols without downloading."""
-    AllReplicas: bool = True
+    all_replicas: bool = Field(True, alias="AllReplicas")
     """Whether to consider all available replicas when resolving input data locations."""
-    Protocols: InputDataPolicyProtocolsConfig = InputDataPolicyProtocolsConfig()
+    protocols: InputDataPolicyProtocolsConfig = Field(
+        InputDataPolicyProtocolsConfig(), alias="Protocols"
+    )
     """Protocol-specific configuration defining which protocols are available for remote and local access."""
-    InputDataModule: str = "DIRAC.Core.Utilities.InputDataResolution"
+    input_data_module: str = Field(
+        "DIRAC.Core.Utilities.InputDataResolution", alias="InputDataModule"
+    )
     """Module responsible for resolving input data locations and determining access methods."""
 
 
 class OperationsConfig(BaseModel):
-    EnableSecurityLogging: bool = False
+    enable_security_logging: bool = Field(False, alias="EnableSecurityLogging")
     """Flag for globally disabling the use of the SecurityLogging service.
 
     This is False by default, as should be migrated to use centralized logging.
     """
-    InputDataPolicy: InputDataPolicyConfig = InputDataPolicyConfig()
+    input_data_policy: InputDataPolicyConfig = Field(
+        InputDataPolicyConfig(), alias="InputDataPolicy"
+    )
     """Specify how jobs access their data. See InputDataResolution documentation for details."""
-    JobDescription: JobDescriptionConfig = JobDescriptionConfig()
+    job_description: JobDescriptionConfig = Field(
+        JobDescriptionConfig(), alias="JobDescription"
+    )
     """Configuration for job description defaults and limits."""
-    Services: ServicesConfig = ServicesConfig()
+    services: ServicesConfig = Field(ServicesConfig(), alias="Services")
     """Configuration for various DIRAC services."""
-    SoftwareDistModule: str = "LocalSoftwareDist"
+    software_dist_module: str = Field("LocalSoftwareDist", alias="SoftwareDistModule")
     """Module used for software distribution."""
 
-    Cloud: MutableMapping[str, Any] | None = None
+    cloud: MutableMapping[str, Any] | None = Field(None, alias="Cloud")
     """Cloud computing configuration."""
-    DataConsistency: MutableMapping[str, Any] | None = None
+    data_consistency: MutableMapping[str, Any] | None = Field(
+        None, alias="DataConsistency"
+    )
     """Data consistency checking configuration."""
-    DataManagement: MutableMapping[str, Any] | None = None
+    data_management: MutableMapping[str, Any] | None = Field(
+        None, alias="DataManagement"
+    )
     """Data management operations configuration."""
-    EMail: MutableMapping[str, Any] | None = None
+    email: MutableMapping[str, Any] | None = Field(None, alias="EMail")
     """Email notification configuration."""
-    GaudiExecution: MutableMapping[str, Any] | None = None
+    gaudi_execution: MutableMapping[str, Any] | None = Field(
+        None, alias="GaudiExecution"
+    )
     """Gaudi framework execution configuration."""
-    Hospital: MutableMapping[str, Any] | None = None
+    hospital: MutableMapping[str, Any] | None = Field(None, alias="Hospital")
     """Job recovery and hospital configuration."""
-    JobScheduling: MutableMapping[str, Any] | None = None
+    job_scheduling: MutableMapping[str, Any] | None = Field(None, alias="JobScheduling")
     """Advanced job scheduling configuration."""
-    JobTypeMapping: MutableMapping[str, Any] | None = None
+    job_type_mapping: MutableMapping[str, Any] | None = Field(
+        None, alias="JobTypeMapping"
+    )
     """Mapping of job types to execution environments."""
-    LogFiles: MutableMapping[str, Any] | None = None
+    log_files: MutableMapping[str, Any] | None = Field(None, alias="LogFiles")
     """Log file management configuration."""
-    LogStorage: MutableMapping[str, Any] | None = None
+    log_storage: MutableMapping[str, Any] | None = Field(None, alias="LogStorage")
     """Log storage backend configuration."""
-    Logging: MutableMapping[str, Any] | None = None
+    logging: MutableMapping[str, Any] | None = Field(None, alias="Logging")
     """General logging configuration."""
-    Matching: MutableMapping[str, Any] | None = None
+    matching: MutableMapping[str, Any] | None = Field(None, alias="Matching")
     """Job matching configuration."""
-    MonitoringBackends: MutableMapping[str, Any] | None = None
+    monitoring_backends: MutableMapping[str, Any] | None = Field(
+        None, alias="MonitoringBackends"
+    )
     """Monitoring backend configuration."""
-    NagiosConnector: MutableMapping[str, Any] | None = None
+    nagios_connector: MutableMapping[str, Any] | None = Field(
+        None, alias="NagiosConnector"
+    )
     """Nagios monitoring integration configuration."""
-    Pilot: MutableMapping[str, Any] | None = None
+    pilot: MutableMapping[str, Any] | None = Field(None, alias="Pilot")
     """Pilot job configuration."""
-    Productions: MutableMapping[str, Any] | None = None
+    productions: MutableMapping[str, Any] | None = Field(None, alias="Productions")
     """Production management configuration."""
-    Shares: MutableMapping[str, Any] | None = None
+    shares: MutableMapping[str, Any] | None = Field(None, alias="Shares")
     """Resource sharing configuration."""
-    Shifter: MutableMapping[str, Any] | None = None
+    shifter: MutableMapping[str, Any] | None = Field(None, alias="Shifter")
     """Shifter proxy configuration."""
-    SiteSEMappingByProtocol: MutableMapping[str, Any] | None = None
+    site_se_mapping_by_protocol: MutableMapping[str, Any] | None = Field(
+        None, alias="SiteSEMappingByProtocol"
+    )
     """Site storage element mapping by protocol."""
-    TransformationPlugins: MutableMapping[str, Any] | None = None
+    transformation_plugins: MutableMapping[str, Any] | None = Field(
+        None, alias="TransformationPlugins"
+    )
     """Data transformation plugin configuration."""
-    Transformations: MutableMapping[str, Any] | None = None
+    transformations: MutableMapping[str, Any] | None = Field(
+        None, alias="Transformations"
+    )
     """Data transformation system configuration."""
-    ResourceStatus: MutableMapping[str, Any] | None = None
+    resource_status: MutableMapping[str, Any] | None = Field(
+        None, alias="ResourceStatus"
+    )
     """Resource status monitoring configuration."""
 
 
 class ResourcesComputingConfig(BaseModel):
     # TODO: Remove this once the model is extended to support everything
-    model_config = ConfigDict(extra="ignore", frozen=True)
+    model_config = ConfigDict(extra="ignore", frozen=True, populate_by_name=True)
 
     # TODO: Figure out how to remove this in LHCbDIRAC and then consider
     # constraining there to be at least one entry
-    OSCompatibility: MutableMapping[str, set[str]] = {}
+    os_compatibility: MutableMapping[str, set[str]] = Field({}, alias="OSCompatibility")
     """Compatibility matrix between DIRAC platforms and OS versions.
 
     Used by SiteDirector to match TaskQueues to Computing Element capabilities.
     """
 
-    @field_validator("OSCompatibility", mode="before")
+    @field_validator("os_compatibility", mode="before")
     @classmethod
     def legacy_adaptor_os_compatibility(cls, v: Any) -> Any:
         """Apply transformations to interpret the legacy DIRAC CFG format."""
@@ -338,7 +388,7 @@ class ResourcesComputingConfig(BaseModel):
             os_compatibility[k] = set(v.replace(" ", "").split(","))
         return os_compatibility
 
-    @field_validator("OSCompatibility")
+    @field_validator("os_compatibility")
     @classmethod
     def ensure_self_compatibility(cls, v: dict[str, set[str]]) -> dict[str, set[str]]:
         """Ensure platforms are compatible with themselves."""
@@ -350,38 +400,47 @@ class ResourcesComputingConfig(BaseModel):
 class ResourcesConfig(BaseModel):
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(
-        extra="ignore", frozen=True, use_attribute_docstrings=True
+        extra="ignore",
+        frozen=True,
+        use_attribute_docstrings=True,
+        populate_by_name=True,
     )
 
-    Computing: ResourcesComputingConfig = ResourcesComputingConfig()
+    computing: ResourcesComputingConfig = Field(
+        ResourcesComputingConfig(), alias="Computing"
+    )
     """Computing resource configuration."""
 
 
 class Config(BaseModel):
-    DIRAC: DIRACConfig
+    dirac: DIRACConfig = Field(alias="DIRAC")
     """The DIRAC section contains general parameters needed in most installation types."""
-    Operations: MutableMapping[str, OperationsConfig]
+    operations: MutableMapping[str, OperationsConfig] = Field(alias="Operations")
     """Operations configuration per VO. The Defaults entry is automatically merged into each VO-specific config."""
-    Registry: MutableMapping[str, RegistryConfig]
+    registry: MutableMapping[str, RegistryConfig] = Field(alias="Registry")
     """Registry sections to register VOs, groups, users and hosts. See UserManagement documentation for details."""
-    Resources: ResourcesConfig = ResourcesConfig()
+    resources: ResourcesConfig = Field(ResourcesConfig(), alias="Resources")
     """Resources configuration including computing elements, storage elements, and sites."""
 
-    LocalSite: Any = None
+    local_site: Any = Field(None, alias="LocalSite")
     """Local site-specific configuration parameters."""
-    LogLevel: Any = None
+    log_level: Any = Field(None, alias="LogLevel")
     """Global logging level configuration."""
-    MCTestingDestination: Any = None
+    mc_testing_destination: Any = Field(None, alias="MCTestingDestination")
     """Monte Carlo testing destination configuration."""
-    Systems: Any | None = None
+    systems: Any | None = Field(None, alias="Systems")
     """Systems configuration."""
-    WebApp: Any = None
+    web_app: Any = Field(None, alias="WebApp")
     """Web application configuration parameters."""
 
     @model_validator(mode="before")
     @classmethod
     def ensure_operations_defaults(cls, v: dict[str, Any]):
         """Merge the Defaults entry into the VO-specific config under Operations."""
+        for field_name, field_info in cls.model_fields.items():
+            if field_info.alias and field_name in v:
+                v[field_info.alias] = v.pop(field_name)
+
         operations = v.setdefault("Operations", {})
         if os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             # The Defaults entry should be kept and not merged into the VO-specific

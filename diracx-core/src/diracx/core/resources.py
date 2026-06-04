@@ -26,5 +26,5 @@ def find_compatible_platforms(job_platforms: list[str], config: Config) -> list[
         list of compatible platforms
 
     """
-    os_compatibility_dict = config.Resources.Computing.OSCompatibility
+    os_compatibility_dict = config.resources.computing.os_compatibility
     return returnValueOrRaise(getDIRACPlatform(job_platforms, os_compatibility_dict))

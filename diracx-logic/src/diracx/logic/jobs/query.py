@@ -47,7 +47,7 @@ async def search(
                 body.parameters = ["JobID"] + (body.parameters or [])
 
     # TODO: Apply all the job policy stuff properly using user_info
-    global_jobs_info = config.Operations[vo].Services.JobMonitoring.GlobalJobsInfo
+    global_jobs_info = config.operations[vo].services.job_monitoring.global_jobs_info
     if not global_jobs_info and preferred_username:
         body.search.append(
             {
@@ -88,7 +88,7 @@ async def summary(
     body: SummaryParams,
 ):
     """Show information suitable for plotting."""
-    global_jobs_info = config.Operations[vo].Services.JobMonitoring.GlobalJobsInfo
+    global_jobs_info = config.operations[vo].services.job_monitoring.global_jobs_info
     if not global_jobs_info and preferred_username:
         body.search.append(
             {

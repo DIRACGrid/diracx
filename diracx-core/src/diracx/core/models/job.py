@@ -14,20 +14,20 @@ from .types import UTCDatetime
 
 
 class InsertedJob(BaseModel):
-    JobID: int
-    Status: str
-    MinorStatus: str
-    TimeStamp: UTCDatetime
+    job_id: int = Field(alias="JobID")
+    status: str = Field(alias="Status")
+    minor_status: str = Field(alias="MinorStatus")
+    time_stamp: UTCDatetime = Field(alias="TimeStamp")
 
 
 class HeartbeatData(BaseModel, extra="forbid"):
-    LoadAverage: float | None = None
-    MemoryUsed: float | None = None
-    Vsize: float | None = None
-    AvailableDiskSpace: float | None = None
-    CPUConsumed: float | None = None
-    WallClockTime: float | None = None
-    StandardOutput: str | None = None
+    load_average: float | None = Field(None, alias="LoadAverage")
+    memory_used: float | None = Field(None, alias="MemoryUsed")
+    vsize: float | None = Field(None, alias="Vsize")
+    available_disk_space: float | None = Field(None, alias="AvailableDiskSpace")
+    cpu_consumed: float | None = Field(None, alias="CPUConsumed")
+    wall_clock_time: float | None = Field(None, alias="WallClockTime")
+    standard_output: str | None = Field(None, alias="StandardOutput")
 
 
 class JobCommand(BaseModel):
@@ -136,34 +136,34 @@ class JobLoggingRecord(BaseModel):
 
 
 class JobStatusUpdate(BaseModel):
-    Status: JobStatus | None = None
-    MinorStatus: str | None = None
-    ApplicationStatus: str | None = None
-    Source: str = "Unknown"
+    status: JobStatus | None = Field(None, alias="Status")
+    minor_status: str | None = Field(None, alias="MinorStatus")
+    application_status: str | None = Field(None, alias="ApplicationStatus")
+    source: str = Field("Unknown", alias="Source")
 
 
 class LimitedJobStatusReturn(BaseModel):
-    Status: JobStatus
-    MinorStatus: str
-    ApplicationStatus: str
+    status: JobStatus = Field(alias="Status")
+    minor_status: str = Field(alias="MinorStatus")
+    application_status: str = Field(alias="ApplicationStatus")
 
 
 class JobStatusReturn(LimitedJobStatusReturn):
-    StatusTime: UTCDatetime
-    Source: str
+    status_time: UTCDatetime = Field(alias="StatusTime")
+    source: str = Field(alias="Source")
 
 
 class SetJobStatusReturn(BaseModel):
     class SetJobStatusReturnSuccess(BaseModel):
         """Successful new status change."""
 
-        Status: JobStatus | None = None
-        MinorStatus: str | None = None
-        ApplicationStatus: str | None = None
-        HeartBeatTime: UTCDatetime | None = None
-        StartExecTime: UTCDatetime | None = None
-        EndExecTime: UTCDatetime | None = None
-        LastUpdateTime: UTCDatetime | None = None
+        status: JobStatus | None = Field(None, alias="Status")
+        minor_status: str | None = Field(None, alias="MinorStatus")
+        application_status: str | None = Field(None, alias="ApplicationStatus")
+        heart_beat_time: UTCDatetime | None = Field(None, alias="HeartBeatTime")
+        start_exec_time: UTCDatetime | None = Field(None, alias="StartExecTime")
+        end_exec_time: UTCDatetime | None = Field(None, alias="EndExecTime")
+        last_update_time: UTCDatetime | None = Field(None, alias="LastUpdateTime")
 
     success: dict[int, SetJobStatusReturnSuccess]
     failed: dict[int, dict[str, str]]

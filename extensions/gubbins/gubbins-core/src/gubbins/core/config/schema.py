@@ -11,6 +11,7 @@ from diracx.core.config import (
 from diracx.core.config import (
     UserConfig as _UserConfig,
 )
+from pydantic import Field
 
 """
 In order to add extra config, you need to redefine
@@ -19,12 +20,12 @@ the whole tree down to the point you are interested in changing
 
 
 class UserConfig(_UserConfig):
-    GubbinsSpecificInfo: str | None = None
+    gubbins_specific_info: str | None = Field(None, alias="GubbinsSpecificInfo")
 
 
 class RegistryConfig(_RegistryConfig):
-    Users: MutableMapping[str, UserConfig]  # type: ignore[assignment]
+    users: MutableMapping[str, UserConfig] = Field(alias="Users")  # type: ignore[assignment]
 
 
 class Config(_Config):
-    Registry: MutableMapping[str, RegistryConfig]  # type: ignore[assignment]
+    registry: MutableMapping[str, RegistryConfig] = Field(alias="Registry")  # type: ignore[assignment]

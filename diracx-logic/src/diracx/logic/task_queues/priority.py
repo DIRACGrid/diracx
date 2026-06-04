@@ -19,9 +19,9 @@ async def recalculate_tq_shares_for_entity(
     task_queue_db: TaskQueueDB,
 ):
     """Recalculate the shares for a user/userGroup combo."""
-    group_properties = config.Registry[vo].Groups[owner_group].Properties
-    job_share = config.Registry[vo].Groups[owner_group].JobShare
-    allow_background_tqs = config.Registry[vo].Groups[owner_group].AllowBackgroundTQs
+    group_properties = config.registry[vo].groups[owner_group].properties
+    job_share = config.registry[vo].groups[owner_group].job_share
+    allow_background_tqs = config.registry[vo].groups[owner_group].allow_background_tqs
     if JOB_SHARING in group_properties:
         # If group has JobSharing just set prio for that entry, user is irrelevant
         await set_priorities_for_entity(

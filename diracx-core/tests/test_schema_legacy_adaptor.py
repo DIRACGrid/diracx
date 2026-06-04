@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from diracx.core.config import SerializableSet
 from diracx.core.config.schema import BaseModel
@@ -17,19 +17,21 @@ class SimpleModel(BaseModel):
     """Test model with various field types that should be handled by legacy_adaptor."""
 
     # Non-optional list
-    required_list: list[str]
+    required_list: list[str] = Field(alias="RequiredList")
 
     # Optional list
-    optional_list: list[str] | None = None
+    optional_list: list[str] | None = Field(None, alias="OptionalList")
 
     # Non-optional SerializableSet
-    required_set: SerializableSet[str]
+    required_set: SerializableSet[str] = Field(alias="RequiredSet")
 
     # Optional SerializableSet
-    optional_set: SerializableSet[str] | None = None
+    optional_set: SerializableSet[str] | None = Field(None, alias="OptionalSet")
 
     # Optional SerializableSet with SecurityProperty
-    optional_security_set: SerializableSet[SecurityProperty] | None = None
+    optional_security_set: SerializableSet[SecurityProperty] | None = Field(
+        None, alias="OptionalSecuritySet"
+    )
 
 
 def test_legacy_adaptor_without_env_var():
@@ -40,8 +42,8 @@ def test_legacy_adaptor_without_env_var():
     with pytest.raises(ValidationError) as exc_info:
         SimpleModel.model_validate(
             {
-                "required_list": "item1, item2",
-                "required_set": "item3, item4",
+                "RequiredList": "item1, item2",
+                "RequiredSet": "item3, item4",
             }
         )
 
@@ -56,8 +58,8 @@ def test_legacy_adaptor_required_list(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "xroot, root",
-            "required_set": "item1, item2",
+            "RequiredList": "xroot, root",
+            "RequiredSet": "item1, item2",
         }
     )
 
@@ -74,9 +76,9 @@ def test_legacy_adaptor_optional_list_with_value(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "item1",
-            "required_set": "item2",
-            "optional_list": "xroot, root",
+            "RequiredList": "item1",
+            "RequiredSet": "item2",
+            "OptionalList": "xroot, root",
         }
     )
 
@@ -89,9 +91,9 @@ def test_legacy_adaptor_optional_list_with_none(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "item1",
-            "required_set": "item2",
-            "optional_list": None,
+            "RequiredList": "item1",
+            "RequiredSet": "item2",
+            "OptionalList": None,
         }
     )
 
@@ -104,9 +106,9 @@ def test_legacy_adaptor_optional_set_with_value(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "item1",
-            "required_set": "item2",
-            "optional_set": "value1, value2, value3",
+            "RequiredList": "item1",
+            "RequiredSet": "item2",
+            "OptionalSet": "value1, value2, value3",
         }
     )
 
@@ -119,9 +121,9 @@ def test_legacy_adaptor_optional_security_property_set(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "item1",
-            "required_set": "item2",
-            "optional_security_set": "NormalUser, ProductionManagement",
+            "RequiredList": "item1",
+            "RequiredSet": "item2",
+            "OptionalSecuritySet": "NormalUser, ProductionManagement",
         }
     )
 
@@ -137,9 +139,9 @@ def test_legacy_adaptor_whitespace_handling(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "  item1  ,  item2  ,  item3  ",
-            "required_set": "value1,value2,  value3  ",
-            "optional_list": "xroot,   root,   gsiftp",
+            "RequiredList": "  item1  ,  item2  ,  item3  ",
+            "RequiredSet": "value1,value2,  value3  ",
+            "OptionalList": "xroot,   root,   gsiftp",
         }
     )
 
@@ -154,8 +156,8 @@ def test_legacy_adaptor_empty_values(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": "item1,,item2,,,item3",  # Empty values between commas
-            "required_set": "value1, , value2",  # Empty value with spaces
+            "RequiredList": "item1,,item2,,,item3",  # Empty values between commas
+            "RequiredSet": "value1, , value2",  # Empty value with spaces
         }
     )
 
@@ -169,9 +171,9 @@ def test_legacy_adaptor_already_list(monkeypatch):
 
     model = SimpleModel.model_validate(
         {
-            "required_list": ["already", "a", "list"],
-            "required_set": ["already", "a", "list"],
-            "optional_list": ["also", "a", "list"],
+            "RequiredList": ["already", "a", "list"],
+            "RequiredSet": ["already", "a", "list"],
+            "OptionalList": ["also", "a", "list"],
         }
     )
 

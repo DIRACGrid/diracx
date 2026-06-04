@@ -253,7 +253,7 @@ async def perform_legacy_exchange(
 
     try:
         parsed_scope = parse_and_validate_scope(scope, config, available_properties)
-        vo_users = config.Registry[parsed_scope["vo"]]
+        vo_users = config.registry[parsed_scope["vo"]]
         sub = vo_users.sub_from_preferred_username(preferred_username)
     except (KeyError, ValueError) as e:
         raise ValueError("Invalid scope or preferred_username") from e
@@ -291,8 +291,8 @@ async def exchange_token(
 
     # Extract attributes from the OIDC token details
     sub = oidc_token_info["sub"]
-    if user_info := config.Registry[vo].Users.get(sub):
-        preferred_username = user_info.PreferedUsername
+    if user_info := config.registry[vo].users.get(sub):
+        preferred_username = user_info.prefered_username
     else:
         preferred_username = oidc_token_info.get("preferred_username", sub)
         raise NotImplementedError(
@@ -300,7 +300,7 @@ async def exchange_token(
         )
 
     # Check that the subject is part of the dirac users
-    if sub not in config.Registry[vo].Groups[dirac_group].Users:
+    if sub not in config.registry[vo].groups[dirac_group].users:
         raise PermissionError(
             f"User is not a member of the requested group ({preferred_username}, {dirac_group})"
         )

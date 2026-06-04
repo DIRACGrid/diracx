@@ -34,19 +34,19 @@ LEGACY_EXCHANGE_PATTERN = rf"diracx:legacy:({BASE_64_URL_SAFE_PATTERN})"
 
 
 class IdPConfig(BaseModel):
-    URL: str
-    ClientID: str
+    url: str = Field(alias="URL")
+    client_id: str = Field(alias="ClientID")
 
 
 class VOConfig(BaseModel):
-    DefaultGroup: str
-    IdP: IdPConfig
-    UserSubjects: dict[str, str]
-    Support: SupportInfo = Field(default_factory=SupportInfo)
+    default_group: str = Field(alias="DefaultGroup")
+    idp: IdPConfig = Field(alias="IdP")
+    user_subjects: dict[str, str] = Field(alias="UserSubjects")
+    support: SupportInfo = Field(default_factory=SupportInfo, alias="Support")
 
 
 class ConversionConfig(BaseModel):
-    VOs: dict[str, VOConfig]
+    vos: dict[str, VOConfig] = Field(alias="VOs")
 
 
 @app.command()
@@ -81,7 +81,9 @@ def cs_sync(old_file: Path, new_file: Path):
     )[0].load()
     config = config_class.model_validate(raw)
     new_file.write_text(
-        yaml.safe_dump(config.model_dump(exclude_unset=True, mode="json"))
+        yaml.safe_dump(
+            config.model_dump(by_alias=True, exclude_unset=True, mode="json")
+        )
     )
 
 
@@ -112,20 +114,20 @@ def _apply_fixes(raw):
 
     # Check that we have the config for all the VOs
     vos = set(raw["Registry"].get("VO", []))
-    if non_configured_vos := vos - set(conv_config.VOs):
+    if non_configured_vos := vos - set(conv_config.vos):
         print(f"{non_configured_vos} don't have a migration config, ignoring")
 
     # Modify the registry to be fully multi-VO
     original_registry = raw.pop("Registry")
     raw["Registry"] = {}
 
-    for vo, vo_meta in conv_config.VOs.items():
+    for vo, vo_meta in conv_config.vos.items():
         raw["Registry"][vo] = {
-            "IdP": vo_meta.IdP.model_dump(),
-            "DefaultGroup": vo_meta.DefaultGroup,
+            "IdP": vo_meta.idp.model_dump(by_alias=True),
+            "DefaultGroup": vo_meta.default_group,
             "Users": {},
             "Groups": {},
-            "Support": vo_meta.Support,
+            "Support": vo_meta.support,
         }
         if "DefaultStorageQuota" in original_registry:
             raw["Registry"][vo]["DefaultStorageQuota"] = original_registry[
@@ -154,14 +156,14 @@ def _apply_fixes(raw):
                 nicknames = {u.strip() for u in info["Users"].split(",") if u.strip()}
                 vo_users |= nicknames
                 raw["Registry"][vo]["Groups"][name]["Users"] = [
-                    vo_meta.UserSubjects[n]
+                    vo_meta.user_subjects[n]
                     for n in nicknames
-                    if n in vo_meta.UserSubjects
+                    if n in vo_meta.user_subjects
                 ]
         # Find the users that belong to this VO
         for name, info in original_registry["Users"].items():
             if name in vo_users:
-                if subject := vo_meta.UserSubjects.get(name):
+                if subject := vo_meta.user_subjects.get(name):
                     raw["Registry"][vo]["Users"][subject] = info | {
                         "PreferedUsername": name
                     }
