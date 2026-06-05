@@ -25,9 +25,9 @@ Settings for the authentication service.
 
 *Optional*, default value: `myDIRACClientID`
 
-OAuth2 client identifier for DIRAC services.
+OAuth2 client identifier for DIRAC clients (cli, web) to DIRAC services.
 
-This should match the client ID registered with the identity provider.
+There is no real reason to change that.
 
 ### `DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS`
 
