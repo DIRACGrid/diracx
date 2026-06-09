@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DIRACX_CHARTS_REPOSITORY: https://github.com/DIRACGrid/diracx-charts.git
+  DIRACX_CHARTS_BRANCH: master
+
 jobs:
   shellcheck:
     runs-on: ubuntu-latest
@@ -168,7 +172,7 @@ jobs:
           docker image ls -a
       - name: Start demo
         run: |
-          git clone https://github.com/DIRACGrid/diracx-charts.git ../diracx-charts
+          git clone --branch "$DIRACX_CHARTS_BRANCH" --single-branch "$DIRACX_CHARTS_REPOSITORY" ../diracx-charts
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")

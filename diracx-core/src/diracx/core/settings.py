@@ -175,9 +175,9 @@ class AuthSettings(ServiceSettingsBase):
     )
 
     dirac_client_id: str = "myDIRACClientID"
-    """OAuth2 client identifier for DIRAC services.
+    """OAuth2 client identifier for DIRAC clients (cli, web) to DIRAC services.
 
-    This should match the client ID registered with the identity provider.
+    There is no real reason to change that.
     """
 
     allowed_redirects: list[str] = []
