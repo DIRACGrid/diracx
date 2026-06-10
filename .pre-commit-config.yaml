@@ -71,7 +71,9 @@ repos:
     rev: v2.4.2
     hooks:
       - id: codespell
-        args: ["-w"]
+        args:
+          - --ignore-words-list=CheckIn,dependent,dependant
+          - --skip=diracx-client/src/diracx/client/_generated/*,diracx-[a-z]*/tests/*,diracx-testing/*,extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*,extensions/gubbins/gubbins-*/tests/*,pyproject.toml
         exclude: pixi\.lock$
 
   - repo: https://github.com/adamchainz/blacken-docs

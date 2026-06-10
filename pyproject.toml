@@ -41,11 +41,11 @@ select = [
   "PLE", # pylint errors
   "D",   # pydocstyle
   # "UP",   # pyUpgrade
-  "FLY", # flynt
-  "DTZ", # flake8-datetimez
-  "S",   # flake8-bandit
-  "N",   # pep8-naming
-  "INP", # flake8-no-implicit-namespace-packages
+  "FLY",    # flynt
+  "DTZ",    # flake8-datetimez
+  "S",      # flake8-bandit
+  "N",      # pep8-naming
+  "INP",    # flake8-no-implicit-namespace-packages
   "RUF022",
   "TID251", # flake8-tidy-imports.banned-api
 ]
@@ -108,8 +108,9 @@ skip = [
   "diracx-testing/*",
   "extensions/gubbins/gubbins-client/src/gubbins/client/_generated/*",
   "extensions/gubbins/gubbins-*/tests/*",
+  "pyproject.toml",
 ]
-ignore-words-list = ["CheckIn", "dependant"]
+ignore-words-list = ["CheckIn", "dependent", "dependant"]
 
 
 [tool.mypy]

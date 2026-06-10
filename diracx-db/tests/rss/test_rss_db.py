@@ -45,7 +45,7 @@ async def test_site_status(rss_db: ResourceStatusDB):
     assert status == "Active"
     assert reason == "All good"
 
-    # Test with an unknow Site (should not be found)
+    # Test with an unknown Site (should not be found)
     with pytest.raises(ResourceNotFoundError):
         async with rss_db as db:
             await db.get_site_status("Unknown")
@@ -129,7 +129,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
         assert row.Status == "Active"
         assert row.Reason == "All good"
 
-    # Test with an unknow Resource (should not be found)
+    # Test with an unknown Resource (should not be found)
     with pytest.raises(ResourceNotFoundError):
         async with rss_db as db:
             await db.get_resource_status("Unknown")
