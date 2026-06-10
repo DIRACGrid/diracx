@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.1](https://github.com/DIRACGrid/diracx/compare/v0.1.0...v0.1.1) (2026-06-10)
+
+
+### Features
+
+* add documentation for diracx container deployment ([#851](https://github.com/DIRACGrid/diracx/issues/851)) ([0b56b80](https://github.com/DIRACGrid/diracx/commit/0b56b80b372a436aee5570faf4ad3f32918e06ee))
+
+
+### Bug Fixes
+
+* rename the pth file to make sure it is parsed after editable install pth ([#921](https://github.com/DIRACGrid/diracx/issues/921)) ([5883c3f](https://github.com/DIRACGrid/diracx/commit/5883c3f29f56a639b8493ca3f6cc995dad6fab0b))
+* setup pixi in the deployment ci ([#912](https://github.com/DIRACGrid/diracx/issues/912)) ([a27e79b](https://github.com/DIRACGrid/diracx/commit/a27e79b733197d474954dbf4e1a8b10a049346b2))
+
+
+### Miscellaneous Chores
+
+* release 0.1.1 ([0da77e0](https://github.com/DIRACGrid/diracx/commit/0da77e066fd0a8d99d505adaa5b1f359a196a6fd))
+
 ## [0.1.0](https://github.com/DIRACGrid/diracx/compare/v0.0.14...v0.1.0) (2026-05-06)
 
 
