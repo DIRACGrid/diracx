@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, Depends, HTTPException, Query, status
+from fastapi import Body, Depends, HTTPException, Query
 
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR
@@ -63,13 +63,13 @@ async def register_pilots(
     # can only register a single stamp per call.
     if GENERIC_PILOT in user_info.properties and len(pilot_stamps) != 1:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Insufficient permissions to register more than one pilot.",
         )
 
     if JOB_ADMINISTRATOR not in user_info.properties and vo != user_info.vo:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Pilots can only be registered for your own VO.",
         )
 
@@ -162,7 +162,7 @@ async def update_pilot_metadata(
     # can only modify a single stamp per call.
     if GENERIC_PILOT in user_info.properties and len(pilot_stamps) != 1:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=HTTPStatus.FORBIDDEN,
             detail="Insufficient permissions to modify more than one pilot.",
         )
 

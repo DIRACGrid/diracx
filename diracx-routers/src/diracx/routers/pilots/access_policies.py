@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import StrEnum, auto
+from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 
 from diracx.core.models.search import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
@@ -59,14 +60,14 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
             )
             if not is_admin and not is_legacy_pilot:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
+                    status_code=HTTPStatus.FORBIDDEN,
                     detail="Insufficient permissions to manage pilots.",
                 )
 
         if action == ActionType.READ_PILOT_METADATA:
             if GENERIC_PILOT in user_info.properties:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
+                    status_code=HTTPStatus.FORBIDDEN,
                     detail="Pilots cannot read other pilots' metadata.",
                 )
 
@@ -88,7 +89,7 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
             )
             if len(owner_rows) != len(set(job_ids)):
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=HTTPStatus.NOT_FOUND,
                     detail="One or more jobs do not exist.",
                 )
             if not all(
@@ -97,7 +98,7 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                 for row in owner_rows
             ):
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
+                    status_code=HTTPStatus.FORBIDDEN,
                     detail=(
                         "Insufficient permissions to access all of the provided jobs."
                     ),
@@ -112,12 +113,12 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
             )
             if len(pilots) != len(set(pilot_stamps)):
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=HTTPStatus.NOT_FOUND,
                     detail="At least one pilot does not exist.",
                 )
             if not all(pilot["VO"] == user_info.vo for pilot in pilots):
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
+                    status_code=HTTPStatus.FORBIDDEN,
                     detail=(
                         "Insufficient permissions to access all of the provided pilots."
                     ),
