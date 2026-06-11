@@ -131,7 +131,7 @@ async def _s3_delete_chunk_with_retry(
                 Bucket=bucket,
                 Delete={"Objects": remaining, "Quiet": True},
             )
-        except NoSuchBucketError:
+        except PresignError:
             if attempt == max_attempts:
                 return {obj["Key"] for obj in remaining}
             await asyncio.sleep(delay)
