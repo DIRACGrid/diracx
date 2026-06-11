@@ -98,9 +98,7 @@ async def test_presigned_upload_moto(moto_s3):
         ExpiresIn=3600,
     )
     async with httpx.AsyncClient() as client:
-        r = await client.get(
-            url,
-        )
+        r = await client.get(url)
 
     assert r.content == file_content
 
@@ -123,12 +121,11 @@ async def test_bucket(minio_client):
     await minio_client.create_bucket(Bucket=bucket_name)
     yield bucket_name
     objects = await minio_client.list_objects(Bucket=bucket_name)
-    if objects.get("Contents", []):
+    contents = objects.get("Contents", [])
+    if contents:
         await minio_client.delete_objects(
             Bucket=bucket_name,
-            Delete={
-                "Objects": [{"Key": obj["Key"]} for obj in objects.get("Contents", [])]
-            },
+            Delete={"Objects": [{"Key": obj["Key"]} for obj in contents]},
         )
 
     await minio_client.delete_bucket(Bucket=bucket_name)
