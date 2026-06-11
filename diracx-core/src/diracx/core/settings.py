@@ -158,15 +158,15 @@ class AuthSettings(ServiceSettingsBase):
     @model_validator(mode="after")
     def check_retention_greater_than_expiration(self) -> Self:
         """Ensure retention times are bigger than expiration times to avoid deleting valid flows."""
-        if self.completed_flow_retention_minutes <= (
-            self.device_flow_expiration_seconds / 60
-        ) or self.completed_flow_retention_minutes <= (
-            self.authorization_flow_expiration_seconds / 60
+        retention_seconds = self.expired_flow_retention_days * 86400
+        if (
+            retention_seconds <= self.device_flow_expiration_seconds
+            or retention_seconds <= self.authorization_flow_expiration_seconds
         ):
             raise ValueError(
-                f"completed_flow_retention_minutes ({self.completed_flow_retention_minutes} minutes) must be bigger"
-                f" than device_flow_expiration_seconds ({self.device_flow_expiration_seconds / 60} minutes) and"
-                f" authorization_flow_expiration_seconds: ({self.authorization_flow_expiration_seconds / 60} minutes)"
+                f"expired_flow_retention_days ({self.expired_flow_retention_days} days) must be bigger than"
+                f" device_flow_expiration_seconds ({self.device_flow_expiration_seconds} s) and"
+                f" authorization_flow_expiration_seconds ({self.authorization_flow_expiration_seconds} s)"
             )
         return self
 
@@ -202,11 +202,12 @@ class AuthSettings(ServiceSettingsBase):
     before it must be exchanged for tokens. Default: 5 minutes.
     """
 
-    completed_flow_retention_minutes: int = 60
-    """Retention time in minutes for completed flow.
+    expired_flow_retention_days: int = 7
+    """Retention time in days for device and authorization flows.
 
-    The maximum retention time of flow after being completed
-    and before they are deleted. Default: 60 minutes.
+    Expired flow rows are deleted (in batches) once they are older than this
+    many days. Must be larger than the device and authorization flow expiration
+    times so that still-valid flows are never removed. Default: 7 days.
     """
 
     state_key: FernetKey
@@ -251,11 +252,12 @@ class AuthSettings(ServiceSettingsBase):
     through a new authentication flow. Default: 60 minutes.
     """
 
-    revoked_refresh_token_retention_minutes: int = 43200
-    """Retention time in minutes for revoked refresh tokens.
+    refresh_token_retention_months: int = 6
+    """Retention time in months for refresh tokens.
 
-    The maximum retention time of refresh tokens after being
-    revoked and before they are deleted. Default: 43200 minutes (30 days).
+    Refresh tokens live in monthly partitions that are dropped once the whole
+    month is older than this many months. It is therefore the longest a refresh
+    token (revoked or not) is kept before removal. Default: 6 months.
     """
 
     available_properties: set[SecurityProperty] = Field(

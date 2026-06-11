@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import re
 import secrets
 from datetime import UTC, datetime
 from itertools import pairwise
 
+from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MONTHLY, rrule
 from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
@@ -31,6 +33,62 @@ USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ"
 MAX_RETRY = 5
 
 logger = logging.getLogger(__name__)
+
+# Always keep at least this many months of future RefreshTokens partitions ahead
+# of "now" so the ``p_future`` catch-all partition never accumulates rows.
+PARTITION_MONTHS_AHEAD = 12
+
+# Maximum number of flow rows deleted per transaction when cleaning expired
+# device/authorization flows, to bound lock usage on large tables.
+FLOW_DELETE_BATCH_SIZE = 50_000
+
+
+def _month_start(dt: datetime) -> datetime:
+    """Truncate ``dt`` to the first instant of its month."""
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _partition_name(month_start: datetime) -> str:
+    """Name of the partition holding the tokens created during ``month_start``."""
+    return f"p_{month_start.year}_{month_start.month}"
+
+
+def _partition_boundary(dt: datetime) -> str:
+    """``RANGE COLUMNS(JTI)`` upper bound (exclusive) for tokens created before ``dt``."""
+    return str(uuid7_from_datetime(dt, randomize=False)).replace("-", "")
+
+
+def plan_partition_maintenance(
+    existing_months: list[datetime],
+    now: datetime,
+    retention_months: int,
+    months_ahead: int,
+) -> tuple[list[datetime], list[datetime]]:
+    """Decide which monthly ``RefreshTokens`` partitions to drop and to add.
+
+    ``existing_months`` are the month-start datetimes of the existing
+    ``p_<year>_<month>`` partitions (excluding ``p_future``). Returns
+    ``(months_to_drop, months_to_add)`` as month-start datetimes.
+    """
+    existing = sorted(existing_months)
+
+    # A partition for month ``m`` holds tokens created before ``m + 1 month``, so
+    # the whole partition is expired once that upper bound is older than the
+    # retention horizon. Keeping ``retention_months`` worth of partitions never
+    # drops a token younger than that many calendar months.
+    horizon = now - relativedelta(months=retention_months)
+    months_to_drop = [m for m in existing if m + relativedelta(months=1) <= horizon]
+
+    # Ensure a partition exists for every month up to ``now + months_ahead`` by
+    # appending months above the highest existing partition.
+    target_last = _month_start(now) + relativedelta(months=months_ahead)
+    cursor = max(existing) if existing else _month_start(now) - relativedelta(months=1)
+    months_to_add: list[datetime] = []
+    while cursor < target_last:
+        cursor += relativedelta(months=1)
+        months_to_add.append(cursor)
+
+    return months_to_drop, months_to_add
 
 
 class AuthDB(BaseSQLDB):
@@ -67,8 +125,8 @@ class AuthDB(BaseSQLDB):
                 partition_list = []
                 for name, limit in pairwise(dates):
                     partition_list.append(
-                        f"PARTITION p_{name.year}_{name.month} "
-                        f"VALUES LESS THAN ('{str(uuid7_from_datetime(limit, randomize=False)).replace('-', '')}')"
+                        f"PARTITION {_partition_name(name)} "
+                        f"VALUES LESS THAN ('{_partition_boundary(limit)}')"
                     )
                 partition_list.append("PARTITION p_future VALUES LESS THAN (MAXVALUE)")
 
@@ -340,60 +398,139 @@ class AuthDB(BaseSQLDB):
             .values(status=RefreshTokenStatus.REVOKED)
         )
 
-    async def clean_expired_refresh_tokens(self, max_validity: int) -> int:
-        """Delete expired refresh tokens.
+    async def maintain_refresh_token_partitions(
+        self,
+        retention_months: int,
+        months_ahead: int = PARTITION_MONTHS_AHEAD,
+    ) -> None:
+        """Maintain the monthly partitions of the RefreshTokens table.
 
-        max_validity: Maximum validity time in minutes for refresh tokens.
+        Drops partitions whose entire month is older than ``retention_months``
+        and adds partitions ahead of time so the ``p_future`` catch-all never
+        fills. Cleanup of expired refresh tokens is achieved by dropping whole
+        partitions rather than deleting rows.
+
+        Only implemented for MySQL; raises ``NotImplementedError`` for any other
+        dialect (the table is only partitioned on MySQL).
         """
-        expired_date = str(
-            uuid7_from_datetime(substract_date(minutes=max_validity), randomize=False)
+        dialect = self.conn.dialect.name
+        if dialect != "mysql":
+            raise NotImplementedError(
+                "Refresh token partition maintenance is only implemented for "
+                f"MySQL, not {dialect!r}"
+            )
+
+        check_partition_query = text(
+            "SELECT PARTITION_NAME FROM information_schema.partitions "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'RefreshTokens' "
+            "AND PARTITION_NAME IS NOT NULL"
         )
-        stmt_expired = delete(RefreshTokens).where(
-            RefreshTokens.status == RefreshTokenStatus.CREATED,
-            RefreshTokens.jti < expired_date,
+        partition_names = (await self.conn.execute(check_partition_query)).all()
+
+        existing_months = []
+        for (name,) in partition_names:
+            if match := re.fullmatch(r"p_(\d+)_(\d+)", name):
+                existing_months.append(
+                    datetime(int(match.group(1)), int(match.group(2)), 1, tzinfo=UTC)
+                )
+
+        if not existing_months:
+            logger.warning(
+                "RefreshTokens is not partitioned; skipping partition maintenance. "
+                "Partition the table manually (see AuthDB.post_create)."
+            )
+            return
+
+        months_to_drop, months_to_add = plan_partition_maintenance(
+            existing_months,
+            now=datetime.now(tz=UTC),
+            retention_months=retention_months,
+            months_ahead=months_ahead,
         )
-        res_expired = await self.conn.execute(stmt_expired)
 
-        return res_expired.rowcount
+        # Add new partitions first, by splitting the p_future catch-all.
+        if months_to_add:
+            new_partitions = [
+                f"PARTITION {_partition_name(m)} "
+                f"VALUES LESS THAN ('{_partition_boundary(m + relativedelta(months=1))}')"
+                for m in months_to_add
+            ]
+            new_partitions.append("PARTITION p_future VALUES LESS THAN (MAXVALUE)")
+            await self.conn.execute(
+                text(
+                    "ALTER TABLE RefreshTokens REORGANIZE PARTITION p_future INTO ("
+                    + ", ".join(new_partitions)
+                    + ")"
+                )
+            )
 
-    async def clean_revoked_refresh_tokens(self, max_retention: int) -> int:
-        """Delete old revoked refresh tokens.
+        # Then drop the partitions whose whole month is past the retention horizon.
+        if months_to_drop:
+            drop_names = ", ".join(_partition_name(m) for m in months_to_drop)
+            await self.conn.execute(
+                text(f"ALTER TABLE RefreshTokens DROP PARTITION {drop_names}")
+            )
 
-        max_retention: Maximum retention time in minutes for revoked refresh tokens.
+        logger.info(
+            "Refresh token partition maintenance: added %d, dropped %d",
+            len(months_to_add),
+            len(months_to_drop),
+        )
+
+    async def _delete_flows_in_batches(
+        self, table, pk_column, cutoff: datetime, batch_size: int
+    ) -> int:
+        """Delete rows of ``table`` created before ``cutoff`` in batches.
+
+        Each batch deletes up to ``batch_size`` rows in its own transaction to
+        bound lock usage on large tables. Returns the number of rows deleted.
         """
-        revoked_date = str(
-            uuid7_from_datetime(substract_date(minutes=max_retention), randomize=False)
-        )
-        stmt_revoked = delete(RefreshTokens).where(
-            RefreshTokens.status == RefreshTokenStatus.REVOKED,
-            RefreshTokens.jti < revoked_date,
-        )
-        res_revoked = await self.conn.execute(stmt_revoked)
+        total = 0
+        while True:
+            pks = (
+                (
+                    await self.conn.execute(
+                        select(pk_column)
+                        .where(table.creation_time < cutoff)
+                        .limit(batch_size)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if not pks:
+                break
+            await self.conn.execute(delete(table).where(pk_column.in_(pks)))
+            await self.conn.commit()
+            total += len(pks)
+            if len(pks) < batch_size:
+                break
+        return total
 
-        return res_revoked.rowcount
+    async def clean_expired_authorization_flows(
+        self, retention_days: int, batch_size: int = FLOW_DELETE_BATCH_SIZE
+    ) -> int:
+        """Delete authorization flows older than ``retention_days`` days.
 
-    async def clean_expired_authorization_flows(self, max_retention: int) -> int:
-        """Delete old authorization flows.
-
-        max_retention: Maximum retention time in minutes for expired authorization flows.
-        Must be bigger than authorization_flow_expiration_seconds.
+        ``retention_days`` must be bigger than authorization_flow_expiration_seconds.
         """
-        stmt_auth = delete(AuthorizationFlows).where(
-            AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
+        return await self._delete_flows_in_batches(
+            AuthorizationFlows,
+            AuthorizationFlows.uuid,
+            substract_date(days=retention_days),
+            batch_size,
         )
-        res_auth = await self.conn.execute(stmt_auth)
 
-        return res_auth.rowcount
+    async def clean_expired_device_flows(
+        self, retention_days: int, batch_size: int = FLOW_DELETE_BATCH_SIZE
+    ) -> int:
+        """Delete device flows older than ``retention_days`` days.
 
-    async def clean_expired_device_flows(self, max_retention: int) -> int:
-        """Delete old device flows.
-
-        max_retention: Maximum retention time in minutes for expired device flows.
-        Must be bigger than device_flow_expiration_seconds.
+        ``retention_days`` must be bigger than device_flow_expiration_seconds.
         """
-        stmt_device = delete(DeviceFlows).where(
-            DeviceFlows.creation_time < substract_date(minutes=max_retention),
+        return await self._delete_flows_in_batches(
+            DeviceFlows,
+            DeviceFlows.user_code,
+            substract_date(days=retention_days),
+            batch_size,
         )
-        res_device = await self.conn.execute(stmt_device)
-
-        return res_device.rowcount
