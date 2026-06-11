@@ -101,35 +101,33 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     # Test with the test Compute Element (should be found)
     async with rss_db as db:
         result = await db.get_resource_statuses()
-    assert "TestCompute" in result
-    result = result["TestCompute"]
-    assert "all" in result
-    assert result["all"].Status == "Active"
-    assert result["all"].Reason == "All good"
-    assert result["all"].VO == "all"
+    assert "TestCompute" in result["all"]
+    row = result["all"]["TestCompute"]["all"]
+    assert row.Status == "Active"
+    assert row.Reason == "All good"
+    assert row.VO == "all"
 
     # Test with the test FTS (should be found)
     async with rss_db as db:
         result = await db.get_resource_statuses()
-    assert "TestFTS" in result
-    result = result["TestFTS"]
-    assert "all" in result
-    assert result["all"].Status == "Active"
-    assert result["all"].Reason == "All good"
-    assert result["all"].VO == "all"
+    assert "TestFTS" in result["all"]
+    row = result["all"]["TestFTS"]["all"]
+    assert row.Status == "Active"
+    assert row.Reason == "All good"
+    assert row.VO == "all"
 
     # Test with the test Storage Element (should be found)
     async with rss_db as db:
         result = await db.get_resource_statuses(
             ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
         )
-    assert set(result["TestStorage"].keys()) == {
+    assert set(result["all"]["TestStorage"].keys()) == {
         "ReadAccess",
         "WriteAccess",
         "CheckAccess",
         "RemoveAccess",
     }
-    for row in result["TestStorage"].values():
+    for row in result["all"]["TestStorage"].values():
         assert row.Status == "Active"
         assert row.Reason == "All good"
 
@@ -145,6 +143,28 @@ async def test_resource_status(rss_db: ResourceStatusDB):
         )
     assert max_date == _NOW
     assert count == 4  # TestStorage access rows
+
+
+async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
+    """Rows for the same resource in different VOs must not overwrite each other."""
+    async with rss_db as db:
+        await db.insert_resource_status(
+            name="SharedCE",
+            status="Active",
+            status_type="all",
+            vo="lhcb",
+            date_effective=_NOW,
+        )
+        await db.insert_resource_status(
+            name="SharedCE",
+            status="Banned",
+            status_type="all",
+            vo="atlas",
+            date_effective=_NOW,
+        )
+        result = await db.get_resource_statuses()
+    assert result["lhcb"]["SharedCE"]["all"].Status == "Active"
+    assert result["atlas"]["SharedCE"]["all"].Status == "Banned"
 
 
 async def test_empty_tables(rss_db: ResourceStatusDB):

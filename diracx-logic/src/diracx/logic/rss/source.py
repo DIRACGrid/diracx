@@ -17,6 +17,7 @@ from diracx.core.config.sources import AsyncCacheableSource, Snapshot
 from diracx.db.sql.rss.db import ResourceStatusDB
 
 from .query import (
+    STORAGE_STATUS_TYPES,
     get_compute_statuses,
     get_fts_statuses,
     get_site_statuses,
@@ -34,6 +35,10 @@ def _make_revision(max_date: datetime | None, count: int) -> tuple[str, datetime
 
     Including the row count in the revision means insertions and deletions
     change the ETag even when they do not advance the latest DateEffective.
+
+    This relies on writes setting DateEffective to the time of the change: an
+    update that neither advances max(DateEffective) nor changes the row count
+    keeps the same revision, so caches only notice it once the hard TTL expires.
     """
     if max_date is None:
         return EMPTY_REVISION
@@ -76,7 +81,7 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
 
 
 class StorageElementStatusSource(ResourceStatusSource):
-    status_types = ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
+    status_types = STORAGE_STATUS_TYPES
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
         return await get_storage_statuses(db)

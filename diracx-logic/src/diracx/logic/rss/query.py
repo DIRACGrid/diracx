@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from diracx.core.models.rss import (
     ALLOWED,
     BANNED,
@@ -14,6 +16,8 @@ from diracx.core.models.rss import (
     SiteStatus as SiteStatusModel,
 )
 from diracx.db.sql import ResourceStatusDB
+
+logger = logging.getLogger(__name__)
 
 
 def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
@@ -63,13 +67,13 @@ async def get_compute_statuses(
     all_rows = await resource_status_db.get_resource_statuses(["all"])
 
     result: dict[str, dict[str, ComputeElementStatus]] = {}
-    for name, rows in all_rows.items():
-        vo = rows["all"].VO or "all"
-        if vo not in result:
-            result[vo] = {}
-        result[vo][name] = ComputeElementStatus(
-            all=map_status(rows["all"].Status, rows["all"].Reason)
-        )
+    for vo, names in all_rows.items():
+        result[vo] = {
+            name: ComputeElementStatus(
+                all=map_status(rows["all"].Status, rows["all"].Reason)
+            )
+            for name, rows in names.items()
+        }
 
     return result
 
@@ -81,35 +85,51 @@ async def get_fts_statuses(
     all_rows = await resource_status_db.get_resource_statuses(["all"])
 
     result: dict[str, dict[str, FTSStatus]] = {}
-    for name, rows in all_rows.items():
-        vo = rows["all"].VO or "all"
-        if vo not in result:
-            result[vo] = {}
-        result[vo][name] = FTSStatus(
-            all=map_status(rows["all"].Status, rows["all"].Reason)
-        )
+    for vo, names in all_rows.items():
+        result[vo] = {
+            name: FTSStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
+            for name, rows in names.items()
+        }
 
     return result
+
+
+STORAGE_STATUS_TYPES = ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
 
 
 async def get_storage_statuses(
     resource_status_db: ResourceStatusDB,
 ) -> dict[str, dict[str, StorageElementStatus]]:
-    """Fetch all storage element statuses across all VOs."""
-    all_rows = await resource_status_db.get_resource_statuses(
-        ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
-    )
+    """Fetch all storage element statuses across all VOs.
+
+    Storage elements missing one or more of the four access rows are skipped:
+    their status is undefined and guessing could grant unintended access.
+    """
+    all_rows = await resource_status_db.get_resource_statuses(STORAGE_STATUS_TYPES)
 
     result: dict[str, dict[str, StorageElementStatus]] = {}
-    for name, rows in all_rows.items():
-        vo = rows["ReadAccess"].VO or "all"
-        if vo not in result:
-            result[vo] = {}
-        result[vo][name] = StorageElementStatus(
-            read=map_status(rows["ReadAccess"].Status, rows["ReadAccess"].Reason),
-            write=map_status(rows["WriteAccess"].Status, rows["WriteAccess"].Reason),
-            check=map_status(rows["CheckAccess"].Status, rows["CheckAccess"].Reason),
-            remove=map_status(rows["RemoveAccess"].Status, rows["RemoveAccess"].Reason),
-        )
+    for vo, names in all_rows.items():
+        result[vo] = {}
+        for name, rows in names.items():
+            if missing := [st for st in STORAGE_STATUS_TYPES if st not in rows]:
+                logger.warning(
+                    "Skipping storage element %r (vo=%r): missing status types %s",
+                    name,
+                    vo,
+                    missing,
+                )
+                continue
+            result[vo][name] = StorageElementStatus(
+                read=map_status(rows["ReadAccess"].Status, rows["ReadAccess"].Reason),
+                write=map_status(
+                    rows["WriteAccess"].Status, rows["WriteAccess"].Reason
+                ),
+                check=map_status(
+                    rows["CheckAccess"].Status, rows["CheckAccess"].Reason
+                ),
+                remove=map_status(
+                    rows["RemoveAccess"].Status, rows["RemoveAccess"].Reason
+                ),
+            )
 
     return result

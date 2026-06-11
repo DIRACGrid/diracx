@@ -37,7 +37,7 @@ class ResourceStatusDB(BaseSQLDB):
     async def get_resource_statuses(
         self,
         status_types: list[str] | None = None,
-    ) -> dict[str, dict[str, Row]]:
+    ) -> dict[str, dict[str, dict[str, Row]]]:
         """Return resource statuses for the given status types across all VOs.
 
         Args:
@@ -45,7 +45,9 @@ class ResourceStatusDB(BaseSQLDB):
                           Defaults to ["all"].
 
         Returns:
-            Nested dict keyed by resource name then status type.
+            Nested dict keyed by VO, then resource name, then status type. The
+            VO must be part of the key as (Name, StatusType, VO) is the
+            table's primary key: the same resource can have rows in several VOs.
 
         """
         if not status_types:
@@ -61,11 +63,10 @@ class ResourceStatusDB(BaseSQLDB):
         )
         result = await self.conn.execute(stmt)
 
-        statuses: dict[str, dict[str, Row]] = {}
+        statuses: dict[str, dict[str, dict[str, Row]]] = {}
         for row in result.all():
-            if row.Name not in statuses:
-                statuses[row.Name] = {}
-            statuses[row.Name][row.StatusType] = row
+            vo = row.VO or "all"
+            statuses.setdefault(vo, {}).setdefault(row.Name, {})[row.StatusType] = row
         return statuses
 
     async def get_resource_status_date(
@@ -73,6 +74,11 @@ class ResourceStatusDB(BaseSQLDB):
         status_types: list[str] | None = None,
     ) -> tuple[datetime | None, int]:
         """Return the most recent DateEffective and row count for the given status types.
+
+        The pair is used as the cache revision (and ultimately the HTTP ETag),
+        so it relies on every status write setting DateEffective to the time
+        of the change: an update that neither advances max(DateEffective) nor
+        changes the row count is invisible to caches until the hard TTL expires.
 
         Args:
             status_types: Status type filter. Defaults to ["all"].
@@ -94,6 +100,10 @@ class ResourceStatusDB(BaseSQLDB):
 
     async def get_site_status_date(self) -> tuple[datetime | None, int]:
         """Return the most recent DateEffective and row count from the SiteStatus table.
+
+        As with get_resource_status_date, the pair serves as the cache
+        revision, so writes must set DateEffective to the time of the change
+        for caches to notice updates.
 
         Returns:
             (max_date_effective, row_count) across all VOs. The date is None

@@ -110,10 +110,12 @@ async def test_read_raw_compute(mock_resource_status_db):
     ResourceStatus = namedtuple("ResourceStatus", ["Name", "Status", "Reason", "VO"])
 
     mock_db_data = {
-        "TestCE": {
-            "all": ResourceStatus(
-                Name="TestCE", Status="Active", Reason="", VO="test_vo"
-            )
+        "test_vo": {
+            "TestCE": {
+                "all": ResourceStatus(
+                    Name="TestCE", Status="Active", Reason="", VO="test_vo"
+                )
+            }
         }
     }
     mock_resource_status_db.get_resource_statuses = AsyncMock(return_value=mock_db_data)
@@ -138,19 +140,21 @@ async def test_read_raw_storage(mock_resource_status_db):
     ResourceStatus = namedtuple("ResourceStatus", ["Name", "Status", "Reason", "VO"])
 
     mock_db_data = {
-        "TestSE": {
-            "ReadAccess": ResourceStatus(
-                Name="TestSE", Status="Active", Reason=None, VO="test_vo"
-            ),
-            "WriteAccess": ResourceStatus(
-                Name="TestSE", Status="Active", Reason=None, VO="test_vo"
-            ),
-            "CheckAccess": ResourceStatus(
-                Name="TestSE", Status="Active", Reason=None, VO="test_vo"
-            ),
-            "RemoveAccess": ResourceStatus(
-                Name="TestSE", Status="Active", Reason=None, VO="test_vo"
-            ),
+        "test_vo": {
+            "TestSE": {
+                "ReadAccess": ResourceStatus(
+                    Name="TestSE", Status="Active", Reason=None, VO="test_vo"
+                ),
+                "WriteAccess": ResourceStatus(
+                    Name="TestSE", Status="Active", Reason=None, VO="test_vo"
+                ),
+                "CheckAccess": ResourceStatus(
+                    Name="TestSE", Status="Active", Reason=None, VO="test_vo"
+                ),
+                "RemoveAccess": ResourceStatus(
+                    Name="TestSE", Status="Active", Reason=None, VO="test_vo"
+                ),
+            }
         }
     }
     mock_resource_status_db.get_resource_statuses.return_value = mock_db_data
@@ -176,15 +180,39 @@ async def test_read_raw_storage(mock_resource_status_db):
     )
 
 
+async def test_read_raw_storage_partial_rows_skipped(mock_resource_status_db, caplog):
+    """A storage element missing access rows is skipped rather than failing."""
+    ResourceStatus = namedtuple("ResourceStatus", ["Name", "Status", "Reason", "VO"])
+
+    mock_db_data = {
+        "test_vo": {
+            "PartialSE": {
+                "ReadAccess": ResourceStatus(
+                    Name="PartialSE", Status="Active", Reason=None, VO="test_vo"
+                ),
+            }
+        }
+    }
+    mock_resource_status_db.get_resource_statuses.return_value = mock_db_data
+    source = StorageElementStatusSource(db=mock_resource_status_db)
+
+    result = await source.read_raw("test_revision", datetime.now(tz=timezone.utc))
+
+    assert result.data == {"test_vo": {}}
+    assert "PartialSE" in caplog.text
+
+
 async def test_read_raw_fts(mock_resource_status_db):
     """Test the read_raw method for FTS resource type."""
     ResourceStatus = namedtuple("ResourceStatus", ["Name", "Status", "Reason", "VO"])
 
     mock_db_data = {
-        "FTS": {
-            "all": ResourceStatus(
-                Name="FTS", Status="Active", Reason=None, VO="test_vo"
-            ),
+        "test_vo": {
+            "FTS": {
+                "all": ResourceStatus(
+                    Name="FTS", Status="Active", Reason=None, VO="test_vo"
+                ),
+            }
         }
     }
     mock_resource_status_db.get_resource_statuses.return_value = mock_db_data

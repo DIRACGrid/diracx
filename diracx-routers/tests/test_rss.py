@@ -75,6 +75,16 @@ async def _prepare_rss(client):
                 reason="All good",
                 date_effective=now,
             )
+            # The same storage element banned in another VO: rows in other
+            # VOs must not leak into or overwrite the lhcb view.
+            await conn.insert_resource_status(
+                name="SE-CERN",
+                status="Banned",
+                status_type=status_type,
+                vo="other_vo",
+                reason="Banned for other_vo",
+                date_effective=now,
+            )
         await conn.insert_resource_status(
             name="CE-CERN",
             status="Active",
@@ -236,6 +246,8 @@ def test_vo_filtering(normal_user_client):
     r = normal_user_client.get("/api/rss/storage")
     assert r.status_code == HTTPStatus.OK, r.json()
     assert set(r.json()) == {"SE-CERN"}  # not SE-OTHER (vo=other_vo)
+    # SE-CERN is banned for other_vo, but the lhcb view must show lhcb's row
+    assert r.json()["SE-CERN"]["read"]["allowed"] is True
 
     r = normal_user_client.get("/api/rss/site")
     assert r.status_code == HTTPStatus.OK, r.json()
