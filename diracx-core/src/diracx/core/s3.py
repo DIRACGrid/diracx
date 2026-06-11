@@ -45,9 +45,13 @@ async def s3_object_exists(s3_client: AsyncClient, bucket_name: str, key: str) -
 async def _s3_exists(method, **kwargs: str) -> bool:
     try:
         await method(**kwargs)
-    except (NoSuchBucketError, PresignError):
-        # if e.response["Error"]["Code"] != "404":
-        #     raise
+    except PresignError as e:
+        # TODO: remove this statement when https://github.com/DIRACGrid/signurlarity/issues/41
+        if "does not exist or is not accessible" in str(e):
+            return False
+        else:
+            raise
+    except NoSuchBucketError:
         return False
     else:
         return True
