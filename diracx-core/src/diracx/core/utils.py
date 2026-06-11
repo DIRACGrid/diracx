@@ -378,7 +378,14 @@ class AsyncTwoLevelCache:
 
             # Ensure at most one refresh Task is in flight for this key.
             if key not in self.tasks or self.tasks[key].done():
-                self.tasks[key] = asyncio.create_task(self._work(key, populate_func))
+                task = asyncio.create_task(self._work(key, populate_func))
+                # Failures are already logged in _work; mark any exception as
+                # retrieved so soft-refresh failures (which nothing awaits)
+                # don't emit "Task exception was never retrieved" warnings.
+                task.add_done_callback(
+                    lambda t: t.exception() if not t.cancelled() else None
+                )
+                self.tasks[key] = task
             task = self.tasks[key]
 
             if key in self.hard_cache:
@@ -390,9 +397,22 @@ class AsyncTwoLevelCache:
 
         # Hard miss: no value in either cache yet.
         if blocking:
-            # Await outside the lock so _work can acquire it to write results.
-            await task
-            return self.hard_cache[key]
+            try:
+                # Await outside the lock so _work can acquire it to write results.
+                await task
+            except asyncio.CancelledError:
+                # If the refresh task was cancelled (e.g. by clear()) report a
+                # cache miss; only propagate when we are being cancelled.
+                if task.cancelled():
+                    raise NotReadyError(
+                        f"Population of cache key {key} was cancelled."
+                    ) from None
+                raise
+            try:
+                return self.hard_cache[key]
+            except KeyError:
+                # The value was evicted between the refresh and the lookup.
+                raise NotReadyError(f"Cache key {key} is not ready yet.") from None
 
         logger.debug(
             "Cache key %r not ready yet, background population in progress", key

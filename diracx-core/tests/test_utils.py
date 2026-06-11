@@ -446,3 +446,26 @@ class TestAsyncTwoLevelCache:
         await cache.clear()
         assert await cache.get("key", populate) == "value"
         assert call_count == 2
+
+    async def test_clear_during_inflight_population(self):
+        """clear() while a blocking get is in flight surfaces as NotReadyError."""
+        import asyncio
+
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_populate():
+            started.set()
+            await release.wait()
+            return "value"
+
+        task = asyncio.create_task(cache.get("key", slow_populate, blocking=True))
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+
+        # Cancels the in-flight refresh; the waiter must see a cache miss
+        # rather than a stray CancelledError or KeyError.
+        await cache.clear()
+
+        with pytest.raises(NotReadyError):
+            await task
