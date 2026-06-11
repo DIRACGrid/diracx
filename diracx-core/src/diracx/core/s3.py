@@ -87,36 +87,6 @@ async def generate_presigned_upload(
     return cast(S3PresignedPostInfo, result)
 
 
-async def generate_presigned_download(
-    s3_client: AsyncClient,
-    bucket_name: str,
-    key: str,
-    checksum_algorithm: ChecksumAlgorithm,
-    checksum: str,
-    size: int,
-    validity_seconds: int,
-) -> S3PresignedPostInfo:
-    """Generate a presigned URL and fields for uploading a file to S3.
-
-    The signature is restricted to only accept data with the given checksum and size.
-    """
-    fields = {
-        "x-amz-checksum-algorithm": checksum_algorithm,
-        f"x-amz-checksum-{checksum_algorithm}": b16_to_b64(checksum),
-    }
-    conditions = [["content-length-range", size, size]] + [
-        {k: v} for k, v in fields.items()
-    ]
-    result = await s3_client.generate_presigned_post(
-        Bucket=bucket_name,
-        Key=key,
-        Fields=fields,
-        Conditions=conditions,
-        ExpiresIn=validity_seconds,
-    )
-    return cast(S3PresignedPostInfo, result)
-
-
 def b16_to_b64(hex_string: str) -> str:
     """Convert hexadecimal encoded data to base64 encoded data."""
     return base64.b64encode(base64.b16decode(hex_string.upper())).decode()
