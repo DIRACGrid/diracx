@@ -332,7 +332,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
         async with AsyncClient(
-            **self.s3_client_kwargs,
+            **self.s3_client_kwargs, httpx_max_connections=self.s3_max_pool_connections
         ) as self._client:  # type: ignore
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
