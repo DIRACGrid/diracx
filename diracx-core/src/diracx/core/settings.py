@@ -16,7 +16,7 @@ import contextlib
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar, cast
+from typing import Annotated, Any, Self, TypeVar, cast
 
 from cryptography.fernet import Fernet
 from joserfc.jwk import KeySet, KeySetSerialization
@@ -37,9 +37,6 @@ from signurlarity.exceptions import SignurlarityError
 
 from .properties import SecurityProperty
 from .s3 import s3_bucket_exists
-
-if TYPE_CHECKING:
-    from signurlarity.aio.client import AsyncClient
 
 T = TypeVar("T")
 
