@@ -33,7 +33,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from signurlarity.aio.client import AsyncClient
-from signurlarity.exceptions import NoSuchBucketError
+from signurlarity.exceptions import SignurlarityError
 
 from .properties import SecurityProperty
 from .s3 import s3_bucket_exists
@@ -341,7 +341,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
                     )
                 try:
                     await self._client.create_bucket(Bucket=self.bucket_name)
-                except NoSuchBucketError as e:
+                except SignurlarityError as e:
                     raise ValueError(
                         f"Failed to create bucket {self.bucket_name}"
                     ) from e
