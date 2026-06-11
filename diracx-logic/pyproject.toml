@@ -23,6 +23,12 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.entry-points."diracx.cacheable_sources"]
+storage_status = "diracx.logic.rss.source:StorageElementStatusSource"
+compute_status = "diracx.logic.rss.source:ComputeElementStatusSource"
+fts_status = "diracx.logic.rss.source:FTSStatusSource"
+site_status = "diracx.logic.rss.source:SiteStatusSource"
+
 [project.optional-dependencies]
 testing = ["diracx-testing", "freezegun"]
 types = [
