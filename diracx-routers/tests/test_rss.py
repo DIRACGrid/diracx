@@ -40,7 +40,7 @@ async def _clear_source_caches(client):
     The sources live for the whole test session while each test gets a fresh
     database, so any snapshot cached by a previous test must be dropped.
     """
-    from diracx.core.config.sources import AsyncCacheableSource
+    from diracx.core.sources import AsyncCacheableSource
 
     for override in client.app.dependency_overrides.values():
         source = getattr(override, "__self__", None)

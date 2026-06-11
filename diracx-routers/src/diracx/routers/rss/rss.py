@@ -5,13 +5,13 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Header, Response
 
-from diracx.core.config.sources import Snapshot
 from diracx.core.models.rss import (
     ComputeElementStatus,
     FTSStatus,
     SiteStatus,
     StorageElementStatus,
 )
+from diracx.core.sources import Snapshot
 from diracx.logic.rss.source import (
     ComputeElementStatusSource,
     FTSStatusSource,

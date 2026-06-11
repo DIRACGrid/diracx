@@ -13,7 +13,7 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from typing import ClassVar
 
-from diracx.core.config.sources import AsyncCacheableSource, Snapshot
+from diracx.core.sources import AsyncCacheableSource, Snapshot
 from diracx.db.sql.rss.db import ResourceStatusDB
 
 from .query import (

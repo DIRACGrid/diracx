@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 __all__ = [
-    "AsyncCacheableSource",
     "CacheableSource",
     "Config",
     "ConfigSource",
@@ -16,7 +15,6 @@ __all__ = [
     "RegistryConfig",
     "RemoteGitConfigSource",
     "SerializableSet",
-    "Snapshot",
     "SupportInfo",
     "UserConfig",
     "is_running_in_async_context",
@@ -34,12 +32,10 @@ from .schema import (
     UserConfig,
 )
 from .sources import (
-    AsyncCacheableSource,
     CacheableSource,
     ConfigSource,
     ConfigSourceUrl,
     LocalGitConfigSource,
     RemoteGitConfigSource,
-    Snapshot,
     is_running_in_async_context,
 )
