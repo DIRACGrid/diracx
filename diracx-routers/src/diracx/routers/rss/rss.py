@@ -64,6 +64,7 @@ async def get_storage_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, StorageElementStatus]:
     """Get the latest status of storage elements, scoped to the caller's VO."""
+    await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
 
@@ -77,6 +78,7 @@ async def get_compute_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, ComputeElementStatus]:
     """Get the latest status of compute elements, scoped to the caller's VO."""
+    await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
 
@@ -90,6 +92,7 @@ async def get_site_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, SiteStatus]:
     """Get the latest status of sites, scoped to the caller's VO."""
+    await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
 
@@ -103,4 +106,5 @@ async def get_fts_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, FTSStatus]:
     """Get the latest status of FTS servers, scoped to the caller's VO."""
+    await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
