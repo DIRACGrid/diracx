@@ -3,13 +3,10 @@ from __future__ import annotations
 __all__ = ["router"]
 
 import logging
-from datetime import datetime, timezone
-from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import (
     Header,
-    HTTPException,
     Response,
 )
 
@@ -17,10 +14,9 @@ from diracx.routers.dependencies import Config
 
 from .access_policies import open_access
 from .fastapi_classes import DiracxRouter
+from .utils.http_cache import apply_cache_headers
 
 logger = logging.getLogger(__name__)
-
-LAST_MODIFIED_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
 router = DiracxRouter()
 
@@ -42,31 +38,12 @@ async def serve_config(
         return 304: this is to avoid flip/flopping
     """
     # await check_permissions()
-    headers = {
-        "ETag": config._hexsha,
-        "Last-Modified": config._modified.strftime(LAST_MODIFIED_FORMAT),
-    }
-
-    if if_none_match == config._hexsha:
-        raise HTTPException(status_code=HTTPStatus.NOT_MODIFIED, headers=headers)
-
-    # This is to prevent flip/flopping in case
-    # a server gets out of sync with disk
-    if if_modified_since:
-        try:
-            not_before = datetime.strptime(
-                if_modified_since, LAST_MODIFIED_FORMAT
-            ).astimezone(timezone.utc)
-        except ValueError:
-            logger.debug(
-                "Failed to parse If-Modified-Since header: %s", if_modified_since
-            )
-        else:
-            if not_before > config._modified:
-                raise HTTPException(
-                    status_code=HTTPStatus.NOT_MODIFIED, headers=headers
-                )
-
-    response.headers.update(headers)
+    apply_cache_headers(
+        response,
+        etag=config._hexsha,
+        modified=config._modified,
+        if_none_match=if_none_match,
+        if_modified_since=if_modified_since,
+    )
 
     return config
