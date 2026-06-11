@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "CacheableSource",
     "Config",
     "ConfigSource",
     "ConfigSourceUrl",
@@ -31,6 +32,7 @@ from .schema import (
     UserConfig,
 )
 from .sources import (
+    CacheableSource,
     ConfigSource,
     ConfigSourceUrl,
     LocalGitConfigSource,

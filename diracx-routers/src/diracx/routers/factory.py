@@ -32,6 +32,7 @@ from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import ServiceSettingsBase
+from diracx.core.sources import AsyncCacheableSource
 from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailableError
 from diracx.db.os.utils import BaseOSDB
@@ -185,6 +186,7 @@ def create_app_inner(
     fail_startup = True
     # Add the SQL DBs to the application
     available_sql_db_classes: set[type[BaseSQLDB]] = set()
+    sql_db_instances: dict[type[BaseSQLDB], BaseSQLDB] = {}
 
     for db_name, db_url in database_urls.items():
         try:
@@ -199,6 +201,7 @@ def create_app_inner(
             for sql_db_class in sql_db_classes:
                 assert sql_db_class.transaction not in app.dependency_overrides
                 available_sql_db_classes.add(sql_db_class)
+                sql_db_instances[sql_db_class] = sql_db
 
                 app.dependency_overrides[sql_db_class.transaction] = partial(
                     db_transaction, sql_db
@@ -214,6 +217,34 @@ def create_app_inner(
 
     if fail_startup:
         raise Exception("No SQL database could be initialized, aborting")
+
+    # Instantiate the cacheable sources and override their create methods,
+    # mirroring the SQL DB wiring above. A single instance is used for each
+    # source name so that its caches persist across requests. The instance is
+    # made from the highest priority class but, as for the DBs, the override
+    # is registered for every implementation class so that vanilla DiracX
+    # routers get an instance of the extension's source.
+    source_classes_by_name: dict[str, list[type[AsyncCacheableSource]]] = {}
+    for entry_point in select_from_extension(group=DiracEntryPoint.CACHEABLE_SOURCES):
+        # Entry points are yielded in priority order, highest first
+        source_classes_by_name.setdefault(entry_point.name, []).append(
+            entry_point.load()
+        )
+    for source_name, source_classes in source_classes_by_name.items():
+        source_db = sql_db_instances.get(source_classes[0].db_class)
+        if source_db is None:
+            logger.warning(
+                "Cannot wire cacheable source %s: %s is not available",
+                source_name,
+                source_classes[0].db_class.__name__,
+            )
+            continue
+        # The base class does not declare the ``db`` argument as it is only
+        # part of the contract between the factory and the concrete sources
+        source = source_classes[0](db=source_db)  # type: ignore[call-arg]
+        for source_cls in source_classes:
+            assert source_cls.create not in app.dependency_overrides
+            app.dependency_overrides[source_cls.create] = source.read
 
     # Add the OpenSearch DBs to the application
     available_os_db_classes: set[type[BaseOSDB]] = set()
@@ -271,6 +302,17 @@ def create_app_inner(
             raise NotImplementedError(
                 f"Cannot enable {system_name=} as it requires {missing_os_dbs=}"
             )
+
+        # Ensure required cacheable sources have been wired, i.e. that the
+        # database they read from is available
+        for source_cls in find_dependents(
+            router,
+            AsyncCacheableSource,  # type: ignore[type-abstract]
+        ):
+            if source_cls.create not in app.dependency_overrides:
+                raise NotImplementedError(
+                    f"Cannot enable {system_name=} as it requires {source_cls=}"
+                )
 
         # Add the router to the application
         dependencies = []
