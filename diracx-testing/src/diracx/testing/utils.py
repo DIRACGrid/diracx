@@ -108,7 +108,7 @@ def test_auth_settings(private_key, fernet_key) -> Generator[AuthSettings, None,
 
     yield AuthSettings(
         token_issuer=ISSUER,
-        token_keystore=json.dumps(KeySet([private_key]).as_dict(private_keys=True)),
+        token_keystore=json.dumps(KeySet([private_key]).as_dict(private=True)),
         state_key=fernet_key,
         allowed_redirects=[
             "http://diracx.test.invalid:8000/api/docs/oauth2-redirect",
