@@ -120,14 +120,15 @@ Expiration time in minutes for refresh tokens.
 The maximum lifetime of refresh tokens before they must be re-issued
 through a new authentication flow. Default: 60 minutes.
 
-### `DIRACX_SERVICE_AUTH_REVOKED_REFRESH_TOKEN_RETENTION_MINUTES`
+### `DIRACX_SERVICE_AUTH_REFRESH_TOKEN_RETENTION_MONTHS`
 
-*Optional*, default value: `43200`
+*Optional*, default value: `6`
 
-Retention time in minutes for revoked refresh tokens.
+Retention time in months for refresh tokens.
 
-The maximum retention time of refresh tokens after being
-revoked and before they are deleted. Default: 43200 minutes (30 days).
+Refresh tokens live in monthly partitions that are dropped once the whole
+month is older than this many months. It is therefore the longest a refresh
+token (revoked or not) is kept before removal. Default: 6 months.
 
 ### `DIRACX_SERVICE_AUTH_AVAILABLE_PROPERTIES`
 
