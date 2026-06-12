@@ -161,6 +161,7 @@ testpaths = [
   "diracx-client/tests",
   "diracx-core/tests",
   "diracx-db/tests",
+  "diracx-logic/tests",
   "diracx-routers/tests",
   "diracx-tasks/tests",
 ]
