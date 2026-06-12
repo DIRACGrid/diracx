@@ -11,6 +11,7 @@ import pytest
 from diracx.core.exceptions import NotReadyError
 from diracx.core.models import TokenResponse
 from diracx.core.utils import (
+    AsyncTwoLevelCache,
     TwoLevelCache,
     dotenv_files_from_environment,
     read_credentials,
@@ -299,3 +300,172 @@ class TestTwoLevelCache:
 
         # Ensure background thread completes
         thread.join()
+
+
+class TestAsyncTwoLevelCache:
+    """Tests for AsyncTwoLevelCache, mirroring TestTwoLevelCache."""
+
+    async def test_successful_population(self):
+        """Test that cache is populated successfully."""
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        call_count = 0
+
+        async def populate():
+            nonlocal call_count
+            call_count += 1
+            return "test_value"
+
+        result = await cache.get("key", populate)
+        assert result == "test_value"
+        assert call_count == 1
+
+        # Second call should use cached value
+        result = await cache.get("key", populate)
+        assert result == "test_value"
+        assert call_count == 1
+
+    async def test_failed_population_logs_and_allows_retry(self, caplog):
+        """Test that failed population logs error and allows retry on next request."""
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        call_count = 0
+
+        async def failing_populate():
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("Test error")
+
+        # First call should fail and log the error
+        with pytest.raises(ValueError, match="Test error"):
+            await cache.get("key", failing_populate, blocking=True)
+
+        assert call_count == 1
+        assert "Failed to populate cache key 'key'" in caplog.text
+        assert "Test error" in caplog.text
+
+        # Task should be removed, so next call should retry
+        with pytest.raises(ValueError, match="Test error"):
+            await cache.get("key", failing_populate, blocking=True)
+
+        assert call_count == 2  # Should have retried
+
+    async def test_failed_population_then_success(self):
+        """Test that after a failure, subsequent successful call works."""
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        should_fail = True
+
+        async def populate():
+            if should_fail:
+                raise ValueError("Test error")
+            return "success_value"
+
+        # First call fails
+        with pytest.raises(ValueError):
+            await cache.get("key", populate, blocking=True)
+
+        # Second call succeeds
+        should_fail = False
+        result = await cache.get("key", populate, blocking=True)
+        assert result == "success_value"
+
+    async def test_none_return_value_is_cached(self):
+        """Test that None return values are properly cached."""
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        call_count = 0
+
+        async def populate_none():
+            nonlocal call_count
+            call_count += 1
+            return None
+
+        result = await cache.get("key", populate_none)
+        assert result is None
+        assert call_count == 1
+
+        # Second call should use cached None value
+        result = await cache.get("key", populate_none)
+        assert result is None
+        assert call_count == 1  # Should not have called populate again
+
+    async def test_non_blocking_raises_not_ready(self):
+        """Test that non-blocking mode raises NotReadyError when cache is empty."""
+        import asyncio
+
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_populate():
+            started.set()
+            await release.wait()
+            return "value"
+
+        # Start population in the background
+        task = asyncio.create_task(cache.get("key", slow_populate, blocking=True))
+
+        # Wait until slow_populate has started to avoid race conditions
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+
+        # Non-blocking call should raise NotReadyError since cache isn't populated yet
+        with pytest.raises(NotReadyError, match="not ready yet"):
+            await cache.get("key", slow_populate, blocking=False)
+
+        # Let the in-flight population finish
+        release.set()
+        assert await task == "value"
+
+    async def test_single_flight_deduplication(self):
+        """Test that concurrent gets for the same key only populate once."""
+        import asyncio
+
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        call_count = 0
+
+        async def populate():
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0.05)
+            return "value"
+
+        results = await asyncio.gather(
+            *(cache.get("key", populate, blocking=True) for _ in range(5))
+        )
+        assert results == ["value"] * 5
+        assert call_count == 1
+
+    async def test_clear(self):
+        """Test that clear empties both cache tiers."""
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        call_count = 0
+
+        async def populate():
+            nonlocal call_count
+            call_count += 1
+            return "value"
+
+        assert await cache.get("key", populate) == "value"
+        await cache.clear()
+        assert await cache.get("key", populate) == "value"
+        assert call_count == 2
+
+    async def test_clear_during_inflight_population(self):
+        """clear() while a blocking get is in flight surfaces as NotReadyError."""
+        import asyncio
+
+        cache = AsyncTwoLevelCache(soft_ttl=10, hard_ttl=60)
+        started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def slow_populate():
+            started.set()
+            await release.wait()
+            return "value"
+
+        task = asyncio.create_task(cache.get("key", slow_populate, blocking=True))
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+
+        # Cancels the in-flight refresh; the waiter must see a cache miss
+        # rather than a stray CancelledError or KeyError.
+        await cache.clear()
+
+        with pytest.raises(NotReadyError):
+            await task

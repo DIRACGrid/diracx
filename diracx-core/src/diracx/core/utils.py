@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = [
     "EXPIRES_GRACE_SECONDS",
+    "AsyncTwoLevelCache",
     "TwoLevelCache",
     "batched_async",
     "dotenv_files_from_environment",
@@ -11,6 +12,7 @@ __all__ = [
     "write_credentials",
 ]
 
+import asyncio
 import fcntl
 import json
 import logging
@@ -19,7 +21,7 @@ import re
 import stat
 import threading
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -291,6 +293,172 @@ class TwoLevelCache:
         self.hard_cache.clear()
         self.futures.clear()
         self.locks.clear()
+
+
+class AsyncTwoLevelCache:
+    """Async equivalent of TwoLevelCache, for use with async populate functions.
+
+    Mirrors the two-TTL semantics of TwoLevelCache exactly: a soft TTL that
+    triggers a background refresh while still serving the stale value, and a
+    hard TTL beyond which a miss either awaits a fresh value (blocking=True) or
+    raises NotReadyError (blocking=False).
+
+    The key difference from TwoLevelCache is that all coordination uses asyncio
+    primitives (asyncio.Lock, asyncio.Task) rather than a ThreadPoolExecutor,
+    so populate_func can be a native coroutine.
+
+    Attributes:
+        soft_cache (TTLCache): A cache with a shorter TTL for quick access.
+        hard_cache (TTLCache): A cache with a longer TTL as a fallback.
+        tasks (dict): In-flight refresh Tasks keyed by cache key.
+        _lock (asyncio.Lock): Guards task creation to ensure single-flight behaviour.
+
+    Args:
+        soft_ttl (int): Time-to-live in seconds for the soft cache.
+        hard_ttl (int): Time-to-live in seconds for the hard cache.
+        max_items (int): Maximum number of items in each cache tier.
+
+    Example:
+        >>> cache = AsyncTwoLevelCache(soft_ttl=5, hard_ttl=3600)
+        >>> async def populate():
+        ...     return await some_db_query()
+        >>> value = await cache.get("key", populate)
+
+    """
+
+    def __init__(
+        self,
+        soft_ttl: int,
+        hard_ttl: int,
+        *,
+        max_items: int = 1_000_000,
+    ):
+        """Initialize the AsyncTwoLevelCache with specified TTLs."""
+        self.soft_cache: Cache = TTLCache(max_items, soft_ttl)
+        self.hard_cache: Cache = TTLCache(max_items, hard_ttl)
+        # One Task per key for single-flight refresh deduplication.
+        self.tasks: dict[str, asyncio.Task] = {}
+        # A single lock guards task creation across all keys.
+        # Per-key locks would be cleaner but require careful cleanup;
+        # contention here is minimal since task creation is very fast.
+        self._lock = asyncio.Lock()
+
+    async def get(
+        self,
+        key: str,
+        populate_func: Callable[[], Coroutine[Any, Any, T]],
+        blocking: bool = True,
+    ) -> T:
+        """Retrieve a value from the cache, populating it if necessary.
+
+        Checks the soft cache first. On a soft miss, kicks off a background
+        refresh and returns the stale hard-cache value if one exists. On a hard
+        miss, either awaits the refresh (blocking=True) or raises NotReadyError
+        (blocking=False).
+
+        Args:
+            key (str): The cache key to retrieve or populate.
+            populate_func: An async callable (coroutine function) that returns
+                           the value to cache.
+            blocking (bool): If True, wait for the populate_func to complete on
+                             a hard miss. If False, raise NotReadyError instead.
+
+        Returns:
+            The cached value associated with the key.
+
+        """
+        # Fast path: soft cache hit, no locking needed.
+        if key in self.soft_cache:
+            return self.soft_cache[key]
+
+        async with self._lock:
+            # Re-check inside the lock in case another coroutine just populated it.
+            if key in self.soft_cache:
+                return self.soft_cache[key]
+
+            # Ensure at most one refresh Task is in flight for this key.
+            if key not in self.tasks or self.tasks[key].done():
+                task = asyncio.create_task(self._work(key, populate_func))
+                # Failures are already logged in _work; mark any exception as
+                # retrieved so soft-refresh failures (which nothing awaits)
+                # don't emit "Task exception was never retrieved" warnings.
+                task.add_done_callback(
+                    lambda t: t.exception() if not t.cancelled() else None
+                )
+                self.tasks[key] = task
+            task = self.tasks[key]
+
+            if key in self.hard_cache:
+                # Soft miss but hard hit: serve stale while the refresh runs.
+                # Pre-fill soft cache so the next request skips the lock entirely.
+                result = self.hard_cache[key]
+                self.soft_cache[key] = result
+                return result
+
+        # Hard miss: no value in either cache yet.
+        if blocking:
+            try:
+                # Await outside the lock so _work can acquire it to write results.
+                await task
+            except asyncio.CancelledError:
+                # If the refresh task was cancelled (e.g. by clear()) report a
+                # cache miss; only propagate when we are being cancelled.
+                if task.cancelled():
+                    raise NotReadyError(
+                        f"Population of cache key {key} was cancelled."
+                    ) from None
+                raise
+            try:
+                return self.hard_cache[key]
+            except KeyError:
+                # The value was evicted between the refresh and the lookup.
+                raise NotReadyError(f"Cache key {key} is not ready yet.") from None
+
+        logger.debug(
+            "Cache key %r not ready yet, background population in progress", key
+        )
+        raise NotReadyError(f"Cache key {key} is not ready yet.")
+
+    async def _work(
+        self, key: str, populate_func: Callable[[], Coroutine[Any, Any, T]]
+    ) -> None:
+        """Await populate_func and write results into both cache tiers.
+
+        Always removes the task entry so the next soft miss can schedule a fresh
+        refresh, regardless of whether this attempt succeeded or failed.
+
+        Args:
+            key (str): The cache key to populate.
+            populate_func: Async callable that produces the value.
+
+        """
+        success = False
+        result = None
+        try:
+            result = await populate_func()
+            success = True
+        except Exception:
+            logger.error(
+                "Failed to populate cache key %r, will retry on next request",
+                key,
+                exc_info=True,
+            )
+            raise
+        finally:
+            async with self._lock:
+                self.tasks.pop(key, None)
+                if success:
+                    self.hard_cache[key] = result
+                    self.soft_cache[key] = result
+
+    async def clear(self):
+        """Cancel any in-flight refresh tasks and clear both cache tiers."""
+        async with self._lock:
+            for task in self.tasks.values():
+                task.cancel()
+            self.tasks.clear()
+        self.soft_cache.clear()
+        self.hard_cache.clear()
 
 
 async def batched_async(
