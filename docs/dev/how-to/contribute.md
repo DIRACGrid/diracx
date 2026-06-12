@@ -39,6 +39,7 @@
 ### 4. Make a Pull Request (PR)
 
 - **Submit Your PR:** When you’re ready, submit your pull request. Please include a clear description of what your PR does and reference the issue number it addresses (if applicable).
+- **Keep It Reviewable:** Large changes are merged faster as a series of small, focused PRs. See [Splitting pull requests](../explanations/splitting-prs.md) for how to think about where to split.
 - **Review Process:** Your PR will be reviewed by project maintainers. Please be patient and responsive to any feedback you receive.
 
 ### 5. Additional Notes
