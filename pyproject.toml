@@ -69,7 +69,10 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.per-file-ignores]
 # Ignore Bandit security checks in the test directories
 "diracx-testing/*" = ["S"]
-"diracx-*/tests/*" = ["S"]
+# Test directories must not contain __init__.py: with pytest's
+# import-mode=importlib, packages with common names (e.g. tests/jobs) collide
+# in sys.modules when several diracx-* packages are collected in one run
+"diracx-*/tests/*" = ["S", "INP"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "diracx-routers/src/diracx/routers/access_policies.py" = ["I002"]
@@ -161,6 +164,7 @@ testpaths = [
   "diracx-client/tests",
   "diracx-core/tests",
   "diracx-db/tests",
+  "diracx-logic/tests",
   "diracx-routers/tests",
   "diracx-tasks/tests",
 ]
