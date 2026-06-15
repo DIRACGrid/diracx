@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/DIRACGrid/diracx/compare/v0.1.1...v0.2.0) (2026-06-15)
+
+
+### Features
+
+* **core:** add AsyncTwoLevelCache ([#936](https://github.com/DIRACGrid/diracx/issues/936)) ([2a36667](https://github.com/DIRACGrid/diracx/commit/2a36667bd3e2ed64cd305e425aa7fbdf339f7f3d))
+
+
+### Bug Fixes
+
+* clean up AuthDB refresh tokens by dropping partitions ([#929](https://github.com/DIRACGrid/diracx/issues/929)) ([6d16991](https://github.com/DIRACGrid/diracx/commit/6d16991bc2c82bccddce11549e65cecf42bbd068))
+* **routers:** parse If-Modified-Since as GMT and extract apply_cache_headers ([#937](https://github.com/DIRACGrid/diracx/issues/937)) ([bb62ea8](https://github.com/DIRACGrid/diracx/commit/bb62ea8d7cf934205cb7353809ab221a96e72d72))
+* use 'private' for jose keyword argument in as_dict ([#944](https://github.com/DIRACGrid/diracx/issues/944)) ([f9457c3](https://github.com/DIRACGrid/diracx/commit/f9457c34a3705a0dad718a6818bbbf42c5e9b3ad))
+
 ## [0.1.1](https://github.com/DIRACGrid/diracx/compare/v0.1.0...v0.1.1) (2026-06-10)
 
 
