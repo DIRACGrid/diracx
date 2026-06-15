@@ -5,7 +5,7 @@ import hashlib
 import json
 import secrets
 
-import httpx
+import httpx2
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
 from joserfc import jwt
@@ -34,7 +34,7 @@ async def get_server_metadata(url: str):
     """Get the server metadata from the IAM."""
     server_metadata = _server_metadata_cache.get(url)
     if server_metadata is None:
-        async with httpx.AsyncClient() as c:
+        async with httpx2.AsyncClient() as c:
             res = await c.get(url)
             if res.status_code != 200:
                 raise IAMServerError("Failed to retrieve IAM server metadata")
@@ -68,7 +68,7 @@ async def fetch_jwk_set(url: str):
     if not jwks_uri:
         raise RuntimeError('Missing "jwks_uri" in metadata')
 
-    async with httpx.AsyncClient() as c:
+    async with httpx2.AsyncClient() as c:
         res = await c.get(jwks_uri)
         if res.status_code != 200:
             # TODO: Better error handling
@@ -166,7 +166,7 @@ async def get_token_from_iam(
         "redirect_uri": redirect_uri,
     }
 
-    async with httpx.AsyncClient() as c:
+    async with httpx2.AsyncClient() as c:
         res = await c.post(
             token_endpoint,
             data=data,

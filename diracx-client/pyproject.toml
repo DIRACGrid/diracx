@@ -12,7 +12,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Distributed Computing",
 ]
-dependencies = ["azure-core", "diracx-core", "isodate", "httpx", "pyjwt"]
+dependencies = ["azure-core", "diracx-core", "isodate", "httpx2", "pyjwt"]
 dynamic = ["version"]
 
 [project.optional-dependencies]

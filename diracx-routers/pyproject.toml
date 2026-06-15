@@ -21,7 +21,7 @@ dependencies = [
     "python-dotenv",    # TODO: We might not need this
     "python-multipart",
     "fastapi>=0.121.0",
-    "httpx",
+    "httpx2",
     "joserfc",
     "pydantic >=2.10",
     "uvicorn",
@@ -34,7 +34,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = ["diracx-testing", "moto[server]", "pytest-httpx", "freezegun", "pyjwt"]
+testing = ["diracx-testing", "moto[server]", "httpx2-pytest", "freezegun", "pyjwt"]
 types = [
     "types-cachetools",
     "types-python-dateutil",

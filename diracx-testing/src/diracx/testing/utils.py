@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Generator
 from urllib.parse import parse_qs, urljoin, urlparse
 
-import httpx
+import httpx2
 import pytest
 from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
@@ -587,8 +587,6 @@ def demo_kubectl_env(demo_dir):
 @pytest.fixture
 def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
     """Set up the environment for the CLI."""
-    import httpx
-
     from diracx.core.preferences import get_diracx_preferences
 
     diracx_url = demo_urls["diracx"]
@@ -598,7 +596,7 @@ def cli_env(monkeypatch, tmp_path, demo_urls, demo_dir):
 
     # Ensure the demo is working
 
-    r = httpx.get(
+    r = httpx2.get(
         f"{diracx_url}/api/openapi.json",
         verify=ssl.create_default_context(cafile=ca_path),
     )
@@ -697,7 +695,7 @@ async def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     ssl_context = ssl.create_default_context(cafile=ca_path)
     client_kwargs = dict(verify=ssl_context, follow_redirects=True)
     # Get the login page
-    async with httpx.AsyncClient(**client_kwargs) as client:
+    async with httpx2.AsyncClient(**client_kwargs) as client:
         r = await client.get(url)
 
     r.raise_for_status()
@@ -710,7 +708,7 @@ async def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     assert action_url is not None, login_page_body
 
     # Do the actual login
-    async with httpx.AsyncClient(**client_kwargs) as client:
+    async with httpx2.AsyncClient(**client_kwargs) as client:
         r = await client.post(
             action_url,
             data={"login": "admin@example.com", "password": "password"},
@@ -720,7 +718,7 @@ async def do_device_flow_with_dex(url: str, ca_path: str) -> None:
     approval_url = r.url  # This is not the same as URL as we redirect to dex
     # Do the actual approval
 
-    async with httpx.AsyncClient(**client_kwargs) as client:
+    async with httpx2.AsyncClient(**client_kwargs) as client:
         r = await client.post(
             approval_url,
             data={

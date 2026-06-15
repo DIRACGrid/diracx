@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO, Literal
 
-import httpx
+import httpx2
 import zstandard
 
 from diracx.client.aio import AsyncDiracClient
@@ -88,7 +88,7 @@ async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
         if res.url:
             logger.debug("Uploading sandbox for %s", res.pfn)
             files = {"file": ("file", tar_fh)}
-            async with httpx.AsyncClient() as httpx_client:
+            async with httpx2.AsyncClient() as httpx_client:
                 response = await httpx_client.post(
                     res.url, data=res.fields, files=files
                 )
@@ -111,7 +111,7 @@ async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracCli
     res = await client.jobs.get_sandbox_file(pfn=pfn)
     logger.debug("Downloading sandbox for %s", pfn)
     with tempfile.TemporaryFile(mode="w+b") as fh:
-        async with httpx.AsyncClient() as http_client:
+        async with httpx2.AsyncClient() as http_client:
             response = await http_client.get(res.url)
             # TODO: Handle this error better
             response.raise_for_status()

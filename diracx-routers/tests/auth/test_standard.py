@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-import httpx
+import httpx2
 import jwt
 import pytest
 from cryptography.fernet import Fernet
@@ -18,7 +18,7 @@ from joserfc.errors import (
     UnsupportedAlgorithmError,
     InvalidKeyIdError,
 )
-from pytest_httpx import HTTPXMock
+from pytest_httpx2 import HTTPXMock
 from uuid_utils import uuid7
 
 from diracx.core.config import Config
@@ -69,11 +69,11 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
 
     id_tokens = ["user1", "user2"]
 
-    def custom_response(request: httpx.Request):
+    def custom_response(request: httpx2.Request):
         if b"&code=valid-code&" in request.content:
             id_token = id_tokens.pop(0)
-            return httpx.Response(status_code=200, json={"id_token": id_token})
-        return httpx.Response(status_code=401)
+            return httpx2.Response(status_code=200, json={"id_token": id_token})
+        return httpx2.Response(status_code=401)
 
     httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
