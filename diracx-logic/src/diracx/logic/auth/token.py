@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import re
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import Any, cast
 
 from joserfc import jwt
 from joserfc.jwt import Claims
@@ -36,6 +37,8 @@ from .utils import (
     parse_and_validate_scope,
     verify_dirac_refresh_token,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def get_oidc_token(
@@ -317,13 +320,12 @@ async def exchange_token(
     sub = f"{vo}:{sub}"
 
     refresh_payload: RefreshTokenPayload | None = None
+
     if include_refresh_token:
         # Insert the refresh token with user details into the RefreshTokens table
         # User details are needed to regenerate access tokens later
         refresh_jti = await insert_refresh_token(
-            auth_db=auth_db,
-            subject=sub,
-            scope=scope,
+            auth_db=auth_db, subject=sub, scope=scope, policies={}
         )
 
         # Generate refresh token payload
@@ -391,9 +393,7 @@ def _sign_token_payload(claims: dict, settings: AuthSettings) -> str:
 
 
 async def insert_refresh_token(
-    auth_db: AuthDB,
-    subject: str,
-    scope: str,
+    auth_db: AuthDB, subject: str, scope: str, policies: dict[str, Any]
 ) -> UUID:
     """Insert a refresh token into the database and return the JWT ID."""
     # Generate a JWT ID
@@ -404,6 +404,7 @@ async def insert_refresh_token(
         jti=jti,
         subject=subject,
         scope=scope,
+        policies=policies,
     )
     return jti
 

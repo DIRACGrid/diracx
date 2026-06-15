@@ -192,7 +192,9 @@ class ClientFactory:
                 access_payload: AccessTokenPayload,
                 refresh_payload: RefreshTokenPayload | None,
             ):
-                return {"PolicySpecific": "OpenAccessForTest"}, {}
+                return {"PolicySpecific": "OpenAccessForTest"}, {
+                    "PolicySpecific": "OpenRefreshForTest"
+                }
 
         enabled_systems = {
             e.name for e in select_from_extension(group=DiracEntryPoint.SERVICES)
