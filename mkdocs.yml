@@ -195,6 +195,7 @@ nav:
       - Documentation system: dev/explanations/documentation-system.md
       - Components overview: dev/explanations/components/index.md
       - Dependency management: dev/explanations/dependency-management.md
+      - Splitting pull requests: dev/explanations/splitting-prs.md
       - Run demo: dev/explanations/run_demo.md
       - Backend:
           - Components:
