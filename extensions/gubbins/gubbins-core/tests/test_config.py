@@ -22,7 +22,7 @@ def github_is_down():
         return True
 
 
-@pytest.mark.skipif(github_is_down(), reason="Github unavailble")
+@pytest.mark.skipif(github_is_down(), reason="Github unavailable")
 def test_remote_git_config_source(monkeypatch):
     monkeypatch.setattr(
         "diracx.core.config.sources.DEFAULT_CONFIG_FILE",
