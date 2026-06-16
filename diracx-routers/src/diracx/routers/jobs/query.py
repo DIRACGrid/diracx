@@ -132,17 +132,41 @@ async def search(
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
 ) -> list[dict[str, Any]]:
-    """Create a search query to the job database.
+    """Search jobs in the job database.
 
-    This search can be based on different parameters, such as jobID, status, owner, etc.
+    Performs a paginated search for jobs accessible to the requesting user. The
+    search can filter by job parameters, such as jobID, ID, status, owner, etc.,
+    specify which job parameters to return, and sort the results.
 
-    **Possibilities**
-    - Use `search` to filter jobs based on various parameters (optional).
-    - Use `parameters` to specify which job parameters to return (optional).
-    - Use `sort` to order the results based on specific parameters (optional).
+    Args:
+        config (Config): Application configuration.
+        job_db (JobDB): Database access object for jobs.
+        job_parameters_db (JobParametersDB): Database access for job parameters.
+        job_logging_db (JobLoggingDB): Database access for job logging.
+        user_info (AuthorizedUserInfo): Authenticated user information.
+        check_permissions (CheckWMSPolicyCallable): Callable used to verify access
+            permissions for the requesting user.
+        response (Response): FastAPI response object used to set headers and status.
+        page (int, optional): Page number (1-indexed). Defaults to 1.
+        per_page (int, optional): Number of results per page. Defaults to 100.
+        body (SearchParams | None, optional): Search parameters payload. Defaults
+            to ``None``. Examples are provided in the module-level
+            ``EXAMPLE_SEARCHES`` constant and exposed to OpenAPI via the
+            ``Body(openapi_examples=EXAMPLE_SEARCHES)`` declaration.
 
-    By default, the search will return all jobs the user has access to, and all the fields
-    of the job will be returned.
+    Returns:
+        list[dict[str, Any]]: List of job dictionaries matching the search.
+
+    Raises:
+        HTTPException: If permission checks fail or other HTTP-level errors occur.
+
+    Notes:
+        - If fewer jobs are returned than exist, the handler sets the
+          ``Content-Range`` header and returns HTTP 206 (Partial Content).
+        - If the requested range cannot be satisfied but matching jobs exist,
+          the handler sets ``Content-Range`` and returns HTTP 416
+          (Requested Range Not Satisfiable).
+
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 
@@ -290,14 +314,40 @@ async def summary(
     body: SummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Group jobs by a specific list of parameters.
+    """Summarize jobs by grouping parameters.
 
-    Returns an array of n-uplets, where each n-uplet contains the
-    values of the grouping parameters and the number of jobs that match those values.
+    Produces aggregated results based on the provided grouping parameters.
 
-    Body parameters:
-    - `grouping`: List of parameters to group the jobs by.
-    - `search`: List of search parameters to filter the jobs by (optional).
+    Each item in the returned list is a dictionary. Behavior depends on the
+    `grouping` value supplied in the request body (see :pyclass:`SummaryParams`):
+
+    - When `body.grouping` is non-empty, each dict contains one key per
+      grouping parameter with its value, plus a ``count`` key with the number
+      of jobs matching that combination of grouping values.
+    - When `body.grouping` is empty (no grouping), each dict contains a full
+      job representation (the same fields returned by the ``search`` endpoint)
+      with an additional ``count`` key (typically equal to 1 for individual
+      jobs).
+
+    Args:
+        config (Config): Application configuration.
+        job_db (JobDB): Database access object for jobs.
+        user_info (AuthorizedUserInfo): Authenticated user information.
+        body (SummaryParams): Summary parameters describing the grouping and
+            optional search filters. The expected body keys include ``grouping``
+            (list of fields to group by) and ``search`` (optional filters).
+            See the module-level ``EXAMPLE_SUMMARY`` constant for request
+            examples.
+        check_permissions (CheckWMSPolicyCallable): Callable used to verify
+            access permissions for the requesting user.
+
+    Returns:
+        list[dict[str, Any]]: Aggregated results as described above. See the
+            module-level ``EXAMPLE_SUMMARY_RESPONSES`` constant for concrete
+            examples of the returned structure.
+
+    Raises:
+        HTTPException: If permission checks fail or other HTTP-level errors occur.
 
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
