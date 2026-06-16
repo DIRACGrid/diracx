@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Generator
 
 import botocore.exceptions
 import freezegun
-import httpx
+import httpx2
 import pytest
 import sqlalchemy
 
@@ -92,7 +92,7 @@ async def test_upload_and_clean(
 
     # Do the actual upload
     files = {"file": ("file", BytesIO(data))}
-    async with httpx.AsyncClient() as httpx_client:
+    async with httpx2.AsyncClient() as httpx_client:
         response = await httpx_client.post(
             response.url, data=response.fields, files=files
         )
@@ -111,7 +111,7 @@ async def test_upload_and_clean(
         download_response = await get_sandbox_file(
             expected_pfn, sandbox_metadata_db, sandbox_settings
         )
-    async with httpx.AsyncClient() as httpx_client:
+    async with httpx2.AsyncClient() as httpx_client:
         response = await httpx_client.get(download_response.url)
         response.raise_for_status()
         assert response.content == data
@@ -124,7 +124,7 @@ async def test_upload_and_clean(
         download_response = await get_sandbox_file(
             expected_pfn, sandbox_metadata_db, sandbox_settings
         )
-    async with httpx.AsyncClient() as httpx_client:
+    async with httpx2.AsyncClient() as httpx_client:
         response = await httpx_client.get(download_response.url)
         response.raise_for_status()
         assert response.content == data

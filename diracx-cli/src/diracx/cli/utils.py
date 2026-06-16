@@ -7,7 +7,7 @@ from functools import wraps
 
 import typer
 from azure.core.exceptions import ClientAuthenticationError
-from httpx import ConnectError
+from httpx2 import ConnectError
 from rich import print
 
 

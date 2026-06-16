@@ -5,7 +5,7 @@ import hashlib
 import random
 import secrets
 
-import httpx
+import httpx2
 import pytest
 from aiobotocore.session import get_session
 
@@ -82,7 +82,7 @@ async def test_presigned_upload_moto(moto_s3):
     )
 
     # Upload the file
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         r = await client.post(
             upload_info["url"],
             data=upload_info["fields"],
@@ -153,7 +153,7 @@ async def test_presigned_upload_minio(
         minio_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         r = await client.post(
             upload_info["url"], data=upload_info["fields"], files={"file": content}
         )

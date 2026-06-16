@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TextIO
 from urllib import parse
 
-import httpx
+import httpx2
 import jwt
 from azure.core.credentials import AccessToken
 from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
@@ -40,7 +40,7 @@ def get_openid_configuration(
     endpoint: str, *, verify: bool | str = True
 ) -> dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
-    response = httpx.get(
+    response = httpx2.get(
         url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
         verify=verify,
     )
@@ -120,7 +120,7 @@ def refresh_token(
     verify: bool | str = True,
 ) -> TokenResponse:
     """Refresh the access token using the refresh_token flow."""
-    response = httpx.post(
+    response = httpx2.post(
         url=token_endpoint,
         data={
             "client_id": client_id,

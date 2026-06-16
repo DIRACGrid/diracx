@@ -7,7 +7,7 @@ import fcntl
 import json
 import os
 from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
-import httpx
+import httpx2
 import jwt
 
 from datetime import datetime, timezone
@@ -43,7 +43,7 @@ def get_openid_configuration(
     endpoint: str, *, verify: bool | str = True
 ) -> Dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
-    response = httpx.get(
+    response = httpx2.get(
         url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
         verify=verify,
     )
@@ -123,7 +123,7 @@ def refresh_token(
     verify: bool | str = True,
 ) -> TokenResponse:
     """Refresh the access token using the refresh_token flow."""
-    response = httpx.post(
+    response = httpx2.post(
         url=token_endpoint,
         data={
             "client_id": client_id,

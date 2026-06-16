@@ -15,7 +15,7 @@ classifiers = [
 dependencies = [
     "diracx-client",
     "diracx-core",
-    "httpx",
+    "httpx2",
     "zstandard",
 ]
 dynamic = ["version"]
