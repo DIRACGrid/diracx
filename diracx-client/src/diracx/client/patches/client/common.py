@@ -19,7 +19,11 @@ from urllib import parse
 import httpx2
 import jwt
 from azure.core.credentials import AccessToken
-from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
+from diracx.core.utils import (
+    EXPIRES_GRACE_SECONDS,
+    prepare_verify,
+    serialize_credentials,
+)
 from diracx.core.models import TokenResponse
 
 
@@ -42,7 +46,7 @@ def get_openid_configuration(
     """Get the openid configuration from the .well-known endpoint"""
     response = httpx2.get(
         url=parse.urljoin(endpoint, ".well-known/openid-configuration"),
-        verify=verify,
+        verify=prepare_verify(verify),
     )
     if not response.is_success:
         raise RuntimeError("Cannot fetch any information from the .well-known endpoint")
@@ -127,7 +131,7 @@ def refresh_token(
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
         },
-        verify=verify,
+        verify=prepare_verify(verify),
     )
 
     if response.status_code != 200:

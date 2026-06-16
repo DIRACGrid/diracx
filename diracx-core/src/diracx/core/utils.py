@@ -6,6 +6,7 @@ __all__ = [
     "TwoLevelCache",
     "batched_async",
     "dotenv_files_from_environment",
+    "prepare_verify",
     "read_credentials",
     "recursive_merge",
     "serialize_credentials",
@@ -18,6 +19,7 @@ import json
 import logging
 import os
 import re
+import ssl
 import stat
 import threading
 from collections import defaultdict
@@ -72,6 +74,20 @@ def dotenv_files_from_environment(prefix: str) -> list[str]:
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
             env_files[int(match.group(1) or -1)] = value
     return [v for _, v in sorted(env_files.items())]
+
+
+def prepare_verify(verify: bool | str) -> bool | ssl.SSLContext:
+    """Normalise a TLS ``verify`` option for use with httpx clients.
+
+    httpx2 deprecated passing ``verify`` as a path string. When ``verify`` is a
+    path to a CA bundle file (or a directory of certificates) build an
+    :class:`ssl.SSLContext` from it instead; booleans are returned unchanged.
+    """
+    if isinstance(verify, str):
+        if os.path.isdir(verify):
+            return ssl.create_default_context(capath=verify)
+        return ssl.create_default_context(cafile=verify)
+    return verify
 
 
 def serialize_credentials(token_response: TokenResponse) -> str:
