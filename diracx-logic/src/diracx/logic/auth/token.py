@@ -48,6 +48,7 @@ async def get_oidc_token(
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
+    policies: dict[str, Any],
     device_code: str | None = None,
     code: str | None = None,
     redirect_uri: str | None = None,
@@ -90,6 +91,7 @@ async def get_oidc_token(
     return await exchange_token(
         auth_db,
         scope,
+        policies,
         oidc_token_info,
         config,
         settings,
@@ -238,6 +240,7 @@ async def perform_legacy_exchange(
     expected_api_key: str,
     preferred_username: str,
     scope: str,
+    policies: dict[str, Any],
     authorization: str,
     auth_db: AuthDB,
     available_properties: set[SecurityProperty],
@@ -264,6 +267,7 @@ async def perform_legacy_exchange(
     return await exchange_token(
         auth_db,
         scope,
+        policies,
         {"sub": sub, "preferred_username": preferred_username},
         config,
         settings,
@@ -276,6 +280,7 @@ async def perform_legacy_exchange(
 async def exchange_token(
     auth_db: AuthDB,
     scope: str,
+    policies: dict[str, Any],
     oidc_token_info: dict,
     config: Config,
     settings: AuthSettings,
@@ -319,13 +324,23 @@ async def exchange_token(
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
 
+    # Enrich the token with policy specific content
+    dirac_access_policies = {}
+    dirac_refresh_policies = {}
+    for policy_name, policy in policies.items():
+        access_extra, refresh_extra = policy.enrich_tokens()
+        if access_extra:
+            dirac_access_policies[policy_name] = access_extra
+        if refresh_extra:
+            dirac_refresh_policies[policy_name] = refresh_extra
+
     refresh_payload: RefreshTokenPayload | None = None
 
     if include_refresh_token:
         # Insert the refresh token with user details into the RefreshTokens table
         # User details are needed to regenerate access tokens later
         refresh_jti = await insert_refresh_token(
-            auth_db=auth_db, subject=sub, scope=scope, policies={}
+            auth_db=auth_db, subject=sub, scope=scope, policies=dirac_refresh_policies
         )
 
         # Generate refresh token payload
@@ -340,7 +355,7 @@ async def exchange_token(
             # legacy_exchange is used to indicate that the original refresh token
             # was obtained from the legacy_exchange endpoint
             legacy_exchange=legacy_exchange,
-            dirac_policies={},
+            dirac_policies=dirac_refresh_policies,
         )
 
     # Generate access token payload
@@ -359,7 +374,7 @@ async def exchange_token(
         preferred_username=preferred_username,
         dirac_group=dirac_group,
         exp=access_exp,
-        dirac_policies={},
+        dirac_policies=dirac_access_policies,
     )
 
     return access_payload, refresh_payload
