@@ -29,12 +29,14 @@ class ActionType(StrEnum):
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
-    """Rules.
+    """Access policy for WMS (job) operations.
 
-    * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
-    * An admin cannot create any resource but can read everything and modify everything
-    * A NORMAL_USER can create
-    * a NORMAL_USER can query and read only his own jobs.
+    This policy enforces access control for job-related actions. Key rules:
+    - Either ``NORMAL_USER`` or ``JOB_ADMINISTRATOR`` must be present in the
+      requester's properties.
+    - ``JOB_ADMINISTRATOR`` may read and modify all resources.
+    - ``NORMAL_USER`` may create jobs and may read/query only their own jobs.
+    - ``GENERIC_PILOT`` is allowed for pilot-related manage actions.
     """
 
     @staticmethod
@@ -47,6 +49,26 @@ class WMSAccessPolicy(BaseAccessPolicy):
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
     ):
+        """Evaluate WMS access policy for the current request.
+
+        Args:
+            policy_name (str): Name of the policy invocation (unused by logic).
+            user_info (AuthorizedUserInfo): Authenticated user information.
+            action (ActionType | None): The action being requested.
+            job_db (JobDB | None): Job database access object; required for
+                ownership checks when verifying access to specific job IDs.
+            job_ids (list[int] | None): Optional list of job IDs the action
+                targets. Used to verify ownership for non-admin users.
+
+        Returns:
+            None
+
+        Raises:
+            HTTPException: If the caller is not authorized for the requested
+                action.
+            NotImplementedError: If required arguments are missing or an
+                unsupported combination of parameters is supplied.
+        """
         assert action, "action is a mandatory parameter"
         assert job_db, "job_db is a mandatory parameter"
 
@@ -117,9 +139,11 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 
 class SandboxAccessPolicy(BaseAccessPolicy):
-    """Policy for the sandbox.
+    """Access policy for sandbox operations.
 
-    They are similar to the WMS access policies.
+    This policy enforces permissions for sandbox creation, reading and
+    modification. It follows the general principles of the WMS policy but
+    includes additional checks for PFN prefixes and sandbox ownership.
     """
 
     @staticmethod
@@ -134,6 +158,29 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         required_prefix: str | None = None,
         se_name: str | None = None,
     ):
+        """Evaluate sandbox access policy for the current request.
+
+        Args:
+            policy_name (str): Name of the policy invocation (unused by logic).
+            user_info (AuthorizedUserInfo): Authenticated user information.
+            action (ActionType | None): The action being requested.
+            sandbox_metadata_db (SandboxMetadataDB | None): Metadata DB used
+                to query sandbox ownership.
+            pfns (list[str] | None): Optional list of PFNs to validate and
+                check ownership for.
+            required_prefix (str | None): Required PFN prefix for validation.
+            se_name (str | None): Storage element name used to resolve sandbox
+                ownership.
+
+        Returns:
+            None
+
+        Raises:
+            HTTPException: If the caller is not authorized for the requested
+                action or does not own the specified sandbox.
+            NotImplementedError: If required arguments are missing or an
+                unsupported combination of parameters is supplied.
+        """
         assert action, "action is a mandatory parameter"
         assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
 

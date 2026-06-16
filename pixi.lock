@@ -19250,8 +19250,8 @@ packages:
   requires_python: '>=3.11'
 - pypi: ./
   name: diracx
-  version: 0.1.2.dev5+g9c6cdd8a8.d20260616
-  sha256: 17e5486bd706a905148f8eb09dd12c1f5d354ba0e221b76981594b2beeff70b9
+  version: 0.1.2.dev7+g4ea1d7a78.d20260616
+  sha256: 23dd64825a701e7ed0d75b1e9758a1689da381b6b26cd0a2ac44612d4ebea4d6
   requires_dist:
   - diracx-api
   - diracx-cli
