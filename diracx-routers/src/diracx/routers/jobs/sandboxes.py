@@ -47,13 +47,32 @@ async def initiate_sandbox_upload(
     settings: SandboxStoreSettings,
     check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxUploadResponse:
-    """Get the PFN for the given sandbox, initiate an upload as required.
+    """Initiate sandbox upload or retrieve a PFN of an existing sandbox.
 
-    If the sandbox already exists in the database then the PFN is returned
-    and there is no "url" field in the response.
+    If the sandbox metadata already exists, this returns the existing PFN.
+    If the sandbox is not present, the response contains presigned upload
+    information (``url`` and ``fields``) that the client should use to
+    upload the sandbox to the configured storage backend.
 
-    If the sandbox does not exist in the database then the "url" and "fields"
-    should be used to upload the sandbox to the storage backend.
+    Args:
+        user_info (AuthorizedUserInfo): Authenticated user information.
+        sandbox_info (SandboxInfo): Metadata describing the sandbox to upload.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        settings (SandboxStoreSettings): Storage backend configuration.
+        check_permissions (CheckSandboxPolicyCallable): Callable to verify
+            that the requesting user has permission to create sandboxes.
+
+    Returns:
+        SandboxUploadResponse: Contains the sandbox PFN and, when an upload is
+            required, the presigned ``url`` and form ``fields`` to perform the
+            upload.
+
+    Raises:
+        HTTPException: If the provided input is invalid or the operation
+            cannot be performed (e.g. as a result of validation in the
+            business logic layer).
+
     """
     await check_permissions(
         action=ActionType.CREATE, sandbox_metadata_db=sandbox_metadata_db
@@ -79,13 +98,34 @@ async def get_sandbox_file(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckSandboxPolicyCallable,
 ) -> SandboxDownloadResponse:
-    """Get a presigned URL to download a sandbox file.
+    """Return a presigned download URL for a sandbox file.
 
-    This route cannot use a redirect response most clients will also send the
-    authorization header when following a redirect. This is not desirable as
-    it would leak the authorization token to the storage backend. Additionally,
-    most storage backends return an error when they receive an authorization
-    header for a presigned URL.
+    This endpoint validates access to the requested PFN and returns a
+    presigned URL suitable for client downloads. It does not redirect to the
+    storage backend because many clients include the Authorization header when
+    following redirects, which would leak credentials to the storage service.
+
+    Additionally, when the sandbox already exists the response will not
+    include upload fields; clients should use the returned PFN.
+
+    Args:
+        pfn (str): The full or short PFN of the sandbox file. Must match
+            ``SANDBOX_PFN_REGEX``.
+        settings (SandboxStoreSettings): Storage backend configuration.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        user_info (AuthorizedUserInfo): Authenticated user information.
+        check_permissions (CheckSandboxPolicyCallable): Callable used to
+            verify read access to the requested PFN.
+
+    Returns:
+        SandboxDownloadResponse: Contains the presigned download URL and any
+            associated metadata required by the client.
+
+    Raises:
+        HTTPException: If permission checks fail or the requested sandbox
+            cannot be accessed.
+
     """
     short_pfn = pfn.split("|", 1)[-1]
     required_prefix = (
@@ -111,7 +151,21 @@ async def get_job_sandboxes(
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ) -> dict[str, list[Any]]:
-    """Get input and output sandboxes of given job."""
+    """Retrieve input and output sandboxes for a job.
+
+    Args:
+        job_id (int): Job identifier.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        job_db (JobDB): Job database access object, used for permission checks.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify that the
+            caller may read the job's data.
+
+    Returns:
+        dict[str, list[Any]]: A dictionary with keys (e.g. "input", "output")
+            mapping to lists of sandbox entries associated with the job.
+
+    """
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     return await get_job_sandboxes_bl(job_id, sandbox_metadata_db)
 
@@ -124,7 +178,22 @@ async def get_job_sandbox(
     sandbox_type: Literal["input", "output"],
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[Any]:
-    """Get input or output sandbox of given job."""
+    """Retrieve either input or output sandbox entries for a job.
+
+    Args:
+        job_id (int): Job identifier.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        job_db (JobDB): Job database access object, used for permission checks.
+        sandbox_type (Literal["input", "output"]): Which sandbox type to
+            retrieve.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify that the
+            caller may read the job's data.
+
+    Returns:
+        list[Any]: List of sandbox entries for the specified type.
+
+    """
     await check_permissions(action=ActionType.READ, job_db=job_db, job_ids=[job_id])
     return await get_job_sandbox_bl(job_id, sandbox_metadata_db, sandbox_type)
 
@@ -138,7 +207,27 @@ async def assign_sandbox_to_job(
     settings: SandboxStoreSettings,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Map the pfn as output sandbox to job."""
+    """Assign a sandbox PFN as the job's output sandbox.
+
+    Maps the provided PFN to the job as an output sandbox. Permission checks
+    are performed before attempting the assignment.
+
+    Args:
+        job_id (int): Identifier of the job to update.
+        pfn (str): PFN to assign as the job's output sandbox. Must match
+            ``SANDBOX_PFN_REGEX``.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        job_db (JobDB): Job database access object, used for permission checks.
+        settings (SandboxStoreSettings): Storage backend configuration.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify that the
+            caller may manage the job.
+
+    Raises:
+        HTTPException: If the sandbox does not exist, is already assigned, or
+            the caller lacks permission to perform the assignment.
+
+    """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     try:
         await assign_sandbox_to_job_bl(job_id, pfn, sandbox_metadata_db, settings)
@@ -159,7 +248,21 @@ async def unassign_job_sandboxes(
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Delete single job sandbox mapping."""
+    """Remove sandbox mapping(s) for a single job.
+
+    Args:
+        job_id (int): Identifier of the job whose sandbox mappings will be
+            removed.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        job_db (JobDB): Job database access object, used for permission checks.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify that the
+            caller may manage the job.
+
+    Returns:
+        None
+
+    """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=[job_id])
     await unassign_jobs_sandboxes_bl([job_id], sandbox_metadata_db)
 
@@ -190,6 +293,26 @@ async def unassign_bulk_jobs_sandboxes(
     job_db: JobDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Delete bulk jobs sandbox mapping."""
+    """Remove sandbox mappings for multiple jobs in bulk.
+
+    The request body should be a JSON object containing a top-level
+    ``job_ids`` array. OpenAPI examples are provided in the module-level
+    ``EXAMPLE_UNASSIGN`` constant and are exposed via the route's
+    ``openapi_extra`` metadata.
+
+    Args:
+        job_ids (list[int]): List of job identifiers to unassign sandboxes
+            for. This parameter is provided in the request body as a top-level
+            ``job_ids`` key.
+        sandbox_metadata_db (SandboxMetadataDB): Database access for sandbox
+            metadata.
+        job_db (JobDB): Job database access object, used for permission checks.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify that the
+            caller may manage the specified jobs.
+
+    Returns:
+        None
+
+    """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
     await unassign_jobs_sandboxes_bl(job_ids, sandbox_metadata_db)
