@@ -8,7 +8,7 @@ import jwt
 import pytest
 from azure.core.credentials import AccessToken
 
-from diracx.client.patches.utils import get_token
+from diracx.client.patches.client.common import get_token
 from diracx.core.models import TokenResponse
 from diracx.core.utils import serialize_credentials
 
@@ -34,7 +34,7 @@ def test_get_token_accessing_lock_file(monkeypatch, tmp_path):
     token_location = tmp_path / "credentials.json"
     token_location.write_text(CREDENTIALS_CONTENT)
 
-    # Patch 'fcntl.flock' within the 'diracx.client.patches.utils' module
+    # Patch 'fcntl.flock' within the 'diracx.client.patches.client.common' module
     flock_calls = []
 
     def mock_flock(file, operation):
@@ -42,7 +42,7 @@ def test_get_token_accessing_lock_file(monkeypatch, tmp_path):
         if operation == fcntl.LOCK_EX:
             raise BlockingIOError("File is locked")
 
-    monkeypatch.setattr("diracx.client.patches.utils.fcntl.flock", mock_flock)
+    monkeypatch.setattr("diracx.client.patches.client.common.fcntl.flock", mock_flock)
 
     # Attempt to get a token, expecting a BlockingIOError due to the lock
     with pytest.raises(BlockingIOError) as exc_info:
@@ -172,7 +172,9 @@ def test_get_token_refresh_valid(monkeypatch, tmp_path):
         was_refresh_called = True
         return TokenResponse(**TOKEN_RESPONSE_DICT)
 
-    monkeypatch.setattr("diracx.client.patches.utils.refresh_token", mock_refresh)
+    monkeypatch.setattr(
+        "diracx.client.patches.client.common.refresh_token", mock_refresh
+    )
 
     # Call get_token
     result = get_token(

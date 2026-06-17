@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ssl
 from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from types import TracebackType
@@ -12,8 +13,9 @@ from azure.core.credentials_async import AsyncTokenCredential
 from azure.core.pipeline import PipelineRequest
 from azure.core.pipeline.policies import AsyncBearerTokenCredentialPolicy
 from diracx.core.preferences import get_diracx_preferences, DiracxPreferences
+from diracx.core.utils import prepare_verify
 
-from ..utils import get_openid_configuration, get_token
+from .common import get_openid_configuration, get_token
 from ..._generated.aio._client import Dirac as _Dirac
 
 __all__ = [
@@ -30,7 +32,7 @@ class AsyncDiracTokenCredential(AsyncTokenCredential):
         token_endpoint: str,
         client_id: str,
         *,
-        verify: bool | str = True,
+        verify: bool | ssl.SSLContext = True,
     ) -> None:
         self.location = location
         self.verify = verify
@@ -122,11 +124,16 @@ class Dirac(_Dirac):
         if verify is True and diracx_preferences.ca_path:
             verify = str(diracx_preferences.ca_path)
         kwargs["connection_verify"] = verify
+        # azure-core wants a bool/path for connection_verify, but httpx2 wants
+        # an SSLContext, so convert the CA path once here for the httpx2 calls.
+        ssl_verify = prepare_verify(verify)
         self._endpoint = str(endpoint or diracx_preferences.url)
         self._client_id = client_id or "myDIRACClientID"
 
         # Get .well-known configuration
-        openid_configuration = get_openid_configuration(self._endpoint, verify=verify)
+        openid_configuration = get_openid_configuration(
+            self._endpoint, verify=ssl_verify
+        )
 
         try:
             self.client_version = distribution("diracx").version
@@ -149,7 +156,7 @@ class Dirac(_Dirac):
                     location=diracx_preferences.credentials_path,
                     token_endpoint=openid_configuration["token_endpoint"],
                     client_id=self._client_id,
-                    verify=verify,
+                    verify=ssl_verify,
                 ),
             ),
             **kwargs,
