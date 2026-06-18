@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import os
 from http import HTTPStatus
 from typing import Annotated, Literal
@@ -35,7 +34,6 @@ from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter
 
 router = DiracxRouter(require_auth=False)
-logger = logging.getLogger(__name__)
 
 
 async def mint_token(
