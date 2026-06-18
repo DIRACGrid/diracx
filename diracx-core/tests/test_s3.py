@@ -97,7 +97,7 @@ async def test_presigned_upload_moto(moto_s3):
         Params={"Bucket": BUCKET_NAME, "Key": key},
         ExpiresIn=3600,
     )
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         r = await client.get(url)
 
     assert r.content == file_content

@@ -142,7 +142,7 @@ async def test_upload_and_clean(
 
     # Check that the sandbox was actually removed from the bucket
     with pytest.raises(
-        signurlarity.exceptions.PresignError,
+        signurlarity.exceptions.NoSuchKeyError,
         match="does not exist or is not accessible",
     ):
         await sandbox_settings.s3_client.head_object(

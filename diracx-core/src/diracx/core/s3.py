@@ -14,7 +14,7 @@ import asyncio
 import base64
 from typing import TYPE_CHECKING, TypedDict, cast
 
-from signurlarity.exceptions import NoSuchBucketError, PresignError
+from signurlarity.exceptions import NoSuchBucketError, NoSuchKeyError, PresignError
 
 from diracx.core.models import ChecksumAlgorithm
 
@@ -45,13 +45,9 @@ async def s3_object_exists(s3_client: AsyncClient, bucket_name: str, key: str) -
 async def _s3_exists(method, **kwargs: str) -> bool:
     try:
         await method(**kwargs)
-    except PresignError as e:
-        # TODO: remove this statement when https://github.com/DIRACGrid/signurlarity/issues/41
-        if "does not exist or is not accessible" in str(e):
-            return False
-        else:
-            raise
-    except NoSuchBucketError:
+    except PresignError:
+        raise
+    except (NoSuchBucketError, NoSuchKeyError):
         return False
     else:
         return True
