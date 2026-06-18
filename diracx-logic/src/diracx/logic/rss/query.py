@@ -10,6 +10,7 @@ from diracx.core.models.rss import (
     ComputeElementStatus,
     FTSStatus,
     ResourceStatus,
+    ResourceType,
     StorageElementStatus,
 )
 from diracx.core.models.rss import (
@@ -64,7 +65,9 @@ async def get_compute_statuses(
     resource_status_db: ResourceStatusDB,
 ) -> dict[str, dict[str, ComputeElementStatus]]:
     """Fetch all compute element statuses across all VOs."""
-    all_rows = await resource_status_db.get_resource_statuses(["all"])
+    all_rows = await resource_status_db.get_resource_statuses(
+        ["all"], element_type=ResourceType.Compute
+    )
 
     result: dict[str, dict[str, ComputeElementStatus]] = {}
     for vo, names in all_rows.items():
@@ -82,7 +85,9 @@ async def get_fts_statuses(
     resource_status_db: ResourceStatusDB,
 ) -> dict[str, dict[str, FTSStatus]]:
     """Fetch all FTS server statuses across all VOs."""
-    all_rows = await resource_status_db.get_resource_statuses(["all"])
+    all_rows = await resource_status_db.get_resource_statuses(
+        ["all"], element_type=ResourceType.FTS
+    )
 
     result: dict[str, dict[str, FTSStatus]] = {}
     for vo, names in all_rows.items():
@@ -105,7 +110,9 @@ async def get_storage_statuses(
     Storage elements missing one or more of the four access rows are skipped:
     their status is undefined and guessing could grant unintended access.
     """
-    all_rows = await resource_status_db.get_resource_statuses(STORAGE_STATUS_TYPES)
+    all_rows = await resource_status_db.get_resource_statuses(
+        STORAGE_STATUS_TYPES, element_type=ResourceType.Storage
+    )
 
     result: dict[str, dict[str, StorageElementStatus]] = {}
     for vo, names in all_rows.items():

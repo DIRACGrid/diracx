@@ -30,19 +30,24 @@ class ResourceStatusDB(BaseSQLDB):
             SiteStatus.status,
             SiteStatus.reason,
             SiteStatus.vo,
-        ).where(SiteStatus.status_type == "all")
+        )
         result = await self.conn.execute(stmt)
         return [(row.Name, row.Status, row.Reason, row.VO) for row in result.all()]
 
     async def get_resource_statuses(
         self,
         status_types: list[str] | None = None,
+        element_type: str | None = None,
     ) -> dict[str, dict[str, dict[str, Row]]]:
         """Return resource statuses for the given status types across all VOs.
 
         Args:
             status_types: Status type filter (e.g. ["ReadAccess", "WriteAccess"]).
                           Defaults to ["all"].
+            element_type: Element type filter (e.g. "ComputeElement", "FTS",
+                          "StorageElement"). Defaults to None (no filter), which
+                          returns every element type and would mix, say, compute
+                          and FTS rows that both use the "all" status type.
 
         Returns:
             Nested dict keyed by VO, then resource name, then status type. The
@@ -61,6 +66,8 @@ class ResourceStatusDB(BaseSQLDB):
         ).where(
             ResourceStatus.status_type.in_(status_types),
         )
+        if element_type is not None:
+            stmt = stmt.where(ResourceStatus.element_type == element_type)
         result = await self.conn.execute(stmt)
 
         statuses: dict[str, dict[str, dict[str, Row]]] = {}
@@ -72,6 +79,7 @@ class ResourceStatusDB(BaseSQLDB):
     async def get_resource_status_date(
         self,
         status_types: list[str] | None = None,
+        element_type: str | None = None,
     ) -> tuple[datetime | None, int]:
         """Return the most recent DateEffective and row count for the given status types.
 
@@ -82,6 +90,9 @@ class ResourceStatusDB(BaseSQLDB):
 
         Args:
             status_types: Status type filter. Defaults to ["all"].
+            element_type: Element type filter. Defaults to None (no filter). Pass
+                          the same value as get_resource_statuses so the revision
+                          tracks exactly the rows that view returns.
 
         Returns:
             (max_date_effective, row_count) across all VOs. The date is None
@@ -94,6 +105,8 @@ class ResourceStatusDB(BaseSQLDB):
             func.max(ResourceStatus.date_effective),
             func.count(),
         ).where(ResourceStatus.status_type.in_(status_types))
+        if element_type is not None:
+            stmt = stmt.where(ResourceStatus.element_type == element_type)
         result = await self.conn.execute(stmt)
         max_date, count = result.one()
         return max_date, count
@@ -113,7 +126,7 @@ class ResourceStatusDB(BaseSQLDB):
         stmt = select(
             func.max(SiteStatus.date_effective),
             func.count(),
-        ).where(SiteStatus.status_type == "all")
+        )
         result = await self.conn.execute(stmt)
         max_date, count = result.one()
         return max_date, count
@@ -124,6 +137,7 @@ class ResourceStatusDB(BaseSQLDB):
         status: str,
         status_type: str,
         vo: str,
+        element_type: str,
         reason: str = "",
         date_effective: datetime | None = None,
         last_check_time: datetime | None = None,
@@ -135,6 +149,8 @@ class ResourceStatusDB(BaseSQLDB):
             status: Status value.
             status_type: One of "all", "ReadAccess", "WriteAccess", etc.
             vo: Virtual organisation (e.g. "lhcb", "all").
+            element_type: One of "ComputeElement", "FTS", "StorageElement". Read
+                          queries filter on this, so it must be set correctly.
             reason: Human-readable reason string.
             date_effective: Timestamp when the status became effective.
                             Defaults to now.
@@ -147,6 +163,7 @@ class ResourceStatusDB(BaseSQLDB):
             Status=status,
             StatusType=status_type,
             VO=vo,
+            ElementType=element_type,
             Reason=reason,
             DateEffective=date_effective or now,
             LastCheckTime=last_check_time or now,
@@ -179,6 +196,7 @@ class ResourceStatusDB(BaseSQLDB):
             Status=status,
             StatusType="all",
             VO=vo,
+            ElementType="Site",
             Reason=reason,
             DateEffective=date_effective or now,
             LastCheckTime=last_check_time or now,

@@ -144,6 +144,21 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert max_date == _NOW
     assert count == 4  # TestStorage access rows
 
+    # Filtering by element_type must not leak rows of other element types:
+    # TestCompute and TestFTS both use status_type "all".
+    async with rss_db as db:
+        compute = await db.get_resource_statuses(["all"], element_type="ComputeElement")
+        fts = await db.get_resource_statuses(["all"], element_type="FTS")
+    assert set(compute["all"]) == {"TestCompute"}
+    assert set(fts["all"]) == {"TestFTS"}
+
+    async with rss_db as db:
+        max_date, count = await db.get_resource_status_date(
+            ["all"], element_type="ComputeElement"
+        )
+    assert max_date == _NOW
+    assert count == 1  # only TestCompute, not TestFTS
+
 
 async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
     """Rows for the same resource in different VOs must not overwrite each other."""
@@ -153,6 +168,7 @@ async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
             status="Active",
             status_type="all",
             vo="lhcb",
+            element_type="ComputeElement",
             date_effective=_NOW,
         )
         await db.insert_resource_status(
@@ -160,6 +176,7 @@ async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
             status="Banned",
             status_type="all",
             vo="atlas",
+            element_type="ComputeElement",
             date_effective=_NOW,
         )
         result = await db.get_resource_statuses()
@@ -188,3 +205,28 @@ async def test_site_status_date(rss_db: ResourceStatusDB):
         max_date, count = await db.get_site_status_date()
     assert max_date == _NOW
     assert count == 1
+
+
+async def test_insert_resource_status_sets_element_type(rss_db: ResourceStatusDB):
+    """insert_resource_status must persist ElementType so reads can filter on it."""
+    async with rss_db as db:
+        await db.insert_resource_status(
+            name="ComputeOnly",
+            status="Active",
+            status_type="all",
+            vo="lhcb",
+            element_type="ComputeElement",
+            date_effective=_NOW,
+        )
+        await db.insert_resource_status(
+            name="FTSOnly",
+            status="Active",
+            status_type="all",
+            vo="lhcb",
+            element_type="FTS",
+            date_effective=_NOW,
+        )
+        compute = await db.get_resource_statuses(["all"], element_type="ComputeElement")
+        fts = await db.get_resource_statuses(["all"], element_type="FTS")
+    assert set(compute["lhcb"]) == {"ComputeOnly"}
+    assert set(fts["lhcb"]) == {"FTSOnly"}
