@@ -12,6 +12,7 @@ import httpx2
 import jwt
 import pytest
 from cryptography.fernet import Fernet
+from freezegun import freeze_time
 from joserfc.jwk import RSAKey, OKPKey, KeySet
 from joserfc.errors import (
     UnsupportedKeyOperationError,
@@ -566,34 +567,25 @@ async def test_refresh_token_expired(
     """Test the expiration date of the passed refresh token.
 
     - get a refresh token
-    - decode it and change the expiration time
-    - recode it (with the JWK of the server).
+    - move time forward past its expiration time
+    - ensure the expired token is rejected.
     """
-    # Get refresh token
-    initial_refresh_token = _get_tokens(test_client)["refresh_token"]
+    with freeze_time(datetime.now(tz=timezone.utc)) as frozen_time:
+        # Get refresh token
+        refresh_token = _get_tokens(test_client)["refresh_token"]
 
-    # Decode it
-    refresh_payload = jwt.decode(
-        initial_refresh_token, options={"verify_signature": False}
-    )
+        frozen_time.tick(
+            delta=timedelta(minutes=test_auth_settings.refresh_token_expire_minutes + 1)
+        )
 
-    # Modify the expiration time (utc now - 5 hours)
-    refresh_payload["exp"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
-    )
+        request_data = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": DIRAC_CLIENT_ID,
+        }
 
-    # Encode it differently
-    new_refresh_token = _sign_token_payload(refresh_payload, test_auth_settings)
-
-    request_data = {
-        "grant_type": "refresh_token",
-        "refresh_token": new_refresh_token,
-        "client_id": DIRAC_CLIENT_ID,
-    }
-
-    # Try to get a new access token using the invalid refresh token
-    # The server should detect that it is not encoded properly
-    r = test_client.post("/api/auth/token", data=request_data)
+        # Try to get a new access token using the expired refresh token
+        r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "expired_token: The token is expired"
@@ -605,30 +597,21 @@ async def test_access_token_expired(
     """Test the expiration date of the passed access token.
 
     - get an access token
-    - decode it and change the expiration time
-    - recode it (with the JWK of the server).
+    - move time forward past its expiration time
+    - ensure the expired token is rejected.
     """
-    # Get access token
-    initial_access_token = _get_tokens(test_client)["access_token"]
+    with freeze_time(datetime.now(tz=timezone.utc)) as frozen_time:
+        # Get access token
+        access_token = _get_tokens(test_client)["access_token"]
 
-    # Decode it
-    access_payload = jwt.decode(
-        initial_access_token, options={"verify_signature": False}
-    )
+        frozen_time.tick(
+            delta=timedelta(minutes=test_auth_settings.access_token_expire_minutes + 1)
+        )
 
-    # Modify the expiration time (utc now - 5 hours)
-    access_payload["exp"] = int(
-        (datetime.now(tz=timezone.utc) - timedelta(hours=5)).timestamp()
-    )
+        headers = {"Authorization": f"Bearer {access_token}"}
 
-    # Encode it differently
-    new_access_token = _sign_token_payload(access_payload, test_auth_settings)
-
-    headers = {"Authorization": f"Bearer {new_access_token}"}
-
-    # Try to get the userinfo using the invalid access token
-    # The server should detect that it is not encoded properly
-    r = test_client.get("/api/auth/userinfo", headers=headers)
+        # Try to get the userinfo using the expired access token
+        r = test_client.get("/api/auth/userinfo", headers=headers)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "Invalid JWT"
