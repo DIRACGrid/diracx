@@ -96,11 +96,19 @@ jobs:
       - name: Publish package on PyPI
         if: steps.check-tag.outputs.create-release == 'true'
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        with:
+          # Generate and upload PEP 740 attestations (build provenance) for the wheels.
+          attestations: true
 
   docker:
     needs: deploy-pypi
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # push images to ghcr.io
+      id-token: write          # OIDC for sigstore signing of attestations
+      attestations: write      # write build-provenance attestations
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -116,6 +124,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push services (release)
+        id: build-services-release
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
@@ -125,7 +134,15 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest services (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/services
+          subject-digest: ${{ steps.build-services-release.outputs.digest }}
+          push-to-registry: true
       - name: Build and push tasks (release)
+        id: build-tasks-release
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
@@ -135,7 +152,15 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest tasks (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/tasks
+          subject-digest: ${{ steps.build-tasks-release.outputs.digest }}
+          push-to-registry: true
       - name: Build and push client (release)
+        id: build-client-release
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
@@ -145,6 +170,13 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest client (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/client
+          subject-digest: ${{ steps.build-client-release.outputs.digest }}
+          push-to-registry: true
 
       - name: Build and push services (dev)
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
