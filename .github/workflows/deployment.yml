@@ -42,6 +42,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           token: ${{ github.token }}
+          persist-credentials: false
       - run: |
           git fetch --prune --unshallow
           git config --global user.email "ci@diracgrid.org"
@@ -112,6 +113,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
       - name: Set up Docker Buildx
@@ -218,13 +221,14 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           path: diracx
-
+          persist-credentials: false
       - name: Checkout diracx-charts
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           repository: DIRACGrid/diracx-charts
           token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
           path: diracx-charts
+          persist-credentials: true
 
       - name: Configure Git
         run: |
