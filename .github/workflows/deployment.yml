@@ -12,6 +12,8 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+permissions: {}
+
 jobs:
   deploy-pypi:
     name: PyPI deployment

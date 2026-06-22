@@ -16,6 +16,8 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
 
+permissions: {}
+
 defaults:
   run:
     shell: bash -el {0}
