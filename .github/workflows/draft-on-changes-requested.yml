@@ -1,7 +1,7 @@
 name: Draft on Changes Requested
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] workflow is safe.
     workflows: ["Record Changes Requested"]
     types: [completed]
 
