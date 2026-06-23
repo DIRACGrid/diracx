@@ -36,6 +36,11 @@ This page documents the available pixi tasks.
 - `mkdocs`: mkdocs serve
 - `mkdocs-build`: mkdocs build --strict
 
+## Github Actions Tasks
+
+- `gha-pinact`: Run Pinact GHA versions update
+- `gha-zizmor`: Run Zizmor GHA analysis
+
 ## Gubbins Tasks
 
 - `pytest-gubbins`: Run the tests for gubbins
