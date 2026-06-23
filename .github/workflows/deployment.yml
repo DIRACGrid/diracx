@@ -66,11 +66,13 @@ jobs:
           python -m readme_renderer README.md -o /tmp/README.html
       - name: Extract version from tag
         id: check-tag
+        env:
+          GITHUB_REF: ${{ github.ref }}
         run: |
           set -xeuo pipefail
           IFS=$'\n\t'
           # Check if this is a tag push
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             # Extract version from the tag
             export NEW_VERSION="${GITHUB_REF#refs/tags/}"
             echo "Deploying release $NEW_VERSION"
@@ -240,9 +242,11 @@ jobs:
 
       - name: Update chart versions
         id: update-versions
+        env:
+          NEW_CHART_VERSION: ${{ needs.deploy-pypi.outputs.new-version }}
         run: |
           cd diracx-charts
-          VERSION="${{ needs.deploy-pypi.outputs.new-version }}"
+          VERSION="${NEW_CHART_VERSION}"
 
           # Get current chart version before updating
           CURRENT_CHART_VERSION=$(grep '^version:' diracx/Chart.yaml | sed 's/version: //' | tr -d '"')
@@ -268,6 +272,10 @@ jobs:
 
       - name: Commit and push changes
         if: success()
+        env:
+          CURRENT_CHART_VERSION: ${{ steps.update-versions.outputs.current_chart_version }}
+          NEW_CHART_VERSION: ${{ steps.update-versions.outputs.new_chart_version }}
+          DIRACX_VERSION: ${{ steps.update-versions.outputs.diracx_version }}
         run: |
           cd diracx-charts
 
@@ -280,15 +288,15 @@ jobs:
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
             # Commit the changes
-            git commit -m "chore: bump chart to ${{ steps.update-versions.outputs.new_chart_version }} for DiracX ${{ steps.update-versions.outputs.diracx_version }}
+            git commit -m "chore: bump chart to ${NEW_CHART_VERSION} for DiracX ${DIRACX_VERSION}
 
-            - Update appVersion to ${{ steps.update-versions.outputs.diracx_version }}
-            - Update image tag to ${{ steps.update-versions.outputs.diracx_version }}
-            - Bump chart version from ${{ steps.update-versions.outputs.current_chart_version }} to ${{ steps.update-versions.outputs.new_chart_version }}"
+            - Update appVersion to ${DIRACX_VERSION}
+            - Update image tag to ${DIRACX_VERSION}
+            - Bump chart version from ${CURRENT_CHART_VERSION} to ${NEW_CHART_VERSION}"
 
             git push origin master
 
-            echo "✅ Successfully pushed chart version ${{ steps.update-versions.outputs.new_chart_version }} and tag ${TAG_NAME}"
+            echo "✅ Successfully pushed chart version ${NEW_CHART_VERSION} and tag ${TAG_NAME}"
           else
             echo "No changes to commit"
           fi
