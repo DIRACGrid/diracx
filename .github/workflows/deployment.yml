@@ -41,7 +41,7 @@ jobs:
         # We need extglob for REFERENCE_BRANCH substitution
         shell: bash -l -O extglob {0}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           token: ${{ github.token }}
           persist-credentials: false
@@ -49,7 +49,7 @@ jobs:
           git fetch --prune --unshallow
           git config --global user.email "ci@diracgrid.org"
           git config --global user.name "DIRACGrid CI"
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.14'
       - name: Installing dependencies
@@ -91,7 +91,7 @@ jobs:
           # Also build the diracx metapackage
           python -m build --outdir $PWD/dist .
       - name: 'Upload Artifact'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: diracx-whl
           path: dist/diracx*.whl
@@ -100,7 +100,7 @@ jobs:
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
         if: steps.check-tag.outputs.create-release == 'true'
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           # Generate and upload PEP 740 attestations (build provenance) for the wheels.
           attestations: true
@@ -116,15 +116,15 @@ jobs:
       attestations: write      # write build-provenance attestations
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
       - name: Login to GitHub container registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -132,7 +132,7 @@ jobs:
 
       - name: Build and push services (release)
         id: build-services-release
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -150,7 +150,7 @@ jobs:
           push-to-registry: true
       - name: Build and push tasks (release)
         id: build-tasks-release
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -168,7 +168,7 @@ jobs:
           push-to-registry: true
       - name: Build and push client (release)
         id: build-client-release
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -186,7 +186,7 @@ jobs:
           push-to-registry: true
 
       - name: Build and push services (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -195,7 +195,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/services:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push tasks (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -204,7 +204,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/tasks:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -222,12 +222,12 @@ jobs:
     if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           path: diracx
           persist-credentials: false
       - name: Checkout diracx-charts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: DIRACGrid/diracx-charts
           token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
