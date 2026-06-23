@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from time import sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,7 +22,7 @@ pytestmark = pytest.mark.enabled_dependencies(
 )
 
 
-def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
+def test_heartbeat(frozen_time, normal_user_client: TestClient, valid_job_id: int):
     search_body = {
         "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
     }
@@ -60,7 +59,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     )
     r.raise_for_status()
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
     # Send another heartbeat and check that a Kill job command was set
     payload = {valid_job_id: {"Vsize": 1235}}
     r = normal_user_client.patch("/api/jobs/heartbeat", json=payload)
@@ -74,7 +73,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
     assert commands[0]["command"] == "Kill", (
         f"Wrong job command received, should be 'Kill' but got {commands[0]=}"
     )
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     # Send another heartbeat and check the job commands are empty
     payload = {valid_job_id: {"Vsize": 1234}}
@@ -87,6 +86,7 @@ def test_heartbeat(normal_user_client: TestClient, valid_job_id: int):
 
 
 def test_multiple_jobs_receive_independent_kill_commands(
+    frozen_time,
     normal_user_client: TestClient,
     valid_job_ids: list[int],
 ):
@@ -105,7 +105,7 @@ def test_multiple_jobs_receive_independent_kill_commands(
     )
     r.raise_for_status()
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     r = normal_user_client.patch(
         "/api/jobs/heartbeat",
@@ -118,7 +118,7 @@ def test_multiple_jobs_receive_independent_kill_commands(
     assert {cmd["job_id"] for cmd in commands} == set(valid_job_ids)
     assert {cmd["command"] for cmd in commands} == {"Kill"}
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     r = normal_user_client.patch(
         "/api/jobs/heartbeat",
@@ -130,6 +130,7 @@ def test_multiple_jobs_receive_independent_kill_commands(
 
 
 def test_non_killed_status_does_not_create_command(
+    frozen_time,
     normal_user_client: TestClient,
     valid_job_id: int,
 ):
@@ -147,7 +148,7 @@ def test_non_killed_status_does_not_create_command(
     )
     r.raise_for_status()
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     r = normal_user_client.patch(
         "/api/jobs/heartbeat",
@@ -159,6 +160,7 @@ def test_non_killed_status_does_not_create_command(
 
 
 def test_deleted_creates_kill_command(
+    frozen_time,
     normal_user_client: TestClient,
     valid_job_id: int,
 ):
@@ -176,7 +178,7 @@ def test_deleted_creates_kill_command(
     )
     r.raise_for_status()
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     r = normal_user_client.patch(
         "/api/jobs/heartbeat",
@@ -189,7 +191,7 @@ def test_deleted_creates_kill_command(
     assert commands[0]["job_id"] == valid_job_id
     assert commands[0]["command"] == "Kill"
 
-    sleep(1)
+    frozen_time.tick(delta=timedelta(seconds=1))
 
     r = normal_user_client.patch(
         "/api/jobs/heartbeat",

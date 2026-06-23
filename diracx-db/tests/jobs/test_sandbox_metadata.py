@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import sqlalchemy
@@ -11,12 +10,14 @@ from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundE
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
+from diracx.testing.time import install_sqlite_time_mock
 
 
 @pytest.fixture
 async def sandbox_metadata_db(tmp_path):
     sandbox_metadata_db = SandboxMetadataDB("sqlite+aiosqlite:///:memory:")
     async with sandbox_metadata_db.engine_context():
+        install_sqlite_time_mock(sandbox_metadata_db.engine)
         async with sandbox_metadata_db.engine.begin() as conn:
             await conn.run_sync(sandbox_metadata_db.metadata.create_all)
         yield sandbox_metadata_db
@@ -39,7 +40,7 @@ def test_get_pfn(sandbox_metadata_db: SandboxMetadataDB):
     )
 
 
-async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
+async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB, frozen_time):
     # TODO: DAL tests should be very simple, such complex tests should be handled in diracx-routers
     user_info = UserInfo(
         sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
@@ -64,7 +65,7 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
     db_contents = await _dump_db(sandbox_metadata_db)
     owner_id1, last_access_time1 = db_contents[pfn1]
 
-    await asyncio.sleep(1)  # The timestamp only has second precision
+    frozen_time.tick(delta=timedelta(seconds=1))
     async with sandbox_metadata_db:
         with pytest.raises(SandboxAlreadyInsertedError):
             await sandbox_metadata_db.insert_sandbox(owner_id, "SandboxSE", pfn1, 100)
@@ -81,7 +82,7 @@ async def test_insert_sandbox(sandbox_metadata_db: SandboxMetadataDB):
         assert not await sandbox_metadata_db.sandbox_is_assigned(pfn1, "SandboxSE")
 
     # Inserting again should update the last access time
-    await asyncio.sleep(1)  # The timestamp only has second precision
+    frozen_time.tick(delta=timedelta(seconds=1))
     last_access_time3 = (await _dump_db(sandbox_metadata_db))[pfn1][1]
     assert last_access_time2 == last_access_time3
     async with sandbox_metadata_db:
