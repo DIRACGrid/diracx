@@ -194,6 +194,14 @@ shellcheck = "*"
 cmd = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 description = "Run shellcheck on all shell scripts"
 
+# Features for running GHA lints
+[feature.gha-lint.dependencies]
+zizmor = "*"
+pinact = "*"
+[feature.gha-lint.tasks]
+gha-zizmor = {cmd = "zizmor .", description = "Run Zizmor GHA analysis"}
+gha-pinact = {cmd ="pinact run" , description = "Run Pinact GHA versions update"}
+
 # Settings documentation feature
 [feature.settings-doc.dependencies]
 python = "*"
@@ -253,6 +261,7 @@ mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
+gha-lint = {features = ["gha-lint"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]
