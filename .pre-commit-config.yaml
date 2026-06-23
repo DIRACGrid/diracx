@@ -78,7 +78,10 @@ repos:
       - id: blacken-docs
         additional_dependencies:
           - black==22.12.0
-
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.22.0
+    hooks:
+      - id: zizmor
   - repo: local
     hooks:
       - id: check-lollygag
