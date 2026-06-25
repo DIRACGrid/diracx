@@ -1,3 +1,11 @@
+"""OpenSearch object-store utilities for DIRACX.
+
+This module provides the :class:`BaseOSDB` base class for OpenSearch-backed
+storage accessors. It includes common database discovery, client lifecycle
+management, index creation, upsert, and search helpers used by OS-backed
+DIRACX database classes.
+"""
+
 from __future__ import annotations
 
 import contextlib
@@ -89,7 +97,23 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type[BaseOSDB]]:
-        """Return the available implementations of the DB in reverse priority order."""
+        """Return the available implementations of the DB.
+
+        Implementations are discovered via the ``diracx.dbs.os`` entry
+        point. The returned list is ordered with the preferred implementation
+        first.
+
+        Args:
+            db_name (str): Logical database name to locate implementations for.
+
+        Returns:
+            list[type[BaseOSDB]]: Subclasses of :class:`BaseOSDB` that can be
+            used for the requested logical database.
+
+        Raises:
+            NotImplementedError: If no implementations are found for
+                ``db_name``.
+        """
         db_classes: list[type[BaseOSDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
@@ -104,8 +128,16 @@ class BaseOSDB(metaclass=ABCMeta):
     def available_urls(cls) -> dict[str, dict[str, Any]]:
         """Return a dict of available OpenSearch database urls.
 
-        The list of available URLs is determined by environment variables
-        prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
+        Environment variables named ``DIRACX_OS_DB_<NAME>`` are parsed as JSON
+        to obtain connection parameters for each advertised DB implementation.
+
+        Returns:
+            dict[str, dict[str, Any]]: Mapping from DB name to connection
+                parameter dictionaries.
+
+        Raises:
+            Exception: If an advertised environment variable cannot be parsed
+                as JSON.
         """
         conn_kwargs: dict[str, dict[str, Any]] = {}
         for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
@@ -126,7 +158,11 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @property
     def client(self) -> AsyncOpenSearch:
-        """Just a getter for _client, making sure we entered the context manager."""
+        """Return the active AsyncOpenSearch client.
+
+        The property ensures that the caller has previously entered
+        :attr:`client_context`; otherwise a ``RuntimeError`` is raised.
+        """
         if self._client is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return self._client
@@ -142,10 +178,13 @@ class BaseOSDB(metaclass=ABCMeta):
                 self._client = None
 
     async def ping(self):
-        """Check whether the connection to the DB is still working.
+        """Ping the OpenSearch cluster to verify connectivity.
 
         We could enable the ``pre_ping`` in the engine, but this would
         be ran at every query.
+
+        Raises:
+            OpenSearchDBUnavailableError: If the ping operation fails.
         """
         if not await self.client.ping():
             raise OpenSearchDBUnavailableError(
@@ -153,10 +192,11 @@ class BaseOSDB(metaclass=ABCMeta):
             )
 
     async def __aenter__(self):
-        """Entered on every request.
+        """Enter per-request DB context.
 
-        At the moment it does nothing, however, we keep it here
-        in case we ever want to use OpenSearch equivalent of a transaction.
+        Currently the context only maintains an internal flag but is kept to
+        allow future per-request lifecycle hooks or transaction-like
+        semantics.
         """
         assert not self._conn.get(), "BaseOSDB context cannot be nested"
         assert self._client is not None, "client_context hasn't been entered"
@@ -168,6 +208,11 @@ class BaseOSDB(metaclass=ABCMeta):
         self._conn.set(False)
 
     async def create_index_template(self) -> None:
+        """Create an OpenSearch index template for this DB's indices.
+
+        The method submits an index template that applies ``self.fields`` as
+        the index mapping for all indices matching ``{self.index_prefix}*``.
+        """
         template_body = {
             "template": {"mappings": {"properties": self.fields}},
             "index_patterns": [f"{self.index_prefix}*"],
@@ -178,6 +223,14 @@ class BaseOSDB(metaclass=ABCMeta):
         assert result["acknowledged"]
 
     async def upsert(self, vo: str, doc_id: int, document: Any) -> None:
+        """Upsert a document into the OpenSearch index corresponding to ``doc_id``.
+
+        Args:
+            vo (str): VO identifier used to compute the target index name.
+            doc_id (int): Document identifier.
+            document (Any): The document to store; it will be used as the
+                content of the ``doc`` update payload.
+        """
         index_name = self.index_name(vo, doc_id)
         response = await self.client.update(
             index=index_name,
@@ -195,9 +248,23 @@ class BaseOSDB(metaclass=ABCMeta):
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
     ) -> list[dict[str, Any]]:
-        """Search the database for matching results.
+        """Search the OpenSearch indices using DiracX search parameters.
 
-        See the DiracX search API documentation for details.
+        Args:
+            parameters (list[str] | None): List of fields to include in the
+                returned document source. If falsy, all fields are returned.
+            search (list[dict] | None): A list of DiracX search clauses which
+                will be converted to an OpenSearch query via
+                :func:`apply_search_filters`.
+            sorts (list[dict]): Sort descriptors with ``parameter`` and
+                ``direction`` keys.
+            per_page (int): Number of hits per page.
+            page (int | None): Optional 1-based page number. If omitted the
+                entire result set is returned (subject to OpenSearch limits).
+
+        Returns:
+            list[dict[str, Any]]: List of hit sources with any date fields
+                converted to Python ``datetime`` objects.
         """
         body = {}
         if parameters:
@@ -235,6 +302,11 @@ class BaseOSDB(metaclass=ABCMeta):
 
 
 def require_type(operator, field_name, field_type, allowed_types):
+    """Validate that the given field type supports the requested operator.
+
+    Raises:
+        InvalidQueryError: If the field_type is not among allowed_types.
+    """
     if field_type not in allowed_types:
         raise InvalidQueryError(
             f"Cannot apply {operator} to {field_name} ({field_type=}, {allowed_types=})"
@@ -242,10 +314,21 @@ def require_type(operator, field_name, field_type, allowed_types):
 
 
 def apply_search_filters(db_fields, search):
-    """Build an OpenSearch query from the given DiracX search parameters.
+    """Convert DiracX search descriptors into an OpenSearch boolean query.
 
-    If the searched parameters cannot be efficiently translated to a query for
-    OpenSearch an InvalidQueryError exception is raised.
+    The function iterates over DiracX search clauses and translates supported
+    operators into OpenSearch term/range/terms queries. If an unsupported
+    operator or a field not present in ``db_fields`` is encountered an
+    ``InvalidQueryError`` is raised.
+
+    Args:
+        db_fields (dict): Mapping of field names to their mapping metadata
+            (including ``type``).
+        search (list[dict]): List of search descriptors with keys like
+            ``parameter``, ``operator`` and either ``value`` or ``values``.
+
+    Returns:
+        dict: OpenSearch ``bool`` query body fragment.
     """
     result = {
         "must": [],
