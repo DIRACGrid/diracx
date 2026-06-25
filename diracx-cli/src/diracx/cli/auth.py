@@ -24,11 +24,36 @@ app = AsyncTyper()
 
 
 async def installation_metadata():
+    """Fetch installation metadata from the server's well-known endpoint.
+
+    This helper uses an `AsyncDiracClient` to request the DIRAC installation
+    metadata. It is intended for use from synchronous callback contexts
+    (e.g. `vo_callback`) where `asyncio.run` may be used to synchronously
+    obtain the result.
+
+    Returns:
+        Metadata: Installation metadata retrieved from the server.
+    """
     async with AsyncDiracClient() as api:
         return await api.well_known.get_installation_metadata()
 
 
 def vo_callback(vo: str | None) -> str:
+    """Validate the provided VO against installation metadata.
+
+    This callback is used by `typer` to validate the `vo` argument passed by
+    the user. It synchronously fetches installation metadata and verifies
+    that the supplied VO exists. On failure it raises a `typer.BadParameter`.
+
+    Args:
+        vo (Optional[str]): The VO name provided by the user.
+
+    Returns:
+        str: The validated VO string.
+
+    Raises:
+        typer.BadParameter: If no VO was provided or the VO is not known.
+    """
     metadata = asyncio.run(installation_metadata())
     vos = list(metadata.virtual_organizations)
     if not vo:
@@ -64,17 +89,28 @@ async def login(
         ),
     ] = None,
 ):
-    """Login to the DIRAC system using the device flow.
+    """Login to DIRAC using the OAuth2 device flow.
 
-    - If only VO is provided: Uses the default group and its properties for the VO.
+    The command initiates a device authorization flow, instructs the user to
+    open a verification URL and enter a user code, polls the token endpoint
+    until the user completes authorization, and saves received credentials to
+    the local preferences file.
 
-    - If VO and group are provided: Uses the specified group and its properties for the VO.
+    Scope resolution behavior:
+    - If only VO is provided: uses the VO's default group and its properties.
+    - If VO and group are provided: uses the specified group and its properties.
+    - If VO and properties are provided: uses the default group and merges its
+        properties with the provided properties.
+    - If VO, group, and properties are provided: uses the specified group and
+        merges its properties with the provided properties.
 
-    - If VO and properties are provided: Uses the default group and combines its properties with the
-      provided properties.
+    Args:
+            vo (Optional[str]): Virtual Organization name (validated by `vo_callback`).
+            group (Optional[str]): Group name within the VO.
+            property (Optional[list[str]]): Additional properties to request.
 
-    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
-      provided properties.
+    Raises:
+            RuntimeError: If the device flow fails or expires before completion.
     """
     scopes = [f"vo:{vo}"]
     if group:
@@ -117,6 +153,11 @@ async def login(
 
 @app.async_command()
 async def whoami():
+    """Print authenticated user's identity information.
+
+    Queries the `userinfo` endpoint and prints a JSON representation of the
+    returned identity attributes. Intended for interactive inspection.
+    """
     async with AsyncDiracClient() as api:
         user_info = await api.auth.userinfo()
         # TODO: Add a RICH output format
@@ -125,6 +166,13 @@ async def whoami():
 
 @app.async_command()
 async def logout():
+    """Logout by revoking refresh token and removing stored credentials.
+
+    If stored credentials are present, the command attempts to revoke the
+    refresh token at the server and then deletes the local credentials file.
+    Any errors during revocation are printed but do not prevent credential
+    file removal.
+    """
     async with AsyncDiracClient() as api:
         credentials_path = get_diracx_preferences().credentials_path
         if credentials_path.exists():
@@ -150,5 +198,13 @@ async def logout():
 
 @app.callback()
 def callback(output_format: Optional[str] = None):
+    """Typer callback to set the output format for CLI commands.
+
+    When provided, this callback sets the `DIRACX_OUTPUT_FORMAT` environment
+    variable so subsequent commands can adapt their output formatting.
+
+    Args:
+        output_format (Optional[str]): Output format identifier (e.g. "json").
+    """
     if output_format is not None:
         os.environ["DIRACX_OUTPUT_FORMAT"] = output_format
