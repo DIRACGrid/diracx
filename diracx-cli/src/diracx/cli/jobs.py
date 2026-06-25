@@ -32,6 +32,23 @@ available_operators = (
 
 
 def parse_condition(value: str) -> SearchSpec:
+    """Parse a single search condition into a `SearchSpec`.
+
+    The expected string format is ``"<parameter> <operator> <value>"``. For
+    scalar operators the ``value`` is returned as ``value``; for vector
+    operators the ``value`` is parsed as JSON and returned under ``values``.
+
+    Args:
+        value (str): Condition string, e.g. ``"JobID eq 1000"`` or
+            ``"Embedding cos_sim [0.1, 0.2, 0.3]"``.
+
+    Returns:
+        SearchSpec: Dictionary describing the parsed condition in the
+            shape expected by the API client.
+
+    Raises:
+        ValueError: If the operator is unknown or the input cannot be parsed.
+    """
     parameter, operator, rest = value.split(" ", 2)
     if operator in set(ScalarSearchOperator):
         return {
@@ -69,6 +86,26 @@ async def search(
     page: int = 1,
     per_page: int = 10,
 ):
+    """Search for jobs and display results.
+
+    The command constructs a list of ``SearchSpec`` objects from the
+    provided ``condition`` arguments and performs a paginated job search
+    through the API client. Results are displayed using the user's
+    configured output format.
+
+    Args:
+        parameter (list[str]): List of fields to return for each job. Use
+            the special flag ``--all`` to return all available parameters.
+        condition (list[str]): Search condition strings (see
+            ``parse_condition``) that will be combined with AND semantics.
+        all (bool): If true, ignore ``parameter`` and request all fields.
+        page (int): Page number for pagination (1-based).
+        per_page (int): Number of items per page.
+
+    Returns:
+        None: Results are printed to stdout using the configured display
+            format (JSON or rich table).
+    """
     search_specs = [parse_condition(cond) for cond in condition]
     async with AsyncDiracClient() as api:
         jobs, content_range = await api.jobs.search(
@@ -86,6 +123,13 @@ async def search(
 
 
 class ContentRange:
+    """Parse and represent a `Content-Range` response header.
+
+    The class understands headers of the form ``"unit start-end/total"``
+    (e.g. ``"jobs 0-9/100"``) and exposes parsed attributes suitable for
+    building human-readable captions for CLI output.
+    """
+
     unit: str | None = None
     start: int | None = None
     end: int | None = None
@@ -114,6 +158,20 @@ class ContentRange:
 
 
 def display(data, content_range: ContentRange):
+    """Render search results using the configured output format.
+
+    The helper consults the user's ``output_format`` preference and routes
+    the data to the appropriate renderer. Supported formats are JSON and
+    rich-table output.
+
+    Args:
+        data: JSON-serializable list of job records returned by the API.
+        content_range (ContentRange): Parsed content-range metadata used for
+            captions in the rich renderer.
+
+    Raises:
+        NotImplementedError: If the configured output format is unsupported.
+    """
     output_format = get_diracx_preferences().output_format
     match output_format:
         case OutputFormats.JSON:
@@ -125,6 +183,16 @@ def display(data, content_range: ContentRange):
 
 
 def display_rich(data, content_range: ContentRange) -> None:
+    """Render a rich table representation of the job results.
+
+    Chooses between a two-column parameter/value layout (for wide or
+    numerous columns) and a multi-column table. The table caption displays
+    the parsed content-range information.
+
+    Args:
+        data: List of job records (each a mapping of parameter -> value).
+        content_range (ContentRange): Parsed content-range metadata.
+    """
     if not data:
         print(f"No {content_range.unit} found")
         return
@@ -155,6 +223,19 @@ def display_rich(data, content_range: ContentRange) -> None:
 
 @app.async_command()
 async def submit(jdl: list[FileText]):
+    """Submit one or more JDL job descriptions and print the inserted IDs.
+
+    The command accepts one or more files containing JDL job descriptions,
+    submits them to the server via the client API, and prints a summary of
+    the inserted job IDs.
+
+    Args:
+        jdl (list[FileText]): List of file-like objects pointing to JDL
+            descriptions.
+
+    Returns:
+        None
+    """
     async with AsyncDiracClient() as api:
         jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
     print(
