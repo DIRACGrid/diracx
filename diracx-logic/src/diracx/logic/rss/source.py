@@ -13,6 +13,7 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from typing import ClassVar
 
+from diracx.core.models.rss import ResourceType
 from diracx.core.sources import AsyncCacheableSource, Snapshot
 from diracx.db.sql.rss.db import ResourceStatusDB
 
@@ -61,13 +62,21 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
     #: revision query and the data fetch.
     status_types: ClassVar[list[str]]
 
+    #: Element type holding this resource type's data. Compute and FTS share
+    #: the "all" status type, so the revision query must also filter on this to
+    #: track exactly the rows the data fetch returns; otherwise their revisions
+    #: would collide and a change to one would invalidate the other's cache.
+    element_type: ClassVar[ResourceType]
+
     def __init__(self, *, db: ResourceStatusDB) -> None:
         super().__init__()
         self._db = db
 
     async def latest_revision(self) -> tuple[str, datetime]:
         async with self._db as db:
-            max_date, count = await db.get_resource_status_date(self.status_types)
+            max_date, count = await db.get_resource_status_date(
+                self.status_types, element_type=self.element_type
+            )
         return _make_revision(max_date, count)
 
     async def read_raw(self, hexsha: str, modified: datetime) -> Snapshot:
@@ -82,6 +91,7 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
 
 class StorageElementStatusSource(ResourceStatusSource):
     status_types = STORAGE_STATUS_TYPES
+    element_type = ResourceType.Storage
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
         return await get_storage_statuses(db)
@@ -89,6 +99,7 @@ class StorageElementStatusSource(ResourceStatusSource):
 
 class ComputeElementStatusSource(ResourceStatusSource):
     status_types = ["all"]
+    element_type = ResourceType.Compute
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
         return await get_compute_statuses(db)
@@ -96,6 +107,7 @@ class ComputeElementStatusSource(ResourceStatusSource):
 
 class FTSStatusSource(ResourceStatusSource):
     status_types = ["all"]
+    element_type = ResourceType.FTS
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
         return await get_fts_statuses(db)

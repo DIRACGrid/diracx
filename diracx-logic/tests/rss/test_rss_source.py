@@ -46,8 +46,11 @@ async def test_latest_revision(mock_resource_status_db):
     assert revision == f"{_MAX_DATE.isoformat()}-4"
     assert modified == _MAX_DATE
 
-    # Verify the database call queries this source's status types
-    mock_resource_status_db.get_resource_status_date.assert_awaited_once_with(["all"])
+    # Verify the database call queries this source's status types and element
+    # type so the revision tracks exactly the rows read_raw returns.
+    mock_resource_status_db.get_resource_status_date.assert_awaited_once_with(
+        ["all"], element_type=ResourceType.Compute
+    )
 
 
 async def test_latest_revision_storage_status_types(mock_resource_status_db):
@@ -57,8 +60,27 @@ async def test_latest_revision_storage_status_types(mock_resource_status_db):
     await source.latest_revision()
 
     mock_resource_status_db.get_resource_status_date.assert_awaited_once_with(
-        ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
+        ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"],
+        element_type=ResourceType.Storage,
     )
+
+
+async def test_latest_revision_compute_fts_distinct_element_type(
+    mock_resource_status_db,
+):
+    """Compute and FTS revisions must be distinguished by element type.
+
+    They share the "all" status type, so the revision query must filter on
+    element type to avoid the two sources sharing a revision.
+    """
+    await ComputeElementStatusSource(db=mock_resource_status_db).latest_revision()
+    await FTSStatusSource(db=mock_resource_status_db).latest_revision()
+
+    element_types = [
+        call.kwargs["element_type"]
+        for call in mock_resource_status_db.get_resource_status_date.await_args_list
+    ]
+    assert element_types == [ResourceType.Compute, ResourceType.FTS]
 
 
 async def test_latest_revision_empty(mock_resource_status_db):
