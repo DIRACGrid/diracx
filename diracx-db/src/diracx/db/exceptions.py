@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """Database exceptions used by DiracX.
 
 This module defines exception types raised by DiracX database subsystems.
 Keep exceptions small and focused so callers can catch specific failure
 conditions (for example, when the database is unavailable).
 """
+
+from __future__ import annotations
 
 __all__ = ["DBUnavailableError"]
 
