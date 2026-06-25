@@ -10,6 +10,10 @@ requires-pixi = ">=0.68.0"
 # CVE fix), override per package via [exclude-newer] (conda) or [pypi-exclude-newer] (PyPI).
 exclude-newer = "7d"
 
+[pypi-exclude-newer]
+diraccommon= "0d"
+signurlarity= "0d"
+
 [dependencies]
 python = ">=3.11.3,<3.12"
 # Add some useful development dependencies to most environments
