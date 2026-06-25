@@ -35,7 +35,7 @@ repos:
         exclude: pixi\.lock$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.17"
+    rev: "v0.15.18"
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -53,8 +53,6 @@ repos:
           - types-requests
           - types-python-dateutil
           - types-croniter
-          - types-aiobotocore[essential]
-          - boto3-stubs[essential]
         exclude: ^(diracx-client/src/diracx/client/_generated|diracx-[a-z]+/tests/|diracx-testing/|build|extensions/gubbins/gubbins-client/src/gubbins/client/_generated)
 
   - repo: https://github.com/hukkin/mdformat
@@ -80,6 +78,11 @@ repos:
       - id: blacken-docs
         additional_dependencies:
           - black==22.12.0
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.22.0
+    hooks:
+      - id: zizmor
 
   - repo: local
     hooks:

@@ -8,29 +8,24 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from abc import ABCMeta, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated
 from urllib.parse import urlparse, urlunparse
 
 import sh
 import yaml
-from cachetools import Cache, LRUCache
 from pydantic import AnyUrl, BeforeValidator, TypeAdapter, UrlConstraints
 
 from diracx.core.exceptions import BadConfigurationVersionError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.utils import TwoLevelCache
+from diracx.core.sources import CacheableSource
 
 from .schema import Config
 
 DEFAULT_CONFIG_FILE = "default.yml"
 DEFAULT_GIT_BRANCH = "master"
-DEFAULT_CS_REV_CACHE_SOFT_TTL = 5
-# TODO: Reduce the hard TTL when we have more redundancy around the source of truth
-DEFAULT_CS_REV_CACHE_HARD_TTL = 60 * 60
 DEFAULT_CS_CONTENT_HARD_TTL = 15
 
 logger = logging.getLogger(__name__)
@@ -56,87 +51,6 @@ class AnyUrlWithoutHost(AnyUrl):
 
 
 ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_scheme)]
-
-T = TypeVar("T")
-
-
-class CacheableSource(Generic[T], metaclass=ABCMeta):
-    """Abstract base class for sources that can be cached.
-
-    Handles the caching of the latest revision and its content using a two-level cache.
-    """
-
-    def __init__(self):
-        # Revision cache is used to store the latest revision and its
-        # modification date. This cache has two TTLs, one which triggers the
-        # background refresh and the other which is results in a hard failure.
-        # This allows us to avoid blocking while the refresh is done, while
-        # maintaining strong guarantees on the data freshness.
-        self._revision_cache = TwoLevelCache(
-            soft_ttl=DEFAULT_CS_REV_CACHE_SOFT_TTL,
-            hard_ttl=DEFAULT_CS_REV_CACHE_HARD_TTL,
-            max_workers=1,
-            max_items=1,
-        )
-        # The content of a given revision can be stored in a simple LRU cache
-        # We keep the last two versions in memory to avoid any potential to flip
-        # flop between two versions when it changes.
-        self._content_cache: Cache = LRUCache(maxsize=2)
-
-    @abstractmethod
-    def latest_revision(self) -> tuple[str, datetime]:
-        """Abstract method.
-
-        Must return:
-        * a unique hash as a string, representing the last version
-        * a datetime object corresponding to when the version dates.
-        """
-
-    @abstractmethod
-    def read_raw(self, hexsha: str, modified: datetime) -> T:
-        """Abstract method.
-
-        Return the Source object that corresponds to the specific hash
-        The `modified` parameter is just added as a attribute to the source.
-        """
-
-    def read(self) -> T:
-        """Load the source from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
-        hexsha = self._revision_cache.get(
-            "latest_revision", self._read_work, blocking=True
-        )
-        return self._content_cache[hexsha]
-
-    async def read_non_blocking(self) -> T:
-        """Load the source from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
-        hexsha = self._revision_cache.get(
-            "latest_revision", self._read_work, blocking=False
-        )
-        return self._content_cache[hexsha]
-
-    def _read_work(self) -> str:
-        """Work function for the thread pool of `self._revision_cache`.
-
-        This function ensures that the latest revision is loaded into the
-        content cache before it is admitted into the revision cache.
-        """
-        hexsha, modified = self.latest_revision()
-        if hexsha not in self._content_cache:
-            self._content_cache[hexsha] = self.read_raw(hexsha, modified)
-        return hexsha
-
-    def clear_caches(self):
-        """Clear the caches."""
-        self._revision_cache.clear()
-        self._content_cache.clear()
 
 
 class ConfigSource(CacheableSource[Config]):

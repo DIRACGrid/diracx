@@ -16,6 +16,8 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
 
+permissions: {}
+
 defaults:
   run:
     shell: bash -el {0}
@@ -31,8 +33,10 @@ jobs:
         dirac-branch:
           - integration
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.14'
       - name: Clone DIRAC
@@ -91,7 +95,7 @@ jobs:
           echo "::group::DIRAC server logs"
           cd /tmp/DIRACRepo && ./integration_tests.py logs --no-follow --lines 1000 2>&1 | tee /tmp/service-logs/dirac.log || true
           echo "::endgroup::"
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ failure() }}
         with:
           name: service-logs-${{ github.job }}

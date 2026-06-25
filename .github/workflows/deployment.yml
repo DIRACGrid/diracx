@@ -12,6 +12,8 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+permissions: {}
+
 jobs:
   deploy-pypi:
     name: PyPI deployment
@@ -39,14 +41,15 @@ jobs:
         # We need extglob for REFERENCE_BRANCH substitution
         shell: bash -l -O extglob {0}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           token: ${{ github.token }}
+          persist-credentials: false
       - run: |
           git fetch --prune --unshallow
           git config --global user.email "ci@diracgrid.org"
           git config --global user.name "DIRACGrid CI"
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.14'
       - name: Installing dependencies
@@ -63,11 +66,13 @@ jobs:
           python -m readme_renderer README.md -o /tmp/README.html
       - name: Extract version from tag
         id: check-tag
+        env:
+          GITHUB_REF: ${{ github.ref }}
         run: |
           set -xeuo pipefail
           IFS=$'\n\t'
           # Check if this is a tag push
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             # Extract version from the tag
             export NEW_VERSION="${GITHUB_REF#refs/tags/}"
             echo "Deploying release $NEW_VERSION"
@@ -86,7 +91,7 @@ jobs:
           # Also build the diracx metapackage
           python -m build --outdir $PWD/dist .
       - name: 'Upload Artifact'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: diracx-whl
           path: dist/diracx*.whl
@@ -95,28 +100,39 @@ jobs:
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
         if: steps.check-tag.outputs.create-release == 'true'
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          # Generate and upload PEP 740 attestations (build provenance) for the wheels.
+          attestations: true
 
   docker:
     needs: deploy-pypi
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # push images to ghcr.io
+      id-token: write          # OIDC for sigstore signing of attestations
+      attestations: write      # write build-provenance attestations
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
       - name: Login to GitHub container registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push services (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        id: build-services-release
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -125,8 +141,16 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest services (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/services
+          subject-digest: ${{ steps.build-services-release.outputs.digest }}
+          push-to-registry: true
       - name: Build and push tasks (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        id: build-tasks-release
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -135,8 +159,16 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest tasks (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/tasks
+          subject-digest: ${{ steps.build-tasks-release.outputs.digest }}
+          push-to-registry: true
       - name: Build and push client (release)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        id: build-client-release
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
         with:
           context: .
@@ -145,9 +177,16 @@ jobs:
           push: true
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
+      - name: Attest client (release)
+        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ghcr.io/diracgrid/diracx/client
+          subject-digest: ${{ steps.build-client-release.outputs.digest }}
+          push-to-registry: true
 
       - name: Build and push services (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -156,7 +195,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/services:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push tasks (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -165,7 +204,7 @@ jobs:
           tags: ghcr.io/diracgrid/diracx/tasks:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (dev)
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: containers/Dockerfile
@@ -183,16 +222,17 @@ jobs:
     if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           path: diracx
-
+          persist-credentials: false
       - name: Checkout diracx-charts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           repository: DIRACGrid/diracx-charts
           token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
           path: diracx-charts
+          persist-credentials: true
 
       - name: Configure Git
         run: |
@@ -202,9 +242,11 @@ jobs:
 
       - name: Update chart versions
         id: update-versions
+        env:
+          NEW_CHART_VERSION: ${{ needs.deploy-pypi.outputs.new-version }}
         run: |
           cd diracx-charts
-          VERSION="${{ needs.deploy-pypi.outputs.new-version }}"
+          VERSION="${NEW_CHART_VERSION}"
 
           # Get current chart version before updating
           CURRENT_CHART_VERSION=$(grep '^version:' diracx/Chart.yaml | sed 's/version: //' | tr -d '"')
@@ -230,6 +272,10 @@ jobs:
 
       - name: Commit and push changes
         if: success()
+        env:
+          CURRENT_CHART_VERSION: ${{ steps.update-versions.outputs.current_chart_version }}
+          NEW_CHART_VERSION: ${{ steps.update-versions.outputs.new_chart_version }}
+          DIRACX_VERSION: ${{ steps.update-versions.outputs.diracx_version }}
         run: |
           cd diracx-charts
 
@@ -242,15 +288,15 @@ jobs:
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
             # Commit the changes
-            git commit -m "chore: bump chart to ${{ steps.update-versions.outputs.new_chart_version }} for DiracX ${{ steps.update-versions.outputs.diracx_version }}
+            git commit -m "chore: bump chart to ${NEW_CHART_VERSION} for DiracX ${DIRACX_VERSION}
 
-            - Update appVersion to ${{ steps.update-versions.outputs.diracx_version }}
-            - Update image tag to ${{ steps.update-versions.outputs.diracx_version }}
-            - Bump chart version from ${{ steps.update-versions.outputs.current_chart_version }} to ${{ steps.update-versions.outputs.new_chart_version }}"
+            - Update appVersion to ${DIRACX_VERSION}
+            - Update image tag to ${DIRACX_VERSION}
+            - Bump chart version from ${CURRENT_CHART_VERSION} to ${NEW_CHART_VERSION}"
 
             git push origin master
 
-            echo "✅ Successfully pushed chart version ${{ steps.update-versions.outputs.new_chart_version }} and tag ${TAG_NAME}"
+            echo "✅ Successfully pushed chart version ${NEW_CHART_VERSION} and tag ${TAG_NAME}"
           else
             echo "No changes to commit"
           fi

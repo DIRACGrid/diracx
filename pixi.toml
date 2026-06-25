@@ -1,6 +1,18 @@
 [workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "linux-aarch64"]
+# Require a pixi new enough for the v7 lock file (added in 0.68.0), which also covers the
+# relative-duration exclude-newer ("cooldown") below (added in 0.67.0).
+requires-pixi = ">=0.68.0"
+# Supply-chain cooldown: when (re)solving, skip conda and PyPI releases newer than 7 days,
+# matching the 7-day Renovate minimum-release-age. This filters fresh candidates at solve
+# time; it does not evict already-locked versions. To fast-track a reviewed release (e.g. a
+# CVE fix), override per package via [exclude-newer] (conda) or [pypi-exclude-newer] (PyPI).
+exclude-newer = "7d"
+
+[pypi-exclude-newer]
+diraccommon= "0d"
+signurlarity= "0d"
 
 [dependencies]
 python = ">=3.11.3,<3.12"
@@ -186,6 +198,14 @@ shellcheck = "*"
 cmd = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 description = "Run shellcheck on all shell scripts"
 
+# Features for running GHA lints
+[feature.gha-lint.dependencies]
+zizmor = "*"
+pinact = "*"
+[feature.gha-lint.tasks]
+gha-zizmor = {cmd = "zizmor .", description = "Run Zizmor GHA analysis"}
+gha-pinact = {cmd ="pinact run" , description = "Run Pinact GHA versions update"}
+
 # Settings documentation feature
 [feature.settings-doc.dependencies]
 python = "*"
@@ -245,6 +265,7 @@ mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
+gha-lint = {features = ["gha-lint"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]

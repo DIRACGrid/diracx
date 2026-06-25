@@ -16,11 +16,8 @@ import contextlib
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Self, TypeVar, cast
+from typing import Annotated, Any, Self, TypeVar, cast
 
-from aiobotocore.session import get_session
-from botocore.config import Config
-from botocore.errorfactory import ClientError
 from cryptography.fernet import Fernet
 from joserfc.jwk import KeySet, KeySetSerialization
 from pydantic import (
@@ -35,12 +32,11 @@ from pydantic import (
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from signurlarity.aio.client import AsyncClient
+from signurlarity.exceptions import SignurlarityError
 
 from .properties import SecurityProperty
 from .s3 import s3_bucket_exists
-
-if TYPE_CHECKING:
-    from types_aiobotocore_s3.client import S3Client
 
 T = TypeVar("T")
 
@@ -328,17 +324,12 @@ class SandboxStoreSettings(ServiceSettingsBase):
     Controls parallelism of database DELETE operations.
     """
 
-    _client: S3Client = PrivateAttr()
+    _client: AsyncClient = PrivateAttr()
 
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
-        async with get_session().create_client(
-            "s3",
-            **self.s3_client_kwargs,
-            config=Config(
-                signature_version="v4",
-                max_pool_connections=self.s3_max_pool_connections,
-            ),
+        async with AsyncClient(
+            **self.s3_client_kwargs, httpx_max_connections=self.s3_max_pool_connections
         ) as self._client:  # type: ignore
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
@@ -347,7 +338,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
                     )
                 try:
                     await self._client.create_bucket(Bucket=self.bucket_name)
-                except ClientError as e:
+                except SignurlarityError as e:
                     raise ValueError(
                         f"Failed to create bucket {self.bucket_name}"
                     ) from e
@@ -355,7 +346,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
             yield
 
     @property
-    def s3_client(self) -> S3Client:
+    def s3_client(self) -> AsyncClient:
         if self._client is None:
             raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
