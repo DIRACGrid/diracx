@@ -237,8 +237,7 @@ class BaseOSDB(metaclass=ABCMeta):
         Args:
             vo (str): VO identifier used to compute the target index name.
             doc_id (int): Document identifier.
-            document (Any): The document to store; it will be used as the
-                content of the ``doc`` update payload.
+            document (Any): The document to store.
         """
         index_name = self.index_name(vo, doc_id)
         response = await self.client.update(
