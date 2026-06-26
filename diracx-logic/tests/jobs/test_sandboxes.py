@@ -10,7 +10,6 @@ import freezegun
 import httpx2
 import pytest
 import signurlarity.exceptions
-import sqlalchemy
 
 from diracx.core.exceptions import SandboxNotFoundError
 from diracx.core.models import ChecksumAlgorithm, SandboxFormat, SandboxInfo, UserInfo
@@ -21,7 +20,7 @@ from diracx.logic.jobs import (
     get_sandbox_file,
     initiate_sandbox_upload,
 )
-from diracx.testing.time import mock_sqlite_time
+from diracx.testing.time import install_sqlite_time_mock
 
 FAKE_USER_INFO = UserInfo(
     sub="fakevo:97ae90d3-36aa-4271-becf-e61173d93fe3",
@@ -36,7 +35,7 @@ async def sandbox_metadata_db() -> AsyncGenerator[SandboxMetadataDB, None]:
     """Create a fake sandbox metadata database."""
     db = SandboxMetadataDB(db_url="sqlite+aiosqlite:///:memory:")
     async with db.engine_context():
-        sqlalchemy.event.listen(db.engine.sync_engine, "connect", mock_sqlite_time)
+        install_sqlite_time_mock(db.engine)
 
         async with db.engine.begin() as conn:
             await conn.run_sync(db.metadata.create_all)

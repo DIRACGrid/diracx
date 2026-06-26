@@ -305,6 +305,7 @@ class ClientFactory:
         from diracx.db.os.utils import BaseOSDB
         from diracx.db.sql.utils import BaseSQLDB
         from diracx.testing.mock_osdb import MockOSDBMixin
+        from diracx.testing.time import install_sqlite_time_mock
 
         for k, v in self.app.dependency_overrides.items():
             # Ignore dependency overrides which aren't BaseSQLDB.transaction/no_transaction or BaseOSDB.session
@@ -335,6 +336,7 @@ class ClientFactory:
                 sqlalchemy.event.listen(
                     db.engine.sync_engine, "connect", set_sqlite_pragma
                 )
+                install_sqlite_time_mock(db.engine)
 
             # We maintain a cache of the populated DBs in empty_db_dir so that
             # we don't have to recreate them for every test. This speeds up the

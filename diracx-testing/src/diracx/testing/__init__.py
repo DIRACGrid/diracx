@@ -10,6 +10,7 @@ __all__ = [
     "demo_urls",
     "do_device_flow_with_dex",
     "fernet_key",
+    "frozen_time",
     "private_key",
     "pytest_addoption",
     "session_client_factory",
@@ -23,6 +24,7 @@ __all__ = [
 ]
 
 from .entrypoints import verify_entry_points
+from .time import frozen_time
 from .utils import (
     ClientFactory,
     aio_moto,

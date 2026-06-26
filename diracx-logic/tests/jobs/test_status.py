@@ -4,14 +4,13 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
-import sqlalchemy
 
 from diracx.core.models import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.logic.jobs import set_job_parameters_or_attributes
 from diracx.testing.mock_osdb import MockOSDBMixin
-from diracx.testing.time import mock_sqlite_time
+from diracx.testing.time import install_sqlite_time_mock
 
 
 # Reuse the generic MockOSDBMixin to build a mock JobParameters DB implementation
@@ -36,7 +35,7 @@ async def job_db() -> AsyncGenerator[JobDB, None]:
     """Create a fake sandbox metadata database."""
     db = JobDB(db_url="sqlite+aiosqlite:///:memory:")
     async with db.engine_context():
-        sqlalchemy.event.listen(db.engine.sync_engine, "connect", mock_sqlite_time)
+        install_sqlite_time_mock(db.engine)
 
         async with db.engine.begin() as conn:
             await conn.run_sync(db.metadata.create_all)

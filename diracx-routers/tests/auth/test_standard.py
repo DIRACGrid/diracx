@@ -12,7 +12,6 @@ import httpx2
 import jwt
 import pytest
 from cryptography.fernet import Fernet
-from freezegun import freeze_time
 from joserfc.jwk import RSAKey, OKPKey, KeySet
 from joserfc.errors import (
     UnsupportedKeyOperationError,
@@ -562,7 +561,10 @@ async def test_refresh_token_rotation(test_client, auth_httpx_mock: HTTPXMock):
 
 
 async def test_refresh_token_expired(
-    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+    test_client,
+    test_auth_settings: AuthSettings,
+    auth_httpx_mock: HTTPXMock,
+    frozen_time,
 ):
     """Test the expiration date of the passed refresh token.
 
@@ -570,29 +572,31 @@ async def test_refresh_token_expired(
     - move time forward past its expiration time
     - ensure the expired token is rejected.
     """
-    with freeze_time(datetime.now(tz=timezone.utc)) as frozen_time:
-        # Get refresh token
-        refresh_token = _get_tokens(test_client)["refresh_token"]
+    # Get refresh token
+    refresh_token = _get_tokens(test_client)["refresh_token"]
 
-        frozen_time.tick(
-            delta=timedelta(minutes=test_auth_settings.refresh_token_expire_minutes + 1)
-        )
+    frozen_time.tick(
+        delta=timedelta(minutes=test_auth_settings.refresh_token_expire_minutes + 1)
+    )
 
-        request_data = {
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "client_id": DIRAC_CLIENT_ID,
-        }
+    request_data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": DIRAC_CLIENT_ID,
+    }
 
-        # Try to get a new access token using the expired refresh token
-        r = test_client.post("/api/auth/token", data=request_data)
+    # Try to get a new access token using the expired refresh token
+    r = test_client.post("/api/auth/token", data=request_data)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "expired_token: The token is expired"
 
 
 async def test_access_token_expired(
-    test_client, test_auth_settings: AuthSettings, auth_httpx_mock: HTTPXMock
+    test_client,
+    test_auth_settings: AuthSettings,
+    auth_httpx_mock: HTTPXMock,
+    frozen_time,
 ):
     """Test the expiration date of the passed access token.
 
@@ -600,18 +604,17 @@ async def test_access_token_expired(
     - move time forward past its expiration time
     - ensure the expired token is rejected.
     """
-    with freeze_time(datetime.now(tz=timezone.utc)) as frozen_time:
-        # Get access token
-        access_token = _get_tokens(test_client)["access_token"]
+    # Get access token
+    access_token = _get_tokens(test_client)["access_token"]
 
-        frozen_time.tick(
-            delta=timedelta(minutes=test_auth_settings.access_token_expire_minutes + 1)
-        )
+    frozen_time.tick(
+        delta=timedelta(minutes=test_auth_settings.access_token_expire_minutes + 1)
+    )
 
-        headers = {"Authorization": f"Bearer {access_token}"}
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-        # Try to get the userinfo using the expired access token
-        r = test_client.get("/api/auth/userinfo", headers=headers)
+    # Try to get the userinfo using the expired access token
+    r = test_client.get("/api/auth/userinfo", headers=headers)
     data = r.json()
     assert r.status_code == 401, data
     assert data["detail"] == "Invalid JWT"

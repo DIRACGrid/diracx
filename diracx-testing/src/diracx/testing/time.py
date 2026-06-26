@@ -7,11 +7,9 @@ freezegun to freeze time.
 Example usage to mock SQLite time functions in SQLAlchemy for connections in
 a given engine:
 
-    import sqlalchemy
+    from diracx.testing.time import install_sqlite_time_mock
 
-    from diracx.testing.time import mock_sqlite_time
-
-    sqlalchemy.event.listen(engine.sync_engine, "connect", mock_sqlite_time)
+    install_sqlite_time_mock(engine)
 
 This functionality is tested in the `diracx-db` tests, specifically in the
 `test_freeze_time.py` file.
@@ -20,6 +18,8 @@ This functionality is tested in the `diracx-db` tests, specifically in the
 from __future__ import annotations
 
 __all__ = [
+    "frozen_time",
+    "install_sqlite_time_mock",
     "julian_date",
     "mock_sqlite_time",
 ]
@@ -27,7 +27,31 @@ __all__ = [
 import re
 from datetime import UTC, datetime
 
+import freezegun
+import pytest
+import sqlalchemy
+
 RE_SQLITE_TIME = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}):(\d{2}))?")
+
+
+@pytest.fixture
+def frozen_time():
+    """Fixture that freezes time to the current UTC time (without microseconds)."""
+    with freezegun.freeze_time(
+        datetime.now(tz=UTC).replace(microsecond=0)
+    ) as frozen_time:
+        yield frozen_time
+
+
+def install_sqlite_time_mock(engine) -> None:
+    """Make SQLite's date/time functions follow frozen Python time on `engine`.
+
+    Registers `mock_sqlite_time` as a "connect" listener so every new DBAPI
+    connection gets the mocked DATETIME()/JULIANDAY()/... functions. Accepts a
+    sync Engine or an AsyncEngine.
+    """
+    sync_engine = getattr(engine, "sync_engine", engine)
+    sqlalchemy.event.listen(sync_engine, "connect", mock_sqlite_time)
 
 
 def mock_sqlite_time(dbapi_connection, connection_record):
