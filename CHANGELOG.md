@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/DIRACGrid/diracx/compare/v0.2.0...v0.3.0) (2026-06-29)
+
+
+### Features
+
+* add rss router serving cached resource status ([#940](https://github.com/DIRACGrid/diracx/issues/940)) ([d214f90](https://github.com/DIRACGrid/diracx/commit/d214f9009b996471e15622266a1c6bcbcb3b82da))
+* **core:** add AsyncCacheableSource and cacheable-source wiring ([#938](https://github.com/DIRACGrid/diracx/issues/938)) ([8b944bf](https://github.com/DIRACGrid/diracx/commit/8b944bf7015dcf8dd4d8fface980db4bfc3ec959))
+* **db:** bulk all-VO read queries for ResourceStatusDB ([#939](https://github.com/DIRACGrid/diracx/issues/939)) ([cf16090](https://github.com/DIRACGrid/diracx/commit/cf160903dbc86e966b00c328c24131e227c7c138))
+
+
+### Bug Fixes
+
+* avoid httpx2 verify=&lt;str&gt; deprecation in the client auth patches ([#952](https://github.com/DIRACGrid/diracx/issues/952)) ([5cb782e](https://github.com/DIRACGrid/diracx/commit/5cb782e3bb8b1a87173561a7f0c0009a91adb51e))
+* migrate HTTP client usage to httpx2 ([#948](https://github.com/DIRACGrid/diracx/issues/948)) ([88a5deb](https://github.com/DIRACGrid/diracx/commit/88a5deb157d2308096c718f0c76fc61d1ca9ade1))
+
 ## [0.2.0](https://github.com/DIRACGrid/diracx/compare/v0.1.1...v0.2.0) (2026-06-15)
 
 
