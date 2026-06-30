@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import AsyncExitStack, asynccontextmanager
 from functools import partial
@@ -15,6 +14,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant
 
 from diracx.core.extensions import select_from_extension
+from diracx.core.settings import FactorySettings
 
 from ._redis_types import LockCoordinator
 from .base_task import BaseTask
@@ -313,7 +313,7 @@ async def setup_dependency_overrides(
                 overrides[os_db_class.session] = partial(_db_context, os_db)
 
         # --- Config ---
-        config_url = os.environ.get("DIRACX_CONFIG_BACKEND_URL")
+        config_url = FactorySettings().config_backend_url
         if config_url:
             from diracx.core.config import ConfigSource
 

@@ -93,14 +93,15 @@ async def delete_jwk(args):
 async def cleanup_authdb(args):
     """Maintain AuthDB partitions and remove expired flows."""
     logger.info("Maintaining AuthDB partitions and removing expired flows")
-    import os
 
-    from diracx.core.settings import AuthSettings
+    from diracx.core.settings import AuthSettings, FactorySettings
     from diracx.db.sql import AuthDB
     from diracx.logic.auth.management import cleanup_expired_data
 
     settings = AuthSettings()
-    db_url = os.environ["DIRACX_DB_URL_AUTHDB"]
+
+    db_url = FactorySettings().sql_dbs["AuthDB"]
+
     db = AuthDB(db_url)
     async with db.engine_context():
         async with db:
