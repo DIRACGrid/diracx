@@ -38,7 +38,7 @@ from diracx.logic.auth.utils import _server_metadata_cache
 
 DIRAC_CLIENT_ID = "myDIRACClientID"
 pytestmark = pytest.mark.enabled_dependencies(
-    ["AuthDB", "AuthSettings", "ConfigSource", "BaseAccessPolicy"]
+    ["AuthDB", "AuthSettings", "ConfigSource", "BaseAccessPolicy", "FactorySettings"]
 )
 
 

@@ -17,17 +17,40 @@ pytestmark = pytest.mark.enabled_dependencies(
         "ConfigSource",
         "BaseAccessPolicy",
         "DevelopmentSettings",
+        "FactorySettings",
     ]
 )
 
 
 @pytest.fixture
-def legacy_credentials(monkeypatch):
+def legacy_credentials(test_client, monkeypatch):
+
     secret = secrets.token_bytes()
     valid_token = f"diracx:legacy:{base64.urlsafe_b64encode(secret).decode()}"
-    monkeypatch.setenv(
-        "DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY", hashlib.sha256(secret).hexdigest()
+    hashed_key = hashlib.sha256(secret).hexdigest()
+
+    from diracx.core.settings import FactorySettings
+
+    # FactorySettings is a frozen Pydantic model, so assigning to
+    # test_factory_settings.legacy_exchange_hashed_api_key with
+    # monkeypatch.setattr raises a ValidationError. The application reads
+    # FactorySettings through FastAPI dependency injection (FactorySettings.create
+    # is used as the dependency key), so the safe way to alter behavior for this
+    # test is to replace the dependency provider itself. We locate the existing
+    # FactorySettings dependency in the app overrides and swap it with a callable
+    # that returns a new FactorySettings instance where legacy exchange is set
+
+    factory_settings_dependency = next(
+        dep
+        for dep in test_client.app.dependency_overrides
+        if getattr(dep, "__self__", None) is FactorySettings
     )
+    monkeypatch.setitem(
+        test_client.app.dependency_overrides,
+        factory_settings_dependency,
+        lambda: FactorySettings(legacy_exchange_hashed_api_key=hashed_key),
+    )
+
     yield {"Authorization": f"Bearer {valid_token}"}
 
 
@@ -134,6 +157,7 @@ async def test_refresh_token(test_client, legacy_credentials):
 
 
 async def test_disabled(test_client):
+
     r = test_client.get(
         "/api/auth/legacy-exchange",
         params={"preferred_username": "chaen", "scope": "vo:lhcb group:lhcb_user"},

@@ -4,18 +4,138 @@
 
 ## Core
 
-### `DIRACX_CONFIG_BACKEND_URL`
-
-The URL of the configuration backend.
-
 ### `DIRACX_SERVICE_DOTENV`
 
 The variable points to .env files where configuration may be placed. There could be more than one file, with suffixes
 \_X, where X is a number. The files will be loaded in order.
 
-### `DIRACX_SERVICE_JOBS_ENABLED`
+## FactorySettings
 
-Determines whether the jobs service is enabled.
+Factory settings.
+
+```
+Settings which do not fit into dedicated classes,
+or are dynamically generated.
+```
+
+### `DIRACX_CONFIG_BACKEND_URL`
+
+*Optional*, default value: `None`
+The URL of the configuration backend.
+
+### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
+
+*Optional*, default value: \`\`
+The hashed API key for the legacy exchange endpoint.
+
+### `DIRACX_TASKS_REDIS_URL`
+
+*Optional*, default value: `redis://localhost`
+The url for the redis server to manage tasks
+
+### `DIRACX_FACTORY_OS_GLOBAL_PREFIX`
+
+*Optional*, default value: \`\`
+Global prefix for OpenSearch database indices.
+
+### `ENABLED_SERVICES`
+
+*Optional*
+The following environment variables dictates which routers are enabled.
+
+#### `DIRACX_SERVICE_AUTH_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the AUTH router
+
+#### `DIRACX_SERVICE_CONFIG_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the CONFIG router
+
+#### `DIRACX_SERVICE_HEALTH_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the HEALTH router
+
+#### `DIRACX_SERVICE_JOBS_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the JOBS router
+
+#### `DIRACX_SERVICE_RSS_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the RSS router
+
+### `OPENSEARCH_DBS`
+
+*Optional*
+The following environment variables configure the OpenSearch database connections.
+
+#### `DIRACX_OS_DB_JOBPARAMETERSDB`
+
+*Optional*, default value: \`\`
+
+A JSON-encoded dictionary of connection keyword arguments for the OpenSearch database JobParametersDB.
+
+### `SQL_DBS`
+
+*Optional*
+The following environment variables configure the SQL database connections.
+
+#### `DIRACX_DB_URL_AUTHDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database AuthDB.
+
+#### `DIRACX_DB_URL_JOBDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database JobDB.
+
+#### `DIRACX_DB_URL_JOBLOGGINGDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database JobLoggingDB.
+
+#### `DIRACX_DB_URL_PILOTAGENTSDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database PilotAgentsDB.
+
+#### `DIRACX_DB_URL_RESOURCESTATUSDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database ResourceStatusDB.
+
+#### `DIRACX_DB_URL_SANDBOXMETADATADB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database SandboxMetadataDB.
+
+#### `DIRACX_DB_URL_TASKDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database TaskDB.
+
+#### `DIRACX_DB_URL_TASKQUEUEDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database TaskQueueDB.
 
 ## AuthSettings
 
@@ -139,10 +259,6 @@ Set of security properties available in this DIRAC installation.
 These properties define various authorization capabilities and are used
 for access control decisions. Defaults to all available security properties.
 
-### `DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`
-
-The hashed API key for the legacy exchange endpoint.
-
 ## SandboxStoreSettings
 
 Settings for the sandbox store.
@@ -218,16 +334,6 @@ Smaller chunks mean shorter transactions and less lock contention.
 Maximum number of concurrent DB delete chunks during cleaning.
 
 Controls parallelism of database DELETE operations.
-
-## Databases
-
-### `DIRACX_DB_URL_<db_name>`
-
-The URL for the SQL database `<db_name>`.
-
-### `DIRACX_OS_DB_<db_name>`
-
-A JSON-encoded dictionary of connection keyword arguments for the OpenSearch database `<db_name>`.
 
 ## OTELSettings
 

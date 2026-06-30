@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import AsyncExitStack, asynccontextmanager
 from functools import partial
@@ -15,6 +14,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant
 
 from diracx.core.extensions import select_from_extension
+from diracx.core.settings import FactorySettings
 
 from ._redis_types import LockCoordinator
 from .base_task import BaseTask
@@ -305,15 +305,18 @@ async def setup_dependency_overrides(
                 )
 
         # --- OS databases ---
+        os_global_prefix = FactorySettings().os_global_prefix
         for db_name, conn_kwargs in BaseOSDB.available_urls().items():
             os_db_classes = BaseOSDB.available_implementations(db_name)
-            os_db = os_db_classes[0](connection_kwargs=conn_kwargs)
+            os_db = os_db_classes[0](
+                connection_kwargs=conn_kwargs, global_prefix=os_global_prefix
+            )
             await stack.enter_async_context(os_db.client_context())
             for os_db_class in os_db_classes:
                 overrides[os_db_class.session] = partial(_db_context, os_db)
 
         # --- Config ---
-        config_url = os.environ.get("DIRACX_CONFIG_BACKEND_URL")
+        config_url = FactorySettings().config_backend_url
         if config_url:
             from diracx.core.config import ConfigSource
 

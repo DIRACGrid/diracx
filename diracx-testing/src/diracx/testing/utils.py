@@ -17,6 +17,7 @@ __all__ = [
     "session_client_factory",
     "test_auth_settings",
     "test_dev_settings",
+    "test_factory_settings",
     "test_login",
     "test_sandbox_settings",
     "with_cli_login",
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
     from diracx.core.settings import (
         AuthSettings,
         DevelopmentSettings,
+        FactorySettings,
         SandboxStoreSettings,
     )
     from diracx.routers.utils import AuthorizedUserInfo
@@ -117,6 +119,14 @@ def test_auth_settings(private_key, fernet_key) -> Generator[AuthSettings, None,
 
 
 @pytest.fixture(scope="session")
+def test_factory_settings() -> Generator[FactorySettings, None, None]:
+
+    from diracx.core.settings import FactorySettings
+
+    yield FactorySettings()
+
+
+@pytest.fixture(scope="session")
 def aio_moto(worker_id):
     """Start the moto server in a separate thread and return the base URL.
 
@@ -167,6 +177,7 @@ class ClientFactory:
         test_auth_settings,
         test_sandbox_settings,
         test_dev_settings,
+        test_factory_settings,
     ):
         from diracx.core.config import ConfigSource
         from diracx.core.extensions import select_from_extension
@@ -217,6 +228,7 @@ class ClientFactory:
 
         self.test_auth_settings = test_auth_settings
         self.test_dev_settings = test_dev_settings
+        self.test_factory_settings = test_factory_settings
 
         all_access_policies = {
             e.name: [AlwaysAllowAccessPolicy]
@@ -236,6 +248,7 @@ class ClientFactory:
                 test_auth_settings,
                 test_sandbox_settings,
                 test_dev_settings,
+                test_factory_settings,
             ],
             database_urls=database_urls,
             os_database_conn_kwargs=os_database_conn_kwargs,
@@ -416,6 +429,7 @@ def session_client_factory(
     with_config_repo,
     tmp_path_factory,
     test_dev_settings,
+    test_factory_settings,
 ):
     """TODO."""
     yield ClientFactory(
@@ -424,6 +438,7 @@ def session_client_factory(
         test_auth_settings,
         test_sandbox_settings,
         test_dev_settings,
+        test_factory_settings,
     )
 
 
