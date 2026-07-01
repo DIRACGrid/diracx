@@ -20,7 +20,29 @@ from ..utils import EnumBackedBool, str32, str64, str128, str255
 str100 = Annotated[str, 100]
 
 
+"""SQLAlchemy schema for the Job-related SQL DB.
+
+This module defines ORM mapping classes for job records, JDL storage,
+input data, parameters, heartbeat logs and job commands used by the
+SQL-backed DiracX job database.
+"""
+
+
 class JobDBBase(DeclarativeBase):
+    """Base declarative class that maps thin type aliases to SQL column types.
+
+    This base class provides a :attr:`type_annotation_map` that lets mapped
+    classes use compact type aliases (for example, ``str32``) in their
+    annotations while ensuring the corresponding SQLAlchemy column types
+    (for example, ``String(32)``) are produced at table construction time.
+
+    Attributes:
+        type_annotation_map (dict): Mapping from annotation aliases such as
+            ``str32`` to SQLAlchemy column types (for example
+            ``String(32)``). Used by the declarative mapper to translate
+            the thin type annotations into concrete DB column definitions.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str64: String(64),
@@ -31,7 +53,12 @@ class JobDBBase(DeclarativeBase):
 
 
 class AccountedFlagEnum(types.TypeDecorator):
-    """Maps a ``AccountedFlagEnum()`` column to True/False in Python."""
+    """SQLAlchemy type decorator for the accounted-flag enum.
+
+    Stored values are the strings ``"True"``, ``"False"`` or ``"Failed"``.
+    In Python these are converted to ``True``, ``False`` or the literal
+    string ``"Failed"`` respectively.
+    """
 
     impl = types.Enum("True", "False", "Failed", name="accounted_flag_enum")
     cache_ok = True
@@ -59,6 +86,12 @@ class AccountedFlagEnum(types.TypeDecorator):
 
 class Jobs(JobDBBase):
     __tablename__ = "Jobs"
+    """ORM mapping for the primary Jobs table.
+
+    Columns mirror the legacy DIRAC JobDB layout and include timing, status,
+    owner and priority metadata. Several indexes are declared in
+    ``__table_args__`` to support common queries.
+    """
 
     job_id: Mapped[int] = mapped_column(
         "JobID",
@@ -127,6 +160,10 @@ class Jobs(JobDBBase):
 
 class JobJDLs(JobDBBase):
     __tablename__ = "JobJDLs"
+    """Storage for job JDL blobs.
+
+    Stores the compressed/processed JDL and the original JDL text.
+    """
     job_id: Mapped[int] = mapped_column("JobID", autoincrement=True, primary_key=True)
     jdl: Mapped[str] = mapped_column("JDL", Text)
     job_requirements: Mapped[str] = mapped_column("JobRequirements", Text)
@@ -135,6 +172,7 @@ class JobJDLs(JobDBBase):
 
 class InputData(JobDBBase):
     __tablename__ = "InputData"
+    """Mapping of job -> input LFNs (logical file names)."""
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
@@ -144,6 +182,7 @@ class InputData(JobDBBase):
 
 class JobParameters(JobDBBase):
     __tablename__ = "JobParameters"
+    """Persistent storage for arbitrary job parameters (name/value pairs)."""
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
@@ -153,6 +192,7 @@ class JobParameters(JobDBBase):
 
 class OptimizerParameters(JobDBBase):
     __tablename__ = "OptimizerParameters"
+    """Parameters used by job optimizers; similar shape to JobParameters."""
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
@@ -162,6 +202,10 @@ class OptimizerParameters(JobDBBase):
 
 class AtticJobParameters(JobDBBase):
     __tablename__ = "AtticJobParameters"
+    """Archived job parameters kept for historical/reschedule processing.
+
+    Includes an optional reschedule cycle counter used by rescheduling logic.
+    """
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
@@ -172,6 +216,11 @@ class AtticJobParameters(JobDBBase):
 
 class HeartBeatLoggingInfo(JobDBBase):
     __tablename__ = "HeartBeatLoggingInfo"
+    """Time-series table for heartbeat metric logs.
+
+    Each row stores the metric name, value and the timestamp when the
+    measurement was observed.
+    """
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
@@ -186,6 +235,12 @@ class HeartBeatLoggingInfo(JobDBBase):
 
 class JobCommands(JobDBBase):
     __tablename__ = "JobCommands"
+    """Commands destined for jobs.
+
+    Rows represent commands submitted for a job; ``Status`` tracks whether a
+    command is pending ("Received") or delivered ("Sent"). The DB stores
+    reception and optional execution timestamps.
+    """
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
     )
