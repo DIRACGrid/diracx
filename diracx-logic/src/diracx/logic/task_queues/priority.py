@@ -1,3 +1,11 @@
+"""Priority calculation helpers for task queues.
+
+This module contains helpers to compute and apply per-user or per-group
+task-queue priority shares. The functions translate configured job-share
+values into per-task-queue priorities, respecting background-task-queue
+settings and grouping task queues with equivalent characteristics.
+"""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -18,7 +26,21 @@ async def recalculate_tq_shares_for_entity(
     config: Config,
     task_queue_db: TaskQueueDB,
 ):
-    """Recalculate the shares for a user/userGroup combo."""
+    """Recalculate the shares for a user/userGroup combo.
+
+    This reads the group configuration to determine the group's job share
+    and either sets a single priority for the whole group (when the group
+    enables job sharing) or splits the configured share among the group's
+    owners. When the number of owners changes, priorities for all owners in
+    the group are recalculated.
+
+    Args:
+        owner (str): Owner username (may be None when recalculating for group).
+        owner_group (str): Owner group name.
+        vo (str): Virtual organisation identifier.
+        config (Config): Configuration registry used to read group settings.
+        task_queue_db (TaskQueueDB): DB helper used to read and update TQ data.
+    """
     group_properties = config.registry[vo].groups[owner_group].properties
     job_share = config.registry[vo].groups[owner_group].job_share
     allow_background_tqs = config.registry[vo].groups[owner_group].allow_background_tqs
@@ -80,7 +102,16 @@ async def set_priorities_for_entity(
     task_queue_db: TaskQueueDB,
     owner: str | None = None,
 ):
-    """Set the priority for a user/userGroup combo given a split share."""
+    """Set the priority for a user/userGroup combo given a split share.
+
+    Args:
+        owner_group (str): Owner group name.
+        job_share (float): Share allocated to the owner or owner group.
+        allow_background_tqs (bool): Whether background task queues may be used.
+        task_queue_db (TaskQueueDB): DB helper used to read and update TQ data.
+        owner (str | None): Optional specific owner to update. If omitted,
+            priorities for all owners in the group are adjusted.
+    """
     tq_dict = await task_queue_db.get_task_queue_priorities(owner_group, owner)
     if not tq_dict:
         return
@@ -97,17 +128,27 @@ async def calculate_priority(
     share: float,
     allow_bg_tqs: bool,
 ) -> dict[float, list[int]]:
-    """Calculate the priority for each TQ given a share.
+    """Calculate effective priorities for task queues from a share.
 
-    :param tq_dict: dict of {tq_id: prio}
-    :param all_tqs_data: dict of {tq_id: {tq_data}}, where tq_data is a dict of {field: value}
-    :param share: share to be distributed among TQs
-    :param allow_bg_tqs: allow background TQs to be used
-    :return: dict of {priority: [tq_ids]}
+    Args:
+        tq_dict (dict[int, float]): Mapping of task-queue id to its configured
+            priority weight.
+        all_tqs_data (dict[int, dict[str, Any]]): Mapping of task-queue id to
+            its data dictionary (fields describing the TQ).
+        share (float): Share to be distributed among the task queues.
+        allow_bg_tqs (bool): Whether background task queues are permitted.
+
+    Returns:
+        dict[float, list[int]]: Mapping of computed priority values to lists
+            of task-queue ids that share that priority.
     """
 
     def is_background(tq_priority: float, allow_bg_tqs: bool) -> bool:
-        """Determine if a TQ is background based on its priority and allowed background TQs."""
+        """Return True when a task queue should be considered background.
+
+        A TQ is considered background when its configured priority is small
+        (<= 0.1) and background TQs are allowed by policy.
+        """
         return tq_priority <= 0.1 and allow_bg_tqs
 
     # Calculate Sum of priorities of non background TQs
