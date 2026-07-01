@@ -1,3 +1,10 @@
+"""Job query router endpoints for DIRACX.
+
+This module exposes HTTP endpoints for searching jobs and computing job
+summaries. It supports paginated job search, content-range handling, and
+OpenAPI examples for search and summary payloads.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus

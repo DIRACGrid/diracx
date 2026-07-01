@@ -1,3 +1,11 @@
+"""Sandbox router endpoints for DIRACX.
+
+This module exposes HTTP endpoints for sandbox upload initiation, file
+retrieval, sandbox assignment, and sandbox unassignment operations. It
+integrates sandbox metadata management with access control and storage
+backend interactions.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
