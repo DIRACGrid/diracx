@@ -1,3 +1,9 @@
+"""Resource status SQL DB access helpers.
+
+Provides a small DB helper around the resource/site status tables used by
+the RSS (resource status) subsystem.
+"""
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -14,11 +20,30 @@ from .schema import (
 
 
 class ResourceStatusDB(BaseSQLDB):
-    """Class that defines the interactions with the tables of the ResourceStatusDB."""
+    """Helper for interacting with the ResourceStatusDB tables.
+
+    The class implements convenience methods to read site and resource
+    status entries from the RSS tables.
+
+    Attributes:
+        metadata: Bound SQLAlchemy metadata from :class:`RSSBase`.
+    """
 
     metadata = RSSBase.metadata
 
     async def get_site_status(self, name: str, vo: str = "all") -> tuple[str, str]:
+        """Return the status and reason for a site.
+
+        Args:
+            name (str): Site name to query.
+            vo (str): Virtual organization to filter by (defaults to ``"all"``).
+
+        Returns:
+            tuple[str, str]: ``(status, reason)`` for the site.
+
+        Raises:
+            ResourceNotFoundError: If no site status row is found for ``name``.
+        """
         stmt = select(SiteStatus.status, SiteStatus.reason).where(
             SiteStatus.name == name,
             SiteStatus.status_type == "all",
@@ -37,6 +62,21 @@ class ResourceStatusDB(BaseSQLDB):
         status_types: list[str] | None = None,
         vo: str = "all",
     ) -> dict[str, Row]:
+        """Return resource status rows for a given resource name.
+
+        Args:
+            name (str): Resource name to query.
+            status_types (list[str] | None): List of status types to include.
+                If falsy, defaults to ``["all"]``.
+            vo (str): Virtual organization to filter by (defaults to ``"all"``).
+
+        Returns:
+            dict[str, Row]: Mapping from status_type to the corresponding DB row.
+
+        Raises:
+            ResourceNotFoundError: If no resource status rows are found for
+                ``name``.
+        """
         if not status_types:
             status_types = ["all"]
         stmt = select(
