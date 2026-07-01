@@ -1,3 +1,9 @@
+"""RSS schema definitions.
+
+Contains base declarative classes and table mappings used by the RSS
+resource/site status subsystem.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,12 +14,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from diracx.db.sql.utils.types import SmarterDateTime
 
 from ..utils import str32, str64, str128, str512
-
-"""RSS schema definitions.
-
-Contains base declarative classes and table mappings used by the RSS
-resource/site status subsystem.
-"""
 
 
 class RSSBase(DeclarativeBase):
