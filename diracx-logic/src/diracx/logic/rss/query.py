@@ -1,3 +1,9 @@
+"""Helpers to map database resource statuses to logic-layer RSS models.
+
+This module translates raw status strings and reasons returned by the
+`ResourceStatusDB` into the typed models used by the logic layer and APIs.
+"""
+
 from __future__ import annotations
 
 from diracx.core.models.rss import (
@@ -17,6 +23,15 @@ from diracx.db.sql import ResourceStatusDB
 
 
 def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
+    """Map a raw database status string to a `ResourceStatus` model.
+
+    Args:
+        db_status (str): The raw status string returned by the DB.
+        reason (str | None): Optional explanatory reason from the DB.
+
+    Returns:
+        ResourceStatus: A typed status model (allowed or banned).
+    """
     if db_status in ALLOWED:
         return AllowedStatus(
             allowed=True,
@@ -38,6 +53,16 @@ def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
 async def get_site_status(
     resource_status_db: ResourceStatusDB, name: str, vo: str
 ) -> SiteStatusModel:
+    """Fetch and return the site-level resource status.
+
+    Args:
+        resource_status_db (ResourceStatusDB): DB helper to query statuses.
+        name (str): Site name.
+        vo (str): Virtual organisation.
+
+    Returns:
+        SiteStatusModel: Site-level status model wrapping the mapped status.
+    """
     status, reason = await resource_status_db.get_site_status(name, vo)
     return SiteStatusModel(all=map_status(status, reason))
 
@@ -45,6 +70,16 @@ async def get_site_status(
 async def get_compute_status(
     resource_status_db: ResourceStatusDB, name: str, vo: str
 ) -> ComputeElementStatus:
+    """Fetch and return a CE (Computing Element's) resource status.
+
+    Args:
+        resource_status_db (ResourceStatusDB): DB helper to query statuses.
+        name (str): Computing Element name.
+        vo (str): Virtual organisation.
+
+    Returns:
+        ComputeElementStatus: Compute element status model.
+    """
     rows = await resource_status_db.get_resource_status(name, ["all"], vo)
     return ComputeElementStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
 
@@ -52,6 +87,16 @@ async def get_compute_status(
 async def get_fts_status(
     resource_status_db: ResourceStatusDB, name: str, vo: str
 ) -> FTSStatus:
+    """Fetch and return a FTS (File Transfer Service) resource status.
+
+    Args:
+        resource_status_db (ResourceStatusDB): DB helper to query statuses.
+        name (str): FTS endpoint name.
+        vo (str): Virtual organisation.
+
+    Returns:
+        FTSStatus: FTS status model.
+    """
     rows = await resource_status_db.get_resource_status(name, ["all"], vo)
     return FTSStatus(all=map_status(rows["all"].Status, rows["all"].Reason))
 
@@ -59,6 +104,19 @@ async def get_fts_status(
 async def get_storage_status(
     resource_status_db: ResourceStatusDB, name: str, vo: str
 ) -> StorageElementStatus:
+    """Fetch and return a SE (Storage Element's) access-related statuses.
+
+    Queries the DB for the specific access checks and maps each to a
+    `ResourceStatus` model used by the logic layer.
+
+    Args:
+        resource_status_db (ResourceStatusDB): DB helper to query statuses.
+        name (str): Storage Element name.
+        vo (str): Virtual organisation.
+
+    Returns:
+        StorageElementStatus: Storage element status model with per-access fields.
+    """
     rows = await resource_status_db.get_resource_status(
         name, ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"], vo
     )
