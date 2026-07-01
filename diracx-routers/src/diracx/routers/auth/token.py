@@ -45,7 +45,33 @@ async def mint_token(
     all_access_policies: dict[str, BaseAccessPolicy],
     settings: AuthSettings,
 ) -> TokenResponse:
-    """Enrich the token with policy specific content and mint it."""
+    """Enrich token payloads with policy-specific content and mint tokens.
+
+    This utility applies all configured `BaseAccessPolicy` implementations to
+    the access and refresh payloads, embeds any policy-specific claims, and
+    creates signed token strings using the application's settings.
+
+    Args:
+        access_payload (AccessTokenPayload): Payload used to create the
+            access token.
+        refresh_payload (RefreshTokenPayload | None): Optional payload used
+            to create the refresh token. If omitted, ``existing_refresh_token``
+            must be provided.
+        existing_refresh_token (str | None): An existing refresh token string
+            to reuse when ``refresh_payload`` is not supplied.
+        all_access_policies (dict[str, BaseAccessPolicy]): Mapping of policy
+            name to policy instance; each policy may enrich token payloads.
+        settings (AuthSettings): Authentication settings used during token
+            creation (signing keys, expiry, etc.).
+
+    Returns:
+        TokenResponse: Object containing the minted ``access_token``,
+            ``expires_in`` and ``refresh_token`` values.
+
+    Raises:
+        HTTPException: If neither ``refresh_payload`` nor
+            ``existing_refresh_token`` is provided (HTTP 500).
+    """
     if not refresh_payload and not existing_refresh_token:
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -121,9 +147,43 @@ async def get_oidc_token(
         Form(description="Refresh token used with OAuth2 refresh token flow"),
     ] = None,
 ) -> TokenResponse:
-    """Token endpoint to retrieve the token at the end of a flow.
+    """Token endpoint to exchange grant artifacts for tokens.
 
-    This is the endpoint being pulled by dirac-login when doing the device flow.
+    Implements the OAuth2 `/token` endpoint supporting a limited set of
+    grant types used by DIRACX: authorization code, device code, and
+    refresh token. The endpoint delegates grant validation to the business
+    logic layer and then calls ``mint_token`` to produce the final
+    ``TokenResponse``.
+
+    Args:
+        grant_type (GrantType): The OAuth2 grant type (authorization_code,
+            device_code, or refresh_token).
+        client_id (str): Registered OAuth2 client identifier.
+        auth_db (AuthDB): Database accessor used by business logic.
+        config (Config): Application configuration object.
+        settings (AuthSettings): Authentication-related settings.
+        available_properties (AvailableSecurityProperties): Security
+            properties available to the client/user.
+        all_access_policies (dict[str, BaseAccessPolicy]): Access policies to
+            apply when minting tokens.
+        device_code (str | None): Device flow code when using the device grant.
+        code (str | None): Authorization code when using the authorization
+            code grant.
+        redirect_uri (str | None): Redirect URI used with the authorization
+            code grant.
+        code_verifier (str | None): PKCE code verifier for authorization-code
+            exchanges from public clients.
+        refresh_token (str | None): Refresh token for the refresh-token grant.
+
+    Returns:
+        TokenResponse: Contains the newly minted access token (and refresh
+            token when applicable) and expiry information.
+
+    Raises:
+        DiracHttpResponseError: When the grant is pending (maps to a
+            400 with ``error=authorization_pending`` for device flows).
+        HTTPException: For invalid requests (HTTP 400), invalid credentials
+            (HTTP 401), or insufficient permissions (HTTP 403).
     """
     try:
         access_payload, refresh_payload = await get_oidc_token_bl(
@@ -188,10 +248,36 @@ async def perform_legacy_exchange(
     ],
     expires_minutes: int | None = None,
 ) -> TokenResponse:
-    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange.
+    """Legacy proxy-to-token exchange endpoint used by older DIRAC clients.
 
-    This route is disabled if DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY is not set
-    in the environment.
+    This helper allows legacy proxies to exchange a bearer-like header
+    (matching ``LEGACY_EXCHANGE_PATTERN``) for modern access/refresh tokens.
+    The route is gated by the environment variable
+    ``DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY``; if unset the endpoint returns
+    HTTP 503 (service unavailable).
+
+    Args:
+        preferred_username (str): Username asserted by the legacy proxy.
+        scope (str): Requested scope string.
+        authorization (str): Authorization header value provided by the
+            legacy proxy (must match the expected hashed API key format).
+        auth_db (AuthDB): Database accessor used by business logic.
+        available_properties (AvailableSecurityProperties): Security
+            properties used to resolve the requested scope.
+        settings (AuthSettings): Authentication-related settings.
+        config (Config): Application configuration object.
+        all_access_policies (dict[str, BaseAccessPolicy]): Access policies to
+            apply when minting tokens.
+        expires_minutes (int | None): Optional override for refresh token
+            expiry in minutes.
+
+    Returns:
+        TokenResponse: Contains minted access and (optionally) refresh tokens.
+
+    Raises:
+        HTTPException: When the legacy exchange is disabled (HTTP 503), on
+            invalid input (HTTP 400), invalid credentials (HTTP 401), or
+            insufficient permissions (HTTP 403).
     """
     if not (
         expected_api_key := os.environ.get("DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY")

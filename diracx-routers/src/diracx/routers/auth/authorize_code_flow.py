@@ -49,25 +49,52 @@ async def initiate_authorization_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Initiate the authorization flow.
+    """Initiate an OAuth2 authorization-code flow by redirecting to the IAM.
 
-    It will redirect to the actual OpenID server (IAM, CheckIn) to
-    perform a authorization code flow.
+    Builds the authorization request and returns a `RedirectResponse` that
+    routes the user agent to the configured identity provider (IAM/CheckIn)
+    to authenticate and authorize the client.
 
-    Scope details:
-    - If only VO is provided: Uses the default group and its properties for the VO.
+    Scope resolution behavior:
+    - If only VO is provided: uses the VO's default group and its properties.
+    - If VO and group are provided: uses the specified group and its properties.
+    - If VO and properties are provided: uses the default group and merges its
+      properties with the provided properties.
+    - If VO, group, and properties are provided: uses the specified group and
+      merges its properties with the provided properties.
 
-    - If VO and group are provided: Uses the specified group and its properties for the VO.
+    The implementation stores transient flow details in a cookie so the
+    authorization response (returned to ``/authorize/complete``) can be
+    correlated back to the initiating request.
 
-    - If VO and properties are provided: Uses the default group and combines its properties with the
-      provided properties.
+    Args:
+        request (Request): Incoming FastAPI request; used to compute the
+            ``request_url`` passed to the business logic.
+        response_type (Literal["code"]): OAuth2 response type (must be
+            ``"code"`` for the authorization-code flow).
+        code_challenge (str): PKCE code challenge (base64url-encoded).
+        code_challenge_method (Literal["S256"]): PKCE method (must be
+            ``"S256"``).
+        client_id (str): Client identifier registered in the IAM.
+        redirect_uri (str): Client redirect URI to return the user to after
+            successful authentication.
+        scope (str): OAuth2 scope string; may contain VO/group/property
+            information as described above.
+        state (str): Opaque state value used to correlate requests and
+            mitigate CSRF attacks.
+        auth_db (AuthDB): Database accessor for temporary authorization state.
+        config (Config): Application configuration object.
+        available_properties (AvailableSecurityProperties): Available
+            security properties used to resolve requested scope.
+        settings (AuthSettings): Authentication-related settings.
 
-    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
-      provided properties.
+    Returns:
+        RedirectResponse: A redirect to the identity provider's authorization
+            endpoint.
 
-    We set the user details obtained from the user authorize flow in a cookie
-    to be able to map the authorization flow with the corresponding
-    user authorize flow.
+    Raises:
+        HTTPException: If input validation or business-logic validation fails
+            (returns HTTP 400 with details).
     """
     try:
         redirect_uri = await initiate_authorization_flow_bl(
@@ -101,11 +128,38 @@ async def complete_authorization_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Complete the authorization flow.
+    """Complete the OAuth2 authorization-code flow and persist the ID token.
 
-    The user is redirected back to the DIRAC auth service after completing the IAM's authorization flow.
-    We retrieve the original flow details from the decrypted state and store the ID token requested from the IAM.
-    The user is then redirected to the client's redirect URI.
+    This endpoint is the redirect target for the identity provider. It
+    restores the original authorization flow context from the encrypted
+    ``state``, exchanges the authorization ``code`` for tokens (ID token /
+    access token) via the business logic layer, persists the retrieved ID
+    token and related state, and finally redirects the user agent to the
+    client's configured redirect URI.
+
+    Args:
+        code (str): Authorization code issued by the identity provider.
+        state (str): Opaque encrypted state previously created by
+            ``initiate_authorization_flow`` to recover the original context.
+        request (Request): Incoming FastAPI request; used to compute the
+            ``request_url`` passed to the business logic.
+        auth_db (AuthDB): Database accessor for authorization state and
+            tokens.
+        config (Config): Application configuration object.
+        settings (AuthSettings): Authentication-related settings.
+
+    Returns:
+        RedirectResponse: A redirect to the client's redirect URI on success.
+
+    Raises:
+        HTTPException: Raised with different status codes depending on the
+            failure mode:
+            - HTTP 400: Invalid or tampered ``state`` (mapped from
+              ``AuthorizationError``).
+            - HTTP 502: IAM server-side error while exchanging the code
+              (mapped from ``IAMServerError``).
+            - HTTP 401: Invalid authorization ``code`` or IAM client error
+              (mapped from ``IAMClientError``).
     """
     try:
         redirect_uri = await complete_authorization_flow_bl(

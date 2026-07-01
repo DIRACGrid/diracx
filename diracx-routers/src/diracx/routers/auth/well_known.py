@@ -1,3 +1,10 @@
+"""Well-known auth discovery endpoints for DIRACX.
+
+This module exposes OpenID Connect discovery endpoints and metadata
+endpoints, including OIDC configuration, JWKS, DIRAC installation metadata,
+and security.txt information.
+"""
+
 from __future__ import annotations
 
 from fastapi import Request
@@ -26,7 +33,24 @@ async def get_openid_configuration(
     config: Config,
     settings: AuthSettings,
 ) -> OpenIDConfiguration:
-    """OpenID Connect discovery endpoint."""
+    """Return the OpenID Connect discovery document.
+
+    Provides the standard OIDC discovery information (authorization,
+    token, userinfo and other endpoint locations) so clients can
+    automatically configure themselves to interact with this issuer.
+
+    Args:
+        request (Request): Incoming request used to build absolute URLs for
+            endpoints referenced in the discovery document.
+        config (Config): Application configuration used to populate
+            installation-specific metadata.
+        settings (AuthSettings): Authentication settings (used to decide
+            supported features and values exposed in the configuration).
+
+    Returns:
+        OpenIDConfiguration: A dataclass representing the ephemeral
+            discovery document as defined by OpenID Connect.
+    """
     return await get_openid_configuration_bl(
         str(request.url_for("get_oidc_token")),
         str(request.url_for("userinfo")),
@@ -43,7 +67,20 @@ async def get_openid_configuration(
 async def get_jwks(
     settings: AuthSettings,
 ) -> dict:
-    """Get the JWKs (public keys)."""
+    """Return the JSON Web Key Set (JWKS) for this issuer.
+
+    Clients use the JWKS to retrieve the public keys required to verify
+    signatures on issued tokens (ID tokens / access tokens). The JWKS
+    contains the public portion of the server's signing keys and is safe
+    to publish publicly.
+
+    Args:
+        settings (AuthSettings): Authentication settings containing key
+            configuration used to build the JWKS.
+
+    Returns:
+        dict: A JSON-serializable JWKS mapping (``{"keys": [...]}``).
+    """
     return await get_jwks_bl(settings)
 
 
@@ -51,13 +88,33 @@ async def get_jwks(
 async def get_installation_metadata(
     config: Config,
 ) -> Metadata:
-    """Get metadata about the dirac installation."""
+    """Return DIRAC-specific installation metadata.
+
+    Provides metadata describing this DIRAC installation (capabilities,
+    supported integrations, or other information consumers may need to
+    adapt behavior for a particular deployment).
+
+    Args:
+        config (Config): Application configuration used to populate the
+            installation metadata.
+
+    Returns:
+        Metadata: Installation metadata structure.
+    """
     return await get_installation_metadata_bl(config)
 
 
 @router.get("/security.txt")
 async def get_security_txt() -> str:
-    """Get the security.txt file."""
+    """Return the site's security contact information (security.txt).
+
+    The response contains contact and disclosure metadata following the
+    security.txt convention, aiding security researchers and reporters in
+    finding the appropriate channel to disclose vulnerabilities.
+
+    Returns:
+        str: A plaintext ``security.txt`` document.
+    """
     return """Contact: https://github.com/DIRACGrid/diracx/security/advisories/new
 Expires: 2026-07-02T23:59:59.000Z
 Preferred-Languages: en
