@@ -1,4 +1,9 @@
-"""Token endpoint implementation."""
+"""Token endpoint logic used by DIRACX OAuth2 flows.
+
+This module implements the business logic behind the token endpoint and
+related grant validation functions. It supports device flow, authorization
+code flow, refresh token exchange, legacy proxy exchange, and token minting.
+"""
 
 from __future__ import annotations
 
@@ -51,7 +56,27 @@ async def get_oidc_token(
     code_verifier: str | None = None,
     refresh_token: str | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
-    """Token endpoint to retrieve the token at the end of a flow."""
+    """Create OIDC-compatible access and refresh token payloads.
+
+    Args:
+        grant_type (GrantType): The grant type being exchanged.
+        client_id (str): Client identifier making the token request.
+        auth_db (AuthDB): Database accessor for auth flow and refresh token state.
+        config (Config): Application configuration registry.
+        settings (AuthSettings): Authentication settings.
+        available_properties (set[SecurityProperty]): Security properties available to the client/user.
+        device_code (str | None): Device flow code when using the device grant.
+        code (str | None): Authorization code for the authorization code grant.
+        redirect_uri (str | None): Redirect URI used with the authorization code grant.
+        code_verifier (str | None): PKCE code verifier for the authorization code grant.
+        refresh_token (str | None): Refresh token for the refresh token grant.
+
+    Returns:
+        tuple[AccessTokenPayload, RefreshTokenPayload | None]: Access token payload and optional refresh token payload.
+
+    Raises:
+        NotImplementedError: If the grant type is not supported.
+    """
     legacy_exchange = False
     include_refresh_token = True
     refresh_token_expire_minutes = None
@@ -100,7 +125,21 @@ async def get_oidc_token(
 async def get_oidc_token_info_from_device_flow(
     device_code: str, client_id: str, auth_db: AuthDB, settings: AuthSettings
 ) -> tuple[dict, str]:
-    """Get OIDC token information from the device flow DB and check few parameters before returning it."""
+    """Validate a device flow code and return OIDC token information.
+
+    Args:
+        device_code (str): Device flow code to resolve.
+        client_id (str): Expected client identifier.
+        auth_db (AuthDB): Database accessor for device flow state.
+        settings (AuthSettings): Authentication settings.
+
+    Returns:
+        tuple[dict, str]: OIDC token info and the resolved scope string.
+
+    Raises:
+        ValueError: If the client ID does not match the stored flow.
+        NotImplementedError: If the flow status is not READY.
+    """
     info = await get_device_flow(
         auth_db, device_code, settings.device_flow_expiration_seconds
     )
@@ -127,7 +166,23 @@ async def get_oidc_token_info_from_authorization_flow(
     auth_db: AuthDB,
     settings: AuthSettings,
 ) -> tuple[dict, str]:
-    """Get OIDC token information from the authorization flow DB and check few parameters before returning it."""
+    """Validate an authorization code and return OIDC token information.
+
+    Args:
+        code (str): Authorization code returned by the identity provider.
+        client_id (str | None): Expected client identifier.
+        redirect_uri (str | None): Expected redirect URI.
+        code_verifier (str): PKCE verifier used to validate the code challenge.
+        auth_db (AuthDB): Database accessor for authorization flow state.
+        settings (AuthSettings): Authentication settings.
+
+    Returns:
+        tuple[dict, str]: OIDC token info and the resolved scope string.
+
+    Raises:
+        ValueError: If the client ID, redirect URI, or code verifier are invalid.
+        NotImplementedError: If the flow status is not READY.
+    """
     info = await get_authorization_flow(
         auth_db, code, settings.authorization_flow_expiration_seconds
     )
@@ -164,7 +219,24 @@ async def get_oidc_token_info_from_authorization_flow(
 async def get_oidc_token_info_from_refresh_flow(
     refresh_token: str, auth_db: AuthDB, settings: AuthSettings
 ) -> tuple[dict, str, bool, float, bool]:
-    """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
+    """Validate a refresh token and return OIDC token information.
+
+    This verifies the refresh token, checks its status in the DB, handles
+    refresh token rotation for non-legacy exchanges, and returns the token
+    payload needed to mint a new access token.
+
+    Args:
+        refresh_token (str): Refresh token string to validate.
+        auth_db (AuthDB): Database accessor for refresh token state.
+        settings (AuthSettings): Authentication settings.
+
+    Returns:
+        tuple[dict, str, bool, float, bool]: OIDC token info, scope, legacy
+            exchange flag, remaining expiry minutes, and include-refresh-token flag.
+
+    Raises:
+        InvalidCredentialsError: If the refresh token has been revoked or is invalid.
+    """
     # Decode the refresh token to get the JWT ID
     jti, exp, legacy_exchange = await verify_dirac_refresh_token(
         refresh_token, settings
@@ -242,7 +314,26 @@ async def perform_legacy_exchange(
     config: Config,
     expires_minutes: float | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
-    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange."""
+    """Perform a legacy proxy-to-token exchange for older DIRAC clients.
+
+    Args:
+        expected_api_key (str): Expected hashed API key used to authenticate the proxy.
+        preferred_username (str): Username asserted by the legacy proxy.
+        scope (str): Requested scope string.
+        authorization (str): Authorization header value from the legacy proxy.
+        auth_db (AuthDB): Database accessor used for token and flow state.
+        available_properties (set[SecurityProperty]): Allowed properties for the user.
+        settings (AuthSettings): Authentication settings.
+        config (Config): Application configuration registry.
+        expires_minutes (float | None): Optional refresh token expiry override.
+
+    Returns:
+        tuple[AccessTokenPayload, RefreshTokenPayload | None]: Generated access/refresh payloads.
+
+    Raises:
+        ValueError: If the authorization header is invalid or the scope/preferred username is invalid.
+        InvalidCredentialsError: If the provided proxy credentials are incorrect.
+    """
     if match := re.fullmatch(LEGACY_EXCHANGE_PATTERN, authorization):
         raw_token = base64.urlsafe_b64decode(match.group(1))
     else:
@@ -282,7 +373,22 @@ async def exchange_token(
     legacy_exchange: bool = False,
     include_refresh_token: bool = True,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
-    """Exchange the OIDC token for a DIRAC generated access token."""
+    """Create DIRAC access and refresh token payloads from OIDC token info.
+
+    Args:
+        auth_db (AuthDB): Database accessor for refresh token state.
+        scope (str): The OIDC scope string.
+        oidc_token_info (dict): Claims extracted from the OIDC token.
+        config (Config): Application configuration registry.
+        settings (AuthSettings): Authentication settings.
+        available_properties (set[SecurityProperty]): Allowed security properties for the user.
+        refresh_token_expire_minutes (float | None): Optional refresh token expiry override.
+        legacy_exchange (bool): Whether the request is a legacy proxy exchange.
+        include_refresh_token (bool): Whether to mint a new refresh token.
+
+    Returns:
+        tuple[AccessTokenPayload, RefreshTokenPayload | None]: Newly generated token payloads.
+    """
     # Extract dirac attributes from the OIDC scope
     parsed_scope = parse_and_validate_scope(scope, config, available_properties)
     vo = parsed_scope["vo"]
@@ -364,12 +470,28 @@ async def exchange_token(
 
 
 def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
-    """Create a JWT token with the given payload and settings."""
+    """Create a signed JWT token from the provided payload.
+
+    Args:
+        payload (TokenPayload): Typed token payload to sign.
+        settings (AuthSettings): Authentication settings containing signing keys.
+
+    Returns:
+        str: Signed JWT token string.
+    """
     return _sign_token_payload(payload.model_dump(), settings)
 
 
 def _sign_token_payload(claims: dict, settings: AuthSettings) -> str:
-    """Sign a raw claims dict as a JWT. Used by create_token and tests."""
+    """Sign a raw claims dictionary as a JWT string.
+
+    Args:
+        claims (dict): JWT claims to sign.
+        settings (AuthSettings): Authentication settings containing signing keys.
+
+    Returns:
+        str: Signed JWT token.
+    """
     signing_key = None
     for key in settings.token_keystore.jwks.keys:
         key_ops = key.get("key_ops")
@@ -395,7 +517,16 @@ async def insert_refresh_token(
     subject: str,
     scope: str,
 ) -> UUID:
-    """Insert a refresh token into the database and return the JWT ID."""
+    """Insert a refresh token record and return its generated JWT ID.
+
+    Args:
+        auth_db (AuthDB): Database accessor for refresh token state.
+        subject (str): Subject identifier for the refresh token.
+        scope (str): Scope string associated with the refresh token.
+
+    Returns:
+        UUID: Generated JWT ID for the refresh token.
+    """
     # Generate a JWT ID
     jti = uuid7()
 
@@ -409,7 +540,21 @@ async def insert_refresh_token(
 
 
 async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
-    """Get the device flow from the DB and check few parameters before returning it."""
+    """Load and validate a device flow record from the database.
+
+    Args:
+        auth_db (AuthDB): Database accessor for device flow state.
+        device_code (str): Device code issued to the client.
+        max_validity (int): Maximum validity window in seconds for the device code.
+
+    Returns:
+        dict: Device flow record from the database.
+
+    Raises:
+        InvalidCredentialsError: If the device code has expired.
+        AuthorizationError: If the code has already been used or is in a bad state.
+        PendingAuthorizationError: If the device flow is still pending user approval.
+    """
     res = await auth_db.get_device_flow(device_code)
 
     if res["CreationTime"].replace(tzinfo=timezone.utc) < substract_date(
@@ -431,7 +576,19 @@ async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
 
 
 async def get_authorization_flow(auth_db: AuthDB, code: str, max_validity: int):
-    """Get the authorization flow from the DB and check few parameters before returning it."""
+    """Load and validate an authorization flow record from the database.
+
+    Args:
+        auth_db (AuthDB): Database accessor for authorization flow state.
+        code (str): Authorization code issued to the client.
+        max_validity (int): Maximum validity window in seconds for the authorization code.
+
+    Returns:
+        dict: Authorization flow record from the database.
+
+    Raises:
+        AuthorizationError: If the code has already been used or is in a bad state.
+    """
     res = await auth_db.get_authorization_flow(code, max_validity)
 
     if res["Status"] == FlowStatus.READY:
