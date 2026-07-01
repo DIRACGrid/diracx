@@ -31,10 +31,27 @@ logger = logging.getLogger(__name__)
 
 
 class SandboxMetadataDB(BaseSQLDB):
+    """Database helper for sandbox metadata operations.
+
+    Provides convenience methods to insert and query sandbox metadata,
+    assign and unassign sandboxes to jobs and select sandboxes eligible for
+    deletion.
+
+    Attributes:
+        metadata: SQLAlchemy metadata bound from :class:`SandboxMetadataDBBase`.
+    """
+
     metadata = SandboxMetadataDBBase.metadata
 
     async def get_owner_id(self, user: UserInfo) -> int | None:
-        """Get the id of the owner from the database."""
+        """Get the id of an owner.
+
+        Args:
+            user (UserInfo): User information to look up.
+
+        Returns:
+            int | None: The owner id if present, otherwise ``None``.
+        """
         stmt = select(SBOwners.OwnerID).where(
             SBOwners.Owner == user.preferred_username,
             SBOwners.OwnerGroup == user.dirac_group,
@@ -43,7 +60,15 @@ class SandboxMetadataDB(BaseSQLDB):
         return (await self.conn.execute(stmt)).scalar_one_or_none()
 
     async def get_sandbox_owner_id(self, pfn: str, se_name: str) -> int | None:
-        """Get the id of the owner of a sandbox."""
+        """Get the owner id for a sandbox identified by its PFN and SE.
+
+        Args:
+            pfn (str): Physical file name of the sandbox.
+            se_name (str): Storage element name.
+
+        Returns:
+            int | None: Owner id if found, otherwise ``None``.
+        """
         stmt = select(SBOwners.OwnerID).where(
             SBOwners.OwnerID == SandBoxes.OwnerId,
             SandBoxes.SEName == se_name,
@@ -52,6 +77,14 @@ class SandboxMetadataDB(BaseSQLDB):
         return (await self.conn.execute(stmt)).scalar_one_or_none()
 
     async def insert_owner(self, user: UserInfo) -> int:
+        """Insert a new owner row and return the new OwnerID.
+
+        Args:
+            user (UserInfo): User information to insert as an owner.
+
+        Returns:
+            int: Newly inserted OwnerID.
+        """
         stmt = insert(SBOwners).values(
             Owner=user.preferred_username,
             OwnerGroup=user.dirac_group,
@@ -62,7 +95,17 @@ class SandboxMetadataDB(BaseSQLDB):
 
     @staticmethod
     def get_pfn(bucket_name: str, user: UserInfo, sandbox_info: SandboxInfo) -> str:
-        """Get the sandbox's user namespaced and content addressed PFN."""
+        """Build a user-namespaced, content-addressed PFN for a sandbox.
+
+        Args:
+            bucket_name (str): S3 bucket name.
+            user (UserInfo): User owning the sandbox.
+            sandbox_info (SandboxInfo): Sandbox metadata including checksum
+                and format used to form the content-addressed name.
+
+        Returns:
+            str: Constructed PFN starting with '/S3/...'.
+        """
         parts = [
             "S3",
             bucket_name,
@@ -76,7 +119,18 @@ class SandboxMetadataDB(BaseSQLDB):
     async def insert_sandbox(
         self, owner_id: int, se_name: str, pfn: str, size: int
     ) -> None:
-        """Add a new sandbox in SandboxMetadataDB."""
+        """Add a new sandbox record.
+
+        Args:
+            owner_id (int): Owner identifier to associate with the sandbox.
+            se_name (str): Storage element name.
+            pfn (str): Physical file name for the sandbox.
+            size (int): Size of the sandbox in bytes.
+
+        Raises:
+            SandboxAlreadyInsertedError: If a row with the same PFN and SE
+                already exists.
+        """
         stmt = insert(SandBoxes).values(
             OwnerId=owner_id,
             SEName=se_name,
@@ -91,6 +145,16 @@ class SandboxMetadataDB(BaseSQLDB):
             raise SandboxAlreadyInsertedError(pfn, se_name) from e
 
     async def update_sandbox_last_access_time(self, se_name: str, pfn: str) -> None:
+        """Update the last-access time for a sandbox.
+
+        Args:
+            se_name (str): Storage element name.
+            pfn (str): Physical file name of the sandbox.
+
+        Raises:
+            SandboxNotFoundError: If the sandbox does not exist.
+            NotImplementedError: If the update affected more than one row.
+        """
         stmt = (
             update(SandBoxes)
             .where(SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn)
@@ -106,7 +170,18 @@ class SandboxMetadataDB(BaseSQLDB):
             )
 
     async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
-        """Check if a sandbox exists and has been assigned."""
+        """Check if a sandbox exists and whether it is assigned.
+
+        Args:
+            pfn (str): Physical file name of the sandbox.
+            se_name (str): Storage element name.
+
+        Returns:
+            bool: ``True`` if assigned, ``False`` if unassigned.
+
+        Raises:
+            SandboxNotFoundError: If the sandbox does not exist.
+        """
         stmt: Executable = select(SandBoxes.Assigned).where(
             SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn
         )
@@ -120,13 +195,28 @@ class SandboxMetadataDB(BaseSQLDB):
 
     @staticmethod
     def jobid_to_entity_id(job_id: int) -> str:
-        """Define the entity id as 'Entity:entity_id' due to the DB definition."""
+        """Convert a job id to the DB's entity id format.
+
+        Args:
+            job_id (int): Job identifier.
+
+        Returns:
+            str: Entity id in the form ``'Job:<job_id>'``.
+        """
         return f"Job:{job_id}"
 
     async def get_sandbox_assigned_to_job(
         self, job_id: int, sb_type: SandboxType
     ) -> list[Any]:
-        """Get the sandbox assign to job."""
+        """Return the PFNs of sandboxes assigned to a job for a given type.
+
+        Args:
+            job_id (int): Job identifier.
+            sb_type (SandboxType): Sandbox type to filter mappings.
+
+        Returns:
+            list[Any]: List of PFNs (as strings) assigned to the job.
+        """
         entity_id = self.jobid_to_entity_id(job_id)
         stmt = (
             select(SandBoxes.SEPFN)
@@ -146,7 +236,23 @@ class SandboxMetadataDB(BaseSQLDB):
         sb_type: SandboxType,
         se_name: str,
     ) -> None:
-        """Map sandbox and jobs."""
+        """Assign a sandbox to one or more jobs.
+
+        For each job id this inserts a mapping row and marks the sandbox as
+        assigned. If the mapping already exists for the sandbox/job pair a
+        :class:`SandboxAlreadyAssignedError` is raised.
+
+        Args:
+            jobs_ids (list[int]): List of job ids to map the sandbox to.
+            pfn (str): Physical file name of the sandbox.
+            sb_type (SandboxType): Sandbox mapping type.
+            se_name (str): Storage element name.
+
+        Raises:
+            SandboxAlreadyAssignedError: If the sandbox is already mapped to a
+                job in the list.
+            SandboxNotFoundError: If the sandbox does not exist.
+        """
         for job_id in jobs_ids:
             # Define the entity id as 'Entity:entity_id' due to the DB definition:
             entity_id = self.jobid_to_entity_id(job_id)
@@ -176,7 +282,14 @@ class SandboxMetadataDB(BaseSQLDB):
             assert result.rowcount == 1
 
     async def unassign_sandboxes_to_jobs(self, jobs_ids: list[int]) -> None:
-        """Delete mapping between jobs and sandboxes."""
+        """Remove sandbox-to-job mappings for the provided job ids.
+
+        The method removes SBEntityMapping rows for each job and, if a sandbox
+        no longer has any remaining mappings, clears its ``Assigned`` flag.
+
+        Args:
+            jobs_ids (list[int]): List of job ids to unassign sandboxes from.
+        """
         for job_id in jobs_ids:
             entity_id = self.jobid_to_entity_id(job_id)
             sb_sel_stmt = select(SandBoxes.SBId)
