@@ -1,3 +1,9 @@
+"""Pilot agents schema definitions.
+
+Defines the SQLAlchemy ORM mappings for pilot agent records, mappings from
+jobs to pilots and pilot output blobs.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,6 +27,12 @@ from diracx.db.sql.utils.types import SmarterDateTime
 
 
 class PilotAgentsDBBase(DeclarativeBase):
+    """Base declarative class for the pilot agents schema.
+
+    The :attr:`type_annotation_map` provides compact annotation aliases like
+    ``str32`` that are translated to concrete SQLAlchemy ``String`` types.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str128: String(128),
@@ -29,6 +41,30 @@ class PilotAgentsDBBase(DeclarativeBase):
 
 
 class PilotAgents(PilotAgentsDBBase):
+    """ORM mapping for the ``PilotAgents`` table.
+
+    Stores pilot job reference rows and associated metadata such as site,
+    queue, timestamps and status.
+
+    Attributes:
+        pilot_id (int): Auto-incrementing primary key.
+        initial_job_id (int): Initial job identifier associated with the pilot.
+        current_job_id (int): Current job id the pilot is handling.
+        pilot_job_reference (str): External pilot job reference string.
+        pilot_stamp (str): Optional pilot stamp value.
+        destination_site (str): Destination site name.
+        queue (str): Queue name.
+        grid_site (str): Grid site identifier.
+        vo (str): Virtual organization.
+        grid_type (str): Grid type (for example, "LCG").
+        benchmark (float): Measured benchmark value.
+        submission_time (datetime | None): Submission timestamp.
+        last_update_time (datetime | None): Last update timestamp.
+        status (str): Current status string.
+        status_reason (str): Optional human-readable reason.
+        accounting_sent (bool): Flag whether accounting was sent.
+    """
+
     __tablename__ = "PilotAgents"
 
     pilot_id: Mapped[int] = mapped_column(
@@ -70,6 +106,11 @@ class PilotAgents(PilotAgentsDBBase):
 class JobToPilotMapping(PilotAgentsDBBase):
     __tablename__ = "JobToPilotMapping"
 
+    """Mapping table from jobs to pilots.
+
+    Each row associates a pilot with a job and records when the pilot started
+    handling the job.
+    """
     pilot_id: Mapped[int] = mapped_column("PilotID", primary_key=True)
     job_id: Mapped[int] = mapped_column("JobID", primary_key=True)
     start_time: Mapped[datetime] = mapped_column("StartTime", SmarterDateTime)
@@ -80,6 +121,13 @@ class JobToPilotMapping(PilotAgentsDBBase):
 class PilotOutput(PilotAgentsDBBase):
     __tablename__ = "PilotOutput"
 
+    """Storage for pilot standard output and error blobs.
+
+    Attributes:
+        pilot_id (int): Pilot identifier (primary key).
+        std_output (str): Captured standard output text.
+        std_error (str): Captured standard error text.
+    """
     pilot_id: Mapped[int] = mapped_column("PilotID", primary_key=True)
     std_output: Mapped[str] = mapped_column("StdOutput", Text)
     std_error: Mapped[str] = mapped_column("StdError", Text)

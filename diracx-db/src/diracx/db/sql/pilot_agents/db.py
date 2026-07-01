@@ -1,3 +1,9 @@
+"""Pilot agents SQL DB helpers.
+
+This module provides the :class:`PilotAgentsDB` helper used to insert and
+manage pilot reference records in the ``PilotAgents`` table.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,7 +15,11 @@ from .schema import PilotAgents, PilotAgentsDBBase
 
 
 class PilotAgentsDB(BaseSQLDB):
-    """PilotAgentsDB class is a front-end to the PilotAgents Database."""
+    """Front-end for the PilotAgents database.
+
+    Attributes:
+        metadata: SQLAlchemy metadata bound from :class:`PilotAgentsDBBase`.
+    """
 
     metadata = PilotAgentsDBBase.metadata
 
@@ -20,6 +30,23 @@ class PilotAgentsDB(BaseSQLDB):
         grid_type: str = "DIRAC",
         pilot_stamps: dict | None = None,
     ) -> None:
+        """Bulk insert pilot reference records into the DB.
+
+        Inserts one row per value in ``pilot_ref`` into the ``PilotAgents``
+        table. For each inserted row the method sets ``SubmissionTime``,
+        ``LastUpdateTime`` to the current UTC time and ``Status`` to
+        ``"Submitted"``.
+
+        Args:
+            pilot_ref (list[str]): Pilot job reference strings to insert.
+            vo (str): Virtual organization name.
+            grid_type (str): Grid type string. Defaults to ``"DIRAC"``.
+            pilot_stamps (dict | None): Optional mapping of pilot reference to
+                a pilot stamp string to store alongside the record.
+
+        Returns:
+            None
+        """
         if pilot_stamps is None:
             pilot_stamps = {}
 
