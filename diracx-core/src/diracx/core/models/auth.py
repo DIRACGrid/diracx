@@ -1,3 +1,9 @@
+"""Authentication model definitions used by DIRACX.
+
+This module defines OpenID Connect and OAuth2-related Pydantic models and
+TypedDict structures for token handling, device flow responses, and metadata.
+"""
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -9,6 +15,8 @@ from .types import UTCDatetime
 
 
 class UserInfo(BaseModel):
+    """Authenticated user information extracted from token claims."""
+
     sub: str  # dirac generated vo:sub
     preferred_username: str
     dirac_group: str
@@ -57,12 +65,16 @@ class OpenIDConfiguration(TypedDict):
 
 
 class TokenPayload(BaseModel):
+    """Base token payload common to access and refresh tokens."""
+
     jti: str
     exp: UTCDatetime
     dirac_policies: dict
 
 
 class TokenResponse(BaseModel):
+    """OAuth2 token response returned by the token endpoint."""
+
     # Based on RFC 6749
     access_token: str
     expires_in: int
@@ -71,6 +83,8 @@ class TokenResponse(BaseModel):
 
 
 class AccessTokenPayload(TokenPayload):
+    """Payload for access tokens containing user and authorization claims."""
+
     sub: str
     vo: str
     iss: str
@@ -80,24 +94,34 @@ class AccessTokenPayload(TokenPayload):
 
 
 class RefreshTokenPayload(TokenPayload):
+    """Payload for refresh tokens used to obtain new access tokens."""
+
     legacy_exchange: bool
 
 
 class SupportInfo(TypedDict):
+    """Support contact information returned by an authentication metadata endpoint."""
+
     message: str
     webpage: str | None
     email: str | None
 
 
 class GroupInfo(TypedDict):
+    """Information about a VO group returned by metadata endpoints."""
+
     properties: list[str]
 
 
 class VOInfo(TypedDict):
+    """Virtual organization metadata including groups and support contact info."""
+
     groups: dict[str, GroupInfo]
     support: SupportInfo
     default_group: str
 
 
 class Metadata(TypedDict):
+    """Authentication server metadata payload describing available virtual organizations."""
+
     virtual_organizations: dict[str, VOInfo]

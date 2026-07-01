@@ -1,4 +1,9 @@
-"""Module containing the list of Properties that can be assigned to users and groups."""
+"""Security property definitions for user and group authorization.
+
+This module defines the built-in DIRACX security properties and provides
+helpers for evaluating combinations of those properties. These properties are
+used to express access rights in the authorization subsystem.
+"""
 
 from __future__ import annotations
 
@@ -43,8 +48,19 @@ from .extensions import select_from_extension
 
 
 class SecurityProperty(str):
+    """A named security property value used for authorization checks.
+
+    `SecurityProperty` is a thin wrapper around `str` that enables symbolic
+    handling of DIRACX security properties and interoperates with Pydantic.
+    """
+
     @classmethod
     def available_properties(cls) -> set[SecurityProperty]:
+        """Return all security properties discovered from extensions.
+
+        Returns:
+            set[SecurityProperty]: All configured security property values.
+        """
         properties = set()
         for entry_point in select_from_extension(
             group="diracx", name="properties_module"
@@ -59,6 +75,7 @@ class SecurityProperty(str):
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
+        """Provide a Pydantic core schema for this property type."""
         return core_schema.no_info_after_validator_function(cls, handler(str))
 
     def __repr__(self) -> str:
@@ -90,6 +107,13 @@ class SecurityProperty(str):
 
 
 class UnevaluatedProperty:
+    """A property expression that can be evaluated against allowed properties.
+
+    Instances represent a single property or a compound property expression
+    that can later be called with a list of allowed properties to determine if
+    it is satisfied.
+    """
+
     def __init__(self, property: SecurityProperty):
         self.property = property
 
@@ -100,6 +124,15 @@ class UnevaluatedProperty:
         return repr(self.property)
 
     def __call__(self, allowed_properties: list[SecurityProperty]) -> bool:
+        """Evaluate whether this property is allowed.
+
+        Args:
+            allowed_properties (list[SecurityProperty]): The properties that are
+                permitted in the current context.
+
+        Returns:
+            bool: True if this property is included in allowed_properties.
+        """
         return self.property in allowed_properties
 
     def __and__(self, value: UnevaluatedProperty) -> UnevaluatedExpression:
@@ -116,6 +149,13 @@ class UnevaluatedProperty:
 
 
 class UnevaluatedExpression(UnevaluatedProperty):
+    """A logical expression of unevaluated properties.
+
+    `UnevaluatedExpression` composes property operands with logical operators
+    such as AND, OR, XOR, and NOT, and can be evaluated against a list of
+    allowed properties.
+    """
+
     def __init__(self, operator: Callable[..., bool], *args: UnevaluatedProperty):
         self.operator = operator
         self.args = args
@@ -134,6 +174,14 @@ class UnevaluatedExpression(UnevaluatedProperty):
         return f"{self.operator.__name__}({', '.join(map(repr, self.args))})"
 
     def __call__(self, properties: list[SecurityProperty]) -> bool:
+        """Evaluate the expression against a set of properties.
+
+        Args:
+            properties (list[SecurityProperty]): The allowed security properties.
+
+        Returns:
+            bool: True if the expression evaluates to true for the given properties.
+        """
         return self.operator(*(a(properties) for a in self.args))
 
 

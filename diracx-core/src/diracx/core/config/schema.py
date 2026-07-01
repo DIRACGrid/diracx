@@ -1,3 +1,11 @@
+"""Pydantic models for DIRACX configuration schema.
+
+This module defines the configuration schema used to parse and validate DIRAC
+configuration documents. It provides models for user, group, VO registry,
+resource, and operations settings, and includes compatibility helpers for
+legacy DIRAC CFG-style input.
+"""
+
 from __future__ import annotations
 
 import os
@@ -28,6 +36,12 @@ SerializableSet = Annotated[
 
 
 class BaseModel(_BaseModel):
+    """Base model for DIRACX configuration models.
+
+    All configuration models are immutable, forbid extra fields, and support
+    field aliasing by name.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
@@ -38,7 +52,12 @@ class BaseModel(_BaseModel):
     @model_validator(mode="before")
     @classmethod
     def legacy_adaptor(cls, v):
-        """Apply transformations to interpret the legacy DIRAC CFG format."""
+        """Transform legacy DIRAC CFG-style values before validation.
+
+        This validator adapts legacy string-valued CSV fields and explicit
+        "None" values into the current Pydantic types when the legacy
+        compatibility mode is enabled.
+        """
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
 
@@ -84,6 +103,8 @@ class BaseModel(_BaseModel):
 
 
 class UserConfig(BaseModel):
+    """User-specific configuration for DIRAC registry entries."""
+
     prefered_username: str = Field(alias="PreferedUsername")
     """Preferred username for the user account."""
     dns: list[str] = Field([], alias="DNs")
@@ -97,6 +118,12 @@ class UserConfig(BaseModel):
 
 
 class GroupConfig(BaseModel):
+    """Group configuration controlling permissions, quotas, and security.
+
+    GroupConfig describes the DIRAC group settings that apply to a set of users,
+    including access properties, quotas, and proxy-related behavior.
+    """
+
     auto_add_voms: bool = Field(False, alias="AutoAddVOMS")
     """Controls automatic addition of VOMS extension when creating proxies."""
     auto_upload_pilot_proxy: bool = Field(False, alias="AutoUploadPilotProxy")
@@ -123,6 +150,8 @@ class GroupConfig(BaseModel):
 
 
 class IdpConfig(BaseModel):
+    """Identity provider configuration for a VO registry entry."""
+
     url: str = Field(alias="URL")
     """The authorization server's issuer identifier.
 
@@ -146,6 +175,8 @@ class SupportInfo(BaseModel):
 
 
 class RegistryConfig(BaseModel):
+    """Registry configuration for a single virtual organization (VO)."""
+
     idp: IdpConfig = Field(alias="IdP")
     """Registered identity provider associated with this VO."""
     support: SupportInfo = Field(default_factory=SupportInfo, alias="Support")
@@ -240,6 +271,8 @@ class JobDescriptionConfig(BaseModel):
 
 
 class InputDataPolicyProtocolsConfig(BaseModel):
+    """Configuration for input data access protocols."""
+
     remote: list[str] = Field([], alias="Remote")
     """List of protocols that should be considered as remote access methods (e.g., 'https', 'gsiftp', 'srm')."""
     local: list[str] = Field([], alias="Local")
@@ -366,6 +399,8 @@ class OperationsConfig(BaseModel):
 
 
 class ResourcesComputingConfig(BaseModel):
+    """Configuration for computing resource compatibility and platform mapping."""
+
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(extra="ignore", frozen=True, populate_by_name=True)
 
@@ -380,7 +415,11 @@ class ResourcesComputingConfig(BaseModel):
     @field_validator("os_compatibility", mode="before")
     @classmethod
     def legacy_adaptor_os_compatibility(cls, v: Any) -> Any:
-        """Apply transformations to interpret the legacy DIRAC CFG format."""
+        """Convert legacy OS compatibility values into the current schema.
+
+        This validator supports the legacy CFG-style OSCompatibility format by
+        parsing comma-separated strings into sets.
+        """
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
         os_compatibility = v.get("OSCompatibility", {})
@@ -391,13 +430,15 @@ class ResourcesComputingConfig(BaseModel):
     @field_validator("os_compatibility")
     @classmethod
     def ensure_self_compatibility(cls, v: dict[str, set[str]]) -> dict[str, set[str]]:
-        """Ensure platforms are compatible with themselves."""
+        """Ensure each platform is marked compatible with itself."""
         for platform, compatible_platforms in v.items():
             compatible_platforms.add(platform)
         return v
 
 
 class ResourcesConfig(BaseModel):
+    """Resources configuration container."""
+
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(
         extra="ignore",
@@ -413,6 +454,8 @@ class ResourcesConfig(BaseModel):
 
 
 class Config(BaseModel):
+    """Top-level DIRAC configuration model."""
+
     dirac: DIRACConfig = Field(alias="DIRAC")
     """The DIRAC section contains general parameters needed in most installation types."""
     operations: MutableMapping[str, OperationsConfig] = Field(alias="Operations")
@@ -436,7 +479,11 @@ class Config(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_operations_defaults(cls, v: dict[str, Any]):
-        """Merge the Defaults entry into the VO-specific config under Operations."""
+        """Ensure that VO-specific operations inherit default settings.
+
+        This validator merges the 'Defaults' section into each VO-specific
+        operations configuration while preserving legacy compatibility rules.
+        """
         for field_name, field_info in cls.model_fields.items():
             if field_info.alias and field_name in v:
                 v[field_info.alias] = v.pop(field_name)

@@ -1,6 +1,8 @@
 """Module to implement the logic of the configuration server side.
 
-This is where all the backend abstraction and the caching logic takes place.
+This module provides classes and helpers for reading configuration from
+various backends such as local or remote Git repositories. It also manages
+caching of revision metadata and content to minimize backend load.
 """
 
 from __future__ import annotations
@@ -30,7 +32,12 @@ DEFAULT_CS_CONTENT_HARD_TTL = 15
 logger = logging.getLogger(__name__)
 
 
-def is_running_in_async_context():
+def is_running_in_async_context() -> bool:
+    """Return whether the current code is executing inside an asyncio event loop.
+
+    Returns:
+        bool: True when running inside an async context, False otherwise.
+    """
     try:
         asyncio.get_running_loop()
         return True
@@ -39,13 +46,23 @@ def is_running_in_async_context():
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Apply the default git+file:// scheme if not present."""
+    """Normalize a config backend string into a full git URL.
+
+    Args:
+        value (str): A backend URL or path.
+
+    Returns:
+        str: A backend URL with the default ``git+file://`` scheme applied when
+            no scheme is present.
+    """
     if "://" not in value:
         value = f"git+file://{value}"
     return value
 
 
 class AnyUrlWithoutHost(AnyUrl):
+    """URL type that allows missing host components for local file backends."""
+
     _constraints = UrlConstraints(host_required=False)
 
 
@@ -53,11 +70,10 @@ ConfigSourceUrl = Annotated[AnyUrlWithoutHost, BeforeValidator(_apply_default_sc
 
 
 class ConfigSource(CacheableSource[Config]):
-    """Abstract class for the configuration source.
+    """Abstract configuration source supporting backend-specific implementations.
 
-    This class takes care of the expected caching and locking logic. Subclasses
-    are responsible for implementing the actual logic to find revisions and
-    reading the configuration.
+    Subclasses are expected to implement revision discovery and raw content
+    reading while the shared base class handles caching and refresh logic.
     """
 
     # Keep a mapping between the scheme and the class
@@ -68,13 +84,14 @@ class ConfigSource(CacheableSource[Config]):
         super().__init__()
 
     def __init_subclass__(cls) -> None:
-        """Keep a record of <scheme: class>."""
+        """Register a configuration source subclass by its URL scheme."""
         if cls.scheme in cls.__registry:
             raise TypeError(f"{cls.scheme=} is already define")
         cls.__registry[cls.scheme] = cls
 
     @classmethod
     def create(cls):
+        """Create a config source from the environment backend URL."""
         # Avoid circular import
         from diracx.core.settings import FactorySettings
 
@@ -84,13 +101,20 @@ class ConfigSource(CacheableSource[Config]):
     def create_from_url(
         cls, *, backend_url: ConfigSourceUrl | Path | str
     ) -> "ConfigSource":
-        """Produce a concrete instance depending on the backend URL scheme."""
+        """Produce a concrete config source instance based on URL scheme.
+
+        Args:
+            backend_url (ConfigSourceUrl | Path | str): The backend URL to resolve.
+
+        Returns:
+            ConfigSource: A concrete source implementation for the scheme.
+        """
         url = TypeAdapter(ConfigSourceUrl).validate_python(str(backend_url))
         return cls.__registry[url.scheme](backend_url=url)
 
 
 class BaseGitConfigSource(ConfigSource):
-    """Base class for the git based config source."""
+    """Base class for Git-backed configuration sources."""
 
     repo_location: Path
 
@@ -152,18 +176,32 @@ class BaseGitConfigSource(ConfigSource):
         return config
 
     def extract_remote_url(self, backend_url: ConfigSourceUrl) -> str:
-        """Extract the base URL without the 'git+' prefix and query parameters."""
+        """Extract the remote repository URL from a backend URL.
+
+        Args:
+            backend_url (ConfigSourceUrl): The backend URL to parse.
+
+        Returns:
+            str: The remote URL without the ``git+`` prefix or query parameters.
+        """
         parsed_url = urlparse(str(backend_url).replace("git+", ""))
         remote_url = urlunparse(parsed_url._replace(query=""))
         return remote_url
 
     def get_git_revision_from_url(self, backend_url: ConfigSourceUrl) -> str:
-        """Extract the branch from the query parameters."""
+        """Extract the requested Git revision from a backend URL.
+
+        Args:
+            backend_url (ConfigSourceUrl): The backend URL to inspect.
+
+        Returns:
+            str: The requested Git revision or the default branch if none is provided.
+        """
         return dict(backend_url.query_params()).get("revision", DEFAULT_GIT_BRANCH)
 
 
 class LocalGitConfigSource(BaseGitConfigSource):
-    """The configuration is stored on a local git repository.
+    """Configuration source backed by a local Git repository.
 
     When running on multiple servers, the filesystem must be shared.
     """
@@ -196,7 +234,7 @@ class LocalGitConfigSource(BaseGitConfigSource):
 
 
 class RemoteGitConfigSource(BaseGitConfigSource):
-    """Use a remote directory as a config source."""
+    """Configuration source backed by a remote Git repository."""
 
     scheme = "git+https"
 
@@ -214,6 +252,11 @@ class RemoteGitConfigSource(BaseGitConfigSource):
         return hash(self.repo_location)
 
     def latest_revision(self) -> tuple[str, datetime]:
+        """Pull the latest revision from the remote repository before returning it.
+
+        Returns:
+            tuple[str, datetime]: The latest revision hash and its modification time.
+        """
         logger.debug("Pulling latest version from %s", self)
         try:
             sh.git.pull(_cwd=self.repo_location, _async=False)

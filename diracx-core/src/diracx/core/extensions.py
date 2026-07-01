@@ -1,3 +1,10 @@
+"""Helpers for discovering and using DIRACX extension entry points.
+
+This module exposes utilities for locating extension implementations from the
+installed Python entry points and for decorating functions with extension
+fallback behavior.
+"""
+
 from __future__ import annotations
 
 __all__ = [
@@ -36,11 +43,18 @@ class DiracEntryPoint(StrEnum):
 
 @cached(cache=LRUCache(maxsize=1))
 def extensions_by_priority() -> list[str]:
-    """Yield extension module names in order of priority.
+    """Return extension module names in priority order.
 
-    NOTE: This function is duplicated in diracx._client_importer to avoid
-    importing diracx in the MetaPathFinder as part of unrelated imports
-    (e.g. http.client).
+    The base DIRACX package is always included with the lowest priority, while
+    any installed extension package is ranked above it.
+
+    Note:
+        This function is duplicated in diracx._client_importer to avoid
+        importing diracx in the MetaPathFinder as part of unrelated imports
+        (for example, http.client).
+
+    Returns:
+        list[str]: The sorted module names of the active extension packages.
     """
     selected = entry_points().select(group=DiracEntryPoint.CORE)
     if selected is None:
@@ -60,7 +74,15 @@ def extensions_by_priority() -> list[str]:
 
 @cached(cache=LRUCache(maxsize=1024))
 def select_from_extension(*, group: str, name: str | None = None) -> list[EntryPoint]:
-    """Select entry points by group and name, in order of priority."""
+    """Select extension entry points by group and name.
+
+    Args:
+        group (str): The entry point group to search.
+        name (str | None): Optional entry point name filter.
+
+    Returns:
+        list[EntryPoint]: Matching entry points ordered by extension priority.
+    """
     selected = entry_points().select(group=group)
     if name is not None:
         selected = selected.select(name=name)
@@ -81,20 +103,24 @@ def select_from_extension(*, group: str, name: str | None = None) -> list[EntryP
 def supports_extending(
     group: str, name: str
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """Replace a function with an extension implementation.
+    """Decorate a function with an extension-aware fallback implementation.
 
-    This decorator looks for an entry point in the specified group and name,
-    and if found, replaces the decorated function with the extension's implementation.
+    This decorator looks for an entry point in the specified group and name.
+    When one is found, the decorated function is replaced by the extension's
+    implementation; otherwise the original function is used.
 
     Args:
-        group: The entry point group to search in
-        name: The entry point name to search for
+        group (str): The entry point group to search.
+        name (str): The entry point name to search for.
+
+    Returns:
+        Callable[[Callable[P, T]], Callable[P, T]]: A decorator that wires in
+            the extension implementation when available.
 
     Example:
-        @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
-        def my_function():
-            return "default implementation"
-
+        >>> @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
+        ... def my_function():
+        ...     return "default implementation"
     """
 
     def decorator(f: Callable[P, T]) -> Callable[P, T]:

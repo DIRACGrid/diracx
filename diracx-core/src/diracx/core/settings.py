@@ -1,4 +1,9 @@
-"""Settings for the core services."""
+"""Settings for the core services.
+
+This module defines configuration models and helper types used by DIRACX
+core services, including authentication, sandbox storage, and service
+lifecycle settings.
+"""
 
 from __future__ import annotations
 
@@ -48,6 +53,8 @@ T = TypeVar("T")
 
 
 class SqlalchemyDsn(AnyUrl):
+    """URL type for SQLAlchemy DSNs with supported database schemes."""
+
     _constraints = UrlConstraints(
         allowed_schemes=[
             "sqlite+aiosqlite",
@@ -60,6 +67,8 @@ class SqlalchemyDsn(AnyUrl):
 
 
 class _TokenSigningKeyStore(SecretStr):
+    """Secret string wrapper that loads JWKS from JSON or file URLs."""
+
     jwks: KeySet
 
     def __init__(self, data: str):
@@ -83,7 +92,17 @@ class _TokenSigningKeyStore(SecretStr):
 
 
 def _maybe_load_keys_from_file(value: Any) -> Any:
-    """Load jwks from files if needed."""
+    """Load JWKS from files when the value is a file URL.
+
+    If the provided value is a string that does not appear to be JSON,
+    it is treated as a file URL and the referenced file is read.
+
+    Args:
+        value (Any): A potential JWKS payload or file URL.
+
+    Returns:
+        Any: The loaded JWKS JSON string or the original value.
+    """
     if isinstance(value, str):
         # If the value is a string, we need to check if it is a JSON string or a file URL
         if not (value.strip().startswith("{") or value.startswith("[")):
@@ -105,6 +124,8 @@ TokenSigningKeyStore = Annotated[
 
 
 class FernetKey(SecretStr):
+    """Secret string wrapper that holds a Fernet encryption key."""
+
     fernet: Fernet
 
     def __init__(self, data: str):
@@ -113,7 +134,14 @@ class FernetKey(SecretStr):
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Apply the default file:// scheme if not present."""
+    """Apply a default file:// scheme to a path if missing.
+
+    Args:
+        value (str): String representing a path or URL.
+
+    Returns:
+        str: The input value normalized to a file URL if no scheme was present.
+    """
     if "://" not in value:
         value = f"file://{value}"
     return value
@@ -123,6 +151,13 @@ LocalFileUrl = Annotated[FileUrl, BeforeValidator(_apply_default_scheme)]
 
 
 class ServiceSettingsBase(BaseSettings):
+    """Base class for DIRACX service settings models.
+
+    This class provides shared configuration behavior for service-specific
+    settings types, including a placeholder `create` method and a lifetime
+    function context manager.
+    """
+
     model_config = SettingsConfigDict(frozen=True)
 
     @classmethod

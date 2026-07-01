@@ -14,6 +14,8 @@ from .types import UTCDatetime
 
 
 class InsertedJob(BaseModel):
+    """Response model for a newly inserted job."""
+
     job_id: int = Field(alias="JobID")
     status: str = Field(alias="Status")
     minor_status: str = Field(alias="MinorStatus")
@@ -21,6 +23,8 @@ class InsertedJob(BaseModel):
 
 
 class HeartbeatData(BaseModel, extra="forbid"):
+    """Job heartbeat metrics reported by worker nodes."""
+
     load_average: float | None = Field(None, alias="LoadAverage")
     memory_used: float | None = Field(None, alias="MemoryUsed")
     vsize: float | None = Field(None, alias="Vsize")
@@ -31,13 +35,15 @@ class HeartbeatData(BaseModel, extra="forbid"):
 
 
 class JobCommand(BaseModel):
+    """Command request for performing an action on a job."""
+
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
 
 
 class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
-    """Some of the most important parameters that can be set for a job."""
+    """Job parameter values that are passed to or stored with a job."""
 
     timestamp: UTCDatetime | None = None
     cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
@@ -61,7 +67,14 @@ class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
     )
     @classmethod
     def convert_cpu_fields_to_int(cls, v):
-        """Convert string representation of float to integer for CPU-related fields."""
+        """Normalize CPU-related values to integers before validation.
+
+        Args:
+            v: The raw field value, which may be a string or numeric type.
+
+        Returns:
+            int | None: The normalized integer value or None.
+        """
         if v is None:
             return v
         if isinstance(v, str):
@@ -75,7 +88,7 @@ class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
 
 
 class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
-    """All the attributes that can be set for a job."""
+    """Job attribute fields representing metadata about a job."""
 
     job_type: str | None = Field(None, alias="JobType")
     job_group: str | None = Field(None, alias="JobGroup")
@@ -100,7 +113,7 @@ class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
 
 
 class JobMetaData(JobAttributes, JobParameters, extra="allow"):
-    """A model that combines both JobAttributes and JobParameters."""
+    """Combined job metadata and parameter model."""
 
 
 class JobStatus(StrEnum):
@@ -127,6 +140,8 @@ class JobMinorStatus(StrEnum):
 
 
 class JobLoggingRecord(BaseModel):
+    """Log entry captured when a job status changes."""
+
     job_id: int
     status: JobStatus | Literal["idem"]
     minor_status: str
@@ -136,6 +151,8 @@ class JobLoggingRecord(BaseModel):
 
 
 class JobStatusUpdate(BaseModel):
+    """Request model to update an existing job's status."""
+
     status: JobStatus | None = Field(None, alias="Status")
     minor_status: str | None = Field(None, alias="MinorStatus")
     application_status: str | None = Field(None, alias="ApplicationStatus")
@@ -143,17 +160,23 @@ class JobStatusUpdate(BaseModel):
 
 
 class LimitedJobStatusReturn(BaseModel):
+    """Minimal job status response model returned for status-only queries."""
+
     status: JobStatus = Field(alias="Status")
     minor_status: str = Field(alias="MinorStatus")
     application_status: str = Field(alias="ApplicationStatus")
 
 
 class JobStatusReturn(LimitedJobStatusReturn):
+    """Extended job status response including timestamp and source."""
+
     status_time: UTCDatetime = Field(alias="StatusTime")
     source: str = Field(alias="Source")
 
 
 class SetJobStatusReturn(BaseModel):
+    """Response model for the outcome of setting job statuses."""
+
     class SetJobStatusReturnSuccess(BaseModel):
         """Successful new status change."""
 
