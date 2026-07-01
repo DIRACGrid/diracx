@@ -1,4 +1,9 @@
-"""Device flow."""
+"""Business logic for OAuth2 device flow operations.
+
+This module handles the DiracX-specific device authorization flow, including
+initial device flow creation, verification URI redirection, and completion of
+the interactive user authorization step.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +30,24 @@ async def initiate_device_flow(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
-    """Initiate the device flow against DIRAC authorization Server."""
+    """Initiate the device authorization flow.
+
+    This validates the client identifier and requested scope, creates a new
+    device flow record in the database, and returns the response required by
+    the device to complete user authorization.
+
+    Args:
+        client_id (str): OAuth2 client identifier.
+        scope (str): Requested OAuth2 scope string.
+        verification_uri (str): URI the user should visit to enter the code.
+        auth_db (AuthDB): Database helper for device flow state.
+        config (Config): Application configuration registry.
+        available_properties (set[SecurityProperty]): Security properties available for scope resolution.
+        settings (AuthSettings): Authentication-related settings.
+
+    Returns:
+        InitiateDeviceFlowResponse: Verification and expiry data for the device.
+    """
     if settings.dirac_client_id != client_id:
         raise ValueError("Unrecognised client ID")
 
@@ -50,7 +72,23 @@ async def do_device_flow(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
 ) -> str:
-    """Verify URI for the device flow."""
+    """Verify the device user code and initiate the interactive authorization flow.
+
+    This validates the submitted user code, resolves the requested scope, and
+    constructs the IAM authorization URL for the browser-based portion of the
+    device flow.
+
+    Args:
+        request_url (str): Base URL of the current request.
+        auth_db (AuthDB): Database helper for device flow state.
+        user_code (str): User code issued to the device.
+        config (Config): Application configuration registry.
+        available_properties (set[SecurityProperty]): Available security properties for scope resolution.
+        settings (AuthSettings): Authentication-related settings.
+
+    Returns:
+        str: Redirect URL for the IAM authorization endpoint.
+    """
     # Here we make sure the user_code actually exists
     scope = await auth_db.device_flow_validate_user_code(
         user_code, settings.device_flow_expiration_seconds
@@ -82,7 +120,19 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ):
-    """Check that the url callbacked by IAM/CheckIn after the authorization flow was granted."""
+    """Complete the device flow by exchanging the IAM authorization code.
+
+    This decrypts the returned state, exchanges the authorization code for an
+    ID token, and stores the token in the database under the device flow record.
+
+    Args:
+        request_url (str): Base URL of the current request.
+        code (str): Authorization code returned by the IAM.
+        state (str): Encrypted state from the IAM redirect.
+        auth_db (AuthDB): Database helper for device flow state.
+        config (Config): Application configuration registry.
+        settings (AuthSettings): Authentication-related settings.
+    """
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code
 
