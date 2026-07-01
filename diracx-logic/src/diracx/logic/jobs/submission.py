@@ -1,3 +1,10 @@
+"""Job submission helpers for DIRACX.
+
+This module implements job submission logic, including JDL validation,
+parametric job expansion, job record creation, and initial logging for
+submitted jobs.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +41,17 @@ logger = logging.getLogger(__name__)
 
 
 class JobSubmissionSpec(BaseModel):
+    """Specification for a single job submission.
+
+    Attributes:
+        jdl (str): Raw JDL string describing the job.
+        owner (str): Username of the job owner.
+        owner_group (str): Group of the job owner.
+        initial_status (str): Initial job status to set on creation.
+        initial_minor_status (str): Initial minor status string.
+        vo (str): VO the job belongs to.
+    """
+
     jdl: str
     owner: str
     owner_group: str
@@ -52,7 +70,36 @@ async def submit_jdl_jobs(
     user_info: UserInfo,
     config: Config,
 ) -> list[InsertedJob]:
-    """Submit a list of JDLs to the JobDB."""
+    """Submit one or more JDL job descriptions to the JobDB.
+
+    This helper accepts either a single JDL (which may be parametric) or a
+    list of JDL strings. It validates and expands parametric jobs when
+    necessary, enforces submission limits, inserts job records into the DB,
+    and emits initial logging records for the created jobs.
+
+    Args:
+        job_definitions (list[str]): One or more raw JDL strings. A single
+            JDL may describe a parametric job which will be expanded into
+            multiple concrete jobs.
+        job_db (JobDB): Database accessor used to create jobs and persist
+            JDLs and attributes.
+        job_logging_db (JobLoggingDB): Database accessor used to insert
+            initial job logging records.
+        user_info (UserInfo): Information about the submitting user (used
+            to populate owner, owner group and VO fields).
+        config (Config): Application configuration used for manifest
+            generation and VO-specific behavior.
+
+    Returns:
+        list[InsertedJob]: A list of inserted job descriptors containing the
+            assigned `JobID`, `Status`, `MinorStatus` and `TimeStamp`.
+
+    Raises:
+        ValueError: If JDL validation fails, the submission exceeds the
+            configured limits, or parametric jobs are submitted in bulk.
+        ExceptionGroup: Propagated when manifest generation for parametric
+            expansion fails.
+    """
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
         job_definition = job_definitions[i].strip()
@@ -165,7 +212,33 @@ async def submit_jdl_jobs(
 
 
 async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: Config):
-    """Create jobs from JDLs and insert them into the DB."""
+    """Create DB job records from JDLs.
+
+    Given a list of :class:`JobSubmissionSpec` entries this function:
+    - Generates new `JobID`s via ``job_db.create_job``.
+    - Validates and prepares each job's ClassAd/JDL using the internal
+      ``check_and_prepare_job`` helper.
+    - Builds a final JDL with initial status using DIRAC helpers and writes
+      the compressed JDL back to the database.
+    - Inserts job attributes (owner, VO, timestamps) and any ``InputData``
+      records.
+
+    Args:
+        jobs (list[JobSubmissionSpec]): Prepared job submission specs with
+            JDLs and owner/VO metadata.
+        job_db (JobDB): Database accessor used to allocate JobIDs and
+            perform JDL/attribute persistence.
+        config (Config): Application configuration used to build job
+            manifests.
+
+    Returns:
+        list[int]: List of newly created job IDs.
+
+    Raises:
+        ValueError: If JDL syntax is invalid for any job.
+        NotImplementedError: If unsupported JDL features are encountered
+            (e.g. inline Parameters).
+    """
     jobs_to_insert = {}
     jdls_to_update = {}
     inputdata_to_insert = {}

@@ -1,3 +1,10 @@
+"""Job status handling and transition helpers for DIRACX.
+
+This module implements job status updates, status-driven cleanup, and
+integration with task queues, job logging, and sandbox metadata for DIRACX
+job lifecycle management.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -66,7 +73,36 @@ async def remove_jobs(
     sandbox_metadata_db: SandboxMetadataDB,
     task_queue_db: TaskQueueDB,
 ):
-    """Fully remove a list of jobs from the WMS databases."""
+    """Permanently remove jobs and related records from WMS databases.
+
+    This operation performs a best-effort cleanup of all data associated
+    with the provided job identifiers. The procedure includes:
+    - Unassigning any sandboxes associated with the jobs.
+    - Removing entries from task queues that reference the jobs.
+    - Deleting logging records for the jobs from the JobLoggingDB.
+    - Deleting the jobs themselves from the JobDB.
+
+    Args:
+        job_ids (list[int]): List of job IDs to remove.
+        config (Config): Application configuration used for VO-specific
+            behavior (unused currently but provided for symmetry with other
+            job operations).
+        job_db (JobDB): Database accessor for job records; used to delete
+            the jobs.
+        job_logging_db (JobLoggingDB): Database accessor for job logging
+            records; used to delete logging entries for the jobs.
+        sandbox_metadata_db (SandboxMetadataDB): Accessor used to unassign
+            sandboxes associated with the jobs.
+        task_queue_db (TaskQueueDB): Accessor for task queues; used to
+            remove tasks related to the jobs.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions raised by any of the database accessors may propagate
+        (e.g. connectivity or integrity errors).
+    """
     # Remove the staging task from the StorageManager
     # TODO: this was not done in the JobManagerHandler, but it was done in the kill method
     # I think it should be done here too
@@ -97,13 +133,45 @@ async def set_job_statuses(
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
-    """Set various status fields for job specified by its jobId.
+    """Apply status updates for multiple jobs and persist changes.
 
-    Set only the last status in the JobDB, updating all the status
-    logging information in the JobLoggingDB. The status dict has datetime
-    as a key and status information dictionary as values.
+    Processes a mapping of job identifiers to time-keyed status updates
+    and applies them to the WMS. For each job the function:
+    - Computes derived fields (Start/End execution times) and determines
+      the new canonical job status using the DIRAC utilities.
+    - Updates job attributes in the JobDB and job parameters if needed.
+    - Appends structured logging records to the JobLoggingDB.
+    - Schedules delete/kill commands for transitions to DELETED or KILLED.
+    - Removes affected jobs from task queues as required.
 
-    :raises: JobNotFound if the job is not found in one of the DBs
+    Args:
+        status_changes (dict[int, dict[datetime, JobStatusUpdate]]): A map
+            from job ID to a mapping of timestamps to ``JobStatusUpdate``
+            objects describing status changes.
+        config (Config): Application configuration used to evaluate VO
+            specific behaviour.
+        job_db (JobDB): Database accessor for job records.
+        job_logging_db (JobLoggingDB): Database accessor for job logging
+            records.
+        task_queue_db (TaskQueueDB): Database accessor for task queues; used
+            to remove or update queued tasks for affected jobs.
+        job_parameters_db (JobParametersDB): Accessor used to persist job
+            parameter updates derived from status changes.
+        force (bool): When true, forces status transitions even if they
+            would otherwise be suppressed by business logic.
+        additional_attributes (dict[int, dict[str, str]]): Optional mapping
+            of job-specific attribute updates to apply alongside status
+            changes.
+
+    Returns:
+        SetJobStatusReturn: Object containing two mappings: ``success`` with
+            applied updates per job and ``failed`` with error details for
+            jobs that could not be updated.
+
+    Raises:
+        ValueError: If any provided timestamp is not timezone-aware.
+        Exceptions from underlying DB accessors or DIRAC utilities may
+            propagate (e.g. connectivity errors or unexpected API failures).
     """
     # check that the datetime contains timezone info
     for job_id, status in status_changes.items():
@@ -291,7 +359,39 @@ async def reschedule_jobs(
     job_parameters_db: JobParametersDB,
     reset_jobs: bool = False,
 ):
-    """Reschedule given job."""
+    """Reschedule one or more jobs according to the VO's scheduling policy.
+
+    For each provided job ID the function validates that the job is
+    reschedulable (has a verified flag, has not exceeded the maximum
+    reschedule count) and prepares a fresh scheduling request.
+    If ``reset_jobs`` is true the reschedule counter for matching jobs is
+    reset to zero; otherwise the counter is incremented. Jobs that exceed
+    the configured maximum rescheduling threshold are marked as failed with
+    a suitable ``JobStatusUpdate`` placed in the returned failure mapping.
+
+    Args:
+        job_ids (list[int]): List of job IDs to reschedule.
+        config (Config): Application configuration used to obtain VO-level
+            scheduling limits and behavior.
+        job_db (JobDB): Database accessor for job records and JDL retrieval.
+        job_logging_db (JobLoggingDB): Database accessor for job logging; may
+            be used to append reschedule-related log entries.
+        task_queue_db (TaskQueueDB): Accessor for task queues; used to
+            manipulate queued tasks during rescheduling.
+        job_parameters_db (JobParametersDB): Accessor for job parameter
+            storage; used to persist updates to parameters like ``Status``.
+        reset_jobs (bool): If true reset the reschedule counter instead of
+            incrementing it.
+
+    Returns:
+        None
+
+    Notes:
+        - The function performs multiple DB reads and writes; database
+          exceptions may propagate to the caller.
+        - The exact resubmission mechanism uses DIRAC ClassAd/JDL helpers
+          and integrates with the job preparation utilities in this module.
+    """
     failed = {}
     status_changes = {}
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
@@ -486,7 +586,29 @@ async def remove_jobs_from_task_queue(
     config: Config,
     task_queue_db: TaskQueueDB,
 ):
-    """Remove the job from TaskQueueDB."""
+    """Remove job entries from task queues and cleanup empty queues.
+
+    This helper removes references to the specified jobs from the task
+    queue database. After removing the jobs it inspects any task queues
+    that referenced those jobs; if a task queue becomes empty it is
+    deleted and the shares for the owner group are recalculated.
+
+    Args:
+        job_ids (list[int]): List of job IDs to remove from task queues.
+        config (Config): Application configuration used when recalculating
+            task-queue shares for an entity.
+        task_queue_db (TaskQueueDB): Database accessor for task-queue
+            operations; used to remove job references, query queue
+            information, delete empty queues, and check queue occupancy.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions from the task queue database accessor may propagate
+        (e.g. connectivity errors). Note: some steps are TODO and may be
+        migrated to asynchronous workers (e.g. Celery) in the future.
+    """
     await task_queue_db.remove_jobs(job_ids)
 
     tq_infos = await task_queue_db.get_tq_infos_for_jobs(job_ids)
@@ -510,7 +632,32 @@ async def set_job_parameters_or_attributes(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
 ):
-    """Set job parameters or attributes for a list of jobs."""
+    """Set job attributes and/or parameters for multiple jobs.
+
+    The function accepts a mapping from job id to a ``JobMetaData`` model.
+    For each metadata object it separates fields into job attributes (DB
+    fields) and job parameters (stored in the JobParametersDB).
+    Fields that match a
+    known job attribute alias are applied via a bulk ``set_job_attributes``
+    call; fields that match a job parameter alias are upserted into the
+    ``JobParametersDB``. Unknown fields are treated as parameters to allow
+    flexible metadata handling.
+
+    Args:
+        updates (dict[int, JobMetaData]): Mapping of job ID to metadata
+            describing attributes and parameters to set.
+        job_db (JobDB): Database accessor used to persist job attribute
+            updates.
+        job_parameters_db (JobParametersDB): Database accessor used to
+            upsert job parameters.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions raised by the underlying database accessors may propagate
+        (e.g. connectivity errors).
+    """
     # Those dicts create a mapping of job_id -> {attribute_name: value}
     attr_updates: dict[int, dict[str, Any]] = {}
     param_updates: dict[int, dict[str, Any]] = {}
@@ -553,7 +700,41 @@ async def add_heartbeat(
     task_queue_db: TaskQueueDB,
     job_parameters_db: JobParametersDB,
 ) -> None:
-    """Send a heart beat sign of life for a job jobID."""
+    """Process and record heartbeat signals for multiple jobs.
+
+    The function accepts heartbeat payloads keyed by job ID and ensures the
+    system records liveness and any heartbeat-provided metadata. Behavior:
+    - Looks up provided job IDs and validates they exist.
+    - For jobs currently in ``MATCHED`` or ``STALLED`` schedules a status
+      transition to ``RUNNING`` (with source set to ``"Heartbeat"``) by
+      delegating to :func:`set_job_statuses`.
+    - For jobs that do not require a status transition, updates their
+      ``HeartBeatTime`` attribute via ``JobDB``.
+    - Persists heartbeat SQL fields using ``job_db.add_heartbeat_data`` and
+      stores any non-SQL fields in ``JobParametersDB``.
+
+    Args:
+        data (dict[int, HeartbeatData]): Mapping of job ID to heartbeat
+            payloads.
+        config (Config): Application configuration used for VO-specific
+            behavior.
+        job_db (JobDB): Database accessor for job records and attributes.
+        job_logging_db (JobLoggingDB): Database accessor for job logging
+            records.
+        task_queue_db (TaskQueueDB): Database accessor for task-queue
+            operations (used when status transitions affect queues).
+        job_parameters_db (JobParametersDB): Accessor used to upsert
+            non-SQL heartbeat parameters.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If the provided job IDs cannot be resolved to existing
+            jobs (lookup count differs from the input keys).
+        Exceptions from underlying database accessors may propagate
+            (e.g. connectivity or integrity errors).
+    """
     # Find the current status of the jobs
     search_query: VectorSearchSpec = {
         "parameter": "JobID",
@@ -620,8 +801,29 @@ async def _insert_parameters(
 ) -> None:
     """Upsert job parameters (if any) into the JobParametersDB.
 
-    This function takes a mapping of job_id -> parameters. If the parameters
-    dict is empty this is a no-op.
+    This helper accepts a mapping from job ID to parameter dictionaries and
+    performs upserts into ``job_parameters_db``. Empty parameter mappings are
+    ignored. The function first resolves the VO for each job by querying
+    ``job_db.summary`` (required by the parameters index/template) and then
+    issues concurrent upsert operations for each job's parameters.
+
+    Args:
+        updates (dict[int, dict[str, Any]]): Mapping of job ID to parameter
+            key/value pairs to upsert. Jobs with empty parameter dicts are
+            filtered out and ignored.
+        job_parameters_db (JobParametersDB): Database accessor used to
+            upsert parameters for a given VO and job ID.
+        job_db (JobDB): Database accessor used to resolve the VO for each
+            job ID present in ``updates``.
+
+    Returns:
+        None
+
+    Raises:
+        KeyError: If a job ID in ``updates`` is missing from the VO mapping
+            returned by ``job_db.summary``.
+        Exceptions from underlying DB accessors may propagate (e.g.
+            connectivity or integrity errors).
     """
     updates = {job_id: params for job_id, params in updates.items() if params}
     if not updates:
@@ -648,8 +850,21 @@ async def _insert_parameters(
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:
-    """Get the pending job commands for a list of job IDs.
+    """Retrieve pending job commands for given job IDs and mark them as sent.
 
-    This function automatically marks the commands as "Sent" in the database.
+    The function fetches pending commands for the provided job IDs from the
+    job database and marks those commands as ``Sent`` to avoid re-delivery.
+
+    Args:
+        job_ids (Iterable[int]): Iterable of job IDs to query commands for.
+        job_db (JobDB): Database accessor to retrieve and update job commands.
+
+    Returns:
+        list[JobCommand]: List of pending ``JobCommand`` objects for the
+            provided job IDs. If no commands exist an empty list is returned.
+
+    Raises:
+        Exceptions raised by ``job_db`` may propagate (e.g. connectivity
+            errors).
     """
     return await job_db.get_job_commands(job_ids)
