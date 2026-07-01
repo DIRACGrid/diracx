@@ -1,3 +1,9 @@
+"""SQL utility classes and helpers for DiracX database access.
+
+This module contains the base SQL DB class and shared query helper functions
+used by DiracX SQL database modules.
+"""
+
 from __future__ import annotations
 
 import contextlib
@@ -110,7 +116,14 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type["BaseSQLDB"]]:
-        """Return the available implementations of the DB in reverse priority order."""
+        """Return the available implementations of the DB in priority order.
+
+        Args:
+            db_name (str): Name of the database to resolve.
+
+        Returns:
+            list[type[BaseSQLDB]]: List of database implementation classes.
+        """
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
@@ -127,6 +140,9 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         The list of available URLs is determined by environment variables
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
+
+        Returns:
+            dict[str, str]: Mapping from database name to connection URL.
         """
         db_urls: dict[str, str] = {}
         for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
@@ -160,17 +176,29 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @classmethod
     async def post_create(cls, conn: AsyncConnection) -> None:
-        """Execute actions after the schema has been created."""
+        """Execute actions after the schema has been created.
+
+        Args:
+            conn (AsyncConnection): Connection to use for post-creation actions.
+        """
         return
 
     @classmethod
     def transaction(cls) -> Self:
-        """Dependency injection sentinel: overridden at startup to yield a DB inside a transaction."""
+        """Dependency injection sentinel: overridden at startup to yield a DB inside a transaction.
+
+        Raises:
+            NotImplementedError: Always raised in the base implementation.
+        """
         raise NotImplementedError("This should never be called")
 
     @classmethod
     def no_transaction(cls) -> Self:
-        """Dependency injection sentinel: overridden at startup to yield a DB without a transaction."""
+        """Dependency injection sentinel: overridden at startup to yield a DB without a transaction.
+
+        Raises:
+            NotImplementedError: Always raised in the base implementation.
+        """
         raise NotImplementedError("This should never be called")
 
     @property
@@ -181,6 +209,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         doing something special, like writing a test fixture that gives you a db.
 
         Requires that the engine_context has been entered.
+
+        Returns:
+            AsyncEngine: The active SQLAlchemy engine.
         """
         assert self._engine is not None, "engine_context must be entered"
         return self._engine
@@ -211,10 +242,13 @@ class BaseSQLDB(metaclass=ABCMeta):
         return cast(AsyncConnection, self._conn.get())
 
     async def __aenter__(self) -> Self:
-        """Create a connection.
+        """Create and open a new database connection.
 
-        This is called by the Dependency mechanism (see ``db_transaction``),
-        It will create a new connection/transaction for each route call.
+        This is called by the dependency mechanism (see ``db_transaction``).
+        It creates a new connection/transaction for each route call.
+
+        Returns:
+            Self: The active database instance.
         """
         assert self._conn.get() is None, "BaseSQLDB context cannot be nested"
         try:
@@ -233,12 +267,15 @@ class BaseSQLDB(metaclass=ABCMeta):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        """Commit or roll back changes to a DB.
+        """Commit or roll back the open database transaction.
 
-        Called when exiting a route.
+        Called when exiting a route. If there was no exception, the changes in
+        the database are committed. Otherwise, they are rolled back.
 
-        If there was no exception, the changes in the DB are committed.
-        Otherwise, they are rolled back.
+        Args:
+            exc_type (type | None): Exception type, if raised.
+            exc (BaseException | None): Exception instance, if raised.
+            tb (TracebackType | None): Traceback object, if raised.
         """
         if exc_type is None:
             await self._conn.get().commit()
@@ -248,8 +285,11 @@ class BaseSQLDB(metaclass=ABCMeta):
     async def ping(self):
         """Check whether the connection to the DB is still working.
 
-        We could enable the ``pre_ping`` in the engine, but this would be ran at
+        We could enable the ``pre_ping`` in the engine, but this would be run at
         every query.
+
+        Raises:
+            SQLDBUnavailableError: If the ping fails due to an operational error.
         """
         try:
             await self.conn.scalar(select(1))
@@ -267,7 +307,20 @@ class BaseSQLDB(metaclass=ABCMeta):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[str, Any]]]:
-        """Search for elements in a table."""
+        """Search for elements in a table.
+
+        Args:
+            table (type[DeclarativeBase]): The mapped table class.
+            parameters (list[str] | None): Column names to return.
+            search (list[SearchSpec]): Search filters to apply.
+            sorts (list[SortSpec]): Sort specifications to apply.
+            distinct (bool): Whether to return only distinct rows.
+            per_page (int): Number of rows to return per page.
+            page (int | None): Page number for pagination.
+
+        Returns:
+            tuple[int, list[dict[str, Any]]]: Total row count and results.
+        """
         # Find which columns to select
         columns = _get_columns(table.__table__, parameters)
 
@@ -335,6 +388,18 @@ class TimeResolution(StrEnum):
 
 
 def find_time_resolution(value):
+    """Infer the time resolution of a string or return a datetime unchanged.
+
+    Args:
+        value (str | datetime): The string to parse or a datetime object.
+
+    Returns:
+        tuple[TimeResolution | None, datetime]: The inferred precision and the
+            normalized datetime value.
+
+    Raises:
+        InvalidQueryError: If the input string is not a supported datetime.
+    """
     if isinstance(value, datetime):
         return None, value
     if match := re.fullmatch(
@@ -365,6 +430,18 @@ def find_time_resolution(value):
 
 
 def _get_columns(table, parameters):
+    """Return a table's columns, optionally filtered by requested names.
+
+    Args:
+        table: SQLAlchemy table object.
+        parameters (list[str] | None): Requested column names.
+
+    Returns:
+        list: Selected column objects.
+
+    Raises:
+        InvalidQueryError: If any requested column names are not present.
+    """
     columns = [x for x in table.columns]
     if parameters:
         if unrecognised_parameters := set(parameters) - set(table.columns.keys()):
@@ -382,6 +459,13 @@ def _datetime_period_bounds(
 
     For example, precision=TimeResolution.DAY and value_str="2025-08-25" returns:
         (datetime(2025, 8, 25, 0, 0), datetime(2025, 8, 26, 0, 0))
+
+    Args:
+        value_str (str): Datetime string to parse.
+        precision (TimeResolution): Precision to use when computing bounds.
+
+    Returns:
+        tuple[datetime, datetime]: Start inclusive and end exclusive bounds.
     """
     parse_formats = {
         TimeResolution.YEAR: "%Y",
