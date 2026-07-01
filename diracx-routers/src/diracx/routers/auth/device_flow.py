@@ -49,21 +49,43 @@ async def initiate_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
-    """Initiate the device flow against DIRAC authorization Server.
+    """Initiate the OAuth2 device authorization flow.
 
-    Scope details:
-    - If only VO is provided: Uses the default group and its properties for the VO.
+    Starts the device flow for a public client by contacting the identity
+    provider and returning the verification information needed by the
+    device (user code, verification URI, and expiry). The returned
+    ``InitiateDeviceFlowResponse`` is intended for consumption by a
+    headless device which will instruct the end user to visit the
+    verification URI and enter the displayed user code.
 
-    - If VO and group are provided: Uses the specified group and its properties for the VO.
+    Scope resolution behavior:
+    - If only VO is provided: uses the VO's default group and its properties.
+    - If VO and group are provided: uses the specified group and its properties.
+    - If VO and properties are provided: uses the default group and merges its
+        properties with the provided properties.
+    - If VO, group, and properties are provided: uses the specified group and
+        merges its properties with the provided properties.
 
-    - If VO and properties are provided: Uses the default group and combines its properties with the
-      provided properties.
+    The verification URI typically points to the ``/device`` endpoint which
+    renders a form for the user to enter the provided ``user_code``.
 
-    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
-      provided properties.
+    Args:
+        client_id (str): OAuth2 client identifier initiating the device flow.
+        scope (str): Requested scope string; may include VO/group/property
+            qualifiers as described above.
+        request (Request): FastAPI request used to compute the ``verification_uri``.
+        auth_db (AuthDB): Database accessor for temporary device flow state.
+        config (Config): Application configuration object.
+        available_properties (AvailableSecurityProperties): Available
+            security properties used to resolve requested scope.
+        settings (AuthSettings): Authentication-related settings.
 
-    Offers the user to go with the browser to
-    `auth/<vo>/device?user_code=XYZ`
+    Returns:
+        InitiateDeviceFlowResponse: Contains user code, verification URI, and
+            other parameters the device needs to complete the flow.
+
+    Raises:
+        HTTPException: On invalid input (returns HTTP 400 with validation details).
     """
     try:
         device_flow_response = await initiate_device_flow_bl(
@@ -93,15 +115,32 @@ async def do_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Serve as the verification URI for the device flow.
+    """Serve the device verification UI and redirect to the IAM.
 
-    It will redirect to the actual OpenID server (IAM, CheckIn) to
-    perform a authorization code flow.
+    This endpoint is the verification URI that the end user visits in a
+    browser. It establishes a short-lived browser-side session (cookie)
+    that stores the device ``user_code`` and then redirects the user to the
+    identity provider to perform an interactive authorization (authorization
+    code flow). The server uses the stored ``user_code`` to correlate the
+    interactive authorization with the waiting device.
 
-    We set the user_code obtained from the device flow in a cookie
-    to be able to map the authorization flow with the corresponding
-    device flow.
-    (note: it can't be put as parameter or in the URL)
+    Args:
+        request (Request): FastAPI request; used to build redirect URLs.
+        auth_db (AuthDB): Database accessor for device flow state and lookups.
+        user_code (str): The user code issued to the device that the user
+            must enter; stored server-side (cookie) for correlation.
+        config (Config): Application configuration object.
+        available_properties (AvailableSecurityProperties): Available
+            security properties used to resolve requested scope.
+        settings (AuthSettings): Authentication-related settings.
+
+    Returns:
+        RedirectResponse: Redirects the user agent to the identity provider's
+            authorization endpoint.
+
+    Raises:
+        HTTPException: On invalid or expired ``user_code`` (HTTP 400), invalid
+            scope (HTTP 400), or IAM server errors (HTTP 502).
     """
     try:
         authorization_flow_url = await do_device_flow_bl(
@@ -142,11 +181,29 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Handle the URL callbacked by IAM/CheckIn after authorization flow.
+    """Complete the interactive step of the device flow and finalize tokens.
 
-    It gets us the code we need for the authorization flow, and we
-    can map it to the corresponding device flow using the user_code
-    in the cookie/session.
+    The identity provider redirects the user's browser to this callback
+    after the interactive authorization. This handler exchanges the provided
+    authorization ``code`` for tokens (via the business logic), maps the
+    tokens to the waiting device (using the server-side ``user_code`` state),
+    and persists any required tokens/state.
+
+    Args:
+        request (Request): FastAPI request used to compute the base request URL.
+        code (str): Authorization code returned by the identity provider.
+        state (str): State value used to validate and restore context.
+        auth_db (AuthDB): Database accessor for device flow state and tokens.
+        config (Config): Application configuration object.
+        settings (AuthSettings): Authentication-related settings.
+
+    Returns:
+        RedirectResponse: Redirects the user agent to a local "finished"
+            page on success.
+
+    Raises:
+        HTTPException: On IAM server errors (HTTP 502) or IAM client errors
+            such as invalid code (HTTP 401).
     """
     request_url = str(request.url.replace(query={}))
 
@@ -177,7 +234,18 @@ async def finish_device_flow(
 
 @router.get("/device/complete/finished")
 def finished(response: Response):
-    """Mark the final step of the device flow."""
+    """Render a simple final page instructing the user to close the window.
+
+    This synchronous endpoint returns a simple HTML response indicating the
+    interactive portion of the device flow has finished and the user may
+    close their browser window.
+
+    Args:
+        response (Response): FastAPI response object to populate.
+
+    Returns:
+        Response: HTML response with a short message.
+    """
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"
