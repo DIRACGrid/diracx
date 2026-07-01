@@ -12,19 +12,18 @@ from .extensions import DiracEntryPoint, supports_extending
 
 @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
 def find_compatible_platforms(job_platforms: list[str], config: Config) -> list[str]:
-    """Find compatible platforms for the given job platforms.
+    """Return compatible DIRAC platforms for the supplied job platforms.
 
-    This is the default implementation, it can be overridden by the user to
-    provide a custom implementation using the "find_compatible_platforms"
-    key in "diracx" entrypoint.
+    This default implementation can be overridden by providing a custom
+    implementation under the ``find_compatible_platforms`` key in the
+    ``diracx`` entrypoint.
 
     Args:
-        job_platforms: list of job platforms
-        config: config object
+        job_platforms (list[str]): Job platform identifiers to evaluate.
+        config (Config): Application configuration.
 
     Returns:
-        list of compatible platforms
-
+        list[str]: Compatible platforms for the requested job platforms.
     """
     os_compatibility_dict = config.resources.computing.os_compatibility
     return returnValueOrRaise(getDIRACPlatform(job_platforms, os_compatibility_dict))

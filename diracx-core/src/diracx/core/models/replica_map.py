@@ -54,9 +54,16 @@ from pydantic import (
 
 
 def _validate_lfn(value: str) -> str:
-    """Validate and normalize Logical File Name.
+    """Validate and normalize a Logical File Name.
 
-    Removes LFN: prefix if present and ensures it's a valid absolute path or a filename without slashes.
+    Removes an optional ``LFN:`` prefix and ensures the value is either an
+    absolute path or a filename without slashes.
+
+    Args:
+        value (str): Input logical file name.
+
+    Returns:
+        str: Normalized logical file name.
     """
     value = value.removeprefix("LFN:")
     if not value:
@@ -72,9 +79,15 @@ def _validate_lfn(value: str) -> str:
 
 
 def _validate_pfn(value: str) -> str:
-    """Validate and normalize Physical File Name.
+    """Validate and normalize a Physical File Name.
 
-    Removes PFN: prefix if present before URL validation.
+    Removes an optional ``PFN:`` prefix before URL validation.
+
+    Args:
+        value (str): Input physical file name.
+
+    Returns:
+        str: Normalized physical file name.
     """
     value = value.removeprefix("PFN:")
     if not value:
@@ -85,7 +98,13 @@ def _validate_pfn(value: str) -> str:
 def _validate_adler32(value: str) -> str:
     """Validate Adler32 checksum format.
 
-    Must be 8 hexadecimal characters.
+    The checksum must be exactly eight hexadecimal characters.
+
+    Args:
+        value (str): Adler32 checksum input.
+
+    Returns:
+        str: Normalized lowercase Adler32 checksum.
     """
     value = value.lower()
     if len(value) != 8:
@@ -102,9 +121,15 @@ def _validate_adler32(value: str) -> str:
 def _validate_guid(value: str) -> str:
     """Validate GUID checksum format.
 
-    The format is 8-4-4-4-12 hexadecimal digits with hyphens (UUID format).
-    The original case is preserved to avoid mismatches with downstream systems.
-    Example: 6032CB7C-32DC-EC11-9A66-D85ED3091D71
+    The value must follow the UUID pattern ``8-4-4-4-12`` hexadecimal digits
+    separated by hyphens. The original case is preserved to avoid mismatches
+    with downstream systems.
+
+    Args:
+        value (str): GUID checksum input.
+
+    Returns:
+        str: The validated GUID string.
     """
     if len(value) != 36:
         raise ValueError(
@@ -168,6 +193,14 @@ class ReplicaMap(RootModel):
             @field_validator("se")
             @classmethod
             def validate_se(cls, v: str) -> str:
+                """Validate the storage element identifier.
+
+                Args:
+                    v (str): Storage element identifier.
+
+                Returns:
+                    str: Stripped storage element identifier.
+                """
                 if not v or not v.strip():
                     raise ValueError("Storage Element ID cannot be empty")
                 return v.strip()
@@ -191,6 +224,14 @@ class ReplicaMap(RootModel):
         @field_validator("replicas")
         @classmethod
         def validate_replicas(cls, v: list) -> list:
+            """Validate that at least one replica is present.
+
+            Args:
+                v (list): List of replica entries.
+
+            Returns:
+                list: The validated list of replicas.
+            """
             if not v:
                 raise ValueError("At least one replica is required")
             return v
@@ -198,6 +239,14 @@ class ReplicaMap(RootModel):
         @field_validator("size_bytes")
         @classmethod
         def validate_size_bytes(cls, v: int | None) -> int | None:
+            """Validate the declared size of the replica file.
+
+            Args:
+                v (int | None): The file size in bytes.
+
+            Returns:
+                int | None: The validated file size.
+            """
             if v is not None and v <= 0:
                 raise ValueError(f"Size in bytes cannot be zero or negative: {v}")
             return v

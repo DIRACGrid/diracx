@@ -1,4 +1,8 @@
-"""Utilities for interacting with S3-compatible storage."""
+"""Utilities for interacting with S3-compatible storage.
+
+This module provides helpers for S3 bucket and object existence checks,
+presigned upload generation, and bulk delete operations with retry logic.
+"""
 
 from __future__ import annotations
 
@@ -24,25 +28,64 @@ if TYPE_CHECKING:
     from types_aiobotocore_s3.client import S3Client
 
     class S3Object(TypedDict):
+        """TypedDict representing an S3 object identifier for deletion.
+
+        Attributes:
+            Key (str): Object key in the bucket.
+        """
+
         Key: str
 
 
 class S3PresignedPostInfo(TypedDict):
+    """TypedDict containing presigned upload information.
+
+    Attributes:
+        url (str): Presigned URL to upload an object.
+        fields (dict[str, str]): Form fields required for the upload.
+    """
+
     url: str
     fields: dict[str, str]
 
 
 async def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
-    """Check if a bucket exists in S3."""
+    """Check if a bucket exists in S3.
+
+    Args:
+        s3_client (S3Client): S3 client instance.
+        bucket_name (str): Name of the bucket to check.
+
+    Returns:
+        bool: True if the bucket exists, otherwise False.
+    """
     return await _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
 
 
 async def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> bool:
-    """Check if an object exists in an S3 bucket."""
+    """Check if an object exists in an S3 bucket.
+
+    Args:
+        s3_client (S3Client): S3 client instance.
+        bucket_name (str): Name of the bucket containing the object.
+        key (str): Object key to check.
+
+    Returns:
+        bool: True if the object exists, otherwise False.
+    """
     return await _s3_exists(s3_client.head_object, Bucket=bucket_name, Key=key)
 
 
 async def _s3_exists(method, **kwargs: str) -> bool:
+    """Check whether an S3 resource exists by invoking a client HEAD method.
+
+    Args:
+        method: S3 client HEAD method to call (for bucket or object existence).
+        **kwargs (str): Keyword arguments to pass to the HEAD method.
+
+    Returns:
+        bool: True if the resource exists, otherwise False.
+    """
     try:
         await method(**kwargs)
     except ClientError as e:
@@ -64,7 +107,20 @@ async def generate_presigned_upload(
 ) -> S3PresignedPostInfo:
     """Generate a presigned URL and fields for uploading a file to S3.
 
-    The signature is restricted to only accept data with the given checksum and size.
+    The signature is restricted to only accept data with the given checksum
+    and size.
+
+    Args:
+        s3_client (S3Client): S3 client instance.
+        bucket_name (str): The target S3 bucket name.
+        key (str): Object key to upload.
+        checksum_algorithm (ChecksumAlgorithm): Checksum algorithm to enforce.
+        checksum (str): Checksum value for the uploaded object.
+        size (int): Exact size of the uploaded object in bytes.
+        validity_seconds (int): Time in seconds that the presigned upload URL is valid.
+
+    Returns:
+        S3PresignedPostInfo: Presigned upload URL and form fields.
     """
     fields = {
         "x-amz-checksum-algorithm": checksum_algorithm,
@@ -84,7 +140,14 @@ async def generate_presigned_upload(
 
 
 def b16_to_b64(hex_string: str) -> str:
-    """Convert hexadecimal encoded data to base64 encoded data."""
+    """Convert hexadecimal encoded data to base64 encoded data.
+
+    Args:
+        hex_string (str): Hexadecimal string to convert.
+
+    Returns:
+        str: Base64-encoded representation of the input.
+    """
     return base64.b64encode(base64.b16decode(hex_string.upper())).decode()
 
 
@@ -93,9 +156,13 @@ async def s3_bulk_delete_with_retry(
 ) -> set[str]:
     """Delete objects from S3 in chunks of 1000, retrying failures.
 
-    Returns:
-        Set of keys that failed to delete after all retries.
+    Args:
+        s3_client: S3 client instance.
+        bucket (str): Bucket containing the objects to delete.
+        objects (list[S3Object]): List of objects to delete.
 
+    Returns:
+        set[str]: Set of keys that failed to delete after all retries.
     """
     max_chunk_size = 1000
     chunks = [
@@ -114,9 +181,13 @@ async def _s3_delete_chunk_with_retry(
 ) -> set[str]:
     """Try to delete a chunk of S3 objects, retrying partial failures.
 
-    Returns:
-        Set of keys that failed to delete after all retries.
+    Args:
+        s3_client: S3 client instance.
+        bucket (str): Bucket containing the objects to delete.
+        objects (list[S3Object]): Chunk of objects to delete.
 
+    Returns:
+        set[str]: Set of keys that failed to delete after all retries.
     """
     max_attempts = 5
     delay = 1.0

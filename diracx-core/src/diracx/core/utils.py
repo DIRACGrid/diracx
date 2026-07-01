@@ -1,3 +1,9 @@
+"""Core utility helpers for DIRACX.
+
+This module provides shared helpers for configuration file discovery,
+credential serialization, caching, and async batching utilities.
+"""
+
 from __future__ import annotations
 
 __all__ = [
@@ -66,7 +72,15 @@ def recursive_merge(base: Any, override: Any) -> Any:
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
-    """Get the sorted list of .env files to use for configuration."""
+    """Get the sorted list of .env files to use for configuration.
+
+    Args:
+        prefix (str): Environment variable prefix used to detect .env entries.
+
+    Returns:
+        list[str]: Sorted values of matching environment variables, ordered by
+            numeric suffix if present.
+    """
     env_files = {}
     for key, value in os.environ.items():
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
@@ -121,7 +135,13 @@ def read_credentials(location: Path | None = None) -> TokenResponse:
 
 
 def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
-    """Write credentials received in dirax_preferences.credentials_path."""
+    """Write credentials to a local file protected with exclusive locking.
+
+    Args:
+        token_response (TokenResponse): Token response object to serialize.
+        location (Path | None): Optional override location for the credentials file.
+            If omitted, uses the default path from DIRACX preferences.
+    """
     from diracx.core.preferences import get_diracx_preferences
 
     credentials_path = location or get_diracx_preferences().credentials_path
