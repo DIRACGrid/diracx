@@ -9,10 +9,21 @@ from diracx.db.sql.utils.types import SmarterDateTime
 
 from ..utils import str32, str64, str128, str512
 
-# Defining the tables
+"""RSS schema definitions.
+
+Contains base declarative classes and table mappings used by the RSS
+resource/site status subsystem.
+"""
 
 
 class RSSBase(DeclarativeBase):
+    """Base declarative class for RSS tables.
+
+    The :attr:`type_annotation_map` maps compact annotation aliases like
+    ``str32`` to concrete SQLAlchemy ``String`` column types used throughout
+    the module.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str64: String(64),
@@ -22,6 +33,25 @@ class RSSBase(DeclarativeBase):
 
 
 class ElementStatusBase:
+    """Shared column definitions for element status tables.
+
+    This mixin defines the common columns used for site/resource status
+    tables such as ``Name``, ``StatusType``, ``VO``, ``Status`` and timing
+    fields.
+
+    Attributes:
+        name (str): Element name (primary key in some tables).
+        status_type (str): Status type identifier, defaults to ``"all"``.
+        vo (str): Virtual organization, defaults to ``"all"``.
+        status (str): Short status string.
+        reason (str): Human-readable reason.
+        date_effective (datetime): When the status takes effect.
+        token_expiration (datetime): Token expiration timestamp.
+        element_type (str): Element type string.
+        last_check_time (datetime): Last check timestamp.
+        token_owner (str): Token owner identifier.
+    """
+
     name: Mapped[str64] = mapped_column("Name", primary_key=True)
     status_type: Mapped[str128] = mapped_column(
         "StatusType", server_default="all", primary_key=True
@@ -43,11 +73,11 @@ class ElementStatusBase:
 
 
 class ElementStatusBaseWithID(ElementStatusBase):
-    """Almost the same as ElementStatusBase.
+    """Variant of :class:`ElementStatusBase` that uses an autoincrement ID.
 
-    Differences:
-    - there's an autoincrement ID column which is also the primary key
-    - the name and statusType components are not part of the primary key
+    Differences from :class:`ElementStatusBase`:
+        - An autoincrementing ``ID`` column is used as the primary key.
+        - ``Name`` and ``StatusType`` are regular columns (not part of PK).
     """
 
     id: Mapped[int] = mapped_column(
@@ -71,31 +101,51 @@ class ElementStatusBaseWithID(ElementStatusBase):
     )
 
 
-# tables with schema defined in ElementStatusBase
+# Concrete tables
 
 
 class SiteStatus(ElementStatusBase, RSSBase):
+    """Per-site current status rows.
+
+    Uses the columns from :class:`ElementStatusBase` and is backed by the
+    ``SiteStatus`` table.
+    """
+
     __tablename__ = "SiteStatus"
 
 
 class ResourceStatus(ElementStatusBase, RSSBase):
+    """Per-resource current status rows.
+
+    Uses the columns from :class:`ElementStatusBase` and is backed by the
+    ``ResourceStatus`` table.
+    """
+
     __tablename__ = "ResourceStatus"
 
 
-# tables with schema defined in ElementStatusBaseWithID
+# Audit/history tables
 
 
 class SiteLog(ElementStatusBaseWithID, RSSBase):
+    """Historical site log entries with autoincrementing IDs."""
+
     __tablename__ = "SiteLog"
 
 
 class SiteHistory(ElementStatusBaseWithID, RSSBase):
+    """Site history rows (archival)."""
+
     __tablename__ = "SiteHistory"
 
 
 class ResourceLog(ElementStatusBaseWithID, RSSBase):
+    """Historical resource log entries with autoincrementing IDs."""
+
     __tablename__ = "ResourceLog"
 
 
 class ResourceHistory(ElementStatusBaseWithID, RSSBase):
+    """Resource history rows (archival)."""
+
     __tablename__ = "ResourceHistory"
