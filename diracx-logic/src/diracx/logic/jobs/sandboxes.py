@@ -1,3 +1,10 @@
+"""Sandbox storage helpers for DIRACX jobs.
+
+This module provides logic for sandbox upload initiation, download URL
+generation, sandbox assignment, and metadata handling. It integrates
+sandbox metadata storage with S3-backed object storage operations.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -42,13 +49,35 @@ async def initiate_sandbox_upload(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> SandboxUploadResponse:
-    """Get the PFN for the given sandbox, initiate an upload as required.
+    """Obtain a storage PFN for a sandbox and initiate an upload if needed.
 
-    If the sandbox already exists in the database then the PFN is returned
-    and there is no "url" field in the response.
+    The function determines the PFN for the sandbox described by
+    ``sandbox_info`` and checks whether the sandbox is already uploaded and
+    assigned. If the sandbox is present the returned ``SandboxUploadResponse``
+    contains only the ``pfn``. If the sandbox is not present, the response
+    contains presigned upload information (``url`` and ``fields``) that the
+    caller should use to upload the object into the storage backend.
 
-    If the sandbox does not exist in the database then the "url" and "fields"
-    should be used to upload the sandbox to the storage backend.
+    Args:
+        user_info (UserInfo): Identity of the requesting user.
+        sandbox_info (SandboxInfo): Metadata describing the sandbox (size,
+            checksum, checksum algorithm, etc.).
+        sandbox_metadata_db (SandboxMetadataDB): Database accessor for
+            sandbox metadata operations.
+        settings (SandboxStoreSettings): S3 and store-specific settings
+            (bucket name, SE name, URL validity, client, etc.).
+
+    Returns:
+        SandboxUploadResponse: Contains the full PFN and, when an upload is
+            required, presigned upload information such as ``url`` and
+            ``fields``.
+
+    Raises:
+        ValueError: If the sandbox exceeds the configured maximum size.
+        Exceptions from the metadata DB or storage client may propagate
+            (e.g. connectivity issues). Note: ``SandboxNotFoundError`` is
+            handled internally to differentiate a missing DB entry from an
+            unassigned-but-uploaded sandbox.
     """
     pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
 
@@ -104,7 +133,25 @@ async def get_sandbox_file(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> SandboxDownloadResponse:
-    """Get a presigned URL to download a sandbox file."""
+    """Return a presigned URL to download the sandbox identified by ``pfn``.
+
+    The function updates the sandbox last-access time in the metadata DB and
+    then requests a presigned URL from the configured S3 client.
+
+    Args:
+        pfn (str): Full PFN (may include SE prefix) identifying the sandbox.
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor used
+            to update access times.
+        settings (SandboxStoreSettings): Settings containing the S3 client,
+            bucket name and URL expiry configuration.
+
+    Returns:
+        SandboxDownloadResponse: Contains a presigned download URL and the
+            expiry time in seconds.
+
+    Raises:
+        Exceptions from the storage client or metadata DB may propagate.
+    """
     short_pfn = pfn.split("|", 1)[-1]
 
     await sandbox_metadata_db.update_sandbox_last_access_time(
@@ -126,7 +173,17 @@ async def get_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
 ) -> dict[str, list[Any]]:
-    """Get input and output sandboxes of given job."""
+    """Retrieve the input and output sandboxes assigned to a job.
+
+    Args:
+        job_id (int): Job identifier to query.
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor used
+            to look up sandbox assignments.
+
+    Returns:
+        dict[str, list[Any]]: Mapping with keys ``SandboxType.Input`` and
+            ``SandboxType.Output`` containing lists of sandbox records.
+    """
     input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType.Input
     )
@@ -141,7 +198,17 @@ async def get_job_sandbox(
     sandbox_metadata_db: SandboxMetadataDB,
     sandbox_type: Literal["input", "output"],
 ) -> list[Any]:
-    """Get input or output sandbox of given job."""
+    """Get either the input or output sandbox assigned to job.
+
+    Args:
+        job_id (int): Job identifier.
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor.
+        sandbox_type (Literal["input", "output"]): Which sandbox type to
+            return.
+
+    Returns:
+        list[Any]: A list of sandbox metadata records assigned to the job.
+    """
     return await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType(sandbox_type.capitalize())
     )
@@ -153,7 +220,23 @@ async def assign_sandbox_to_job(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ):
-    """Map the pfn as output sandbox to job."""
+    """Map the given PFN as an output sandbox for a job.
+
+    The function strips any SE prefix from the provided PFN and records the
+    association in the metadata DB as an output-type sandbox.
+
+    Args:
+        job_id (int): Job identifier to which the sandbox will be assigned.
+        pfn (str): PFN of the sandbox (may include SE prefix).
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor.
+        settings (SandboxStoreSettings): Settings providing the SE name.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions from the metadata DB may propagate.
+    """
     short_pfn = pfn.split("|", 1)[-1]
     await sandbox_metadata_db.assign_sandbox_to_jobs(
         jobs_ids=[job_id],
@@ -167,7 +250,17 @@ async def unassign_jobs_sandboxes(
     jobs_ids: list[int],
     sandbox_metadata_db: SandboxMetadataDB,
 ):
-    """Delete bulk jobs sandbox mapping."""
+    """Unassign sandboxes from multiple jobs in bulk.
+
+    Args:
+        jobs_ids (list[int]): List of job IDs whose sandbox assignments
+            should be removed.
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor used
+            to perform the unassignment.
+
+    Returns:
+        None
+    """
     await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)
 
 
@@ -175,6 +268,12 @@ def pfn_to_key(pfn: str) -> str:
     """Convert a PFN to a key for S3.
 
     This removes the leading "/S3/<bucket_name>" from the PFN.
+
+    Args:
+        pfn (str): The PFN string to convert.
+
+    Returns:
+        str: The S3 object key derived from the PFN.
     """
     return "/".join(pfn.split("/")[3:])
 
@@ -186,7 +285,28 @@ async def insert_sandbox(
     pfn: str,
     size: int,
 ) -> None:
-    """Add a new sandbox in SandboxMetadataDB."""
+    """Insert sandbox metadata into the SandboxMetadataDB.
+
+    The helper ensures the owner exists in the metadata DB, inserts the
+    sandbox record and gracefully handles a concurrent insertion by updating
+    the last-access time when ``SandboxAlreadyInsertedError`` is raised.
+
+    Args:
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor.
+        se_name (str): Storage element (SE) name where the sandbox will live.
+        user (UserInfo): Owner information used to resolve or create the
+            owner record.
+        pfn (str): PFN (without SE prefix) to insert.
+        size (int): Size of the sandbox in bytes.
+
+    Returns:
+        None
+
+    Raises:
+        Exceptions from the metadata DB may propagate, except
+            ``SandboxAlreadyInsertedError`` which is handled by updating the
+            sandbox last access time.
+    """
     # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
     owner_id = await sandbox_metadata_db.get_owner_id(user)
     if owner_id is None:
@@ -202,20 +322,27 @@ async def clean_sandboxes(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> int:
-    """Delete sandboxes that are not assigned to any job.
+    """Delete unassigned sandboxes from storage and metadata DB in batches.
 
-    Each batch:
-    1. Selects rows using cursor-based pagination
-    2. Deletes from S3 (chunks sent concurrently)
-    3. Deletes from DB
+    The cleanup procedure iterates over candidate sandboxes using cursor-
+    based pagination. For each batch the function:
+    1. Selects candidate rows from the metadata DB.
+    2. Attempts to delete the corresponding S3 objects (in parallel).
+    3. Deletes the metadata DB rows for objects successfully removed from
+       S3 (in small chunks and short transactions to avoid locks).
 
     Args:
-        sandbox_metadata_db: Database connection (not in a transaction).
-        settings: Sandbox store settings with S3 client.
+        sandbox_metadata_db (SandboxMetadataDB): Metadata DB accessor.
+        settings (SandboxStoreSettings): Sandbox store settings containing
+            S3 client, batch sizes, concurrency limits and bucket name.
 
     Returns:
-        Total number of sandboxes deleted.
+        int: Total number of sandboxes deleted from the metadata DB.
 
+    Raises:
+        Exceptions from the S3 client or metadata DB may propagate; the
+            function attempts to tolerate partial failures by skipping DB
+            deletions for S3 objects that failed to delete.
     """
     batch_size = settings.clean_batch_size
     total_deleted = 0
