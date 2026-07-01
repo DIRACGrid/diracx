@@ -1,3 +1,10 @@
+"""Job status router endpoints for DIRACX.
+
+This module exposes HTTP endpoints for updating job statuses in DIRACX.
+It delegates the status change business logic to the logic layer and handles
+permission checks, validation, and HTTP error translation.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -77,13 +84,41 @@ async def set_job_statuses(
     check_permissions: CheckWMSPolicyCallable,
     force: bool = False,
 ) -> SetJobStatusReturn:
-    """Set the status of a job or a list of jobs.
+    """Set job status updates for one or more jobs.
 
-    Body parameters:
-    - `Status`: The new status of the job.
-    - `MinorStatus`: The minor status of the job.
-    - `ApplicationStatus`: The application-specific status of the job.
-    - `Source`: The source of the status update (default is "Unknown").
+    Accepts a mapping of job IDs to timestamped status update payloads. Each
+    update is applied via the business logic layer and resulting actions
+    (logging, task queueing, parameter updates) are performed as needed.
+
+    Args:
+        job_update (dict[int, dict[datetime, JobStatusUpdate]]): Mapping from
+            job ID to a mapping of timestamp to status update payload. Each
+            JobStatusUpdate may include the following keys:
+            - ``Status``: The new status of the job.
+            - ``MinorStatus``: A more detailed status description.
+            - ``ApplicationStatus``: Application-specific status information.
+            - ``Source``: The source of the status update (defaults to
+              ``Unknown`` if omitted).
+            See ``EXAMPLE_STATUS_UPDATES`` for request examples.
+        config (Config): Application configuration.
+        job_db (JobDB): Database access object for jobs.
+        job_logging_db (JobLoggingDB): Database access for job logs.
+        task_queue_db (TaskQueueDB): Task queue database used to enqueue
+            follow-up work.
+        job_parameters_db (JobParametersDB): Database for job parameters and
+            attributes.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify the
+            caller may manage the affected jobs.
+        force (bool, optional): When True, force status changes even if they
+            would normally be rejected. Defaults to False.
+
+    Returns:
+        SetJobStatusReturn: Result object summarizing the outcome of the
+            requested status updates.
+
+    Raises:
+        HTTPException: If validation fails or the update cannot be applied
+            (HTTP 400), or if a referenced job cannot be found (HTTP 404).
     """
     await check_permissions(
         action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)
@@ -163,13 +198,29 @@ async def add_heartbeat(
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[JobCommand]:
-    """Register a heartbeat from the job.
+    """Register heartbeat data and return job commands.
 
-    This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-    receive job commands from the WMS. It also results in stalled jobs being
-    restored to the RUNNING status.
+    The JobAgent calls this endpoint to report runtime metrics and retrieve
+    pending commands. The request and response are mappings keyed by job ID.
 
-    The `data` parameter and return value are mappings keyed by job ID.
+    Args:
+        data (dict[int, HeartbeatData]): Mapping from job ID to heartbeat
+            metrics. See ``EXAMPLE_HEARTBEAT`` for example payloads.
+        config (Config): Application configuration.
+        job_db (JobDB): Database access object for jobs.
+        job_logging_db (JobLoggingDB): Database access for job logs.
+        task_queue_db (TaskQueueDB): Task queue database used to enqueue
+            follow-up work.
+        job_parameters_db (JobParametersDB): Database for job parameters.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify the
+            caller has pilot/manage privileges for the supplied job IDs.
+
+    Returns:
+        list[JobCommand]: A list of commands the agent should execute for the
+            supplied jobs.
+
+    Raises:
+        HTTPException: If permission checks fail.
     """
     await check_permissions(action=ActionType.PILOT, job_db=job_db, job_ids=list(data))
 
@@ -208,12 +259,28 @@ async def reschedule_jobs(
     check_permissions: CheckWMSPolicyCallable,
     reset_jobs: Annotated[bool, Query()] = False,
 ) -> dict[str, Any]:
-    """Reschedule a list of killed or failed jobs.
+    """Reschedule killed or failed jobs.
 
-    Body parameters:
-    - `job_ids`: List of job IDs to reschedule.
-    - `reset_jobs`: If True, reset the count of reschedules for the jobs.
+    Args:
+        job_ids (list[int]): List of job identifiers to reschedule. Examples
+            are provided via ``EXAMPLE_RESCHEDULE`` in the module.
+        config (Config): Application configuration.
+        job_db (JobDB): Database access object for jobs.
+        job_logging_db (JobLoggingDB): Database access for job logs.
+        task_queue_db (TaskQueueDB): Task queue database used to enqueue
+            rescheduled jobs.
+        job_parameters_db (JobParametersDB): Database for job parameters.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify the
+            caller may manage the specified jobs.
+        reset_jobs (bool, optional): If True, reset the reschedule counters
+            for the jobs. Defaults to False.
 
+    Returns:
+        dict[str, Any]: Result of the reschedule operation, including a
+            ``success`` list of rescheduled job IDs when successful.
+
+    Raises:
+        HTTPException: If the reschedule operation fails (HTTP 400).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
 
@@ -265,9 +332,26 @@ async def patch_metadata(
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+    """Patch job metadata attributes for multiple jobs.
 
-    The argument  are all the attributes/parameters of a job (except the ID).
+    The request body is a mapping from job ID to a dictionary of metadata
+    attributes to update (e.g. ``UserPriority``, ``HeartBeatTime``,
+    ``JobType``). See ``EXAMPLE_METADATA`` for example payloads.
+
+    Args:
+        updates (dict[int, JobMetaData]): Mapping from job ID to metadata
+            updates to apply.
+        job_db (JobDB): Database access object for jobs.
+        job_parameters_db (JobParametersDB): Database for job parameters.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify the
+            caller may manage the specified jobs.
+
+    Returns:
+        None
+
+    Raises:
+        HTTPException: If validation fails or updates cannot be applied
+            (HTTP 400).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
     try:

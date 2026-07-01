@@ -1,3 +1,10 @@
+"""Job submission router endpoints for DIRACX.
+
+This module exposes HTTP endpoints for submitting JDL-defined jobs to the
+DIRACX workload management system. It includes payload models and OpenAPI
+examples for job submission requests.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -19,6 +26,12 @@ router = DiracxRouter()
 
 
 class JobID(BaseModel):
+    """Model representing a single job identifier payload.
+
+    Attributes:
+        job_id (int): The numeric identifier of a job.
+    """
+
     job_id: int
 
 
@@ -60,7 +73,30 @@ async def submit_jdl_jobs(
     check_permissions: CheckWMSPolicyCallable,
     config: Config,
 ) -> list[InsertedJob]:
-    """Submit a list of jobs in JDL format."""
+    """Submit one or more jobs described in JDL format.
+
+    The endpoint accepts a list of JDL job description strings and submits
+    them to the WMS via the business logic layer. OpenAPI examples are
+    available in the module-level ``EXAMPLE_JDLS`` constant.
+
+    Args:
+        job_definitions (list[str]): List of job descriptions in JDL format.
+            See ``EXAMPLE_JDLS`` for example payloads.
+        job_db (JobDB): Database access object for jobs.
+        job_logging_db (JobLoggingDB): Database access object for job logs.
+        user_info (AuthorizedUserInfo): Authenticated user information.
+        check_permissions (CheckWMSPolicyCallable): Callable to verify the
+            caller may create jobs.
+        config (Config): Application configuration.
+
+    Returns:
+        list[InsertedJob]: List of inserted job records containing assigned
+            identifiers and other insertion metadata.
+
+    Raises:
+        HTTPException: If validation fails or the business logic raises an
+            error while submitting the jobs (returns HTTP 400 with details).
+    """
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
 
     try:

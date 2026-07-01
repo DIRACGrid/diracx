@@ -1,3 +1,10 @@
+"""Job and sandbox access policy definitions for DIRACX routers.
+
+This module defines router-level access control policies for job management
+and sandbox operations. It includes action enums, WMS policy rules, and
+sandbox-specific PFN/ownership validation logic.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
