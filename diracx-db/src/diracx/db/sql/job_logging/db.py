@@ -13,7 +13,10 @@ from .schema import JobLoggingDBBase, LoggingInfo
 
 
 class JobLoggingDB(BaseSQLDB):
-    """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps."""
+    """Frontend for the JobLoggingDB.
+
+    Provides the ability to store changes with timestamps.
+    """
 
     metadata = JobLoggingDBBase.metadata
 
@@ -21,7 +24,11 @@ class JobLoggingDB(BaseSQLDB):
         self,
         records: list[JobLoggingRecord],
     ):
-        """Bulk insert entries to the JobLoggingDB table."""
+        """Bulk insert entries to the JobLoggingDB table.
+
+        Args:
+            records (list[JobLoggingRecord]): Records to insert.
+        """
         # First, fetch the maximum SeqNums for the given job_ids
         seqnum_stmt = (
             select(
@@ -64,6 +71,13 @@ class JobLoggingDB(BaseSQLDB):
         """Return a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple.
 
         For each record found for job specified by its jobID in historical order.
+
+        Args:
+            job_ids (list[int]): Job IDs to query.
+
+        Returns:
+            dict[int, JobStatusReturn]: Mapping from job id to list of
+                :class:`JobStatusReturn` entries in historical order.
         """
         # We could potentially use a group_by here, but we need to post-process the
         # results later.
@@ -134,7 +148,11 @@ class JobLoggingDB(BaseSQLDB):
         return res
 
     async def delete_records(self, job_ids: list[int]):
-        """Delete logging records for given jobs."""
+        """Delete logging records for given jobs.
+
+        Args:
+            job_ids (list[int]): Job IDs whose logging records will be deleted.
+        """
         stmt = delete(LoggingInfo).where(LoggingInfo.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
@@ -143,7 +161,14 @@ class JobLoggingDB(BaseSQLDB):
     ) -> dict[int, dict[str, datetime]]:
         """Get TimeStamps for job MajorState transitions for multiple jobs at once.
 
-        return a {JobID: {State:timestamp}} dictionary.
+        Return a mapping of ``{JobID: {State: timestamp}}``.
+
+        Args:
+            job_ids (Iterable[int]): Job IDs to query.
+
+        Returns:
+            dict[int, dict[str, datetime]]: Mapping of JobID to a dict mapping
+                state names to their corresponding timestamps.
         """
         result: defaultdict[int, dict[str, datetime]] = defaultdict(dict)
         stmt = select(
