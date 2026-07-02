@@ -41,25 +41,15 @@ async def mint_token(
     access_payload: AccessTokenPayload,
     refresh_payload: RefreshTokenPayload | None,
     existing_refresh_token: str | None,
-    all_access_policies: dict[str, BaseAccessPolicy],
     settings: AuthSettings,
 ) -> TokenResponse:
-    """Enrich the token with policy specific content and mint it."""
+    """Mint the token."""
     if not refresh_payload and not existing_refresh_token:
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Refresh token is not set and no refresh token was provided",
         )
 
-    # Enrich the token with policy specific content
-    dirac_access_policies = {}
-    for policy_name, policy in all_access_policies.items():
-        access_extra = policy.enrich_tokens(access_payload)
-        if access_extra:
-            dirac_access_policies[policy_name] = access_extra
-
-    # Create the access token
-    access_payload.dirac_policies = dirac_access_policies
     access_token = create_token(access_payload, settings)
 
     # Create the refresh token
@@ -126,6 +116,7 @@ async def get_oidc_token(
             config,
             settings,
             available_properties,
+            all_access_policies,
             device_code=device_code,
             code=code,
             redirect_uri=redirect_uri,
@@ -156,9 +147,7 @@ async def get_oidc_token(
             status_code=HTTPStatus.FORBIDDEN,
             detail=str(e),
         ) from e
-    return await mint_token(
-        access_payload, refresh_payload, refresh_token, all_access_policies, settings
-    )
+    return await mint_token(access_payload, refresh_payload, refresh_token, settings)
 
 
 BASE_64_URL_SAFE_PATTERN = (
@@ -203,6 +192,7 @@ async def perform_legacy_exchange(
             available_properties=available_properties,
             settings=settings,
             config=config,
+            all_access_policies=all_access_policies,
             expires_minutes=expires_minutes,
         )
     except ValueError as e:
@@ -221,6 +211,4 @@ async def perform_legacy_exchange(
             status_code=HTTPStatus.FORBIDDEN,
             detail=str(e),
         ) from e
-    return await mint_token(
-        access_payload, refresh_payload, None, all_access_policies, settings
-    )
+    return await mint_token(access_payload, refresh_payload, None, settings)
