@@ -78,12 +78,14 @@ async def test_valid(test_client, legacy_credentials, expires_seconds):
     )
     assert r.status_code == 200
     user_info = r.json()
+
     assert user_info["sub"] == "lhcb:b824d4dc-1f9d-4ee8-8df5-c0ae55d46041"
     assert user_info["vo"] == "lhcb"
     assert user_info["dirac_group"] == "lhcb_user"
     assert sorted(user_info["properties"]) == sorted(
         ["PrivateLimitedDelegation", "NormalUser"]
     )
+    assert user_info["policies"]
 
 
 async def test_refresh_token(test_client, legacy_credentials):

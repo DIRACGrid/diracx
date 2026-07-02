@@ -1490,3 +1490,54 @@ async def test_do_device_flow_iam_server_error(test_client, monkeypatch):
     r = test_client.get("/api/auth/device", params={"user_code": user_code})
     assert r.status_code == 502
     assert r.json()["detail"] == "IAM error"
+
+
+async def test_access_token_contains_policies(test_client, auth_httpx_mock: HTTPXMock):
+    """Test that dirac_policies exists in the access token after login."""
+    # Get access token
+    access_token = _get_tokens(test_client)["access_token"]
+
+    # Get user infos
+    r = test_client.get(
+        "/api/auth/userinfo", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    assert r.status_code == 200
+    assert r.json()["policies"]
+
+
+async def test_access_token_contains_policies_after_refresh(
+    test_client, auth_httpx_mock: HTTPXMock
+):
+    """Test that dirac_policies are persisted in the access token after refreshing the token."""
+    # Get tokens
+    tokens = _get_tokens(test_client)
+    initial_access_token = tokens["access_token"]
+    initial_refresh_token = tokens["refresh_token"]
+
+    # Retrieve policies
+    r = test_client.get(
+        "/api/auth/userinfo",
+        headers={"Authorization": f"Bearer {initial_access_token}"},
+    )
+    assert r.status_code == 200
+    initial_policies = r.json()["policies"]
+    assert initial_policies
+
+    # Refresh the token
+    r = test_client.post(
+        "/api/auth/token",
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": initial_refresh_token,
+            "client_id": DIRAC_CLIENT_ID,
+        },
+    )
+    assert r.status_code == 200
+    new_access_token = r.json()["access_token"]
+
+    # Check if policies are the same
+    r = test_client.get(
+        "/api/auth/userinfo", headers={"Authorization": f"Bearer {new_access_token}"}
+    )
+    assert r.status_code == 200
+    assert r.json()["policies"] == initial_policies
