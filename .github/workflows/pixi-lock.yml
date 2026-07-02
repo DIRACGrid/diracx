@@ -1,0 +1,93 @@
+name: Pixi Lock
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Pixi Lock
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+          # Fetch the base branch as well as the PR merge commit so the job can
+          # compare exactly which files changed in the PR.
+          fetch-depth: 0
+
+      - name: Compare file changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_ACTOR: ${{ github.actor }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only --diff-filter=ACMRT "origin/${BASE_REF}...HEAD")"
+
+          pixi_lock_changed=false
+          dependency_source_changed=false
+
+          while IFS= read -r file; do
+            case "$file" in
+              pixi.lock)
+                pixi_lock_changed=true
+                ;;
+              pixi.toml|*/pixi.toml|pyproject.toml|*/pyproject.toml)
+                dependency_source_changed=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$pixi_lock_changed" != "true" ]]; then
+            exit 0
+          fi
+
+          if [[ "$dependency_source_changed" == "true" ]]; then
+            exit 0
+          fi
+
+          renovate_lock_maintenance=false
+          if [[ "$PR_ACTOR" == "renovate[bot]" ]]; then
+            renovate_lock_maintenance=true
+          elif [[ "$HEAD_REF" == renovate/* ]]; then
+            renovate_lock_maintenance=true
+          elif [[ "$PR_TITLE" == "chore(deps): lock file maintenance" ]]; then
+            renovate_lock_maintenance=true
+          fi
+
+          if [[ "$renovate_lock_maintenance" == "true" ]]; then
+            exit 0
+          fi
+
+          if [[ "$PR_LABELS" == *'"deps: intentional-lock-change"'* ]]; then
+            exit 0
+          fi
+
+          cat <<'EOF' >&2
+          pixi.lock changed without a dependency source change.
+
+          This is usually caused by regenerating the lock file with a pixi
+          version that does not match the repository requirement in pixi.toml,
+          which can create lockfile format churn.
+
+          To fix this PR, either:
+          - regenerate pixi.lock with a pixi version satisfying requires-pixi in pixi.toml, and commit any matching dependency source change; or
+          - if this is a deliberate manual lock-only update, ask a maintainer to add the deps: intentional-lock-change label.
+
+          Renovate lockFileMaintenance PRs are exempt automatically.
+          EOF
+
+          exit 1
