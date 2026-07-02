@@ -338,7 +338,6 @@ async def exchange_token(
             # legacy_exchange is used to indicate that the original refresh token
             # was obtained from the legacy_exchange endpoint
             legacy_exchange=legacy_exchange,
-            dirac_policies={},
         )
 
     # Generate access token payload

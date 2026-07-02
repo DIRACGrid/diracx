@@ -82,7 +82,7 @@ class AccessTokenPayload(TokenPayload):
 class RefreshTokenPayload(TokenPayload):
     legacy_exchange: bool
     # TODO: this should be removed later (https://github.com/DIRACGrid/diracx/issues/524#issuecomment-4395561176)
-    dirac_policies: dict | None
+    dirac_policies: dict | None = None
 
 
 class SupportInfo(TypedDict):
