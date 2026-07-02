@@ -59,7 +59,6 @@ class OpenIDConfiguration(TypedDict):
 class TokenPayload(BaseModel):
     jti: str
     exp: UTCDatetime
-    dirac_policies: dict
 
 
 class TokenResponse(BaseModel):
@@ -77,10 +76,13 @@ class AccessTokenPayload(TokenPayload):
     dirac_properties: list[str]
     preferred_username: str
     dirac_group: str
+    dirac_policies: dict
 
 
 class RefreshTokenPayload(TokenPayload):
     legacy_exchange: bool
+    # TODO: this should be removed later (https://github.com/DIRACGrid/diracx/issues/524#issuecomment-4395561176)
+    dirac_policies: dict | None
 
 
 class SupportInfo(TypedDict):
