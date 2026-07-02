@@ -55,6 +55,7 @@ async def get_oidc_token(
     legacy_exchange = False
     include_refresh_token = True
     refresh_token_expire_minutes = None
+    policies = None
 
     if grant_type == GrantType.device_code:
         assert device_code is not None
@@ -77,6 +78,7 @@ async def get_oidc_token(
             legacy_exchange,
             refresh_token_expire_minutes,
             include_refresh_token,
+            policies,
         ) = await get_oidc_token_info_from_refresh_flow(
             refresh_token, auth_db, settings
         )
@@ -94,6 +96,7 @@ async def get_oidc_token(
         legacy_exchange=legacy_exchange,
         refresh_token_expire_minutes=refresh_token_expire_minutes,
         include_refresh_token=include_refresh_token,
+        policies=policies,
     )
 
 
@@ -163,7 +166,7 @@ async def get_oidc_token_info_from_authorization_flow(
 
 async def get_oidc_token_info_from_refresh_flow(
     refresh_token: str, auth_db: AuthDB, settings: AuthSettings
-) -> tuple[dict, str, bool, float, bool]:
+) -> tuple[dict, str, bool, float, bool, dict]:
     """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
     # Decode the refresh token to get the JWT ID
     jti, exp, legacy_exchange = await verify_dirac_refresh_token(
@@ -216,12 +219,14 @@ async def get_oidc_token_info_from_refresh_flow(
         "sub": sub.split(":", 1)[1],
     }
     scope = refresh_token_attributes["Scope"]
+    policies = refresh_token_attributes["Policies"]
     return (
         oidc_token_info,
         scope,
         legacy_exchange,
         remaining_minutes,
         include_refresh_token,
+        policies,
     )
 
 
@@ -267,6 +272,7 @@ async def perform_legacy_exchange(
         available_properties,
         refresh_token_expire_minutes=expires_minutes,
         legacy_exchange=True,
+        policies=None,
     )
 
 
@@ -281,6 +287,7 @@ async def exchange_token(
     refresh_token_expire_minutes: float | None = None,
     legacy_exchange: bool = False,
     include_refresh_token: bool = True,
+    policies: dict[str, Any] | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
     """Exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
@@ -324,7 +331,7 @@ async def exchange_token(
             auth_db=auth_db,
             subject=sub,
             scope=scope,
-            policies={},  # TODO
+            policies=policies or {},
         )
 
         # Generate refresh token payload
@@ -357,7 +364,7 @@ async def exchange_token(
         preferred_username=preferred_username,
         dirac_group=dirac_group,
         exp=access_exp,
-        dirac_policies={},
+        dirac_policies=policies or {},
     )
 
     return access_payload, refresh_payload
