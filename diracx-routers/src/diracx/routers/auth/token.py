@@ -56,9 +56,7 @@ async def mint_token(
     dirac_access_policies = {}
     dirac_refresh_policies = {}
     for policy_name, policy in all_access_policies.items():
-        access_extra, refresh_extra = policy.enrich_tokens(
-            access_payload, refresh_payload
-        )
+        access_extra, refresh_extra = policy.enrich_tokens(access_payload)
         if access_extra:
             dirac_access_policies[policy_name] = access_extra
         if refresh_extra:
