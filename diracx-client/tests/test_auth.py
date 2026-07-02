@@ -17,7 +17,6 @@ REFRESH_CONTENT = {
     "jti": "f0706e0a-af1e-4538-9f1f-7b9620783cba",
     "exp": int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp()),
     "legacy_exchange": False,
-    "dirac_policies": {},
 }
 
 TOKEN_RESPONSE_DICT = {
