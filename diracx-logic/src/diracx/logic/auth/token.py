@@ -329,31 +329,6 @@ async def exchange_token(
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
 
-    refresh_payload: RefreshTokenPayload | None = None
-    if include_refresh_token:
-        # Insert the refresh token with user details into the RefreshTokens table
-        # User details are needed to regenerate access tokens later
-        refresh_jti = await insert_refresh_token(
-            auth_db=auth_db,
-            subject=sub,
-            scope=scope,
-            policies=policies or {},
-        )
-
-        # Generate refresh token payload
-        if refresh_token_expire_minutes is None:
-            refresh_token_expire_minutes = settings.refresh_token_expire_minutes
-        refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
-            minutes=refresh_token_expire_minutes
-        )
-        refresh_payload = RefreshTokenPayload(
-            jti=str(refresh_jti),
-            exp=refresh_exp,
-            # legacy_exchange is used to indicate that the original refresh token
-            # was obtained from the legacy_exchange endpoint
-            legacy_exchange=legacy_exchange,
-        )
-
     # Generate access token payload
     # For now, the access token is only used to access DIRAC services,
     # therefore, the audience is not set and checked
@@ -380,6 +355,31 @@ async def exchange_token(
         for policy_name, policy in all_access_policies.items():
             if access_extra := policy.enrich_tokens(access_payload):
                 access_payload.dirac_policies[policy_name] = access_extra
+
+    refresh_payload: RefreshTokenPayload | None = None
+    if include_refresh_token:
+        # Insert the refresh token with user details into the RefreshTokens table
+        # User details are needed to regenerate access tokens later
+        refresh_jti = await insert_refresh_token(
+            auth_db=auth_db,
+            subject=sub,
+            scope=scope,
+            policies=access_payload.dirac_policies,
+        )
+
+        # Generate refresh token payload
+        if refresh_token_expire_minutes is None:
+            refresh_token_expire_minutes = settings.refresh_token_expire_minutes
+        refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
+            minutes=refresh_token_expire_minutes
+        )
+        refresh_payload = RefreshTokenPayload(
+            jti=str(refresh_jti),
+            exp=refresh_exp,
+            # legacy_exchange is used to indicate that the original refresh token
+            # was obtained from the legacy_exchange endpoint
+            legacy_exchange=legacy_exchange,
+        )
 
     return access_payload, refresh_payload
 
