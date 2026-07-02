@@ -30,7 +30,6 @@ from diracx.db.sql import AuthDB
 from diracx.db.sql.auth.schema import FlowStatus, RefreshTokenStatus
 from diracx.db.sql.utils import uuid7_to_datetime
 from diracx.db.sql.utils.functions import substract_date
-from diracx.routers.access_policies import BaseAccessPolicy
 
 from .utils import (
     get_allowed_user_properties,
@@ -46,7 +45,7 @@ async def get_oidc_token(
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
-    all_access_policies: dict[str, BaseAccessPolicy],
+    all_access_policies: dict[str, Any],
     device_code: str | None = None,
     code: str | None = None,
     redirect_uri: str | None = None,
@@ -248,7 +247,7 @@ async def perform_legacy_exchange(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
     config: Config,
-    all_access_policies: dict[str, BaseAccessPolicy],
+    all_access_policies: dict[str, Any],
     expires_minutes: float | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
     """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange."""
@@ -288,7 +287,7 @@ async def exchange_token(
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
-    all_access_policies: dict[str, BaseAccessPolicy],
+    all_access_policies: dict[str, Any],
     *,
     refresh_token_expire_minutes: float | None = None,
     legacy_exchange: bool = False,
