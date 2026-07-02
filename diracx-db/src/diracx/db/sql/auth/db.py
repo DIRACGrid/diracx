@@ -5,6 +5,7 @@ import re
 import secrets
 from datetime import UTC, datetime
 from itertools import pairwise
+from typing import Any
 
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MONTHLY, rrule
@@ -324,10 +325,7 @@ class AuthDB(BaseSQLDB):
         )
 
     async def insert_refresh_token(
-        self,
-        jti: UUID,
-        subject: str,
-        scope: str,
+        self, jti: UUID, subject: str, scope: str, policies: dict[str, Any]
     ) -> None:
         """Insert a refresh token in the DB.
 
@@ -335,9 +333,7 @@ class AuthDB(BaseSQLDB):
         """
         # Insert values into the DB
         stmt = insert(RefreshTokens).values(
-            jti=str(jti),
-            sub=subject,
-            scope=scope,
+            jti=str(jti), sub=subject, scope=scope, policies=policies
         )
         await self.conn.execute(stmt)
 

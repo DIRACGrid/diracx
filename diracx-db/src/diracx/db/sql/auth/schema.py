@@ -119,5 +119,8 @@ class RefreshTokens(Base):
 
     # User attributes bound to the refresh token
     sub: Mapped[str] = mapped_column("Sub", String(256), index=True)
+    policies: Mapped[dict[str, Any] | None] = mapped_column(
+        "Policies", nullable=True, default=None
+    )
 
     __table_args__ = (Index("index_status_sub", status, sub),)

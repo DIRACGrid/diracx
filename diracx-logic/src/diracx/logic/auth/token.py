@@ -6,7 +6,7 @@ import base64
 import hashlib
 import re
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import Any, cast
 
 from joserfc import jwt
 from joserfc.jwt import Claims
@@ -324,6 +324,7 @@ async def exchange_token(
             auth_db=auth_db,
             subject=sub,
             scope=scope,
+            policies={},  # TODO
         )
 
         # Generate refresh token payload
@@ -390,9 +391,7 @@ def _sign_token_payload(claims: dict, settings: AuthSettings) -> str:
 
 
 async def insert_refresh_token(
-    auth_db: AuthDB,
-    subject: str,
-    scope: str,
+    auth_db: AuthDB, subject: str, scope: str, policies: dict[str, Any]
 ) -> UUID:
     """Insert a refresh token into the database and return the JWT ID."""
     # Generate a JWT ID
@@ -400,9 +399,7 @@ async def insert_refresh_token(
 
     # Insert the refresh token into the DB
     await auth_db.insert_refresh_token(
-        jti=jti,
-        subject=subject,
-        scope=scope,
+        jti=jti, subject=subject, scope=scope, policies=policies
     )
     return jti
 
