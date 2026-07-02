@@ -6,7 +6,7 @@ import base64
 import hashlib
 import re
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import Any, cast
 
 from joserfc import jwt
 from joserfc.jwt import Claims
@@ -45,6 +45,7 @@ async def get_oidc_token(
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
+    all_access_policies: dict[str, Any],
     device_code: str | None = None,
     code: str | None = None,
     redirect_uri: str | None = None,
@@ -55,6 +56,7 @@ async def get_oidc_token(
     legacy_exchange = False
     include_refresh_token = True
     refresh_token_expire_minutes = None
+    policies = None
 
     if grant_type == GrantType.device_code:
         assert device_code is not None
@@ -77,6 +79,7 @@ async def get_oidc_token(
             legacy_exchange,
             refresh_token_expire_minutes,
             include_refresh_token,
+            policies,
         ) = await get_oidc_token_info_from_refresh_flow(
             refresh_token, auth_db, settings
         )
@@ -91,9 +94,11 @@ async def get_oidc_token(
         config,
         settings,
         available_properties,
+        all_access_policies,
         legacy_exchange=legacy_exchange,
         refresh_token_expire_minutes=refresh_token_expire_minutes,
         include_refresh_token=include_refresh_token,
+        policies=policies,
     )
 
 
@@ -163,7 +168,7 @@ async def get_oidc_token_info_from_authorization_flow(
 
 async def get_oidc_token_info_from_refresh_flow(
     refresh_token: str, auth_db: AuthDB, settings: AuthSettings
-) -> tuple[dict, str, bool, float, bool]:
+) -> tuple[dict, str, bool, float, bool, dict]:
     """Get OIDC token information from the refresh token DB and check few parameters before returning it."""
     # Decode the refresh token to get the JWT ID
     jti, exp, legacy_exchange = await verify_dirac_refresh_token(
@@ -216,12 +221,14 @@ async def get_oidc_token_info_from_refresh_flow(
         "sub": sub.split(":", 1)[1],
     }
     scope = refresh_token_attributes["Scope"]
+    policies = refresh_token_attributes["Policies"]
     return (
         oidc_token_info,
         scope,
         legacy_exchange,
         remaining_minutes,
         include_refresh_token,
+        policies,
     )
 
 
@@ -240,6 +247,7 @@ async def perform_legacy_exchange(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
     config: Config,
+    all_access_policies: dict[str, Any],
     expires_minutes: float | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
     """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange."""
@@ -265,8 +273,10 @@ async def perform_legacy_exchange(
         config,
         settings,
         available_properties,
+        all_access_policies,
         refresh_token_expire_minutes=expires_minutes,
         legacy_exchange=True,
+        policies=None,
     )
 
 
@@ -277,10 +287,12 @@ async def exchange_token(
     config: Config,
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
+    all_access_policies: dict[str, Any],
     *,
     refresh_token_expire_minutes: float | None = None,
     legacy_exchange: bool = False,
     include_refresh_token: bool = True,
+    policies: dict[str, Any] | None = None,
 ) -> tuple[AccessTokenPayload, RefreshTokenPayload | None]:
     """Exchange the OIDC token for a DIRAC generated access token."""
     # Extract dirac attributes from the OIDC scope
@@ -316,31 +328,6 @@ async def exchange_token(
     # Merge the VO with the subject to get a unique DIRAC sub
     sub = f"{vo}:{sub}"
 
-    refresh_payload: RefreshTokenPayload | None = None
-    if include_refresh_token:
-        # Insert the refresh token with user details into the RefreshTokens table
-        # User details are needed to regenerate access tokens later
-        refresh_jti = await insert_refresh_token(
-            auth_db=auth_db,
-            subject=sub,
-            scope=scope,
-        )
-
-        # Generate refresh token payload
-        if refresh_token_expire_minutes is None:
-            refresh_token_expire_minutes = settings.refresh_token_expire_minutes
-        refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
-            minutes=refresh_token_expire_minutes
-        )
-        refresh_payload = RefreshTokenPayload(
-            jti=str(refresh_jti),
-            exp=refresh_exp,
-            # legacy_exchange is used to indicate that the original refresh token
-            # was obtained from the legacy_exchange endpoint
-            legacy_exchange=legacy_exchange,
-            dirac_policies={},
-        )
-
     # Generate access token payload
     # For now, the access token is only used to access DIRAC services,
     # therefore, the audience is not set and checked
@@ -359,6 +346,39 @@ async def exchange_token(
         exp=access_exp,
         dirac_policies={},
     )
+
+    # Enrich the token with policy specific content
+    if policies is not None:
+        access_payload.dirac_policies = policies
+    else:
+        for policy_name, policy in all_access_policies.items():
+            if access_extra := policy.enrich_tokens(access_payload):
+                access_payload.dirac_policies[policy_name] = access_extra
+
+    refresh_payload: RefreshTokenPayload | None = None
+    if include_refresh_token:
+        # Insert the refresh token with user details into the RefreshTokens table
+        # User details are needed to regenerate access tokens later
+        refresh_jti = await insert_refresh_token(
+            auth_db=auth_db,
+            subject=sub,
+            scope=scope,
+            policies=access_payload.dirac_policies,
+        )
+
+        # Generate refresh token payload
+        if refresh_token_expire_minutes is None:
+            refresh_token_expire_minutes = settings.refresh_token_expire_minutes
+        refresh_exp = uuid7_to_datetime(refresh_jti) + timedelta(
+            minutes=refresh_token_expire_minutes
+        )
+        refresh_payload = RefreshTokenPayload(
+            jti=str(refresh_jti),
+            exp=refresh_exp,
+            # legacy_exchange is used to indicate that the original refresh token
+            # was obtained from the legacy_exchange endpoint
+            legacy_exchange=legacy_exchange,
+        )
 
     return access_payload, refresh_payload
 
@@ -391,9 +411,7 @@ def _sign_token_payload(claims: dict, settings: AuthSettings) -> str:
 
 
 async def insert_refresh_token(
-    auth_db: AuthDB,
-    subject: str,
-    scope: str,
+    auth_db: AuthDB, subject: str, scope: str, policies: dict[str, Any]
 ) -> UUID:
     """Insert a refresh token into the database and return the JWT ID."""
     # Generate a JWT ID
@@ -401,9 +419,7 @@ async def insert_refresh_token(
 
     # Insert the refresh token into the DB
     await auth_db.insert_refresh_token(
-        jti=jti,
-        subject=subject,
-        scope=scope,
+        jti=jti, subject=subject, scope=scope, policies=policies
     )
     return jti
 

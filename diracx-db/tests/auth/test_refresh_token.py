@@ -25,6 +25,7 @@ async def test_insert(auth_db: AuthDB):
             jti1,
             "subject",
             "vo:lhcb property:NormalUser",
+            {"PolicySpecific": "OpenAccessForTest"},
         )
 
     # Insert a second refresh token
@@ -34,6 +35,7 @@ async def test_insert(auth_db: AuthDB):
             jti2,
             "subject",
             "vo:lhcb property:NormalUser",
+            {"PolicySpecific": "OpenAccessForTest"},
         )
 
     # Make sure they don't have the same JWT ID
@@ -46,6 +48,7 @@ async def test_get(auth_db: AuthDB):
     refresh_token_details = {
         "sub": "12345",
         "scope": "vo:lhcb property:NormalUser",
+        "policies": {"PolicySpecific": "OpenAccessForTest"},
     }
 
     # Insert refresh token details
@@ -55,6 +58,7 @@ async def test_get(auth_db: AuthDB):
             jti,
             refresh_token_details["sub"],
             refresh_token_details["scope"],
+            refresh_token_details["policies"],
         )
 
     # Enrich the dict with the generated refresh token attributes
@@ -63,6 +67,7 @@ async def test_get(auth_db: AuthDB):
         "Scope": refresh_token_details["scope"],
         "JTI": jti,
         "Status": RefreshTokenStatus.CREATED,
+        "Policies": refresh_token_details["policies"],
     }
 
     # Get refresh token details
@@ -90,9 +95,7 @@ async def test_get_user_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid7(),
-                sub,
-                "scope",
+                uuid7(), sub, "scope", {"PolicySpecific": "OpenAccessForTest"}
             )
 
     # Get the refresh tokens of each user
@@ -117,9 +120,7 @@ async def test_revoke(auth_db: AuthDB):
     async with auth_db as auth_db:
         jti = uuid7()
         await auth_db.insert_refresh_token(
-            jti,
-            "subject",
-            "scope",
+            jti, "subject", "scope", {"PolicySpecific": "OpenAccessForTest"}
         )
 
     # Revoke the token
@@ -146,9 +147,7 @@ async def test_revoke_user_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid7(),
-                sub,
-                "scope",
+                uuid7(), sub, "scope", {"PolicySpecific": "OpenAccessForTest"}
             )
 
     # Revoke the tokens of sub1
@@ -191,9 +190,7 @@ async def test_revoke_and_get_user_refresh_tokens(auth_db: AuthDB):
         for _ in range(nb_tokens):
             jti = uuid7()
             await auth_db.insert_refresh_token(
-                jti,
-                sub,
-                "scope",
+                jti, sub, "scope", {"PolicySpecific": "OpenAccessForTest"}
             )
             jtis.append(jti)
 
@@ -239,9 +236,7 @@ async def test_get_refresh_tokens(auth_db: AuthDB):
     async with auth_db as auth_db:
         for sub in subjects:
             await auth_db.insert_refresh_token(
-                uuid7(),
-                sub,
-                "scope",
+                uuid7(), sub, "scope", {"PolicySpecific": "OpenAccessForTest"}
             )
 
     # Get all refresh tokens (Admin)
