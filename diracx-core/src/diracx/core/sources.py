@@ -42,7 +42,8 @@ class Snapshot(Generic[T]):
 class CacheableSource(Generic[T], metaclass=ABCMeta):
     """Abstract base class for sources that can be cached.
 
-    Handles the caching of the latest revision and its content using a two-level cache.
+    This class handles caching of the latest revision and its content using a
+    two-level cache.
     """
 
     def __init__(self):
@@ -64,26 +65,34 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
-        """Abstract method.
+        """Return the latest revision and its modification time.
 
-        Must return:
-        * a unique hash as a string, representing the last version
-        * a datetime object corresponding to when the version dates.
+        Returns:
+            tuple[str, datetime]: A unique hash for the latest version and the
+                datetime when the version was modified.
         """
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> T:
-        """Abstract method.
+        """Return the source object for a specific revision.
 
-        Return the Source object that corresponds to the specific hash
-        The `modified` parameter is just added as a attribute to the source.
+        Args:
+            hexsha (str): Unique hash identifying the source revision.
+            modified (datetime): Modification time to attach to the source.
+
+        Returns:
+            T: The source object corresponding to the given revision.
         """
 
     def read(self) -> T:
         """Load the source from the backend with appropriate caching.
 
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
+        Returns:
+            T: The cached source object.
+
+        Raises:
+            diracx.core.exceptions.NotReadyError: If the source is still being loaded.
+            git.exc.BadName: If the version does not exist.
         """
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=True
@@ -93,8 +102,12 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
     async def read_non_blocking(self) -> T:
         """Load the source from the backend with appropriate caching.
 
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
+        Returns:
+            T: The cached source object.
+
+        Raises:
+            diracx.core.exceptions.NotReadyError: If the source is still being loaded.
+            git.exc.BadName: If the version does not exist.
         """
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=False
@@ -102,10 +115,13 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
         return self._content_cache[hexsha]
 
     def _read_work(self) -> str:
-        """Work function for the thread pool of `self._revision_cache`.
+        """Populate the caches for the latest revision.
 
         This function ensures that the latest revision is loaded into the
         content cache before it is admitted into the revision cache.
+
+        Returns:
+            str: The current revision hash.
         """
         hexsha, modified = self.latest_revision()
         if hexsha not in self._content_cache:
@@ -113,7 +129,7 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
         return hexsha
 
     def clear_caches(self):
-        """Clear the caches."""
+        """Clear the revision and content caches."""
         self._revision_cache.clear()
         self._content_cache.clear()
 
