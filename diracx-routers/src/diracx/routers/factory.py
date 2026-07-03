@@ -6,7 +6,6 @@ __all__ = ["DIRACX_MIN_CLIENT_VERSION", "create_app", "create_app_inner"]
 
 import inspect
 import logging
-import os
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from http import HTTPStatus
@@ -14,7 +13,6 @@ from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from logging import Formatter, StreamHandler
 from typing import Any, TypeVar, cast
 
-import dotenv
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.dependencies.models import Dependant
@@ -24,16 +22,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.routing import APIRoute
 from packaging.version import InvalidVersion, parse
-from pydantic import TypeAdapter
 from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
 from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.settings import ServiceSettingsBase
+from diracx.core.settings import FactorySettings, ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
-from diracx.core.utils import dotenv_files_from_environment
 from diracx.db.exceptions import DBUnavailableError
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
@@ -144,7 +140,6 @@ def create_app_inner(
     # Please see ServiceSettingsBase for more details
 
     available_settings_classes: set[type[ServiceSettingsBase]] = set()
-
     for service_settings in all_service_settings:
         cls = type(service_settings)
         assert cls not in available_settings_classes
@@ -388,17 +383,12 @@ def create_app() -> DiracFastAPI:
     We attempt to load each setting classes to make sure that the
     settings are correctly defined.
     """
-    for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
-        logger.debug("Loading dotenv file: %s", env_file)
-        if not dotenv.load_dotenv(env_file):
-            raise NotImplementedError(f"Could not load dotenv file {env_file}")
-
     # Load all available routers
     enabled_systems = set()
     settings_classes = set()
+    factory_settings = FactorySettings()
     for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES):
-        env_var = f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED"
-        enabled = TypeAdapter(bool).validate_json(os.environ.get(env_var, "true"))
+        enabled = factory_settings.enabled_services.get(entry_point.name, True)
         logger.debug("Found service %r: enabled=%s", entry_point, enabled)
         if not enabled:
             continue
@@ -485,6 +475,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 def find_dependents(
     obj: APIRouter | Iterable[Dependant], cls: type[T]
 ) -> Iterable[type[T]]:
+
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)

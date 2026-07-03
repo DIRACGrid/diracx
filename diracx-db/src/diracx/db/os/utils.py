@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-import os
 from abc import ABCMeta, abstractmethod
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
@@ -14,6 +13,7 @@ from opensearchpy import AsyncOpenSearch
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
+from diracx.core.settings import FactorySettings
 from diracx.db.exceptions import DBUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,8 @@ class BaseOSDB(metaclass=ABCMeta):
     This method returns a dictionary of database names to connection parameters.
     The available databases are determined by the `diracx.dbs.os` entrypoint in
     the `pyproject.toml` file and the connection parameters are taken from the
-    environment variables prefixed with `DIRACX_OS_DB_{DB_NAME}`.
+    `opensearch_dbs` field in FactorySettings, which reads from environment variables
+    prefixed with `DIRACX_OS_DB_{DB_NAME}`.
 
     If extensions to DiracX are being used, there can be multiple implementations
     of the same database. To list the available implementations use
@@ -104,16 +105,19 @@ class BaseOSDB(metaclass=ABCMeta):
     def available_urls(cls) -> dict[str, dict[str, Any]]:
         """Return a dict of available OpenSearch database urls.
 
-        The list of available URLs is determined by environment variables
+        The list of available URLs is determined by the opensearch_dbs field
+        in FactorySettings, which reads from environment variables
         prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
         """
+        factory_settings = FactorySettings()
+
         conn_kwargs: dict[str, dict[str, Any]] = {}
         for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
             db_name = entry_point.name
-            var_name = f"DIRACX_OS_DB_{entry_point.name.upper()}"
-            if var_name in os.environ:
+            # Get the field value from the OpenSearchDBSettings model
+            if field_value := factory_settings.opensearch_dbs.get(db_name):
                 try:
-                    conn_kwargs[db_name] = json.loads(os.environ[var_name])
+                    conn_kwargs[db_name] = json.loads(field_value)
                 except Exception:
                     logger.error("Error loading connection parameters for %s", db_name)
                     raise
