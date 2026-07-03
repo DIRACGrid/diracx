@@ -18,14 +18,14 @@ import asyncio
 import base64
 from typing import TYPE_CHECKING, TypedDict, cast
 
-from botocore.errorfactory import ClientError
+from signurlarity.exceptions import NoSuchBucketError, NoSuchKeyError, PresignError
 
 from diracx.core.models import ChecksumAlgorithm
 
 if TYPE_CHECKING:
     from typing import TypedDict
 
-    from types_aiobotocore_s3.client import S3Client
+    from signurlarity.aio.client import AsyncClient
 
     class S3Object(TypedDict):
         """TypedDict representing an S3 object identifier for deletion.
@@ -49,12 +49,12 @@ class S3PresignedPostInfo(TypedDict):
     fields: dict[str, str]
 
 
-async def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
-    """Check if a bucket exists in S3.
+async def s3_bucket_exists(s3_client: AsyncClient, bucket_name: str) -> bool:
+    """Check whether a bucket exists in S3.
 
     Args:
-        s3_client (S3Client): S3 client instance.
-        bucket_name (str): Name of the bucket to check.
+        s3_client (AsyncClient): S3 client instance.
+        bucket_name (str): Bucket name to check.
 
     Returns:
         bool: True if the bucket exists, otherwise False.
@@ -62,12 +62,12 @@ async def s3_bucket_exists(s3_client: S3Client, bucket_name: str) -> bool:
     return await _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
 
 
-async def s3_object_exists(s3_client: S3Client, bucket_name: str, key: str) -> bool:
-    """Check if an object exists in an S3 bucket.
+async def s3_object_exists(s3_client: AsyncClient, bucket_name: str, key: str) -> bool:
+    """Check whether an object exists in an S3 bucket.
 
     Args:
-        s3_client (S3Client): S3 client instance.
-        bucket_name (str): Name of the bucket containing the object.
+        s3_client (AsyncClient): S3 client instance.
+        bucket_name (str): Bucket containing the object.
         key (str): Object key to check.
 
     Returns:
@@ -88,16 +88,16 @@ async def _s3_exists(method, **kwargs: str) -> bool:
     """
     try:
         await method(**kwargs)
-    except ClientError as e:
-        if e.response["Error"]["Code"] != "404":
-            raise
+    except PresignError:
+        raise
+    except (NoSuchBucketError, NoSuchKeyError):
         return False
     else:
         return True
 
 
 async def generate_presigned_upload(
-    s3_client: S3Client,
+    s3_client: AsyncClient,
     bucket_name: str,
     key: str,
     checksum_algorithm: ChecksumAlgorithm,
@@ -162,7 +162,7 @@ async def s3_bulk_delete_with_retry(
         objects (list[S3Object]): List of objects to delete.
 
     Returns:
-        set[str]: Set of keys that failed to delete after all retries.
+        set[str]: Keys that failed to delete after all retries.
     """
     max_chunk_size = 1000
     chunks = [
@@ -187,7 +187,7 @@ async def _s3_delete_chunk_with_retry(
         objects (list[S3Object]): Chunk of objects to delete.
 
     Returns:
-        set[str]: Set of keys that failed to delete after all retries.
+        set[str]: Keys that failed to delete after all retries.
     """
     max_attempts = 5
     delay = 1.0
@@ -198,7 +198,7 @@ async def _s3_delete_chunk_with_retry(
                 Bucket=bucket,
                 Delete={"Objects": remaining, "Quiet": True},
             )
-        except ClientError:
+        except PresignError:
             if attempt == max_attempts:
                 return {obj["Key"] for obj in remaining}
             await asyncio.sleep(delay)
