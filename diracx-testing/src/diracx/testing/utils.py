@@ -46,8 +46,8 @@ from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
 from diracx.core.extensions import DiracEntryPoint
-from diracx.core.settings import FactorySettings
 from diracx.core.models import AccessTokenPayload
+from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
     from diracx.core.settings import (
