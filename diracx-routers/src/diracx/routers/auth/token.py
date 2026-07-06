@@ -265,6 +265,8 @@ async def perform_legacy_exchange(
         available_properties (AvailableSecurityProperties): Security
             properties used to resolve the requested scope.
         settings (AuthSettings): Authentication-related settings.
+        factory_settings (FactorySettings): Factory-level configuration
+            containing the legacy exchange hashed API key.
         config (Config): Application configuration object.
         all_access_policies (dict[str, BaseAccessPolicy]): Access policies to
             apply when minting tokens.
