@@ -31,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           run-install: false
           post-cleanup: false
@@ -42,7 +42,7 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           environments: ${{ matrix.package }}
       - name: Run pytest
@@ -58,11 +58,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           environments: generate-client
       - name: Run autorest
