@@ -129,11 +129,6 @@ class BaseOSDB(metaclass=ABCMeta):
     def available_urls(cls) -> dict[str, dict[str, Any]]:
         """Return a dict of available OpenSearch database urls.
 
-<<<<<<< HEAD
-        The list of available URLs is determined by the opensearch_dbs field
-        in FactorySettings, which reads from environment variables
-        prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
-=======
         Environment variables named ``DIRACX_OS_DB_<NAME>`` are parsed as JSON
         to obtain connection parameters for each advertised DB implementation.
 
@@ -144,7 +139,6 @@ class BaseOSDB(metaclass=ABCMeta):
         Raises:
             Exception: If an advertised environment variable cannot be parsed
                 as JSON.
->>>>>>> a8109d8 (docs: enforce google docs style - os/utils)
         """
         factory_settings = FactorySettings()
 
@@ -169,8 +163,12 @@ class BaseOSDB(metaclass=ABCMeta):
     def client(self) -> AsyncOpenSearch:
         """Return the active AsyncOpenSearch client.
 
-        The property ensures that the caller has previously entered
-        :attr:`client_context`; otherwise a ``RuntimeError`` is raised.
+        Returns:
+            AsyncOpenSearch: The active AsyncOpenSearch client instance.
+
+        Raises:
+            RuntimeError: If the property is accessed before entering
+                :attr:`client_context`.
         """
         if self._client is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
@@ -178,7 +176,18 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @contextlib.asynccontextmanager
     async def client_context(self) -> AsyncIterator[None]:
-        """Context manager to manage the client lifecycle. This is called when starting fastapi."""
+        """Async context manager to manage the client lifecycle.
+
+        This context manager opens an ``AsyncOpenSearch`` client using the
+        connection parameters provided at construction and ensures it is
+        cleaned up when the context exits.
+
+        Returns:
+            AsyncIterator[None]: Asynchronous context manager yielding ``None``.
+
+        Raises:
+            AssertionError: If the context manager is nested (it cannot be nested).
+        """
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
             try:
@@ -189,8 +198,11 @@ class BaseOSDB(metaclass=ABCMeta):
     async def ping(self):
         """Ping the OpenSearch cluster to verify connectivity.
 
-        We could enable the ``pre_ping`` in the engine, but this would
-        be ran at every query.
+        We could enable the ``pre_ping`` in the engine, but this would be
+        run at every query.
+
+        Returns:
+            None
 
         Raises:
             OpenSearchDBUnavailableError: If the ping operation fails.
@@ -206,6 +218,13 @@ class BaseOSDB(metaclass=ABCMeta):
         Currently the context only maintains an internal flag but is kept to
         allow future per-request lifecycle hooks or transaction-like
         semantics.
+
+        Returns:
+            BaseOSDB: The DB instance for use within the request context.
+
+        Raises:
+            AssertionError: If the context is nested or the client context
+                has not been entered.
         """
         assert not self._conn.get(), "BaseOSDB context cannot be nested"
         assert self._client is not None, "client_context hasn't been entered"
@@ -221,6 +240,12 @@ class BaseOSDB(metaclass=ABCMeta):
 
         The method submits an index template that applies ``self.fields`` as
         the index mapping for all indices matching ``{self.index_prefix}*``.
+
+        Returns:
+            None
+
+        Raises:
+            AssertionError: If the OpenSearch response is not acknowledged.
         """
         template_body = {
             "template": {"mappings": {"properties": self.fields}},
@@ -237,7 +262,8 @@ class BaseOSDB(metaclass=ABCMeta):
         Args:
             vo (str): VO identifier used to compute the target index name.
             doc_id (int): Document identifier.
-            document (Any): The document to store.
+            document (Any): The document to store; it will be used as the
+                content of the ``doc`` update payload.
         """
         index_name = self.index_name(vo, doc_id)
         response = await self.client.update(
