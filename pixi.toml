@@ -50,6 +50,8 @@ diracx-routers = { path = "diracx-routers", editable = true, extras = ["testing"
 importlib-metadata = "<8.8.0"
 [feature.diracx-tasks.pypi-dependencies]
 diracx-tasks = { path = "diracx-tasks", editable = true, extras = ["testing"] }
+[feature.rss-read-adapter.pypi-dependencies]
+rss-read-adapter = { path = "rss-read-adapter", editable = true, extras = ["testing"] }
 
 # DiracX features for providing tasks. This is needed to make it so that running
 # "pixi run pytest-diracx-core -vvv --pdb" passes the arguments as expected.
@@ -80,6 +82,9 @@ description = "Run the tests for diracx-routers"
 [feature.task-diracx-tasks.tasks.pytest-diracx-tasks]
 cmd = "cd diracx-tasks/ && pytest"
 description = "Run the tests for diracx-tasks"
+[feature.task-rss-read-adapter.tasks.pytest-rss-read-adapter]
+cmd = "cd rss-read-adapter/ && pytest"
+description = "Run the tests for rss-read-adapter"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
@@ -234,6 +239,7 @@ diracx-db = {features = ["task-diracx-db", "diracx-db", "diracx-core"], solve-gr
 diracx-logic = {features = ["task-diracx-logic", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 diracx-routers = {features = ["task-diracx-routers", "diracx-routers", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
 diracx-tasks = {features = ["task-diracx-tasks", "diracx-tasks", "diracx-logic", "diracx-db", "diracx-core"], solve-group = "diracx"}
+rss-read-adapter = {features = ["task-rss-read-adapter", "rss-read-adapter", "diracx-client", "diracx-core", "diracx", "diracx-api"], solve-group = "diracx"}
 
 # Gubbins environments
 default-gubbins = {features = ["task-gubbins", "run-local", "diracx", "gubbins", "diracx-core", "gubbins-core", "diracx-api", "gubbins-api", "diracx-cli", "gubbins-cli", "diracx-client", "gubbins-client", "diracx-db", "gubbins-db", "diracx-logic", "gubbins-logic", "diracx-routers", "gubbins-routers", "diracx-tasks", "gubbins-tasks"], solve-group = "gubbins"}
