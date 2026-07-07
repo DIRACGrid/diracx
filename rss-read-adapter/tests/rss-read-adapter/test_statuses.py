@@ -35,14 +35,12 @@ async def test_get_storage_element_status():
     mock_client.rss.get_storage_status.assert_awaited_once()
 
     # Verify result matches expected legacy format
-    expected = {
-        "SE1": {
-            "ReadAccess": "Active",
-            "WriteAccess": "Degraded",
-            "CheckAccess": "Banned",
-            "RemoveAccess": "Active",
-        }
-    }
+    expected = [
+        ("SE1", "StorageElement", "ReadAccess", "Active", None),
+        ("SE1", "StorageElement", "WriteAccess", "Degraded", None),
+        ("SE1", "StorageElement", "CheckAccess", "Banned", None),
+        ("SE1", "StorageElement", "RemoveAccess", "Active", None),
+    ]
     assert result == expected
 
 
@@ -68,10 +66,10 @@ async def test_get_computing_element_status():
     mock_client.rss.get_compute_status.assert_awaited_once()
 
     # Verify result matches expected legacy format
-    expected = {
-        "CE1": {"Status": "Active"},
-        "CE2": {"Status": "Error"},
-    }
+    expected = [
+        ("CE1", "ComputeElement", "all", "Active", None),
+        ("CE2", "ComputeElement", "all", "Error", None),
+    ]
     assert result == expected
 
 
@@ -95,10 +93,10 @@ async def test_get_fts_status():
     mock_client.rss.get_fts_status.assert_awaited_once()
 
     # Verify result matches expected legacy format
-    expected = {
-        "FTS1": {"Status": "Active"},
-        "FTS2": {"Status": "Probing"},
-    }
+    expected = [
+        ("FTS1", "FTS", "all", "Active", None),
+        ("FTS2", "FTS", "all", "Probing", None),
+    ]
     assert result == expected
 
 
@@ -112,7 +110,7 @@ async def test_get_site_status():
     mock_client.rss.get_site_status = AsyncMock(
         return_value={
             "Site1": SiteStatus(all=AllowedStatus(allowed=True)),
-            "Site2": SiteStatus(all=BannedStatus(allowed=False, reason="Unknown")),
+            "Site2": SiteStatus(all=BannedStatus(allowed=False)),
         }
     )
 
@@ -122,8 +120,8 @@ async def test_get_site_status():
     mock_client.rss.get_site_status.assert_awaited_once()
 
     # Verify result matches expected legacy format
-    expected = {
-        "Site1": {"Status": "Active"},
-        "Site2": {"Status": "Unknown"},
-    }
+    expected = [
+        ("Site1", "Active"),
+        ("Site2", "Banned"),
+    ]
     assert result == expected

@@ -5,9 +5,10 @@ This module translates responses from diracx Pydantic models to legacy format.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Dict
 
 from diracx.core.models.rss import (
+    BANNED,
     AllowedStatus,
     BannedStatus,
     ComputeElementStatus,
@@ -18,81 +19,122 @@ from diracx.core.models.rss import (
 
 
 def translate_storage_element_status(
-    response: Dict[str, StorageElementStatus]
-) -> Dict[str, Dict[str, Any]]:
+    response: Dict[str, StorageElementStatus],
+) -> list[tuple]:
     """Translate storage element status from diracx format to legacy format.
 
     Args:
         response: Dictionary of storage element names to StorageElementStatus
 
     Returns:
-        Dictionary in legacy format
+        List of tuples in legacy format: (name, element_type, status_type, status, vo)
+
     """
-    legacy_format = {}
+    legacy_format = []
     for name, status in response.items():
-        legacy_format[name] = {
-            "ReadAccess": _translate_resource_status(status.read),
-            "WriteAccess": _translate_resource_status(status.write),
-            "CheckAccess": _translate_resource_status(status.check),
-            "RemoveAccess": _translate_resource_status(status.remove),
-        }
+        legacy_format.append(
+            (
+                name,
+                "StorageElement",
+                "ReadAccess",
+                _translate_resource_status(status.read),
+                None,
+            )
+        )
+        legacy_format.append(
+            (
+                name,
+                "StorageElement",
+                "WriteAccess",
+                _translate_resource_status(status.write),
+                None,
+            )
+        )
+        legacy_format.append(
+            (
+                name,
+                "StorageElement",
+                "CheckAccess",
+                _translate_resource_status(status.check),
+                None,
+            )
+        )
+        legacy_format.append(
+            (
+                name,
+                "StorageElement",
+                "RemoveAccess",
+                _translate_resource_status(status.remove),
+                None,
+            )
+        )
+
     return legacy_format
 
 
 def translate_computing_element_status(
-    response: Dict[str, ComputeElementStatus]
-) -> Dict[str, Dict[str, Any]]:
+    response: Dict[str, ComputeElementStatus],
+) -> list[tuple]:
     """Translate computing element status from diracx format to legacy format.
 
     Args:
         response: Dictionary of computing element names to ComputeElementStatus
 
     Returns:
-        Dictionary in legacy format
+        List of tuples in legacy format: (name, element_type, status_type, status, vo)
+
     """
-    legacy_format = {}
+    legacy_format = []
     for name, status in response.items():
-        legacy_format[name] = {
-            "Status": _translate_resource_status(status.all),
-        }
+        legacy_format.append(
+            (
+                name,
+                "ComputeElement",
+                "all",
+                _translate_resource_status(status.all),
+                None,
+            )
+        )
     return legacy_format
 
 
-def translate_fts_status(
-    response: Dict[str, FTSStatus]
-) -> Dict[str, Dict[str, Any]]:
+def translate_fts_status(response: Dict[str, FTSStatus]) -> list[tuple]:
     """Translate FTS server status from diracx format to legacy format.
 
     Args:
         response: Dictionary of FTS server names to FTSStatus
 
     Returns:
-        Dictionary in legacy format
+        List of tuples in legacy format: (name, element_type, status_type, status, vo)
+
     """
-    legacy_format = {}
+    legacy_format = []
     for name, status in response.items():
-        legacy_format[name] = {
-            "Status": _translate_resource_status(status.all),
-        }
+        legacy_format.append(
+            (
+                name,
+                "FTS",
+                "all",
+                _translate_resource_status(status.all),
+                None,
+            )
+        )
     return legacy_format
 
 
-def translate_site_status(
-    response: Dict[str, SiteStatus]
-) -> Dict[str, Dict[str, Any]]:
+def translate_site_status(response: Dict[str, SiteStatus]) -> list[tuple]:
     """Translate site status from diracx format to legacy format.
 
     Args:
         response: Dictionary of site names to SiteStatus
 
     Returns:
-        Dictionary in legacy format
+        List of tuples in legacy format: (site, status)
+
     """
-    legacy_format = {}
+    legacy_format = []
     for name, status in response.items():
-        legacy_format[name] = {
-            "Status": _translate_resource_status(status.all),
-        }
+        legacy_format.append((name, _translate_resource_status(status.all)))
     return legacy_format
 
 
@@ -104,10 +146,11 @@ def _translate_resource_status(status: AllowedStatus | BannedStatus) -> str:
 
     Returns:
         Legacy status string
+
     """
     if isinstance(status, AllowedStatus):
-        if status.warnings:
+        if status.warnings == "Degraded":
             return "Degraded"
         return "Active"
     else:  # BannedStatus
-        return status.reason or "Banned"
+        return status.reason if status.reason in BANNED - {"Unknown"} else "Banned"

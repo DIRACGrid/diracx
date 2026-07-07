@@ -29,14 +29,12 @@ def test_translate_storage_element_status():
     }
 
     result = translate_storage_element_status(response)
-    expected = {
-        "SE1": {
-            "ReadAccess": "Active",
-            "WriteAccess": "Degraded",
-            "CheckAccess": "Banned",
-            "RemoveAccess": "Active",
-        }
-    }
+    expected = [
+        ("SE1", "StorageElement", "ReadAccess", "Active", None),
+        ("SE1", "StorageElement", "WriteAccess", "Degraded", None),
+        ("SE1", "StorageElement", "CheckAccess", "Banned", None),
+        ("SE1", "StorageElement", "RemoveAccess", "Active", None),
+    ]
     assert result == expected
 
 
@@ -48,10 +46,10 @@ def test_translate_computing_element_status():
     }
 
     result = translate_computing_element_status(response)
-    expected = {
-        "CE1": {"Status": "Active"},
-        "CE2": {"Status": "Error"},
-    }
+    expected = [
+        ("CE1", "ComputeElement", "all", "Active", None),
+        ("CE2", "ComputeElement", "all", "Error", None),
+    ]
     assert result == expected
 
 
@@ -63,10 +61,10 @@ def test_translate_fts_status():
     }
 
     result = translate_fts_status(response)
-    expected = {
-        "FTS1": {"Status": "Active"},
-        "FTS2": {"Status": "Probing"},
-    }
+    expected = [
+        ("FTS1", "FTS", "all", "Active", None),
+        ("FTS2", "FTS", "all", "Probing", None),
+    ]
     assert result == expected
 
 
@@ -74,12 +72,12 @@ def test_translate_site_status():
     """Test translating site status."""
     response = {
         "Site1": SiteStatus(all=AllowedStatus(allowed=True)),
-        "Site2": SiteStatus(all=BannedStatus(allowed=False, reason="Unknown")),
+        "Site2": SiteStatus(all=BannedStatus(allowed=False)),
     }
 
     result = translate_site_status(response)
-    expected = {
-        "Site1": {"Status": "Active"},
-        "Site2": {"Status": "Unknown"},
-    }
+    expected = [
+        ("Site1", "Active"),
+        ("Site2", "Banned"),
+    ]
     assert result == expected
