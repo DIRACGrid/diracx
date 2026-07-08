@@ -197,7 +197,7 @@ def generate_helm_values(
         "initSql": {"enabled": False},
         "cert-manager": {"enabled": False},
         "cert-manager-issuer": {"enabled": False},
-        "minio": {"enabled": False},
+        "seaweedfs": {"enabled": False},
         "dex": {"enabled": False},
         "opensearch": {"enabled": False},
         # This is Openshift specific, change it maybe
