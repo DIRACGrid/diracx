@@ -15,6 +15,7 @@ This page documents the available pixi tasks.
 - `local-shell`: Open a shell with the local DiracX environment configured
 - `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)
 - `local-tasks`: Run diracx-task-run with the local environment variables
+- `pytest-rss-read-adapter`: Run the tests for rss-read-adapter
 - `test-tutorial`: Run only the advanced tutorial tests
 - `tutorial-reset`: Strip tutorial code from gubbins for the advanced tutorial
 

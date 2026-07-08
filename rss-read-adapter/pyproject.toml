@@ -50,3 +50,5 @@ addopts = [
 ]
 asyncio_mode = "auto"
 
+[tool.ruff]
+src = ["src", "tests"]

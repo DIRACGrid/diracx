@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 # Direct client calls - no need for separate client_calls module
 from rss_read_adapter.response_translation import (
@@ -13,7 +13,7 @@ from rss_read_adapter.response_translation import (
 )
 
 
-async def get_storage_element_status(client: Any) -> Dict[str, Dict[str, Any]]:
+async def get_storage_element_status(client: Any) -> list[tuple]:
     """Get storage element status from the RSS API and translate to legacy format.
 
     Args:
@@ -27,7 +27,7 @@ async def get_storage_element_status(client: Any) -> Dict[str, Dict[str, Any]]:
     return translate_storage_element_status(response)
 
 
-async def get_computing_element_status(client: Any) -> Dict[str, Dict[str, Any]]:
+async def get_computing_element_status(client: Any) -> list[tuple]:
     """Get computing element status from the RSS API and translate to legacy format.
 
     Args:
@@ -41,7 +41,7 @@ async def get_computing_element_status(client: Any) -> Dict[str, Dict[str, Any]]
     return translate_computing_element_status(response)
 
 
-async def get_fts_status(client: Any) -> Dict[str, Dict[str, Any]]:
+async def get_fts_status(client: Any) -> list[tuple]:
     """Get merged FTS server status from all VOs.
 
     Args:
@@ -55,7 +55,7 @@ async def get_fts_status(client: Any) -> Dict[str, Dict[str, Any]]:
     return translate_fts_status(response)
 
 
-async def get_site_status(client: Any) -> Dict[str, Dict[str, Any]]:
+async def get_site_status(client: Any) -> list[tuple]:
     """Get site status from the RSS API and translate to legacy format.
 
     Args:

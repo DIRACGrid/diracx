@@ -1,5 +1,7 @@
 """Tests for read adapter response translation."""
 
+from __future__ import annotations
+
 from rss_read_adapter.response_translation import (
     translate_computing_element_status,
     translate_fts_status,

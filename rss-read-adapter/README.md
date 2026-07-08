@@ -17,6 +17,7 @@ This module provides a read adapter that calls the diracx RSS API and returns da
 ## Testing
 
 Run tests with:
+
 ```bash
 pixi run pytest-rss-read-adapter
 ```
