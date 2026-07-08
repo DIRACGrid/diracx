@@ -73,7 +73,7 @@ async def test_s3_object_exists(moto_s3):
 async def test_presigned_upload_moto(moto_s3):
     """Test the presigned upload with moto.
 
-    This doesn't actually test the signature, see test_presigned_upload_minio
+    This doesn't actually test the signature, see test_presigned_upload_seaweedfs
     """
     file_content, checksum = _random_file(128)
     key = f"{checksum}.dat"
@@ -104,10 +104,10 @@ async def test_presigned_upload_moto(moto_s3):
 
 
 @pytest.fixture(scope="function")
-async def minio_client(demo_urls):
-    """Create a S3 client that uses minio from the demo as backend."""
+async def s3_client(demo_urls):
+    """Create a S3 client that uses seaweedfs from the demo as backend."""
     async with AsyncClient(
-        endpoint_url=demo_urls["minio"],
+        endpoint_url=demo_urls["seaweedfs"],
         aws_access_key_id="console",
         aws_secret_access_key="console123",
     ) as client:
@@ -115,20 +115,20 @@ async def minio_client(demo_urls):
 
 
 @pytest.fixture(scope="function")
-async def test_bucket(minio_client):
+async def test_bucket(s3_client):
     """Create a test bucket that is cleaned up after the test session."""
     bucket_name = f"dirac-test-{secrets.token_hex(8)}"
-    await minio_client.create_bucket(Bucket=bucket_name)
+    await s3_client.create_bucket(Bucket=bucket_name)
     yield bucket_name
-    objects = await minio_client.list_objects(Bucket=bucket_name)
+    objects = await s3_client.list_objects(Bucket=bucket_name)
     contents = objects.get("Contents", [])
     if contents:
-        await minio_client.delete_objects(
+        await s3_client.delete_objects(
             Bucket=bucket_name,
             Delete={"Objects": [{"Key": obj["Key"]} for obj in contents]},
         )
 
-    await minio_client.delete_bucket(Bucket=bucket_name)
+    await s3_client.delete_bucket(Bucket=bucket_name)
 
 
 @pytest.mark.parametrize(
@@ -144,24 +144,24 @@ async def test_bucket(minio_client):
             _random_file(128)[0],
             _random_file(128)[1],
             128,
-            "ContentChecksumMismatch",
+            "BadDigest",
             id="checksum",
         ),
     ],
 )
-async def test_presigned_upload_minio(
-    minio_client, test_bucket, content, checksum, size, expected_error
+async def test_presigned_upload_seaweedfs(
+    s3_client, test_bucket, content, checksum, size, expected_error
 ):
-    """Test the presigned upload with Minio.
+    """Test the presigned upload with Seaweedfs.
 
     This is a more complete test that checks that the presigned upload works
-    and is properly validated by Minio. This is not possible with moto as it
+    and is properly validated by Seaweedfs. This is not possible with moto as it
     doesn't actually validate the signature.
     """
     key = f"{checksum}.dat"
     # Prepare the signed URL
     upload_info = await generate_presigned_upload(
-        minio_client, test_bucket, key, "sha256", checksum, size, 60
+        s3_client, test_bucket, key, "sha256", checksum, size, 60
     )
     # Ensure the URL doesn't work
     async with httpx2.AsyncClient() as client:
@@ -171,8 +171,8 @@ async def test_presigned_upload_minio(
 
     if expected_error is None:
         assert r.status_code == 204, r.text
-        assert await s3_object_exists(minio_client, test_bucket, key)
+        assert await s3_object_exists(s3_client, test_bucket, key)
     else:
         assert r.status_code == 400, r.text
         assert expected_error in r.text
-        assert not (await s3_object_exists(minio_client, test_bucket, key))
+        assert not (await s3_object_exists(s3_client, test_bucket, key))

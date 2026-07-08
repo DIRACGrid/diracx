@@ -98,7 +98,7 @@ fi
 
 # Shutdown the pods so we collect coverage data
 pods=$(kubectl get pods -o json | jq -r '.items[] | .metadata.name')
-for pod_name in $(echo "${pods}" | grep -vE '(dex|minio|mysql|rabbitmq|opensearch)'); do
+for pod_name in $(echo "${pods}" | grep -vE '(dex|seaweedfs|mysql|rabbitmq|opensearch)'); do
     kubectl delete pod/"${pod_name}"
 done
 

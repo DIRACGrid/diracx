@@ -197,7 +197,7 @@ def generate_helm_values(
         "initSql": {"enabled": False},
         "cert-manager": {"enabled": False},
         "cert-manager-issuer": {"enabled": False},
-        "minio": {"enabled": False},
+        "seaweedfs": {"enabled": False},
         "dex": {"enabled": False},
         "opensearch": {"enabled": False},
         # This is Openshift specific, change it maybe
@@ -359,7 +359,6 @@ def generate_helm_values(
         typer.echo(error_msg, err=True)
         raise typer.Exit(1) from None
     # Sandboxstore settings
-    # TODO: Integrate minio for production use (ingress, etc)
     # By default, take the server hostname and prepend "sandboxes"
     diracx_settings["DIRACX_SANDBOX_STORE_BUCKET_NAME"] = (
         f"{diracx_hostname.split('.')[0]}-sandboxes"
