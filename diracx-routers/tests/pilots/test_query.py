@@ -37,11 +37,12 @@ async def populated_pilot_client(normal_test_client):
     """Client with N pilots registered and metadata patched."""
     pilot_stamps = [f"stamp_{i}" for i in range(1, N + 1)]
 
-    r = normal_test_client.post(
-        "/api/pilots/",
-        json={"vo": MAIN_VO, "pilot_stamps": pilot_stamps},
-    )
-    assert r.status_code == 200, r.json()
+    for stamp in pilot_stamps:
+        r = normal_test_client.post(
+            "/api/pilots/",
+            json={"vo": MAIN_VO, "pilot_stamp": stamp},
+        )
+        assert r.status_code == 200, r.json()
 
     r = normal_test_client.patch(
         "/api/pilots/metadata",

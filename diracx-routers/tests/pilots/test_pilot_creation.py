@@ -31,16 +31,17 @@ async def test_register_then_duplicate_then_success(normal_test_client):
     """Registering an existing stamp is rejected with 409; a fresh one still succeeds."""
     pilot_stamps = [f"stamps_{i}" for i in range(5)]
 
-    r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": pilot_stamps, "vo": MAIN_VO}
-    )
-    assert r.status_code == 200, r.json()
+    for stamp in pilot_stamps:
+        r = normal_test_client.post(
+            "/api/pilots/", json={"pilot_stamp": stamp, "vo": MAIN_VO}
+        )
+        assert r.status_code == 200, r.json()
 
-    # Mix of existing and new stamps: whole batch is rejected
+    # Existing stamp is rejected
     r = normal_test_client.post(
         "/api/pilots/",
         json={
-            "pilot_stamps": [pilot_stamps[0], "stamps_new"],
+            "pilot_stamp": pilot_stamps[0],
             "vo": MAIN_VO,
         },
     )
@@ -48,14 +49,14 @@ async def test_register_then_duplicate_then_success(normal_test_client):
 
     # The new stamp alone was NOT committed by the failing call above
     r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": ["stamps_new"], "vo": MAIN_VO}
+        "/api/pilots/", json={"pilot_stamp": "stamps_new", "vo": MAIN_VO}
     )
     assert r.status_code == 200, r.json()
 
 
 async def test_register_delete_by_stamp_roundtrip(normal_test_client):
     r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": ["stamp_a"], "vo": MAIN_VO}
+        "/api/pilots/", json={"pilot_stamp": "stamp_a", "vo": MAIN_VO}
     )
     assert r.status_code == 200
 
@@ -64,7 +65,7 @@ async def test_register_delete_by_stamp_roundtrip(normal_test_client):
 
     # Now the stamp is free again
     r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": ["stamp_a"], "vo": MAIN_VO}
+        "/api/pilots/", json={"pilot_stamp": "stamp_a", "vo": MAIN_VO}
     )
     assert r.status_code == 200
 
@@ -72,10 +73,11 @@ async def test_register_delete_by_stamp_roundtrip(normal_test_client):
 async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
     """PATCH /pilots/metadata supports heterogeneous field subsets per row."""
     stamps = ["stamp_m1", "stamp_m2"]
-    r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": stamps, "vo": MAIN_VO}
-    )
-    assert r.status_code == 200
+    for stamp in stamps:
+        r = normal_test_client.post(
+            "/api/pilots/", json={"pilot_stamp": stamp, "vo": MAIN_VO}
+        )
+        assert r.status_code == 200
 
     # stamp_m1 updates only BenchMark; stamp_m2 only Status
     r = normal_test_client.patch(
@@ -133,7 +135,7 @@ async def test_unknown_query_params_do_not_trigger_deletion(normal_test_client):
     """
     # Create a pilot to ensure there's something that could be deleted
     r = normal_test_client.post(
-        "/api/pilots/", json={"pilot_stamps": ["stamp_safe"], "vo": MAIN_VO}
+        "/api/pilots/", json={"pilot_stamp": "stamp_safe", "vo": MAIN_VO}
     )
     assert r.status_code == 200
 
