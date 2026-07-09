@@ -110,6 +110,34 @@ class PilotAgentsDB(BaseSQLDB):
             delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
         )
 
+    async def insert_pilot_output(self, pilot_id: int, std_output: str, std_error: str):
+        """Insert or update pilot output (stdout/stderr).
+
+        Upserts on `pilot_id` so repeated calls overwrite previous output.
+        """
+        stmt = insert(PilotOutput).values(
+            pilot_id=pilot_id,
+            std_output=std_output,
+            std_error=std_error,
+        )
+        try:
+            await self.conn.execute(stmt)
+        except IntegrityError:
+            await self.conn.execute(
+                update(PilotOutput)
+                .where(PilotOutput.pilot_id == pilot_id)
+                .values(std_output=std_output, std_error=std_error)
+            )
+
+    async def get_pilot_output(self, pilot_id: int) -> dict[str, str] | None:
+        """Return pilot output (stdout/stderr) for a given pilot ID."""
+        stmt = select(PilotOutput).where(PilotOutput.pilot_id == pilot_id)
+        result = await self.conn.execute(stmt)
+        row = result.first()
+        if row is None:
+            return None
+        return {"std_output": row.std_output, "std_error": row.std_error}
+
     async def update_pilot_metadata(self, pilot_metadata: list[PilotMetadata]):
         """Bulk-update pilot metadata.
 
