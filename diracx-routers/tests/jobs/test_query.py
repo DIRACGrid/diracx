@@ -944,7 +944,7 @@ async def _assign_pilot_to_jobs(client, stamp: str, job_ids: list[int]) -> None:
 async def _register_pilot(client, stamp: str) -> None:
     r = client.post(
         "/api/pilots/",
-        json={"pilot_stamps": [stamp], "vo": "lhcb"},
+        json={"pilot_stamp": stamp, "vo": "lhcb"},
     )
     assert r.status_code == 200, r.json()
 

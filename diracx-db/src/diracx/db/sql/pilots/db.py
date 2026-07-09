@@ -131,12 +131,14 @@ class PilotAgentsDB(BaseSQLDB):
 
     async def get_pilot_output(self, pilot_id: int) -> dict[str, str] | None:
         """Return pilot output (stdout/stderr) for a given pilot ID."""
-        stmt = select(PilotOutput).where(PilotOutput.pilot_id == pilot_id)
+        stmt = select(PilotOutput.std_output, PilotOutput.std_error).where(
+            PilotOutput.pilot_id == pilot_id
+        )
         result = await self.conn.execute(stmt)
         row = result.first()
         if row is None:
             return None
-        return {"std_output": row.std_output, "std_error": row.std_error}
+        return {"std_output": row[0], "std_error": row[1]}
 
     async def update_pilot_metadata(self, pilot_metadata: list[PilotMetadata]):
         """Bulk-update pilot metadata.
