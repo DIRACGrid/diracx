@@ -3,14 +3,11 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, Depends, HTTPException, Query
+from fastapi import Body, Depends, HTTPException
 
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR
 from diracx.db.sql import PilotAgentsDB
-from diracx.logic.pilots.management import (
-    delete_pilots as delete_pilots_bl,
-)
 from diracx.logic.pilots.management import (
     register_new_pilots,
     update_pilots_metadata,
@@ -83,31 +80,6 @@ async def register_pilots(
         pilot_job_references=pilot_references,
         status=pilot_status,
     )
-
-
-@router.delete("/", status_code=HTTPStatus.NO_CONTENT)
-async def delete_pilots(
-    pilot_db: PilotAgentsDB,
-    check_permissions: CheckPilotManagementPolicyCallable,
-    pilot_stamps: Annotated[
-        list[str], Query(description="Stamps of the pilots to delete.", min_length=1)
-    ],
-):
-    """Delete pilots by stamp.
-
-    Deletes the pilot rows as well as their logs and job associations.
-
-    Age-based retention cleanup is deliberately *not* exposed here: it is
-    handled by the maintenance task worker. See
-    `diracx.logic.pilots.management.delete_pilots`.
-    """
-    await check_permissions(
-        action=ActionType.MANAGE_PILOTS,
-        pilot_db=pilot_db,
-        pilot_stamps=pilot_stamps,
-    )
-
-    await delete_pilots_bl(pilot_db=pilot_db, pilot_stamps=pilot_stamps)
 
 
 EXAMPLE_UPDATE_METADATA = {
