@@ -36,6 +36,6 @@ class PilotsOperations(_PilotsOperations):
         return super().summary(**make_summary_body(**kwargs))
 
     @distributed_trace
-    def register_pilots(self, **kwargs: Unpack[RegisterPilotsKwargs]) -> None:
-        """Register a batch of pilots."""
-        return super().register_pilots(**make_register_pilots_body(**kwargs))
+    def register_pilot(self, **kwargs: Unpack[RegisterPilotsKwargs]) -> None:
+        """Register a pilot."""
+        return super().register_pilot(**make_register_pilots_body(**kwargs))

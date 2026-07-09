@@ -42,8 +42,8 @@ class PilotsOperations(_PilotsOperations):
         return await super().summary(**make_summary_body(**kwargs))
 
     @distributed_trace_async
-    async def register_pilots(
+    async def register_pilot(
         self, **kwargs: Unpack[RegisterPilotsKwargs]
     ) -> None:
-        """Register a batch of pilots."""
-        return await super().register_pilots(**make_register_pilots_body(**kwargs))
+        """Register a pilot."""
+        return await super().register_pilot(**make_register_pilots_body(**kwargs))

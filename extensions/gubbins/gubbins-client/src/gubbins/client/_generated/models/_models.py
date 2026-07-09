@@ -248,79 +248,79 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
-class BodyPilotsRegisterPilots(_serialization.Model):
-    """Body_pilots_register_pilots.
+class BodyPilotsRegisterPilot(_serialization.Model):
+    """Body_pilots_register_pilot.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar pilot_stamps: Stamps of the pilots to create. Required.
-    :vartype pilot_stamps: list[str]
+    :ivar pilot_stamp: Stamp of the pilot to create. Required.
+    :vartype pilot_stamp: str
     :ivar vo: Pilot virtual organization. Required.
     :vartype vo: str
-    :ivar grid_type: Grid type of the pilots.
+    :ivar grid_type: Grid type of the pilot.
     :vartype grid_type: str
-    :ivar grid_site: Pilots grid site.
+    :ivar grid_site: Pilot grid site.
     :vartype grid_site: str
-    :ivar destination_site: Pilots destination site.
+    :ivar destination_site: Pilot destination site.
     :vartype destination_site: str
-    :ivar pilot_references: Association of a pilot reference with a pilot stamp.
-    :vartype pilot_references: dict[str, str]
-    :ivar pilot_status: Initial status of the pilots. Known values are: "Submitted", "Waiting",
+    :ivar pilot_reference: Pilot reference.
+    :vartype pilot_reference: str
+    :ivar pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
      "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
     :vartype pilot_status: str or ~_generated.models.PilotStatus
     """
 
     _validation = {
-        "pilot_stamps": {"required": True},
+        "pilot_stamp": {"required": True},
         "vo": {"required": True},
     }
 
     _attribute_map = {
-        "pilot_stamps": {"key": "pilot_stamps", "type": "[str]"},
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
         "vo": {"key": "vo", "type": "str"},
         "grid_type": {"key": "grid_type", "type": "str"},
         "grid_site": {"key": "grid_site", "type": "str"},
         "destination_site": {"key": "destination_site", "type": "str"},
-        "pilot_references": {"key": "pilot_references", "type": "{str}"},
+        "pilot_reference": {"key": "pilot_reference", "type": "str"},
         "pilot_status": {"key": "pilot_status", "type": "str"},
     }
 
     def __init__(
         self,
         *,
-        pilot_stamps: list[str],
+        pilot_stamp: str,
         vo: str,
         grid_type: str = "Dirac",
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
-        pilot_references: Optional[dict[str, str]] = None,
+        pilot_reference: Optional[str] = None,
         pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
         **kwargs: Any
     ) -> None:
         """
-        :keyword pilot_stamps: Stamps of the pilots to create. Required.
-        :paramtype pilot_stamps: list[str]
+        :keyword pilot_stamp: Stamp of the pilot to create. Required.
+        :paramtype pilot_stamp: str
         :keyword vo: Pilot virtual organization. Required.
         :paramtype vo: str
-        :keyword grid_type: Grid type of the pilots.
+        :keyword grid_type: Grid type of the pilot.
         :paramtype grid_type: str
-        :keyword grid_site: Pilots grid site.
+        :keyword grid_site: Pilot grid site.
         :paramtype grid_site: str
-        :keyword destination_site: Pilots destination site.
+        :keyword destination_site: Pilot destination site.
         :paramtype destination_site: str
-        :keyword pilot_references: Association of a pilot reference with a pilot stamp.
-        :paramtype pilot_references: dict[str, str]
-        :keyword pilot_status: Initial status of the pilots. Known values are: "Submitted", "Waiting",
+        :keyword pilot_reference: Pilot reference.
+        :paramtype pilot_reference: str
+        :keyword pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
          "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
         :paramtype pilot_status: str or ~_generated.models.PilotStatus
         """
         super().__init__(**kwargs)
-        self.pilot_stamps = pilot_stamps
+        self.pilot_stamp = pilot_stamp
         self.vo = vo
         self.grid_type = grid_type
         self.grid_site = grid_site
         self.destination_site = destination_site
-        self.pilot_references = pilot_references
+        self.pilot_reference = pilot_reference
         self.pilot_status = pilot_status
 
 
