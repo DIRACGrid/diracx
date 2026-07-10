@@ -152,6 +152,7 @@ exec "$@"
 ```
 
 Note: You can check which packages to install by doing:
+
 ```
 podman run -v /opt/dirac/diracx:/diracx_sources:z,ro -ti ghcr.io/diracgrid/diracx/services:v0.1.0 /bin/bash
 
