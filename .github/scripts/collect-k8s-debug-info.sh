@@ -12,7 +12,7 @@ SERVICE_PREFIX="${2:-diracx}"
 export KUBECONFIG="${DEMO_DIR}/kube.conf"
 export PATH="${DEMO_DIR}:$PATH"
 
-INFRA_PODS="(dex|minio|mysql|rabbitmq|opensearch)"
+INFRA_PODS="(dex|seaweedfs|mysql|rabbitmq|opensearch)"
 
 # Function to output all info for a single pod
 output_pod_info() {
