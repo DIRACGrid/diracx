@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = [
     "AuthorizationError",
     "DiracError",
-    "DiracHttpResponseError",
     "IAMClientError",
     "IAMServerError",
     "InvalidCredentialsError",
@@ -19,13 +18,10 @@ __all__ = [
 from http import HTTPStatus
 
 
-class DiracHttpResponseError(RuntimeError):
-    def __init__(self, status_code: int, data):
-        self.status_code = status_code
-        self.data = data
-
-
 class DiracError(RuntimeError):
+    # Fallback HTTP representation used by the app-level DiracError handler.
+    # Routers are expected to catch DiracError and raise HTTPException
+    # explicitly when endpoint-specific status codes/messages/headers are needed.
     http_status_code = HTTPStatus.BAD_REQUEST  # 400
     http_headers: dict[str, str] | None = None
 

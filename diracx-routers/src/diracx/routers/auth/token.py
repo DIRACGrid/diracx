@@ -11,7 +11,6 @@ from fastapi import Depends, Form, Header, HTTPException
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
-    DiracHttpResponseError,
     InvalidCredentialsError,
     PendingAuthorizationError,
 )
@@ -30,6 +29,7 @@ from diracx.logic.auth import (
 )
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.dependencies import Config
+from diracx.routers.exceptions import DiracHttpResponseError
 
 from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter

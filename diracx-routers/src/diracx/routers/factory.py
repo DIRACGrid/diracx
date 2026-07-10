@@ -29,7 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
+from diracx.core.exceptions import DiracError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
@@ -39,6 +39,7 @@ from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
 
+from .exceptions import DiracHttpResponseError
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 from .otel import instrument_otel
 from .utils.users import verify_dirac_access_token
@@ -514,7 +515,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
             _db_alive_cache[db] = ""
 
         except DBUnavailableError as e:
-            _db_alive_cache[db] = e.args[0]
+            _db_alive_cache[db] = str(e)
 
     return _db_alive_cache[db]
 

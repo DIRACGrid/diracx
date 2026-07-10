@@ -78,7 +78,7 @@ async def initiate_device_flow(
     except ValueError as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
 
     return device_flow_response
@@ -116,19 +116,19 @@ async def do_device_flow(
         logger.warning("Invalid or expired user_code: %s", e)
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
     except ValueError as e:
         logger.warning("Invalid scope during device flow: %s", e)
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
     except IAMServerError as e:
         logger.warning("IAM server error during device flow: %s", e)
         raise HTTPException(
             status_code=HTTPStatus.BAD_GATEWAY,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
     return RedirectResponse(authorization_flow_url)
 
@@ -163,13 +163,13 @@ async def finish_device_flow(
         logger.warning("IAM server error during device flow completion: %s", e)
         raise HTTPException(
             status_code=HTTPStatus.BAD_GATEWAY,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
     except IAMClientError as e:
         logger.warning("IAM client error during device flow completion: %s", e)
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
-            detail=e.args[0],
+            detail=str(e),
         ) from e
 
     return RedirectResponse(f"{request_url}/finished")

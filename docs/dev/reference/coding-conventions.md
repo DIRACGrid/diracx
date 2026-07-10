@@ -135,3 +135,10 @@ To make sure that each part of DiracX is doing only what it is supposed to do, y
 - `diracx-routers` should deal with user interactions through HTTPs. It is expected to deal with permissions and should call `diracx-logic`. Results returned should be translated into HTTP responses.
 - `diracx-logic` should embed Dirac specificities. It should encapsulate the logic of the services and should call `diracx-db` to interact with databases.
 - `diracx-db` should contain atomic methods (complex logic is expected to be located in `diracx-db`).
+
+### Error handling boundaries
+
+- `diracx-db` and `diracx-logic` should raise domain exceptions (typically `DiracError` subclasses), and should not depend on `fastapi`.
+- `diracx-routers` is the HTTP boundary and should translate known backend/domain exceptions into `HTTPException` with the desired status code, message, and headers.
+- `DiracError` handling registered at app level (see [diracx-routers/src/diracx/routers/factory.py](../../../diracx-routers/src/diracx/routers/factory.py), especially `app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))`) is a fallback safety net for uncaught domain exceptions, not a replacement for explicit mapping when the router needs specific HTTP behavior.
+- Protocol-specific responses can be handled directly in routers when `HTTPException` shape is not suitable (for example OAuth2-style payloads). In that case DiracHttpResponseError shall be used.
