@@ -26,6 +26,16 @@ RequestHeader set "X-Forwarded-Proto" "https"
 Note: We use 8000 for the diracx container and 8001 for the diracx-web container.
 The same ports need to the specified in the yaml files used to steer the containers.
 
+## Containerd Config
+
+If you are planning to run the containers as an unprivileged user (e.g. as the dirac user) you must set the runroot by hand.
+Here is an example of /opt/dirac/.config/containers/storage.conf
+```
+[storage]
+runroot = "/run/user/1000/run"
+driver = "overlay"
+```
+
 ## Create the DiracXAuthDB
 
 At this point we also create the DiracXAuthDB. You can refer to the documentation [here](../install/installing.md#create-the-diracxauthdb)

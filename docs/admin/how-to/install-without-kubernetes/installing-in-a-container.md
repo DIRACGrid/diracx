@@ -142,12 +142,21 @@ pip install -e /diracx_sources/diracx-core \
             -e /diracx_sources/diracx-db \
             -e /diracx_sources/diracx-logic \
             -e /diracx_sources/diracx-routers \
-            -e /diracx_sources/diracx-client
+            -e /diracx_sources/diracx-tasks \
+            -e /diracx_sources/diracx-testing
 
 # initialise database and make updates if necessary
 python -m diracx.db init-sql
 
 exec "$@"
+```
+
+Note: You can check which packages to install by doing:
+```
+podman run -v /opt/dirac/diracx:/diracx_sources:z,ro -ti ghcr.io/diracgrid/diracx/services:v0.1.0 /bin/bash
+
+source /active.sh
+(app:container-services) root@7584c624afbc:/# pip list | grep diracx
 ```
 
 ## Install the code
