@@ -15,16 +15,8 @@ __all__ = [
     "TokenNotFoundError",
 ]
 
-from http import HTTPStatus
-
 
 class DiracError(RuntimeError):
-    # Fallback HTTP representation used by the app-level DiracError handler.
-    # Routers are expected to catch DiracError and raise HTTPException
-    # explicitly when endpoint-specific status codes/messages/headers are needed.
-    http_status_code = HTTPStatus.BAD_REQUEST  # 400
-    http_headers: dict[str, str] | None = None
-
     def __init__(self, detail: str = "Unknown"):
         self.detail = detail
 

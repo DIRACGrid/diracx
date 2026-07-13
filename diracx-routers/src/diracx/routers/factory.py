@@ -438,10 +438,12 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
+    status_code = getattr(exc, "http_status_code", HTTPStatus.BAD_REQUEST)
+    headers = getattr(exc, "http_headers", None)
     return JSONResponse(
-        status_code=exc.http_status_code,
+        status_code=status_code,
         content={"detail": exc.detail},
-        headers=exc.http_headers,
+        headers=headers,
     )
 
 
