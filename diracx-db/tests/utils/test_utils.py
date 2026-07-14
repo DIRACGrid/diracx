@@ -210,13 +210,14 @@ class TestBaseOSDBInit:
 class TestAvailableUrls:
     def test_returns_parsed_env_var(self):
         kwargs = {"hosts": ["https://os:9200"]}
-        env = {"DIRACX_OS_DB_DUMMY": json.dumps(kwargs)}
         ep = MagicMock()
         ep.name = "dummy"
+        mock_settings = MagicMock()
+        mock_settings.opensearch_dbs = {"dummy": json.dumps(kwargs)}
 
         with (
             patch("diracx.db.os.utils.select_from_extension", return_value=[ep]),
-            patch("os.environ", env),
+            patch("diracx.db.os.utils.FactorySettings", return_value=mock_settings),
         ):
             result = DummyOSDB.available_urls()
         assert result == {"dummy": kwargs}
@@ -224,9 +225,11 @@ class TestAvailableUrls:
     def test_skips_missing_env_var(self):
         ep = MagicMock()
         ep.name = "dummy"
+        mock_settings = MagicMock()
+        mock_settings.opensearch_dbs = {}
         with (
             patch("diracx.db.os.utils.select_from_extension", return_value=[ep]),
-            patch("os.environ", {}),
+            patch("diracx.db.os.utils.FactorySettings", return_value=mock_settings),
         ):
             result = DummyOSDB.available_urls()
         assert result == {}
@@ -234,10 +237,11 @@ class TestAvailableUrls:
     def test_raises_on_invalid_json(self):
         ep = MagicMock()
         ep.name = "dummy"
-        env = {"DIRACX_OS_DB_DUMMY": "not-json"}
+        mock_settings = MagicMock()
+        mock_settings.opensearch_dbs = {"dummy": "not-json"}
         with (
             patch("diracx.db.os.utils.select_from_extension", return_value=[ep]),
-            patch("os.environ", env),
+            patch("diracx.db.os.utils.FactorySettings", return_value=mock_settings),
         ):
             with pytest.raises(json.JSONDecodeError):
                 DummyOSDB.available_urls()
