@@ -4,12 +4,13 @@ import contextlib
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, Self
 
 from opensearchpy import AsyncOpenSearch
+from opensearchpy.helpers import async_bulk
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
@@ -195,6 +196,35 @@ class BaseOSDB(metaclass=ABCMeta):
             index_name,
             response,
         )
+
+    async def bulk_upsert(
+        self,
+        documents: Iterable[tuple[str, int, dict[str, Any]]],
+    ) -> tuple[int, list[Any]]:
+        """Bulk upsert documents."""
+        actions = (
+            {
+                "_op_type": "update",
+                "_index": self.index_name(vo, doc_id),
+                "_id": doc_id,
+                "doc": document,
+                "doc_as_upsert": True,
+                "retry_on_conflict": 10,
+            }
+            for vo, doc_id, document in documents
+        )
+
+        success, errors = await async_bulk(
+            self.client,
+            actions,
+            raise_on_error=False,
+            raise_on_exception=False,
+        )
+
+        if errors:
+            logger.warning("Bulk upsert completed with %d errors", len(errors))
+
+        return success, errors
 
     async def search(
         self, parameters, search, sorts, *, per_page: int = 100, page: int | None = None
