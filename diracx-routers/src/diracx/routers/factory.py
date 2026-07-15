@@ -39,7 +39,6 @@ from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
 
-from .exceptions import DiracHttpResponseError
 from .fastapi_classes import DiracFastAPI, DiracxRouter
 from .otel import instrument_otel
 from .utils.users import verify_dirac_access_token
@@ -334,9 +333,6 @@ def create_app_inner(
     handler_signature = Callable[[Request, Exception], Response | Awaitable[Response]]
     app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))
     app.add_exception_handler(
-        DiracHttpResponseError, cast(handler_signature, http_response_handler)
-    )
-    app.add_exception_handler(
         DBUnavailableError, cast(handler_signature, route_unavailable_error_hander)
     )
     app.add_exception_handler(
@@ -445,10 +441,6 @@ def dirac_error_handler(request: Request, exc: DiracError) -> Response:
         content={"detail": exc.detail},
         headers=headers,
     )
-
-
-def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Response:
-    return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):

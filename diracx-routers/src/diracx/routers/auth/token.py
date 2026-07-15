@@ -8,6 +8,7 @@ from http import HTTPStatus
 from typing import Annotated, Literal
 
 from fastapi import Depends, Form, Header, HTTPException
+from fastapi.responses import JSONResponse
 from joserfc.errors import JoseError
 
 from diracx.core.exceptions import (
@@ -29,7 +30,6 @@ from diracx.logic.auth import (
 )
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.dependencies import Config
-from diracx.routers.exceptions import DiracHttpResponseError
 
 from ..dependencies import AvailableSecurityProperties
 from ..fastapi_classes import DiracxRouter
@@ -139,11 +139,11 @@ async def get_oidc_token(
             code_verifier=code_verifier,
             refresh_token=refresh_token,
         )
-    except PendingAuthorizationError as e:
-        raise DiracHttpResponseError(
+    except PendingAuthorizationError:
+        return JSONResponse(
             status_code=HTTPStatus.BAD_REQUEST,
-            data={"error": "authorization_pending"},
-        ) from e
+            content={"error": "authorization_pending"},
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
