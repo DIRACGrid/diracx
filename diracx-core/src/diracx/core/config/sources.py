@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -76,7 +75,10 @@ class ConfigSource(CacheableSource[Config]):
 
     @classmethod
     def create(cls):
-        return cls.create_from_url(backend_url=os.environ["DIRACX_CONFIG_BACKEND_URL"])
+        # Avoid circular import
+        from diracx.core.settings import FactorySettings
+
+        return cls.create_from_url(backend_url=FactorySettings().config_backend_url)
 
     @classmethod
     def create_from_url(

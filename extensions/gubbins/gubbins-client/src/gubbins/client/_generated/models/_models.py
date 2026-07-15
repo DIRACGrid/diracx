@@ -16,6 +16,70 @@ if TYPE_CHECKING:
 JSON = MutableMapping[str, Any]
 
 
+class AllowedStatus(_serialization.Model):
+    """AllowedStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar allowed: Allowed. Required.
+    :vartype allowed: bool
+    :ivar warnings: Warnings.
+    :vartype warnings: str
+    """
+
+    _validation = {
+        "allowed": {"required": True},
+    }
+
+    _attribute_map = {
+        "allowed": {"key": "allowed", "type": "bool"},
+        "warnings": {"key": "warnings", "type": "str"},
+    }
+
+    def __init__(self, *, allowed: bool, warnings: Optional[str] = None, **kwargs: Any) -> None:
+        """
+        :keyword allowed: Allowed. Required.
+        :paramtype allowed: bool
+        :keyword warnings: Warnings.
+        :paramtype warnings: str
+        """
+        super().__init__(**kwargs)
+        self.allowed = allowed
+        self.warnings = warnings
+
+
+class BannedStatus(_serialization.Model):
+    """BannedStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar allowed: Allowed. Required.
+    :vartype allowed: bool
+    :ivar reason: Reason.
+    :vartype reason: str
+    """
+
+    _validation = {
+        "allowed": {"required": True},
+    }
+
+    _attribute_map = {
+        "allowed": {"key": "allowed", "type": "bool"},
+        "reason": {"key": "reason", "type": "str"},
+    }
+
+    def __init__(self, *, allowed: bool, reason: str = "Unknown", **kwargs: Any) -> None:
+        """
+        :keyword allowed: Allowed. Required.
+        :paramtype allowed: bool
+        :keyword reason: Reason.
+        :paramtype reason: str
+        """
+        super().__init__(**kwargs)
+        self.allowed = allowed
+        self.reason = reason
+
+
 class BodyAuthGetOidcToken(_serialization.Model):
     """Body_auth_get_oidc_token.
 
@@ -184,6 +248,36 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
+class ComputeElementStatus(_serialization.Model):
+    """ComputeElementStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar all: All. Required.
+    :vartype all: ~_generated.models.ComputeElementStatusAll
+    """
+
+    _validation = {
+        "all": {"required": True},
+    }
+
+    _attribute_map = {
+        "all": {"key": "all", "type": "ComputeElementStatusAll"},
+    }
+
+    def __init__(self, *, all: "_models.ComputeElementStatusAll", **kwargs: Any) -> None:
+        """
+        :keyword all: All. Required.
+        :paramtype all: ~_generated.models.ComputeElementStatusAll
+        """
+        super().__init__(**kwargs)
+        self.all = all
+
+
+class ComputeElementStatusAll(_serialization.Model):
+    """All."""
+
+
 class ExtendedMetadata(_serialization.Model):
     """ExtendedMetadata.
 
@@ -229,6 +323,36 @@ class ExtendedMetadata(_serialization.Model):
         self.virtual_organizations = virtual_organizations
         self.gubbins_secrets = gubbins_secrets
         self.gubbins_user_info = gubbins_user_info
+
+
+class FTSStatus(_serialization.Model):
+    """FTSStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar all: All. Required.
+    :vartype all: ~_generated.models.FTSStatusAll
+    """
+
+    _validation = {
+        "all": {"required": True},
+    }
+
+    _attribute_map = {
+        "all": {"key": "all", "type": "FTSStatusAll"},
+    }
+
+    def __init__(self, *, all: "_models.FTSStatusAll", **kwargs: Any) -> None:
+        """
+        :keyword all: All. Required.
+        :paramtype all: ~_generated.models.FTSStatusAll
+        """
+        super().__init__(**kwargs)
+        self.all = all
+
+
+class FTSStatusAll(_serialization.Model):
+    """All."""
 
 
 class GroupInfo(_serialization.Model):
@@ -1282,6 +1406,36 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         self.last_update_time = last_update_time
 
 
+class SiteStatus(_serialization.Model):
+    """SiteStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar all: All. Required.
+    :vartype all: ~_generated.models.SiteStatusAll
+    """
+
+    _validation = {
+        "all": {"required": True},
+    }
+
+    _attribute_map = {
+        "all": {"key": "all", "type": "SiteStatusAll"},
+    }
+
+    def __init__(self, *, all: "_models.SiteStatusAll", **kwargs: Any) -> None:
+        """
+        :keyword all: All. Required.
+        :paramtype all: ~_generated.models.SiteStatusAll
+        """
+        super().__init__(**kwargs)
+        self.all = all
+
+
+class SiteStatusAll(_serialization.Model):
+    """All."""
+
+
 class SortSpec(_serialization.Model):
     """SortSpec.
 
@@ -1313,6 +1467,77 @@ class SortSpec(_serialization.Model):
         super().__init__(**kwargs)
         self.parameter = parameter
         self.direction = direction
+
+
+class StorageElementStatus(_serialization.Model):
+    """StorageElementStatus.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar read: Read. Required.
+    :vartype read: ~_generated.models.StorageElementStatusRead
+    :ivar write: Write. Required.
+    :vartype write: ~_generated.models.StorageElementStatusWrite
+    :ivar check: Check. Required.
+    :vartype check: ~_generated.models.StorageElementStatusCheck
+    :ivar remove: Remove. Required.
+    :vartype remove: ~_generated.models.StorageElementStatusRemove
+    """
+
+    _validation = {
+        "read": {"required": True},
+        "write": {"required": True},
+        "check": {"required": True},
+        "remove": {"required": True},
+    }
+
+    _attribute_map = {
+        "read": {"key": "read", "type": "StorageElementStatusRead"},
+        "write": {"key": "write", "type": "StorageElementStatusWrite"},
+        "check": {"key": "check", "type": "StorageElementStatusCheck"},
+        "remove": {"key": "remove", "type": "StorageElementStatusRemove"},
+    }
+
+    def __init__(
+        self,
+        *,
+        read: "_models.StorageElementStatusRead",
+        write: "_models.StorageElementStatusWrite",
+        check: "_models.StorageElementStatusCheck",
+        remove: "_models.StorageElementStatusRemove",
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword read: Read. Required.
+        :paramtype read: ~_generated.models.StorageElementStatusRead
+        :keyword write: Write. Required.
+        :paramtype write: ~_generated.models.StorageElementStatusWrite
+        :keyword check: Check. Required.
+        :paramtype check: ~_generated.models.StorageElementStatusCheck
+        :keyword remove: Remove. Required.
+        :paramtype remove: ~_generated.models.StorageElementStatusRemove
+        """
+        super().__init__(**kwargs)
+        self.read = read
+        self.write = write
+        self.check = check
+        self.remove = remove
+
+
+class StorageElementStatusCheck(_serialization.Model):
+    """Check."""
+
+
+class StorageElementStatusRead(_serialization.Model):
+    """Read."""
+
+
+class StorageElementStatusRemove(_serialization.Model):
+    """Remove."""
+
+
+class StorageElementStatusWrite(_serialization.Model):
+    """Write."""
 
 
 class SummaryParams(_serialization.Model):

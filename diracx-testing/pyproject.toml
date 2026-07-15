@@ -20,6 +20,8 @@ dependencies = [
     "pytest-xdist",
     "httpx2",
     "joserfc",
+    "freezegun",
+    "sqlalchemy",
     "uuid-utils",
     "pytest-github-actions-annotate-failures",
 ]

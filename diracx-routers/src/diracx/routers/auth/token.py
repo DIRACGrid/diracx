@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from http import HTTPStatus
 from typing import Annotated, Literal
 
@@ -21,7 +20,7 @@ from diracx.core.models import (
     RefreshTokenPayload,
     TokenResponse,
 )
-from diracx.core.settings import AuthSettings
+from diracx.core.settings import AuthSettings, FactorySettings
 from diracx.db.sql import AuthDB
 from diracx.logic.auth import create_token
 from diracx.logic.auth import get_oidc_token as get_oidc_token_bl
@@ -182,6 +181,7 @@ async def perform_legacy_exchange(
     auth_db: AuthDB,
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
+    factory_settings: FactorySettings,
     config: Config,
     all_access_policies: Annotated[
         dict[str, BaseAccessPolicy], Depends(BaseAccessPolicy.all_used_access_policies)
@@ -193,9 +193,7 @@ async def perform_legacy_exchange(
     This route is disabled if DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY is not set
     in the environment.
     """
-    if not (
-        expected_api_key := os.environ.get("DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY")
-    ):
+    if not (expected_api_key := factory_settings.legacy_exchange_hashed_api_key):
         raise HTTPException(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE,
             detail="Legacy exchange is not enabled",

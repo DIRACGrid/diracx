@@ -10,6 +10,10 @@ requires-pixi = ">=0.68.0"
 # CVE fix), override per package via [exclude-newer] (conda) or [pypi-exclude-newer] (PyPI).
 exclude-newer = "7d"
 
+[pypi-exclude-newer]
+diraccommon= "0d"
+signurlarity= "0d"
+
 [dependencies]
 python = ">=3.11.3,<3.12"
 # Add some useful development dependencies to most environments
@@ -194,6 +198,14 @@ shellcheck = "*"
 cmd = "find . -not -wholename './.pixi/*' -name '*.sh' -print -exec shellcheck --exclude=SC1090,SC1091 --external-source '{}' ';'"
 description = "Run shellcheck on all shell scripts"
 
+# Features for running GHA lints
+[feature.gha-lint.dependencies]
+zizmor = "*"
+pinact = "*"
+[feature.gha-lint.tasks]
+gha-zizmor = {cmd = "zizmor .", description = "Run Zizmor GHA analysis"}
+gha-pinact = {cmd ="pinact run" , description = "Run Pinact GHA versions update"}
+
 # Settings documentation feature
 [feature.settings-doc.dependencies]
 python = "*"
@@ -253,6 +265,7 @@ mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
+gha-lint = {features = ["gha-lint"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]

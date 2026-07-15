@@ -8,7 +8,7 @@ import pytest
 import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from diracx.testing.time import julian_date, mock_sqlite_time
+from diracx.testing.time import install_sqlite_time_mock, julian_date
 
 RE_SQLITE_TIME = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}):(\d{2}))?")
 
@@ -40,7 +40,7 @@ async def test_freeze_sqlite_datetime(with_mock):
     """Test the SQLite DATETIME() function with freezegun."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True, echo=True)
     if with_mock:
-        sqlalchemy.event.listen(engine.sync_engine, "connect", mock_sqlite_time)
+        install_sqlite_time_mock(engine)
 
     async with engine.begin() as conn:
         # DATETIME()
@@ -83,7 +83,7 @@ async def test_freeze_sqlite_julianday(with_mock):
     """Test the SQLite JULIANDAY() function with freezegun."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True, echo=True)
     if with_mock:
-        sqlalchemy.event.listen(engine.sync_engine, "connect", mock_sqlite_time)
+        install_sqlite_time_mock(engine)
 
     async with engine.begin() as conn:
         # JULIANDAY()

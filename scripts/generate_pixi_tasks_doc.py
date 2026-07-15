@@ -22,6 +22,8 @@ def get_task_group(task_name):
         return "Shellcheck"
     if task_name.startswith("generate-settings-"):
         return "Settings"
+    if task_name.startswith("gha-"):
+        return "Github Actions"
     return "Default"
 
 

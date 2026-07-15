@@ -1,7 +1,7 @@
 name: Draft on Changes Requested
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] workflow is safe.
     workflows: ["Record Changes Requested"]
     types: [completed]
 
@@ -16,7 +16,7 @@ jobs:
     outputs:
       pr_number: ${{ steps.pr.outputs.number }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: pr-info
           run-id: ${{ github.event.workflow_run.id }}
@@ -26,7 +26,7 @@ jobs:
 
   draft:
     needs: get-pr
-    uses: DIRACGrid/.github/.github/workflows/draft-on-changes-requested.yml@eab297d50d33cf7eabf0b388ac57d1f91e36d14c # main
+    uses: DIRACGrid/.github/.github/workflows/draft-on-changes-requested.yml@a599200da5df9e3ea9104a6b9b99eb5bf83754a3 # main
     with:
       pr_number: ${{ fromJSON(needs.get-pr.outputs.pr_number) }}
     secrets:

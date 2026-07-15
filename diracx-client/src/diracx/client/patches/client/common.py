@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 __all__ = [
-    "DiracAuthMixin",
+    "get_openid_configuration",
+    "get_token",
+    "refresh_token",
 ]
 
 import fcntl
 import json
 import os
+import ssl
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from enum import Enum
@@ -19,7 +22,10 @@ from urllib import parse
 import httpx2
 import jwt
 from azure.core.credentials import AccessToken
-from diracx.core.utils import EXPIRES_GRACE_SECONDS, serialize_credentials
+from diracx.core.utils import (
+    EXPIRES_GRACE_SECONDS,
+    serialize_credentials,
+)
 from diracx.core.models import TokenResponse
 
 
@@ -37,7 +43,7 @@ class TokenResult:
 
 
 def get_openid_configuration(
-    endpoint: str, *, verify: bool | str = True
+    endpoint: str, *, verify: bool | ssl.SSLContext = True
 ) -> dict[str, str]:
     """Get the openid configuration from the .well-known endpoint"""
     response = httpx2.get(
@@ -54,7 +60,7 @@ def get_token(
     token: AccessToken | None,
     token_endpoint: str,
     client_id: str,
-    verify: bool | str,
+    verify: bool | ssl.SSLContext,
 ) -> AccessToken:
     """Get the access token if available and still valid."""
     # Immediately return the token if it is available and still valid
@@ -117,7 +123,7 @@ def refresh_token(
     client_id: str,
     refresh_token: str,
     *,
-    verify: bool | str = True,
+    verify: bool | ssl.SSLContext = True,
 ) -> TokenResponse:
     """Refresh the access token using the refresh_token flow."""
     response = httpx2.post(

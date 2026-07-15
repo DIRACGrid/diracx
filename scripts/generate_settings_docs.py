@@ -29,6 +29,7 @@ from settings_doc import OutputFormat, importing, render
 from settings_doc.main import _model_fields
 from settings_doc.template_functions import JINJA_ENV_GLOBALS
 
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import ServiceSettingsBase
 
 
@@ -194,6 +195,7 @@ def validate_documentation(
 
     # Exclude ServiceSettingsBase as it's the base class
     undocumented.discard("ServiceSettingsBase")
+    undocumented.discard("FactorySettings")
 
     if undocumented:
         all_documented = False
@@ -231,6 +233,44 @@ def generate_all_templates(
 
     classes = {cls: list(cls.model_fields.values()) for cls in settings}
 
+    factory_enabled_services = [
+        {
+            "env_name": f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED",
+            "description": f"Enable the {entry_point.name.upper()} router",
+            "default": "True",
+        }
+        for entry_point in sorted(
+            select_from_extension(group=DiracEntryPoint.SERVICES),
+            key=lambda entry: entry.name,
+        )
+        if "well-known" not in entry_point.name
+    ]
+
+    factory_opensearch_dbs = [
+        {
+            "env_name": f"DIRACX_OS_DB_{entry_point.name.upper()}",
+            "description": "A JSON-encoded dictionary of connection keyword arguments"
+            f" for the OpenSearch database {entry_point.name}.",
+            "default": "",
+        }
+        for entry_point in sorted(
+            select_from_extension(group=DiracEntryPoint.OS_DB),
+            key=lambda entry: entry.name,
+        )
+    ]
+
+    factory_sql_dbs = [
+        {
+            "env_name": f"DIRACX_DB_URL_{entry_point.name.upper()}",
+            "description": f"The URL for the SQL database {entry_point.name}.",
+            "default": "",
+        }
+        for entry_point in sorted(
+            select_from_extension(group=DiracEntryPoint.SQL_DB),
+            key=lambda entry: entry.name,
+        )
+    ]
+
     # Set up Jinja2 environment
     env = Environment(
         loader=FileSystemLoader([str(docs_dir), str(docs_dir / "templates")]),
@@ -247,6 +287,9 @@ def generate_all_templates(
             "fields": fields,
             "classes": classes,
             "all_classes": settings,
+            "factory_enabled_services": factory_enabled_services,
+            "factory_opensearch_dbs": factory_opensearch_dbs,
+            "factory_sql_dbs": factory_sql_dbs,
         }
     )
 
