@@ -200,10 +200,12 @@ class JobDB(BaseSQLDB):
 
         All the jobs must update the same properties.
 
-        :param properties: {job_id : {prop1: val1, prop2:val2}
-        :param update_timestamp: if True, update the LastUpdate to now
+        Args:
+            properties: {job_id : {prop1: val1, prop2:val2}
+            update_timestamp: if True, update the LastUpdate to now
 
-        :return rowcount
+        Returns:
+          rowcount
 
         """
         # Check that all we always update the same set of properties
@@ -238,9 +240,10 @@ class JobDB(BaseSQLDB):
         This is instead handled by the `diracx.logic.jobs.status.set_job_statuses`
         as it involves updating multiple databases.
 
-        :param job_id: the job id
-        :param dynamic_data: mapping of the dynamic data to store,
-            e.g. {"AvailableDiskSpace": 123}
+        Args:
+            job_id: the job id
+            dynamic_data: mapping of the dynamic data to store, e.g.
+                {"AvailableDiskSpace": 123}
         """
         if extra_fields := set(dynamic_data) - self.heartbeat_fields:
             raise InvalidQueryError(
@@ -261,8 +264,11 @@ class JobDB(BaseSQLDB):
     async def get_job_commands(self, job_ids: Iterable[int]) -> list[JobCommand]:
         """Get a command to be passed to the job together with the next heartbeat.
 
-        :param job_ids: the job ids
-        :return: mapping of job id to list of commands
+        Args:
+            job_ids: the job ids
+
+        Returns:
+            mapping of job id to list of commands
         """
         # Get the commands
         stmt = (

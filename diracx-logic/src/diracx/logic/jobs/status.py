@@ -103,7 +103,8 @@ async def set_job_statuses(
     logging information in the JobLoggingDB. The status dict has datetime
     as a key and status information dictionary as values.
 
-    :raises: JobNotFound if the job is not found in one of the DBs
+    Raises:
+      JobNotFound if the job is not found in one of the DBs
     """
     # check that the datetime contains timezone info
     for job_id, status in status_changes.items():

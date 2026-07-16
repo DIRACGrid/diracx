@@ -99,11 +99,15 @@ async def calculate_priority(
 ) -> dict[float, list[int]]:
     """Calculate the priority for each TQ given a share.
 
-    :param tq_dict: dict of {tq_id: prio}
-    :param all_tqs_data: dict of {tq_id: {tq_data}}, where tq_data is a dict of {field: value}
-    :param share: share to be distributed among TQs
-    :param allow_bg_tqs: allow background TQs to be used
-    :return: dict of {priority: [tq_ids]}
+    Args:
+        tq_dict: dict of {tq_id: prio}
+        all_tqs_data: dict of {tq_id: {tq_data}}, where tq_data is a
+            dict of {field: value}
+        share: share to be distributed among TQs
+        allow_bg_tqs: allow background TQs to be used
+
+    Returns:
+        dict of {priority: [tq_ids]}
     """
 
     def is_background(tq_priority: float, allow_bg_tqs: bool) -> bool:

@@ -159,7 +159,7 @@ class AuthDB(BaseSQLDB):
 
         Returns the scope field for the given user_code
 
-        :raises:
+        Raises:
             NoResultFound if no such user code currently Pending
         """
         stmt = select(DeviceFlows.scope).where(
@@ -273,7 +273,7 @@ class AuthDB(BaseSQLDB):
     ) -> tuple[str, str]:
         """Return code, redirect_uri.
 
-        :raises: AuthorizationError if no such uuid or status not pending.
+        Raises: AuthorizationError if no such uuid or status not pending.
         """
         # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()
