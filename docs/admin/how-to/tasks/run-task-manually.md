@@ -23,6 +23,20 @@ diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]'
 diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 ```
 
+## Run the dummy job executor
+
+Pass a job ID to the registered `jobs:DummyJobExecutorTask` entry point:
+
+```bash
+diracx-task-run call jobs:DummyJobExecutorTask --args '[42]'
+```
+
+The task logs:
+
+```text
+I am executing 42
+```
+
 ## Debugging
 
 The `--debugger` flag drops into Python's debugger:
