@@ -63,13 +63,13 @@ For the full guide on building routes, see
 
 ## Register entry points
 
-Service entry point:
+Service entry point (add under `[project.entry-points."diracx.services"]`):
 
 ```toml title="gubbins-routers/pyproject.toml"
 --8<-- "extensions/gubbins/gubbins-routers/pyproject.toml:my_pilots_service_entry_point"
 ```
 
-Access policy entry point:
+Access policy entry point (add under `[project.entry-points."diracx.access_policies"]`):
 
 ```toml title="gubbins-routers/pyproject.toml"
 --8<-- "extensions/gubbins/gubbins-routers/pyproject.toml:my_pilots_access_policy_entry_point"
