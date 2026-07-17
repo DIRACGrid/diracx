@@ -25,16 +25,24 @@ diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 
 ## Run the dummy job executor
 
-Pass a job ID to the registered `jobs:DummyJobExecutorTask` entry point:
+Demo deployments include two tasks that simulate job execution. The periodic
+`jobs:DummyJobExecutorMonitorTask` moves every `Received` job to `Waiting` and
+schedules a one-shot `jobs:DummyJobExecutorTask` for it, which walks the job
+through `Matched` → `Running` → `Done`.
+
+Both tasks talk to the job databases, so the relevant `DIRACX_DB_URL_*`,
+`DIRACX_OS_DB_*`, and `DIRACX_CONFIG_BACKEND_URL` variables must be set.
+
+Run the monitor once to pick up all `Received` jobs:
+
+```bash
+diracx-task-run call jobs:DummyJobExecutorMonitorTask
+```
+
+Or simulate the execution of a single job by passing its job ID:
 
 ```bash
 diracx-task-run call jobs:DummyJobExecutorTask --args '[42]'
-```
-
-The task logs:
-
-```text
-I am executing 42
 ```
 
 ## Debugging
