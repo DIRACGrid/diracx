@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/DIRACGrid/diracx/compare/v0.3.0...v0.3.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* minor fixes to the advanced tutorial ([#991](https://github.com/DIRACGrid/diracx/issues/991)) ([ea6f400](https://github.com/DIRACGrid/diracx/commit/ea6f40024735c24bb6e704761cbeb695976eb827))
+
 ## [0.3.0](https://github.com/DIRACGrid/diracx/compare/v0.2.0...v0.3.0) (2026-07-07)
 
 
