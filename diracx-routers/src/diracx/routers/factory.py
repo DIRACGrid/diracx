@@ -115,21 +115,17 @@ def create_app_inner(
     the actual behavior we are interested in for settings, DBs or policy.
     This allows an extension to override any of these components
 
-
-    :param enabled_system:
-         this contains the name of all the routers we have to load
-    :param all_service_settings:
-        list of instance of each Settings type required
-    :param database_urls:
-        dict <db_name: url>. When testing, sqlite urls are used
-    :param os_database_conn_kwargs:
-        <db_name:dict> containing all the parameters the OpenSearch client takes
-    :param config_source:
-        Source of the configuration to use
-    :param all_access_policies:
-        <policy_name: [implementations]>
-
-
+    Args:
+        enabled_systems: this contains the name of all the routers we
+            have to load
+        all_service_settings: list of instance of each Settings type
+            required
+        database_urls: dict <db_name: url>. When testing, sqlite urls
+            are used
+        os_database_conn_kwargs: <db_name:dict> containing all the
+            parameters the OpenSearch client takes
+        config_source: Source of the configuration to use
+        all_access_policies: <policy_name: [implementations]>
     """
     app = DiracFastAPI()
 

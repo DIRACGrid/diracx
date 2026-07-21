@@ -1,6 +1,4 @@
-"""
-This shows how to create a new subcommand
-"""
+"""This shows how to create a new subcommand"""
 
 from __future__ import annotations
 
@@ -15,16 +13,13 @@ app = AsyncTyper()
 
 @app.command()
 def hello():
-    """
-    This is just to make sure that the CLI extension mechanism works
-    """
+    """This is just to make sure that the CLI extension mechanism works"""
     print("Shagadelic, Baby!")
 
 
 @app.async_command()
 async def get_owners():
-    """
-    This makes a proper use of the AsyncGubbinsClient to call
+    """This makes a proper use of the AsyncGubbinsClient to call
     a method specific to Gubbins
     """
     async with AsyncGubbinsClient() as api:
@@ -34,9 +29,7 @@ async def get_owners():
 
 @app.async_command()
 async def sensei():
-    """
-    This function is only here to test the GUBBINS_SENSEI property
-    """
+    """This function is only here to test the GUBBINS_SENSEI property"""
     async with AsyncGubbinsClient() as api:
         secrets = await api.lollygag.get_gubbins_secrets()
         print(secrets)
