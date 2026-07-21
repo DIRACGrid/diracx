@@ -244,7 +244,7 @@ def parse_and_validate_scope(
     return dict with group and properties.
 
     Raises:
-        * ValueError in case the scope isn't valid
+        ValueError: in case the scope isn't valid
     """
     scopes = set(scope.split(" "))
 

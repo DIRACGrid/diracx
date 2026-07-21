@@ -104,7 +104,7 @@ async def set_job_statuses(
     as a key and status information dictionary as values.
 
     Raises:
-      JobNotFound if the job is not found in one of the DBs
+        JobNotFound: if the job is not found in one of the DBs
     """
     # check that the datetime contains timezone info
     for job_id, status in status_changes.items():

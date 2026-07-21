@@ -160,7 +160,7 @@ class AuthDB(BaseSQLDB):
         Returns the scope field for the given user_code
 
         Raises:
-            NoResultFound if no such user code currently Pending
+            NoResultFound: if no such user code currently Pending
         """
         stmt = select(DeviceFlows.scope).where(
             DeviceFlows.user_code == user_code,
@@ -271,9 +271,10 @@ class AuthDB(BaseSQLDB):
     async def authorization_flow_insert_id_token(
         self, uuid: str, id_token: dict[str, str], max_validity: int
     ) -> tuple[str, str]:
-        """Return code, redirect_uri.
+        """Return the authorization code and redirect URI.
 
-        Raises: AuthorizationError if no such uuid or status not pending.
+        Raises:
+            AuthorizationError: If no such UUID exists or the flow is not pending.
         """
         # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()

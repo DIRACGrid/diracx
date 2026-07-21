@@ -205,7 +205,7 @@ class JobDB(BaseSQLDB):
             update_timestamp: if True, update the LastUpdate to now
 
         Returns:
-          rowcount
+            rowcount
 
         """
         # Check that all we always update the same set of properties
