@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 MINOR_STATUS = "DummyExecutor"
 
 
-class _DummyJobExecutorSettings(ServiceSettingsBase):
+class DummyJobExecutorSettings(ServiceSettingsBase):
     """Settings controlling automatic dummy job execution."""
 
     model_config = ServiceSettingsBase.model_config | {
@@ -46,7 +46,7 @@ class _DummyJobExecutorSettings(ServiceSettingsBase):
     """How often the enabled monitor searches for received jobs."""
 
 
-_settings = _DummyJobExecutorSettings()
+_settings = DummyJobExecutorSettings()
 
 
 @dataclasses.dataclass
