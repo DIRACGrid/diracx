@@ -25,10 +25,17 @@ diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 
 ## Run the dummy job executor
 
-Demo deployments include two tasks that simulate job execution. The periodic
+The task package includes two tasks that simulate job execution. The periodic
 `jobs:DummyJobExecutorMonitorTask` moves every `Received` job to `Waiting` and
 schedules a one-shot `jobs:DummyJobExecutorTask` for it, which walks the job
 through `Matched` → `Running` → `Done`.
+
+Automatic monitoring is disabled by default. `run_local.sh` explicitly enables
+the monitor every 10 seconds with
+`DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED=true` and
+`DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS=10`. Demo deployment
+enablement requires the coordinated `diracx-charts` values change and is not
+part of this commit.
 
 Both tasks talk to the job databases, so the relevant `DIRACX_DB_URL_*`,
 `DIRACX_OS_DB_*`, and `DIRACX_CONFIG_BACKEND_URL` variables must be set.
