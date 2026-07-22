@@ -97,7 +97,7 @@ def test_monitor_schedule_activation_is_environment_controlled():
 
 def test_monitor_interval_must_be_positive():
     with pytest.raises(ValidationError):
-        dummy_job_executor_module._DummyJobExecutorSettings(interval_seconds=0)
+        dummy_job_executor_module.DummyJobExecutorSettings(interval_seconds=0)
 
 
 def test_executor_takes_a_per_job_mutex():
