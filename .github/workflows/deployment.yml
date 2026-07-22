@@ -41,7 +41,7 @@ jobs:
         # We need extglob for REFERENCE_BRANCH substitution
         shell: bash -l -O extglob {0}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           token: ${{ github.token }}
           persist-credentials: false
@@ -116,7 +116,7 @@ jobs:
       attestations: write      # write build-provenance attestations
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - name: Set up QEMU
@@ -222,12 +222,12 @@ jobs:
     if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           path: diracx
           persist-credentials: false
       - name: Checkout diracx-charts
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: DIRACGrid/diracx-charts
           token: ${{ secrets.CHARTS_UPDATE_TOKEN }}
