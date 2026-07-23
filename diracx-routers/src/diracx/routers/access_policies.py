@@ -33,7 +33,6 @@ from fastapi import Depends
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.models import (
     AccessTokenPayload,
-    RefreshTokenPayload,
 )
 from diracx.core.settings import DevelopmentSettings
 from diracx.routers.dependencies import auto_inject
@@ -90,18 +89,15 @@ class BaseAccessPolicy(metaclass=ABCMeta):
         return
 
     @staticmethod
-    def enrich_tokens(
-        access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload | None
-    ) -> tuple[dict, dict]:
-        """Add content to access or refresh payload when issuing a token.
+    def enrich_tokens(access_payload: AccessTokenPayload) -> dict:
+        """Add content to access payload when issuing a token.
 
-        Content can be whatever is desired inside the access or refresh payload.
+        Content can be whatever is desired inside the access payload.
 
         :param access_payload: access token payload
-        :param refresh_payload: refresh token payload
-        :returns: extra content for both payload
+        :returns: extra content for the access payload
         """
-        return {}, {}
+        return {}
 
 
 @auto_inject

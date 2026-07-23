@@ -46,7 +46,7 @@ from joserfc.jwk import KeySet, OKPKey
 from uuid_utils import uuid7
 
 from diracx.core.extensions import DiracEntryPoint
-from diracx.core.models import AccessTokenPayload, RefreshTokenPayload
+from diracx.core.models import AccessTokenPayload
 from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
@@ -199,11 +199,8 @@ class ClientFactory:
                 pass
 
             @staticmethod
-            def enrich_tokens(
-                access_payload: AccessTokenPayload,
-                refresh_payload: RefreshTokenPayload | None,
-            ):
-                return {"PolicySpecific": "OpenAccessForTest"}, {}
+            def enrich_tokens(access_payload: AccessTokenPayload):
+                return {"PolicySpecific": "OpenAccessForTest"}
 
         enabled_systems = {
             e.name for e in select_from_extension(group=DiracEntryPoint.SERVICES)
