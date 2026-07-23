@@ -62,6 +62,12 @@ Enable the HEALTH router
 
 Enable the JOBS router
 
+#### `DIRACX_SERVICE_PILOTS_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the PILOTS router
+
 #### `DIRACX_SERVICE_RSS_ENABLED`
 
 *Optional*, default value: `True`
