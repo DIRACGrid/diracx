@@ -26,7 +26,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
+from diracx.core.exceptions import DiracError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import FactorySettings, ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
@@ -328,9 +328,6 @@ def create_app_inner(
     handler_signature = Callable[[Request, Exception], Response | Awaitable[Response]]
     app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))
     app.add_exception_handler(
-        DiracHttpResponseError, cast(handler_signature, http_response_handler)
-    )
-    app.add_exception_handler(
         DBUnavailableError, cast(handler_signature, route_unavailable_error_hander)
     )
     app.add_exception_handler(
@@ -427,15 +424,13 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
+    status_code = getattr(exc, "http_status_code", HTTPStatus.BAD_REQUEST)
+    headers = getattr(exc, "http_headers", None)
     return JSONResponse(
-        status_code=exc.http_status_code,
+        status_code=status_code,
         content={"detail": exc.detail},
-        headers=exc.http_headers,
+        headers=headers,
     )
-
-
-def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Response:
-    return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
@@ -505,7 +500,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
             _db_alive_cache[db] = ""
 
         except DBUnavailableError as e:
-            _db_alive_cache[db] = e.args[0]
+            _db_alive_cache[db] = str(e)
 
     return _db_alive_cache[db]
 

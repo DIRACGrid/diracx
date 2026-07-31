@@ -3,7 +3,6 @@ from __future__ import annotations
 __all__ = [
     "AuthorizationError",
     "DiracError",
-    "DiracHttpResponseError",
     "IAMClientError",
     "IAMServerError",
     "InvalidCredentialsError",
@@ -16,19 +15,8 @@ __all__ = [
     "TokenNotFoundError",
 ]
 
-from http import HTTPStatus
-
-
-class DiracHttpResponseError(RuntimeError):
-    def __init__(self, status_code: int, data):
-        self.status_code = status_code
-        self.data = data
-
 
 class DiracError(RuntimeError):
-    http_status_code = HTTPStatus.BAD_REQUEST  # 400
-    http_headers: dict[str, str] | None = None
-
     def __init__(self, detail: str = "Unknown"):
         self.detail = detail
 
