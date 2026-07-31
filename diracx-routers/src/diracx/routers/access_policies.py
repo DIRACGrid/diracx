@@ -9,7 +9,6 @@ Each route should either:
 * have the open_access decorator to make explicit that it does not implement policy
 * have a callable and call it that will perform the access policy
 
-
 Adding a new policy:
 1. Create a class that inherits from BaseAccessPolicy and implement the ``policy`` and ``enrich_tokens`` methods
 2. create an entry in diracx.access_policy entrypoints
@@ -97,9 +96,12 @@ class BaseAccessPolicy(metaclass=ABCMeta):
 
         Content can be whatever is desired inside the access or refresh payload.
 
-        :param access_payload: access token payload
-        :param refresh_payload: refresh token payload
-        :returns: extra content for both payload
+        Args:
+            access_payload: access token payload
+            refresh_payload: refresh token payload
+
+        Returns:
+            extra content for both payload
         """
         return {}, {}
 

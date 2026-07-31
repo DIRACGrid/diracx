@@ -7,8 +7,7 @@ from .schema import GubbinsInfo, JobDBBase
 
 
 class GubbinsJobDB(JobDB):
-    """
-    This DB extends the diracx JobDB.
+    """This DB extends the diracx JobDB.
     All methods from the parent DB are accessible
 
     """
@@ -16,17 +15,14 @@ class GubbinsJobDB(JobDB):
     metadata = JobDBBase.metadata
 
     async def insert_gubbins_info(self, job_id: int, info: str):
-        """
-        This is a new method that makes use of a new table.
-        """
+        """This is a new method that makes use of a new table."""
         stmt = insert(GubbinsInfo).values(job_id=job_id, info=info)
         await self.conn.execute(stmt)
 
     async def get_job_jdls(  # type: ignore[override]
         self, job_ids, original: bool = False, with_info=False
     ) -> dict:
-        """
-        This method modifies the one in the parent class:
+        """This method modifies the one in the parent class:
         * adds an extra argument
         * changes the return type
 
@@ -50,8 +46,7 @@ class GubbinsJobDB(JobDB):
         return result
 
     async def set_job_attributes(self, job_data):
-        """
-        This method modified the one in the parent class,
+        """This method modified the one in the parent class,
         without changing the argument nor the return type
 
         Also, this method is called by the router via the status_utility
