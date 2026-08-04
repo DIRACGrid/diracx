@@ -22,6 +22,8 @@ import traceback
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Iterable
 
+from redis.asyncio import Redis
+
 from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
@@ -314,8 +316,8 @@ async def call_task(
     """Execute a task interactively (no broker).
 
     Uses ``task_wrapper`` with ``_interactive=True`` so that structural
-    locks (Mutex, RW) are acquired when Redis is available, while
-    limiters (rate/concurrency) are skipped.
+    locks (Mutex, RW) are acquired, while limiters (rate/concurrency)
+    are skipped.
 
     Dependency injection (databases, config, settings) is resolved
     automatically from environment variables via
@@ -337,13 +339,8 @@ async def call_task(
         print(f"Task {entry_point!r} not found. Available: {sorted(registry)}")
         sys.exit(1)
 
-    # Try to connect to Redis for lock acquisition
-    redis: LockCoordinator | None = None
-    redis_url = _factory_settings.tasks_redis_url
-    if redis_url:
-        from redis.asyncio import Redis
-
-        redis = Redis.from_url(redis_url)
+    # Connect to Redis for lock acquisition
+    redis: LockCoordinator = Redis.from_url(_factory_settings.tasks_redis_url)
 
     wrapped = wrap_task(task_cls)
 
@@ -388,5 +385,4 @@ async def call_task(
             pdb.post_mortem(traceback_info[2])
         finally:
             await async_exit_stack.aclose()
-            if redis is not None:
-                await redis.aclose()
+            await redis.aclose()
