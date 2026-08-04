@@ -305,9 +305,12 @@ async def setup_dependency_overrides(
                 )
 
         # --- OS databases ---
+        os_global_prefix = FactorySettings().os_global_prefix
         for db_name, conn_kwargs in BaseOSDB.available_urls().items():
             os_db_classes = BaseOSDB.available_implementations(db_name)
-            os_db = os_db_classes[0](connection_kwargs=conn_kwargs)
+            os_db = os_db_classes[0](
+                connection_kwargs=conn_kwargs, global_prefix=os_global_prefix
+            )
             await stack.enter_async_context(os_db.client_context())
             for os_db_class in os_db_classes:
                 overrides[os_db_class.session] = partial(_db_context, os_db)
