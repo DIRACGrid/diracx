@@ -6,10 +6,10 @@ from typing import Annotated
 from fastapi import Body, HTTPException
 
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
-from diracx.core.models.pilot import PilotMetadata, PilotStatus
+from diracx.core.models.pilot import PilotMetadata, PilotRegistrationParams
 from diracx.db.sql import PilotAgentsDB
 from diracx.logic.pilots import (
-    register_new_pilots,
+    register_new_pilot,
     update_pilots_metadata,
 )
 
@@ -27,24 +27,8 @@ router = DiracxRouter()
 async def register_pilot(
     config: Config,
     pilot_db: PilotAgentsDB,
-    pilot_stamp: Annotated[
-        str,
-        Body(description="Stamp of the pilot to create."),
-    ],
-    vo: Annotated[str, Body(description="Pilot virtual organization.")],
+    registration: PilotRegistrationParams,
     check_permissions: CheckPilotManagementPolicyCallable,
-    grid_type: Annotated[str, Body(description="Grid type of the pilot.")] = "DIRAC",
-    grid_site: Annotated[str, Body(description="Pilot grid site.")] = "Unknown",
-    destination_site: Annotated[
-        str, Body(description="Pilot destination site.")
-    ] = "NotAssigned",
-    pilot_reference: Annotated[
-        str | None,
-        Body(description="Pilot reference."),
-    ] = None,
-    pilot_status: Annotated[
-        PilotStatus, Body(description="Initial status of the pilot.")
-    ] = PilotStatus.SUBMITTED,
 ):
     """Register a pilot with its reference.
 
@@ -57,23 +41,15 @@ async def register_pilot(
     # single stamp per call, which bounds what a stolen credential can do.
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
-        target_vo=vo,
+        target_vo=registration.vo,
         allow_legacy_pilots=True,
     )
 
     try:
-        await register_new_pilots(
+        await register_new_pilot(
             config=config,
             pilot_db=pilot_db,
-            pilot_stamps=[pilot_stamp],
-            vo=vo,
-            grid_type=grid_type,
-            grid_site=grid_site,
-            destination_site=destination_site,
-            pilot_job_references={pilot_stamp: pilot_reference}
-            if pilot_reference
-            else None,
-            status=pilot_status,
+            registration=registration,
         )
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e

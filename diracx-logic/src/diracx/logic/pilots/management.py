@@ -5,27 +5,21 @@ from typing import Any
 
 from diracx.core.config import Config
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
-from diracx.core.models.pilot import PilotMetadata, PilotStatus
+from diracx.core.models.pilot import PilotMetadata, PilotRegistrationParams
 from diracx.db.sql import PilotAgentsDB
 
 from .query import get_pilots_by_stamp
 
 
-async def register_new_pilots(
+async def register_new_pilot(
     config: Config,
     pilot_db: PilotAgentsDB,
-    pilot_stamps: list[str],
-    vo: str,
-    grid_type: str,
-    grid_site: str,
-    destination_site: str,
-    status: PilotStatus,
-    pilot_job_references: dict[str, str] | None,
+    registration: PilotRegistrationParams,
 ):
-    """Register a batch of new pilots.
+    """Register a new pilot.
 
     Raises `ValueError` if the VO is not in the registry, and
-    `PilotAlreadyExistsError` if any stamp already exists.
+    `PilotAlreadyExistsError` if the stamp already exists.
 
     Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
     constraint on `PilotStamp` (only a non-unique key), so a concurrent
@@ -36,27 +30,25 @@ async def register_new_pilots(
     # TODO: https://github.com/DIRACGrid/diracx/issues/1005
     # Also validate grid_type, grid_site and destination_site once the
     # Resources section of the CS is modeled in the Config schema.
-    if vo not in config.registry:
-        raise ValueError(f"VO {vo!r} is not registered in this installation.")
-
-    existing_pilots = await get_pilots_by_stamp(
-        pilot_db=pilot_db, pilot_stamps=pilot_stamps
-    )
-
-    if existing_pilots:
-        found_keys = {pilot["PilotStamp"] for pilot in existing_pilots}
-        raise PilotAlreadyExistsError(
-            f"The following pilots already exist: {found_keys}"
+    if registration.vo not in config.registry:
+        raise ValueError(
+            f"VO {registration.vo!r} is not registered in this installation."
         )
 
+    stamp = registration.pilot_stamp
+    if await get_pilots_by_stamp(pilot_db=pilot_db, pilot_stamps=[stamp]):
+        raise PilotAlreadyExistsError(f"Pilot with stamp {stamp!r} already exists")
+
     await pilot_db.register_pilots(
-        pilot_stamps=pilot_stamps,
-        vo=vo,
-        grid_type=grid_type,
-        grid_site=grid_site,
-        destination_site=destination_site,
-        pilot_references=pilot_job_references,
-        status=status,
+        pilot_stamps=[stamp],
+        vo=registration.vo,
+        grid_type=registration.grid_type,
+        grid_site=registration.grid_site,
+        destination_site=registration.destination_site,
+        pilot_references={stamp: registration.pilot_reference}
+        if registration.pilot_reference
+        else None,
+        status=registration.pilot_status,
     )
 
 

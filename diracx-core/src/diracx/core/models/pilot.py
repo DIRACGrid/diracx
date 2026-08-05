@@ -18,6 +18,22 @@ class PilotStatus(StrEnum):
     UNKNOWN = "Unknown"
 
 
+class PilotRegistrationParams(BaseModel, extra="forbid"):
+    """Body of ``POST /api/pilots/`` to register a single pilot."""
+
+    pilot_stamp: str = Field(min_length=1, description="Stamp of the pilot to create.")
+    vo: str = Field(min_length=1, description="Pilot virtual organization.")
+    grid_type: str = Field("DIRAC", description="Grid type of the pilot.")
+    grid_site: str = Field("Unknown", description="Pilot grid site.")
+    destination_site: str = Field("NotAssigned", description="Pilot destination site.")
+    pilot_reference: str | None = Field(
+        None, description="CE job reference of the pilot; defaults to the stamp."
+    )
+    pilot_status: PilotStatus = Field(
+        PilotStatus.SUBMITTED, description="Initial status of the pilot."
+    )
+
+
 class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
     """Mutable metadata attached to a pilot.
 

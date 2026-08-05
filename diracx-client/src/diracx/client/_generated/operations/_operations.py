@@ -3043,16 +3043,17 @@ class PilotsOperations:
 
     @overload
     def register_pilot(
-        self, body: _models.BodyPilotsRegisterPilot, *, content_type: str = "application/json", **kwargs: Any
+        self, body: _models.PilotRegistrationParams, *, content_type: str = "application/json", **kwargs: Any
     ) -> Any:
         """Register Pilot.
 
         Register a pilot with its reference.
 
         If the stamp already exists, the registration is rejected with a 409.
+        Registering into a VO that is not in the registry is rejected with a 400.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsRegisterPilot
+        :type body: ~_generated.models.PilotRegistrationParams
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3068,6 +3069,7 @@ class PilotsOperations:
         Register a pilot with its reference.
 
         If the stamp already exists, the registration is rejected with a 409.
+        Registering into a VO that is not in the registry is rejected with a 400.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3080,15 +3082,16 @@ class PilotsOperations:
         """
 
     @distributed_trace
-    def register_pilot(self, body: Union[_models.BodyPilotsRegisterPilot, IO[bytes]], **kwargs: Any) -> Any:
+    def register_pilot(self, body: Union[_models.PilotRegistrationParams, IO[bytes]], **kwargs: Any) -> Any:
         """Register Pilot.
 
         Register a pilot with its reference.
 
         If the stamp already exists, the registration is rejected with a 409.
+        Registering into a VO that is not in the registry is rejected with a 400.
 
-        :param body: Is either a BodyPilotsRegisterPilot type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsRegisterPilot or IO[bytes]
+        :param body: Is either a PilotRegistrationParams type or a IO[bytes] type. Required.
+        :type body: ~_generated.models.PilotRegistrationParams or IO[bytes]
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3113,7 +3116,7 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsRegisterPilot")
+            _json = self._serialize.body(body, "PilotRegistrationParams")
 
         _request = build_pilots_register_pilot_request(
             content_type=content_type,

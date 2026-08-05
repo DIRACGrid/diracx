@@ -248,82 +248,6 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
         self.job_ids = job_ids
 
 
-class BodyPilotsRegisterPilot(_serialization.Model):
-    """Body_pilots_register_pilot.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: Stamp of the pilot to create. Required.
-    :vartype pilot_stamp: str
-    :ivar vo: Pilot virtual organization. Required.
-    :vartype vo: str
-    :ivar grid_type: Grid type of the pilot.
-    :vartype grid_type: str
-    :ivar grid_site: Pilot grid site.
-    :vartype grid_site: str
-    :ivar destination_site: Pilot destination site.
-    :vartype destination_site: str
-    :ivar pilot_reference: Pilot reference.
-    :vartype pilot_reference: str
-    :ivar pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
-     "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
-    :vartype pilot_status: str or ~_generated.models.PilotStatus
-    """
-
-    _validation = {
-        "pilot_stamp": {"required": True},
-        "vo": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
-        "vo": {"key": "vo", "type": "str"},
-        "grid_type": {"key": "grid_type", "type": "str"},
-        "grid_site": {"key": "grid_site", "type": "str"},
-        "destination_site": {"key": "destination_site", "type": "str"},
-        "pilot_reference": {"key": "pilot_reference", "type": "str"},
-        "pilot_status": {"key": "pilot_status", "type": "str"},
-    }
-
-    def __init__(
-        self,
-        *,
-        pilot_stamp: str,
-        vo: str,
-        grid_type: str = "DIRAC",
-        grid_site: str = "Unknown",
-        destination_site: str = "NotAssigned",
-        pilot_reference: Optional[str] = None,
-        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
-        **kwargs: Any
-    ) -> None:
-        """
-        :keyword pilot_stamp: Stamp of the pilot to create. Required.
-        :paramtype pilot_stamp: str
-        :keyword vo: Pilot virtual organization. Required.
-        :paramtype vo: str
-        :keyword grid_type: Grid type of the pilot.
-        :paramtype grid_type: str
-        :keyword grid_site: Pilot grid site.
-        :paramtype grid_site: str
-        :keyword destination_site: Pilot destination site.
-        :paramtype destination_site: str
-        :keyword pilot_reference: Pilot reference.
-        :paramtype pilot_reference: str
-        :keyword pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
-         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
-        :paramtype pilot_status: str or ~_generated.models.PilotStatus
-        """
-        super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
-        self.vo = vo
-        self.grid_type = grid_type
-        self.grid_site = grid_site
-        self.destination_site = destination_site
-        self.pilot_reference = pilot_reference
-        self.pilot_status = pilot_status
-
-
 class ComputeElementStatus(_serialization.Model):
     """ComputeElementStatus.
 
@@ -1214,6 +1138,88 @@ class PilotMetadata(_serialization.Model):
         self.grid_type = grid_type
         self.accounting_sent = accounting_sent
         self.current_job_id = current_job_id
+
+
+class PilotRegistrationParams(_serialization.Model):
+    """Body of ``POST /api/pilots/`` to register a single pilot.
+
+    Field length limits match the ``PilotAgents`` table columns.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Stamp of the pilot to create. Required.
+    :vartype pilot_stamp: str
+    :ivar vo: Pilot virtual organization. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilot.
+    :vartype grid_type: str
+    :ivar grid_site: Pilot grid site.
+    :vartype grid_site: str
+    :ivar destination_site: Pilot destination site.
+    :vartype destination_site: str
+    :ivar pilot_reference: CE job reference of the pilot; defaults to the stamp.
+    :vartype pilot_reference: str
+    :ivar pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
+     "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True, "max_length": 32, "min_length": 1},
+        "vo": {"required": True, "max_length": 128, "min_length": 1},
+        "grid_type": {"max_length": 32},
+        "grid_site": {"max_length": 128},
+        "destination_site": {"max_length": 128},
+        "pilot_reference": {"max_length": 255},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "destination_site": {"key": "destination_site", "type": "str"},
+        "pilot_reference": {"key": "pilot_reference", "type": "str"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        vo: str,
+        grid_type: str = "DIRAC",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
+        pilot_reference: Optional[str] = None,
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: Stamp of the pilot to create. Required.
+        :paramtype pilot_stamp: str
+        :keyword vo: Pilot virtual organization. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilot.
+        :paramtype grid_type: str
+        :keyword grid_site: Pilot grid site.
+        :paramtype grid_site: str
+        :keyword destination_site: Pilot destination site.
+        :paramtype destination_site: str
+        :keyword pilot_reference: CE job reference of the pilot; defaults to the stamp.
+        :paramtype pilot_reference: str
+        :keyword pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.vo = vo
+        self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.destination_site = destination_site
+        self.pilot_reference = pilot_reference
+        self.pilot_status = pilot_status
 
 
 class SandboxDownloadResponse(_serialization.Model):
