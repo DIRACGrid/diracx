@@ -33,8 +33,9 @@ async def register_new_pilots(
     check. In practice pilot stamps are cryptographically random UUIDs,
     making the collision window negligible.
     """
-    # TODO: Also validate grid_type, grid_site and destination_site once
-    # the Resources section of the CS is modeled in the Config schema.
+    # TODO: https://github.com/DIRACGrid/diracx/issues/1005
+    # Also validate grid_type, grid_site and destination_site once the
+    # Resources section of the CS is modeled in the Config schema.
     if vo not in config.registry:
         raise ValueError(f"VO {vo!r} is not registered in this installation.")
 
