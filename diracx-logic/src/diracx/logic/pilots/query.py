@@ -91,15 +91,20 @@ async def _rewrite_job_id_pseudo_param(
     job_ids: list[int] = []
     for spec in matches:
         operator = spec.get("operator")
-        if operator == ScalarSearchOperator.EQUAL:
-            job_ids.append(int(spec["value"]))  # type: ignore[typeddict-item]
-        elif operator == VectorSearchOperator.IN:
-            job_ids.extend(int(v) for v in spec["values"])  # type: ignore[typeddict-item]
-        else:
+        try:
+            if operator == ScalarSearchOperator.EQUAL:
+                job_ids.append(int(spec["value"]))  # type: ignore[typeddict-item]
+            elif operator == VectorSearchOperator.IN:
+                job_ids.extend(int(v) for v in spec["values"])  # type: ignore[typeddict-item]
+            else:
+                raise InvalidQueryError(
+                    f"Operator {operator!r} is not supported on the "
+                    f"{JOB_ID_PSEUDO_PARAM!r} pseudo-parameter; use 'eq' or 'in'."
+                )
+        except (TypeError, ValueError) as e:
             raise InvalidQueryError(
-                f"Operator {operator!r} is not supported on the "
-                f"{JOB_ID_PSEUDO_PARAM!r} pseudo-parameter; use 'eq' or 'in'."
-            )
+                f"{JOB_ID_PSEUDO_PARAM!r} pseudo-parameter values must be integers."
+            ) from e
 
     pilot_ids = await _resolve_pilots_for_job_ids(pilot_db, job_ids)
     body.search = [
@@ -185,6 +190,8 @@ async def get_pilots_by_stamp(
         if "PilotStamp" not in query_parameters:
             query_parameters.append("PilotStamp")
 
+    # No `page` is passed, so pagination is disabled and all matches are
+    # returned (`per_page` is ignored when `page` is None).
     _, pilots = await pilot_db.search_pilots(
         parameters=query_parameters,
         search=[
@@ -195,6 +202,5 @@ async def get_pilots_by_stamp(
             )
         ],
         sorts=[],
-        per_page=MAX_PER_PAGE,
     )
     return pilots

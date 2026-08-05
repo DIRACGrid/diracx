@@ -47,15 +47,12 @@ async def populated_pilot_client(normal_test_client):
     r = normal_test_client.patch(
         "/api/pilots/metadata",
         json={
-            "pilot_metadata": [
-                PilotMetadata(
-                    PilotStamp=stamp,
-                    BenchMark=float(i),
-                    Status=PILOT_STATUSES[i % len(PILOT_STATUSES)],
-                    Queue=f"queue_{i}",
-                ).model_dump(exclude_unset=True)
-                for i, stamp in enumerate(pilot_stamps)
-            ]
+            stamp: PilotMetadata(
+                BenchMark=float(i),
+                Status=PILOT_STATUSES[i % len(PILOT_STATUSES)],
+                Queue=f"queue_{i}",
+            ).model_dump(exclude_unset=True)
+            for i, stamp in enumerate(pilot_stamps)
         },
     )
     assert r.status_code == 204, r.json()
@@ -175,6 +172,15 @@ def test_pilots_search_job_id_unsupported_operator_raises(populated_pilot_client
     r = populated_pilot_client.post(
         "/api/pilots/search",
         json={"search": [{"parameter": "JobID", "operator": "neq", "value": 1}]},
+    )
+    assert r.status_code in (400, 422), r.json()
+
+
+def test_pilots_search_job_id_non_numeric_value_raises(populated_pilot_client):
+    """A non-numeric `JobID` value is a 400, not a 500."""
+    r = populated_pilot_client.post(
+        "/api/pilots/search",
+        json={"search": [{"parameter": "JobID", "operator": "eq", "value": "abc"}]},
     )
     assert r.status_code in (400, 422), r.json()
 

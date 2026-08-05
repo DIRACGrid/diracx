@@ -290,7 +290,7 @@ class BodyPilotsRegisterPilot(_serialization.Model):
         *,
         pilot_stamp: str,
         vo: str,
-        grid_type: str = "Dirac",
+        grid_type: str = "DIRAC",
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
         pilot_reference: Optional[str] = None,
@@ -322,32 +322,6 @@ class BodyPilotsRegisterPilot(_serialization.Model):
         self.destination_site = destination_site
         self.pilot_reference = pilot_reference
         self.pilot_status = pilot_status
-
-
-class BodyPilotsUpdatePilotMetadata(_serialization.Model):
-    """Body_pilots_update_pilot_metadata.
-
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_metadata: Pilot metadata mappings to apply. Required.
-    :vartype pilot_metadata: list[~_generated.models.PilotMetadata]
-    """
-
-    _validation = {
-        "pilot_metadata": {"required": True},
-    }
-
-    _attribute_map = {
-        "pilot_metadata": {"key": "pilot_metadata", "type": "[PilotMetadata]"},
-    }
-
-    def __init__(self, *, pilot_metadata: list["_models.PilotMetadata"], **kwargs: Any) -> None:
-        """
-        :keyword pilot_metadata: Pilot metadata mappings to apply. Required.
-        :paramtype pilot_metadata: list[~_generated.models.PilotMetadata]
-        """
-        super().__init__(**kwargs)
-        self.pilot_metadata = pilot_metadata
 
 
 class ComputeElementStatus(_serialization.Model):
@@ -1179,13 +1153,10 @@ class OpenIDConfiguration(_serialization.Model):
 class PilotMetadata(_serialization.Model):
     """Mutable metadata attached to a pilot.
 
-    ``PilotStamp`` identifies the pilot and cannot be changed. Every other
+    The pilot is identified by its stamp, passed alongside this model
+    (e.g. as the mapping key on ``PATCH /api/pilots/metadata``\\ ). Every
     field is optional; when absent it is left untouched by an update.
 
-    All required parameters must be populated in order to send to server.
-
-    :ivar pilot_stamp: Immutable stamp identifying the pilot. Required.
-    :vartype pilot_stamp: str
     :ivar status_reason: Human-readable reason for the current status.
     :vartype status_reason: str
     :ivar status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
@@ -1207,12 +1178,7 @@ class PilotMetadata(_serialization.Model):
     :vartype current_job_id: int
     """
 
-    _validation = {
-        "pilot_stamp": {"required": True},
-    }
-
     _attribute_map = {
-        "pilot_stamp": {"key": "PilotStamp", "type": "str"},
         "status_reason": {"key": "StatusReason", "type": "str"},
         "status": {"key": "Status", "type": "str"},
         "bench_mark": {"key": "BenchMark", "type": "float"},
@@ -1227,7 +1193,6 @@ class PilotMetadata(_serialization.Model):
     def __init__(
         self,
         *,
-        pilot_stamp: str,
         status_reason: Optional[str] = None,
         status: Optional[Union[str, "_models.PilotStatus"]] = None,
         bench_mark: Optional[float] = None,
@@ -1240,8 +1205,6 @@ class PilotMetadata(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword pilot_stamp: Immutable stamp identifying the pilot. Required.
-        :paramtype pilot_stamp: str
         :keyword status_reason: Human-readable reason for the current status.
         :paramtype status_reason: str
         :keyword status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
@@ -1263,7 +1226,6 @@ class PilotMetadata(_serialization.Model):
         :paramtype current_job_id: int
         """
         super().__init__(**kwargs)
-        self.pilot_stamp = pilot_stamp
         self.status_reason = status_reason
         self.status = status
         self.bench_mark = bench_mark

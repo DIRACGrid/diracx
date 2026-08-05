@@ -43,6 +43,7 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         action: ActionType | None = None,
         pilot_db: PilotAgentsDB | None = None,
         pilot_stamps: list[str] | None = None,
+        target_vo: str | None = None,
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
         allow_legacy_pilots: bool = False,
@@ -53,8 +54,11 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         if action is None:
             raise ValueError("action is a mandatory parameter")
 
+        # Service administrators read and manage pilots across VOs; every
+        # other identity is confined to its own VO.
+        is_admin = SERVICE_ADMINISTRATOR in user_info.properties
+
         if action == ActionType.MANAGE_PILOTS:
-            is_admin = SERVICE_ADMINISTRATOR in user_info.properties
             is_legacy_pilot = (
                 allow_legacy_pilots and GENERIC_PILOT in user_info.properties
             )
@@ -62,6 +66,23 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                 raise HTTPException(
                     status_code=HTTPStatus.FORBIDDEN,
                     detail="Insufficient permissions to manage pilots.",
+                )
+            # Limit the damage a stolen legacy pilot credential can do: a
+            # pilot identity may only act on a single pilot per call. Note
+            # this bounds the rate of abuse, not its scope.
+            if not is_admin and pilot_stamps and len(set(pilot_stamps)) > 1:
+                raise HTTPException(
+                    status_code=HTTPStatus.FORBIDDEN,
+                    detail="Insufficient permissions to modify more than one pilot.",
+                )
+            # `target_vo` is the VO that pilots are being registered into
+            # (pilots that already exist are checked against the DB through
+            # `pilot_stamps` below). Only service administrators may
+            # register pilots outside their own VO.
+            if target_vo is not None and not is_admin and target_vo != user_info.vo:
+                raise HTTPException(
+                    status_code=HTTPStatus.FORBIDDEN,
+                    detail="Pilots can only be registered for your own VO.",
                 )
 
         if action == ActionType.READ_PILOT_METADATA:
@@ -104,7 +125,8 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                     ),
                 )
 
-        # If pilot stamps are provided, verify they all belong to the user's VO.
+        # If pilot stamps are provided, verify they all exist and (unless the
+        # caller is a service administrator) belong to the user's VO.
         if pilot_db is not None and pilot_stamps:
             pilots = await get_pilots_by_stamp(
                 pilot_db=pilot_db,
@@ -116,7 +138,9 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                     status_code=HTTPStatus.NOT_FOUND,
                     detail="At least one pilot does not exist.",
                 )
-            if not all(pilot["VO"] == user_info.vo for pilot in pilots):
+            if not is_admin and not all(
+                pilot["VO"] == user_info.vo for pilot in pilots
+            ):
                 raise HTTPException(
                     status_code=HTTPStatus.FORBIDDEN,
                     detail=(

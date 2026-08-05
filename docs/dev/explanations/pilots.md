@@ -28,9 +28,6 @@ stateDiagram-v2
     Submitted --> Aborted
     Waiting --> Aborted
     Running --> Aborted
-    Running --> Stalled
-    Stalled --> Running
-    Stalled --> Failed
     Done --> [*]
     Failed --> [*]
     Aborted --> [*]
@@ -55,4 +52,4 @@ Only `eq` and `in` operators are supported on the pseudo-parameter; other operat
 
 Pilots are partitioned by VO. By default a normal user sees and acts on pilots belonging to their own VO only. `SERVICE_ADMINISTRATOR` can read pilots across VOs via `/search` and `/summary`.
 
-Management actions (register, delete, patch metadata) require `SERVICE_ADMINISTRATOR`. Legacy X.509 pilot identities may be permitted to self-register or self-modify; those paths opt in via `allow_legacy_pilots=True` in the access policy and limit each call to a single pilot stamp as a containment measure against stolen credentials.
+Management actions (register, patch metadata) require `SERVICE_ADMINISTRATOR`, who — as for reads — may act across VOs. Legacy X.509 pilot identities may additionally self-register and self-update within their own VO — pilots started in the vacuum have no SiteDirector to register them, mirroring `dirac-admin-add-pilot` in legacy DIRAC. Those paths opt in via `allow_legacy_pilots=True` in the access policy, which caps each call to a single pilot stamp to limit the blast radius of a stolen credential (this bounds the rate of abuse, not its scope: a legacy pilot identity is not bound to its own stamp and can act on any pilot in its VO).

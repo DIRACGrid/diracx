@@ -3,16 +3,14 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body, Depends, HTTPException
+from fastapi import Body
 
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
-from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR
 from diracx.db.sql import PilotAgentsDB
 from diracx.logic.pilots.management import (
     register_new_pilots,
     update_pilots_metadata,
 )
-from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_token
 
 from ..fastapi_classes import DiracxRouter
 from .access_policies import (
@@ -32,8 +30,7 @@ async def register_pilot(
     ],
     vo: Annotated[str, Body(description="Pilot virtual organization.")],
     check_permissions: CheckPilotManagementPolicyCallable,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    grid_type: Annotated[str, Body(description="Grid type of the pilot.")] = "Dirac",
+    grid_type: Annotated[str, Body(description="Grid type of the pilot.")] = "DIRAC",
     grid_site: Annotated[str, Body(description="Pilot grid site.")] = "Unknown",
     destination_site: Annotated[
         str, Body(description="Pilot destination site.")
@@ -51,24 +48,15 @@ async def register_pilot(
     If the stamp already exists, the registration is rejected with a 409.
     """
     # TODO: Verify that grid types, sites, destination sites, etc. are valid
+    # Legacy (X.509 / GENERIC_PILOT) pilot identities may self-register:
+    # pilots started in the vacuum have no SiteDirector to register them.
+    # This mirrors dirac-admin-add-pilot in legacy DIRAC. The route takes a
+    # single stamp per call, which bounds what a stolen credential can do.
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
-        allow_legacy_pilots=True,  # dirac-admin-add-pilot
+        target_vo=vo,
+        allow_legacy_pilots=True,
     )
-
-    # Limit the damage a stolen pilot credential can do: a pilot identity
-    # can only register a single stamp per call.
-    if GENERIC_PILOT in user_info.properties:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Insufficient permissions to register a pilot.",
-        )
-
-    if JOB_ADMINISTRATOR not in user_info.properties and vo != user_info.vo:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Pilots can only be registered for your own VO.",
-        )
 
     await register_new_pilots(
         pilot_db=pilot_db,
@@ -88,18 +76,14 @@ EXAMPLE_UPDATE_METADATA = {
     "Update the BenchMark field": {
         "summary": "Update BenchMark",
         "description": "Update only the BenchMark for one pilot.",
-        "value": {
-            "pilot_metadata": [{"PilotStamp": "the_pilot_stamp", "BenchMark": 1.0}]
-        },
+        "value": {"the_pilot_stamp": {"BenchMark": 1.0}},
     },
     "Update multiple statuses": {
         "summary": "Update multiple pilots",
         "description": "Update statuses for multiple pilots at once.",
         "value": {
-            "pilot_metadata": [
-                {"PilotStamp": "first_stamp", "Status": "Waiting"},
-                {"PilotStamp": "second_stamp", "Status": "Waiting"},
-            ]
+            "first_stamp": {"Status": "Waiting"},
+            "second_stamp": {"Status": "Waiting"},
         },
     },
 }
@@ -107,40 +91,32 @@ EXAMPLE_UPDATE_METADATA = {
 
 @router.patch("/metadata", status_code=HTTPStatus.NO_CONTENT)
 async def update_pilot_metadata(
-    pilot_metadata: Annotated[
-        list[PilotMetadata],
+    updates: Annotated[
+        dict[str, PilotMetadata],
         Body(
-            description="Pilot metadata mappings to apply.",
-            embed=True,
+            description="Mapping from pilot stamp to the metadata to apply.",
             openapi_examples=EXAMPLE_UPDATE_METADATA,  # type: ignore
         ),
     ],
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
-    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ):
     """Update pilot metadata (status, benchmark, etc.).
 
-    Only fields defined in `PilotMetadata` are mutable. `PilotStamp`
-    identifies the row and cannot be changed.
+    Only fields defined in `PilotMetadata` are mutable. The pilot stamp
+    (the mapping key) identifies the pilot and cannot be changed.
     """
-    pilot_stamps = [m.PilotStamp for m in pilot_metadata]
+    pilot_stamps = list(updates)
+    # Legacy pilot identities may self-update (dirac-admin-add-pilot
+    # --status); the policy caps them to a single pilot stamp per call.
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
         pilot_db=pilot_db,
         pilot_stamps=pilot_stamps,
-        allow_legacy_pilots=True,  # dirac-admin-add-pilot
+        allow_legacy_pilots=True,
     )
-
-    # Limit the damage a stolen pilot credential can do: a pilot identity
-    # can only modify a single stamp per call.
-    if GENERIC_PILOT in user_info.properties and len(pilot_stamps) != 1:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Insufficient permissions to modify more than one pilot.",
-        )
 
     await update_pilots_metadata(
         pilot_db=pilot_db,
-        pilot_metadata=pilot_metadata,
+        updates=updates,
     )

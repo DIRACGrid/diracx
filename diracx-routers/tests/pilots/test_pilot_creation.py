@@ -67,14 +67,10 @@ async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
     r = normal_test_client.patch(
         "/api/pilots/metadata",
         json={
-            "pilot_metadata": [
-                PilotMetadata(PilotStamp="stamp_m1", BenchMark=1.0).model_dump(
-                    exclude_unset=True
-                ),
-                PilotMetadata(
-                    PilotStamp="stamp_m2", Status=PilotStatus.WAITING
-                ).model_dump(exclude_unset=True),
-            ]
+            "stamp_m1": PilotMetadata(BenchMark=1.0).model_dump(exclude_unset=True),
+            "stamp_m2": PilotMetadata(Status=PilotStatus.WAITING).model_dump(
+                exclude_unset=True
+            ),
         },
     )
     assert r.status_code == 204, r.json()

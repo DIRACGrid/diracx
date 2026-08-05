@@ -98,12 +98,12 @@ def make_summary_body(**kwargs: Unpack[SummaryKwargs]) -> UnderlyingSummaryArgs:
 
 
 class RegisterPilotsBody(TypedDict, total=False):
-    pilot_stamps: list[str]
+    pilot_stamp: str
     vo: str
     grid_type: str
     grid_site: str
     destination_site: str
-    pilot_references: dict[str, str]
+    pilot_reference: str
     pilot_status: PilotStatus
 
 
@@ -125,12 +125,12 @@ def make_register_pilots_body(
             continue
         key = cast(
             Literal[
-                "pilot_stamps",
+                "pilot_stamp",
                 "vo",
                 "grid_type",
                 "grid_site",
                 "destination_site",
-                "pilot_references",
+                "pilot_reference",
                 "pilot_status",
             ],
             key,

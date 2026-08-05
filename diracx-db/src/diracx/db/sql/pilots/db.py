@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import case, delete, insert, literal, select, update
+from sqlalchemy import case, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql import expression
 
 from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
@@ -19,7 +18,6 @@ from .schema import (
     JobToPilotMapping,
     PilotAgents,
     PilotAgentsDBBase,
-    PilotOutput,
 )
 
 
@@ -92,74 +90,30 @@ class PilotAgentsDB(BaseSQLDB):
                 ) from e
             raise
 
-    async def delete_pilots(self, pilot_ids: list[int]):
-        """Destructive. Delete pilots by ID."""
-        await self.conn.execute(
-            delete(PilotAgents).where(PilotAgents.pilot_id.in_(pilot_ids))
-        )
-
-    async def remove_jobs_from_pilots(self, pilot_ids: list[int]):
-        """Destructive. De-associate jobs and pilots."""
-        await self.conn.execute(
-            delete(JobToPilotMapping).where(JobToPilotMapping.pilot_id.in_(pilot_ids))
-        )
-
-    async def delete_pilot_logs(self, pilot_ids: list[int]):
-        """Destructive. Remove pilot logs."""
-        await self.conn.execute(
-            delete(PilotOutput).where(PilotOutput.pilot_id.in_(pilot_ids))
-        )
-
-    async def insert_pilot_output(self, pilot_id: int, std_output: str, std_error: str):
-        """Insert or update pilot output (stdout/stderr).
-
-        Upserts on `pilot_id` so repeated calls overwrite previous output.
-        """
-        stmt = insert(PilotOutput).values(
-            pilot_id=pilot_id,
-            std_output=std_output,
-            std_error=std_error,
-        )
-        try:
-            await self.conn.execute(stmt)
-        except IntegrityError:
-            await self.conn.execute(
-                update(PilotOutput)
-                .where(PilotOutput.pilot_id == pilot_id)
-                .values(std_output=std_output, std_error=std_error)
-            )
-
-    async def get_pilot_output(self, pilot_id: int) -> dict[str, str] | None:
-        """Return pilot output (stdout/stderr) for a given pilot ID."""
-        stmt = select(PilotOutput.std_output, PilotOutput.std_error).where(
-            PilotOutput.pilot_id == pilot_id
-        )
-        result = await self.conn.execute(stmt)
-        row = result.first()
-        if row is None:
-            return None
-        return {"std_output": row[0], "std_error": row[1]}
-
-    async def update_pilot_metadata(self, pilot_metadata: list[PilotMetadata]):
+    async def update_pilot_metadata(self, updates: dict[str, PilotMetadata]):
         """Bulk-update pilot metadata.
 
-        Each PilotMetadata entry may set a different subset of fields;
-        unset fields (None) are preserved. Uses a per-column CASE
-        expression to support heterogeneous updates, matching the pattern
-        in JobDB.set_job_attributes. Raises PilotNotFoundError if any of
-        the pilot stamps is not found.
+        `updates` maps a pilot stamp to the fields to set for that pilot;
+        each entry may set a different subset of fields, and unset fields
+        (None) are preserved. `LastUpdateTime` is refreshed on every
+        updated pilot. Uses a per-column CASE expression to support
+        heterogeneous updates, matching the pattern in
+        JobDB.set_job_attributes. Raises PilotNotFoundError if any of the
+        pilot stamps is not found.
         """
-        if not pilot_metadata:
-            return
-
         updates_by_stamp: dict[str, dict[str, Any]] = {
-            m.PilotStamp: m.model_dump(exclude={"PilotStamp"}, exclude_none=True)
-            for m in pilot_metadata
+            stamp: metadata.model_dump(exclude_none=True)
+            for stamp, metadata in updates.items()
         }
 
-        columns = {col for fields in updates_by_stamp.values() for col in fields}
-        if not columns:
+        if not any(updates_by_stamp.values()):
             return
+
+        now = datetime.now(tz=timezone.utc)
+        for fields in updates_by_stamp.values():
+            fields["LastUpdateTime"] = now
+
+        columns = {col for fields in updates_by_stamp.values() for col in fields}
 
         case_expressions = {
             column: case(
@@ -169,9 +123,7 @@ class PilotAgentsDB(BaseSQLDB):
                         literal(
                             fields[column],
                             type_=PilotAgents.__table__.c[column].type,
-                        )
-                        if not isinstance(fields[column], expression.FunctionElement)
-                        else fields[column],
+                        ),
                     )
                     for stamp, fields in updates_by_stamp.items()
                     if column in fields

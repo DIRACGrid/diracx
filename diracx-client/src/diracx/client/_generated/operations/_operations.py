@@ -3144,17 +3144,17 @@ class PilotsOperations:
 
     @overload
     def update_pilot_metadata(
-        self, body: _models.BodyPilotsUpdatePilotMetadata, *, content_type: str = "application/json", **kwargs: Any
+        self, body: dict[str, _models.PilotMetadata], *, content_type: str = "application/json", **kwargs: Any
     ) -> None:
         """Update Pilot Metadata.
 
         Update pilot metadata (status, benchmark, etc.).
 
-        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
-        identifies the row and cannot be changed.
+        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
+        (the mapping key) identifies the pilot and cannot be changed.
 
         :param body: Required.
-        :type body: ~_generated.models.BodyPilotsUpdatePilotMetadata
+        :type body: dict[str, ~_generated.models.PilotMetadata]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
          Default value is "application/json".
         :paramtype content_type: str
@@ -3169,8 +3169,8 @@ class PilotsOperations:
 
         Update pilot metadata (status, benchmark, etc.).
 
-        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
-        identifies the row and cannot be changed.
+        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
+        (the mapping key) identifies the pilot and cannot be changed.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3184,17 +3184,17 @@ class PilotsOperations:
 
     @distributed_trace
     def update_pilot_metadata(  # pylint: disable=inconsistent-return-statements
-        self, body: Union[_models.BodyPilotsUpdatePilotMetadata, IO[bytes]], **kwargs: Any
+        self, body: Union[dict[str, _models.PilotMetadata], IO[bytes]], **kwargs: Any
     ) -> None:
         """Update Pilot Metadata.
 
         Update pilot metadata (status, benchmark, etc.).
 
-        Only fields defined in ``PilotMetadata`` are mutable. ``PilotStamp``
-        identifies the row and cannot be changed.
+        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
+        (the mapping key) identifies the pilot and cannot be changed.
 
-        :param body: Is either a BodyPilotsUpdatePilotMetadata type or a IO[bytes] type. Required.
-        :type body: ~_generated.models.BodyPilotsUpdatePilotMetadata or IO[bytes]
+        :param body: Is either a {str: PilotMetadata} type or a IO[bytes] type. Required.
+        :type body: dict[str, ~_generated.models.PilotMetadata] or IO[bytes]
         :return: None
         :rtype: None
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -3219,7 +3219,7 @@ class PilotsOperations:
         if isinstance(body, (IOBase, bytes)):
             _content = body
         else:
-            _json = self._serialize.body(body, "BodyPilotsUpdatePilotMetadata")
+            _json = self._serialize.body(body, "{PilotMetadata}")
 
         _request = build_pilots_update_pilot_metadata_request(
             content_type=content_type,

@@ -21,11 +21,11 @@ class PilotStatus(StrEnum):
 class PilotMetadata(BaseModel, extra="forbid"):
     """Mutable metadata attached to a pilot.
 
-    ``PilotStamp`` identifies the pilot and cannot be changed. Every other
+    The pilot is identified by its stamp, passed alongside this model
+    (e.g. as the mapping key on ``PATCH /api/pilots/metadata``). Every
     field is optional; when absent it is left untouched by an update.
     """
 
-    PilotStamp: str = Field(description="Immutable stamp identifying the pilot.")
     StatusReason: str | None = Field(
         default=None, description="Human-readable reason for the current status."
     )
