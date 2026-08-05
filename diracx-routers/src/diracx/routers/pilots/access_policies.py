@@ -7,9 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException
 
-from diracx.core.models.search import VectorSearchOperator, VectorSearchSpec
 from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
-from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.pilots.db import PilotAgentsDB
 from diracx.logic.pilots.query import get_pilots_by_stamp
 from diracx.routers.access_policies import BaseAccessPolicy
@@ -44,8 +42,6 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         pilot_db: PilotAgentsDB | None = None,
         pilot_stamps: list[str] | None = None,
         target_vo: str | None = None,
-        job_db: JobDB | None = None,
-        job_ids: list[int] | None = None,
         allow_legacy_pilots: bool = False,
     ):
         # Authorization is VO-scoped, not bound to the caller's
@@ -90,39 +86,6 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
                 raise HTTPException(
                     status_code=HTTPStatus.FORBIDDEN,
                     detail="Pilots cannot read other pilots' metadata.",
-                )
-
-        # If job IDs are provided, verify the user owns all of them.
-        # Using a direct search (rather than summary/aggregate equality) is
-        # clearer and gives a distinct 404 vs 403 on missing jobs.
-        if job_db is not None and job_ids:
-            _, owner_rows = await job_db.search(
-                parameters=["Owner", "VO"],
-                search=[
-                    VectorSearchSpec(
-                        parameter="JobID",
-                        operator=VectorSearchOperator.IN,
-                        values=job_ids,
-                    )
-                ],
-                sorts=[],
-                per_page=len(set(job_ids)),
-            )
-            if len(owner_rows) != len(set(job_ids)):
-                raise HTTPException(
-                    status_code=HTTPStatus.NOT_FOUND,
-                    detail="One or more jobs do not exist.",
-                )
-            if not all(
-                row["Owner"] == user_info.preferred_username
-                and row["VO"] == user_info.vo
-                for row in owner_rows
-            ):
-                raise HTTPException(
-                    status_code=HTTPStatus.FORBIDDEN,
-                    detail=(
-                        "Insufficient permissions to access all of the provided jobs."
-                    ),
                 )
 
         # If pilot stamps are provided, verify they all exist and (unless the
