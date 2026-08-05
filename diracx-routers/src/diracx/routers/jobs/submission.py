@@ -51,7 +51,7 @@ StdOutput = std.out;"""
 }
 
 
-@router.post("/jdl")
+@router.post("/jdl", status_code=HTTPStatus.CREATED)
 async def submit_jdl_jobs(
     job_definitions: Annotated[list[str], Body(openapi_examples=EXAMPLE_JDLS)],
     job_db: JobDB,

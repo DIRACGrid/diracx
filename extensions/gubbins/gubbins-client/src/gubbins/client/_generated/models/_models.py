@@ -1074,6 +1074,185 @@ class OpenIDConfiguration(_serialization.Model):
         self.code_challenge_methods_supported = code_challenge_methods_supported
 
 
+class PilotMetadata(_serialization.Model):
+    """Mutable metadata attached to a pilot.
+
+    The pilot is identified by its stamp, passed alongside this model
+    (e.g. as the mapping key on ``PATCH /api/pilots/metadata``\\ ). Every
+    field is optional; when absent it is left untouched by an update.
+
+    :ivar status_reason: Human-readable reason for the current status.
+    :vartype status_reason: str
+    :ivar status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
+     "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype status: str or ~_generated.models.PilotStatus
+    :ivar bench_mark: Pilot benchmark value.
+    :vartype bench_mark: float
+    :ivar destination_site: Destination site.
+    :vartype destination_site: str
+    :ivar queue: Batch queue name.
+    :vartype queue: str
+    :ivar grid_site: Grid site.
+    :vartype grid_site: str
+    :ivar grid_type: Grid type.
+    :vartype grid_type: str
+    :ivar accounting_sent: Whether accounting has been sent for this pilot.
+    :vartype accounting_sent: bool
+    :ivar current_job_id: ID of the job currently running on this pilot.
+    :vartype current_job_id: int
+    """
+
+    _validation = {
+        "status_reason": {"max_length": 255},
+        "destination_site": {"max_length": 128},
+        "queue": {"max_length": 128},
+        "grid_site": {"max_length": 128},
+        "grid_type": {"max_length": 32},
+    }
+
+    _attribute_map = {
+        "status_reason": {"key": "StatusReason", "type": "str"},
+        "status": {"key": "Status", "type": "str"},
+        "bench_mark": {"key": "BenchMark", "type": "float"},
+        "destination_site": {"key": "DestinationSite", "type": "str"},
+        "queue": {"key": "Queue", "type": "str"},
+        "grid_site": {"key": "GridSite", "type": "str"},
+        "grid_type": {"key": "GridType", "type": "str"},
+        "accounting_sent": {"key": "AccountingSent", "type": "bool"},
+        "current_job_id": {"key": "CurrentJobID", "type": "int"},
+    }
+
+    def __init__(
+        self,
+        *,
+        status_reason: Optional[str] = None,
+        status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        bench_mark: Optional[float] = None,
+        destination_site: Optional[str] = None,
+        queue: Optional[str] = None,
+        grid_site: Optional[str] = None,
+        grid_type: Optional[str] = None,
+        accounting_sent: Optional[bool] = None,
+        current_job_id: Optional[int] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword status_reason: Human-readable reason for the current status.
+        :paramtype status_reason: str
+        :keyword status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
+         "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype status: str or ~_generated.models.PilotStatus
+        :keyword bench_mark: Pilot benchmark value.
+        :paramtype bench_mark: float
+        :keyword destination_site: Destination site.
+        :paramtype destination_site: str
+        :keyword queue: Batch queue name.
+        :paramtype queue: str
+        :keyword grid_site: Grid site.
+        :paramtype grid_site: str
+        :keyword grid_type: Grid type.
+        :paramtype grid_type: str
+        :keyword accounting_sent: Whether accounting has been sent for this pilot.
+        :paramtype accounting_sent: bool
+        :keyword current_job_id: ID of the job currently running on this pilot.
+        :paramtype current_job_id: int
+        """
+        super().__init__(**kwargs)
+        self.status_reason = status_reason
+        self.status = status
+        self.bench_mark = bench_mark
+        self.destination_site = destination_site
+        self.queue = queue
+        self.grid_site = grid_site
+        self.grid_type = grid_type
+        self.accounting_sent = accounting_sent
+        self.current_job_id = current_job_id
+
+
+class PilotRegistrationParams(_serialization.Model):
+    """Body of ``POST /api/pilots/`` to register a single pilot.
+
+    The ``max_length`` constraints mirror the column sizes of the legacy
+    ``PilotAgents`` table so that oversized values are rejected with a 422
+    instead of a backend-dependent database error.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar pilot_stamp: Stamp of the pilot to create. Required.
+    :vartype pilot_stamp: str
+    :ivar vo: Pilot virtual organization. Required.
+    :vartype vo: str
+    :ivar grid_type: Grid type of the pilot.
+    :vartype grid_type: str
+    :ivar grid_site: Pilot grid site.
+    :vartype grid_site: str
+    :ivar destination_site: Pilot destination site.
+    :vartype destination_site: str
+    :ivar pilot_reference: CE job reference of the pilot; defaults to the stamp.
+    :vartype pilot_reference: str
+    :ivar pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
+     "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+    :vartype pilot_status: str or ~_generated.models.PilotStatus
+    """
+
+    _validation = {
+        "pilot_stamp": {"required": True, "max_length": 32, "min_length": 1},
+        "vo": {"required": True, "max_length": 128, "min_length": 1},
+        "grid_type": {"max_length": 32},
+        "grid_site": {"max_length": 128},
+        "destination_site": {"max_length": 128},
+        "pilot_reference": {"max_length": 255},
+    }
+
+    _attribute_map = {
+        "pilot_stamp": {"key": "pilot_stamp", "type": "str"},
+        "vo": {"key": "vo", "type": "str"},
+        "grid_type": {"key": "grid_type", "type": "str"},
+        "grid_site": {"key": "grid_site", "type": "str"},
+        "destination_site": {"key": "destination_site", "type": "str"},
+        "pilot_reference": {"key": "pilot_reference", "type": "str"},
+        "pilot_status": {"key": "pilot_status", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        pilot_stamp: str,
+        vo: str,
+        grid_type: str = "DIRAC",
+        grid_site: str = "Unknown",
+        destination_site: str = "NotAssigned",
+        pilot_reference: Optional[str] = None,
+        pilot_status: Optional[Union[str, "_models.PilotStatus"]] = None,
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword pilot_stamp: Stamp of the pilot to create. Required.
+        :paramtype pilot_stamp: str
+        :keyword vo: Pilot virtual organization. Required.
+        :paramtype vo: str
+        :keyword grid_type: Grid type of the pilot.
+        :paramtype grid_type: str
+        :keyword grid_site: Pilot grid site.
+        :paramtype grid_site: str
+        :keyword destination_site: Pilot destination site.
+        :paramtype destination_site: str
+        :keyword pilot_reference: CE job reference of the pilot; defaults to the stamp.
+        :paramtype pilot_reference: str
+        :keyword pilot_status: Initial status of the pilot. Known values are: "Submitted", "Waiting",
+         "Running", "Done", "Failed", "Deleted", "Aborted", and "Unknown".
+        :paramtype pilot_status: str or ~_generated.models.PilotStatus
+        """
+        super().__init__(**kwargs)
+        self.pilot_stamp = pilot_stamp
+        self.vo = vo
+        self.grid_type = grid_type
+        self.grid_site = grid_site
+        self.destination_site = destination_site
+        self.pilot_reference = pilot_reference
+        self.pilot_status = pilot_status
+
+
 class SandboxDownloadResponse(_serialization.Model):
     """SandboxDownloadResponse.
 

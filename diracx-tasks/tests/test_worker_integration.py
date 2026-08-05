@@ -313,7 +313,7 @@ async def test_process_message_acks_on_unknown_task(
 async def test_process_message_acks_on_parse_error(
     broker, task_class_registry, wrapped_registry
 ):
-    """Unparseable messages should be acked and logged, not crash the worker."""
+    """Unparsable messages should be acked and logged, not crash the worker."""
     worker = Worker(
         broker=broker,
         task_registry=wrapped_registry,

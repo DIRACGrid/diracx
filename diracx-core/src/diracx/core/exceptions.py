@@ -9,6 +9,9 @@ __all__ = [
     "InvalidQueryError",
     "NotReadyError",
     "PendingAuthorizationError",
+    "PilotAlreadyAssociatedWithJobError",
+    "PilotAlreadyExistsError",
+    "PilotNotFoundError",
     "SandboxAlreadyAssignedError",
     "SandboxAlreadyInsertedError",
     "SandboxNotFoundError",
@@ -19,6 +22,7 @@ __all__ = [
 class DiracError(RuntimeError):
     def __init__(self, detail: str = "Unknown"):
         self.detail = detail
+        super().__init__(detail)
 
 
 class AuthorizationError(DiracError): ...
@@ -53,19 +57,19 @@ class InvalidQueryError(DiracError):
 
 
 class TokenNotFoundError(DiracError):
-    def __init__(self, jti: str, detail: str | None = None):
+    def __init__(self, jti: str, detail: str = ""):
         self.jti: str = jti
         super().__init__(f"Token {jti} not found" + (f" ({detail})" if detail else ""))
 
 
 class JobNotFoundError(DiracError):
-    def __init__(self, job_id: int, detail: str | None = None):
+    def __init__(self, job_id: int, detail: str = ""):
         self.job_id: int = job_id
         super().__init__(f"Job {job_id} not found" + (f" ({detail})" if detail else ""))
 
 
 class SandboxNotFoundError(DiracError):
-    def __init__(self, pfn: str, se_name: str, detail: str | None = None):
+    def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
@@ -81,7 +85,7 @@ class ResourceNotFoundError(DiracError):
 
 
 class SandboxAlreadyAssignedError(DiracError):
-    def __init__(self, pfn: str, se_name: str, detail: str | None = None):
+    def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
@@ -91,7 +95,7 @@ class SandboxAlreadyAssignedError(DiracError):
 
 
 class SandboxAlreadyInsertedError(DiracError):
-    def __init__(self, pfn: str, se_name: str, detail: str | None = None):
+    def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
         super().__init__(
@@ -101,7 +105,7 @@ class SandboxAlreadyInsertedError(DiracError):
 
 
 class JobError(DiracError):
-    def __init__(self, job_id, detail: str | None = None):
+    def __init__(self, job_id, detail: str = ""):
         self.job_id: int = job_id
         super().__init__(
             f"Error concerning job {job_id}" + (f" ({detail})" if detail else "")
@@ -110,3 +114,15 @@ class JobError(DiracError):
 
 class NotReadyError(DiracError):
     """Tried to access a value which is asynchronously loaded but not yet available."""
+
+
+class PilotNotFoundError(DiracError):
+    """At least one pilot is not found."""
+
+
+class PilotAlreadyExistsError(DiracError):
+    """At least one pilot already exists, we avoid collisions."""
+
+
+class PilotAlreadyAssociatedWithJobError(DiracError):
+    """We can't associate a pilot with the same job twice."""

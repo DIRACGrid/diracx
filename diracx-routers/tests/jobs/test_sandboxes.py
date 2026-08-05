@@ -126,7 +126,7 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     # Submit a job:
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
@@ -167,7 +167,7 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     r = normal_user_client.post("/api/jobs/sandbox/unassign", json={"job_ids": job_ids})
     assert r.status_code == 204  # No content expected
 
-    # Get the sb again, it should'nt be there anymore:
+    # Get the sb again, it shouldn't be there anymore:
     short_pfn = sandbox_pfn.split("|", 1)[-1]
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
     assert r.status_code == 200
@@ -221,7 +221,7 @@ def test_malformed_request_to_get_job_sandbox(normal_user_client: TestClient):
     # Submit a job:
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
@@ -236,7 +236,7 @@ def test_get_empty_job_sandboxes(normal_user_client: TestClient):
     # Submit a job:
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
@@ -251,7 +251,7 @@ def test_assign_nonexisting_sb_to_job(normal_user_client: TestClient):
     # Submit a job:
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
@@ -288,7 +288,7 @@ def test_assign_sb_to_job_twice(normal_user_client: TestClient):
     # Submit a job:
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
     job_id = r.json()[0]["JobID"]
 
