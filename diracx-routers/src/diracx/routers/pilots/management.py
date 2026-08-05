@@ -13,6 +13,7 @@ from diracx.logic.pilots import (
     update_pilots_metadata,
 )
 
+from ..dependencies import Config
 from ..fastapi_classes import DiracxRouter
 from .access_policies import (
     ActionType,
@@ -24,6 +25,7 @@ router = DiracxRouter()
 
 @router.post("/")
 async def register_pilot(
+    config: Config,
     pilot_db: PilotAgentsDB,
     pilot_stamp: Annotated[
         str,
@@ -47,8 +49,8 @@ async def register_pilot(
     """Register a pilot with its reference.
 
     If the stamp already exists, the registration is rejected with a 409.
+    Registering into a VO that is not in the registry is rejected with a 400.
     """
-    # TODO: Verify that grid types, sites, destination sites, etc. are valid
     # Legacy (X.509 / GENERIC_PILOT) pilot identities may self-register:
     # pilots started in the vacuum have no SiteDirector to register them.
     # This mirrors dirac-admin-add-pilot in legacy DIRAC. The route takes a
@@ -61,6 +63,7 @@ async def register_pilot(
 
     try:
         await register_new_pilots(
+            config=config,
             pilot_db=pilot_db,
             pilot_stamps=[pilot_stamp],
             vo=vo,
@@ -72,6 +75,8 @@ async def register_pilot(
             else None,
             status=pilot_status,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     except PilotAlreadyExistsError as e:
         raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(e)) from e
 

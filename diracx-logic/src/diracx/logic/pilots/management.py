@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from diracx.core.config import Config
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.db.sql import PilotAgentsDB
@@ -11,6 +12,7 @@ from .query import get_pilots_by_stamp
 
 
 async def register_new_pilots(
+    config: Config,
     pilot_db: PilotAgentsDB,
     pilot_stamps: list[str],
     vo: str,
@@ -22,7 +24,8 @@ async def register_new_pilots(
 ):
     """Register a batch of new pilots.
 
-    Raises `PilotAlreadyExistsError` if any stamp already exists.
+    Raises `ValueError` if the VO is not in the registry, and
+    `PilotAlreadyExistsError` if any stamp already exists.
 
     Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
     constraint on `PilotStamp` (only a non-unique key), so a concurrent
@@ -30,6 +33,11 @@ async def register_new_pilots(
     check. In practice pilot stamps are cryptographically random UUIDs,
     making the collision window negligible.
     """
+    # TODO: Also validate grid_type, grid_site and destination_site once
+    # the Resources section of the CS is modeled in the Config schema.
+    if vo not in config.registry:
+        raise ValueError(f"VO {vo!r} is not registered in this installation.")
+
     existing_pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db, pilot_stamps=pilot_stamps
     )
