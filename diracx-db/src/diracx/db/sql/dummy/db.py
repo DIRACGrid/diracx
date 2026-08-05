@@ -24,7 +24,7 @@ class DummyDB(BaseSQLDB):
     async def summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
-        """Get a summary of the pilots."""
+        """Get a summary of the cars."""
         return await self._summary(table=Cars, group_by=group_by, search=search)
 
     async def insert_owner(self, name: str) -> int:
