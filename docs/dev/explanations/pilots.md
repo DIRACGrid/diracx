@@ -12,7 +12,7 @@ A pilot is a small piece of software that runs on a *worker node* and pulls user
 Three identifiers appear throughout the code and are easy to confuse:
 
 - `PilotStamp`: immutable string chosen by the pilot factory. Primary user-facing key; never changes for the lifetime of a pilot.
-- `PilotID`: auto-incrementing database primary key. Not meaningful outside the DB layer; never exposed on the HTTP surface as an identity.
+- `PilotID`: auto-incrementing database primary key. It appears in search filters and results, but management routes always key on the stamp.
 - `PilotJobReference`: the CE job reference (batch-system identifier)
     that submitted the pilot process. Defaults to the stamp when not known.
 

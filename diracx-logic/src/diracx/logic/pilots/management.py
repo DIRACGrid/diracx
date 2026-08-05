@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
-from diracx.core.models.pilot import PilotMetadata
+from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.db.sql import PilotAgentsDB
 
 from .query import get_pilots_by_stamp
@@ -17,7 +17,7 @@ async def register_new_pilots(
     grid_type: str,
     grid_site: str,
     destination_site: str,
-    status: str,
+    status: PilotStatus,
     pilot_job_references: dict[str, str] | None,
 ):
     """Register a batch of new pilots.

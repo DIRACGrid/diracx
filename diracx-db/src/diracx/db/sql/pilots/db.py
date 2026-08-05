@@ -34,7 +34,7 @@ class PilotAgentsDB(BaseSQLDB):
         grid_site: str = "Unknown",
         destination_site: str = "NotAssigned",
         pilot_references: dict[str, str] | None = None,
-        status: str = PilotStatus.SUBMITTED,
+        status: PilotStatus = PilotStatus.SUBMITTED,
     ):
         """Bulk-register pilots.
 

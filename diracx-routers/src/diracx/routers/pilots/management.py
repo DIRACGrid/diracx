@@ -8,7 +8,7 @@ from fastapi import Body, HTTPException
 from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.db.sql import PilotAgentsDB
-from diracx.logic.pilots.management import (
+from diracx.logic.pilots import (
     register_new_pilots,
     update_pilots_metadata,
 )

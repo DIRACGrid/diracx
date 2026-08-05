@@ -8,9 +8,9 @@ from fastapi import Body, Depends, Query, Response
 from diracx.core.models.search import SearchParams, SummaryParams
 from diracx.core.properties import SERVICE_ADMINISTRATOR
 from diracx.db.sql import PilotAgentsDB
-from diracx.logic.pilots.query import MAX_PER_PAGE
-from diracx.logic.pilots.query import search as search_bl
-from diracx.logic.pilots.query import summary as summary_bl
+from diracx.logic.pilots import MAX_PER_PAGE
+from diracx.logic.pilots import search as search_bl
+from diracx.logic.pilots import summary as summary_bl
 
 from ..fastapi_classes import DiracxRouter
 from ..utils.users import AuthorizedUserInfo, verify_dirac_access_token
