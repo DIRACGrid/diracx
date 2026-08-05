@@ -67,9 +67,9 @@ class PilotAgentsDB(BaseSQLDB):
         """Associate a pilot with jobs.
 
         Each entry has the shape `{"PilotID": ..., "JobID": ..., "StartTime": ...}`.
-        Raises PilotNotFoundError if any pilot is missing, and
-        PilotAlreadyAssociatedWithJobError on duplicates. Caller must
-        ensure the jobs exist.
+        Raises PilotAlreadyAssociatedWithJobError on duplicates. The legacy
+        schema has no foreign key on JobToPilotMapping, so the caller must
+        ensure the pilots and jobs exist.
         """
         stmt = insert(JobToPilotMapping).values(job_to_pilot_mapping)
 
@@ -77,10 +77,6 @@ class PilotAgentsDB(BaseSQLDB):
             await self.conn.execute(stmt)
         except IntegrityError as e:
             msg = str(e.orig).lower()
-            if "foreign key" in msg:
-                raise PilotNotFoundError(
-                    detail="at least one of these pilots does not exist",
-                ) from e
             if "duplicate entry" in msg or "unique constraint" in msg:
                 raise PilotAlreadyAssociatedWithJobError(
                     detail=(
