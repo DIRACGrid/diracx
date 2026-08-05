@@ -19,15 +19,30 @@ class PilotStatus(StrEnum):
 
 
 class PilotRegistrationParams(BaseModel, extra="forbid"):
-    """Body of ``POST /api/pilots/`` to register a single pilot."""
+    """Body of ``POST /api/pilots/`` to register a single pilot.
 
-    pilot_stamp: str = Field(min_length=1, description="Stamp of the pilot to create.")
-    vo: str = Field(min_length=1, description="Pilot virtual organization.")
-    grid_type: str = Field("DIRAC", description="Grid type of the pilot.")
-    grid_site: str = Field("Unknown", description="Pilot grid site.")
-    destination_site: str = Field("NotAssigned", description="Pilot destination site.")
+    The ``max_length`` constraints mirror the column sizes of the legacy
+    ``PilotAgents`` table so that oversized values are rejected with a 422
+    instead of a backend-dependent database error.
+    """
+
+    pilot_stamp: str = Field(
+        min_length=1, max_length=32, description="Stamp of the pilot to create."
+    )
+    vo: str = Field(
+        min_length=1, max_length=128, description="Pilot virtual organization."
+    )
+    grid_type: str = Field(
+        "DIRAC", max_length=32, description="Grid type of the pilot."
+    )
+    grid_site: str = Field("Unknown", max_length=128, description="Pilot grid site.")
+    destination_site: str = Field(
+        "NotAssigned", max_length=128, description="Pilot destination site."
+    )
     pilot_reference: str | None = Field(
-        None, description="CE job reference of the pilot; defaults to the stamp."
+        None,
+        max_length=255,
+        description="CE job reference of the pilot; defaults to the stamp.",
     )
     pilot_status: PilotStatus = Field(
         PilotStatus.SUBMITTED, description="Initial status of the pilot."
@@ -45,6 +60,7 @@ class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
     status_reason: str | None = Field(
         None,
         alias="StatusReason",
+        max_length=255,
         description="Human-readable reason for the current status.",
     )
     status: PilotStatus | None = Field(
@@ -54,11 +70,17 @@ class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
         None, alias="BenchMark", description="Pilot benchmark value."
     )
     destination_site: str | None = Field(
-        None, alias="DestinationSite", description="Destination site."
+        None, alias="DestinationSite", max_length=128, description="Destination site."
     )
-    queue: str | None = Field(None, alias="Queue", description="Batch queue name.")
-    grid_site: str | None = Field(None, alias="GridSite", description="Grid site.")
-    grid_type: str | None = Field(None, alias="GridType", description="Grid type.")
+    queue: str | None = Field(
+        None, alias="Queue", max_length=128, description="Batch queue name."
+    )
+    grid_site: str | None = Field(
+        None, alias="GridSite", max_length=128, description="Grid site."
+    )
+    grid_type: str | None = Field(
+        None, alias="GridType", max_length=32, description="Grid type."
+    )
     accounting_sent: bool | None = Field(
         None,
         alias="AccountingSent",

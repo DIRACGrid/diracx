@@ -147,3 +147,15 @@ async def test_register_pilot_reference(normal_test_client):
     by_stamp = {p["PilotStamp"]: p["PilotJobReference"] for p in r.json()}
     assert by_stamp["stamp_r1"] == "ref-1"
     assert by_stamp["stamp_r2"] == "stamp_r2"
+
+
+async def test_register_pilot_oversized_stamp_returns_422(normal_test_client):
+    """A stamp longer than the PilotStamp column (32 chars) is rejected upfront.
+
+    Without the model-level max_length this would only fail inside the
+    database, and only on backends with strict length enforcement.
+    """
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamp": "s" * 33, "vo": MAIN_VO}
+    )
+    assert r.status_code == 422, r.json()

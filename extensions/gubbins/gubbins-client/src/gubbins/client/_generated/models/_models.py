@@ -1102,6 +1102,14 @@ class PilotMetadata(_serialization.Model):
     :vartype current_job_id: int
     """
 
+    _validation = {
+        "status_reason": {"max_length": 255},
+        "destination_site": {"max_length": 128},
+        "queue": {"max_length": 128},
+        "grid_site": {"max_length": 128},
+        "grid_type": {"max_length": 32},
+    }
+
     _attribute_map = {
         "status_reason": {"key": "StatusReason", "type": "str"},
         "status": {"key": "Status", "type": "str"},
@@ -1164,6 +1172,10 @@ class PilotMetadata(_serialization.Model):
 class PilotRegistrationParams(_serialization.Model):
     """Body of ``POST /api/pilots/`` to register a single pilot.
 
+    The ``max_length`` constraints mirror the column sizes of the legacy
+    ``PilotAgents`` table so that oversized values are rejected with a 422
+    instead of a backend-dependent database error.
+
     All required parameters must be populated in order to send to server.
 
     :ivar pilot_stamp: Stamp of the pilot to create. Required.
@@ -1184,8 +1196,12 @@ class PilotRegistrationParams(_serialization.Model):
     """
 
     _validation = {
-        "pilot_stamp": {"required": True, "min_length": 1},
-        "vo": {"required": True, "min_length": 1},
+        "pilot_stamp": {"required": True, "max_length": 32, "min_length": 1},
+        "vo": {"required": True, "max_length": 128, "min_length": 1},
+        "grid_type": {"max_length": 32},
+        "grid_site": {"max_length": 128},
+        "destination_site": {"max_length": 128},
+        "pilot_reference": {"max_length": 255},
     }
 
     _attribute_map = {
