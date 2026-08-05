@@ -37,6 +37,7 @@ git checkout -b my-tutorial # clean starting point
 pixi run tutorial-reset    # strips tutorial code from gubbins
 pixi run pre-commit run --all-files
 git add extensions/gubbins/
+git add extensions/gubbins-charts/
 git commit -m "docs: Reset tutorial code"
 ```
 

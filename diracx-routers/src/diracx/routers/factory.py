@@ -26,7 +26,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, DiracHttpResponseError, NotReadyError
+from diracx.core.exceptions import DiracError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import FactorySettings, ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
@@ -115,21 +115,17 @@ def create_app_inner(
     the actual behavior we are interested in for settings, DBs or policy.
     This allows an extension to override any of these components
 
-
-    :param enabled_system:
-         this contains the name of all the routers we have to load
-    :param all_service_settings:
-        list of instance of each Settings type required
-    :param database_urls:
-        dict <db_name: url>. When testing, sqlite urls are used
-    :param os_database_conn_kwargs:
-        <db_name:dict> containing all the parameters the OpenSearch client takes
-    :param config_source:
-        Source of the configuration to use
-    :param all_access_policies:
-        <policy_name: [implementations]>
-
-
+    Args:
+        enabled_systems: this contains the name of all the routers we
+            have to load
+        all_service_settings: list of instance of each Settings type
+            required
+        database_urls: dict <db_name: url>. When testing, sqlite urls
+            are used
+        os_database_conn_kwargs: <db_name:dict> containing all the
+            parameters the OpenSearch client takes
+        config_source: Source of the configuration to use
+        all_access_policies: <policy_name: [implementations]>
     """
     app = DiracFastAPI()
 
@@ -328,9 +324,6 @@ def create_app_inner(
     handler_signature = Callable[[Request, Exception], Response | Awaitable[Response]]
     app.add_exception_handler(DiracError, cast(handler_signature, dirac_error_handler))
     app.add_exception_handler(
-        DiracHttpResponseError, cast(handler_signature, http_response_handler)
-    )
-    app.add_exception_handler(
         DBUnavailableError, cast(handler_signature, route_unavailable_error_hander)
     )
     app.add_exception_handler(
@@ -427,15 +420,13 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
+    status_code = getattr(exc, "http_status_code", HTTPStatus.BAD_REQUEST)
+    headers = getattr(exc, "http_headers", None)
     return JSONResponse(
-        status_code=exc.http_status_code,
+        status_code=status_code,
         content={"detail": exc.detail},
-        headers=exc.http_headers,
+        headers=headers,
     )
-
-
-def http_response_handler(request: Request, exc: DiracHttpResponseError) -> Response:
-    return JSONResponse(status_code=exc.status_code, content=exc.data)
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
@@ -505,7 +496,7 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
             _db_alive_cache[db] = ""
 
         except DBUnavailableError as e:
-            _db_alive_cache[db] = e.args[0]
+            _db_alive_cache[db] = str(e)
 
     return _db_alive_cache[db]
 

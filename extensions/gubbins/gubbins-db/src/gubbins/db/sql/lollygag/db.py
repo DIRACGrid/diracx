@@ -9,8 +9,7 @@ from .schema import Cars, Owners
 
 
 class LollygagDB(BaseSQLDB):
-    """
-    This LollygagDB is just to illustrate some important aspect of writing
+    """This LollygagDB is just to illustrate some important aspect of writing
     DB classes in DiracX.
 
     It is mostly pure SQLAlchemy, with a few convention

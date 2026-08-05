@@ -59,7 +59,7 @@ async def _lock_watchdog(
 async def task_wrapper(  # noqa: D417
     cls: type[BaseTask],
     *args: Any,
-    _redis: LockCoordinator | None = None,
+    _redis: LockCoordinator,
     _interactive: bool = False,
     **kwargs: Any,
 ) -> Any:
@@ -70,8 +70,7 @@ async def task_wrapper(  # noqa: D417
 
     Parameters
     ----------
-        _redis: Redis connection for lock acquisition. When None, locks
-            are skipped with a warning.
+        _redis: Redis connection for lock acquisition.
         _interactive: When True, ``BaseLimiter`` subclasses (rate limiters,
             concurrency limiters) are skipped entirely — only hard locks
             (mutex, RW) are acquired.
@@ -84,10 +83,6 @@ async def task_wrapper(  # noqa: D417
         for lock in task.execution_locks:
             # In interactive mode, skip limiters entirely
             if _interactive and isinstance(lock, BaseLimiter):
-                continue
-
-            if _redis is None:
-                logger.warning("No Redis connection — skipping lock %s", lock.redis_key)
                 continue
 
             acquired = await lock.acquire(_redis)

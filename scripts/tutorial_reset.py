@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TUTORIAL_PATHS = [
     "extensions/gubbins/gubbins-db/src/gubbins/db/sql/my_pilot_db",
     "extensions/gubbins/gubbins-db/tests/test_my_pilot_db.py",
+    "extensions/gubbins/gubbins-logic/src/gubbins/logic/my_pilots.py",
     "extensions/gubbins/gubbins-tasks/src/gubbins/tasks/my_pilots.py",
     "extensions/gubbins/gubbins-tasks/src/gubbins/tasks/my_pilot_lock_types.py",
     "extensions/gubbins/gubbins-tasks/tests/test_my_pilot_tasks.py",

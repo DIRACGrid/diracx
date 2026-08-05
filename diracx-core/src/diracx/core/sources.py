@@ -80,22 +80,14 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
         """
 
     def read(self) -> T:
-        """Load the source from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
+        """Load the source from the backend with appropriate caching."""
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=True
         )
         return self._content_cache[hexsha]
 
     async def read_non_blocking(self) -> T:
-        """Load the source from the backend with appropriate caching.
-
-        :raises: diracx.core.exceptions.NotReadyError if the source is being loaded still
-        :raises: git.exc.BadName if version does not exist
-        """
+        """Load the source from the backend with appropriate caching."""
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=False
         )
