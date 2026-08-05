@@ -22,10 +22,10 @@ async def register_new_pilot(
     `PilotAlreadyExistsError` if the stamp already exists.
 
     Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
-    constraint on `PilotStamp` (only a non-unique key), so a concurrent
-    registration of the same stamp from two processes could race past this
-    check. In practice pilot stamps are cryptographically random UUIDs,
-    making the collision window negligible.
+    constraint on `PilotStamp`, so a concurrent registration of the same
+    stamp from two processes could race past this check. In practice pilot
+    stamps are cryptographically random UUIDs, making the collision window
+    negligible.
     """
     # TODO: https://github.com/DIRACGrid/diracx/issues/1005
     # Also validate grid_type, grid_site and destination_site once the

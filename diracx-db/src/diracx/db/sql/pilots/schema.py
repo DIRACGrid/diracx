@@ -59,11 +59,15 @@ class PilotAgents(PilotAgentsDBBase):
     accounting_sent: Mapped[bool] = mapped_column(
         "AccountingSent", EnumBackedBool(), default=False
     )
+    # Index parity with the legacy DIRAC PilotAgentsDB schema: a PilotStamp
+    # index is deliberately NOT added here even though stamp-keyed lookups
+    # are the hot path — it must first be added on the DIRAC side (with an
+    # update-guide entry), like idx_dest_queue_status was in v9.1.0.
     __table_args__ = (
         Index("PilotJobReference", "PilotJobReference"),
-        Index("PilotStamp", "PilotStamp"),
         Index("Status", "Status"),
         Index("Statuskey", "GridSite", "DestinationSite", "Status"),
+        Index("idx_dest_queue_status", "DestinationSite", "Queue", "Status"),
     )
 
 
