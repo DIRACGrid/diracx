@@ -9,6 +9,9 @@ __all__ = [
     "InvalidQueryError",
     "NotReadyError",
     "PendingAuthorizationError",
+    "PilotAlreadyAssociatedWithJobError",
+    "PilotAlreadyExistsError",
+    "PilotNotFoundError",
     "SandboxAlreadyAssignedError",
     "SandboxAlreadyInsertedError",
     "SandboxNotFoundError",
@@ -116,16 +119,10 @@ class NotReadyError(DiracError):
 class PilotNotFoundError(DiracError):
     """At least one pilot is not found."""
 
-    http_status_code = HTTPStatus.NOT_FOUND
-
 
 class PilotAlreadyExistsError(DiracError):
     """At least one pilot already exists, we avoid collisions."""
 
-    http_status_code = HTTPStatus.CONFLICT
-
 
 class PilotAlreadyAssociatedWithJobError(DiracError):
     """We can't associate a pilot with the same job twice."""
-
-    http_status_code = HTTPStatus.CONFLICT

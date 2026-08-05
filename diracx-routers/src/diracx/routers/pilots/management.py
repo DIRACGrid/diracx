@@ -3,8 +3,9 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import Body
+from fastapi import Body, HTTPException
 
+from diracx.core.exceptions import PilotAlreadyExistsError, PilotNotFoundError
 from diracx.core.models.pilot import PilotMetadata, PilotStatus
 from diracx.db.sql import PilotAgentsDB
 from diracx.logic.pilots.management import (
@@ -58,18 +59,21 @@ async def register_pilot(
         allow_legacy_pilots=True,
     )
 
-    await register_new_pilots(
-        pilot_db=pilot_db,
-        pilot_stamps=[pilot_stamp],
-        vo=vo,
-        grid_type=grid_type,
-        grid_site=grid_site,
-        destination_site=destination_site,
-        pilot_job_references={pilot_stamp: pilot_reference}
-        if pilot_reference
-        else None,
-        status=pilot_status,
-    )
+    try:
+        await register_new_pilots(
+            pilot_db=pilot_db,
+            pilot_stamps=[pilot_stamp],
+            vo=vo,
+            grid_type=grid_type,
+            grid_site=grid_site,
+            destination_site=destination_site,
+            pilot_job_references={pilot_stamp: pilot_reference}
+            if pilot_reference
+            else None,
+            status=pilot_status,
+        )
+    except PilotAlreadyExistsError as e:
+        raise HTTPException(status_code=HTTPStatus.CONFLICT, detail=str(e)) from e
 
 
 EXAMPLE_UPDATE_METADATA = {
@@ -116,7 +120,10 @@ async def update_pilot_metadata(
         allow_legacy_pilots=True,
     )
 
-    await update_pilots_metadata(
-        pilot_db=pilot_db,
-        updates=updates,
-    )
+    try:
+        await update_pilots_metadata(
+            pilot_db=pilot_db,
+            updates=updates,
+        )
+    except PilotNotFoundError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
