@@ -46,7 +46,7 @@ pytestmark = pytest.mark.enabled_dependencies(
 def test_insert_and_list_parametric_jobs(normal_user_client):
     job_definitions = [TEST_PARAMETRIC_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == 3  # Parameters.JOB_ID is 3
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -73,7 +73,7 @@ def test_insert_and_list_parametric_jobs(normal_user_client):
 )
 def test_insert_and_list_bulk_jobs(job_definitions, normal_user_client):
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -96,7 +96,7 @@ def test_insert_and_search(normal_user_client):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
-    assert r.status_code == 200, listed_jobs
+    assert r.status_code == 201, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -216,7 +216,7 @@ def test_insert_and_search_by_datetime(normal_user_client):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
-    assert r.status_code == 200, listed_jobs
+    assert r.status_code == 201, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
     r = normal_user_client.post("/api/jobs/search")
     assert len(r.json()) == 1, "No jobs submitted"
@@ -453,7 +453,7 @@ def test_search_distinct(normal_user_client):
     job_definitions = [TEST_JDL, TEST_JDL, TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
-    assert r.status_code == 200, listed_jobs
+    assert r.status_code == 201, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
 
     # Check that distinct collapses identical records when true
@@ -481,7 +481,7 @@ def test_search_pagination(normal_user_client):
     job_definitions = [TEST_JDL] * 20
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
     listed_jobs = r.json()
-    assert r.status_code == 200, listed_jobs
+    assert r.status_code == 201, listed_jobs
     assert len(listed_jobs) == len(job_definitions)
 
     # Get the first 20 jobs (all of them)
@@ -946,13 +946,13 @@ async def _register_pilot(client, stamp: str) -> None:
         "/api/pilots/",
         json={"pilot_stamp": stamp, "vo": "lhcb"},
     )
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
 
 
 async def test_jobs_search_by_pilot_stamp_eq(normal_user_client):
     """A ``PilotStamp`` eq filter on /jobs/search returns the jobs that ran on that pilot."""
     r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL for _ in range(3)])
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     job_ids = [j["JobID"] for j in r.json()]
 
     await _register_pilot(normal_user_client, "stamp-eq")
@@ -976,7 +976,7 @@ async def test_jobs_search_by_pilot_stamp_eq(normal_user_client):
 async def test_jobs_search_by_pilot_stamp_in_multiple(normal_user_client):
     """An ``in`` filter over several stamps returns the union of their jobs."""
     r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL for _ in range(4)])
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     job_ids = [j["JobID"] for j in r.json()]
 
     await _register_pilot(normal_user_client, "stamp-in-a")
@@ -1006,7 +1006,7 @@ async def test_jobs_search_by_pilot_stamp_in_multiple(normal_user_client):
 def test_jobs_search_by_unknown_pilot_stamp_returns_empty(normal_user_client):
     """An unknown stamp resolves to an empty job list; the caller gets ``[]``."""
     r = normal_user_client.post("/api/jobs/jdl", json=[TEST_JDL])
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
 
     r = normal_user_client.post(
         "/api/jobs/search",

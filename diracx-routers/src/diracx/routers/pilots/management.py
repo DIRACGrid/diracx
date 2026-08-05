@@ -23,7 +23,7 @@ from .access_policies import (
 router = DiracxRouter()
 
 
-@router.post("/")
+@router.post("/", status_code=HTTPStatus.CREATED)
 async def register_pilot(
     config: Config,
     pilot_db: PilotAgentsDB,

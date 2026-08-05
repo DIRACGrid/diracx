@@ -42,7 +42,7 @@ async def populated_pilot_client(normal_test_client):
             "/api/pilots/",
             json={"vo": MAIN_VO, "pilot_stamp": stamp},
         )
-        assert r.status_code == 200, r.json()
+        assert r.status_code == 201, r.json()
 
     r = normal_test_client.patch(
         "/api/pilots/metadata",

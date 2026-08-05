@@ -75,7 +75,7 @@ def admin_user_client(client_factory):
 def valid_job_id(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == 1
     return r.json()[0]["JobID"]
 
@@ -84,7 +84,7 @@ def valid_job_id(normal_user_client: TestClient):
 def valid_job_ids(normal_user_client: TestClient):
     job_definitions = [TEST_PARAMETRIC_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == 3
     return sorted([job_dict["JobID"] for job_dict in r.json()])
 

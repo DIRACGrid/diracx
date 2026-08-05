@@ -35,7 +35,7 @@ async def test_register_then_duplicate_then_success(normal_test_client):
         r = normal_test_client.post(
             "/api/pilots/", json={"pilot_stamp": stamp, "vo": MAIN_VO}
         )
-        assert r.status_code == 200, r.json()
+        assert r.status_code == 201, r.json()
 
     # Existing stamp is rejected
     r = normal_test_client.post(
@@ -51,7 +51,7 @@ async def test_register_then_duplicate_then_success(normal_test_client):
     r = normal_test_client.post(
         "/api/pilots/", json={"pilot_stamp": "stamps_new", "vo": MAIN_VO}
     )
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
 
 
 async def test_register_pilot_unknown_vo_returns_400(normal_test_client):
@@ -70,7 +70,7 @@ async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
         r = normal_test_client.post(
             "/api/pilots/", json={"pilot_stamp": stamp, "vo": MAIN_VO}
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
 
     # stamp_m1 updates only BenchMark; stamp_m2 only Status
     r = normal_test_client.patch(
@@ -108,7 +108,7 @@ async def test_update_pilot_metadata_refreshes_last_update_time(normal_test_clie
     r = normal_test_client.post(
         "/api/pilots/", json={"pilot_stamp": "stamp_t", "vo": MAIN_VO}
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
 
     r = normal_test_client.post(
         "/api/pilots/search", json={"parameters": ["LastUpdateTime"]}
@@ -133,11 +133,11 @@ async def test_register_pilot_reference(normal_test_client):
         "/api/pilots/",
         json={"pilot_stamp": "stamp_r1", "vo": MAIN_VO, "pilot_reference": "ref-1"},
     )
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     r = normal_test_client.post(
         "/api/pilots/", json={"pilot_stamp": "stamp_r2", "vo": MAIN_VO}
     )
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
 
     r = normal_test_client.post(
         "/api/pilots/search",

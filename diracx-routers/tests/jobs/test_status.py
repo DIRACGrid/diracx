@@ -358,7 +358,7 @@ def test_set_job_status_with_invalid_job_id(
 def test_insert_and_reschedule(normal_user_client: TestClient):
     job_definitions = [TEST_JDL]
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
@@ -408,7 +408,7 @@ def test_reschedule_job_attr_update(normal_user_client: TestClient):
     job_definitions = [TEST_JDL] * 15
 
     r = normal_user_client.post("/api/jobs/jdl", json=job_definitions)
-    assert r.status_code == 200, r.json()
+    assert r.status_code == 201, r.json()
     assert len(r.json()) == len(job_definitions)
 
     submitted_job_ids = sorted([job_dict["JobID"] for job_dict in r.json()])
