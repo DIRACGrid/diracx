@@ -2,9 +2,9 @@
 
 ## What is a pilot
 
-A pilot is a small piece of software that runs on a *worker node* and pulls user payloads (jobs). The same pilot binary is equipped to talk to both DIRAC and DiracX during the migration, and it supports two authentication modes:
+A pilot is a small piece of software that runs on a *worker node* and pulls user payloads (jobs). Two authentication modes are relevant to this service:
 
-- **X.509 proxy** (legacy): the pilot presents a proxy and, in DiracX, exchanges it for a DiracX token. Callers authenticated this way carry the `GENERIC_PILOT` property and are handled by the "legacy pilot" code paths in the access policy.
+- **X.509 proxy** (legacy): the pilot presents a proxy and exchanges it for a DiracX token. Callers authenticated this way carry the `GENERIC_PILOT` property and are handled by the "legacy pilot" code paths in the access policy.
 - **Pre-issued secret**: the pilot is provisioned with a secret that it exchanges for a DiracX token. Pilots authenticated this way are identified by their unique *stamp* rather than by a set of security properties.
 
 ## Identity model

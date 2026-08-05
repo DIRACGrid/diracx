@@ -55,8 +55,24 @@ async def update_pilots_metadata(
     pilot_db: PilotAgentsDB,
     updates: dict[str, PilotMetadata],
 ):
-    """Bulk-update pilot metadata, keyed by pilot stamp."""
-    await pilot_db.update_pilot_metadata(updates)
+    """Bulk-update pilot metadata, keyed by pilot stamp.
+
+    Unset fields (None) are preserved. `LastUpdateTime` is refreshed on
+    every updated pilot.
+    """
+    fields_by_stamp = {
+        stamp: metadata.model_dump(by_alias=True, exclude_none=True)
+        for stamp, metadata in updates.items()
+    }
+
+    if not any(fields_by_stamp.values()):
+        return
+
+    now = datetime.now(tz=timezone.utc)
+    for fields in fields_by_stamp.values():
+        fields["LastUpdateTime"] = now
+
+    await pilot_db.update_pilot_metadata(fields_by_stamp)
 
 
 async def assign_jobs_to_pilot(

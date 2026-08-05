@@ -50,14 +50,14 @@ async def resolve_jobs_for_pilot_stamps(
     Used by `logic/jobs/query.py:search` to rewrite the `PilotStamp`
     pseudo-parameter into a concrete `JobID` vector filter.
     """
-    return await pilot_db.job_ids_for_stamps(pilot_stamps)
+    return await pilot_db.get_job_ids_for_stamps(pilot_stamps)
 
 
 async def _resolve_pilots_for_job_ids(
     pilot_db: PilotAgentsDB, job_ids: list[int]
 ) -> list[int]:
     """Resolve a batch of job IDs to the pilot IDs that have run them."""
-    return await pilot_db.pilot_ids_for_job_ids(job_ids)
+    return await pilot_db.get_pilot_ids_for_job_ids(job_ids)
 
 
 async def _rewrite_job_id_pseudo_param(
@@ -151,7 +151,7 @@ async def search(
 
     _add_vo_constraint(body, vo_constraint)
 
-    return await pilot_db.search_pilots(
+    return await pilot_db.search(
         body.parameters,
         body.search,
         body.sort,
@@ -168,7 +168,7 @@ async def summary(
 ):
     """Aggregate pilot counts suitable for plotting."""
     _add_vo_constraint(body, vo_constraint)
-    return await pilot_db.pilot_summary(body.grouping, body.search)
+    return await pilot_db.summary(body.grouping, body.search)
 
 
 async def get_pilots_by_stamp(
@@ -192,7 +192,7 @@ async def get_pilots_by_stamp(
 
     # No `page` is passed, so pagination is disabled and all matches are
     # returned (`per_page` is ignored when `page` is None).
-    _, pilots = await pilot_db.search_pilots(
+    _, pilots = await pilot_db.search(
         parameters=query_parameters,
         search=[
             VectorSearchSpec(

@@ -51,7 +51,7 @@ async def populated_pilot_client(normal_test_client):
                 BenchMark=float(i),
                 Status=PILOT_STATUSES[i % len(PILOT_STATUSES)],
                 Queue=f"queue_{i}",
-            ).model_dump(exclude_unset=True)
+            ).model_dump(by_alias=True, exclude_unset=True)
             for i, stamp in enumerate(pilot_stamps)
         },
     )

@@ -18,7 +18,7 @@ class PilotStatus(StrEnum):
     UNKNOWN = "Unknown"
 
 
-class PilotMetadata(BaseModel, extra="forbid"):
+class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
     """Mutable metadata attached to a pilot.
 
     The pilot is identified by its stamp, passed alongside this model
@@ -26,22 +26,30 @@ class PilotMetadata(BaseModel, extra="forbid"):
     field is optional; when absent it is left untouched by an update.
     """
 
-    StatusReason: str | None = Field(
-        default=None, description="Human-readable reason for the current status."
+    status_reason: str | None = Field(
+        None,
+        alias="StatusReason",
+        description="Human-readable reason for the current status.",
     )
-    Status: PilotStatus | None = Field(
-        default=None, description="Current pilot status."
+    status: PilotStatus | None = Field(
+        None, alias="Status", description="Current pilot status."
     )
-    BenchMark: float | None = Field(default=None, description="Pilot benchmark value.")
-    DestinationSite: str | None = Field(default=None, description="Destination site.")
-    Queue: str | None = Field(default=None, description="Batch queue name.")
-    GridSite: str | None = Field(default=None, description="Grid site.")
-    GridType: str | None = Field(default=None, description="Grid type.")
-    AccountingSent: bool | None = Field(
-        default=None,
+    benchmark: float | None = Field(
+        None, alias="BenchMark", description="Pilot benchmark value."
+    )
+    destination_site: str | None = Field(
+        None, alias="DestinationSite", description="Destination site."
+    )
+    queue: str | None = Field(None, alias="Queue", description="Batch queue name.")
+    grid_site: str | None = Field(None, alias="GridSite", description="Grid site.")
+    grid_type: str | None = Field(None, alias="GridType", description="Grid type.")
+    accounting_sent: bool | None = Field(
+        None,
+        alias="AccountingSent",
         description="Whether accounting has been sent for this pilot.",
     )
-    CurrentJobID: int | None = Field(
-        default=None,
+    current_job_id: int | None = Field(
+        None,
+        alias="CurrentJobID",
         description="ID of the job currently running on this pilot.",
     )

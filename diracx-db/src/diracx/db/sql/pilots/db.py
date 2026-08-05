@@ -10,7 +10,7 @@ from diracx.core.exceptions import (
     PilotAlreadyAssociatedWithJobError,
     PilotNotFoundError,
 )
-from diracx.core.models.pilot import PilotMetadata, PilotStatus
+from diracx.core.models.pilot import PilotStatus
 from diracx.core.models.search import SearchSpec, SortSpec
 
 from ..utils import BaseSQLDB
@@ -90,30 +90,19 @@ class PilotAgentsDB(BaseSQLDB):
                 ) from e
             raise
 
-    async def update_pilot_metadata(self, updates: dict[str, PilotMetadata]):
-        """Bulk-update pilot metadata.
+    async def update_pilot_metadata(self, updates: dict[str, dict[str, Any]]):
+        """Bulk-update pilot fields.
 
-        `updates` maps a pilot stamp to the fields to set for that pilot;
-        each entry may set a different subset of fields, and unset fields
-        (None) are preserved. `LastUpdateTime` is refreshed on every
-        updated pilot. Uses a per-column CASE expression to support
-        heterogeneous updates, matching the pattern in
-        JobDB.set_job_attributes. Raises PilotNotFoundError if any of the
-        pilot stamps is not found.
+        `updates` maps a pilot stamp to the column/value pairs to set for
+        that pilot; each entry may set a different subset of columns. Uses
+        a per-column CASE expression to support heterogeneous updates,
+        matching the pattern in JobDB.set_job_attributes. Raises
+        PilotNotFoundError if any of the pilot stamps is not found.
         """
-        updates_by_stamp: dict[str, dict[str, Any]] = {
-            stamp: metadata.model_dump(exclude_none=True)
-            for stamp, metadata in updates.items()
-        }
-
-        if not any(updates_by_stamp.values()):
+        if not updates:
             return
 
-        now = datetime.now(tz=timezone.utc)
-        for fields in updates_by_stamp.values():
-            fields["LastUpdateTime"] = now
-
-        columns = {col for fields in updates_by_stamp.values() for col in fields}
+        columns = {col for fields in updates.values() for col in fields}
 
         case_expressions = {
             column: case(
@@ -125,7 +114,7 @@ class PilotAgentsDB(BaseSQLDB):
                             type_=PilotAgents.__table__.c[column].type,
                         ),
                     )
-                    for stamp, fields in updates_by_stamp.items()
+                    for stamp, fields in updates.items()
                     if column in fields
                 ],
                 else_=getattr(PilotAgents.__table__.c, column),
@@ -136,14 +125,14 @@ class PilotAgentsDB(BaseSQLDB):
         stmt = (
             update(PilotAgents)
             .values(**case_expressions)
-            .where(PilotAgents.__table__.c.PilotStamp.in_(updates_by_stamp.keys()))
+            .where(PilotAgents.__table__.c.PilotStamp.in_(updates.keys()))
         )
         result = await self.conn.execute(stmt)
 
-        if result.rowcount != len(updates_by_stamp):
+        if result.rowcount != len(updates):
             raise PilotNotFoundError("at least one of the given pilots does not exist.")
 
-    async def search_pilots(
+    async def search(
         self,
         parameters: list[str] | None,
         search: list[SearchSpec],
@@ -164,13 +153,13 @@ class PilotAgentsDB(BaseSQLDB):
             page=page,
         )
 
-    async def pilot_summary(
+    async def summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
         """Aggregate pilot counts by the requested columns."""
         return await self._summary(table=PilotAgents, group_by=group_by, search=search)
 
-    async def job_ids_for_stamps(self, pilot_stamps: list[str]) -> list[int]:
+    async def get_job_ids_for_stamps(self, pilot_stamps: list[str]) -> list[int]:
         """Return the IDs of jobs that have run on any of the given pilot stamps.
 
         Single round-trip SQL join over JobToPilotMapping and PilotAgents
@@ -191,7 +180,7 @@ class PilotAgentsDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         return [row[0] for row in result]
 
-    async def pilot_ids_for_job_ids(self, job_ids: list[int]) -> list[int]:
+    async def get_pilot_ids_for_job_ids(self, job_ids: list[int]) -> list[int]:
         """Return the IDs of pilots that have run any of the given jobs."""
         if not job_ids:
             return []

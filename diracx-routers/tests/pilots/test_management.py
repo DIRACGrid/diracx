@@ -67,9 +67,11 @@ async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
     r = normal_test_client.patch(
         "/api/pilots/metadata",
         json={
-            "stamp_m1": PilotMetadata(BenchMark=1.0).model_dump(exclude_unset=True),
+            "stamp_m1": PilotMetadata(BenchMark=1.0).model_dump(
+                by_alias=True, exclude_unset=True
+            ),
             "stamp_m2": PilotMetadata(Status=PilotStatus.WAITING).model_dump(
-                exclude_unset=True
+                by_alias=True, exclude_unset=True
             ),
         },
     )
@@ -82,3 +84,57 @@ async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
     assert by_stamp["stamp_m1"]["Status"] == PilotStatus.SUBMITTED  # untouched
     assert by_stamp["stamp_m2"]["Status"] == PilotStatus.WAITING
     assert by_stamp["stamp_m2"]["BenchMark"] == 0.0  # untouched
+
+
+async def test_update_pilot_metadata_unknown_stamp_returns_404(normal_test_client):
+    r = normal_test_client.patch(
+        "/api/pilots/metadata",
+        json={"nonexistent": {"Status": PilotStatus.DONE.value}},
+    )
+    assert r.status_code == 404, r.json()
+
+
+async def test_update_pilot_metadata_refreshes_last_update_time(normal_test_client):
+    """Any metadata update also bumps LastUpdateTime."""
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamp": "stamp_t", "vo": MAIN_VO}
+    )
+    assert r.status_code == 200
+
+    r = normal_test_client.post(
+        "/api/pilots/search", json={"parameters": ["LastUpdateTime"]}
+    )
+    before = r.json()[0]["LastUpdateTime"]
+
+    r = normal_test_client.patch(
+        "/api/pilots/metadata",
+        json={"stamp_t": {"BenchMark": 1.0}},
+    )
+    assert r.status_code == 204
+
+    r = normal_test_client.post(
+        "/api/pilots/search", json={"parameters": ["LastUpdateTime"]}
+    )
+    assert r.json()[0]["LastUpdateTime"] > before
+
+
+async def test_register_pilot_reference(normal_test_client):
+    """An explicit reference is stored; without one the stamp is used."""
+    r = normal_test_client.post(
+        "/api/pilots/",
+        json={"pilot_stamp": "stamp_r1", "vo": MAIN_VO, "pilot_reference": "ref-1"},
+    )
+    assert r.status_code == 200, r.json()
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamp": "stamp_r2", "vo": MAIN_VO}
+    )
+    assert r.status_code == 200, r.json()
+
+    r = normal_test_client.post(
+        "/api/pilots/search",
+        json={"parameters": ["PilotStamp", "PilotJobReference"]},
+    )
+    assert r.status_code == 200
+    by_stamp = {p["PilotStamp"]: p["PilotJobReference"] for p in r.json()}
+    assert by_stamp["stamp_r1"] == "ref-1"
+    assert by_stamp["stamp_r2"] == "stamp_r2"

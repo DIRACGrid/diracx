@@ -110,13 +110,12 @@ async def update_pilot_metadata(
     Only fields defined in `PilotMetadata` are mutable. The pilot stamp
     (the mapping key) identifies the pilot and cannot be changed.
     """
-    pilot_stamps = list(updates)
     # Legacy pilot identities may self-update (dirac-admin-add-pilot
     # --status); the policy caps them to a single pilot stamp per call.
     await check_permissions(
         action=ActionType.MANAGE_PILOTS,
         pilot_db=pilot_db,
-        pilot_stamps=pilot_stamps,
+        pilot_stamps=list(updates),
         allow_legacy_pilots=True,
     )
 
