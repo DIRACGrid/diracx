@@ -196,3 +196,64 @@ def test_pilots_search_combining_job_id_and_pilot_id_raises(populated_pilot_clie
         },
     )
     assert r.status_code in (400, 422), r.json()
+
+
+# ---------------------------------------------------------------------------
+# VO isolation
+#
+# HTTP-level tests stub the access policy with AlwaysAllowAccessPolicy, so
+# the read scoping cannot be fully exercised through the routes here. The
+# logic layer is tested directly instead: it must apply the VO constraint
+# that the route derives from the caller's identity.
+# ---------------------------------------------------------------------------
+
+OTHER_VO = "gridpp"
+
+
+def _pilot_db(client) -> PilotAgentsDB:
+    return client.app.dependency_overrides[PilotAgentsDB.transaction].args[0]
+
+
+async def test_search_vo_constraint_hides_other_vos(populated_pilot_client):
+    """A VO-constrained search must not leak pilots from another VO."""
+    from diracx.logic.pilots import search as search_bl
+
+    db = _pilot_db(populated_pilot_client)
+    async with db:
+        await db.register_pilots(pilot_stamps=["other-vo-stamp"], vo=OTHER_VO)
+
+    async with db:
+        total, pilots = await search_bl(pilot_db=db, vo_constraint=MAIN_VO)
+    assert total == N
+    assert {p["VO"] for p in pilots} == {MAIN_VO}
+
+    # Unconstrained (service administrator) searches see every VO
+    async with db:
+        total, pilots = await search_bl(pilot_db=db, vo_constraint=None)
+    assert total == N + 1
+    assert {p["VO"] for p in pilots} == {MAIN_VO, OTHER_VO}
+
+
+async def test_summary_vo_constraint_hides_other_vos(populated_pilot_client):
+    """A VO-constrained summary must not count pilots from another VO."""
+    from diracx.core.models.search import SummaryParams
+    from diracx.logic.pilots import summary as summary_bl
+
+    db = _pilot_db(populated_pilot_client)
+    async with db:
+        await db.register_pilots(pilot_stamps=["other-vo-stamp"], vo=OTHER_VO)
+
+    async with db:
+        rows = await summary_bl(
+            pilot_db=db, body=SummaryParams(grouping=["VO"]), vo_constraint=MAIN_VO
+        )
+    assert rows == [{"VO": MAIN_VO, "count": N}]
+
+    async with db:
+        rows = await summary_bl(
+            pilot_db=db, body=SummaryParams(grouping=["VO"]), vo_constraint=None
+        )
+    assert sorted(rows, key=lambda r: r["VO"]) == [
+        {"VO": OTHER_VO, "count": 1},
+        {"VO": MAIN_VO, "count": N},
+    ]
