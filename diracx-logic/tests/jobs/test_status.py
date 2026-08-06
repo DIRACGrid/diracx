@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from diracx.core.exceptions import DocumentUpsertError
 from diracx.core.models import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
@@ -158,3 +159,27 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     assert prow["does_not_exist"] == "unknown"
     assert "UserPriority" not in prow
     assert "HeartBeatTime" not in prow
+
+
+@pytest.mark.asyncio
+async def test_upsert_failure_propagates_as_bare_dirac_error(
+    job_db: JobDB,
+    job_parameters_db: _MockJobParametersDB,
+    valid_job_id: int,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """A DiracError raised while upserting job parameters must propagate as is.
+
+    The TaskGroup wraps failures in an ExceptionGroup, which callers cannot
+    catch by exception type; the logic layer must collapse it.
+    """
+
+    async def failing_upsert(vo, doc_id, document):
+        raise DocumentUpsertError("failed to parse field [doc]")
+
+    monkeypatch.setattr(job_parameters_db, "upsert", failing_upsert)
+
+    updates = {valid_job_id: JobMetaData.model_validate({"SomeParameter": "value"})}
+    with pytest.raises(DocumentUpsertError):
+        async with job_db:
+            await set_job_parameters_or_attributes(updates, job_db, job_parameters_db)

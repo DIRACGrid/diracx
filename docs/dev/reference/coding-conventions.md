@@ -83,6 +83,38 @@ delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 <tr>
 <td>
 
+`pydantic`
+
+</td>
+
+<td>
+
+```python
+from pydantic import BaseModel, Field
+
+
+class HeartbeatData(BaseModel):
+    load_average: float | None = Field(None, allow_inf_nan=False)
+```
+
+</td>
+
+<td>
+
+```python
+from pydantic import BaseModel
+
+
+class HeartbeatData(BaseModel):
+    load_average: float | None = None
+```
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `SQL Alchemy`
 
 </td>

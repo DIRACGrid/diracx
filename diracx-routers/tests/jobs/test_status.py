@@ -899,6 +899,28 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     assert r.json()[0]["UserPriority"] == 2
 
 
+@pytest.mark.parametrize(
+    "raw_value",
+    ["NaN", "Infinity", "-Infinity", '{"nested": [NaN]}'],
+)
+def test_patch_metadata_rejects_non_finite_values(
+    normal_user_client: TestClient, valid_job_id: int, raw_value: str
+):
+    """Non-finite floats survive Python JSON parsing but cannot be stored.
+
+    They used to be forwarded to OpenSearch, which rejects them, resulting
+    in an internal server error.
+    """
+    # Send the raw body as httpx itself refuses to serialize NaN
+    r = normal_user_client.patch(
+        "/api/jobs/metadata",
+        content=f'{{"{valid_job_id}": {{"SomeParameter": {raw_value}}}}}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 422, r.text
+    assert "non-finite" in r.text
+
+
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
     """Test fix for https://github.com/DIRACGrid/diracx/issues/476."""
     inner_payload = {"Status": JobStatus.FAILED.value, "MinorStatus": "Payload failed"}

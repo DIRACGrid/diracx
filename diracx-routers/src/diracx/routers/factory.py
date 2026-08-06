@@ -6,6 +6,7 @@ __all__ = ["DIRACX_MIN_CLIENT_VERSION", "create_app", "create_app_inner"]
 
 import inspect
 import logging
+import math
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from http import HTTPStatus
@@ -16,7 +17,7 @@ from typing import Any, TypeVar, cast
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.dependencies.models import Dependant
-from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -443,6 +444,17 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
     )
 
 
+def _replace_non_finite(obj):
+    """Replace NaN and infinity with their repr as they cannot be serialized to JSON."""
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return repr(obj)
+    if isinstance(obj, dict):
+        return {k: _replace_non_finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_replace_non_finite(v) for v in obj]
+    return obj
+
+
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     logger_422.warning(
         "Got validation error: %s in %s %s with body %r",
@@ -460,7 +472,13 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         #     }
         # },
     )
-    return await request_validation_exception_handler(request, exc)
+    # The rejected input is echoed in the error detail and may contain values
+    # which cannot be represented in strict JSON, such as NaN
+    detail = _replace_non_finite(jsonable_encoder(exc.errors()))
+    return JSONResponse(
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+        content={"detail": detail},
+    )
 
 
 def find_dependents(
