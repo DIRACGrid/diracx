@@ -54,10 +54,6 @@ ignore = [
   "B006",
   "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
   # TODO: Maybe enable these
-  "D100",
-  "D101",
-  "D102",
-  "D103",
   "D104",
   "D105",
   "D107",
@@ -73,6 +69,43 @@ required-imports = ["from __future__ import annotations"]
 # import-mode=importlib, packages with common names (e.g. tests/jobs) collide
 # in sys.modules when several diracx-* packages are collected in one run
 "diracx-*/tests/*" = ["S", "INP"]
+"diracx-api/src/diracx/api/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-api/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-db/src/diracx/db/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-db/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-cli/src/diracx/cli/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-cli/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-core/src/diracx/core/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-core/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-logic/src/diracx/logic/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-logic/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-tasks/src/diracx/tasks/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-tasks/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-testing/src/diracx/testing/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-client/src/diracx/client/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-client/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"diracx-routers/src/diracx/routers/**/*py" = ["D100", "D101", "D102", "D103"]
+"diracx-routers/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-api/src/gubbins/api/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-api/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-cli/src/gubbins/cli/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-cli/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-client/src/gubbins/client/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-client/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-core/src/gubbins/core/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-core/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-db/src/gubbins/db/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-db/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-logic/src/gubbins/logic/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-logic/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-routers/src/gubbins/routers/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-routers/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-tasks/src/gubbins/tasks/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-tasks/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"extensions/gubbins/gubbins-testing/src/gubbins/testing/**/*.py" = ["D100", "D101", "D102", "D103"]
+"tests/*.py" = ["D100", "D101", "D102", "D103"]
+"scripts/*.py" = ["D100", "D101", "D102", "D103"]
+
 
 [tool.ruff.lint.extend-per-file-ignores]
 "diracx-routers/src/diracx/routers/access_policies.py" = ["I002"]
