@@ -73,10 +73,12 @@ async def test_startup(client_factory):
 async def _test_after_clear(config_source, probe_fcn):
     """Ensure that the probe fails after clearing the config source caches.
 
-    :param config_source: The config source to clear.
-    :param probe_fcn: The function to call to make the probe request.
+    Args:
+        config_source: The config source to clear.
+        probe_fcn: The function to call to make the probe request.
 
-    :return: The response from the probe.
+    Returns:
+        The response from the probe.
     """
     orig_r = probe_fcn()
     assert orig_r.status_code == 200, orig_r.text
