@@ -24,6 +24,23 @@ pytestmark = pytest.mark.enabled_dependencies(
 )
 
 
+def test_heartbeat_rejects_non_finite_values(
+    normal_user_client: TestClient, valid_job_id: int
+):
+    """Non-finite floats survive Python JSON parsing but cannot be stored.
+
+    They used to be forwarded to the database backends, which reject them,
+    resulting in an internal server error.
+    """
+    # Send the raw body as httpx itself refuses to serialize NaN
+    r = normal_user_client.patch(
+        "/api/jobs/heartbeat",
+        content=f'{{"{valid_job_id}": {{"Vsize": NaN}}}}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 422, r.text
+
+
 def test_heartbeat(frozen_time, normal_user_client: TestClient, valid_job_id: int):
     search_body = {
         "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]

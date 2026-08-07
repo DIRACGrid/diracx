@@ -19,6 +19,7 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 )
 
 from diracx.core.config import Config
+from diracx.core.exceptions import DiracError
 from diracx.core.models import (
     HeartbeatData,
     JobAttributes,
@@ -577,41 +578,54 @@ async def add_heartbeat(
         if result["Status"] in [JobStatus.MATCHED, JobStatus.STALLED]
     }
 
-    async with TaskGroup() as tg:
-        if status_changes:
-            tg.create_task(
-                set_job_statuses(
-                    status_changes=status_changes,
-                    config=config,
-                    job_db=job_db,
-                    job_logging_db=job_logging_db,
-                    task_queue_db=task_queue_db,
-                    job_parameters_db=job_parameters_db,
+    try:
+        async with TaskGroup() as tg:
+            if status_changes:
+                tg.create_task(
+                    set_job_statuses(
+                        status_changes=status_changes,
+                        config=config,
+                        job_db=job_db,
+                        job_logging_db=job_logging_db,
+                        task_queue_db=task_queue_db,
+                        job_parameters_db=job_parameters_db,
+                    )
                 )
-            )
 
-        if other_ids := set(data) - set(status_changes):
-            # If there are no status changes, we still need to update the heartbeat time
-            heartbeat_updates = {
-                job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
-            }
-            tg.create_task(job_db.set_job_attributes(heartbeat_updates))
+            if other_ids := set(data) - set(status_changes):
+                # If there are no status changes, we still need to update the heartbeat time
+                heartbeat_updates = {
+                    job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
+                }
+                tg.create_task(job_db.set_job_attributes(heartbeat_updates))
 
-        os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
-        for job_id, job_data in data.items():
-            sql_data = {}
-            for key, value in job_data.model_dump(
-                by_alias=True, exclude_defaults=True
-            ).items():
-                if key in job_db.heartbeat_fields:
-                    sql_data[key] = value
-                else:
-                    os_data_by_job_id[job_id][key] = value
+            os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
+            for job_id, job_data in data.items():
+                sql_data = {}
+                for key, value in job_data.model_dump(
+                    by_alias=True, exclude_defaults=True
+                ).items():
+                    if key in job_db.heartbeat_fields:
+                        sql_data[key] = value
+                    else:
+                        os_data_by_job_id[job_id][key] = value
 
-            if sql_data:
-                tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
+                if sql_data:
+                    tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
 
-        await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
+            await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
+    except* DiracError as eg:
+        # Re-raise a DiracError directly rather than the surrounding
+        # ExceptionGroup so callers can catch it by exception type
+        raise _first_leaf(eg) from eg
+
+
+def _first_leaf(eg: BaseExceptionGroup) -> BaseException:
+    """Return the first non-group exception contained in an exception group."""
+    exc: BaseException = eg
+    while isinstance(exc, BaseExceptionGroup):
+        exc = exc.exceptions[0]
+    return exc
 
 
 async def _insert_parameters(
@@ -641,11 +655,16 @@ async def _insert_parameters(
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
     # Upsert the parameters into the JobParametersDB
     # TODO: can we do a bulk upsert instead
-    async with TaskGroup() as tg:
-        for job_id, job_params in updates.items():
-            tg.create_task(
-                job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
-            )
+    try:
+        async with TaskGroup() as tg:
+            for job_id, job_params in updates.items():
+                tg.create_task(
+                    job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
+                )
+    except* DiracError as eg:
+        # Re-raise a DiracError directly rather than the surrounding
+        # ExceptionGroup so callers can catch it by exception type
+        raise _first_leaf(eg) from eg
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:
