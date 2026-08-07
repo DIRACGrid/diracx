@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/DIRACGrid/diracx/compare/v0.3.0...v0.4.0) (2026-08-07)
+
+
+### Features
+
+* add pilot database and router ([#570](https://github.com/DIRACGrid/diracx/issues/570)) ([503d3d2](https://github.com/DIRACGrid/diracx/commit/503d3d2160f7e8b405b7e1b735dbfd5128c958f1))
+
+
+### Bug Fixes
+
+* make redis a mandatory parameter of task_wrapper ([#1000](https://github.com/DIRACGrid/diracx/issues/1000)) ([777f8a7](https://github.com/DIRACGrid/diracx/commit/777f8a75583f91ba2ed55ea44b13bc3e2f55b2d5)), closes [#973](https://github.com/DIRACGrid/diracx/issues/973)
+* minor fixes to the advanced tutorial ([#991](https://github.com/DIRACGrid/diracx/issues/991)) ([ea6f400](https://github.com/DIRACGrid/diracx/commit/ea6f40024735c24bb6e704761cbeb695976eb827))
+
 ## [0.3.0](https://github.com/DIRACGrid/diracx/compare/v0.2.0...v0.3.0) (2026-07-07)
 
 
