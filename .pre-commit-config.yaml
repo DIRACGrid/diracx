@@ -133,3 +133,12 @@ repos:
         entry: pixi run -e default python scripts/check_init_files_precommit_hook.py --mode=forbid
         files: ^(diracx-|extensions/gubbins/gubbins-)[a-z]+/src/[a-z]+/[a-z]+/[a-z_]+/.+\.py$
         exclude: (__init__\.py$|test|_generated|__main__|/patches/)
+
+  - repo: local
+    hooks:
+      - id: forbid-rest-docstrings
+        name: forbid reST docstring tags (use Google style, see #927)
+        language: pygrep
+        entry: '^\s*:(param|type|returns?|rtype|raises?|ivar|cvar|vartype)\b'
+        types: [python]
+        exclude: ^diracx-client/src/diracx/client/
