@@ -1,17 +1,19 @@
 # Run a task manually
 
-The `diracx-task-run call` command executes a single task interactively, bypassing the broker. This is useful for debugging, manual recovery, and verifying task behaviour.
+The `diracx-tasks call` command executes a single task interactively, bypassing the broker. This is useful for debugging, manual recovery, and verifying task behaviour.
+
+`diracx-task-run` remains supported as a backward-compatible alias during migration.
 
 ## Basic usage
 
 ```bash
-diracx-task-run call <entry_point> --args '<JSON list>'
+diracx-tasks call <entry_point> --args '<JSON list>'
 ```
 
 The entry point name is `<category>:<ClassName>` as registered in `pyproject.toml`. For example:
 
 ```bash
-diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]'
+diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]'
 ```
 
 ## Passing arguments
@@ -20,7 +22,7 @@ diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]'
 - **`--kwargs`**: JSON dict of keyword arguments (default: `{}`)
 
 ```bash
-diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
+diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 ```
 
 ## Debugging
@@ -31,7 +33,7 @@ The `--debugger` flag drops into Python's debugger:
 - **`--debugger exception`**: break on unhandled exception (post-mortem)
 
 ```bash
-diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]' --debugger exception
+diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]' --debugger exception
 ```
 
 ## Lock behaviour in interactive mode
@@ -45,6 +47,6 @@ If `DIRACX_TASKS_REDIS_URL` is not set, no locks are acquired at all.
 To see which tasks are registered, run the command with an invalid entry point name:
 
 ```bash
-diracx-task-run call nonexistent
+diracx-tasks call nonexistent
 # Task 'nonexistent' not found. Available: ['lollygag:OwnerCleanupTask', 'lollygag:OwnerReportTask', 'lollygag:SyncOwnersTask']
 ```

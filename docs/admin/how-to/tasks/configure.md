@@ -15,7 +15,7 @@ If unset, defaults to `redis://localhost`.
 Workers consume tasks from the broker and execute them:
 
 ```bash
-diracx-task-run worker --redis-url redis://redis-host:6379 --max-concurrent-tasks 10
+diracx-tasks worker --redis-url redis://redis-host:6379 --max-concurrent-tasks 10
 ```
 
 - **`--max-concurrent-tasks`**: maximum number of tasks a worker runs concurrently (default: 10). Tune based on whether tasks are I/O-bound (higher) or CPU-bound (lower).
@@ -28,8 +28,10 @@ Workers consume tasks from the three priority streams for their configured size 
 The scheduler is a singleton process responsible for submitting periodic tasks and promoting delayed tasks:
 
 ```bash
-diracx-task-run scheduler --redis-url redis://redis-host:6379
+diracx-tasks scheduler --redis-url redis://redis-host:6379
 ```
+
+`diracx-task-run` remains supported as a backward-compatible alias during migration.
 
 Only one scheduler instance should run at a time. This is enforced by a Redis mutex — if a second scheduler starts, it will wait for the first to release the lock before taking over.
 

@@ -6,7 +6,7 @@ All locks are Redis-backed with ownership tracking. Each lock instance generates
 
 Locks are split into two categories:
 
-- **Structural locks** (`MutexLock`, `ExclusiveRWLock`, `SharedRWLock`) — always acquired, including in interactive mode (`diracx-task-run call`).
+- **Structural locks** (`MutexLock`, `ExclusiveRWLock`, `SharedRWLock`) — always acquired, including in interactive mode (`diracx-tasks call`).
 - **Limiters** (`RateLimiter`, `ConcurrencyLimiter`) — skipped in interactive mode. These are subclasses of `BaseLimiter`.
 
 ### MutexLock
