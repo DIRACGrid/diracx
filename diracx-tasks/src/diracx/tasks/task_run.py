@@ -1,10 +1,13 @@
 """CLI entry point for interactive task execution.
 
 Usage:
-    diracx-task-run call <entry_point> [--args JSON] [--kwargs JSON] [--debugger {none,before,exception}]
-    diracx-task-run submit <entry_point> [--args JSON] [--kwargs JSON] [--redis-url URL]
-    diracx-task-run worker [--max-concurrent-tasks N] [--redis-url URL]
-    diracx-task-run scheduler [--redis-url URL]
+    diracx-tasks call <entry_point> [--args JSON] [--kwargs JSON] [--debugger {none,before,exception}]
+    diracx-tasks submit <entry_point> [--args JSON] [--kwargs JSON] [--redis-url URL]
+    diracx-tasks worker [--max-concurrent-tasks N] [--redis-url URL]
+    diracx-tasks scheduler [--redis-url URL]
+
+Backward-compatible alias:
+    diracx-task-run <subcommand> [...]
 """
 
 from __future__ import annotations
