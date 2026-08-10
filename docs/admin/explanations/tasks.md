@@ -4,7 +4,7 @@ This page explains the DiracX task system from an operational perspective. For t
 
 ## Task lifecycle
 
-1. A task is **submitted** — either by application code, the scheduler (for periodic tasks), or the CLI (`diracx-task-run call`)
+1. A task is **submitted** — either by application code, the scheduler (for periodic tasks), or the CLI (`diracx-tasks call`)
 2. The broker places it on one of **nine Redis Streams**, selected by the task's priority (realtime, normal, background) and size (small, medium, large)
 3. A **worker** picks up the message from the stream, consuming in strict priority order (realtime first)
 4. The worker **acquires locks** required by the task (mutex, RW, limiters). If a lock cannot be acquired, the task is rescheduled with a short delay
