@@ -19,7 +19,7 @@ def test_client(client_factory):
 
 async def test_dirac_metadata_is_overwriten(test_client):
     """
-    Makes sure that the dirac-metadata endpoint is properly overwriten
+    Makes sure that the dirac-metadata endpoint is properly overwritten
     """
     r = test_client.get(
         "/.well-known/dirac-metadata",

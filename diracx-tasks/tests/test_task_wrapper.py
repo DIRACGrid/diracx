@@ -17,10 +17,10 @@ from diracx.tasks.plumbing.locks import BaseLock, MutexLock, RateLimiter
 from .conftest import LockedTask
 
 
-async def test_task_wrapper_no_redis_skips_locks():
-    """When _redis is None, locks should be skipped with a warning."""
-    result = await task_wrapper(LockedTask, _redis=None)
-    assert result == "locked_ok"
+async def test_task_wrapper_requires_redis():
+    """_redis has no default — omitting it must fail before any task code runs."""
+    with pytest.raises(TypeError, match="_redis"):
+        await task_wrapper(LockedTask)  # type: ignore[call-arg]
 
 
 async def test_task_wrapper_with_redis_acquires_locks():

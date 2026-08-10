@@ -1,5 +1,4 @@
-"""
-Illustrate how to extend/overwrite a diracx router.
+"""Illustrate how to extend/overwrite a diracx router.
 It :
 * changes slightly the return type
 * uses the Gubbins specific configuration

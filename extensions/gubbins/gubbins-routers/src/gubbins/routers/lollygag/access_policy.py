@@ -1,5 +1,4 @@
-"""
-Lollygag dummy AccessPolicy
+"""Lollygag dummy AccessPolicy
 Makes sure we can use Gubbins specific property
 
 """

@@ -1,5 +1,4 @@
-"""
-This router makes use of the new LollygagDB.
+"""This router makes use of the new LollygagDB.
 It uses the the Lollygag AccessPolicy (which itself requires the Gubbins property)
 """
 

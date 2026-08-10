@@ -41,12 +41,12 @@ def default_remote_conf_assertions(monkeypatch, repo_url):
     return hexsha
 
 
-@pytest.mark.skipif(github_is_down(), reason="Github unavailble")
+@pytest.mark.skipif(github_is_down(), reason="Github unavailable")
 def test_remote_git_config_source_default(monkeypatch):
     default_remote_conf_assertions(monkeypatch, TEST_REPO)
 
 
-@pytest.mark.skipif(github_is_down(), reason="Github unavailble")
+@pytest.mark.skipif(github_is_down(), reason="Github unavailable")
 def test_remote_git_config_source_branch(monkeypatch):
     monkeypatch.setattr(
         "diracx.core.config.sources.DEFAULT_GIT_BRANCH",
@@ -55,7 +55,7 @@ def test_remote_git_config_source_branch(monkeypatch):
     default_remote_conf_assertions(monkeypatch, TEST_REPO_SPECIFIC_BRANCH)
 
 
-@pytest.mark.skipif(github_is_down(), reason="Github unavailble")
+@pytest.mark.skipif(github_is_down(), reason="Github unavailable")
 def test_remote_git_config_source_commit(monkeypatch):
     hexsha = default_remote_conf_assertions(monkeypatch, TEST_REPO_SPECIFIC_COMMIT_HASH)
     assert hexsha == COMMIT_HASH
