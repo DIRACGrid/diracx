@@ -154,10 +154,10 @@ async def execute(self, lollygag_db: LollygagDB, **kwargs):
 
 ### Test interactively
 
-Use `diracx-task-run call` to execute a task directly:
+Use `diracx-tasks call` to execute a task directly:
 
 ```bash
-diracx-task-run call lollygag:SyncOwnersTask --args '["alice"]'
+diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]'
 ```
 
 The `call` subcommand resolves dependencies and acquires structural locks, but skips limiters (`RateLimiter`, `ConcurrencyLimiter`), making it suitable for debugging and manual recovery.

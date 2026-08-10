@@ -153,11 +153,13 @@ export DIRACX_TASKS_REDIS_URL="redis://localhost:6379"
 
 ### CLI
 
-The `diracx-task-run` command provides three subcommands:
+The `diracx-tasks` command provides three subcommands:
 
 - **`call <entry_point>`** — execute a single task interactively (limiters are skipped, structural locks are still acquired). Useful for debugging and manual recovery.
 - **`worker`** — start a worker process that consumes tasks from the broker.
 - **`scheduler`** — start the singleton scheduler that submits periodic tasks and promotes delayed tasks.
+
+`diracx-task-run` remains supported as a backward-compatible alias during migration.
 
 This command is provided by `diracx-tasks` and not `diracx-cli` as it is expected to be ran on the same infrastructure as the DiracX tasks workers (e.g. in debug pod in Kubernetes).
 
