@@ -37,6 +37,8 @@ TaskDB = "diracx.tasks.plumbing.persistence:TaskDB"
 
 [project.entry-points."diracx.tasks.jobs"]
 CleanSandboxStoreTask = "diracx.tasks.jobs:CleanSandboxStoreTask"
+CondorJobExecutorMonitorTask = "diracx.tasks.jobs:CondorJobExecutorMonitorTask"
+CondorJobExecutorTask = "diracx.tasks.jobs:CondorJobExecutorTask"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
