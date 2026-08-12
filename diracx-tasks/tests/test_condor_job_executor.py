@@ -164,10 +164,16 @@ async def test_submit_to_condor_uses_htcondor_bindings(monkeypatch):
     class FakeSchedd:
         def __init__(self, ad):
             self.ad = ad
+            self.spool_called = False
 
-        def submit(self, submit_obj):
+        def submit(self, submit_obj, spool=False):
             assert "Executable = /bin/echo" in submit_obj.submit_text
+            assert spool is True
             return FakeSubmitResult()
+
+        def spool(self, submit_result):
+            assert isinstance(submit_result, FakeSubmitResult)
+            self.spool_called = True
 
     class FakeCollector:
         def __init__(self, host=None):

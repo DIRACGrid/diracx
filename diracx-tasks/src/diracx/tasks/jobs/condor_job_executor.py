@@ -156,6 +156,22 @@ def _clean_jdl_value(value: str) -> str:
     return stripped
 
 
+def _parse_file_list(value: str) -> list[str]:
+    """Turn a DIRAC JDL list value into a list of paths.
+
+    ``InputSandbox = {"a.py", "b.txt"}`` reaches here already stripped of its
+    braces by :func:`_clean_jdl_value`, so split on commas and drop any
+    leftover quoting.
+    """
+    if not value:
+        return []
+    return [
+        piece
+        for chunk in value.split(",")
+        if (piece := chunk.strip().strip('"').strip("'").strip())
+    ]
+
+
 def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
     """Render a DIRAC JDL dictionary into a realistic HTCondor submit stanza."""
     values = {key: _clean_jdl_value(value) for key, value in jdl.items()}
@@ -167,6 +183,7 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
     owner_group = "analysis"
     cpu_time = int(values.get("CPUTime") or 86400)
     request_cpus = values.get("RequestCpus") or values.get("CPUs") or "1"
+    request_disk = values.get("RequestDisk") or "5000000"
     request_memory = values.get("RequestMemory") or values.get("Memory") or "2000"
     std_output = values.get("StdOutput") or f"out/{job_name}.out"
     std_error = values.get("StdError") or f"err/{job_name}.err"
@@ -175,6 +192,7 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
     desired_sites = values.get("DesiredSites") or ",".join(DEFAULT_DESIRED_SITES)
     required_os = values.get("REQUIRED_OS") or "rhel9"
     required_arch = values.get("REQUIRED_ARCH") or "X86_64"
+    input_files = _parse_file_list(values.get("InputSandbox", ""))
 
     lines = [
         "Universe = vanilla",
@@ -188,6 +206,15 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
         "",
         "should_transfer_files = YES",
         "when_to_transfer_output = ON_EXIT",
+    ]
+
+    if input_files:
+        lines.append(f"transfer_input_files = {', '.join(input_files)}")
+    if executable.startswith(("/bin/", "/usr/bin/", "/usr/local/bin/")):
+        # A system binary that already exists on the worker node - don't ship it.
+        lines.append("transfer_executable = false")
+
+    lines += [
         "",
         f'+DESIRED_Sites = "{desired_sites}"',
         f'REQUIRED_OS = "{required_os}"',
@@ -196,6 +223,7 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
         "",
         f"request_cpus = {request_cpus}",
         f"request_memory = {request_memory}",
+        f"request_disk = {request_disk}",
         "",
         f"+MaxWallTimeMins = {wall_time_mins}",
         f'accounting_group = "{owner_group}.{owner}"',
