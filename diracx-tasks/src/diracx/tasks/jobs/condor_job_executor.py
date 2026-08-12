@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pydantic import PositiveInt
 
 from diracx.core.models import (
+    JobLoggingRecord,
     JobStatus,
     JobStatusUpdate,
     ScalarSearchOperator,
@@ -17,7 +18,8 @@ from diracx.core.models import (
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.os import JobParametersDB
 from diracx.db.sql import JobDB, JobLoggingDB, TaskQueueDB
-from diracx.logic.jobs import set_job_statuses
+
+# from diracx.logic.jobs import set_job_statuses
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
 from diracx.tasks.plumbing.depends import Config
 from diracx.tasks.plumbing.enums import Priority, Size
@@ -53,6 +55,44 @@ class CondorJobExecutorSettings(ServiceSettingsBase):
 
 
 _settings = CondorJobExecutorSettings()
+
+
+async def _set_job_statuses_sql_only(
+    *,
+    job_db: JobDB,
+    job_logging_db: JobLoggingDB,
+    status_changes: dict[int, JobStatusUpdate],
+    source: str,
+) -> None:
+    """Apply status updates only to SQL tables, skipping OpenSearch writes."""
+    now = datetime.now(UTC)
+    await job_db.set_job_attributes(
+        {
+            job_id: {
+                key: value
+                for key, value in {
+                    "Status": status_update.status,
+                    "MinorStatus": status_update.minor_status,
+                    "ApplicationStatus": status_update.application_status,
+                }.items()
+                if value is not None
+            }
+            for job_id, status_update in status_changes.items()
+        }
+    )
+    await job_logging_db.insert_records(
+        [
+            JobLoggingRecord(
+                job_id=job_id,
+                status=status_update.status or "idem",
+                minor_status=status_update.minor_status or "idem",
+                application_status=status_update.application_status or "idem",
+                date=now,
+                source=source,
+            )
+            for job_id, status_update in status_changes.items()
+        ]
+    )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -95,23 +135,39 @@ class CondorJobExecutorMonitorTask(PeriodicBaseTask):
 
         job_ids = [job["JobID"] for job in jobs]
         logger.info("Moving %d received job(s) to Waiting: %s", len(job_ids), job_ids)
-        await set_job_statuses(
-            {
-                job_id: {
-                    datetime.now(UTC): JobStatusUpdate(
-                        Status=JobStatus.WAITING,
-                        MinorStatus=MINOR_STATUS,
-                        Source=MINOR_STATUS,
-                    )
-                }
-                for job_id in job_ids
-            },
-            config=config,
+        logger.warning(
+            "Applying SQL-only Waiting status transition (OpenSearch disabled)"
+        )
+        await _set_job_statuses_sql_only(
             job_db=job_db,
             job_logging_db=job_logging_db,
-            task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
+            status_changes={
+                job_id: JobStatusUpdate(
+                    Status=JobStatus.WAITING,
+                    MinorStatus=MINOR_STATUS,
+                    Source=MINOR_STATUS,
+                )
+                for job_id in job_ids
+            },
+            source=MINOR_STATUS,
         )
+        # await set_job_statuses(
+        #     {
+        #         job_id: {
+        #             datetime.now(UTC): JobStatusUpdate(
+        #                 Status=JobStatus.WAITING,
+        #                 MinorStatus=MINOR_STATUS,
+        #                 Source=MINOR_STATUS,
+        #             )
+        #         }
+        #         for job_id in job_ids
+        #     },
+        #     config=config,
+        #     job_db=job_db,
+        #     job_logging_db=job_logging_db,
+        #     task_queue_db=task_queue_db,
+        #     job_parameters_db=job_parameters_db,
+        # )
 
         for job_id in job_ids:
             await CondorJobExecutorTask(job_id=job_id).schedule()
@@ -163,22 +219,39 @@ class CondorJobExecutorTask(BaseTask):
             f"Submitted to HTCondor schedd {target} as "
             f"{submission.cluster_id}.{submission.proc_id}"
         )
-        now = datetime.now(UTC)
-        await set_job_statuses(
-            {
-                self.job_id: {
-                    now: JobStatusUpdate(
-                        Status=JobStatus.MATCHED,
-                        MinorStatus=MINOR_STATUS,
-                        ApplicationStatus=application_status,
-                        Source=MINOR_STATUS,
-                    )
-                }
-            },
-            config=config,
+        logger.warning(
+            "Applying SQL-only Matched status transition for job %d (OpenSearch disabled)",
+            self.job_id,
+        )
+        await _set_job_statuses_sql_only(
             job_db=job_db,
             job_logging_db=job_logging_db,
-            task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
+            status_changes={
+                self.job_id: JobStatusUpdate(
+                    Status=JobStatus.MATCHED,
+                    MinorStatus=MINOR_STATUS,
+                    ApplicationStatus=application_status,
+                    Source=MINOR_STATUS,
+                )
+            },
+            source=MINOR_STATUS,
         )
+        # now = datetime.now(UTC)
+        # await set_job_statuses(
+        #     {
+        #         self.job_id: {
+        #             now: JobStatusUpdate(
+        #                 Status=JobStatus.MATCHED,
+        #                 MinorStatus=MINOR_STATUS,
+        #                 ApplicationStatus=application_status,
+        #                 Source=MINOR_STATUS,
+        #             )
+        #         }
+        #     },
+        #     config=config,
+        #     job_db=job_db,
+        #     job_logging_db=job_logging_db,
+        #     task_queue_db=task_queue_db,
+        #     job_parameters_db=job_parameters_db,
+        # )
         return self.job_id

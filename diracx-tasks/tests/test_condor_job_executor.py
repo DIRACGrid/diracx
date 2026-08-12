@@ -56,7 +56,7 @@ def make_dependencies():
     return {
         "config": MagicMock(name="config"),
         "job_db": AsyncMock(name="job_db"),
-        "job_logging_db": MagicMock(name="job_logging_db"),
+        "job_logging_db": AsyncMock(name="job_logging_db"),
         "task_queue_db": MagicMock(name="task_queue_db"),
         "job_parameters_db": MagicMock(name="job_parameters_db"),
     }
@@ -110,11 +110,6 @@ def test_executor_takes_a_per_job_mutex():
 
 
 async def test_executor_submits_job_and_marks_it_matched(monkeypatch):
-    set_job_statuses = AsyncMock()
-    monkeypatch.setattr(
-        condor_job_executor_module, "set_job_statuses", set_job_statuses
-    )
-
     submission = condor_job_executor_module.CondorSubmitResult(
         cluster_id=1234,
         proc_id=7,
@@ -128,24 +123,18 @@ async def test_executor_submits_job_and_marks_it_matched(monkeypatch):
 
     assert result == 42
     submit_to_condor.assert_awaited_once()
-    set_job_statuses.assert_awaited_once()
-    status_changes = set_job_statuses.await_args.args[0]
-    assert set(status_changes) == {42}
-    updates = status_changes[42]
-    assert [update.status for update in updates.values()] == [JobStatus.MATCHED]
-    assert all(update.minor_status == "CondorExecutor" for update in updates.values())
-    assert all(
-        update.application_status
+    deps["job_db"].set_job_attributes.assert_awaited_once()
+    matched_updates = deps["job_db"].set_job_attributes.await_args.args[0]
+    assert matched_updates[42]["Status"] == JobStatus.MATCHED
+    assert matched_updates[42]["MinorStatus"] == "CondorExecutor"
+    assert (
+        matched_updates[42]["ApplicationStatus"]
         == "Submitted to HTCondor schedd analysis-schedd as 1234.7"
-        for update in updates.values()
     )
+    deps["job_logging_db"].insert_records.assert_awaited_once()
 
 
 async def test_monitor_moves_received_jobs_and_schedules_executors(monkeypatch):
-    set_job_statuses = AsyncMock()
-    monkeypatch.setattr(
-        condor_job_executor_module, "set_job_statuses", set_job_statuses
-    )
     scheduled = []
 
     async def fake_schedule(self, **kwargs):
@@ -163,19 +152,15 @@ async def test_monitor_moves_received_jobs_and_schedules_executors(monkeypatch):
     (search_spec,) = deps["job_db"].search.await_args.args[1]
     assert search_spec["parameter"] == "Status"
     assert search_spec["value"] == JobStatus.RECEIVED
-    set_job_statuses.assert_awaited_once()
-    status_changes = set_job_statuses.await_args.args[0]
-    assert set(status_changes) == {1, 2}
-    for updates in status_changes.values():
-        assert [update.status for update in updates.values()] == [JobStatus.WAITING]
+    deps["job_db"].set_job_attributes.assert_awaited_once()
+    waiting_updates = deps["job_db"].set_job_attributes.await_args.args[0]
+    assert waiting_updates[1]["Status"] == JobStatus.WAITING
+    assert waiting_updates[2]["Status"] == JobStatus.WAITING
+    deps["job_logging_db"].insert_records.assert_awaited_once()
     assert scheduled == [1, 2]
 
 
 async def test_monitor_does_nothing_without_received_jobs(monkeypatch):
-    set_job_statuses = AsyncMock()
-    monkeypatch.setattr(
-        condor_job_executor_module, "set_job_statuses", set_job_statuses
-    )
     schedule_executor = AsyncMock()
     monkeypatch.setattr(CondorJobExecutorTask, "schedule", schedule_executor)
     deps = make_dependencies()
@@ -184,5 +169,6 @@ async def test_monitor_does_nothing_without_received_jobs(monkeypatch):
     result = await CondorJobExecutorMonitorTask().execute(**deps)
 
     assert result == 0
-    set_job_statuses.assert_not_awaited()
+    deps["job_db"].set_job_attributes.assert_not_awaited()
+    deps["job_logging_db"].insert_records.assert_not_awaited()
     schedule_executor.assert_not_awaited()
