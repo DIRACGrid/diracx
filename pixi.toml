@@ -140,6 +140,9 @@ cmd = "cd extensions/gubbins/gubbins-tasks/ && pytest"
 description = "Run the tests for gubbins-tasks"
 
 # Features for running DiracX locally
+# Features for running DiracX locally
+[feature.run-local.target.linux-64.pypi-dependencies]
+htcondor = ">=25"
 [feature.run-local.tasks.local-start]
 cmd = "bash run_local.sh"
 description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"
