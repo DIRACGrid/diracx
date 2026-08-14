@@ -176,7 +176,15 @@ diracx-task-run scheduler > "${tmp_dir}/logs/scheduler.log" 2>&1 &
 scheduler_pid=$!
 diracx-task-run worker --worker-size small --max-concurrent-tasks 3 > "${tmp_dir}/logs/worker-sm.log" 2>&1 &
 worker_small_pid=$!
-diracx-task-run worker --worker-size medium --max-concurrent-tasks 2 > "${tmp_dir}/logs/worker-md.log" 2>&1 &
+if [[ "${DIRACX_DEBUG:-0}" == "1" ]]; then
+  echo "🐛 Starting medium worker with debugpy on port 5678"
+  python -m debugpy --listen 5678 \
+    "$(which diracx-task-run)" worker --worker-size medium --max-concurrent-tasks 2 \
+    > "${tmp_dir}/logs/worker-md.log" 2>&1 &
+else
+  diracx-task-run worker --worker-size medium --max-concurrent-tasks 2 \
+    > "${tmp_dir}/logs/worker-md.log" 2>&1 &
+fi
 worker_medium_pid=$!
 diracx-task-run worker --worker-size large --max-concurrent-tasks 1 > "${tmp_dir}/logs/worker-lg.log" 2>&1 &
 worker_large_pid=$!

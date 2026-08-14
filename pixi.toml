@@ -141,6 +141,8 @@ description = "Run the tests for gubbins-tasks"
 
 # Features for running DiracX locally
 # Features for running DiracX locally
+[feature.run-local.pypi-dependencies]
+debugpy = "*"
 [feature.run-local.target.linux-64.pypi-dependencies]
 htcondor = ">=25"
 [feature.run-local.tasks.local-start]
