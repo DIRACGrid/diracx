@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 """Tests for the Condor job executor tasks."""
 
 from __future__ import annotations
@@ -6,10 +8,13 @@ import json
 import os
 import subprocess
 import sys
+import types
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import ValidationError
+
+sys.modules.setdefault("htcondor2", types.ModuleType("htcondor2"))
 
 from diracx.core.models import JobStatus
 from diracx.tasks.jobs import CondorJobExecutorMonitorTask, CondorJobExecutorTask
@@ -21,8 +26,12 @@ FEATURE_INTERVAL_ENV = "DIRACX_TASKS_CONDOR_JOB_EXECUTOR_INTERVAL_SECONDS"
 
 SCHEDULER_STATE_SCRIPT = """
 import json
+import sys
+import types
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
+
+sys.modules.setdefault("htcondor2", types.ModuleType("htcondor2"))
 
 from diracx.tasks.plumbing.factory import load_task_registry
 from diracx.tasks.plumbing.scheduler.scheduler import TaskScheduler
@@ -132,6 +141,78 @@ async def test_executor_submits_job_and_marks_it_matched(monkeypatch):
         == "Submitted to HTCondor schedd analysis-schedd as 1234.7"
     )
     deps["job_logging_db"].insert_records.assert_awaited_once()
+
+
+def test_jdl_key_value_pairs_are_extracted_as_dict():
+    jdl = '[ Executable = "/bin/echo"; Arguments = "hello"; Requirements = (TARGET.FileSystemDomain == "disk"); ]'
+
+    assert condor_job_executor_module._jdl_to_key_value_pairs(jdl) == {
+        "Executable": "/bin/echo",
+        "Arguments": "hello",
+        "Requirements": 'TARGET.FileSystemDomain == "disk"',
+    }
+
+
+async def test_submit_to_condor_uses_htcondor_bindings(monkeypatch):
+    class FakeDaemonTypes:
+        Schedd = "Schedd"
+
+    class FakeSubmitResult:
+        def cluster(self):
+            return 12345
+
+    class FakeSchedd:
+        def __init__(self, ad):
+            self.ad = ad
+
+        def submit(self, submit_obj):
+            assert "Executable = /bin/echo" in submit_obj.submit_text
+            return FakeSubmitResult()
+
+    class FakeCollector:
+        def __init__(self, host=None):
+            self.host = host
+
+        def locate(self, daemon_type, schedd_name):
+            assert daemon_type == FakeDaemonTypes.Schedd
+            return {"Name": schedd_name, "Collector": self.host}
+
+    class FakeSubmit:
+        def __init__(self, submit_text):
+            self.submit_text = submit_text
+
+    fake_htcondor = type(
+        "FakeHtcondor",
+        (),
+        {
+            "set_subsystem": staticmethod(lambda _: None),
+            "param": {},
+            "enable_log": staticmethod(lambda: None),
+            "Collector": FakeCollector,
+            "DaemonTypes": FakeDaemonTypes,
+            "Schedd": FakeSchedd,
+            "Submit": FakeSubmit,
+        },
+    )
+    monkeypatch.setattr(condor_job_executor_module, "htcondor2", fake_htcondor)
+    monkeypatch.setattr(
+        condor_job_executor_module,
+        "extractJDL",
+        lambda raw_jdl: '[ Executable = "/bin/echo"; Arguments = "hello"; ]',
+    )
+
+    deps = make_dependencies()
+    deps["job_db"].search.return_value = (1, [{"JobID": 42}])
+    deps["job_db"].get_job_jdls.return_value = {42: "eJyFakeCompressedPayload"}
+
+    result = await CondorJobExecutorTask(job_id=42).submit_to_condor(
+        config=deps["config"],
+        job_db=deps["job_db"],
+    )
+
+    assert result.cluster_id == 12345
+    assert result.proc_id == 0
+    assert result.schedd_name == condor_job_executor_module._settings.schedd_name
 
 
 async def test_monitor_moves_received_jobs_and_schedules_executors(monkeypatch):

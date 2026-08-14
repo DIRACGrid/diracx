@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import tempfile
 from datetime import UTC, datetime
 
+import htcondor2
+from DIRACCommon.WorkloadManagementSystem.DB.JobDBUtils import extractJDL
 from pydantic import PositiveInt
 
 from diracx.core.models import (
@@ -47,14 +50,118 @@ class CondorJobExecutorSettings(ServiceSettingsBase):
     interval_seconds: PositiveInt = 10
     """How often the enabled monitor searches for received jobs."""
 
-    schedd_name: str = "default"
+    schedd_name: str = "crab3@vocms059.cern.ch"
     """Logical name of the target HTCondor schedd."""
 
-    collector_host: str | None = None
+    collector_host: str | None = "vocms4100.cern.ch"
     """Optional collector host used to resolve the target schedd."""
 
 
 _settings = CondorJobExecutorSettings()
+
+
+def _jdl_to_key_value_pairs(jdl: str) -> dict[str, str]:
+    """Return a debugger-friendly dictionary extracted from a JDL.
+
+    The DIRAC JDL comes as a classad-like string such as
+    ``[ Executable = "/bin/echo"; Arguments = "hello"; ]``.  Converting it to a
+    dictionary makes it easier to inspect in a debugger while still allowing the
+    same data to be turned back into HTCondor submit text.
+    """
+    stripped = jdl.strip()
+    if not stripped:
+        raise ValueError("JDL is empty")
+
+    if stripped.startswith("[") and stripped.endswith("]"):
+        stripped = stripped[1:-1].strip()
+
+    pairs: dict[str, str] = {}
+    for chunk in stripped.split(";"):
+        piece = chunk.strip()
+        if not piece or piece.lower().startswith("queue"):
+            continue
+        if "=" not in piece:
+            continue
+        key, value = piece.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if value.startswith("(") and value.endswith(")"):
+            value = value[1:-1].strip()
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        if value.startswith("'") and value.endswith("'"):
+            value = value[1:-1]
+        pairs[key] = value
+
+    if not pairs:
+        raise ValueError("JDL did not contain any key/value entries")
+
+    return pairs
+
+
+def _clean_jdl_value(value: str) -> str:
+    """Normalize DIRAC JDL representations into plain Python strings."""
+    stripped = str(value).strip()
+    if not stripped:
+        return ""
+
+    while (
+        len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {'"', "'"}
+    ):
+        stripped = stripped[1:-1].strip()
+
+    if stripped.startswith("[") and stripped.endswith("]"):
+        stripped = stripped[1:-1].strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        stripped = stripped[1:-1].strip()
+    if stripped.startswith("(") and stripped.endswith(")"):
+        stripped = stripped[1:-1].strip()
+
+    if "](" in stripped and stripped.endswith(")"):
+        stripped = stripped.split("](", 1)[0].strip("[]")
+
+    return stripped
+
+
+def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
+    """Render a DIRAC JDL dictionary into a realistic HTCondor submit stanza."""
+    values = {key: _clean_jdl_value(value) for key, value in jdl.items()}
+
+    executable = values.get("Executable") or "/bin/sh"
+    arguments = values.get("Arguments") or ""
+    job_name = values.get("JobName") or "dirac_job"
+    owner = values.get("Owner") or "localuser"
+    owner_group = "analysis"
+    cpu_time = int(values.get("CPUTime") or 86400)
+    request_cpus = values.get("RequestCpus") or values.get("CPUs") or "1"
+    request_memory = values.get("RequestMemory") or values.get("Memory") or "2000"
+    std_output = values.get("StdOutput") or f"out/{job_name}.out"
+    std_error = values.get("StdError") or f"err/{job_name}.err"
+    log_path = values.get("Log") or f"log/{job_name}.log"
+    wall_time_mins = max(1, int(round(cpu_time / 60))) if cpu_time else 60
+
+    lines = [
+        "Universe = vanilla",
+        "",
+        f"Executable = {executable}",
+        f"Arguments = {arguments}",
+        "",
+        f"Log = {log_path}",
+        f"Output = {std_output}",
+        f"Error = {std_error}",
+        "",
+        "should_transfer_files = YES",
+        "when_to_transfer_output = ON_EXIT",
+        "",
+        f"request_cpus = {request_cpus}",
+        f"request_memory = {request_memory}",
+        "",
+        f"+MaxWallTimeMins = {wall_time_mins}",
+        f'accounting_group = "{owner_group}.{owner}"',
+        "",
+        "Queue 1",
+    ]
+    return "\n".join(lines)
 
 
 async def _set_job_statuses_sql_only(
@@ -107,7 +214,7 @@ class CondorJobExecutorMonitorTask(PeriodicBaseTask):
     """Move newly received jobs to Waiting and queue Condor submission tasks."""
 
     priority = Priority.BACKGROUND
-    size = Size.SMALL
+    size = Size.MEDIUM
     _enabled = _settings.enabled
     default_schedule = IntervalSeconds(_settings.interval_seconds)
 
@@ -180,7 +287,7 @@ class CondorJobExecutorTask(BaseTask):
     """Submit a single job to the configured HTCondor schedd."""
 
     priority = Priority.NORMAL
-    size = Size.LARGE
+    size = Size.MEDIUM
     retry_policy = ExponentialBackoff(base_delay_seconds=10, max_retries=3)
 
     job_id: int
@@ -195,13 +302,57 @@ class CondorJobExecutorTask(BaseTask):
         config: Config,
         job_db: JobDB,
     ) -> CondorSubmitResult:
-        target = _settings.schedd_name
-        if _settings.collector_host:
-            target = f"{target}@{_settings.collector_host}"
+        del config
+        schedd_name = _settings.schedd_name
+        collector_host = _settings.collector_host
 
-        raise NotImplementedError(
-            f"Implement HTCondor submission for schedd '{target}' in "
-            "CondorJobExecutorTask.submit_to_condor"
+        _, jobs = await job_db.search(
+            parameters=["JobID"],
+            search=[
+                {
+                    "parameter": "JobID",
+                    "operator": ScalarSearchOperator.EQUAL,
+                    "value": self.job_id,
+                }
+            ],
+            sorts=[],
+        )
+        if not jobs:
+            raise ValueError(f"Job not found: {self.job_id}")
+
+        jdls = await job_db.get_job_jdls([self.job_id])
+        jdl = jdls.get(self.job_id)
+        if not jdl:
+            raise ValueError(f"No JDL found for job {self.job_id}")
+
+        extracted_jdl = extractJDL(jdl)
+        if not extracted_jdl:
+            raise ValueError(f"Could not decode JDL for job {self.job_id}")
+
+        extracted_jdl = _jdl_to_key_value_pairs(extracted_jdl)
+        submit_description = _jdl_dict_to_submit_description(extracted_jdl)
+
+        htcondor2.set_subsystem("TOOL")
+        htcondor2.param["TOOL_DEBUG"] = "D_FULLDEBUG"
+        htcondor2.param["TOOL_LOG"] = f"{tempfile.gettempdir()}/htcondor-python.log"
+        htcondor2.enable_log()
+
+        collector = htcondor2.Collector(collector_host)
+        schedd_ad = collector.locate(htcondor2.DaemonTypes.Schedd, schedd_name)
+        if not schedd_ad:
+            raise RuntimeError(
+                f"Could not locate schedd '{schedd_name}' via collector '{collector_host}'"
+            )
+
+        schedd = htcondor2.Schedd(schedd_ad)
+        submit = htcondor2.Submit(submit_description)
+        result = schedd.submit(submit)
+        cluster_id = result.cluster()
+
+        return CondorSubmitResult(
+            cluster_id=int(cluster_id),
+            proc_id=0,
+            schedd_name=schedd_name,
         )
 
     async def execute(
