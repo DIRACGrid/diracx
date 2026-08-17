@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -21,17 +21,13 @@ class InsertedJob(BaseModel):
     time_stamp: UTCDatetime = Field(alias="TimeStamp")
 
 
-class HeartbeatData(BaseModel, extra="forbid"):
-    load_average: float | None = Field(None, alias="LoadAverage", allow_inf_nan=False)
-    memory_used: float | None = Field(None, alias="MemoryUsed", allow_inf_nan=False)
-    vsize: float | None = Field(None, alias="Vsize", allow_inf_nan=False)
-    available_disk_space: float | None = Field(
-        None, alias="AvailableDiskSpace", allow_inf_nan=False
-    )
-    cpu_consumed: float | None = Field(None, alias="CPUConsumed", allow_inf_nan=False)
-    wall_clock_time: float | None = Field(
-        None, alias="WallClockTime", allow_inf_nan=False
-    )
+class HeartbeatData(BaseModel, extra="forbid", allow_inf_nan=False):
+    load_average: float | None = Field(None, alias="LoadAverage")
+    memory_used: float | None = Field(None, alias="MemoryUsed")
+    vsize: float | None = Field(None, alias="Vsize")
+    available_disk_space: float | None = Field(None, alias="AvailableDiskSpace")
+    cpu_consumed: float | None = Field(None, alias="CPUConsumed")
+    wall_clock_time: float | None = Field(None, alias="WallClockTime")
     standard_output: str | None = Field(None, alias="StandardOutput")
 
 
@@ -41,9 +37,16 @@ class JobCommand(BaseModel):
     arguments: str | None = None
 
 
+def _is_non_finite(value: Any) -> bool:
+    return isinstance(value, float) and not math.isfinite(value)
+
+
 def _ensure_finite_numbers(value: Any, path: str) -> None:
-    """Raise ValueError if a (possibly nested) value contains NaN or infinity."""
-    if isinstance(value, float) and not math.isfinite(value):
+    """Raise ValueError if a (possibly nested) value contains NaN or infinity.
+
+    Only needed for the extra fields, as ``allow_inf_nan`` cannot apply to them.
+    """
+    if _is_non_finite(value):
         raise ValueError(f"{path}: non-finite numbers are not supported")
     if isinstance(value, dict):
         for key, item in value.items():
@@ -53,7 +56,9 @@ def _ensure_finite_numbers(value: Any, path: str) -> None:
             _ensure_finite_numbers(item, f"{path}[{i}]")
 
 
-class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
+class JobParameters(
+    BaseModel, populate_by_name=True, extra="allow", allow_inf_nan=False
+):
     """Some of the most important parameters that can be set for a job."""
 
     timestamp: UTCDatetime | None = None
@@ -83,22 +88,27 @@ class JobParameters(BaseModel, populate_by_name=True, extra="allow"):
             return v
         if isinstance(v, str):
             try:
-                return int(float(v))
+                v = float(v)
             except (ValueError, TypeError) as e:
                 raise ValueError(f"Cannot convert '{v}' to integer") from e
+        # int() raises OverflowError for infinity, which pydantic does not
+        # report as a validation error
+        if _is_non_finite(v):
+            raise ValueError("non-finite numbers are not supported")
         if isinstance(v, (int, float)):
             return int(v)
         return v
 
     @model_validator(mode="after")
-    def validate_extra_fields_are_json_safe(self):
+    def validate_extra_fields_are_json_safe(self) -> Self:
         """Reject extra field values which cannot be represented in strict JSON.
 
         Python's JSON parser accepts NaN and (-)Infinity so such values survive
         request parsing, but OpenSearch rejects documents containing them.
         """
-        for name, value in (self.model_extra or {}).items():
-            _ensure_finite_numbers(value, name)
+        if self.model_extra:
+            for name, value in self.model_extra.items():
+                _ensure_finite_numbers(value, name)
         return self
 
 

@@ -192,15 +192,19 @@ class BaseOSDB(metaclass=ABCMeta):
                 params=dict(retry_on_conflict=10),
             )
         except RequestError as e:
+            # Log the field names rather than the client-supplied values
             logger.error(
-                "Failed to upsert document %s in index %s: %s (document: %r)",
+                "Failed to upsert document %s in index %s: %s %s (fields: %s)",
                 doc_id,
                 index_name,
+                e.error,
                 e.info,
-                document,
+                sorted(document),
             )
+            logger.debug("Rejected document %s: %r", doc_id, document)
+            # The reason describes the backend, not the request
             raise DocumentUpsertError(
-                f"Failed to upsert document {doc_id} in {self.__class__.__name__}: {e.error}"
+                f"Failed to upsert document {doc_id} in {self.__class__.__name__}"
             ) from e
         logger.debug(
             "Upserted document %s in index %s with response: %s",

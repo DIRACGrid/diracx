@@ -19,7 +19,7 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 )
 
 from diracx.core.config import Config
-from diracx.core.exceptions import DiracError
+from diracx.core.exceptions import DiracError, JobNotFoundError
 from diracx.core.models import (
     HeartbeatData,
     JobAttributes,
@@ -565,8 +565,9 @@ async def add_heartbeat(
     _, results = await job_db.search(
         parameters=["Status", "JobID"], search=[search_query], sorts=[]
     )
-    if len(results) != len(data):
-        raise ValueError(f"Failed to lookup job IDs: {data.keys()=} {results=}")
+    found_job_ids = {int(result["JobID"]) for result in results}
+    if missing := sorted(set(data) - found_job_ids):
+        raise JobNotFoundError(missing[0])
     status_changes = {
         int(result["JobID"]): {
             datetime.now(timezone.utc): JobStatusUpdate(
@@ -614,18 +615,34 @@ async def add_heartbeat(
                     tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
 
             await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
-    except* DiracError as eg:
-        # Re-raise a DiracError directly rather than the surrounding
-        # ExceptionGroup so callers can catch it by exception type
-        raise _first_leaf(eg) from eg
+    except ExceptionGroup as eg:
+        raise _collapse_exception_group(eg) from None
 
 
-def _first_leaf(eg: BaseExceptionGroup) -> BaseException:
-    """Return the first non-group exception contained in an exception group."""
-    exc: BaseException = eg
-    while isinstance(exc, BaseExceptionGroup):
-        exc = exc.exceptions[0]
-    return exc
+def _leaves(eg: BaseExceptionGroup) -> list[BaseException]:
+    """Return the non-group exceptions contained in an exception group."""
+    leaves: list[BaseException] = []
+    for exc in eg.exceptions:
+        if isinstance(exc, BaseExceptionGroup):
+            leaves.extend(_leaves(exc))
+        else:
+            leaves.append(exc)
+    return leaves
+
+
+def _collapse_exception_group(eg: BaseExceptionGroup) -> BaseException:
+    """Return a single exception to re-raise in place of an exception group.
+
+    A ``TaskGroup`` wraps the failures of its tasks in an ``ExceptionGroup``,
+    which callers cannot catch by exception type. A ``DiracError`` is preferred
+    as the routers know how to translate it; the others are logged.
+    """
+    leaves = _leaves(eg)
+    chosen = next((exc for exc in leaves if isinstance(exc, DiracError)), leaves[0])
+    for exc in leaves:
+        if exc is not chosen:
+            logger.error("Additional error while processing jobs", exc_info=exc)
+    return chosen
 
 
 async def _insert_parameters(
@@ -653,6 +670,9 @@ async def _insert_parameters(
         ],
     )
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
+    # Jobs which no longer exist have no VO to look up
+    if missing := sorted(set(updates) - set(job_id_to_vo)):
+        raise JobNotFoundError(missing[0])
     # Upsert the parameters into the JobParametersDB
     # TODO: can we do a bulk upsert instead
     try:
@@ -661,10 +681,8 @@ async def _insert_parameters(
                 tg.create_task(
                     job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
                 )
-    except* DiracError as eg:
-        # Re-raise a DiracError directly rather than the surrounding
-        # ExceptionGroup so callers can catch it by exception type
-        raise _first_leaf(eg) from eg
+    except ExceptionGroup as eg:
+        raise _collapse_exception_group(eg) from None
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:

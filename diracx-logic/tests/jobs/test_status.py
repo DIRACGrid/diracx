@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
@@ -10,6 +11,7 @@ from diracx.core.models import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.logic.jobs import set_job_parameters_or_attributes
+from diracx.logic.jobs.status import _collapse_exception_group
 from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.time import install_sqlite_time_mock
 
@@ -161,25 +163,20 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     assert "HeartBeatTime" not in prow
 
 
-@pytest.mark.asyncio
-async def test_upsert_failure_propagates_as_bare_dirac_error(
-    job_db: JobDB,
-    job_parameters_db: _MockJobParametersDB,
-    valid_job_id: int,
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """A DiracError raised while upserting job parameters must propagate as is.
+def test_collapse_exception_group_prefers_dirac_error(caplog):
+    """A DiracError is picked out of a group mixing several failures.
 
-    The TaskGroup wraps failures in an ExceptionGroup, which callers cannot
-    catch by exception type; the logic layer must collapse it.
+    A TaskGroup wraps concurrent failures in an ExceptionGroup, which the
+    routers cannot translate, and the failures it drops must still be logged.
     """
+    dirac_error = DocumentUpsertError("failed to parse field [doc]")
+    group = ExceptionGroup(
+        "",
+        [ValueError("first"), ExceptionGroup("", [dirac_error, RuntimeError("last")])],
+    )
 
-    async def failing_upsert(vo, doc_id, document):
-        raise DocumentUpsertError("failed to parse field [doc]")
+    with caplog.at_level(logging.ERROR, logger="diracx.logic.jobs.status"):
+        assert _collapse_exception_group(group) is dirac_error
 
-    monkeypatch.setattr(job_parameters_db, "upsert", failing_upsert)
-
-    updates = {valid_job_id: JobMetaData.model_validate({"SomeParameter": "value"})}
-    with pytest.raises(DocumentUpsertError):
-        async with job_db:
-            await set_job_parameters_or_attributes(updates, job_db, job_parameters_db)
+    assert "ValueError: first" in caplog.text
+    assert "RuntimeError: last" in caplog.text

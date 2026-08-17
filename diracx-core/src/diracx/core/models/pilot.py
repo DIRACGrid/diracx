@@ -49,7 +49,9 @@ class PilotRegistrationParams(BaseModel, extra="forbid"):
     )
 
 
-class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
+class PilotMetadata(
+    BaseModel, populate_by_name=True, extra="forbid", allow_inf_nan=False
+):
     """Mutable metadata attached to a pilot.
 
     The pilot is identified by its stamp, passed alongside this model
@@ -67,10 +69,7 @@ class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
         None, alias="Status", description="Current pilot status."
     )
     benchmark: float | None = Field(
-        None,
-        alias="BenchMark",
-        allow_inf_nan=False,
-        description="Pilot benchmark value.",
+        None, alias="BenchMark", description="Pilot benchmark value."
     )
     destination_site: str | None = Field(
         None, alias="DestinationSite", max_length=128, description="Destination site."

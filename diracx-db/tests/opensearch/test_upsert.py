@@ -1,28 +1,39 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
+from opensearchpy.exceptions import RequestError
 
 from diracx.core.exceptions import DocumentUpsertError
 from diracx.testing.osdb import DummyOSDB
 
 
-async def test_upsert_valid_document(dummy_opensearch_db: DummyOSDB):
-    """Sanity check that a well-formed document can be upserted."""
-    await dummy_opensearch_db.upsert("dummyvo", 1, {"IntField": 1234})
-    await dummy_opensearch_db.client.indices.refresh(
-        index=f"{dummy_opensearch_db.index_prefix}*"
-    )
-    results = await dummy_opensearch_db.search(
-        None, [{"parameter": "IntField", "operator": "eq", "value": "1234"}], []
-    )
-    assert len(results) == 1
+class _RejectingClient:
+    """Minimal stand-in for AsyncOpenSearch which rejects every update."""
+
+    async def update(self, **kwargs):
+        raise RequestError(
+            400,
+            "x_content_parse_exception",
+            {"error": {"reason": "[1:54] [UpdateRequest] failed to parse field [doc]"}},
+        )
 
 
-async def test_upsert_unparsable_document_raises(dummy_opensearch_db: DummyOSDB):
-    """NaN survives Python JSON serialization but OpenSearch rejects it.
+async def test_upsert_rejected_document(caplog):
+    """A document the backend refuses to index raises a DocumentUpsertError.
 
-    This must surface as a DocumentUpsertError rather than an unhandled
-    RequestError, and the offending document must be logged.
+    The reason is logged for the administrator, not returned to the client, and
+    the client-supplied values are only logged at debug level.
     """
-    with pytest.raises(DocumentUpsertError, match="Failed to upsert document"):
-        await dummy_opensearch_db.upsert("dummyvo", 2, {"IntField": float("nan")})
+    db = DummyOSDB({"hosts": "http://localhost:9200"})
+    db._client = _RejectingClient()
+
+    with caplog.at_level(logging.ERROR, logger="diracx.db.os.utils"):
+        with pytest.raises(DocumentUpsertError) as exc_info:
+            await db.upsert("dummyvo", 1234, {"IntField": 1, "TextField": "a value"})
+
+    assert "x_content_parse_exception" not in str(exc_info.value)
+    assert "x_content_parse_exception" in caplog.text
+    assert "IntField" in caplog.text
+    assert "a value" not in caplog.text

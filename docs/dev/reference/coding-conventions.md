@@ -90,11 +90,11 @@ delay = datetime.datetime.now() + datetime.timedelta(hours=1)
 <td>
 
 ```python
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-class HeartbeatData(BaseModel):
-    load_average: float | None = Field(None, allow_inf_nan=False)
+class HeartbeatData(BaseModel, allow_inf_nan=False):
+    load_average: float | None = None
 ```
 
 </td>
@@ -102,11 +102,12 @@ class HeartbeatData(BaseModel):
 <td>
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HeartbeatData(BaseModel):
-    load_average: float | None = None
+    # Only guards this field: any float added later is unchecked
+    load_average: float | None = Field(None, allow_inf_nan=False)
 ```
 
 </td>

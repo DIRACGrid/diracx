@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from http import HTTPStatus
 
 import pytest
 from fastapi.testclient import TestClient
@@ -39,6 +40,12 @@ def test_heartbeat_rejects_non_finite_values(
         headers={"Content-Type": "application/json"},
     )
     assert r.status_code == 422, r.text
+
+
+def test_heartbeat_unknown_job(normal_user_client: TestClient):
+    """A pilot sending a heartbeat for a job which was removed gets a 404."""
+    r = normal_user_client.patch("/api/jobs/heartbeat", json={999999: {"Vsize": 1.0}})
+    assert r.status_code == HTTPStatus.NOT_FOUND, r.text
 
 
 def test_heartbeat(frozen_time, normal_user_client: TestClient, valid_job_id: int):
