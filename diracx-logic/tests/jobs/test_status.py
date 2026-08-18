@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
 
+from diracx.core.exceptions import DocumentUpsertError
 from diracx.core.models import JobMetaData
 from diracx.db.os.job_parameters import JobParametersDB as RealJobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.logic.jobs import set_job_parameters_or_attributes
+from diracx.logic.jobs.status import _collapse_exception_group
 from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.time import install_sqlite_time_mock
 
@@ -158,3 +161,22 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     assert prow["does_not_exist"] == "unknown"
     assert "UserPriority" not in prow
     assert "HeartBeatTime" not in prow
+
+
+def test_collapse_exception_group_prefers_dirac_error(caplog):
+    """A DiracError is picked out of a group mixing several failures.
+
+    A TaskGroup wraps concurrent failures in an ExceptionGroup, which the
+    routers cannot translate, and the failures it drops must still be logged.
+    """
+    dirac_error = DocumentUpsertError("failed to parse field [doc]")
+    group = ExceptionGroup(
+        "",
+        [ValueError("first"), ExceptionGroup("", [dirac_error, RuntimeError("last")])],
+    )
+
+    with caplog.at_level(logging.ERROR, logger="diracx.logic.jobs.status"):
+        assert _collapse_exception_group(group) is dirac_error
+
+    assert "ValueError: first" in caplog.text
+    assert "RuntimeError: last" in caplog.text

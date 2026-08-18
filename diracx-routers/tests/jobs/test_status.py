@@ -6,12 +6,14 @@ from http import HTTPStatus
 import pytest
 from fastapi.testclient import TestClient
 
+from diracx.core.exceptions import DocumentUpsertError
 from diracx.core.models import JobStatus
 from diracx.routers.jobs import (
     EXAMPLE_HEARTBEAT,
     EXAMPLE_METADATA,
     EXAMPLE_STATUS_UPDATES,
 )
+from diracx.testing.mock_osdb import MockOSDBMixin
 
 from .conftest import TEST_JDL
 
@@ -897,6 +899,66 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     assert r.json()[0]["JobType"] == "VerySpecialIndeed"
     assert hbt1 == datetime.fromisoformat(hbt)
     assert r.json()[0]["UserPriority"] == 2
+
+
+@pytest.mark.parametrize(
+    "field,raw_value",
+    [
+        ("SomeParameter", "NaN"),
+        ("SomeParameter", "Infinity"),
+        ("SomeParameter", "-Infinity"),
+        ("SomeParameter", '{"nested": [NaN]}'),
+        ("CPUNormalizationFactor", "NaN"),
+        ("CPUNormalizationFactor", "Infinity"),
+        # 1e400 overflows to infinity and is standard JSON, so any client can send it
+        ("CPUNormalizationFactor", "1e400"),
+        ("CPUNormalizationFactor", '"Infinity"'),
+    ],
+)
+def test_patch_metadata_rejects_non_finite_values(
+    normal_user_client: TestClient, valid_job_id: int, field: str, raw_value: str
+):
+    """Non-finite numbers survive Python JSON parsing but cannot be stored.
+
+    They used to be forwarded to OpenSearch, which rejects them, resulting in an
+    internal server error.
+    """
+    # Send the raw body as httpx itself refuses to serialize NaN
+    r = normal_user_client.patch(
+        "/api/jobs/metadata",
+        content=f'{{"{valid_job_id}": {{"{field}": {raw_value}}}}}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 422, r.text
+    assert "non-finite" in r.text
+
+
+def test_patch_metadata_unknown_job(normal_user_client: TestClient):
+    """Patching a job which no longer exists reports it as not found."""
+    r = normal_user_client.patch(
+        "/api/jobs/metadata", json={999999: {"SomeParameter": "a value"}}
+    )
+    assert r.status_code == HTTPStatus.NOT_FOUND, r.text
+
+
+def test_patch_metadata_upsert_failure_is_a_server_error(
+    normal_user_client: TestClient, valid_job_id: int, monkeypatch: pytest.MonkeyPatch
+):
+    """A document which cannot be indexed is a server error, not a bad request.
+
+    The fallback DiracError handling would report it as a 400, which tells the
+    client to drop the data rather than to retry later.
+    """
+
+    async def failing_upsert(self, vo, doc_id, document):
+        raise DocumentUpsertError("Failed to upsert document")
+
+    monkeypatch.setattr(MockOSDBMixin, "upsert", failing_upsert)
+
+    r = normal_user_client.patch(
+        "/api/jobs/metadata", json={valid_job_id: {"SomeParameter": "a value"}}
+    )
+    assert r.status_code == HTTPStatus.INTERNAL_SERVER_ERROR, r.text
 
 
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):

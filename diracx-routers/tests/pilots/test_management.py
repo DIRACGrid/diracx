@@ -95,6 +95,26 @@ async def test_update_pilot_metadata_applies_partial_fields(normal_test_client):
     assert by_stamp["stamp_m2"]["BenchMark"] == 0.0  # untouched
 
 
+async def test_update_pilot_metadata_rejects_non_finite_benchmark(normal_test_client):
+    """Non-finite floats survive Python JSON parsing but cannot be stored.
+
+    They used to be forwarded to the database, which rejects them, resulting
+    in an internal server error.
+    """
+    r = normal_test_client.post(
+        "/api/pilots/", json={"pilot_stamp": "stamp_nan", "vo": MAIN_VO}
+    )
+    assert r.status_code == 201
+
+    # Send the raw body as httpx itself refuses to serialize NaN
+    r = normal_test_client.patch(
+        "/api/pilots/metadata",
+        content='{"stamp_nan": {"BenchMark": NaN}}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 422, r.text
+
+
 async def test_update_pilot_metadata_unknown_stamp_returns_404(normal_test_client):
     r = normal_test_client.patch(
         "/api/pilots/metadata",
