@@ -98,6 +98,8 @@ export DIRACX_SANDBOX_STORE_BUCKET_NAME=sandboxes
 export DIRACX_SANDBOX_STORE_AUTO_CREATE_BUCKET=true
 export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost:8333", "aws_access_key_id": "console", "aws_secret_access_key": "console123"}'
 export DIRACX_TASKS_REDIS_URL="redis://localhost:6379"
+export DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED=true
+export DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS=10
 
 # Write all DIRACX env vars to a sourceable file for use in other terminals
 script_dir="$(cd "$(dirname "$0")" && pwd)"
