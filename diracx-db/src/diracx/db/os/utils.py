@@ -80,13 +80,17 @@ class BaseOSDB(metaclass=ABCMeta):
     @abstractmethod
     def index_name(self, vo: str, doc_id: int) -> str: ...
 
-    def __init__(self, connection_kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self, connection_kwargs: dict[str, Any], *, global_prefix: str = ""
+    ) -> None:
         self._client: AsyncOpenSearch | None = None
         self._connection_kwargs = connection_kwargs
         # We use a ContextVar to make sure that self._conn
         # is specific to each context, and avoid parallel
         # route executions to overlap
         self._conn: ContextVar[bool] = ContextVar("_conn", default=False)
+        if global_prefix:
+            self.index_prefix = f"{global_prefix}_{self.index_prefix}"
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type[BaseOSDB]]:
