@@ -174,13 +174,13 @@ fi
 # Start application services
 uvicorn --factory diracx.testing.routers:create_app --reload > "${tmp_dir}/logs/uvicorn.log" 2>&1 &
 diracx_pid=$!
-diracx-task-run scheduler > "${tmp_dir}/logs/scheduler.log" 2>&1 &
+diracx-tasks scheduler > "${tmp_dir}/logs/scheduler.log" 2>&1 &
 scheduler_pid=$!
-diracx-task-run worker --worker-size small --max-concurrent-tasks 3 > "${tmp_dir}/logs/worker-sm.log" 2>&1 &
+diracx-tasks worker --worker-size small --max-concurrent-tasks 3 > "${tmp_dir}/logs/worker-sm.log" 2>&1 &
 worker_small_pid=$!
-diracx-task-run worker --worker-size medium --max-concurrent-tasks 2 > "${tmp_dir}/logs/worker-md.log" 2>&1 &
+diracx-tasks worker --worker-size medium --max-concurrent-tasks 2 > "${tmp_dir}/logs/worker-md.log" 2>&1 &
 worker_medium_pid=$!
-diracx-task-run worker --worker-size large --max-concurrent-tasks 1 > "${tmp_dir}/logs/worker-lg.log" 2>&1 &
+diracx-tasks worker --worker-size large --max-concurrent-tasks 1 > "${tmp_dir}/logs/worker-lg.log" 2>&1 &
 worker_large_pid=$!
 
 all_pid_names=(seaweedfs redis uvicorn scheduler worker-sm worker-md worker-lg)
@@ -198,10 +198,10 @@ all_commands=(
   "weed mini -dir=${tmp_dir}/seaweedfs -s3.config=${tmp_dir}/seaweedfs_s3.json"
   "redis-server --port 6379 --save \"\" --appendonly no"
   "uvicorn --factory diracx.testing.routers:create_app --reload"
-  "diracx-task-run scheduler"
-  "diracx-task-run worker --worker-size small --max-concurrent-tasks 1"
-  "diracx-task-run worker --worker-size medium --max-concurrent-tasks 1"
-  "diracx-task-run worker --worker-size large --max-concurrent-tasks 1"
+  "diracx-tasks scheduler"
+  "diracx-tasks worker --worker-size small --max-concurrent-tasks 1"
+  "diracx-tasks worker --worker-size medium --max-concurrent-tasks 1"
+  "diracx-tasks worker --worker-size large --max-concurrent-tasks 1"
 )
 all_restart_counts=(0 0 0 0 0 0 0)
 

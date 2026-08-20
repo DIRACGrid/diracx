@@ -68,7 +68,7 @@ classDiagram
 
 **Reader-writer locks** (`ExclusiveRWLock` and `SharedRWLock`) share the same Redis hash key (`lock:rw:{obj}:{key}`) — multiple readers can hold the lock concurrently, but a writer requires exclusive access.
 
-**Limiters** inherit from `BaseLock` but are skipped when a task is executed interactively via `diracx-task-run call`. Their `limit` defaults to `None` (disabled); configuration can enable them without code changes.
+**Limiters** inherit from `BaseLock` but are skipped when a task is executed interactively via `diracx-tasks call`. Their `limit` defaults to `None` (disabled); configuration can enable them without code changes.
 
 ## Task subsystem
 

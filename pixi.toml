@@ -145,7 +145,7 @@ cmd = "bash run_local.sh"
 description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"
 [feature.run-local.tasks.local-tasks]
 cmd = "bash run_local_tasks.sh"
-description = "Run diracx-task-run with the local environment variables"
+description = "Run diracx-tasks with the local environment variables"
 [feature.run-local.tasks.local-shell]
 cmd = "bash run_local_shell.sh"
 description = "Open a shell with the local DiracX environment configured"
