@@ -65,7 +65,7 @@ function wait_for_service() {
 }
 
 function redis_ready() { redis-cli -p 6379 ping 2>/dev/null | grep -q PONG; }
-function diracx_ready() { wget --quiet --output-document=/dev/null --tries=1 --timeout=2 http://localhost:8000/api/health/ready; }
+function diracx_ready() { curl --silent --show-error --fail --output /dev/null --max-time 2 http://localhost:8000/api/health/ready; }
 
 # Make a keystore
 keystore="${tmp_dir}/keystore/jwks.json"
