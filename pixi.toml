@@ -145,6 +145,8 @@ description = "Run the tests for gubbins-tasks"
 debugpy = "*"
 [feature.run-local.target.linux-64.pypi-dependencies]
 htcondor = ">=25"
+[feature.run-local.target.osx-arm64.dependencies]
+python-htcondor = ">=25"
 [feature.run-local.tasks.local-start]
 cmd = "bash run_local.sh"
 description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"

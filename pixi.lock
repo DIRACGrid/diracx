@@ -1,8 +1,22 @@
 version: 7
 platforms:
 - name: linux-64
+  virtual-packages:
+  - __unix=0=0
+  - __linux=4.18
+  - __glibc=2.28
+  - __archspec=0=x86_64
 - name: linux-aarch64
+  virtual-packages:
+  - __unix=0=0
+  - __linux=4.18
+  - __glibc=2.28
+  - __archspec=0=aarch64
 - name: osx-arm64
+  virtual-packages:
+  - __unix=0=0
+  - __osx=13.0
+  - __archspec=0=m1
 environments:
   container-client:
     channels:
@@ -2977,6 +2991,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
@@ -2986,16 +3010,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -3243,6 +3257,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
@@ -3252,16 +3276,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -3443,6 +3457,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/gfal2-2.23.5-h46ca294_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/gsoap-2.8.123-hfb11b17_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/gtest-1.17.0-ha393de7_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/htcondor-classads-25.12.2-h7a491f7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/icu-78.3-hef89b57_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/json-c-0.18-he4178ee_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.22.2-h385eeb1_0.conda
@@ -3450,6 +3465,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libboost-1.88.0-h0419b56_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libboost-python-1.88.0-py311h08cb3c8_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcblas-3.11.0-8_hb0561ab_openblas.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcondor_utils-25.12.2-hebbd0f9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcurl-8.20.0-hd5a2499_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcxx-22.1.6-h55c6f16_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libedit-3.1.20250104-pl5321hafb1f1b_0.conda
@@ -3469,7 +3485,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -3490,6 +3506,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pugixml-1.15-hd3d436d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-3.11.15-h8561d8f_0_cpython.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-gfal2-1.13.1-py311h4b21534_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-htcondor-25.12.2-py311h2633247_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyyaml-6.0.3-py311hc290fe0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/redis-server-8.8.0-heeac741_0.conda
@@ -3502,6 +3519,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
@@ -3511,16 +3538,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
@@ -9706,14 +9723,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/2c/9e69d73c4297508be9e3b64a970ea3971b3eb8db64ffc5802d40bd25981f/jsonschema_path-0.5.0-py3-none-any.whl
@@ -9918,14 +9935,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/03/d0/4db86529117320de0c84afd90e70bb47434625875e34fcef9d8c127c5b16/regex-2026.5.9-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -10092,7 +10109,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -10124,14 +10141,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -10341,16 +10358,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/2c/9e69d73c4297508be9e3b64a970ea3971b3eb8db64ffc5802d40bd25981f/jsonschema_path-0.5.0-py3-none-any.whl
@@ -10561,16 +10578,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/03/d0/4db86529117320de0c84afd90e70bb47434625875e34fcef9d8c127c5b16/regex-2026.5.9-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -10743,7 +10760,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -10775,16 +10792,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -11000,12 +11017,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/2c/9e69d73c4297508be9e3b64a970ea3971b3eb8db64ffc5802d40bd25981f/jsonschema_path-0.5.0-py3-none-any.whl
@@ -11209,12 +11226,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/03/d0/4db86529117320de0c84afd90e70bb47434625875e34fcef9d8c127c5b16/regex-2026.5.9-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -11380,7 +11397,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -11412,12 +11429,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -11630,17 +11647,17 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/2c/9e69d73c4297508be9e3b64a970ea3971b3eb8db64ffc5802d40bd25981f/jsonschema_path-0.5.0-py3-none-any.whl
@@ -11855,17 +11872,17 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/03/d0/4db86529117320de0c84afd90e70bb47434625875e34fcef9d8c127c5b16/regex-2026.5.9-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -12039,7 +12056,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -12072,17 +12089,17 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: .
+      - pypi: ./extensions/gubbins
+      - pypi: ./extensions/gubbins/gubbins-api
+      - pypi: ./extensions/gubbins/gubbins-cli
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-api
       - pypi: diracx-cli
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins
-      - pypi: extensions/gubbins/gubbins-api
-      - pypi: extensions/gubbins/gubbins-cli
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -12301,18 +12318,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -12552,18 +12569,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -12763,7 +12780,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -12795,18 +12812,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
@@ -13052,16 +13069,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -13283,16 +13300,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -13474,7 +13491,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -13506,16 +13523,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -13740,10 +13757,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/2c/9e69d73c4297508be9e3b64a970ea3971b3eb8db64ffc5802d40bd25981f/jsonschema_path-0.5.0-py3-none-any.whl
@@ -13937,10 +13954,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/d0/4db86529117320de0c84afd90e70bb47434625875e34fcef9d8c127c5b16/regex-2026.5.9-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -14096,7 +14113,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -14128,10 +14145,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -14330,12 +14347,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -14544,12 +14561,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -14720,7 +14737,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -14752,12 +14769,12 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -14988,6 +15005,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-db
@@ -14995,13 +15019,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -15256,6 +15273,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-db
@@ -15263,13 +15287,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -15483,7 +15500,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -15518,6 +15535,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-client
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-client
       - pypi: diracx-core
       - pypi: diracx-db
@@ -15525,13 +15549,6 @@ environments:
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-client
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
@@ -15776,14 +15793,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -15992,14 +16009,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -16170,7 +16187,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -16202,14 +16219,14 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -16424,18 +16441,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -16672,18 +16689,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -16882,7 +16899,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -16914,18 +16931,18 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-routers
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-routers
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-routers
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/01/be/72532be3da7acc5fdfbccdb95215cd04f995a0886532a5b423f929cda4cc/uvicorn-0.48.0-py3-none-any.whl
@@ -17168,16 +17185,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl
@@ -17396,16 +17413,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wcwidth-0.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/ce/d4a646508bed2f8dec6435b40166fe9308dd191262033d3f307b2bbcaecd/yarl-1.24.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
@@ -17586,7 +17603,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libnghttp2-1.68.1-h8f3e76b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libntlm-1.8-h5505292_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-openmp_he657e61_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.1-h1b79a29_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libtool-2.5.4-h286801f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libuuid-2.42.1-h7b1c3a4_0.conda
@@ -17618,16 +17635,16 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
+      - pypi: ./extensions/gubbins/gubbins-core
+      - pypi: ./extensions/gubbins/gubbins-db
+      - pypi: ./extensions/gubbins/gubbins-logic
+      - pypi: ./extensions/gubbins/gubbins-tasks
+      - pypi: ./extensions/gubbins/gubbins-testing
       - pypi: diracx-core
       - pypi: diracx-db
       - pypi: diracx-logic
       - pypi: diracx-tasks
       - pypi: diracx-testing
-      - pypi: extensions/gubbins/gubbins-core
-      - pypi: extensions/gubbins/gubbins-db
-      - pypi: extensions/gubbins/gubbins-logic
-      - pypi: extensions/gubbins/gubbins-tasks
-      - pypi: extensions/gubbins/gubbins-testing
       - pypi: https://files.pythonhosted.org/packages/00/b7/e3bf5133d697a08128598c8d0abc5e16377b51465a33756de24fa7dee953/aiosqlite-0.22.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/b3/4684b1e128a87821e485f5a901b179790e6b5bc02f89b7ee19c23be36ef3/lazy_object_proxy-1.12.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl
@@ -21703,6 +21720,21 @@ packages:
   purls: []
   size: 378391
   timestamp: 1748320218212
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/htcondor-classads-25.12.2-h7a491f7_0.conda
+  sha256: 0f4ccc59ea2c744f8af58f08d30f05b4fc16d3268732ac219404096ac953f94e
+  md5: b1c8c6b37b34e640a32b69a0eab24f80
+  depends:
+  - __osx >=11.0
+  - libcxx >=19
+  - pcre2 >=10.47,<10.48.0a0
+  license: Apache-2.0
+  license_family: APACHE
+  purls: []
+  run_exports:
+    weak:
+    - htcondor-classads >=25.12.2,<25.13.0a0
+  size: 396461
+  timestamp: 1784940707239
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/icu-78.3-hef89b57_0.conda
   sha256: 3a7907a17e9937d3a46dfd41cffaf815abad59a569440d1e25177c15fd0684e5
   md5: f1182c91c0de31a7abd40cedf6a5ebef
@@ -21851,6 +21883,27 @@ packages:
   purls: []
   size: 18911
   timestamp: 1779859147634
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcondor_utils-25.12.2-hebbd0f9_0.conda
+  sha256: 762a7db08debb14d1eef26987061ca4af2140a338b933d903b6f7d569724b9ad
+  md5: 6c7df3991d16d2952c8e6da71a73b44c
+  depends:
+  - __osx >=11.0
+  - htcondor-classads 25.12.2 h7a491f7_0
+  - krb5 >=1.22.2,<1.23.0a0
+  - libcxx >=19
+  - libsqlite >=3.53.3,<4.0a0
+  - llvm-openmp >=19.1.7
+  - openssl >=3.5.7,<4.0a0
+  - pcre2 >=10.47,<10.48.0a0
+  - scitokens-cpp >=1.4.0,<2.0a0
+  license: Apache-2.0
+  license_family: APACHE
+  purls: []
+  run_exports:
+    weak:
+    - libcondor_utils >=25.12.2,<25.12.3.0a0
+  size: 1667336
+  timestamp: 1784940737458
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libcurl-8.20.0-hd5a2499_0.conda
   sha256: 38c0bc634b61e542776e97cfd15d5d41edd304d4e47c333004d2d622439b2381
   md5: 2f57b7d0c6adda88957586b7afd78438
@@ -22098,6 +22151,20 @@ packages:
   purls: []
   size: 920047
   timestamp: 1777987051643
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.53.4-hca69786_1.conda
+  sha256: 839b31d4830e896b4d315b551d27f2bb08026bc946df04bcc360d8627c3ba2cd
+  md5: fde96d40ebe9a9cb34e4122380189ddb
+  depends:
+  - __osx >=11.0
+  - icu >=78.3,<79.0a0
+  - libzlib >=1.3.2,<2.0a0
+  license: blessing
+  purls: []
+  run_exports:
+    weak:
+    - libsqlite >=3.53.4,<4.0a0
+  size: 942754
+  timestamp: 1787051243846
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libssh2-1.11.1-h1590b86_0.conda
   sha256: 8bfe837221390ffc6f111ecca24fa12d4a6325da0c8d131333d63d6c37f27e0a
   md5: b68e8f66b94b44aaa8de4583d3d4cc40
@@ -22430,6 +22497,23 @@ packages:
   - pkg:pypi/gfal2-python?source=hash-mapping
   size: 184692
   timestamp: 1769083234157
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-htcondor-25.12.2-py311h2633247_0.conda
+  sha256: cf7291918672cf500ff187019a6e6bb40772343f44d078f3058fd42390a71d5c
+  md5: 4990c37250cd33ba2581679b2643ca04
+  depends:
+  - __osx >=11.0
+  - htcondor-classads 25.12.2 h7a491f7_0
+  - libcondor_utils 25.12.2 hebbd0f9_0
+  - libcxx >=19
+  - python >=3.11,<3.12.0a0
+  - python_abi 3.11.* *_cp311
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/htcondor?source=hash-mapping
+  run_exports: {}
+  size: 501008
+  timestamp: 1784940925044
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyyaml-6.0.3-py311hc290fe0_1.conda
   sha256: 984e73d7957460689e10533059de8adb38a308853d298900a37acc58edd84cec
   md5: e4b908da7cd496b3fa6798c0f60a2a19
@@ -22650,6 +22734,85 @@ packages:
   - diracx-core
   - diracx-testing ; extra == 'testing'
   requires_python: '>=3.11'
+- pypi: ./extensions/gubbins
+  name: gubbins
+  requires_dist:
+  - gubbins-testing ; extra == 'testing'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-api
+  name: gubbins-api
+  requires_dist:
+  - diracx-api
+  - diracx-api[testing] ; extra == 'testing'
+  - diracx-testing ; extra == 'testing'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-cli
+  name: gubbins-cli
+  requires_dist:
+  - diracx-cli
+  - diracx-cli[testing] ; extra == 'testing'
+  - diracx-testing ; extra == 'testing'
+  - types-pyyaml ; extra == 'types'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-client
+  name: gubbins-client
+  requires_dist:
+  - diracx-client
+  - diracx-client[testing] ; extra == 'testing'
+  - diracx-testing ; extra == 'testing'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-core
+  name: gubbins-core
+  requires_dist:
+  - diracx-core
+  - diracx-testing ; extra == 'testing'
+  - gubbins-testing ; extra == 'testing'
+  - types-cachetools ; extra == 'types'
+  - types-pyyaml ; extra == 'types'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-db
+  name: gubbins-db
+  requires_dist:
+  - diracx-db
+  - diracx-testing ; extra == 'testing'
+  - gubbins-testing ; extra == 'testing'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-logic
+  name: gubbins-logic
+  requires_dist:
+  - diracx-logic
+  - gubbins-db
+  - types-cachetools ; extra == 'types'
+  - types-python-dateutil ; extra == 'types'
+  - types-pyyaml ; extra == 'types'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-routers
+  name: gubbins-routers
+  requires_dist:
+  - diracx-routers
+  - gubbins-tasks
+  - diracx-testing ; extra == 'testing'
+  - httpx2-pytest ; extra == 'testing'
+  - moto[server] ; extra == 'testing'
+  - types-cachetools ; extra == 'types'
+  - types-python-dateutil ; extra == 'types'
+  - types-pyyaml ; extra == 'types'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-tasks
+  name: gubbins-tasks
+  requires_dist:
+  - diracx-tasks
+  - gubbins-db
+  - gubbins-logic
+  - diracx-testing ; extra == 'testing'
+  - fakeredis ; extra == 'testing'
+  - gubbins-testing ; extra == 'testing'
+  requires_python: '>=3.11'
+- pypi: ./extensions/gubbins/gubbins-testing
+  name: gubbins-testing
+  requires_dist:
+  - diracx-testing
+  requires_python: '>=3.11'
 - pypi: diracx-api
   name: diracx-api
   requires_dist:
@@ -22788,85 +22951,6 @@ packages:
   - pytest-xdist
   - sqlalchemy
   - uuid-utils
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins
-  name: gubbins
-  requires_dist:
-  - gubbins-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-api
-  name: gubbins-api
-  requires_dist:
-  - diracx-api
-  - diracx-api[testing] ; extra == 'testing'
-  - diracx-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-cli
-  name: gubbins-cli
-  requires_dist:
-  - diracx-cli
-  - diracx-cli[testing] ; extra == 'testing'
-  - diracx-testing ; extra == 'testing'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-client
-  name: gubbins-client
-  requires_dist:
-  - diracx-client
-  - diracx-client[testing] ; extra == 'testing'
-  - diracx-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-core
-  name: gubbins-core
-  requires_dist:
-  - diracx-core
-  - diracx-testing ; extra == 'testing'
-  - gubbins-testing ; extra == 'testing'
-  - types-cachetools ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-db
-  name: gubbins-db
-  requires_dist:
-  - diracx-db
-  - diracx-testing ; extra == 'testing'
-  - gubbins-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-logic
-  name: gubbins-logic
-  requires_dist:
-  - diracx-logic
-  - gubbins-db
-  - types-cachetools ; extra == 'types'
-  - types-python-dateutil ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-routers
-  name: gubbins-routers
-  requires_dist:
-  - diracx-routers
-  - gubbins-tasks
-  - diracx-testing ; extra == 'testing'
-  - httpx2-pytest ; extra == 'testing'
-  - moto[server] ; extra == 'testing'
-  - types-cachetools ; extra == 'types'
-  - types-python-dateutil ; extra == 'types'
-  - types-pyyaml ; extra == 'types'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-tasks
-  name: gubbins-tasks
-  requires_dist:
-  - diracx-tasks
-  - gubbins-db
-  - gubbins-logic
-  - diracx-testing ; extra == 'testing'
-  - fakeredis ; extra == 'testing'
-  - gubbins-testing ; extra == 'testing'
-  requires_python: '>=3.11'
-- pypi: extensions/gubbins/gubbins-testing
-  name: gubbins-testing
-  requires_dist:
-  - diracx-testing
   requires_python: '>=3.11'
 - pypi: git+https://github.com/DIRACGrid/mkdocs-diracx-plugin.git?branch=master#5666488291add5d6abf274b0a2cce80ac23c7299
   name: mkdocs-diracx-plugin
