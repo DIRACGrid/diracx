@@ -65,6 +65,7 @@ function wait_for_service() {
 }
 
 function redis_ready() { redis-cli -p 6379 ping 2>/dev/null | grep -q PONG; }
+function diracx_ready() { curl --silent --show-error --fail --output /dev/null --max-time 2 http://localhost:8000/api/health/ready; }
 
 # Make a keystore
 keystore="${tmp_dir}/keystore/jwks.json"
@@ -217,9 +218,9 @@ function restart_process() {
   all_pid_values[$i]=$!
 }
 
-# Wait for uvicorn
+# Wait for DiracX readiness
 if wait_for_service "uvicorn" "$diracx_pid" "${tmp_dir}/logs/uvicorn.log" \
-     curl --silent --max-time 2 --head http://localhost:8000; then
+     diracx_ready; then
   status_line="✅ DiracX is running on http://localhost:8000"
 else
   status_line="❌ Failed to start DiracX — check ${tmp_dir}/logs/uvicorn.log"
