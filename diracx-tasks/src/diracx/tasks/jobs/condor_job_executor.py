@@ -346,7 +346,8 @@ class CondorJobExecutorTask(BaseTask):
 
         schedd = htcondor2.Schedd(schedd_ad)
         submit = htcondor2.Submit(submit_description)
-        result = schedd.submit(submit)
+        result = schedd.submit(submit, spool=True)
+        schedd.spool(result)
         cluster_id = result.cluster()
 
         return CondorSubmitResult(
