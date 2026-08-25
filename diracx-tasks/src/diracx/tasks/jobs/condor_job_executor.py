@@ -35,6 +35,39 @@ logger = logging.getLogger(__name__)
 
 MINOR_STATUS = "CondorExecutor"
 
+DEFAULT_DESIRED_SITES = (
+    "T1_DE_KIT",
+    "T1_ES_PIC",
+    "T1_FR_CCIN2P3",
+    "T1_IT_CNAF",
+    "T1_RU_JINR",
+    "T1_UK_RAL",
+    "T1_US_FNAL",
+    "T2_CH_CERN",
+    "T2_CH_CERN_P2",
+    "T2_CH_CSCS",
+    "T2_DE_DESY",
+    "T2_DE_RWTH",
+    "T2_ES_CIEMAT",
+    "T2_ES_IFCA",
+    "T2_FR_GRIF",
+    "T2_FR_IPHC",
+    "T2_IT_Bari",
+    "T2_IT_Legnaro",
+    "T2_IT_Rome",
+    "T2_UK_London_Brunel",
+    "T2_UK_London_IC",
+    "T2_UK_SGrid_Bristol",
+    "T2_UK_SGrid_RALPP",
+    "T2_US_Caltech",
+    "T2_US_MIT",
+    "T2_US_Nebraska",
+    "T2_US_Purdue",
+    "T2_US_UCSD",
+    "T2_US_Vanderbilt",
+    "T2_US_Wisconsin",
+)
+
 
 class CondorJobExecutorSettings(ServiceSettingsBase):
     """Settings controlling automatic Condor job submission."""
@@ -139,6 +172,9 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
     std_error = values.get("StdError") or f"err/{job_name}.err"
     log_path = values.get("Log") or f"log/{job_name}.log"
     wall_time_mins = max(1, int(round(cpu_time / 60))) if cpu_time else 60
+    desired_sites = values.get("DesiredSites") or ",".join(DEFAULT_DESIRED_SITES)
+    required_os = values.get("REQUIRED_OS") or "rhel9"
+    required_arch = values.get("REQUIRED_ARCH") or "X86_64"
 
     lines = [
         "Universe = vanilla",
@@ -152,6 +188,11 @@ def _jdl_dict_to_submit_description(jdl: dict[str, str]) -> str:
         "",
         "should_transfer_files = YES",
         "when_to_transfer_output = ON_EXIT",
+        "",
+        f'+DESIRED_Sites = "{desired_sites}"',
+        f'REQUIRED_OS = "{required_os}"',
+        f'REQUIRED_ARCH = "{required_arch}"',
+        f'Requirements = (TARGET.Arch == "{required_arch}") && (TARGET.OpSys == "LINUX")',
         "",
         f"request_cpus = {request_cpus}",
         f"request_memory = {request_memory}",
