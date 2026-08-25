@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import Body, HTTPException, Query
 
+from diracx.core.exceptions import JobNotFoundError
 from diracx.core.models import (
     HeartbeatData,
     JobCommand,
@@ -173,9 +174,12 @@ async def add_heartbeat(
     """
     await check_permissions(action=ActionType.PILOT, job_db=job_db, job_ids=list(data))
 
-    await add_heartbeat_bl(
-        data, config, job_db, job_logging_db, task_queue_db, job_parameters_db
-    )
+    try:
+        await add_heartbeat_bl(
+            data, config, job_db, job_logging_db, task_queue_db, job_parameters_db
+        )
+    except JobNotFoundError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     return await get_job_commands_bl(data, job_db)
 
 
@@ -277,3 +281,5 @@ async def patch_metadata(
             status_code=HTTPStatus.BAD_REQUEST,
             detail=str(e),
         ) from e
+    except JobNotFoundError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
