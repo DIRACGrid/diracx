@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run diracx-task-run with the local environment variables
+# Run diracx-tasks with the local environment variables
 set -euo pipefail
 
 env_file_pointer="$(cd "$(dirname "$0")" && pwd)/.run-local-env"
@@ -20,4 +20,4 @@ fi
 # shellcheck disable=SC1090
 source "$env_file"
 
-exec diracx-task-run "$@"
+exec diracx-tasks "$@"
