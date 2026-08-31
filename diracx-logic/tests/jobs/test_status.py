@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,20 +16,6 @@ from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.time import install_sqlite_time_mock
 
 
-@pytest.fixture
-def mock_client():
-    """Return a fully-mocked AsyncOpenSearch client."""
-    client = MagicMock()
-    client.ping = AsyncMock(return_value=True)
-    client.indices = MagicMock()
-    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
-    client.update = AsyncMock(return_value={"result": "updated"})
-    client.search = AsyncMock(return_value={"hits": {"hits": []}})
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-    return client
-
-
 # Reuse the generic MockOSDBMixin to build a mock JobParameters DB implementation
 class _MockJobParametersDB(MockOSDBMixin, RealJobParametersDB):
     def __init__(self, client):  # type: ignore[override]
@@ -42,18 +27,6 @@ class _MockJobParametersDB(MockOSDBMixin, RealJobParametersDB):
         # Add JobID to the document, which is required by the base class
         document["JobID"] = doc_id
         return super().upsert(vo, doc_id, document)
-
-    async def bulk_upsert(self, documents):
-        """Route bulk_upsert through upsert."""
-        errors = []
-        success = 0
-        for vo, doc_id, document in documents:
-            try:
-                await self.upsert(vo, doc_id, document)
-                success += 1
-            except Exception as e:
-                errors.append({"error": str(e), "_id": doc_id})
-        return success, errors
 
 
 # --------------------------------------------------------------------------------------
