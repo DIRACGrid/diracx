@@ -160,8 +160,6 @@ The `diracx-tasks` command provides four subcommands:
 - **`worker`** — start a worker process that consumes tasks from the broker.
 - **`scheduler`** — start the singleton scheduler that submits periodic tasks and promotes delayed tasks.
 
-`diracx-task-run` remains supported as a backward-compatible alias during migration.
-
 This command is provided by `diracx-tasks` package and not `diracx-cli` as it is expected to be ran on the same infrastructure as the DiracX tasks workers (e.g. in debug pod in Kubernetes).
 
 ### Extension pattern
