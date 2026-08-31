@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -14,6 +15,20 @@ from diracx.logic.jobs import set_job_parameters_or_attributes
 from diracx.logic.jobs.status import _collapse_exception_group
 from diracx.testing.mock_osdb import MockOSDBMixin
 from diracx.testing.time import install_sqlite_time_mock
+
+
+@pytest.fixture
+def mock_client():
+    """Return a fully-mocked AsyncOpenSearch client."""
+    client = MagicMock()
+    client.ping = AsyncMock(return_value=True)
+    client.indices = MagicMock()
+    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
+    client.update = AsyncMock(return_value={"result": "updated"})
+    client.search = AsyncMock(return_value={"hits": {"hits": []}})
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
 
 
 # Reuse the generic MockOSDBMixin to build a mock JobParameters DB implementation
