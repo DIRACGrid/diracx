@@ -59,20 +59,6 @@ def db(connection_kwargs):
     return DummyOSDB(connection_kwargs)
 
 
-@pytest.fixture
-def mock_client():
-    """Return a fully-mocked AsyncOpenSearch client."""
-    client = MagicMock()
-    client.ping = AsyncMock(return_value=True)
-    client.indices = MagicMock()
-    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
-    client.update = AsyncMock(return_value={"result": "updated"})
-    client.search = AsyncMock(return_value={"hits": {"hits": []}})
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-    return client
-
-
 @pytest_asyncio.fixture
 async def live_db(db, mock_client):
     """DummyOSDB with client_context and __aenter__ already entered."""

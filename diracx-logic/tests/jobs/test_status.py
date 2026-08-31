@@ -18,14 +18,27 @@ from diracx.testing.time import install_sqlite_time_mock
 
 # Reuse the generic MockOSDBMixin to build a mock JobParameters DB implementation
 class _MockJobParametersDB(MockOSDBMixin, RealJobParametersDB):
-    def __init__(self):  # type: ignore[override]
+    def __init__(self, client):  # type: ignore[override]
         super().__init__({"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"})
+        self._client = client
 
     def upsert(self, vo, doc_id, document):
         """Override to add JobID to the document."""
         # Add JobID to the document, which is required by the base class
         document["JobID"] = doc_id
         return super().upsert(vo, doc_id, document)
+
+    async def bulk_upsert(self, documents):
+        """Route bulk_upsert through upsert."""
+        errors = []
+        success = 0
+        for vo, doc_id, document in documents:
+            try:
+                await self.upsert(vo, doc_id, document)
+                success += 1
+            except Exception as e:
+                errors.append({"error": str(e), "_id": doc_id})
+        return success, errors
 
 
 # --------------------------------------------------------------------------------------
@@ -47,9 +60,8 @@ async def job_db() -> AsyncGenerator[JobDB, None]:
 
 
 @pytest.fixture
-async def job_parameters_db() -> AsyncGenerator[_MockJobParametersDB, None]:
-    db = _MockJobParametersDB()
-    # Need engine_context entered before creating tables
+async def job_parameters_db(mock_client) -> AsyncGenerator[_MockJobParametersDB, None]:
+    db = _MockJobParametersDB(client=mock_client)
     async with db.client_context():
         await db.create_index_template()
         yield db
