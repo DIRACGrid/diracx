@@ -25,6 +25,20 @@ DB_FIELDS = {
 }
 
 
+@pytest.fixture
+def mock_client():
+    """Return a fully-mocked AsyncOpenSearch client."""
+    client = MagicMock()
+    client.ping = AsyncMock(return_value=True)
+    client.indices = MagicMock()
+    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
+    client.update = AsyncMock(return_value={"result": "updated"})
+    client.search = AsyncMock(return_value={"hits": {"hits": []}})
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
+
+
 @pytest.fixture(autouse=True)
 def force_gc():
     """Collect any leaked async resources right after each testself.

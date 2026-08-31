@@ -9,9 +9,7 @@ import contextlib
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, AsyncIterator
-from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -166,17 +164,3 @@ def fake_available_osdb_implementations(name, *, real_available_implementations)
     mock_parameter_db = type(name, (MockOSDBMixin, implementations[0]), {})
 
     return [mock_parameter_db] + implementations
-
-
-@pytest.fixture
-def mock_client():
-    """Return a fully-mocked AsyncOpenSearch client."""
-    client = MagicMock()
-    client.ping = AsyncMock(return_value=True)
-    client.indices = MagicMock()
-    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
-    client.update = AsyncMock(return_value={"result": "updated"})
-    client.search = AsyncMock(return_value={"hits": {"hits": []}})
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-    return client
