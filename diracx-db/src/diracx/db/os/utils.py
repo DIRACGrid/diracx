@@ -11,8 +11,9 @@ from typing import Any, Self
 
 from opensearchpy import AsyncOpenSearch
 from opensearchpy.helpers import async_bulk
+from opensearchpy.exceptions import RequestError
 
-from diracx.core.exceptions import InvalidQueryError
+from diracx.core.exceptions import DocumentUpsertError, InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import FactorySettings
 from diracx.db.exceptions import DBUnavailableError
@@ -184,12 +185,28 @@ class BaseOSDB(metaclass=ABCMeta):
 
     async def upsert(self, vo: str, doc_id: int, document: Any) -> None:
         index_name = self.index_name(vo, doc_id)
-        response = await self.client.update(
-            index=index_name,
-            id=doc_id,
-            body={"doc": document, "doc_as_upsert": True},
-            params=dict(retry_on_conflict=10),
-        )
+        try:
+            response = await self.client.update(
+                index=index_name,
+                id=doc_id,
+                body={"doc": document, "doc_as_upsert": True},
+                params=dict(retry_on_conflict=10),
+            )
+        except RequestError as e:
+            # Log the field names rather than the client-supplied values
+            logger.error(
+                "Failed to upsert document %s in index %s: %s %s (fields: %s)",
+                doc_id,
+                index_name,
+                e.error,
+                e.info,
+                sorted(document),
+            )
+            logger.debug("Rejected document %s: %r", doc_id, document)
+            # The reason describes the backend, not the request
+            raise DocumentUpsertError(
+                f"Failed to upsert document {doc_id} in {self.__class__.__name__}"
+            ) from e
         logger.debug(
             "Upserted document %s in index %s with response: %s",
             doc_id,

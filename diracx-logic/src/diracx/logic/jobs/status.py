@@ -19,6 +19,7 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 )
 
 from diracx.core.config import Config
+from diracx.core.exceptions import DiracError, JobNotFoundError
 from diracx.core.models import (
     HeartbeatData,
     JobAttributes,
@@ -564,8 +565,9 @@ async def add_heartbeat(
     _, results = await job_db.search(
         parameters=["Status", "JobID"], search=[search_query], sorts=[]
     )
-    if len(results) != len(data):
-        raise ValueError(f"Failed to lookup job IDs: {data.keys()=} {results=}")
+    found_job_ids = {int(result["JobID"]) for result in results}
+    if missing := sorted(set(data) - found_job_ids):
+        raise JobNotFoundError(missing[0])
     status_changes = {
         int(result["JobID"]): {
             datetime.now(timezone.utc): JobStatusUpdate(
@@ -577,41 +579,70 @@ async def add_heartbeat(
         if result["Status"] in [JobStatus.MATCHED, JobStatus.STALLED]
     }
 
-    async with TaskGroup() as tg:
-        if status_changes:
-            tg.create_task(
-                set_job_statuses(
-                    status_changes=status_changes,
-                    config=config,
-                    job_db=job_db,
-                    job_logging_db=job_logging_db,
-                    task_queue_db=task_queue_db,
-                    job_parameters_db=job_parameters_db,
+    try:
+        async with TaskGroup() as tg:
+            if status_changes:
+                tg.create_task(
+                    set_job_statuses(
+                        status_changes=status_changes,
+                        config=config,
+                        job_db=job_db,
+                        job_logging_db=job_logging_db,
+                        task_queue_db=task_queue_db,
+                        job_parameters_db=job_parameters_db,
+                    )
                 )
-            )
 
-        if other_ids := set(data) - set(status_changes):
-            # If there are no status changes, we still need to update the heartbeat time
-            heartbeat_updates = {
-                job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
-            }
-            tg.create_task(job_db.set_job_attributes(heartbeat_updates))
+            if other_ids := set(data) - set(status_changes):
+                # If there are no status changes, we still need to update the heartbeat time
+                heartbeat_updates = {
+                    job_id: {"HeartBeatTime": utcnow()} for job_id in other_ids
+                }
+                tg.create_task(job_db.set_job_attributes(heartbeat_updates))
 
-        os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
-        for job_id, job_data in data.items():
-            sql_data = {}
-            for key, value in job_data.model_dump(
-                by_alias=True, exclude_defaults=True
-            ).items():
-                if key in job_db.heartbeat_fields:
-                    sql_data[key] = value
-                else:
-                    os_data_by_job_id[job_id][key] = value
+            os_data_by_job_id: defaultdict[int, dict[str, Any]] = defaultdict(dict)
+            for job_id, job_data in data.items():
+                sql_data = {}
+                for key, value in job_data.model_dump(
+                    by_alias=True, exclude_defaults=True
+                ).items():
+                    if key in job_db.heartbeat_fields:
+                        sql_data[key] = value
+                    else:
+                        os_data_by_job_id[job_id][key] = value
 
-            if sql_data:
-                tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
+                if sql_data:
+                    tg.create_task(job_db.add_heartbeat_data(job_id, sql_data))
 
-        await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
+            await _insert_parameters(os_data_by_job_id, job_parameters_db, job_db)
+    except ExceptionGroup as eg:
+        raise _collapse_exception_group(eg) from None
+
+
+def _leaves(eg: BaseExceptionGroup) -> list[BaseException]:
+    """Return the non-group exceptions contained in an exception group."""
+    leaves: list[BaseException] = []
+    for exc in eg.exceptions:
+        if isinstance(exc, BaseExceptionGroup):
+            leaves.extend(_leaves(exc))
+        else:
+            leaves.append(exc)
+    return leaves
+
+
+def _collapse_exception_group(eg: BaseExceptionGroup) -> BaseException:
+    """Return a single exception to re-raise in place of an exception group.
+
+    A ``TaskGroup`` wraps the failures of its tasks in an ``ExceptionGroup``,
+    which callers cannot catch by exception type. A ``DiracError`` is preferred
+    as the routers know how to translate it; the others are logged.
+    """
+    leaves = _leaves(eg)
+    chosen = next((exc for exc in leaves if isinstance(exc, DiracError)), leaves[0])
+    for exc in leaves:
+        if exc is not chosen:
+            logger.error("Additional error while processing jobs", exc_info=exc)
+    return chosen
 
 
 async def _insert_parameters(
@@ -639,13 +670,19 @@ async def _insert_parameters(
         ],
     )
     job_id_to_vo = {int(x["JobID"]): str(x["VO"]) for x in job_vos}
+    # Jobs which no longer exist have no VO to look up
+    if missing := sorted(set(updates) - set(job_id_to_vo)):
+        raise JobNotFoundError(missing[0])
     # Upsert the parameters into the JobParametersDB
     # TODO: can we do a bulk upsert instead
-    async with TaskGroup() as tg:
-        for job_id, job_params in updates.items():
-            tg.create_task(
-                job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
-            )
+    try:
+        async with TaskGroup() as tg:
+            for job_id, job_params in updates.items():
+                tg.create_task(
+                    job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
+                )
+    except ExceptionGroup as eg:
+        raise _collapse_exception_group(eg) from None
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:

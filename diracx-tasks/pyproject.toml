@@ -30,6 +30,7 @@ dynamic = ["version"]
 testing = ["diracx-testing", "fakeredis"]
 
 [project.scripts]
+diracx-tasks = "diracx.tasks.task_run:main"
 diracx-task-run = "diracx.tasks.task_run:main"
 
 [project.entry-points."diracx.dbs.sql"]

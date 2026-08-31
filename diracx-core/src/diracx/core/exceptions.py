@@ -3,6 +3,7 @@ from __future__ import annotations
 __all__ = [
     "AuthorizationError",
     "DiracError",
+    "DocumentUpsertError",
     "IAMClientError",
     "IAMServerError",
     "InvalidCredentialsError",
@@ -54,6 +55,10 @@ class BadConfigurationVersionError(ConfigurationError):
 
 class InvalidQueryError(DiracError):
     """It was not possible to build a valid database query from the given input."""
+
+
+class DocumentUpsertError(DiracError):
+    """The backend rejected a document upsert, e.g. because it cannot be indexed."""
 
 
 class TokenNotFoundError(DiracError):

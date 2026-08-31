@@ -49,7 +49,9 @@ class PilotRegistrationParams(BaseModel, extra="forbid"):
     )
 
 
-class PilotMetadata(BaseModel, populate_by_name=True, extra="forbid"):
+class PilotMetadata(
+    BaseModel, populate_by_name=True, extra="forbid", allow_inf_nan=False
+):
     """Mutable metadata attached to a pilot.
 
     The pilot is identified by its stamp, passed alongside this model

@@ -6,6 +6,7 @@ __all__ = ["DIRACX_MIN_CLIENT_VERSION", "create_app", "create_app_inner"]
 
 import inspect
 import logging
+import math
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from http import HTTPStatus
@@ -16,7 +17,7 @@ from typing import Any, TypeVar, cast
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.dependencies.models import Dependant
-from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -26,7 +27,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.logging import AccessFormatter, DefaultFormatter
 
 from diracx.core.config import ConfigSource
-from diracx.core.exceptions import DiracError, NotReadyError
+from diracx.core.exceptions import DiracError, DocumentUpsertError, NotReadyError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import FactorySettings, ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
@@ -332,6 +333,9 @@ def create_app_inner(
     app.add_exception_handler(
         NotReadyError, cast(handler_signature, route_unavailable_error_hander)
     )
+    app.add_exception_handler(
+        DocumentUpsertError, cast(handler_signature, document_upsert_error_handler)
+    )
 
     # TODO: remove the CORSMiddleware once we figure out how to launch
     # diracx and diracx-web under the same origin
@@ -420,12 +424,30 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
-    status_code = getattr(exc, "http_status_code", HTTPStatus.BAD_REQUEST)
-    headers = getattr(exc, "http_headers", None)
+    """Fallback for the domain errors a router did not translate itself."""
     return JSONResponse(
-        status_code=status_code,
+        status_code=HTTPStatus.BAD_REQUEST,
         content={"detail": exc.detail},
-        headers=headers,
+    )
+
+
+def document_upsert_error_handler(
+    request: Request, exc: DocumentUpsertError
+) -> Response:
+    """Report a document which could not be indexed as a server error.
+
+    The values which cannot be stored are already rejected by the models, so
+    reaching this point means the server is at fault, e.g. a mapping conflict.
+    """
+    logger.error(
+        "500 Internal Server Error: %s (path=%s)",
+        exc,
+        request.url.path,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        content={"detail": exc.detail},
     )
 
 
@@ -441,6 +463,17 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
         headers={"Retry-After": "10"},
         content={"detail": str(exc)},
     )
+
+
+def _replace_non_finite(obj):
+    """Replace NaN and infinity with their repr as they cannot be serialized to JSON."""
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return repr(obj)
+    if isinstance(obj, dict):
+        return {k: _replace_non_finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_replace_non_finite(v) for v in obj]
+    return obj
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError):
@@ -460,7 +493,13 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         #     }
         # },
     )
-    return await request_validation_exception_handler(request, exc)
+    # The rejected input is echoed in the error detail and may contain values
+    # which cannot be represented in strict JSON, such as NaN
+    detail = _replace_non_finite(jsonable_encoder(exc.errors()))
+    return JSONResponse(
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+        content={"detail": detail},
+    )
 
 
 def find_dependents(
