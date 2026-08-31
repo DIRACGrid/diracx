@@ -10,8 +10,8 @@ from datetime import datetime
 from typing import Any, Self
 
 from opensearchpy import AsyncOpenSearch
-from opensearchpy.helpers import async_bulk
 from opensearchpy.exceptions import RequestError
+from opensearchpy.helpers import async_bulk
 
 from diracx.core.exceptions import DocumentUpsertError, InvalidQueryError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
