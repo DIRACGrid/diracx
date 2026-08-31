@@ -2,8 +2,6 @@
 
 The `diracx-tasks call` command executes a single task interactively, bypassing the broker. This is useful for debugging, manual recovery, and verifying task behaviour.
 
-`diracx-task-run` remains supported as a backward-compatible alias during migration.
-
 ## Basic usage
 
 ```bash
@@ -45,13 +43,13 @@ Both tasks talk to the job databases, so the relevant `DIRACX_DB_URL_*`,
 Run the monitor once to pick up all `Received` jobs:
 
 ```bash
-diracx-task-run call jobs:DummyJobExecutorMonitorTask
+diracx-tasks call jobs:DummyJobExecutorMonitorTask
 ```
 
 Or simulate the execution of a single job by passing its job ID:
 
 ```bash
-diracx-task-run call jobs:DummyJobExecutorTask --args '[42]'
+diracx-tasks call jobs:DummyJobExecutorTask --args '[42]'
 ```
 
 ## Debugging

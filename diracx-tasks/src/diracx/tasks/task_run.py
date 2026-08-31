@@ -5,9 +5,6 @@ Usage:
     diracx-tasks submit <entry_point> [--args JSON] [--kwargs JSON] [--redis-url URL]
     diracx-tasks worker [--max-concurrent-tasks N] [--redis-url URL]
     diracx-tasks scheduler [--redis-url URL]
-
-Backward-compatible alias:
-    diracx-task-run <subcommand> [...]
 """
 
 from __future__ import annotations
