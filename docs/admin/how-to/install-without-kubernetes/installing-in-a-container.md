@@ -71,7 +71,7 @@ DIRACX_SANDBOX_STORE_BUCKET_NAME="notsetyet"
 # disable the jobs router (and hopefully S3)
 DIRACX_SERVICE_JOBS_ENABLED=false
 # we are using a local git repo on the node, this is not fully supported yet.
-# Please see: https://diracx.io/en/latest/RUN_PROD/#cs for the approved way.
+# Please see: https://diracx.diracgrid.org/en/latest/RUN_PROD/#cs for the approved way.
 DIRACX_CONFIG_BACKEND_URL="git+file:///cs_store?revision=main"
 DIRACX_DB_URL_AUTHDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/DiracXAuthDB
 # these are the users and passwords you have chosen for the databases in DIRAC; they can be found in
