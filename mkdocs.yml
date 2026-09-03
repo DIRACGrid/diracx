@@ -3,7 +3,7 @@ extra_css:
 
 site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
-site_url: https://diracx.io/
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, 'https://diracx.diracgrid.org/']
 site_description: >-
   DiracX is the modern, next-generation successor to the DIRAC distributed computing framework,
   originally developed by LHCb at CERN for large-scale scientific data management and workload processing.

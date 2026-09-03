@@ -4,7 +4,7 @@ This page explains how the DiracX documentation system works, including its arch
 
 ## Overview
 
-The DiracX documentation is built using [MkDocs](https://www.mkdocs.org/) with the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The documentation is hosted at [diracx.io](https://diracx.io/).
+The DiracX documentation is built using [MkDocs](https://www.mkdocs.org/) with the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The documentation is hosted at [diracx.diracgrid.org](https://diracx.diracgrid.org/).
 
 ## The Divio Documentation System
 
