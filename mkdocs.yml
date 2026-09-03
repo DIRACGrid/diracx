@@ -59,16 +59,17 @@ nav:
     - Tutorials:
       - user/tutorials/index.md
     - How-To:
-      - Command Line: user/reference/programmatic-usage/command-line-interface.md
+      - user/how-to/index.md
+      - Command Line: user/how-to/programmatic-usage/command-line-interface.md
       - Programmatic Usage:
-        - user/reference/programmatic-usage/index.md
-        - Python: user/reference/programmatic-usage/python-interface.md
-        - HTTPS: user/reference/programmatic-usage/https-interface.md
+        - user/how-to/programmatic-usage/index.md
+        - Python: user/how-to/programmatic-usage/python-interface.md
+        - HTTPS: user/how-to/programmatic-usage/https-interface.md
       - Web Interface:
-        - user/how-to/index.md
-        - Logging in: user/how-to/login-out.md
-        - List and share applications: user/how-to/list-and-share-applications.md
-        - Monitor jobs: user/how-to/monitor-jobs.md
+        - user/how-to/web-interface/index.md
+        - Logging in: user/how-to/web-interface/login-out.md
+        - List and share applications: user/how-to/web-interface/list-and-share-applications.md
+        - Monitor jobs: user/how-to/web-interface/monitor-jobs.md
     - Explanations:
       - user/explanations/index.md
     - Reference:
