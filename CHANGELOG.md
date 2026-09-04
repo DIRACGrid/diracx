@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/DIRACGrid/diracx/compare/v0.4.0...v0.4.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **cli:** rename LegacyClientEnabled to FutureClientEnabled ([#1029](https://github.com/DIRACGrid/diracx/issues/1029)) ([49207d1](https://github.com/DIRACGrid/diracx/commit/49207d19d81b7764f0f8a58988ca7630aa38621f))
+
 ## [0.4.0](https://github.com/DIRACGrid/diracx/compare/v0.3.0...v0.4.0) (2026-09-03)
 
 
