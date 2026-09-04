@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import os
 import tempfile
 from datetime import UTC, datetime
 
@@ -412,6 +413,9 @@ class CondorJobExecutorTask(BaseTask):
             raise RuntimeError(
                 f"Could not locate schedd '{schedd_name}' via collector '{collector_host}'"
             )
+
+        token = htcondor2.Token(os.environ["CONDOR_TOKEN"])
+        htcondor2.setToken(token)
 
         schedd = htcondor2.Schedd(schedd_ad)
         submit = htcondor2.Submit(submit_description)

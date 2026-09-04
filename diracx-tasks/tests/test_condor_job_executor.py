@@ -198,9 +198,12 @@ async def test_submit_to_condor_uses_htcondor_bindings(monkeypatch):
             "DaemonTypes": FakeDaemonTypes,
             "Schedd": FakeSchedd,
             "Submit": FakeSubmit,
+            "Token": staticmethod(lambda value: value),
+            "setToken": staticmethod(lambda _: None),
         },
     )
     monkeypatch.setattr(condor_job_executor_module, "htcondor2", fake_htcondor)
+    monkeypatch.setenv("CONDOR_TOKEN", "test-token")
     monkeypatch.setattr(
         condor_job_executor_module,
         "extractJDL",
