@@ -66,7 +66,7 @@ def cs_sync(old_file: Path, new_file: Path):
     disabled_vos = diracx_section.get("DisabledVOs")
     enabled_clients = []
     for _, client_status in cast(
-        "CFGAsDict", diracx_section.get("LegacyClientEnabled", {})
+        "CFGAsDict", diracx_section.get("FutureClientEnabled", {})
     ).items():
         for _, str_status in cast("CFGAsDict", client_status).items():
             enabled_clients.append(str_status == "True")
