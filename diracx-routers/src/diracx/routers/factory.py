@@ -208,7 +208,14 @@ def create_app_inner(
             logger.exception("Failed to initialize DB %s", db_name)
 
     if fail_startup:
-        raise Exception("No SQL database could be initialized, aborting")
+        raise Exception(
+            "No SQL database could be initialized, aborting. "
+            "Please set the following env variables to enable it:\n "
+            + "\n ".join(
+                "DIRACX_DB_URL_" + ep.name.upper()
+                for ep in select_from_extension(group=DiracEntryPoint.SQL_DB)
+            )
+        )
 
     # Instantiate the cacheable sources and override their create methods,
     # mirroring the SQL DB wiring above. A single instance is used for each
@@ -277,22 +284,31 @@ def create_app_inner(
                     f"Cannot enable {system_name=} as it requires {cls=}"
                 )
 
-        # Ensure required DBs are available
+        # Ensure required SQL DBs are available
         missing_sql_dbs = (
             set(find_dependents(router, BaseSQLDB)) - available_sql_db_classes
         )
-
         if missing_sql_dbs:
             raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_sql_dbs=}"
+                f"Cannot enable {system_name=} please set the following env "
+                "variables to enable it:\n "
+                + "\n ".join(
+                    "DIRACX_DB_URL_" + x.__name__.upper() for x in missing_sql_dbs
+                )
             )
+
+        # Ensure required OpenSearch DBs are available
         missing_os_dbs = (
             set(find_dependents(router, BaseOSDB))  # type: ignore[type-abstract]
             - available_os_db_classes
         )
         if missing_os_dbs:
             raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_os_dbs=}"
+                f"Cannot enable {system_name=} please set the following env "
+                "variables to enable it:\n "
+                + "\n ".join(
+                    "DIRACX_OS_DB_" + x.__name__.upper() for x in missing_os_dbs
+                )
             )
 
         # Ensure required cacheable sources have been wired, i.e. that the
