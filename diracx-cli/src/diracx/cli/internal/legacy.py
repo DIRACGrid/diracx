@@ -1,3 +1,5 @@
+"""Internal CLI commands for migrating legacy DIRAC configuration data."""
+
 from __future__ import annotations
 
 import base64
@@ -34,11 +36,28 @@ LEGACY_EXCHANGE_PATTERN = rf"diracx:legacy:({BASE_64_URL_SAFE_PATTERN})"
 
 
 class IdPConfig(BaseModel):
+    """Identity provider configuration used during legacy conversion.
+
+    Attributes:
+        url (str): Identity provider URL.
+        client_id (str): OAuth2 client identifier.
+    """
+
     url: str = Field(alias="URL")
     client_id: str = Field(alias="ClientID")
 
 
 class VOConfig(BaseModel):
+    """Per-VO conversion settings extracted from the legacy CS.
+
+    Attributes:
+        default_group (str): Default group name for the VO.
+        idp (IdPConfig): Identity provider settings for the VO.
+        user_subjects (dict[str, str]): Mapping from legacy usernames to
+            subject identifiers.
+        support (SupportInfo): Contact and support metadata for the VO.
+    """
+
     default_group: str = Field(alias="DefaultGroup")
     idp: IdPConfig = Field(alias="IdP")
     user_subjects: dict[str, str] = Field(alias="UserSubjects")
@@ -46,12 +65,30 @@ class VOConfig(BaseModel):
 
 
 class ConversionConfig(BaseModel):
+    """Top-level conversion settings for all virtual organizations.
+
+    Attributes:
+        vos (dict[str, VOConfig]): Conversion settings keyed by VO name.
+    """
+
     vos: dict[str, VOConfig] = Field(alias="VOs")
 
 
 @app.command()
 def cs_sync(old_file: Path, new_file: Path):
-    """Load the old CS and convert it to the new YAML format."""
+    """Convert a legacy CS file into the new DiracX YAML configuration.
+
+    Args:
+        old_file (Path): Path to the legacy configuration source file.
+        new_file (Path): Path where the converted YAML should be written.
+
+    Returns:
+        None
+
+    Raises:
+        RuntimeError: If CS conversion is disabled or the legacy
+            configuration contains incompatible settings.
+    """
     if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
         raise RuntimeError(
             "DIRAC_COMPAT_ENABLE_CS_CONVERSION must be set for the conversion to be possible"
@@ -88,7 +125,14 @@ def cs_sync(old_file: Path, new_file: Path):
 
 
 def _apply_fixes(raw):
-    """Modify raw in place to make any layout changes between the old and new structure."""
+    """Apply in-place transformations from the legacy CS layout to DiracX.
+
+    Args:
+        raw: Mutable configuration dictionary loaded from the legacy CS.
+
+    Returns:
+        None
+    """
     conv_config = ConversionConfig.model_validate(raw["DiracX"]["CsSync"])
 
     raw.pop("DiracX", None)
@@ -186,9 +230,22 @@ def generate_helm_values(
         Path | None, Option(help="Path to the cfg containing the secret")
     ] = None,
 ):
-    """Generate an initial values.yaml to run a DiracX installation.
+    """Generate a starter Helm values file from legacy configuration inputs.
 
-    The file generated is not complete, and needs manual editing.
+    The generated file is intentionally incomplete and requires manual
+    editing before use.
+
+    Args:
+        public_cfg (Path): Path to the public CS configuration file.
+        output_file (Path): Destination path for the generated YAML.
+        secret_cfg (Path | None): Optional path to a second CS file
+            containing secrets.
+
+    Returns:
+        None
+
+    Raises:
+        typer.Exit: If required legacy exchange configuration is missing.
     """
     helm_values = {
         "developer": {"enabled": False},
