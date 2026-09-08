@@ -39,8 +39,8 @@ class IdPConfig(BaseModel):
     """Identity provider configuration used during legacy conversion.
 
     Attributes:
-        url (str): Identity provider URL.
-        client_id (str): OAuth2 client identifier.
+        url: Identity provider URL.
+        client_id: OAuth2 client identifier.
     """
 
     url: str = Field(alias="URL")
@@ -51,11 +51,11 @@ class VOConfig(BaseModel):
     """Per-VO conversion settings extracted from the legacy CS.
 
     Attributes:
-        default_group (str): Default group name for the VO.
-        idp (IdPConfig): Identity provider settings for the VO.
-        user_subjects (dict[str, str]): Mapping from legacy usernames to
+        default_group: Default group name for the VO.
+        idp: Identity provider settings for the VO.
+        user_subjects: Mapping from legacy usernames to
             subject identifiers.
-        support (SupportInfo): Contact and support metadata for the VO.
+        support: Contact and support metadata for the VO.
     """
 
     default_group: str = Field(alias="DefaultGroup")
@@ -68,7 +68,7 @@ class ConversionConfig(BaseModel):
     """Top-level conversion settings for all virtual organizations.
 
     Attributes:
-        vos (dict[str, VOConfig]): Conversion settings keyed by VO name.
+        vos: Conversion settings keyed by VO name.
     """
 
     vos: dict[str, VOConfig] = Field(alias="VOs")
@@ -79,11 +79,8 @@ def cs_sync(old_file: Path, new_file: Path):
     """Convert a legacy CS file into the new DiracX YAML configuration.
 
     Args:
-        old_file (Path): Path to the legacy configuration source file.
-        new_file (Path): Path where the converted YAML should be written.
-
-    Returns:
-        None
+        old_file: Path to the legacy configuration source file.
+        new_file: Path where the converted YAML should be written.
 
     Raises:
         RuntimeError: If CS conversion is disabled or the legacy
@@ -129,9 +126,6 @@ def _apply_fixes(raw):
 
     Args:
         raw: Mutable configuration dictionary loaded from the legacy CS.
-
-    Returns:
-        None
     """
     conv_config = ConversionConfig.model_validate(raw["DiracX"]["CsSync"])
 
@@ -236,13 +230,9 @@ def generate_helm_values(
     editing before use.
 
     Args:
-        public_cfg (Path): Path to the public CS configuration file.
-        output_file (Path): Destination path for the generated YAML.
-        secret_cfg (Path | None): Optional path to a second CS file
-            containing secrets.
-
-    Returns:
-        None
+        public_cfg: Path to the public CS configuration file.
+        output_file: Destination path for the generated YAML.
+        secret_cfg: Optional path to a second CS file containing secrets.
 
     Raises:
         typer.Exit: If required legacy exchange configuration is missing.

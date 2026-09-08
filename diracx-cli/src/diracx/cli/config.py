@@ -41,7 +41,7 @@ def display(data: Any) -> None:
     Rich's `print_json`). An unknown format raises `NotImplementedError`.
 
     Args:
-        data (Any): Arbitrary JSON-serializable data to display.
+        data: Arbitrary JSON-serializable data to display.
 
     Raises:
         NotImplementedError: If the configured output format is unsupported.

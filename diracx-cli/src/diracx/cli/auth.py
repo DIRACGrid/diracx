@@ -34,7 +34,7 @@ async def installation_metadata():
     obtain the result.
 
     Returns:
-        Metadata: Installation metadata retrieved from the server.
+        Installation metadata retrieved from the server.
     """
     async with AsyncDiracClient() as api:
         return await api.well_known.get_installation_metadata()
@@ -48,10 +48,10 @@ def vo_callback(vo: str | None) -> str:
     that the supplied VO exists. On failure it raises a `typer.BadParameter`.
 
     Args:
-        vo (Optional[str]): The VO name provided by the user.
+        vo: The VO name provided by the user.
 
     Returns:
-        str: The validated VO string.
+        The validated VO string.
 
     Raises:
         typer.BadParameter: If no VO was provided or the VO is not known.
@@ -107,9 +107,9 @@ async def login(
         merges its properties with the provided properties.
 
     Args:
-        vo (Optional[str]): Virtual Organization name (validated by `vo_callback`).
-        group (Optional[str]): Group name within the VO.
-        property (Optional[list[str]]): Additional properties to request.
+        vo: Virtual Organization name (validated by `vo_callback`).
+        group: Group name within the VO.
+        property: Additional properties to request.
 
     Raises:
         RuntimeError: If the device flow fails or expires before completion.
@@ -206,7 +206,7 @@ def callback(output_format: Optional[str] = None):
     variable so subsequent commands can adapt their output formatting.
 
     Args:
-        output_format (Optional[str]): Output format identifier (e.g. "json").
+        output_format: Output format identifier (e.g. "json").
     """
     if output_format is not None:
         os.environ["DIRACX_OUTPUT_FORMAT"] = output_format

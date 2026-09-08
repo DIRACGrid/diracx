@@ -41,12 +41,12 @@ def parse_condition(value: str) -> SearchSpec:
     operators the ``value`` is parsed as JSON and returned under ``values``.
 
     Args:
-        value (str): Condition string, e.g. ``"JobID eq 1000"`` or
+        value: Condition string, e.g. ``"JobID eq 1000"`` or
             ``"Embedding cos_sim [0.1, 0.2, 0.3]"``.
 
     Returns:
-        SearchSpec: Dictionary describing the parsed condition in the
-            shape expected by the API client.
+        Dictionary describing the parsed condition in the shape expected by
+            the API client.
 
     Raises:
         ValueError: If the operator is unknown or the input cannot be parsed.
@@ -96,17 +96,13 @@ async def search(
     configured output format.
 
     Args:
-        parameter (list[str]): List of fields to return for each job. Use
-            the special flag ``--all`` to return all available parameters.
-        condition (list[str]): Search condition strings (see
-            ``parse_condition``) that will be combined with AND semantics.
-        all (bool): If true, ignore ``parameter`` and request all fields.
-        page (int): Page number for pagination (1-based).
-        per_page (int): Number of items per page.
-
-    Returns:
-        None: Results are printed to stdout using the configured display
-            format (JSON or rich table).
+        parameter: List of fields to return for each job. Use the special flag
+            ``--all`` to return all available parameters.
+        condition: Search condition strings (see ``parse_condition``) that will
+            be combined with AND semantics.
+        all: If true, ignore ``parameter`` and request all fields.
+        page: Page number for pagination (1-based).
+        per_page: Number of items per page.
     """
     search_specs = [parse_condition(cond) for cond in condition]
     async with AsyncDiracClient() as api:
@@ -132,10 +128,10 @@ class ContentRange:
     building human-readable captions for CLI output.
 
     Attributes:
-        unit (str | None): The unit of the range (e.g., "bytes", "items", "jobs").
-        start (int | None): The starting index of the requested range.
-        end (int | None): The ending index of the requested range.
-        total (int | None): The total number of items available.
+        unit: The unit of the range (e.g., "bytes", "items", "jobs").
+        start: The starting index of the requested range.
+        end: The ending index of the requested range.
+        total: The total number of items available.
     """
 
     unit: str | None = None
@@ -157,7 +153,7 @@ class ContentRange:
         """Build a human-readable caption from the parsed content range.
 
         Returns:
-            str: A summary string describing which items are being shown.
+            A summary string describing which items are being shown.
         """
         if self.start is None and self.end is None:
             range_str = "all"
@@ -179,7 +175,7 @@ def display(data, content_range: ContentRange) -> None:
 
     Args:
         data: List of job records (each a mapping of parameter -> value).
-        content_range (ContentRange): Parsed content-range metadata.
+        content_range: Parsed content-range metadata.
     """
     output_format = get_diracx_preferences().output_format
     match output_format:
@@ -200,11 +196,7 @@ def display_rich(data, content_range: ContentRange) -> None:
 
     Args:
         data: Job records to display.
-        content_range (ContentRange): Parsed content-range metadata used for
-            the table caption.
-
-    Returns:
-        None
+        content_range: Parsed content-range metadata used for the table caption.
     """
     if not data:
         print(f"No {content_range.unit} found")
@@ -243,11 +235,7 @@ async def submit(jdl: list[FileText]):
     the inserted job IDs.
 
     Args:
-        jdl (list[FileText]): List of file-like objects pointing to JDL
-            descriptions.
-
-    Returns:
-        None
+        jdl: List of file-like objects pointing to JDL descriptions.
     """
     async with AsyncDiracClient() as api:
         jobs = await api.jobs.submit_jdl_jobs([x.read() for x in jdl])
