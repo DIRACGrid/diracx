@@ -9,7 +9,10 @@ import contextlib
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, AsyncIterator
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+from opensearchpy.serializer import JSONSerializer
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -102,6 +105,18 @@ class MockOSDBMixin:
             stmt = stmt.on_conflict_do_update(index_elements=["doc_id"], set_=values)
             await self._sql_db.conn.execute(stmt)
 
+    async def bulk_upsert(self, documents) -> tuple[int, list[dict[str, Any]]]:
+        """Route bulk_upsert through the upsert API."""
+        errors: list[dict[str, Any]] = []
+        success = 0
+        for vo, doc_id, document in documents:
+            try:
+                await self.upsert(vo, doc_id, document)
+                success += 1
+            except Exception as e:
+                errors.append({"error": str(e), "_id": doc_id})
+        return success, errors
+
     async def search(
         self,
         parameters: list[str] | None,
@@ -164,3 +179,20 @@ def fake_available_osdb_implementations(name, *, real_available_implementations)
     mock_parameter_db = type(name, (MockOSDBMixin, implementations[0]), {})
 
     return [mock_parameter_db] + implementations
+
+
+@pytest.fixture
+def mock_client():
+    """Return a fully-mocked AsyncOpenSearch client."""
+    client = MagicMock()
+    client.ping = AsyncMock(return_value=True)
+    client.indices = MagicMock()
+    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
+    client.update = AsyncMock(return_value={"result": "updated"})
+    client.search = AsyncMock(return_value={"hits": {"hits": []}})
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    client.transport = MagicMock()
+    client.transport.serializer = JSONSerializer()
+    client.bulk = AsyncMock(return_value={"errors": False, "items": []})
+    return client
