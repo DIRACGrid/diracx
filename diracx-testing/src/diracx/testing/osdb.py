@@ -92,14 +92,18 @@ async def dummy_opensearch_db(dummy_opensearch_db_without_template):
 
 
 @pytest.fixture
-async def sql_opensearch_db():
+async def sql_opensearch_db(request):
     """Fixture which returns a SQLOSDB object."""
+    os_global_prefix = None
+    if (marker := request.node.get_closest_marker("os_global_prefix")) is not None:
+        os_global_prefix = marker.args[0]
 
     class MockDummyOSDB(MockOSDBMixin, DummyOSDB):
         pass
 
     db = MockDummyOSDB(
-        connection_kwargs={"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"}
+        connection_kwargs={"sqlalchemy_dsn": "sqlite+aiosqlite:///:memory:"},
+        global_prefix=os_global_prefix,
     )
     async with db.client_context():
         await db.create_index_template()

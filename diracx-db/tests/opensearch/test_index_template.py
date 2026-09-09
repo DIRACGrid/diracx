@@ -49,3 +49,10 @@ async def _get_test_index_mappings(dummy_opensearch_db: DummyOSDB):
     assert list(index_mapping) == [index_name]
     assert list(index_mapping[index_name]) == ["mappings"]
     return index_mapping[index_name]["mappings"]
+
+
+@pytest.mark.os_global_prefix("myglobalprefix")
+async def test_global_prefix(sql_opensearch_db: DummyOSDB):
+    """Check the global prefix."""
+    idx_name = sql_opensearch_db.index_name("myvo", 123)
+    assert idx_name.startswith("myglobalprefix"), idx_name

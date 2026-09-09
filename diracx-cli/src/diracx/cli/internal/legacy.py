@@ -311,6 +311,9 @@ def generate_helm_values(
         },
     }
 
+    if global_os_prefix := cfg["Systems"].get("NoSQLDatabases", {}).get("IndexPrefix"):
+        os_dbs["GlobalIndexPrefix"] = global_os_prefix
+
     for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
         db_name = entry_point.name
         db_config = all_db_configs.get(db_name, {})
