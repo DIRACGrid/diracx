@@ -9,7 +9,7 @@ import json
 import os
 from asyncio import sleep
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from typing import TYPE_CHECKING, Annotated, Optional
 
 import typer
 
@@ -17,6 +17,10 @@ from diracx.client.aio import AsyncDiracClient
 
 # See https://github.com/DIRACGrid/diracx/issues/578
 from diracx.client.models import DeviceFlowErrorResponse  # type: ignore [attr-defined]
+
+if TYPE_CHECKING:
+    from diracx.client._generated.models import Metadata
+
 from diracx.core.preferences import get_diracx_preferences
 from diracx.core.utils import read_credentials, write_credentials
 
@@ -25,7 +29,7 @@ from .utils import AsyncTyper
 app = AsyncTyper()
 
 
-async def installation_metadata():
+async def installation_metadata() -> Metadata:
     """Fetch installation metadata from the server's well-known endpoint.
 
     This helper uses an `AsyncDiracClient` to request the DIRAC installation
