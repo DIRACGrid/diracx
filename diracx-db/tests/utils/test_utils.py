@@ -12,11 +12,11 @@ import pytest_asyncio
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.os.utils import (
-    BaseOSDB,
     OpenSearchDBUnavailableError,
     apply_search_filters,
     require_type,
 )
+from diracx.testing.osdb import DummyOSDB
 
 DB_FIELDS = {
     "status": {"type": "keyword"},
@@ -34,19 +34,6 @@ def force_gc():
     """
     yield
     gc.collect()
-
-
-class DummyOSDB(BaseOSDB):
-    fields = {
-        "job_id": {"type": "long"},
-        "status": {"type": "keyword"},
-        "timestamp": {"type": "date"},
-        "vo": {"type": "keyword"},
-    }
-    index_prefix = "dummy"
-
-    def index_name(self, vo: str, doc_id: int) -> str:
-        return f"{self.index_prefix}-{vo}-{doc_id % 10}"
 
 
 @pytest.fixture
@@ -186,7 +173,8 @@ class TestBaseOSDBInit:
         assert db._connection_kwargs == connection_kwargs
 
     def test_index_name(self, db):
-        assert db.index_name("lhcb", 42) == "dummy-lhcb-2"
+        assert db.index_name("lhcb", 42) == f"{db.index_prefix}-0m"
+        assert db.index_name("lhcb", 2_500_000) == f"{db.index_prefix}-2m"
 
     def test_session_raises(self):
         with pytest.raises(NotImplementedError):
@@ -436,13 +424,13 @@ class TestSearch:
         client.search.return_value = {
             "hits": {
                 "hits": [
-                    self._make_hit({"timestamp": "2024-01-15T10:30:00.000000+00:00"})
+                    self._make_hit({"DateField": "2024-01-15T10:30:00.000000+00:00"})
                 ]
             }
         }
         result = await db.search([], [], [])
-        assert result[0]["timestamp"].tzinfo is not None
-        assert result[0]["timestamp"].year == 2024
+        assert result[0]["DateField"].tzinfo is not None
+        assert result[0]["DateField"].year == 2024
 
     @pytest.mark.asyncio
     async def test_search_with_parameters_sets_source(self, live_db):
@@ -464,9 +452,9 @@ class TestSearch:
     async def test_search_applies_sort(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
-        await db.search([], [], [{"parameter": "job_id", "direction": "asc"}])
+        await db.search([], [], [{"parameter": "IntField", "direction": "asc"}])
         body = client.search.call_args.kwargs["body"]
-        assert {"job_id": {"order": "asc"}} in body["sort"]
+        assert {"IntField": {"order": "asc"}} in body["sort"]
 
     @pytest.mark.asyncio
     async def test_search_raises_for_unsortable_field_type(self, live_db):
