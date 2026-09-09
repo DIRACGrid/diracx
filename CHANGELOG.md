@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/DIRACGrid/diracx/compare/v0.3.0...v0.4.0) (2026-09-03)
+
+
+### Features
+
+* add pilot database and router ([#570](https://github.com/DIRACGrid/diracx/issues/570)) ([503d3d2](https://github.com/DIRACGrid/diracx/commit/503d3d2160f7e8b405b7e1b735dbfd5128c958f1))
+* **tasks:** add dummy job executor ([#995](https://github.com/DIRACGrid/diracx/issues/995)) ([712f32e](https://github.com/DIRACGrid/diracx/commit/712f32e9695610bba2f37de375bdf2f4a67195e6))
+
+
+### Bug Fixes
+
+* avoid 500 errors when job parameters cannot be stored ([#1007](https://github.com/DIRACGrid/diracx/issues/1007)) ([57541d1](https://github.com/DIRACGrid/diracx/commit/57541d1c520743cd7820e6f466a2ae4f0ea55c89))
+* **dev:** wait for /api/health/ready before reporting local-start ready ([#1020](https://github.com/DIRACGrid/diracx/issues/1020)) ([fcb2649](https://github.com/DIRACGrid/diracx/commit/fcb2649c09b9e5e03a5b33f320bed7d19c9836a8))
+* make redis a mandatory parameter of task_wrapper ([#1000](https://github.com/DIRACGrid/diracx/issues/1000)) ([777f8a7](https://github.com/DIRACGrid/diracx/commit/777f8a75583f91ba2ed55ea44b13bc3e2f55b2d5)), closes [#973](https://github.com/DIRACGrid/diracx/issues/973)
+* minor fixes to the advanced tutorial ([#991](https://github.com/DIRACGrid/diracx/issues/991)) ([ea6f400](https://github.com/DIRACGrid/diracx/commit/ea6f40024735c24bb6e704761cbeb695976eb827))
+
 ## [0.3.0](https://github.com/DIRACGrid/diracx/compare/v0.2.0...v0.3.0) (2026-07-07)
 
 

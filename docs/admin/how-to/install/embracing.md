@@ -111,7 +111,7 @@ Over time as more Legacy Adaptors are developed, you can enable them with the fo
 ```
 DiracX
 {
-    LegacyClientEnabled
+    FutureClientEnabled
     {
         <System>
         {

@@ -11,7 +11,7 @@ This is typically done by larger installations that serve a single virtual organ
 ## Do you need an extension?
 
 Before going any further you should consider if you even need a DiracX extension.
-Creating a standard python package which uses the [DiracX Python API](../../user/reference/programmatic-usage/python-interface.md) might be a better choice as this will be more stable over time and leave you with more flexibility in how you implement your code.
+Creating a standard python package which uses the [DiracX Python API](../../user/how-to/programmatic-usage/python-interface.md) might be a better choice as this will be more stable over time and leave you with more flexibility in how you implement your code.
 For example, if you wish to create a job submission framework that lets people submit specialized jobs, monitor their status and then download data you're likely best off not making a DiracX extension.
 
 Alternatively, you should make an extension if you want for example to:

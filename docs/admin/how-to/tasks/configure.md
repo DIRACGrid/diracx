@@ -31,8 +31,6 @@ The scheduler is a singleton process responsible for submitting periodic tasks a
 diracx-tasks scheduler --redis-url redis://redis-host:6379
 ```
 
-`diracx-task-run` remains supported as a backward-compatible alias during migration.
-
 Only one scheduler instance should run at a time. This is enforced by a Redis mutex — if a second scheduler starts, it will wait for the first to release the lock before taking over.
 
 ## Helm chart configuration
