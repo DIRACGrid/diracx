@@ -118,11 +118,9 @@ class BaseOSDB(metaclass=ABCMeta):
             # Get the field value from the OpenSearchDBSettings model
             field_value = factory_settings.opensearch_dbs.get(db_name)
             if field_value == "" or not field_value:
-                logger.warning(
-                    "%s found but no URL connection set: please set "
-                    "DIRACX_OS_DB_%s env variable to enable it.",
-                    db_name,
-                    db_name.upper(),
+                raise Exception(
+                    f"{db_name} found but no URL connection set: please set the "
+                    f"DIRACX_OS_DB_{db_name.upper()} env variable to enable it."
                 )
             else:
                 try:
