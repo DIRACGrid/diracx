@@ -137,11 +137,9 @@ class BaseSQLDB(metaclass=ABCMeta):
             # Get the field value from the SqlDBSettings model
             db_url = factory_settings.sql_dbs.get(db_name)
             if db_url == "" or not db_url:
-                logger.warning(
-                    "%s found but no URL connection set: please set "
-                    "DIRACX_DB_URL_%s env variable to enable it.",
-                    db_name,
-                    db_name.upper(),
+                raise Exception(
+                    f"{db_name} found but no URL connection set: please set the "
+                    f"DIRACX_DB_URL_{db_name.upper()} env variable to enable it."
                 )
             else:
                 try:
