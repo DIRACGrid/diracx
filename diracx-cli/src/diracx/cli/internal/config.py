@@ -1,3 +1,5 @@
+"""Internal CLI commands for creating and editing configuration repositories."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,6 +28,18 @@ app = AsyncTyper()
 
 
 def get_repo_path(config_repo_str: str) -> Path:
+    """Validate and extract a local repository path from a config source URL.
+
+    Args:
+        config_repo_str: Repository URL expected to use the
+            ``git+file://`` scheme.
+
+    Returns:
+        Local filesystem path for the target repository.
+
+    Raises:
+        NotImplementedError: If the URL does not use ``git+file://``.
+    """
     config_repo = TypeAdapter(ConfigSourceUrl).validate_python(config_repo_str)
     if config_repo.scheme != "git+file" or config_repo.path is None:
         raise NotImplementedError("Only git+file:// URLs are supported")
@@ -36,12 +50,27 @@ def get_repo_path(config_repo_str: str) -> Path:
 
 
 def get_config_from_repo_path(repo_path: Path) -> Config:
+    """Load the DiracX configuration from a repository path.
+
+    Args:
+        repo_path: Local path to the configuration repository.
+
+    Returns:
+        Parsed configuration loaded from the repository backend.
+    """
     return ConfigSource.create_from_url(backend_url=repo_path).read()
 
 
 @app.command()
 def generate_cs(config_repo: str):
-    """Generate a minimal DiracX configuration repository."""
+    """Generate a minimal DiracX configuration repository.
+
+    Args:
+        config_repo: Repository URL for the new local config repository.
+
+    Raises:
+        typer.Exit: If the target directory already exists and is not empty.
+    """
     # TODO: The use of TypeAdapter should be moved in to typer itself
 
     repo_path = get_repo_path(config_repo)
@@ -72,7 +101,18 @@ def add_vo(
     idp_url: Annotated[str, typer.Option()],
     idp_client_id: Annotated[str, typer.Option()],
 ):
-    """Add a registry entry (vo) to an existing configuration repository."""
+    """Add a virtual organization entry to an existing configuration repository.
+
+    Args:
+        config_repo: Repository URL for the local config repository.
+        vo: Virtual organization name to add.
+        default_group: Default group assigned to the VO.
+        idp_url: Identity provider URL for the VO.
+        idp_client_id: Client ID used with the identity provider.
+
+    Raises:
+        typer.Exit: If the VO already exists.
+    """
     # TODO: The use of TypeAdapter should be moved in to typer itself
     repo_path = get_repo_path(config_repo)
     config = get_config_from_repo_path(repo_path)
@@ -111,7 +151,17 @@ def add_group(
     group: Annotated[str, typer.Option()],
     properties: list[str] = ["NormalUser"],
 ):
-    """Add a group to an existing vo in the configuration repository."""
+    """Add a group to an existing virtual organization.
+
+    Args:
+        config_repo: Repository URL for the local config repository.
+        vo: Virtual organization that will receive the new group.
+        group: Group name to add.
+        properties: Initial properties assigned to the group.
+
+    Raises:
+        typer.Exit: If the VO does not exist or the group already exists.
+    """
     # TODO: The use of TypeAdapter should be moved in to typer itself
     repo_path = get_repo_path(config_repo)
     config = get_config_from_repo_path(repo_path)
@@ -143,7 +193,20 @@ def add_user(
     sub: Annotated[str, typer.Option()],
     preferred_username: Annotated[str, typer.Option()],
 ):
-    """Add a user to an existing vo and group."""
+    """Add a user to an existing virtual organization and one or more groups.
+
+    Args:
+        config_repo: Repository URL for the local config repository.
+        vo: Virtual organization that will receive the user.
+        groups: Groups to assign to the user. If not
+            provided, the VO default group is used.
+        sub: Subject identifier for the user.
+        preferred_username: Preferred username stored in the config.
+
+    Raises:
+        typer.Exit: If the VO or group does not exist, or if the user already
+            exists in the VO or one of the selected groups.
+    """
     # TODO: The use of TypeAdapter should be moved in to typer itself
     repo_path = get_repo_path(config_repo)
     config = get_config_from_repo_path(repo_path)
@@ -182,7 +245,13 @@ def add_user(
 
 
 def update_config_and_commit(repo_path: Path, config: Config, message: str):
-    """Update the yaml file in the repo and commit it."""
+    """Write the current configuration to disk and create a git commit.
+
+    Args:
+        repo_path: Local path to the configuration repository.
+        config: Configuration object to serialize.
+        message: Commit message for the repository update.
+    """
     repo = git.Repo(repo_path)
     yaml_path = repo_path / "default.yml"
     typer.echo(f"Writing back configuration to {yaml_path}", err=True)
