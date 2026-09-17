@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, Iterable
 
 from diracx.db.os.utils import BaseOSDB
 
@@ -41,3 +42,15 @@ class JobParametersDB(BaseOSDB):
             **document,
         }
         return super().upsert(vo, doc_id, document)
+
+    async def bulk_upsert(
+        self,
+        documents: Iterable[tuple[str, int, dict[str, Any]]],
+    ) -> tuple[int, list[Any]]:
+        """bulk_upsert API implementation."""
+        transformed = []
+        for vo, doc_id, document in documents:
+            timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
+            document = {"JobID": doc_id, "timestamp": timestamp, **document}
+            transformed.append((vo, doc_id, document))
+        return await super().bulk_upsert(transformed)
