@@ -120,7 +120,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
       - name: Login to GitHub container registry
@@ -262,7 +262,7 @@ jobs:
           echo "current_chart_version=$CURRENT_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "new_chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
           echo "diracx_version=$VERSION" >> $GITHUB_OUTPUT
-      - uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
            working-directory: ./diracx-charts
       - name: Run pre-commit to update README
