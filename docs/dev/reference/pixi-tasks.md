@@ -33,6 +33,7 @@ This page documents the available pixi tasks.
 
 ## Documentation Tasks
 
+- `adr-pdf`: Render ADRs as A4 PDFs in adr-pdfs/, e.g. `pixi run adr-pdf 5` or `pixi run adr-pdf 2 3 4 --combined`
 - `mkdocs`: mkdocs serve
 - `mkdocs-build`: mkdocs build --strict
 
