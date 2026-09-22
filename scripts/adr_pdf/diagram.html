@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<script src="__MERMAID_JS__"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #d { display: inline-block; padding: 4px; }
+  #d svg { display: block; max-width: none !important; height: auto; }
+</style>
+<div id="d">__CODE__</div>
+<script>
+(async () => {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'neutral',
+    securityLevel: 'loose',
+    fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
+    fontSize: 14,
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
+    er: { useMaxWidth: false },
+    stateDiagram: { useMaxWidth: false },
+    sequence: { useMaxWidth: false }
+  });
+  const el = document.getElementById('d');
+  const { svg } = await mermaid.render('g0', el.textContent.trim());
+  el.innerHTML = svg;
+  const s = el.querySelector('svg');
+  // Mermaid caps the SVG with a max-width style; drop it and pin the intrinsic
+  // size so the page can be cropped to the drawing.
+  s.removeAttribute('style');
+  const vb = s.viewBox.baseVal;
+  if (vb && vb.width) { s.setAttribute('width', vb.width); s.setAttribute('height', vb.height); }
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const r = el.getBoundingClientRect();
+  const w = Math.ceil(r.width) + 2, h = Math.ceil(r.height) + 2;
+  const st = document.createElement('style');
+  st.textContent = '@page { size: ' + w + 'px ' + h + 'px; margin: 0 }';
+  document.head.appendChild(st);
+  document.title = 'ready ' + w + 'x' + h;
+})();
+</script>
