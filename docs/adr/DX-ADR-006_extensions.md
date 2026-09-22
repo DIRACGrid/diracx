@@ -182,8 +182,9 @@ class ComputeParcel:
 
 class StorageDelta:
     se: str
-    # signed bytes: added at this storage element if positive, freed if negative
-    delta: int
+    # both signed: added at this storage element if positive, freed if negative
+    files: int
+    bytes: int
 
 
 class DataParcel:
@@ -219,7 +220,7 @@ def example_packer(
     ...
 ```
 
-- A `ComputeParcel` or `DataParcel` becomes a parcel row, its facet row, the `ParcelInputs` links, the journal rows, and the `Assigned` transition of its inputs, all in one transaction (DX-ADR-004). The requirements of a compute parcel are merged over the transformation's template and stored content-addressed. The request of a data parcel is what the data backend hands to the request system, and its `deltas` are the storage elements it acts on and the signed bytes it costs each of them: the packer states both rather than leaving the core to parse an RMS body whose vocabulary DX-ADR-008 already wants to replace. It states the bytes rather than letting the core sum `LFNSize` over the parcel's inputs because only the packer knows whether several of those inputs are masks of one file. Each delta becomes a `DataParcelDeltas` row and a data-counter journal row, so a parcel replicating to three destinations counts against all three and one that removes counts a negative against what it frees.
+- A `ComputeParcel` or `DataParcel` becomes a parcel row, its facet row, the `ParcelInputs` links, the journal rows, and the `Assigned` transition of its inputs, all in one transaction (DX-ADR-004). The requirements of a compute parcel are merged over the transformation's template and stored content-addressed. The request of a data parcel is what the data backend hands to the request system, and its `deltas` are the storage elements it acts on and the signed files and bytes it costs each of them: the packer states all of it rather than leaving the core to parse an RMS body whose vocabulary DX-ADR-008 already wants to replace. It states the two counts rather than letting the core derive them from the parcel's inputs because only the packer knows whether several of those inputs are masks of one file, which would be counted once each way. Each delta becomes a `DataParcelDeltas` row and a data-counter journal row, the core routing it by its sign into the added or the freed columns (DX-ADR-004), so a parcel replicating to three destinations counts against all three and one that removes counts against what it frees.
 - A `BadInput` is one the packer cannot use at all; the core moves it to `Problematic` with the reason (DX-ADR-005).
 - A `DelayInput` sets `DelayedUntil` on the inputs and changes nothing else; they are offered to the packer again after that time.
 - `flush` asks the packer to make parcels out of groups it would otherwise hold back as too small (DX-ADR-005).
@@ -255,7 +256,7 @@ def run_assignment_packer(
             inputs=[input.id],
             metadata={"destination": destination},
             request=replicate_request(input.lfn, destination),
-            deltas=[StorageDelta(se=destination, delta=input.lfn_size)],
+            deltas=[StorageDelta(se=destination, files=1, bytes=input.lfn_size)],
         )
 ```
 
