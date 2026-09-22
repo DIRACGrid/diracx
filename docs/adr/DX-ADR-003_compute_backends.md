@@ -125,4 +125,4 @@ Data-transformation parcels are executed by **data backends** as **requests** (c
 - **Push vs pull details.** The exact callback protocol, the retrieval cadence while `Completing`, and idempotency guarantees on broker restart (per DX-ADR-001) need specifying.
 - **Backend capability negotiation.** How a transformation discovers whether its backend pushes, pulls, or both, and how the backend's raw status is surfaced, is open.
 - **interCEde interface mapping.** The concrete mapping of the backend contract onto interCEde's submit/monitor/retrieve API (and its `JobResource` model) needs pinning as interCEde stabilises.
-- **A native request vocabulary.** Data parcels carry DIRAC RMS request bodies. What replaces them is tracked in DX-ADR-008, with which it is shared.
+- **A native request vocabulary.** Data parcels carry DIRAC RMS request bodies. What replaces them is tracked in DX-ADR-008, and is to be settled in an ADR for the request system.

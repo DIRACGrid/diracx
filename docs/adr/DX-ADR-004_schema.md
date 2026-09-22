@@ -195,7 +195,10 @@ erDiagram
     DataParcelDeltas {
         uuid ParcelID PK "also FK"
         varchar StorageElement PK "one row per storage element"
-        bigint Bytes "signed"
+        bigint FilesAdded "written here"
+        bigint BytesAdded "written here"
+        bigint FilesFreed "freed here"
+        bigint BytesFreed "freed here"
     }
     UserParcels {
         uuid ParcelID PK "also FK"
@@ -253,16 +256,20 @@ erDiagram
         uuid7 TransformationID PK "also FK"
         enum Status PK "parcel status"
         varchar StorageElement PK "one row per storage element"
-        bigint LFNCount "signed"
-        bigint LFNSize "signed"
+        bigint LFNCountAdded
+        bigint LFNSizeAdded
+        bigint LFNCountFreed
+        bigint LFNSizeFreed
     }
     DataParcelsCounterJournal {
         bigint JournalID PK
         uuid7 TransformationID FK
         enum Status
         varchar StorageElement
-        bigint LFNCountDelta
-        bigint LFNSizeDelta
+        bigint LFNCountAddedDelta
+        bigint LFNSizeAddedDelta
+        bigint LFNCountFreedDelta
+        bigint LFNSizeFreedDelta
         varchar BatchTag "claim batch"
     }
     TransformationLog {
@@ -593,7 +600,10 @@ CREATE TABLE DataParcels (
 CREATE TABLE DataParcelDeltas (
     ParcelID       BINARY(16)  NOT NULL,
     StorageElement VARCHAR(64) NOT NULL,         -- one row per storage element
-    Bytes          BIGINT      NOT NULL,         -- signed: added if positive, freed if negative
+    FilesAdded     BIGINT      NOT NULL,         -- written here; never negative
+    BytesAdded     BIGINT      NOT NULL,
+    FilesFreed     BIGINT      NOT NULL,         -- freed here; never negative
+    BytesFreed     BIGINT      NOT NULL,
     PRIMARY KEY (ParcelID, StorageElement),
     FOREIGN KEY (ParcelID) REFERENCES DataParcels (ParcelID),
     INDEX (StorageElement)
@@ -601,7 +611,7 @@ CREATE TABLE DataParcelDeltas (
 ```
 
 - **Compute parcels** run the process named by their `ComputeParcels` row with its `Parameters` and `Requirements`, written at creation and read once at submission. `ProcessID` sits on the facet for both origins: copied from `ComputeTransformations` for a transformation parcel, so each parcel records what it ran, and set from the submitted document for a user parcel. `ResolvedHintsID` records the configuration-service values the dispatcher resolved for it, which together with the process hash is what the materialised payload is keyed on (DX-ADR-003).
-- **Data parcels** carry a `Request`, the copy and remove operations the packer decided on. Its vocabulary is the DIRAC Request Management System's for now ([DX-ADR-008](DX-ADR-008_data_management.md)), so the data backend hands it over rather than translating it. What the request costs each storage element is declared separately by the packer (DX-ADR-006) and stored as one `DataParcelDeltas` row per storage element, a signed byte count that is positive where the request puts data and negative where it frees it, so that the core can drive the counters below and answer "how much is this transformation about to add to CERN-TAPE" without parsing an RMS body it does not otherwise understand.
+- **Data parcels** carry a `Request`, the copy and remove operations the packer decided on. Its vocabulary is the DIRAC Request Management System's for now ([DX-ADR-008](DX-ADR-008_data_management.md)), so the data backend hands it over rather than translating it. What the request costs each storage element is declared separately by the packer (DX-ADR-006) and stored as one `DataParcelDeltas` row per storage element, holding what the request writes there and what it frees there as separate file and byte counts, so that the core can drive the counters below and answer "how much is this transformation about to add to CERN-TAPE" without parsing an RMS body it does not otherwise understand.
 - **Recovery parcels** are transformation parcels born `Done` (DX-ADR-003).
 - **User submission** creates a parcel (base, `UserParcels`, `ComputeParcels`) in `Unassigned`. Resubmission after a failure is a new parcel; parcels are never retried, for users too. The WMS `Jobs` table is internal to the `diracx-pilot` backend, which creates a `Jobs` row per parcel of either origin.
 - There is no origin column: a transformation parcel has a `TransformationID`, a user parcel has a `UserParcels` row, and exactly one of the two holds. `Kind` is denormalised from the transformation (user parcels are always `Compute`) so that claiming never joins. That invariant, the origin invariant, and "a `ComputeParcels` row exists exactly when `Kind = Compute`, a `DataParcels` row exactly when `Kind = Data`" are enforced in `diracx-logic`, like VO.
@@ -691,14 +701,14 @@ CREATE TABLE ParcelOutputs (
 
 Monitoring needs "how many inputs and parcels of transformation X are in status Y" constantly, and the drain guard of DX-ADR-005 reads the same numbers to decide that a member has no live work left. Both counters are **journalled counters** ([DX-ADR-009](DX-ADR-009_counters.md)): every transition appends signed deltas to a journal in the same transaction as the status change, a background aggregator folds them into a counter table, and a read sums both halves, so the answer is exact whatever the aggregation lag and no two writers share a row to lock. DX-ADR-009 has the table shapes, the fold and the operational rules; what this schema declares is the key and the measures of each.
 
-| Counter                  | Key                                            | Measures              |
-| ------------------------ | ---------------------------------------------- | --------------------- |
-| `TransformationCounters` | `TransformationID`, `Entity`, `Status`         | `Count`               |
-| `DataParcelsCounters`    | `TransformationID`, `Status`, `StorageElement` | `LFNCount`, `LFNSize` |
+| Counter                  | Key                                            | Measures                                                         |
+| ------------------------ | ---------------------------------------------- | ---------------------------------------------------------------- |
+| `TransformationCounters` | `TransformationID`, `Entity`, `Status`         | `Count`                                                          |
+| `DataParcelsCounters`    | `TransformationID`, `Status`, `StorageElement` | `LFNCountAdded`, `LFNSizeAdded`, `LFNCountFreed`, `LFNSizeFreed` |
 
 - **Inputs and parcels share one counter**, discriminated by `Entity`, because the shapes are identical and there is no polymorphic reference to break. `Status` is then the union of the two state machines, so the column admits combinations the logic never writes, such as an `Input` row in `Completing`; what it still rules out is a status belonging to neither machine.
-- **The data counters are a second counter** rather than extra measures on the first, because their key carries a storage element a compute transformation has no use for and their measures are signed net changes rather than populations. The task that runs the packer journals the `Unassigned` deltas in the transaction that creates the data parcel, one per `DataParcelDeltas` row, each carrying that row's `Bytes` as the `LFNSize` delta and the number of distinct LFNs among the parcel's inputs, signed to match, as the `LFNCount` delta; every later parcel transition moves the same quantities from the old status to the new.
-- **One row per storage element rather than per set of them.** The packer declares what its request costs each storage element (DX-ADR-006), so a parcel replicating to three destinations counts against each of the three and a parcel that removes counts a negative against what it frees. The question an operator actually asks, how much space one named storage element is about to gain or lose, is then a primary-key lookup rather than a scan for every set that contains it. Two prices come with it. Summing the table over storage elements counts a multi-destination parcel once per destination, which is the right answer for transfers and the wrong one for parcels, and parcel counts come from `TransformationCounters`. And because the measures are signed, a transformation that both adds to and frees one storage element nets out there, so the counter says how much space it needs rather than how much traffic it generates.
+- **The data counters are a second counter** rather than extra measures on the first, because their key carries a storage element a compute transformation has no use for and their measures are quantities moved rather than populations. The task that runs the packer journals the `Unassigned` deltas in the transaction that creates the data parcel, one per `DataParcelDeltas` row, each carrying that row's four columns straight across; every later parcel transition moves the same quantities from the old status to the new.
+- **One row per storage element, with the two directions as separate measures.** The packer declares what its request costs each storage element (DX-ADR-006), so a parcel replicating to three destinations counts against each of the three and one that removes counts under the freed measures of what it frees. Keeping the directions apart as measures rather than as a fourth part of the key is what lets one primary-key lookup answer all three questions an operator asks of a storage element: what is about to be written to it, what is about to be freed on it, and the net of the two. A direction in the key would make the net two rows subtracted, and would be single-valued in almost every row, since a parcel rarely writes and frees at the same storage element. The price that remains is that summing the table over storage elements counts a multi-destination parcel once per destination, which is the right answer for transfers and the wrong one for parcels; parcel counts come from `TransformationCounters`.
 - **The cleanup does not maintain the counters.** The last archiving or cleaning action deletes a transformation's input and parcel rows together with its counter and journal rows (DX-ADR-006), so it journals no deltas for the statuses it empties.
 
 ### `TransformationLog` / `WorkgraphLog`
@@ -749,7 +759,7 @@ The transformation state machine, including scouting, the drain into `Finalizing
 - **LFN as a column, everything else JSON.** The LFN is the one field queried *across* transformations (data-management consistency, "what used this file", cleanup) and needs an index and joins; masks and correlated metadata are read only by code that already knows the transformation's conventions. `LFNSize` joins it as a column because the data counters sum it for every parcel.
 - **Parcel outputs as rows, owned by the producer.** An earlier draft realised each internal edge as a metadata-catalogue query generated from the declaration, which made every workgraph depend on an experiment catalogue that can express "the outputs of that transformation". The draft after it recorded each file once per consuming edge, with a column the consumer set when it fed the row, so that exactly-once feeding was a property of the schema. That needed the consumers to be known when the producer finished, which a transformation added to a running workgraph breaks, and it multiplied the rows by the fan-out. Recording each file once, under its declared output, and feeding consumers through the ordinary feeder bookmark keeps the producer ignorant of its readers. Exactly-once feeding is then the bookmark's contract, with the reconciliation at `Finalizing` as the backstop, the same as for a catalogue feeder.
 - **Actions as rows rather than a JSON column.** An ordered list whose entries each accumulate a result is a table. Keeping it in JSON meant the action runner, the operator editing a binding and the reset on state entry all rewrote one column, so results raced and the previous message was lost; a row per action makes recording one a single update and gives each its own timestamp, message and author. `Hooks` stays JSON because the bindings left in it name one hook and carry no result; whether it stays a mapping or becomes a column per hook is open.
-- **Journalled counters.** Why the counts are journalled rather than maintained in place is DX-ADR-009's argument. What belongs here is the choice of keys: input and parcel counts share one counter, discriminated by `Entity`, because the shapes are identical and there is no polymorphic reference to break, while the data counts are a second counter because their key carries a storage element and their measures are signed net changes, neither of which a compute transformation has a use for.
+- **Journalled counters.** Why the counts are journalled rather than maintained in place is DX-ADR-009's argument. What belongs here is the choice of keys: input and parcel counts share one counter, discriminated by `Entity`, because the shapes are identical and there is no polymorphic reference to break, while the data counts are a second counter because their key carries a storage element and their measures are quantities added and freed, neither of which a compute transformation has a use for.
 - **One dispatch path for users and transformations.** A user job is a parcel, so the dispatcher is the single entry point to execution and users reach every backend; the WMS `Jobs` table becomes internal to the `diracx-pilot` backend. The heavy payload stays off the swept row entirely: the process and requirement set are content-addressed hashes, and the per-run `Parameters` live in the `ComputeParcels` facet, written at creation and read at submission.
 - **Polymorphic transformations and parcels.** Joined-table inheritance suits both: kind-specific columns live in facet tables with real `NOT NULL` constraints, while every column the sweeps touch stays on the base, so the hot paths never join. An earlier draft kept parcels uniform with a shared `JobSpecs` payload table; once processes and requirement sets became content-addressed, the spec row held nothing but pointers, and the facets now carry them directly. The transformation reference is a nullable column on the base rather than an origin subtype, so per-transformation sweeps read one table.
 - **One identifier table per backend.** A shared `ExternalID` column would have carried a slot UUID, a server plus glidein id and a legacy integer job id in one untyped string with one index. A table per backend gives each identifier its own type and its own unique index, and a backend that needs two columns to name a job has them.
