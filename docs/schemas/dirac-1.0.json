@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://diracx.io/schemas/dirac-1.0.json",
+  "title": "DiracX CWL hints, schema version 1.0",
+  "description": "The dirac: hint vocabulary of DX-ADR-007, as a hints object keyed by class. The map form is canonical: a class then appears at most once, and this schema is plain properties rather than a contains over a discriminated list. The list form CWL also allows is accepted and means the same thing. This version is provisional: DX-ADR-007 lists the schema as an open issue, and the documents in docs/assets/examples are the vocabulary it is kept in step with.",
+  "type": "object",
+  "properties": {
+    "dirac:Workgraph": { "$ref": "#/$defs/workgraph" },
+    "dirac:Transformation": { "$ref": "#/$defs/transformation" },
+    "dirac:Job": { "$ref": "#/$defs/job" }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "workgraph": {
+      "title": "dirac:Workgraph",
+      "description": "On a top-level Workflow: the workgraph. Every step of it must carry dirac:Transformation.",
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "description": "The version of this hint vocabulary the document is written against.",
+          "type": "string",
+          "enum": ["1.0"]
+        },
+        "type": {
+          "description": "The VO behaviour type, which is what the configuration service resolves defaults against: MCSimulation, Sprucing, Stripping, AnalysisProduction.",
+          "type": "string"
+        },
+        "target": {
+          "description": "What the workgraph is for: the workgraph's Active hook disables every external feeder once this output holds this many files, so a feeder's request is only an upper bound (DX-ADR-006).",
+          "type": "object",
+          "required": ["output"],
+          "properties": {
+            "output": { "description": "The id of a workflow output.", "type": "string" },
+            "files": { "description": "Files in that output that end the workgraph.", "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "output_sandbox": {
+          "description": "Glob patterns whose matches the job wrapper persists to the output sandbox. Sandbox capture is not dataflow: a file matching one of these never travels an edge and never becomes a declared output.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "hooks": { "$ref": "#/$defs/workgraphHooks" },
+        "approving": {
+          "description": "The action list the workgraph runs in Approving, once the scout has drained and before it runs in full. This list is also what makes the workgraph scout: it scouts when there is something to judge and a member the position rule leaves running. ManualApproval is the one that waits for a person: it is Failed until someone signs it off (DX-ADR-006).",
+          "type": "array",
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "data_management": {
+          "description": "Replications, removals and archivals: nodes of the graph that runs, without being steps of the document, since CWL dataflow has no notion of copying or removing a file.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/dataTransformation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dataTransformation": {
+      "title": "a data-management declaration",
+      "type": "object",
+      "required": ["operation", "files"],
+      "properties": {
+        "id": { "description": "The transformation's name, as an operator will see it.", "type": "string" },
+        "operation": { "description": "What its parcels ask the data backend to do.", "enum": ["replicate", "remove", "archive"] },
+        "files": {
+          "description": "What it acts on: a step output as step/output, a declared workflow output, or a workflow input with a dirac:Feeder, as when the files staged to a buffer are removed once the consuming step has processed them.",
+          "type": "string"
+        },
+        "destination": { "description": "Where a replication puts them.", "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+        "storage": { "description": "Which copy a removal takes, where the file is at several storages.", "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+        "after": {
+          "description": "Transformations that must have processed a file before this one takes it. A removal against a workgraph input waits for the step that reads the same query, which is a wait pointing backwards and perfectly legal.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "initial_state": {
+          "description": "How it starts when the workgraph does, and the one override on the rule that derives this from position in the graph: a member runs during the scout if it is a compute step or an ancestor of one, and is held until the workgraph is approved otherwise. Active puts it in the scout whatever its position; Stopped holds it back until the workgraph is approved; Paused holds it until an operator starts it (DX-ADR-005).",
+          "enum": ["Active", "Stopped", "Paused"]
+        },
+        "packer": { "$ref": "#/$defs/packer" },
+        "actions": { "$ref": "#/$defs/actionLists" },
+        "output_sandbox": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "transformation": {
+      "title": "dirac:Transformation",
+      "description": "On a step: the transformation it becomes. Every field is optional, so dirac:Transformation: {} is a transformation with everything defaulted, but its presence is required — a bare step is a submission-time error (DX-ADR-007).",
+      "type": "object",
+      "properties": {
+        "packer": { "$ref": "#/$defs/packer" },
+        "driving_input": {
+          "description": "Which of the step's inputs is the pool, where more than one of them drives it. The rest become the packer's join or the partner it looks up.",
+          "type": "string"
+        },
+        "after": {
+          "description": "Transformations that must have processed an input before this one takes it, such as the staging replication that puts a file on the buffer this step reads.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "initial_state": {
+          "description": "How it starts when the workgraph does, and the one override on the rule that derives this from position in the graph: a member runs during the scout if it is a compute step or an ancestor of one, and is held until the workgraph is approved otherwise. Active puts it in the scout whatever its position; Stopped holds it back until the workgraph is approved; Paused holds it until an operator starts it (DX-ADR-005).",
+          "enum": ["Active", "Stopped", "Paused"]
+        },
+        "hooks": { "$ref": "#/$defs/transformationHooks" },
+        "actions": { "$ref": "#/$defs/actionLists" },
+        "output_sandbox": { "description": "Patterns to add to the workgraph's, for this step alone.", "type": "array", "items": { "type": "string" } },
+        "requirements_template": {
+          "description": "What its parcels ask of a site: priority, output storage element, and what EstimateResourceUsage writes back once the scout has measured it.",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "feeder": {
+      "title": "dirac:Feeder",
+      "description": "On a workflow input parameter, directly, as an extension field: CWL gives input parameters no hints slot, and the feeder is a property of where the inputs come from rather than of how the job runs. Inputs arriving from outside the workgraph carry one; everything else is a job parameter.",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "description": "The feeder plugin: a metadata query, the ancestors of another input, or a generator of seeds.", "type": "string" },
+        "args": { "description": "The plugin's arguments, which are its own vocabulary: the query, the run range, the events asked for, and the sample it takes during a scout \u2014 scouting_events for a seed feeder, scouting_fraction for a catalogue one (DX-ADR-006).", "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "packer": {
+      "title": "the packer",
+      "description": "How inputs are grouped into parcels: a plugin and its arguments (DX-ADR-006).",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "description": "The packer plugin: PerInput, BySize, ByRun, ByGroupSizeRun, AncestorLookup.", "type": "string" },
+        "args": { "description": "Its arguments. group_size is the one every packer here reads.", "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "workgraphHooks": {
+      "title": "the workgraph's hook bindings",
+      "description": "Resolved from the configuration service against the workgraph's type; what is written here overrides that resolution for this document. A hook returns an operation and records no result, which is what separates it from an action (DX-ADR-006).",
+      "type": "object",
+      "properties": {
+        "ScoutingToApproving": { "description": "Runs while Scouting and decides whether enough has been done, or extends the scout with new feeder arguments. Its args are its own vocabulary, and a hook that climbs a ladder of samples states the stages in the feeder's own unit.", "$ref": "#/$defs/hook" },
+        "Active": { "description": "Runs while Active and governs the feeders of the members.", "$ref": "#/$defs/hook" }
+      },
+      "additionalProperties": false
+    },
+    "transformationHooks": {
+      "title": "a transformation's hook bindings",
+      "description": "Resolved from the configuration service against the workgraph's type; what is written here overrides that resolution for this step (DX-ADR-006).",
+      "type": "object",
+      "properties": {
+        "Active": { "description": "Runs while the transformation is Active and returns one operation for it, or none.", "$ref": "#/$defs/hook" },
+        "HandleFailedInput": { "description": "Decides the fate of each Failed input: Unassigned, Split or Problematic.", "$ref": "#/$defs/hook" }
+      },
+      "additionalProperties": false
+    },
+    "actionLists": {
+      "title": "the lifecycle action lists",
+      "description": "A transformation's action lists, one per state that runs one. Three of the four lists of DX-ADR-006 are here; the fourth is the workgraph's approving (DX-ADR-005, DX-ADR-006).",
+      "type": "object",
+      "properties": {
+        "Finalizing": { "description": "Run in Finalizing, once the workgraph drains, upstream members first.", "$ref": "#/$defs/actions" },
+        "Archiving": { "description": "Run in Archiving, after Completed.", "$ref": "#/$defs/actions" },
+        "Cleaning": { "description": "Run in Cancelling, after a cancellation.", "$ref": "#/$defs/actions" }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "title": "an action list",
+      "description": "Actions run in order, each recording its own result. Entering the state resets the list's results (DX-ADR-006).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "hook": {
+      "title": "a hook binding",
+      "description": "The hook plugin to run and the arguments it is given. One per extension point, returning an operation rather than a result (DX-ADR-006).",
+      "type": "object",
+      "required": ["hook"],
+      "properties": {
+        "hook": { "description": "The hook plugin to run.", "type": "string" },
+        "args": { "description": "Its arguments.", "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "title": "an action",
+      "description": "One entry of a list: the action plugin and the arguments it is given, in the form a feeder and a packer are named (DX-ADR-006).",
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": { "description": "The action plugin to run.", "type": "string" },
+        "args": { "description": "Its arguments.", "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "job": {
+      "title": "dirac:Job",
+      "description": "On a CommandLineTool or Workflow that is a standalone user job rather than a workgraph.",
+      "type": "object",
+      "properties": {
+        "output_sandbox": { "type": "array", "items": { "type": "string" } },
+        "requirements_template": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

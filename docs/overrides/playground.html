@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+<!--
+  The playground (docs/playground.md) is a tool rather than a page of prose: the editor, the diagnostics and the workgraph
+  running beside them want the whole window, and the banner, the header and the tabs are a third of a phone's. Everything
+  the theme puts above and below a page is left out of this one, and the way back to the documentation is a link at the
+  right of the tool's own toolbar.
+
+  The same is done again in CSS, on the body class the playground sets while it is mounted: instant loading swaps the
+  content of a page without swapping the header above it, so a reader arriving from another page would otherwise keep
+  that page's chrome.
+-->
+
+{% block announce %}{% endblock %}
+{% block header %}{% endblock %}
+{% block tabs %}{% endblock %}
+{% block footer %}{% endblock %}
+
+<!--
+  The theme's own palette switch, rendered from the palette in mkdocs.yml and moved into the playground's toolbar by
+  playground.js, which also drives it: the theme binds the palette it finds inside its header, and this page has none.
+  What the switch writes is the theme's own `__palette` entry in local storage, so the scheme a reader picks here is the
+  scheme the documentation opens in, and the other way round.
+-->
+{% block container %}
+  <div class="wgpg-palette" data-wgpg-palette hidden>
+    {% include "partials/palette.html" %}
+  </div>
+  {{ super() }}
+{% endblock %}
