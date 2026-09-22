@@ -6,7 +6,6 @@
 - **Date:** [YYYY-MM-DD]
 - **Status:** [Draft | Accepted | Rejected | Deprecated by DX-ADR-YYY | Supersedes DX-ADR-XXX]
 - **Decision Maker(s):** [Name(s)]
-- **Stakeholders:** [Name(s) / Role(s), only used for decisions which affect a subset of communities]
 
 ## Abstract
 
