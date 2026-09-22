@@ -175,6 +175,15 @@ ca-policy-lcg = "*"  # Grid CA certificates (services need this)
 tini = "*"
 ca-policy-lcg = "*"
 
+# Feature for rendering the ADRs as printable PDFs
+[feature.adr-pdf.dependencies]
+python = "*"
+pandoc = "*"
+tectonic = "*"
+[feature.adr-pdf.tasks.adr-pdf]
+cmd = "python scripts/generate_adr_pdf.py"
+description = "Render ADRs as A4 PDFs in adr-pdfs/, e.g. `pixi run adr-pdf 5` or `pixi run adr-pdf 2 3 4 --combined`"
+
 # Features for running pre-commit hooks
 [feature.pre-commit.dependencies]
 pre-commit = "*"
@@ -265,6 +274,7 @@ mkdocs = {features = ["mkdocs"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
+adr-pdf = {features = ["adr-pdf"], no-default-feature = true}
 gha-lint = {features = ["gha-lint"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
