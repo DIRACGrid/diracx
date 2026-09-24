@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/DIRACGrid/diracx/compare/v0.4.1...v0.5.0) (2026-09-24)
+
+
+### Features
+
+* render the ADRs as printable PDFs ([#1038](https://github.com/DIRACGrid/diracx/issues/1038)) ([fe50254](https://github.com/DIRACGrid/diracx/commit/fe50254992deaadb731edb85b805995562628aa5))
+* support global OS prefix ([#922](https://github.com/DIRACGrid/diracx/issues/922)) ([6187929](https://github.com/DIRACGrid/diracx/commit/6187929d3b3140cd05f12144a3fee0d37d5e2403))
+
+
+### Bug Fixes
+
+* **pre-commit:** exclude markdown from ruff-format ([#1035](https://github.com/DIRACGrid/diracx/issues/1035)) ([5da9599](https://github.com/DIRACGrid/diracx/commit/5da95994c722241e2609fe76d0477abdbf78afc6))
+
 ## [0.4.1](https://github.com/DIRACGrid/diracx/compare/v0.4.0...v0.4.1) (2026-09-15)
 
 
