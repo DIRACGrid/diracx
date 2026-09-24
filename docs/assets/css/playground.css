@@ -1,0 +1,429 @@
+/* Workgraph playground (docs/assets/js/playground.js).
+
+   The tokens and the control sizes are the simulator's, in docs/assets/css/workgraph-sim.css: the page the reader is on
+   embeds the widget, and a toolbar of a different height or a border of a different weight would read as two products. */
+
+/* The page fills what is under Material's header. Only this page: the class is put on the body when the playground
+   mounts and taken off when it is disposed, so nothing here touches any other page of the site. */
+body.wgpg-page .md-main__inner { margin: 0; max-width: none; }
+body.wgpg-page .md-content { max-width: none; min-width: 0; }
+body.wgpg-page .md-content__inner { margin: 0; padding: 0; }
+body.wgpg-page .md-content__inner::before { display: none; }
+body.wgpg-page .md-footer { display: none; }
+/* The page's own template (docs/overrides/playground.html) leaves the banner, the header and the tabs out, and this does
+   it again for a reader who arrived by instant loading, which swaps a page's content without swapping the chrome above
+   it. The class is on the body only while the playground is mounted, so navigating away brings all of it back. */
+body.wgpg-page .md-banner,
+body.wgpg-page .md-header,
+body.wgpg-page .md-tabs,
+body.wgpg-page .md-content__button { display: none; }
+/* Out of sight and still read out: the title Material renders for a page with no first-level heading of its own, which the
+   page's own toolbar names it instead, and the live region that carries what the toolbar no longer says. Both are worth the
+   lines they cost to a reader who is not looking at the page, and neither is worth the space on it. */
+body.wgpg-page .md-content__inner > h1, .wgpg-quiet {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* [hidden] loses to a display rule of our own, which is how an overlay comes back from the dead */
+.wgpg [hidden] { display: none !important; }
+
+/* The mount sits inside .md-typeset, whose list, heading and code rules are written for prose. Coming later settles a tie
+   and nothing else, so a reset has to match the theme's specificity to reach it: `.md-typeset ul li` is (0,1,2) and
+   `[dir=ltr] .md-typeset ul li`, which carries the indent, is (0,2,2), where a bare `.wgpg li` is (0,1,1) and loses
+   outright. `.md-typeset .wgpg ul li` ties with the second and wins on order. What hid this was that half the reset did
+   work: `.wgpg ul { list-style: none }` is (0,1,1) and really does tie with `.md-typeset ul`, so the bullets went and the
+   list looked reset while every row kept half an em under it and two ems of indent. */
+.wgpg ul, .md-typeset .wgpg ul { margin: 0; padding: 0; list-style: none; }
+.wgpg li, .md-typeset .wgpg ul li { margin: 0; }
+.wgpg li::before, .wgpg li::marker { content: none; }
+.wgpg pre, .wgpg code { margin: 0; background: transparent; box-shadow: none; }
+
+.wgpg {
+  --wgpg-top: 6.4rem; /* measured off the real header, since it depends on the tabs and on the viewport */
+  --wgpg-split: 46%;
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--wgpg-top));
+  min-height: 24rem;
+  color: var(--wg-ink);
+  background: var(--wg-bg);
+  font-family: var(--wg-sans);
+  font-size: var(--wg-t-body);
+}
+
+/* ---- the toolbar ---- */
+
+.wgpg-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  border-bottom: 0.5px solid var(--wg-accent);
+  background: var(--wg-surface-2);
+}
+.wgpg-field { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--wg-dim); }
+/* the page names itself here, since it carries no header of the theme's: the lockup of `workgraph-sim.css`, which the
+   maximised widget wears too, and nothing of its own but where it stands in the bar */
+.wgpg-brand { flex: 0 0 auto; }
+
+/* the right end: the theme's palette switch, and the way back to the documentation */
+.wgpg-right-group { display: inline-flex; align-items: center; gap: 0.4rem; flex: 0 0 auto; }
+.wgpg-docs, .md-typeset .wgpg-docs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 26px;
+  padding: 0 8px;
+  color: var(--wg-accent);
+  background: transparent;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.wgpg-docs:hover { background: var(--wg-accent-soft); }
+.wgpg-docs:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 1px; }
+.wgpg-docs svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The theme's palette switch, moved into the toolbar from the page template. Material styles it for a coloured header
+   bar, so it is given the size and the border every other control here wears. */
+.wgpg-palette-slot { display: inline-flex; }
+.wgpg-palette, .wgpg-palette form { display: inline-flex; margin: 0; }
+.wgpg .wgpg-palette label.md-header__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  color: var(--wg-ink);
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  cursor: pointer;
+}
+.wgpg .wgpg-palette label.md-header__button:hover { background: var(--wg-accent-soft); }
+.wgpg .wgpg-palette label.md-header__button svg { width: 14px; height: 14px; fill: currentColor; }
+.wgpg .wgpg-palette input.md-option:focus-visible + label { outline: 2px solid var(--wg-accent); outline-offset: 1px; }
+.wgpg-btn, .wgpg-setting input {
+  height: 26px;
+  padding: 0 8px;
+  color: var(--wg-ink);
+  background: transparent;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  font: inherit;
+  font-size: var(--wg-t-body);
+}
+.wgpg-btn { cursor: pointer; }
+.wgpg-btn:hover:not([disabled]) { background: var(--wg-accent-soft); }
+.wgpg-btn:focus-visible, .wgpg-gutter:focus-visible,
+.wgpg-problems-head:focus-visible, .wgpg-drawer-head:focus-visible, .wgpg-problem button:focus-visible, .wgpg-area:focus-visible, .wgpg-setting input:focus-visible {
+  outline: 2px solid var(--wg-accent);
+  outline-offset: 1px;
+}
+.wgpg-btn-accent { color: var(--wg-accent); background: var(--wg-accent-soft); font-weight: 600; }
+.wgpg-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.wgpg-divider { width: 0.5px; height: 18px; background: var(--wg-accent); opacity: 0.6; margin: 0 0.15rem; flex: 0 0 auto; }
+.wgpg-status { margin-left: auto; color: var(--wg-dim); }
+.wgpg-status.loud { color: var(--wg-red); }
+
+/* ---- the split ---- */
+
+.wgpg-split { display: flex; flex: 1 1 auto; min-height: 0; }
+.wgpg-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.wgpg-left { flex: 0 0 var(--wgpg-split); }
+.wgpg-right { flex: 1 1 auto; border-left: 0.5px solid var(--wg-line); }
+.wgpg-gutter {
+  flex: 0 0 7px;
+  cursor: col-resize;
+  background: var(--wg-line);
+  border: 0;
+  touch-action: none;
+}
+.wgpg-gutter:hover, .wgpg-gutter:focus-visible { background: var(--wg-accent); }
+
+/* ---- the editor ---- */
+
+/* The editor is clipped to its pane. An editor that has not measured itself since the window changed is drawing at the
+   wrong size for a moment, and without this it draws that moment over the workgraph beside it. */
+.wgpg-editor { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
+.wgpg-area {
+  flex: 1 1 auto;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  resize: none;
+  color: var(--wg-ink);
+  background: var(--wg-card);
+  font-family: var(--wg-mono);
+  font-size: var(--wg-t-body);
+  line-height: 1.55;
+  tab-size: 2;
+}
+.wgpg-monaco { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; }
+
+/* ---- the problems ---- */
+
+.wgpg-problems { flex: 0 0 auto; max-height: 40%; display: flex; flex-direction: column; border-top: 0.5px solid var(--wg-line); background: var(--wg-surface-2); }
+.wgpg-problems-head, .wgpg-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 6px 14px;
+  color: var(--wg-dim);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--wg-t-head);
+  cursor: pointer;
+  text-align: left;
+}
+.wgpg-problems.has-errors .wgpg-problems-label { color: var(--wg-red); }
+.wgpg-problems-list { margin: 0; padding: 0 0 6px; list-style: none; overflow: auto; }
+.wgpg-problem button {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 3px 14px;
+  color: var(--wg-ink);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--wg-t-body);
+  text-align: left;
+  cursor: pointer;
+}
+.wgpg-problem button:hover { background: var(--wg-accent-soft); }
+.wgpg-problem-line { flex: 0 0 2.5em; text-align: right; color: var(--wg-dim); }
+.wgpg-problem-rule { flex: 0 0 auto; color: var(--wg-dim); }
+.wgpg-error .wgpg-problem-rule { color: var(--wg-red); }
+.wgpg-warning .wgpg-problem-rule { color: var(--wg-amber); }
+.wgpg-problem-text { flex: 1 1 auto; }
+
+/* ---- the workgraph, and the drawers beside it ---- */
+
+/* The workgraph has the right pane: it is what the page is for, and what was parsed and the run settings are a report on
+   the document and a form for the run. They were three tabs once, which said they were three peers and put two diagnostics
+   above the thing they are about; each is now a drawer at the foot of the pane it belongs to, closed until it is asked for,
+   and the space the strip took is the picture's. */
+.wgpg-workgraph { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; position: relative; }
+.wgpg-sim { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 14px; }
+/* the simulator draws its own card; inside the pane it is the pane */
+.wgpg-sim .wgsim { margin: 12px 0; }
+.wgpg-workgraph.stale .wgpg-sim { opacity: 0.35; filter: grayscale(0.6); pointer-events: none; }
+
+/* a drawer is shut by default and takes only its head; open, it takes what it needs of the pane and scrolls inside that */
+.wgpg-drawer { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; border-top: 0.5px solid var(--wg-line); background: var(--wg-surface-2); }
+.wgpg-drawer.open { flex: 0 1 auto; max-height: 60%; }
+.wgpg-drawer-body { overflow: auto; background: var(--wg-bg); border-top: 0.5px solid var(--wg-line); }
+.wgpg-stale {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+.wgpg-stale-why { color: var(--wg-ink); max-width: 30em; line-height: 1.6; }
+
+.wgpg-parsed, .wgpg-settings { padding: 12px 14px 24px; }
+.wgpg-parsed h2, .wgpg-settings h2 {
+  margin: 1.2em 0 0.4em;
+  padding: 0;
+  color: var(--wg-accent);
+  font-size: var(--wg-t-head);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 0;
+}
+.wgpg-parsed h2:first-child { margin-top: 0.2em; }
+.wgpg-parsed pre {
+  margin: 0;
+  padding: 8px 10px;
+  overflow: auto;
+  max-height: 22rem;
+  color: var(--wg-ink);
+  background: var(--wg-card);
+  border: 0.5px solid var(--wg-line);
+  border-radius: var(--wg-radius);
+  font-family: var(--wg-mono);
+  font-size: var(--wg-t-meta);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.wgpg-note { margin: 0 0 0.6em; color: var(--wg-dim); line-height: 1.55; }
+.wgpg-note code { font-family: var(--wg-mono); font-size: var(--wg-t-meta); }
+.wgpg-empty { margin: 0; color: var(--wg-dim); font-style: italic; }
+.wgpg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.8rem; margin: 0.8em 0 1.2em; }
+.wgpg-setting { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; }
+.wgpg-setting > span { color: var(--wg-ink); }
+.wgpg-setting small { color: var(--wg-dim); font-size: var(--wg-t-micro); line-height: 1.4; }
+
+/* ---- the library dialog ---- */
+
+/* A closed dialog is display:none in the browser's own stylesheet, which any rule of ours outranks, so the layout is
+   given to the open one alone. */
+.wgpg-library {
+  width: min(46rem, calc(100vw - 2rem));
+  max-height: min(42rem, calc(100dvh - 3rem));
+  padding: 0;
+  overflow: hidden;
+  color: var(--wg-ink);
+  background: var(--wg-bg);
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  font-size: var(--wg-t-body);
+}
+.wgpg-library[open] { display: flex; flex-direction: column; }
+.wgpg-library::backdrop { background: rgba(10, 12, 20, 0.55); }
+.wgpg-library form { display: flex; margin: 0; }
+
+.wgpg-library-head { display: flex; align-items: center; gap: 0.6rem; padding: 11px 14px; border-bottom: 0.5px solid var(--wg-line); background: var(--wg-surface-2); }
+.wgpg-library h2, .md-typeset .wgpg-library h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  color: var(--wg-dim);
+  font-size: var(--wg-t-title);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  border: 0;
+}
+.wgpg-library h2 b { color: var(--wg-ink); font-weight: 600; }
+.wgpg-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--wg-dim);
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: var(--wg-radius);
+  cursor: pointer;
+}
+.wgpg-close:hover { color: var(--wg-ink); background: var(--wg-accent-soft); border-color: var(--wg-accent); }
+.wgpg-close svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+/* What the page is, and then what it can open. The two sections scroll together: the prose is short, and a reader who
+   has read it once wants the examples under it rather than a second pane to find. */
+.wgpg-library-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 16px 16px; }
+.wgpg-library-h3, .md-typeset .wgpg-library-h3 {
+  margin: 1.4em 0 0.4em;
+  padding: 0;
+  color: var(--wg-accent);
+  font-size: var(--wg-t-head);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 0;
+}
+.wgpg-about p, .md-typeset .wgpg-about p { margin: 0 0 0.9em; line-height: 1.6; }
+.wgpg-library b { color: var(--wg-ink); font-weight: 600; }
+.wgpg-library code, .md-typeset .wgpg-library code { padding: 0 3px; background: var(--wg-surface-2); border-radius: 3px; font-family: var(--wg-mono); font-size: var(--wg-t-meta); }
+.wgpg-library a, .md-typeset .wgpg-library a { color: var(--wg-accent); }
+.wgpg-notice {
+  display: flex;
+  gap: 0.6rem;
+  padding: 8px 10px;
+  background: var(--wg-amber-soft);
+  border-left: 2px solid var(--wg-amber);
+  border-radius: 0 var(--wg-radius) var(--wg-radius) 0;
+}
+.wgpg-notice svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; fill: none; stroke: var(--wg-amber); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* the families down the left, the documents of one down the right */
+.wgpg-picker {
+  display: flex;
+  min-height: 13rem;
+  border: 0.5px solid var(--wg-line);
+  border-radius: var(--wg-radius);
+  overflow: hidden;
+}
+.wgpg-cats {
+  flex: 0 0 11.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-right: 0.5px solid var(--wg-line);
+  background: var(--wg-surface-2);
+}
+.wgpg-cat {
+  padding: 6px 9px;
+  color: var(--wg-dim);
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: var(--wg-radius);
+  font: inherit;
+  font-size: var(--wg-t-body);
+  text-align: left;
+  cursor: pointer;
+}
+.wgpg-cat:hover { background: var(--wg-accent-soft); }
+.wgpg-cat[aria-selected="true"] { color: var(--wg-accent); background: var(--wg-bg); border-color: var(--wg-accent); font-weight: 600; }
+.wgpg-items { flex: 1 1 auto; min-width: 0; padding: 8px; }
+.wgpg-cat:focus-visible, .wgpg-close:focus-visible, .wgpg-item:focus-visible, .wgpg-items:focus-visible {
+  outline: 2px solid var(--wg-accent);
+  outline-offset: 1px;
+}
+.wgpg-item-list { display: flex; flex-direction: column; gap: 4px; }
+.wgpg-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 8px 10px;
+  color: var(--wg-ink);
+  background: transparent;
+  border: 0.5px solid var(--wg-line);
+  border-radius: var(--wg-radius);
+  font: inherit;
+  font-size: var(--wg-t-body);
+  text-align: left;
+  cursor: pointer;
+}
+.wgpg-item:hover { background: var(--wg-accent-soft); border-color: var(--wg-accent); }
+/* the one that is open, while the editor still holds it */
+.wgpg-item[aria-current="true"] { color: var(--wg-accent); background: var(--wg-accent-soft); border-color: var(--wg-accent); }
+.wgpg-item-name { font-weight: 600; }
+.wgpg-item-note { color: var(--wg-dim); line-height: 1.5; }
+
+/* ---- a phone ---- */
+
+@media (max-width: 55em) {
+  .wgpg-split { flex-direction: column; }
+  .wgpg-left, .wgpg-right { flex: 1 1 50%; }
+  .wgpg-right { border-left: 0; border-top: 0.5px solid var(--wg-line); }
+  .wgpg-gutter { display: none; }
+  .wgpg-bar { padding: 8px 10px; }
+  /* the example names are long, and the toolbar wraps rather than running off the side of a phone */
+  .wgpg-field { min-width: 0; max-width: 100%; }
+  /* and the picker's two columns are one above the other, the families a row that scrolls sideways */
+  .wgpg-library { max-height: calc(100dvh - 2rem); }
+  .wgpg-library-body { padding: 12px; }
+  .wgpg-picker { flex-direction: column; }
+  .wgpg-cats { flex: 0 0 auto; flex-direction: row; gap: 4px; overflow-x: auto; border-right: 0; border-bottom: 0.5px solid var(--wg-line); }
+  .wgpg-cat { white-space: nowrap; }
+  .wgpg-status { margin-left: 0; }
+  .wgpg-right-group { margin-left: auto; }
+  /* the mark keeps its size and the word goes: 20px is the most compact identity there is, and it is the half that still
+     says what the page is */
+  .wgpg-brand .wg-lockup-name { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wgpg *, .wgpg *::before, .wgpg *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
