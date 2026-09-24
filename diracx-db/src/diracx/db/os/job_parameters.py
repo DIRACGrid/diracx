@@ -49,8 +49,8 @@ class JobParametersDB(BaseOSDB):
     ) -> tuple[int, list[Any]]:
         """bulk_upsert API implementation."""
         transformed = []
+        timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
         for vo, doc_id, document in documents:
-            timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
             document = {"JobID": doc_id, "timestamp": timestamp, **document}
             transformed.append((vo, doc_id, document))
         return await super().bulk_upsert(transformed)
