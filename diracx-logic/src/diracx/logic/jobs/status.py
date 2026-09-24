@@ -165,6 +165,7 @@ async def set_job_statuses(
     # Get the latest time stamps of major status updates
     wms_time_stamps = await job_logging_db.get_wms_time_stamps(found_jobs)
 
+    docs = []
     for res in results:
         job_id = int(res["JobID"])
         current_status = res["Status"]
@@ -222,7 +223,9 @@ async def set_job_statuses(
             if new_application:
                 job_data["ApplicationStatus"] = new_application
 
-            await job_parameters_db.upsert(res["VO"], job_id, {"Status": new_status})
+            docs.append((res["VO"], job_id, {"Status": new_status}))
+
+        await job_parameters_db.bulk_upsert(docs)
 
         for upd_time in update_times:
             source = status_dict[upd_time]["Source"]
