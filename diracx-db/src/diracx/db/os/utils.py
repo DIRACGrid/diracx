@@ -116,7 +116,13 @@ class BaseOSDB(metaclass=ABCMeta):
         for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
             db_name = entry_point.name
             # Get the field value from the OpenSearchDBSettings model
-            if field_value := factory_settings.opensearch_dbs.get(db_name):
+            field_value = factory_settings.opensearch_dbs.get(db_name)
+            if field_value == "" or not field_value:
+                raise Exception(
+                    f"{db_name} found but no URL connection set: please set the "
+                    f"DIRACX_OS_DB_{db_name.upper()} env variable to enable it."
+                )
+            else:
                 try:
                     conn_kwargs[db_name] = json.loads(field_value)
                 except Exception:

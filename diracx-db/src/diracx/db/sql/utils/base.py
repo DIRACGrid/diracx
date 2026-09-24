@@ -135,7 +135,13 @@ class BaseSQLDB(metaclass=ABCMeta):
         for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
             db_name = entry_point.name
             # Get the field value from the SqlDBSettings model
-            if db_url := factory_settings.sql_dbs.get(db_name):
+            db_url = factory_settings.sql_dbs.get(db_name)
+            if db_url == "" or not db_url:
+                raise Exception(
+                    f"{db_name} found but no URL connection set: please set the "
+                    f"DIRACX_DB_URL_{db_name.upper()} env variable to enable it."
+                )
+            else:
                 try:
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
