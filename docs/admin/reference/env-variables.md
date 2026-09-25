@@ -33,6 +33,11 @@ The hashed API key for the legacy exchange endpoint.
 *Optional*, default value: `redis://localhost`
 The url for the redis server to manage tasks
 
+### `DIRACX_FACTORY_OS_GLOBAL_PREFIX`
+
+*Optional*, default value: \`\`
+Global prefix for OpenSearch database indices.
+
 ### `ENABLED_SERVICES`
 
 *Optional*
