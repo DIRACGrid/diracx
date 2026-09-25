@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from sqlalchemy import (
-    Executable,
     and_,
     delete,
     exists,
@@ -107,7 +106,7 @@ class SandboxMetadataDB(BaseSQLDB):
 
     async def sandbox_is_assigned(self, pfn: str, se_name: str) -> bool | None:
         """Check if a sandbox exists and has been assigned."""
-        stmt: Executable = select(SandBoxes.Assigned).where(
+        stmt = select(SandBoxes.Assigned).where(
             SandBoxes.SEName == se_name, SandBoxes.SEPFN == pfn
         )
         result = await self.conn.execute(stmt)

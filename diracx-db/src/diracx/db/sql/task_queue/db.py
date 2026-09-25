@@ -58,7 +58,7 @@ class TaskQueueDB(BaseSQLDB):
         # Get owners in this group and the amount of times they appear
         # TODO: I guess the rows are already a list of tuples
         # maybe refactor
-        return {r[0]: r[1] for r in rows if r}
+        return {r[0]: r[1] for r in rows}
 
     async def get_task_queue_priorities(
         self, group: str, owner: str | None = None
