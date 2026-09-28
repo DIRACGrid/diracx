@@ -11,7 +11,6 @@ class JobParametersDB(BaseOSDB):
         "timestamp": {"type": "date"},
         "PilotAgent": {"type": "keyword"},
         "Pilot_Reference": {"type": "keyword"},
-        "JobGroup": {"type": "keyword"},
         "CPUNormalizationFactor": {"type": "long"},
         "NormCPUTime(s)": {"type": "long"},
         "Memory(MB)": {"type": "long"},
@@ -23,8 +22,6 @@ class JobParametersDB(BaseOSDB):
         "CEQueue": {"type": "keyword"},
         "BatchSystem": {"type": "keyword"},
         "ModelName": {"type": "keyword"},
-        "Status": {"type": "keyword"},
-        "JobType": {"type": "keyword"},
     }
     # TODO: Does this need to be configurable?
     index_prefix = "job_parameters"

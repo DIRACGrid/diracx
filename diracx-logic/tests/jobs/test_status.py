@@ -110,7 +110,7 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     """Patch metadata mixing.
 
     - Attribute only (UserPriority)
-    - Attribute + parameter (JobType)
+    - Attribute only, not duplicated as a parameter (JobType)
     - Parameter only (CPUNormalizationFactor)
     - Attribute (HeartBeatTime)
     - Non identified Metadata (does_not_exist)
@@ -120,7 +120,7 @@ async def test_patch_metadata_updates_attributes_and_parameters(
 
     metadata = {
         "UserPriority": "2",  # attr
-        "JobType": "VerySpecialIndeed",  # attr + param
+        "JobType": "VerySpecialIndeed",  # attr only
         "CPUNormalizationFactor": "10",  # param only
         "HeartBeatTime": hbt.isoformat(),  # attr
         "does_not_exist": "unknown",  # Does not exist should be treated as a job param
@@ -156,11 +156,11 @@ async def test_patch_metadata_updates_attributes_and_parameters(
         sorts=[],
     )
     prow = params_rows[0]
-    assert prow["JobType"] == "VerySpecialIndeed"
     assert prow["CPUNormalizationFactor"] == 10
     assert prow["does_not_exist"] == "unknown"
     assert "UserPriority" not in prow
     assert "HeartBeatTime" not in prow
+    assert "JobType" not in prow
 
 
 def test_collapse_exception_group_prefers_dirac_error(caplog):

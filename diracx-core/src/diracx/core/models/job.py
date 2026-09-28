@@ -75,8 +75,6 @@ class JobParameters(
     payload_pid: int | None = Field(None, alias="PayloadPID")
     ce_queue: str | None = Field(None, alias="CEQueue")
     batch_system: str | None = Field(None, alias="BatchSystem")
-    job_type: str | None = Field(None, alias="JobType")
-    job_status: str | None = Field(None, alias="JobStatus")
 
     @field_validator(
         "cpu_normalization_factor", "norm_cpu_time_s", "total_cpu_time_s", mode="before"
