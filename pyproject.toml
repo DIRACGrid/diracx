@@ -174,7 +174,7 @@ mypy_path = [
   "$MYPY_CONFIG_FILE_DIR/diracx-routers/src",
   "$MYPY_CONFIG_FILE_DIR/diracx-tasks/src",
 ]
-plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+plugins = ["pydantic.mypy"]
 allow_redefinition = true
 explicit_package_bases = true
 # disallow_untyped_defs = true
