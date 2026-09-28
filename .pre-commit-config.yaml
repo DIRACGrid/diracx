@@ -35,7 +35,7 @@ repos:
         exclude: pixi\.lock$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.16.7"
+    rev: "v0.16.9"
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
