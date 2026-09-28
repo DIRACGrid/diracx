@@ -6,6 +6,11 @@
 
 Settings for the Development Configuration that can influence run time.
 
+```
+Attributes:
+    crash_on_missed_access_policy: Whether to fail when an access policy is missed.
+```
+
 ### `DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY`
 
 *Optional*, default value: `False`
