@@ -1,3 +1,5 @@
+"""Helpers for resolving compatible computing platforms."""
+
 from __future__ import annotations
 
 __all__ = ["find_compatible_platforms"]

@@ -12,6 +12,12 @@ def _validate_utc(v: datetime) -> datetime:
     """Reject aware datetimes that are not in UTC.
 
     AwareDatetime already rejects naive datetimes before this runs.
+
+    Args:
+        v: Aware datetime value to validate.
+
+    Returns:
+        The datetime normalized to the UTC timezone.
     """
     if v.utcoffset() != timedelta(0):
         raise ValueError(f"Datetime must be in UTC, got offset {v.utcoffset()}")

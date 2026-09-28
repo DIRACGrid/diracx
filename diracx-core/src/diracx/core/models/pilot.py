@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 
 class PilotStatus(StrEnum):
+    """Lifecycle statuses for a pilot agent."""
+
     SUBMITTED = "Submitted"
     WAITING = "Waiting"
     RUNNING = "Running"
@@ -24,6 +26,15 @@ class PilotRegistrationParams(BaseModel, extra="forbid"):
     The ``max_length`` constraints mirror the column sizes of the legacy
     ``PilotAgents`` table so that oversized values are rejected with a 422
     instead of a backend-dependent database error.
+
+    Attributes:
+        pilot_stamp: Stamp identifying the pilot to create.
+        vo: Virtual organization associated with the pilot.
+        grid_type: Grid type of the pilot.
+        grid_site: Grid site where the pilot is running.
+        destination_site: Site to which the pilot is assigned.
+        pilot_reference: CE job reference of the pilot.
+        pilot_status: Initial status of the pilot.
     """
 
     pilot_stamp: str = Field(
@@ -57,6 +68,17 @@ class PilotMetadata(
     The pilot is identified by its stamp, passed alongside this model
     (e.g. as the mapping key on ``PATCH /api/pilots/metadata``). Every
     field is optional; when absent it is left untouched by an update.
+
+    Attributes:
+        status_reason: Human-readable reason for the current status.
+        status: Current pilot status.
+        benchmark: Pilot benchmark value.
+        destination_site: Destination site.
+        queue: Batch queue name.
+        grid_site: Grid site.
+        grid_type: Grid type.
+        accounting_sent: Whether accounting has been sent for this pilot.
+        current_job_id: ID of the job currently running on this pilot.
     """
 
     status_reason: str | None = Field(

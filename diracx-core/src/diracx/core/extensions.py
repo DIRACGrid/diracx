@@ -1,3 +1,5 @@
+"""Helpers for discovering and selecting DiracX extension entry points."""
+
 from __future__ import annotations
 
 __all__ = [
@@ -41,6 +43,9 @@ def extensions_by_priority() -> list[str]:
     NOTE: This function is duplicated in diracx._client_importer to avoid
     importing diracx in the MetaPathFinder as part of unrelated imports
     (e.g. http.client).
+
+    Returns:
+        Extension module names ordered from lowest to highest priority.
     """
     selected = entry_points().select(group=DiracEntryPoint.CORE)
     if selected is None:
@@ -60,7 +65,15 @@ def extensions_by_priority() -> list[str]:
 
 @cached(cache=LRUCache(maxsize=1024))
 def select_from_extension(*, group: str, name: str | None = None) -> list[EntryPoint]:
-    """Select entry points by group and name, in order of priority."""
+    """Select entry points by group and name, in order of priority.
+
+    Args:
+        group: Entry point group to search.
+        name: Optional entry point name to filter by.
+
+    Returns:
+        Matching entry points ordered by extension priority.
+    """
     selected = entry_points().select(group=group)
     if name is not None:
         selected = selected.select(name=name)
@@ -89,6 +102,9 @@ def supports_extending(
     Args:
         group: The entry point group to search in
         name: The entry point name to search for
+
+    Returns:
+        A decorator that selects an extension implementation for a function.
 
     Example:
         @supports_extending(DiracEntryPoint.RESOURCES, "find_compatible_platforms")
