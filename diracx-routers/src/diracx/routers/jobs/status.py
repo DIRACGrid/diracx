@@ -74,7 +74,6 @@ async def set_job_statuses(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
-    job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
     force: bool = False,
 ) -> SetJobStatusReturn:
@@ -97,7 +96,6 @@ async def set_job_statuses(
             job_db=job_db,
             job_logging_db=job_logging_db,
             task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
             force=force,
         )
     except ValueError as e:
@@ -208,7 +206,6 @@ async def reschedule_jobs(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
-    job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
     reset_jobs: Annotated[bool, Query()] = False,
 ) -> dict[str, Any]:
@@ -227,7 +224,6 @@ async def reschedule_jobs(
         job_db,
         job_logging_db,
         task_queue_db,
-        job_parameters_db,
         reset_jobs=reset_jobs,
     )
 

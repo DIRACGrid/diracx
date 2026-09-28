@@ -27,7 +27,6 @@ from diracx.core.models import (
     JobLoggingRecord,
     JobMetaData,
     JobMinorStatus,
-    JobParameters,
     JobStatus,
     JobStatusUpdate,
     SetJobStatusReturn,
@@ -50,11 +49,6 @@ logger = logging.getLogger(__name__)
 JOB_ATTRIBUTES_ALIASES = {
     field.alias: field_name
     for field_name, field in JobAttributes.model_fields.items()
-    if field.alias
-}
-JOB_PARAMETERS_ALIASES = {
-    field.alias: field_name
-    for field_name, field in JobParameters.model_fields.items()
     if field.alias
 }
 
@@ -94,7 +88,6 @@ async def set_job_statuses(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
-    job_parameters_db: JobParametersDB,
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
@@ -222,8 +215,6 @@ async def set_job_statuses(
             if new_application:
                 job_data["ApplicationStatus"] = new_application
 
-            await job_parameters_db.upsert(res["VO"], job_id, {"Status": new_status})
-
         for upd_time in update_times:
             source = status_dict[upd_time]["Source"]
             if source.startswith("Job") or source == "Heartbeat":
@@ -290,7 +281,6 @@ async def reschedule_jobs(
     job_db: JobDB,
     job_logging_db: JobLoggingDB,
     task_queue_db: TaskQueueDB,
-    job_parameters_db: JobParametersDB,
     reset_jobs: bool = False,
 ):
     """Reschedule given job."""
@@ -460,7 +450,6 @@ async def reschedule_jobs(
             job_db=job_db,
             job_logging_db=job_logging_db,
             task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
             additional_attributes=attribute_changes,
         )
 
@@ -523,19 +512,12 @@ async def set_job_parameters_or_attributes(
         for pname, pvalue in metadata.model_dump(
             by_alias=True, exclude_none=True
         ).items():
-            # An argument can be a job attribute and/or a job parameter
-
-            # Check if the argument is a valid job attribute (using alias)
+            # A field is either a job attribute (JobDB) or a job parameter
+            # (JobParametersDB), never both. Unknown fields are stored as job
+            # parameters for now, but should eventually be rejected.
             if pname in JOB_ATTRIBUTES_ALIASES:
                 attr_updates[job_id][pname] = pvalue
-
-            # Check if the argument is a valid job parameter (using alias)
-            if pname in JOB_PARAMETERS_ALIASES:
-                param_updates[job_id][pname] = pvalue
-
-            # If the field is not in either known aliases, default to treating it as a parameter
-            # This allows for more flexible metadata handling
-            elif pname not in JOB_ATTRIBUTES_ALIASES:
+            else:
                 param_updates[job_id][pname] = pvalue
 
     # Bulk set job attributes if required
@@ -589,7 +571,6 @@ async def add_heartbeat(
                         job_db=job_db,
                         job_logging_db=job_logging_db,
                         task_queue_db=task_queue_db,
-                        job_parameters_db=job_parameters_db,
                     )
                 )
 

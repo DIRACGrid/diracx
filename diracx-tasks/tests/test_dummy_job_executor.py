@@ -57,7 +57,6 @@ def make_dependencies():
         "job_db": AsyncMock(name="job_db"),
         "job_logging_db": MagicMock(name="job_logging_db"),
         "task_queue_db": MagicMock(name="task_queue_db"),
-        "job_parameters_db": MagicMock(name="job_parameters_db"),
     }
 
 

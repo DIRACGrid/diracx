@@ -608,8 +608,6 @@ class JobMetaData(_serialization.Model):
     :vartype batch_system: str
     :ivar job_type: Jobtype.
     :vartype job_type: str
-    :ivar job_status: Jobstatus.
-    :vartype job_status: str
     :ivar job_group: Jobgroup.
     :vartype job_group: str
     :ivar site: Site.
@@ -667,7 +665,6 @@ class JobMetaData(_serialization.Model):
         "ce_queue": {"key": "CEQueue", "type": "str"},
         "batch_system": {"key": "BatchSystem", "type": "str"},
         "job_type": {"key": "JobType", "type": "str"},
-        "job_status": {"key": "JobStatus", "type": "str"},
         "job_group": {"key": "JobGroup", "type": "str"},
         "site": {"key": "Site", "type": "str"},
         "job_name": {"key": "JobName", "type": "str"},
@@ -708,7 +705,6 @@ class JobMetaData(_serialization.Model):
         ce_queue: Optional[str] = None,
         batch_system: Optional[str] = None,
         job_type: Optional[str] = None,
-        job_status: Optional[str] = None,
         job_group: Optional[str] = None,
         site: Optional[str] = None,
         job_name: Optional[str] = None,
@@ -764,8 +760,6 @@ class JobMetaData(_serialization.Model):
         :paramtype batch_system: str
         :keyword job_type: Jobtype.
         :paramtype job_type: str
-        :keyword job_status: Jobstatus.
-        :paramtype job_status: str
         :keyword job_group: Jobgroup.
         :paramtype job_group: str
         :keyword site: Site.
@@ -822,7 +816,6 @@ class JobMetaData(_serialization.Model):
         self.ce_queue = ce_queue
         self.batch_system = batch_system
         self.job_type = job_type
-        self.job_status = job_status
         self.job_group = job_group
         self.site = site
         self.job_name = job_name

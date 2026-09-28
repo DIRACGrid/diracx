@@ -15,7 +15,6 @@ from diracx.core.models import (
     ScalarSearchSpec,
 )
 from diracx.core.settings import ServiceSettingsBase
-from diracx.db.os import JobParametersDB
 from diracx.db.sql import JobDB, JobLoggingDB, TaskQueueDB
 from diracx.logic.jobs import set_job_statuses
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
@@ -68,7 +67,6 @@ class DummyJobExecutorMonitorTask(PeriodicBaseTask):
         job_db: JobDB,
         job_logging_db: JobLoggingDB,
         task_queue_db: TaskQueueDB,
-        job_parameters_db: JobParametersDB,
     ) -> int:
         _, jobs = await job_db.search(
             ["JobID"],
@@ -100,7 +98,6 @@ class DummyJobExecutorMonitorTask(PeriodicBaseTask):
             job_db=job_db,
             job_logging_db=job_logging_db,
             task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
         )
 
         for job_id in job_ids:
@@ -136,7 +133,6 @@ class DummyJobExecutorTask(BaseTask):
         job_db: JobDB,
         job_logging_db: JobLoggingDB,
         task_queue_db: TaskQueueDB,
-        job_parameters_db: JobParametersDB,
     ) -> int:
         logger.info("Simulating execution of job %d", self.job_id)
         now = datetime.now(UTC)
@@ -161,6 +157,5 @@ class DummyJobExecutorTask(BaseTask):
             job_db=job_db,
             job_logging_db=job_logging_db,
             task_queue_db=task_queue_db,
-            job_parameters_db=job_parameters_db,
         )
         return self.job_id
