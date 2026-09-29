@@ -19,7 +19,7 @@ from DIRACCommon.WorkloadManagementSystem.Utilities.JobStatusUtility import (
 )
 
 from diracx.core.config import Config
-from diracx.core.exceptions import DiracError, JobNotFoundError
+from diracx.core.exceptions import DiracError, DocumentUpsertError, JobNotFoundError
 from diracx.core.models import (
     HeartbeatData,
     JobAttributes,
@@ -655,15 +655,17 @@ async def _insert_parameters(
     if missing := sorted(set(updates) - set(job_id_to_vo)):
         raise JobNotFoundError(missing[0])
     # Upsert the parameters into the JobParametersDB
-    # TODO: can we do a bulk upsert instead
-    try:
-        async with TaskGroup() as tg:
-            for job_id, job_params in updates.items():
-                tg.create_task(
-                    job_parameters_db.upsert(job_id_to_vo[job_id], job_id, job_params)
-                )
-    except ExceptionGroup as eg:
-        raise _collapse_exception_group(eg) from None
+    documents = (
+        (job_id_to_vo[job_id], job_id, job_params)
+        for job_id, job_params in updates.items()
+    )
+
+    _, errors = await job_parameters_db.bulk_upsert(documents)
+    if errors:
+        raise DocumentUpsertError(
+            f"Failed to upsert {len(errors)} document(s) in "
+            f"{type(job_parameters_db).__name__}"
+        )
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:

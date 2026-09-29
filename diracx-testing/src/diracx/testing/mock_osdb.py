@@ -13,6 +13,7 @@ from typing import Any, AsyncIterator
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from diracx.core.exceptions import DocumentUpsertError
 from diracx.core.models import SearchSpec, SortSpec
 from diracx.db.sql import utils as sql_utils
 
@@ -104,6 +105,18 @@ class MockOSDBMixin:
             # TODO: Upsert the JSON blob properly
             stmt = stmt.on_conflict_do_update(index_elements=["doc_id"], set_=values)
             await self._sql_db.conn.execute(stmt)
+
+    async def bulk_upsert(self, documents) -> tuple[int, list[dict[str, Any]]]:
+        """Route bulk_upsert through the upsert API."""
+        errors: list[dict[str, Any]] = []
+        success = 0
+        for vo, doc_id, document in documents:
+            try:
+                await self.upsert(vo, doc_id, document)
+                success += 1
+            except DocumentUpsertError as e:
+                errors.append({"error": str(e), "_id": doc_id})
+        return success, errors
 
     async def search(
         self,
