@@ -8,6 +8,7 @@ __all__ = [
 
 import socket
 from subprocess import PIPE, Popen, check_output
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -172,3 +173,17 @@ async def prefilled_dummy_opensearch_db(dummy_opensearch_db):
 async def prefilled_sql_opensearch_db(sql_opensearch_db):
     """Fixture which returns a SQLOSDB object prefilled with test data."""
     yield await _prefill_db(sql_opensearch_db, is_sql=True)
+
+
+@pytest.fixture
+def mock_client():
+    """Return a fully-mocked AsyncOpenSearch client."""
+    client = MagicMock()
+    client.ping = AsyncMock(return_value=True)
+    client.indices = MagicMock()
+    client.indices.put_index_template = AsyncMock(return_value={"acknowledged": True})
+    client.update = AsyncMock(return_value={"result": "updated"})
+    client.search = AsyncMock(return_value={"hits": {"hits": []}})
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client

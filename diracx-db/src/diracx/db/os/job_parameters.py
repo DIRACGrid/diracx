@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
-from typing import Any, Iterable
+from typing import Any
 
 from diracx.db.os.utils import BaseOSDB
 
@@ -32,12 +33,13 @@ class JobParametersDB(BaseOSDB):
         # The index name must be lowercase or opensearchpy will throw.
         return f"{self.index_prefix}_{vo.lower()}_{split}m"
 
+    @staticmethod
+    def _with_metadata(doc_id: int, document: dict[str, Any], timestamp: int):
+        return {"JobID": doc_id, "timestamp": timestamp, **document}
+
     def upsert(self, vo, doc_id, document):
-        document = {
-            "JobID": doc_id,
-            "timestamp": int(datetime.now(tz=UTC).timestamp() * 1000),
-            **document,
-        }
+        timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
+        document = self._with_metadata(doc_id, document, timestamp)
         return super().upsert(vo, doc_id, document)
 
     async def bulk_upsert(
@@ -45,9 +47,8 @@ class JobParametersDB(BaseOSDB):
         documents: Iterable[tuple[str, int, dict[str, Any]]],
     ) -> tuple[int, list[Any]]:
         """bulk_upsert API implementation."""
-        transformed = []
         timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
-        for vo, doc_id, document in documents:
-            document = {"JobID": doc_id, "timestamp": timestamp, **document}
-            transformed.append((vo, doc_id, document))
-        return await super().bulk_upsert(transformed)
+        return await super().bulk_upsert(
+            (vo, doc_id, self._with_metadata(doc_id, document, timestamp))
+            for vo, doc_id, document in documents
+        )

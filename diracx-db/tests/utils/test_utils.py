@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import gc
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.db.os.utils import (
@@ -25,17 +23,6 @@ DB_FIELDS = {
 }
 
 
-@pytest.fixture(autouse=True)
-def force_gc():
-    """Collect any leaked async resources right after each testself.
-
-    This avoids ResourceWarnings from unrelated aiosqlite connections
-    bleeding into the next test's output.
-    """
-    yield
-    gc.collect()
-
-
 @pytest.fixture
 def connection_kwargs() -> dict[str, Any]:
     return {"hosts": ["https://localhost:9200"], "verify_certs": False}
@@ -46,7 +33,7 @@ def db(connection_kwargs):
     return DummyOSDB(connection_kwargs)
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def live_db(db, mock_client):
     """DummyOSDB with client_context and __aenter__ already entered."""
     with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
@@ -236,20 +223,17 @@ class TestAvailableImplementations:
 
 
 class TestClientContext:
-    @pytest.mark.asyncio
     async def test_client_available_inside_context(self, db, mock_client):
         with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
             async with db.client_context():
                 assert db.client is mock_client
 
-    @pytest.mark.asyncio
     async def test_client_none_after_context_exits(self, db, mock_client):
         with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
             async with db.client_context():
                 pass
         assert db._client is None
 
-    @pytest.mark.asyncio
     async def test_nesting_raises(self, db, mock_client):
         with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
             async with db.client_context():
@@ -259,7 +243,6 @@ class TestClientContext:
 
 
 class TestAsyncContextManager:
-    @pytest.mark.asyncio
     async def test_enters_successfully(self, db, mock_client):
         with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
             async with db.client_context():
@@ -267,7 +250,6 @@ class TestAsyncContextManager:
                     assert db._conn.get() is True
         assert db._conn.get() is False
 
-    @pytest.mark.asyncio
     async def test_nesting_aenter_raises(self, db, mock_client):
         with patch("diracx.db.os.utils.AsyncOpenSearch", return_value=mock_client):
             async with db.client_context():
@@ -276,7 +258,6 @@ class TestAsyncContextManager:
                         async with db:
                             pass
 
-    @pytest.mark.asyncio
     async def test_requires_client_context_first(self, db):
         with pytest.raises(AssertionError, match="client_context"):
             async with db:
@@ -284,13 +265,11 @@ class TestAsyncContextManager:
 
 
 class TestPing:
-    @pytest.mark.asyncio
     async def test_ping_success(self, live_db):
         db, client = live_db
         client.ping.return_value = True
         await db.ping()  # must not raise
 
-    @pytest.mark.asyncio
     async def test_ping_raises_when_unreachable(self, live_db):
         db, client = live_db
         client.ping.return_value = False
@@ -299,7 +278,6 @@ class TestPing:
 
 
 class TestCreateIndexTemplate:
-    @pytest.mark.asyncio
     async def test_calls_put_index_template(self, live_db):
         db, client = live_db
         await db.create_index_template()
@@ -310,7 +288,6 @@ class TestCreateIndexTemplate:
         assert body["index_patterns"] == [f"{db.index_prefix}*"]
         assert body["template"]["mappings"]["properties"] == db.fields
 
-    @pytest.mark.asyncio
     async def test_raises_when_not_acknowledged(self, live_db):
         db, client = live_db
         client.indices.put_index_template.return_value = {"acknowledged": False}
@@ -319,7 +296,6 @@ class TestCreateIndexTemplate:
 
 
 class TestUpsert:
-    @pytest.mark.asyncio
     async def test_upsert_calls_client_update(self, live_db):
         db, client = live_db
         await db.upsert("lhcb", 42, {"status": "Running"})
@@ -329,14 +305,12 @@ class TestUpsert:
         assert kwargs["body"]["doc"] == {"status": "Running"}
         assert kwargs["body"]["doc_as_upsert"] is True
 
-    @pytest.mark.asyncio
     async def test_upsert_uses_correct_index(self, live_db):
         db, client = live_db
         await db.upsert("lhcb", 42, {"status": "Running"})
         kwargs = client.update.call_args.kwargs
         assert kwargs["index"] == db.index_name("lhcb", 42)
 
-    @pytest.mark.asyncio
     async def test_upsert_sets_retry_on_conflict(self, live_db):
         db, client = live_db
         await db.upsert("lhcb", 1, {})
@@ -345,7 +319,6 @@ class TestUpsert:
 
 
 class TestBulkUpsert:
-    @pytest.mark.asyncio
     async def test_bulk_upsert_success(self, live_db):
         db, _ = live_db
         documents = [
@@ -362,10 +335,11 @@ class TestBulkUpsert:
         assert success == 2
         assert errors == []
 
-    @pytest.mark.asyncio
     async def test_bulk_upsert_returns_errors(self, live_db):
         db, _ = live_db
-        error_entry = {"update": {"error": "some error", "_id": 99}}
+        error_entry = {
+            "update": {"error": {"type": "some_error"}, "_id": 99, "_index": "idx"}
+        }
 
         with patch(
             "diracx.db.os.utils.async_bulk", new_callable=AsyncMock
@@ -376,7 +350,6 @@ class TestBulkUpsert:
         assert success == 0
         assert errors == [error_entry]
 
-    @pytest.mark.asyncio
     async def test_bulk_upsert_builds_correct_actions(self, live_db):
         db, _ = live_db
         documents = [("lhcb", 5, {"status": "Waiting"})]
@@ -402,14 +375,12 @@ class TestSearch:
     def _make_hit(self, source: dict) -> dict:
         return {"_source": source}
 
-    @pytest.mark.asyncio
     async def test_returns_empty_list_when_no_hits(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
         result = await db.search([], [], [])
         assert result == []
 
-    @pytest.mark.asyncio
     async def test_returns_source_from_hits(self, live_db):
         db, client = live_db
         client.search.return_value = {
@@ -418,7 +389,6 @@ class TestSearch:
         result = await db.search([], [], [])
         assert result == [{"status": "Running", "job_id": 1}]
 
-    @pytest.mark.asyncio
     async def test_converts_date_strings_to_datetime(self, live_db):
         db, client = live_db
         client.search.return_value = {
@@ -432,7 +402,6 @@ class TestSearch:
         assert result[0]["DateField"].tzinfo is not None
         assert result[0]["DateField"].year == 2024
 
-    @pytest.mark.asyncio
     async def test_search_with_parameters_sets_source(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
@@ -440,7 +409,6 @@ class TestSearch:
         body = client.search.call_args.kwargs["body"]
         assert body["_source"] == ["status", "job_id"]
 
-    @pytest.mark.asyncio
     async def test_search_without_parameters_omits_source(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
@@ -448,7 +416,6 @@ class TestSearch:
         body = client.search.call_args.kwargs["body"]
         assert "_source" not in body
 
-    @pytest.mark.asyncio
     async def test_search_applies_sort(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
@@ -456,7 +423,6 @@ class TestSearch:
         body = client.search.call_args.kwargs["body"]
         assert {"IntField": {"order": "asc"}} in body["sort"]
 
-    @pytest.mark.asyncio
     async def test_search_raises_for_unsortable_field_type(self, live_db):
         db, _ = live_db
         with pytest.raises(InvalidQueryError, match="Cannot apply sort"):
@@ -470,7 +436,6 @@ class TestSearch:
             finally:
                 db.fields = original_fields
 
-    @pytest.mark.asyncio
     async def test_search_with_pagination(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
@@ -479,7 +444,6 @@ class TestSearch:
         assert params["from"] == 50  # (3-1) * 25
         assert params["size"] == 25
 
-    @pytest.mark.asyncio
     async def test_search_without_page_omits_pagination_params(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}
@@ -488,7 +452,6 @@ class TestSearch:
         assert "from" not in params
         assert "size" not in params
 
-    @pytest.mark.asyncio
     async def test_search_queries_correct_index_pattern(self, live_db):
         db, client = live_db
         client.search.return_value = {"hits": {"hits": []}}

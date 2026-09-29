@@ -197,16 +197,16 @@ class BaseOSDB(metaclass=ABCMeta):
                 params=dict(retry_on_conflict=10),
             )
         except RequestError as e:
-            # Log the field names rather than the client-supplied values
+            # Log the field names rather than the client-supplied values, which
+            # the reason can quote
             logger.error(
-                "Failed to upsert document %s in index %s: %s %s (fields: %s)",
+                "Failed to upsert document %s in index %s: %s (fields: %s)",
                 doc_id,
                 index_name,
                 e.error,
-                e.info,
                 sorted(document),
             )
-            logger.debug("Rejected document %s: %r", doc_id, document)
+            logger.debug("Rejected document %s: %r (%s)", doc_id, document, e.info)
             # The reason describes the backend, not the request
             raise DocumentUpsertError(
                 f"Failed to upsert document {doc_id} in {self.__class__.__name__}"
@@ -223,6 +223,7 @@ class BaseOSDB(metaclass=ABCMeta):
         documents: Iterable[tuple[str, int, dict[str, Any]]],
     ) -> tuple[int, list[Any]]:
         """Bulk upsert documents."""
+        documents = list(documents)
         actions = (
             {
                 "_op_type": "update",
@@ -239,11 +240,24 @@ class BaseOSDB(metaclass=ABCMeta):
             self.client,
             actions,
             raise_on_error=False,
-            raise_on_exception=False,
         )
 
-        if errors:
-            logger.warning("Bulk upsert completed with %d errors", len(errors))
+        documents_by_id = {str(doc_id): document for _, doc_id, document in documents}
+        for error in errors:
+            (item,) = error.values()
+            document = documents_by_id[str(item["_id"])]
+            # Log the field names rather than the client-supplied values, which
+            # the reason can quote
+            logger.error(
+                "Failed to upsert document %s in index %s: %s (fields: %s)",
+                item["_id"],
+                item["_index"],
+                item["error"]["type"],
+                sorted(document),
+            )
+            logger.debug(
+                "Rejected document %s: %r (%s)", item["_id"], document, item["error"]
+            )
 
         return success, errors
 

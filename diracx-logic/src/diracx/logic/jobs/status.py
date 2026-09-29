@@ -662,9 +662,10 @@ async def _insert_parameters(
 
     _, errors = await job_parameters_db.bulk_upsert(documents)
     if errors:
-        for error in errors:
-            logger.error("bulk insert error %s", error)
-        raise DocumentUpsertError("Failed to perform bulk insert operation")
+        raise DocumentUpsertError(
+            f"Failed to upsert {len(errors)} document(s) in "
+            f"{type(job_parameters_db).__name__}"
+        )
 
 
 async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCommand]:
