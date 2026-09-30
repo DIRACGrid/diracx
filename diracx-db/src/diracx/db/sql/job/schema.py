@@ -1,3 +1,5 @@
+"""SQLAlchemy table schemas for job data and related records."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,6 +23,12 @@ str100 = Annotated[str, 100]
 
 
 class JobDBBase(DeclarativeBase):
+    """Declarative base with shared string-column type mappings.
+
+    Attributes:
+        type_annotation_map: SQL types associated with the shared string aliases.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str64: String(64),
@@ -31,12 +39,29 @@ class JobDBBase(DeclarativeBase):
 
 
 class AccountedFlagEnum(types.TypeDecorator):
-    """Maps a ``AccountedFlagEnum()`` column to True/False in Python."""
+    """Map the accounted-flag database enum to Python values.
+
+    Attributes:
+        impl: SQLAlchemy enum representation stored in the database.
+        cache_ok: Whether SQLAlchemy may cache statements using this type.
+    """
 
     impl = types.Enum("True", "False", "Failed", name="accounted_flag_enum")
     cache_ok = True
 
     def process_bind_param(self, value, dialect) -> str:
+        """Convert a Python accounted flag to its database representation.
+
+        Args:
+            value: Boolean or ``"Failed"`` value to store.
+            dialect: SQLAlchemy dialect handling the bind operation.
+
+        Returns:
+            The corresponding string stored in the database.
+
+        Raises:
+            NotImplementedError: If the value is not supported.
+        """
         if value is True:
             return "True"
         elif value is False:
@@ -47,6 +72,18 @@ class AccountedFlagEnum(types.TypeDecorator):
             raise NotImplementedError(value, dialect)
 
     def process_result_value(self, value, dialect) -> bool | str:
+        """Convert a database accounted flag to its Python representation.
+
+        Args:
+            value: String value read from the database.
+            dialect: SQLAlchemy dialect handling the result.
+
+        Returns:
+            A boolean for ``"True"`` or ``"False"``, otherwise ``"Failed"``.
+
+        Raises:
+            NotImplementedError: If the database value is unknown.
+        """
         if value == "True":
             return True
         elif value == "False":
@@ -58,6 +95,32 @@ class AccountedFlagEnum(types.TypeDecorator):
 
 
 class Jobs(JobDBBase):
+    """Primary job records and their current status and attributes.
+
+    Attributes:
+        job_id: Identifier linking the job to its JDL record.
+        job_type: Type of the job.
+        job_group: Group associated with the job.
+        site: Site assigned to the job.
+        job_name: Name of the job.
+        owner: User who owns the job.
+        owner_group: Group of the job owner.
+        vo: Virtual organization associated with the job.
+        submission_time: Time when the job was submitted.
+        reschedule_time: Time of the most recent rescheduling.
+        last_update_time: Time of the most recent job update.
+        start_exec_time: Time when execution started.
+        heart_beat_time: Time of the latest heartbeat.
+        end_exec_time: Time when execution ended.
+        status: Current job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+        user_priority: Priority assigned to the job.
+        reschedule_counter: Number of times the job was rescheduled.
+        verified_flag: Whether the job has been verified.
+        accounted_flag: Accounting state of the job.
+    """
+
     __tablename__ = "Jobs"
 
     job_id: Mapped[int] = mapped_column(
@@ -126,6 +189,15 @@ class Jobs(JobDBBase):
 
 
 class JobJDLs(JobDBBase):
+    """JDL documents and requirements associated with jobs.
+
+    Attributes:
+        job_id: Identifier assigned to the job.
+        jdl: Current job description language document.
+        job_requirements: Requirements extracted from the JDL.
+        original_jdl: Original submitted JDL document.
+    """
+
     __tablename__ = "JobJDLs"
     job_id: Mapped[int] = mapped_column("JobID", autoincrement=True, primary_key=True)
     jdl: Mapped[str] = mapped_column("JDL", Text)
@@ -134,6 +206,14 @@ class JobJDLs(JobDBBase):
 
 
 class InputData(JobDBBase):
+    """Input logical file names associated with jobs.
+
+    Attributes:
+        job_id: Identifier of the job requiring the input file.
+        lfn: Logical file name of the input file.
+        status: Status of the input data entry.
+    """
+
     __tablename__ = "InputData"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
@@ -143,6 +223,14 @@ class InputData(JobDBBase):
 
 
 class JobParameters(JobDBBase):
+    """Additional parameter values associated with jobs.
+
+    Attributes:
+        job_id: Identifier of the job.
+        name: Parameter name.
+        value: Parameter value stored as text.
+    """
+
     __tablename__ = "JobParameters"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
@@ -152,6 +240,14 @@ class JobParameters(JobDBBase):
 
 
 class OptimizerParameters(JobDBBase):
+    """Optimizer parameter values associated with jobs.
+
+    Attributes:
+        job_id: Identifier of the job.
+        name: Optimizer parameter name.
+        value: Parameter value stored as text.
+    """
+
     __tablename__ = "OptimizerParameters"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
@@ -161,6 +257,15 @@ class OptimizerParameters(JobDBBase):
 
 
 class AtticJobParameters(JobDBBase):
+    """Archived job parameter values retained across rescheduling.
+
+    Attributes:
+        job_id: Identifier of the job.
+        name: Archived parameter name.
+        value: Parameter value stored as text.
+        reschedule_cycle: Rescheduling cycle associated with the value.
+    """
+
     __tablename__ = "AtticJobParameters"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
@@ -171,6 +276,15 @@ class AtticJobParameters(JobDBBase):
 
 
 class HeartBeatLoggingInfo(JobDBBase):
+    """Dynamic resource information reported by job heartbeats.
+
+    Attributes:
+        job_id: Identifier of the reporting job.
+        name: Name of the heartbeat field.
+        value: Heartbeat field value stored as text.
+        heart_beat_time: Time when the heartbeat was received.
+    """
+
     __tablename__ = "HeartBeatLoggingInfo"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True
@@ -185,6 +299,17 @@ class HeartBeatLoggingInfo(JobDBBase):
 
 
 class JobCommands(JobDBBase):
+    """Commands queued for delivery to jobs during a heartbeat.
+
+    Attributes:
+        job_id: Identifier of the target job.
+        command: Command to deliver.
+        arguments: Arguments associated with the command.
+        status: Delivery state of the command.
+        reception_time: Time when the command was queued.
+        execution_time: Time when the command was executed, if known.
+    """
+
     __tablename__ = "JobCommands"
     job_id: Mapped[int] = mapped_column(
         "JobID", ForeignKey("Jobs.JobID", ondelete="CASCADE"), primary_key=True

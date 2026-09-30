@@ -1,3 +1,5 @@
+"""SQLAlchemy table schemas for authentication flows and refresh tokens."""
+
 from __future__ import annotations
 
 from enum import Enum, auto
@@ -24,6 +26,12 @@ USER_CODE_LENGTH = 8
 
 
 class Base(DeclarativeBase):
+    """Declarative base with shared SQLAlchemy type mappings.
+
+    Attributes:
+        type_annotation_map: SQL types associated with shared Python aliases.
+    """
+
     type_annotation_map = {
         str128: String(128),
         str255: String(255),
@@ -56,6 +64,18 @@ class FlowStatus(Enum):
 
 
 class DeviceFlows(Base):
+    """Database record for an OAuth device authorization flow.
+
+    Attributes:
+        user_code: Short code entered by the user to approve the flow.
+        status: Current state of the device flow.
+        creation_time: Time when the flow was created.
+        client_id: OAuth client that initiated the flow.
+        scope: Requested authorization scope.
+        device_code: Hashed device code used to identify the flow.
+        id_token: ID token claims received from the identity provider, if any.
+    """
+
     __tablename__ = "DeviceFlows"
     user_code: Mapped[str] = mapped_column(
         "UserCode", String(USER_CODE_LENGTH), primary_key=True
@@ -73,6 +93,21 @@ class DeviceFlows(Base):
 
 
 class AuthorizationFlows(Base):
+    """Database record for an OAuth authorization-code flow.
+
+    Attributes:
+        uuid: Identifier of the authorization flow.
+        status: Current state of the authorization flow.
+        client_id: OAuth client that initiated the flow.
+        creation_time: Time when the flow was created.
+        scope: Requested authorization scope.
+        code_challenge: PKCE code challenge for the flow.
+        code_challenge_method: Method used to derive the challenge.
+        redirect_uri: Client URI for the authorization response.
+        code: Hashed authorization code, if the flow is ready.
+        id_token: ID token claims received from the identity provider, if any.
+    """
+
     __tablename__ = "AuthorizationFlows"
     uuid: Mapped[UUID] = mapped_column("UUID", Uuid(as_uuid=False), primary_key=True)
     status: Mapped[FlowStatus] = enum_column(
@@ -107,6 +142,12 @@ class RefreshTokens(Base):
     """Store attributes bound to a refresh token.
 
     Also specific user attributes that might be then used to generate access tokens.
+
+    Attributes:
+        jti: Unique JWT identifier for the refresh token.
+        status: Current refresh token status.
+        scope: Authorized scope associated with the token.
+        sub: Subject identifier associated with the token.
     """
 
     __tablename__ = "RefreshTokens"

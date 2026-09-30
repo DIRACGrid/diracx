@@ -1,3 +1,5 @@
+"""OpenSearch database implementation for job parameters."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -8,6 +10,13 @@ from diracx.db.os.utils import BaseOSDB
 
 
 class JobParametersDB(BaseOSDB):
+    """OpenSearch storage for job parameter documents.
+
+    Attributes:
+        fields: OpenSearch field mappings for job parameter documents.
+        index_prefix: Prefix used to name job parameter indices.
+    """
+
     fields = {
         "JobID": {"type": "long"},
         "timestamp": {"type": "date"},
@@ -29,6 +38,15 @@ class JobParametersDB(BaseOSDB):
     index_prefix = "job_parameters"
 
     def index_name(self, vo, doc_id: int) -> str:
+        """Build the index name for a job parameter document.
+
+        Args:
+            vo: Virtual organization owning the job.
+            doc_id: Identifier of the job document.
+
+        Returns:
+            The lowercase index name partitioned by job ID range.
+        """
         split = int(int(doc_id) // 1e6)
         # The index name must be lowercase or opensearchpy will throw.
         return f"{self.index_prefix}_{vo.lower()}_{split}m"
@@ -38,6 +56,13 @@ class JobParametersDB(BaseOSDB):
         return {"JobID": doc_id, "timestamp": timestamp, **document}
 
     def upsert(self, vo, doc_id, document):
+        """Add job ID and timestamp, then upsert the parameter document.
+
+        Args:
+            vo: Virtual organization owning the job.
+            doc_id: Identifier of the job document.
+            document: Job parameter fields to store.
+        """
         timestamp = int(datetime.now(tz=UTC).timestamp() * 1000)
         document = self._with_metadata(doc_id, document, timestamp)
         return super().upsert(vo, doc_id, document)
