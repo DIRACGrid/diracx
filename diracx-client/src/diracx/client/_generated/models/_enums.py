@@ -9,13 +9,13 @@ from azure.core import CaseInsensitiveEnumMeta
 
 
 class ChecksumAlgorithm(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """ChecksumAlgorithm."""
+    """Algorithms used to calculate sandbox checksums."""
 
     SHA256 = "sha256"
 
 
 class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """JobStatus."""
+    """Lifecycle statuses for a job."""
 
     SUBMITTING = "Submitting"
     RECEIVED = "Received"
@@ -35,7 +35,7 @@ class JobStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 
 
 class PilotStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """PilotStatus."""
+    """Lifecycle statuses for a pilot agent."""
 
     SUBMITTED = "Submitted"
     WAITING = "Waiting"
@@ -48,7 +48,7 @@ class PilotStatus(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 
 
 class SandboxFormat(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """SandboxFormat."""
+    """Archive formats supported for sandboxes."""
 
     TAR_BZ2 = "tar.bz2"
     TAR_ZST = "tar.zst"
@@ -62,7 +62,7 @@ class SandboxType(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 
 
 class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """ScalarSearchOperator."""
+    """Operators for comparing scalar search values."""
 
     EQ = "eq"
     NEQ = "neq"
@@ -74,14 +74,14 @@ class ScalarSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
 
 
 class SortDirection(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """SortDirection."""
+    """Directions in which search results can be sorted."""
 
     ASC = "asc"
     DESC = "desc"
 
 
 class VectorSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
-    """VectorSearchOperator."""
+    """Operators for comparing values against a collection."""
 
     IN = "in"
     NOT_IN = "not in"

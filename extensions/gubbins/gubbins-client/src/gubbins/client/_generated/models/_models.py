@@ -17,7 +17,11 @@ JSON = MutableMapping[str, Any]
 
 
 class AllowedStatus(_serialization.Model):
-    """AllowedStatus.
+    """Status indicating that a resource is allowed.
+
+    Attributes:
+        allowed: Literal indicating that the resource is allowed.
+        warnings: Optional warning associated with the allowed status.
 
     All required parameters must be populated in order to send to server.
 
@@ -49,7 +53,11 @@ class AllowedStatus(_serialization.Model):
 
 
 class BannedStatus(_serialization.Model):
-    """BannedStatus.
+    """Status indicating that a resource is not allowed.
+
+    Attributes:
+        allowed: Literal indicating that the resource is banned.
+        reason: Reason associated with the banned status.
 
     All required parameters must be populated in order to send to server.
 
@@ -249,7 +257,10 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
 
 
 class ComputeElementStatus(_serialization.Model):
-    """ComputeElementStatus.
+    """Status of a compute element.
+
+    Attributes:
+        all: Overall compute element status.
 
     All required parameters must be populated in order to send to server.
 
@@ -326,7 +337,10 @@ class ExtendedMetadata(_serialization.Model):
 
 
 class FTSStatus(_serialization.Model):
-    """FTSStatus.
+    """Status of an FTS resource.
+
+    Attributes:
+        all: Overall FTS status.
 
     All required parameters must be populated in order to send to server.
 
@@ -356,7 +370,7 @@ class FTSStatusAll(_serialization.Model):
 
 
 class GroupInfo(_serialization.Model):
-    """GroupInfo.
+    """Configuration information for a group within a virtual organization.
 
     All required parameters must be populated in order to send to server.
 
@@ -382,7 +396,16 @@ class GroupInfo(_serialization.Model):
 
 
 class HeartbeatData(_serialization.Model):
-    """HeartbeatData.
+    """Runtime resource and output data reported by a job heartbeat.
+
+    Attributes:
+        load_average: System load average.
+        memory_used: Memory used by the job.
+        vsize: Virtual memory size used by the job.
+        available_disk_space: Available disk space.
+        cpu_consumed: CPU time consumed by the job.
+        wall_clock_time: Wall-clock time consumed by the job.
+        standard_output: Standard output reported by the job.
 
     :ivar load_average: Loadaverage.
     :vartype load_average: float
@@ -532,7 +555,13 @@ class InitiateDeviceFlowResponse(_serialization.Model):
 
 
 class InsertedJob(_serialization.Model):
-    """InsertedJob.
+    """Information returned for a newly inserted job.
+
+    Attributes:
+        job_id: Identifier assigned to the inserted job.
+        status: Current job status.
+        minor_status: More detailed job status.
+        time_stamp: Time associated with the insertion.
 
     All required parameters must be populated in order to send to server.
 
@@ -581,7 +610,12 @@ class InsertedJob(_serialization.Model):
 
 
 class JobCommand(_serialization.Model):
-    """JobCommand.
+    """Command to apply to a job.
+
+    Attributes:
+        job_id: Identifier of the target job.
+        command: Command to execute.
+        arguments: Optional command arguments.
 
     All required parameters must be populated in order to send to server.
 
@@ -620,7 +654,11 @@ class JobCommand(_serialization.Model):
 
 
 class JobMetaData(_serialization.Model):
-    """A model that combines both JobAttributes and JobParameters.
+    """A model that combines both job attributes and job parameters.
+
+    Attributes:
+        The attributes and parameters inherited from ``JobAttributes`` and
+        ``JobParameters``.
 
     :ivar additional_properties: Unmatched properties from the message are deserialized to this
      collection.
@@ -885,11 +923,17 @@ class JobMetaData(_serialization.Model):
 
 
 class JobStatusUpdate(_serialization.Model):
-    """JobStatusUpdate.
+    """Requested update to a job's status information.
 
-    :ivar status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
-     "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
-     "Deleted", "Killed", and "Rescheduled".
+    Attributes:
+        status: New job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+        source: Source of the status update.
+
+    :ivar status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
+     "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+     "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~_generated.models.JobStatus
     :ivar minor_status: Minorstatus.
     :vartype minor_status: str
@@ -916,9 +960,9 @@ class JobStatusUpdate(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
-         "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
-         "Deleted", "Killed", and "Rescheduled".
+        :keyword status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
+         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~_generated.models.JobStatus
         :keyword minor_status: Minorstatus.
         :paramtype minor_status: str
@@ -935,7 +979,7 @@ class JobStatusUpdate(_serialization.Model):
 
 
 class OpenIDConfiguration(_serialization.Model):
-    """OpenIDConfiguration.
+    """OpenID Connect provider metadata exposed by the discovery endpoint.
 
     All required parameters must be populated in order to send to server.
 
@@ -1074,6 +1118,17 @@ class PilotMetadata(_serialization.Model):
     (e.g. as the mapping key on ``PATCH /api/pilots/metadata``\\ ). Every
     field is optional; when absent it is left untouched by an update.
 
+    Attributes:
+        status_reason: Human-readable reason for the current status.
+        status: Current pilot status.
+        benchmark: Pilot benchmark value.
+        destination_site: Destination site.
+        queue: Batch queue name.
+        grid_site: Grid site.
+        grid_type: Grid type.
+        accounting_sent: Whether accounting has been sent for this pilot.
+        current_job_id: ID of the job currently running on this pilot.
+
     :ivar status_reason: Human-readable reason for the current status.
     :vartype status_reason: str
     :ivar status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
@@ -1169,6 +1224,15 @@ class PilotRegistrationParams(_serialization.Model):
     ``PilotAgents`` table so that oversized values are rejected with a 422
     instead of a backend-dependent database error.
 
+    Attributes:
+        pilot_stamp: Stamp identifying the pilot to create.
+        vo: Virtual organization associated with the pilot.
+        grid_type: Grid type of the pilot.
+        grid_site: Grid site where the pilot is running.
+        destination_site: Site to which the pilot is assigned.
+        pilot_reference: CE job reference of the pilot.
+        pilot_status: Initial status of the pilot.
+
     All required parameters must be populated in order to send to server.
 
     :ivar pilot_stamp: Stamp of the pilot to create. Required.
@@ -1247,7 +1311,11 @@ class PilotRegistrationParams(_serialization.Model):
 
 
 class SandboxDownloadResponse(_serialization.Model):
-    """SandboxDownloadResponse.
+    """Response containing a URL for downloading a sandbox.
+
+    Attributes:
+        url: URL from which the sandbox can be downloaded.
+        expires_in: Number of seconds until the URL expires.
 
     All required parameters must be populated in order to send to server.
 
@@ -1280,17 +1348,24 @@ class SandboxDownloadResponse(_serialization.Model):
 
 
 class SandboxInfo(_serialization.Model):
-    """SandboxInfo.
+    """Metadata describing a sandbox archive.
+
+    Attributes:
+        checksum_algorithm: Algorithm used to calculate the checksum.
+        checksum: Hexadecimal checksum of the sandbox archive.
+        size: Sandbox size in bytes.
+        format: Archive format of the sandbox.
 
     All required parameters must be populated in order to send to server.
 
-    :ivar checksum_algorithm: ChecksumAlgorithm. Required. "sha256"
+    :ivar checksum_algorithm: Algorithms used to calculate sandbox checksums. Required. "sha256"
     :vartype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
     :ivar checksum: Checksum. Required.
     :vartype checksum: str
     :ivar size: Size. Required.
     :vartype size: int
-    :ivar format: SandboxFormat. Required. Known values are: "tar.bz2" and "tar.zst".
+    :ivar format: Archive formats supported for sandboxes. Required. Known values are: "tar.bz2"
+     and "tar.zst".
     :vartype format: str or ~_generated.models.SandboxFormat
     """
 
@@ -1318,13 +1393,14 @@ class SandboxInfo(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword checksum_algorithm: ChecksumAlgorithm. Required. "sha256"
+        :keyword checksum_algorithm: Algorithms used to calculate sandbox checksums. Required. "sha256"
         :paramtype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
         :keyword checksum: Checksum. Required.
         :paramtype checksum: str
         :keyword size: Size. Required.
         :paramtype size: int
-        :keyword format: SandboxFormat. Required. Known values are: "tar.bz2" and "tar.zst".
+        :keyword format: Archive formats supported for sandboxes. Required. Known values are: "tar.bz2"
+         and "tar.zst".
         :paramtype format: str or ~_generated.models.SandboxFormat
         """
         super().__init__(**kwargs)
@@ -1335,7 +1411,12 @@ class SandboxInfo(_serialization.Model):
 
 
 class SandboxUploadResponse(_serialization.Model):
-    """SandboxUploadResponse.
+    """Response containing details for uploading a sandbox.
+
+    Attributes:
+        pfn: Physical file name assigned to the uploaded sandbox.
+        url: Optional upload URL.
+        fields: Form fields required for the upload.
 
     All required parameters must be populated in order to send to server.
 
@@ -1375,14 +1456,19 @@ class SandboxUploadResponse(_serialization.Model):
 
 
 class ScalarSearchSpec(_serialization.Model):
-    """ScalarSearchSpec.
+    """Search condition applied to a scalar parameter.
+
+    Attributes:
+        parameter: Parameter to search.
+        operator: Comparison operator to apply.
+        value: Value to compare with the parameter.
 
     All required parameters must be populated in order to send to server.
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt",
-     "like", "not like", and "regex".
+    :ivar operator: Operators for comparing scalar search values. Required. Known values are: "eq",
+     "neq", "gt", "lt", "like", "not like", and "regex".
     :vartype operator: str or ~_generated.models.ScalarSearchOperator
     :ivar value: Value. Required.
     :vartype value: any
@@ -1406,8 +1492,8 @@ class ScalarSearchSpec(_serialization.Model):
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
-        :keyword operator: ScalarSearchOperator. Required. Known values are: "eq", "neq", "gt", "lt",
-         "like", "not like", and "regex".
+        :keyword operator: Operators for comparing scalar search values. Required. Known values are:
+         "eq", "neq", "gt", "lt", "like", "not like", and "regex".
         :paramtype operator: str or ~_generated.models.ScalarSearchOperator
         :keyword value: Value. Required.
         :paramtype value: any
@@ -1419,7 +1505,13 @@ class ScalarSearchSpec(_serialization.Model):
 
 
 class SearchParams(_serialization.Model):
-    """SearchParams.
+    """Parameters for searching, sorting, and selecting job results.
+
+    Attributes:
+        parameters: Parameters to include in the search results.
+        search: Search conditions to apply.
+        sort: Sort configurations for the results.
+        distinct: Whether duplicate results should be removed.
 
     :ivar parameters: Parameters.
     :vartype parameters: list[str]
@@ -1469,7 +1561,11 @@ class SearchParamsSearchItem(_serialization.Model):
 
 
 class SetJobStatusReturn(_serialization.Model):
-    """SetJobStatusReturn.
+    """Result of applying a status update to one or more jobs.
+
+    Attributes:
+        success: Successful status updates keyed by job identifier.
+        failed: Failed status updates keyed by job identifier.
 
     All required parameters must be populated in order to send to server.
 
@@ -1508,11 +1604,20 @@ class SetJobStatusReturn(_serialization.Model):
 
 
 class SetJobStatusReturnSuccess(_serialization.Model):
-    """Successful new status change.
+    """Status information for a successful status change.
 
-    :ivar status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
-     "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
-     "Deleted", "Killed", and "Rescheduled".
+    Attributes:
+        status: New job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+        heart_beat_time: Time of the heartbeat.
+        start_exec_time: Time when execution started.
+        end_exec_time: Time when execution ended.
+        last_update_time: Time of the last update.
+
+    :ivar status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
+     "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+     "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~_generated.models.JobStatus
     :ivar minor_status: Minorstatus.
     :vartype minor_status: str
@@ -1551,9 +1656,9 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword status: JobStatus. Known values are: "Submitting", "Received", "Checking", "Staging",
-         "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed", "Failed",
-         "Deleted", "Killed", and "Rescheduled".
+        :keyword status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
+         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
+         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~_generated.models.JobStatus
         :keyword minor_status: Minorstatus.
         :paramtype minor_status: str
@@ -1579,7 +1684,10 @@ class SetJobStatusReturnSuccess(_serialization.Model):
 
 
 class SiteStatus(_serialization.Model):
-    """SiteStatus.
+    """Status of a site.
+
+    Attributes:
+        all: Overall site status.
 
     All required parameters must be populated in order to send to server.
 
@@ -1609,13 +1717,18 @@ class SiteStatusAll(_serialization.Model):
 
 
 class SortSpec(_serialization.Model):
-    """SortSpec.
+    """Sort configuration for a search parameter.
+
+    Attributes:
+        parameter: Parameter by which to sort.
+        direction: Direction in which to sort the parameter.
 
     All required parameters must be populated in order to send to server.
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar direction: SortDirection. Required. Known values are: "asc" and "desc".
+    :ivar direction: Directions in which search results can be sorted. Required. Known values are:
+     "asc" and "desc".
     :vartype direction: str or ~_generated.models.SortDirection
     """
 
@@ -1633,7 +1746,8 @@ class SortSpec(_serialization.Model):
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
-        :keyword direction: SortDirection. Required. Known values are: "asc" and "desc".
+        :keyword direction: Directions in which search results can be sorted. Required. Known values
+         are: "asc" and "desc".
         :paramtype direction: str or ~_generated.models.SortDirection
         """
         super().__init__(**kwargs)
@@ -1642,7 +1756,13 @@ class SortSpec(_serialization.Model):
 
 
 class StorageElementStatus(_serialization.Model):
-    """StorageElementStatus.
+    """Status of the operations supported by a storage element.
+
+    Attributes:
+        read: Read operation status.
+        write: Write operation status.
+        check: Check operation status.
+        remove: Remove operation status.
 
     All required parameters must be populated in order to send to server.
 
@@ -1713,7 +1833,11 @@ class StorageElementStatusWrite(_serialization.Model):
 
 
 class SummaryParams(_serialization.Model):
-    """SummaryParams.
+    """Parameters for grouping and summarizing search results.
+
+    Attributes:
+        grouping: Parameters used to group the search results.
+        search: Search conditions to apply before grouping.
 
     All required parameters must be populated in order to send to server.
 
@@ -1751,7 +1875,7 @@ class SummaryParamsSearchItem(_serialization.Model):
 
 
 class SupportInfo(_serialization.Model):
-    """SupportInfo.
+    """Support contact information for a virtual organization.
 
     All required parameters must be populated in order to send to server.
 
@@ -1791,7 +1915,7 @@ class SupportInfo(_serialization.Model):
 
 
 class TokenResponse(_serialization.Model):
-    """TokenResponse.
+    """OAuth2 token response returned after a successful grant.
 
     All required parameters must be populated in order to send to server.
 
@@ -1976,13 +2100,19 @@ class ValidationError(_serialization.Model):
 
 
 class VectorSearchSpec(_serialization.Model):
-    """VectorSearchSpec.
+    """Search condition applied to a collection of values.
+
+    Attributes:
+        parameter: Parameter to search.
+        operator: Collection comparison operator to apply.
+        values: Values to compare with the parameter.
 
     All required parameters must be populated in order to send to server.
 
     :ivar parameter: Parameter. Required.
     :vartype parameter: str
-    :ivar operator: VectorSearchOperator. Required. Known values are: "in" and "not in".
+    :ivar operator: Operators for comparing values against a collection. Required. Known values
+     are: "in" and "not in".
     :vartype operator: str or ~_generated.models.VectorSearchOperator
     :ivar values: Values. Required.
     :vartype values: any
@@ -2006,7 +2136,8 @@ class VectorSearchSpec(_serialization.Model):
         """
         :keyword parameter: Parameter. Required.
         :paramtype parameter: str
-        :keyword operator: VectorSearchOperator. Required. Known values are: "in" and "not in".
+        :keyword operator: Operators for comparing values against a collection. Required. Known values
+         are: "in" and "not in".
         :paramtype operator: str or ~_generated.models.VectorSearchOperator
         :keyword values: Values. Required.
         :paramtype values: any
@@ -2018,13 +2149,13 @@ class VectorSearchSpec(_serialization.Model):
 
 
 class VOInfo(_serialization.Model):
-    """VOInfo.
+    """Configuration and support information for a virtual organization.
 
     All required parameters must be populated in order to send to server.
 
     :ivar groups: Groups. Required.
     :vartype groups: dict[str, ~_generated.models.GroupInfo]
-    :ivar support: SupportInfo. Required.
+    :ivar support: Support contact information for a virtual organization. Required.
     :vartype support: ~_generated.models.SupportInfo
     :ivar default_group: Default Group. Required.
     :vartype default_group: str
@@ -2053,7 +2184,7 @@ class VOInfo(_serialization.Model):
         """
         :keyword groups: Groups. Required.
         :paramtype groups: dict[str, ~_generated.models.GroupInfo]
-        :keyword support: SupportInfo. Required.
+        :keyword support: Support contact information for a virtual organization. Required.
         :paramtype support: ~_generated.models.SupportInfo
         :keyword default_group: Default Group. Required.
         :paramtype default_group: str

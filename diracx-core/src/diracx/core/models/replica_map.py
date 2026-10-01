@@ -57,6 +57,12 @@ def _validate_lfn(value: str) -> str:
     """Validate and normalize Logical File Name.
 
     Removes LFN: prefix if present and ensures it's a valid absolute path or a filename without slashes.
+
+    Args:
+        value: Logical file name to validate.
+
+    Returns:
+        The logical file name without an ``LFN:`` prefix.
     """
     value = value.removeprefix("LFN:")
     if not value:
@@ -75,6 +81,12 @@ def _validate_pfn(value: str) -> str:
     """Validate and normalize Physical File Name.
 
     Removes PFN: prefix if present before URL validation.
+
+    Args:
+        value: Physical file name to validate.
+
+    Returns:
+        The physical file name without a ``PFN:`` prefix.
     """
     value = value.removeprefix("PFN:")
     if not value:
@@ -86,6 +98,12 @@ def _validate_adler32(value: str) -> str:
     """Validate Adler32 checksum format.
 
     Must be 8 hexadecimal characters.
+
+    Args:
+        value: Adler32 checksum to validate.
+
+    Returns:
+        The checksum normalized to lowercase.
     """
     value = value.lower()
     if len(value) != 8:
@@ -105,6 +123,12 @@ def _validate_guid(value: str) -> str:
     The format is 8-4-4-4-12 hexadecimal digits with hyphens (UUID format).
     The original case is preserved to avoid mismatches with downstream systems.
     Example: 6032CB7C-32DC-EC11-9A66-D85ED3091D71
+
+    Args:
+        value: GUID checksum to validate.
+
+    Returns:
+        The validated GUID checksum with its original casing preserved.
     """
     if len(value) != 36:
         raise ValueError(
@@ -168,6 +192,14 @@ class ReplicaMap(RootModel):
             @field_validator("se")
             @classmethod
             def validate_se(cls, v: str) -> str:
+                """Validate and normalize a storage element identifier.
+
+                Args:
+                    v: Storage element identifier to validate.
+
+                Returns:
+                    The stripped storage element identifier.
+                """
                 if not v or not v.strip():
                     raise ValueError("Storage Element ID cannot be empty")
                 return v.strip()
@@ -191,6 +223,14 @@ class ReplicaMap(RootModel):
         @field_validator("replicas")
         @classmethod
         def validate_replicas(cls, v: list) -> list:
+            """Ensure that at least one replica is present.
+
+            Args:
+                v: Replicas to validate.
+
+            Returns:
+                The validated list of replicas.
+            """
             if not v:
                 raise ValueError("At least one replica is required")
             return v
@@ -198,6 +238,14 @@ class ReplicaMap(RootModel):
         @field_validator("size_bytes")
         @classmethod
         def validate_size_bytes(cls, v: int | None) -> int | None:
+            """Ensure that a file size is positive when provided.
+
+            Args:
+                v: File size in bytes to validate.
+
+            Returns:
+                The validated file size, or ``None``.
+            """
             if v is not None and v <= 0:
                 raise ValueError(f"Size in bytes cannot be zero or negative: {v}")
             return v
@@ -205,9 +253,20 @@ class ReplicaMap(RootModel):
     root: dict[LFN, MapEntry]
 
     def __iter__(self) -> Iterator[LFN]:  # type: ignore[override]
-        """Iterate over the Logical File Names in the map."""
+        """Iterate over the Logical File Names in the map.
+
+        Returns:
+            An iterator over the map's logical file names.
+        """
         return iter(self.root)
 
     def __getitem__(self, item: LFN) -> MapEntry:
-        """Get the map entry for a given LFN."""
+        """Get the map entry for a given LFN.
+
+        Args:
+            item: Logical file name whose entry should be returned.
+
+        Returns:
+            The map entry associated with the logical file name.
+        """
         return self.root[item]

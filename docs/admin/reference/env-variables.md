@@ -16,6 +16,14 @@ Factory settings.
 ```
 Settings which do not fit into dedicated classes,
 or are dynamically generated.
+
+Attributes:
+    config_backend_url: URL of the configuration backend.
+    legacy_exchange_hashed_api_key: Hashed API key for legacy exchange.
+    tasks_redis_url: URL of the Redis server used for tasks.
+    enabled_services: Map of service names to enabled states.
+    opensearch_dbs: OpenSearch database connection URLs.
+    sql_dbs: SQL database connection URLs.
 ```
 
 ### `DIRACX_CONFIG_BACKEND_URL`
@@ -147,6 +155,23 @@ The URL for the SQL database TaskQueueDB.
 
 Settings for the authentication service.
 
+```
+Attributes:
+    dirac_client_id: OAuth2 client identifier for DIRAC clients.
+    allowed_redirects: Redirect URLs allowed during authorization.
+    device_flow_expiration_seconds: Device flow expiration time in seconds.
+    authorization_flow_expiration_seconds: Authorization code expiration time in seconds.
+    completed_flow_retention_minutes: Retention time for completed flows in minutes.
+    state_key: Key used to encrypt and decrypt OAuth2 state values.
+    token_issuer: Issuer identifier for JWT tokens.
+    token_keystore: Cryptographic keys used to sign and verify JWTs.
+    token_allowed_algorithms: Algorithms allowed for JWT signing.
+    access_token_expire_minutes: Access token lifetime in minutes.
+    refresh_token_expire_minutes: Refresh token lifetime in minutes.
+    refresh_token_retention_months: Refresh token retention period in months.
+    available_properties: Security properties available in the installation.
+```
+
 ### `DIRACX_SERVICE_AUTH_DIRAC_CLIENT_ID`
 
 *Optional*, default value: `myDIRACClientID`
@@ -268,6 +293,19 @@ for access control decisions. Defaults to all available security properties.
 ## SandboxStoreSettings
 
 Settings for the sandbox store.
+
+```
+Attributes:
+    bucket_name: S3 bucket used for job sandboxes.
+    s3_client_kwargs: Configuration passed to the S3 client.
+    auto_create_bucket: Whether to create a missing S3 bucket.
+    url_validity_seconds: Validity period for presigned S3 URLs.
+    se_name: Logical Storage Element name for the sandbox store.
+    s3_max_pool_connections: Maximum S3 client connection pool size.
+    clean_batch_size: Number of candidates selected per cleaning batch.
+    clean_delete_chunk_size: Number of database rows deleted per chunk.
+    clean_max_concurrent_db_deletes: Maximum concurrent database delete chunks.
+```
 
 ### `DIRACX_SANDBOX_STORE_BUCKET_NAME`
 

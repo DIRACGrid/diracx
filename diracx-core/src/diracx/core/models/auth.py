@@ -1,3 +1,5 @@
+"""Pydantic models and typed structures for authentication flows."""
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -9,6 +11,8 @@ from .types import UTCDatetime
 
 
 class UserInfo(BaseModel):
+    """Identity information associated with an authenticated user."""
+
     sub: str  # dirac generated vo:sub
     preferred_username: str
     dirac_group: str
@@ -41,6 +45,8 @@ class InitiateDeviceFlowResponse(TypedDict):
 
 
 class OpenIDConfiguration(TypedDict):
+    """OpenID Connect provider metadata exposed by the discovery endpoint."""
+
     issuer: str
     token_endpoint: str
     userinfo_endpoint: str
@@ -57,12 +63,16 @@ class OpenIDConfiguration(TypedDict):
 
 
 class TokenPayload(BaseModel):
+    """Common claims included in DiracX token payloads."""
+
     jti: str
     exp: UTCDatetime
     dirac_policies: dict
 
 
 class TokenResponse(BaseModel):
+    """OAuth2 token response returned after a successful grant."""
+
     # Based on RFC 6749
     access_token: str
     expires_in: int
@@ -71,6 +81,8 @@ class TokenResponse(BaseModel):
 
 
 class AccessTokenPayload(TokenPayload):
+    """Claims included in an access token."""
+
     sub: str
     vo: str
     iss: str
@@ -80,24 +92,34 @@ class AccessTokenPayload(TokenPayload):
 
 
 class RefreshTokenPayload(TokenPayload):
+    """Claims included in a refresh token."""
+
     legacy_exchange: bool
 
 
 class SupportInfo(TypedDict):
+    """Support contact information for a virtual organization."""
+
     message: str
     webpage: str | None
     email: str | None
 
 
 class GroupInfo(TypedDict):
+    """Configuration information for a group within a virtual organization."""
+
     properties: list[str]
 
 
 class VOInfo(TypedDict):
+    """Configuration and support information for a virtual organization."""
+
     groups: dict[str, GroupInfo]
     support: SupportInfo
     default_group: str
 
 
 class Metadata(TypedDict):
+    """Authentication metadata describing the available virtual organizations."""
+
     virtual_organizations: dict[str, VOInfo]

@@ -43,8 +43,15 @@ from .extensions import select_from_extension
 
 
 class SecurityProperty(str):
+    """Security property that can be assigned to users or groups."""
+
     @classmethod
     def available_properties(cls) -> set[SecurityProperty]:
+        """Return security properties provided by installed extensions.
+
+        Returns:
+            The set of security properties exposed by extension modules.
+        """
         properties = set()
         for entry_point in select_from_extension(
             group="diracx", name="properties_module"
@@ -90,6 +97,12 @@ class SecurityProperty(str):
 
 
 class UnevaluatedProperty:
+    """Security property expression evaluated against allowed properties.
+
+    Attributes:
+        property: Security property represented by the expression.
+    """
+
     def __init__(self, property: SecurityProperty):
         self.property = property
 
@@ -100,6 +113,14 @@ class UnevaluatedProperty:
         return repr(self.property)
 
     def __call__(self, allowed_properties: list[SecurityProperty]) -> bool:
+        """Evaluate the property against a list of allowed properties.
+
+        Args:
+            allowed_properties: Properties permitted by the caller.
+
+        Returns:
+            Whether this property is present in the allowed properties.
+        """
         return self.property in allowed_properties
 
     def __and__(self, value: UnevaluatedProperty) -> UnevaluatedExpression:
@@ -116,6 +137,13 @@ class UnevaluatedProperty:
 
 
 class UnevaluatedExpression(UnevaluatedProperty):
+    """Compound expression combining unevaluated security properties.
+
+    Attributes:
+        operator: Operation used to combine or negate the expression operands.
+        args: Operands passed to the operator.
+    """
+
     def __init__(self, operator: Callable[..., bool], *args: UnevaluatedProperty):
         self.operator = operator
         self.args = args
@@ -134,6 +162,14 @@ class UnevaluatedExpression(UnevaluatedProperty):
         return f"{self.operator.__name__}({', '.join(map(repr, self.args))})"
 
     def __call__(self, properties: list[SecurityProperty]) -> bool:
+        """Evaluate the compound expression against allowed properties.
+
+        Args:
+            properties: Properties permitted by the caller.
+
+        Returns:
+            The boolean result of applying the expression operator.
+        """
         return self.operator(*(a(properties) for a in self.args))
 
 

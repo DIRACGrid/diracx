@@ -15,6 +15,15 @@ from .types import UTCDatetime
 
 
 class InsertedJob(BaseModel):
+    """Information returned for a newly inserted job.
+
+    Attributes:
+        job_id: Identifier assigned to the inserted job.
+        status: Current job status.
+        minor_status: More detailed job status.
+        time_stamp: Time associated with the insertion.
+    """
+
     job_id: int = Field(alias="JobID")
     status: str = Field(alias="Status")
     minor_status: str = Field(alias="MinorStatus")
@@ -22,6 +31,18 @@ class InsertedJob(BaseModel):
 
 
 class HeartbeatData(BaseModel, extra="forbid", allow_inf_nan=False):
+    """Runtime resource and output data reported by a job heartbeat.
+
+    Attributes:
+        load_average: System load average.
+        memory_used: Memory used by the job.
+        vsize: Virtual memory size used by the job.
+        available_disk_space: Available disk space.
+        cpu_consumed: CPU time consumed by the job.
+        wall_clock_time: Wall-clock time consumed by the job.
+        standard_output: Standard output reported by the job.
+    """
+
     load_average: float | None = Field(None, alias="LoadAverage")
     memory_used: float | None = Field(None, alias="MemoryUsed")
     vsize: float | None = Field(None, alias="Vsize")
@@ -32,6 +53,14 @@ class HeartbeatData(BaseModel, extra="forbid", allow_inf_nan=False):
 
 
 class JobCommand(BaseModel):
+    """Command to apply to a job.
+
+    Attributes:
+        job_id: Identifier of the target job.
+        command: Command to execute.
+        arguments: Optional command arguments.
+    """
+
     job_id: int
     command: Literal["Kill"]
     arguments: str | None = None
@@ -59,7 +88,29 @@ def _ensure_finite_numbers(value: Any, path: str) -> None:
 class JobParameters(
     BaseModel, populate_by_name=True, extra="allow", allow_inf_nan=False
 ):
-    """Some of the most important parameters that can be set for a job."""
+    """Some of the most important parameters that can be set for a job.
+
+    Extra fields are allowed and must contain values that can be represented
+    safely in JSON.
+
+    Attributes:
+        timestamp: Time associated with the job parameters.
+        cpu_normalization_factor: CPU normalization factor.
+        norm_cpu_time_s: Normalized CPU time in seconds.
+        total_cpu_time_s: Total CPU time in seconds.
+        host_name: Host running the job.
+        grid_ce: Grid computing element.
+        model_name: Computing model name.
+        pilot_agent: Pilot agent name.
+        pilot_reference: Pilot reference.
+        memory_mb: Memory used in megabytes.
+        local_account: Local account used by the job.
+        payload_pid: Payload process identifier.
+        ce_queue: Computing element queue.
+        batch_system: Batch system name.
+        job_type: Type of the job.
+        job_status: Current job status.
+    """
 
     timestamp: UTCDatetime | None = None
     cpu_normalization_factor: int | None = Field(None, alias="CPUNormalizationFactor")
@@ -81,7 +132,15 @@ class JobParameters(
     )
     @classmethod
     def convert_cpu_fields_to_int(cls, v):
-        """Convert string representation of float to integer for CPU-related fields."""
+        """Convert CPU-related values to integers.
+
+        Args:
+            v: CPU-related value to convert.
+
+        Returns:
+            The converted integer value, or the original value when conversion
+            is not applicable.
+        """
         if v is None:
             return v
         if isinstance(v, str):
@@ -103,6 +162,9 @@ class JobParameters(
 
         Python's JSON parser accepts NaN and (-)Infinity so such values survive
         request parsing, but OpenSearch rejects documents containing them.
+
+        Returns:
+            The validated job parameters.
         """
         if self.model_extra:
             for name, value in self.model_extra.items():
@@ -111,7 +173,30 @@ class JobParameters(
 
 
 class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
-    """All the attributes that can be set for a job."""
+    """All the attributes that can be set for a job.
+
+    Attributes:
+        job_type: Type of the job.
+        job_group: Group associated with the job.
+        site: Site associated with the job.
+        job_name: User-defined job name.
+        owner: User who owns the job.
+        owner_group: Group of the job owner.
+        vo: Virtual organization associated with the job.
+        submission_time: Time when the job was submitted.
+        reschedule_time: Time when the job was rescheduled.
+        last_update_time: Time of the last job update.
+        start_exec_time: Time when job execution started.
+        heart_beat_time: Time of the last heartbeat.
+        end_exec_time: Time when job execution ended.
+        status: Current job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific job status.
+        user_priority: Priority assigned by the user.
+        reschedule_counter: Number of times the job was rescheduled.
+        verified_flag: Whether the job has been verified.
+        accounted_flag: Whether the job has been accounted for.
+    """
 
     job_type: str | None = Field(None, alias="JobType")
     job_group: str | None = Field(None, alias="JobGroup")
@@ -136,10 +221,17 @@ class JobAttributes(BaseModel, populate_by_name=True, extra="forbid"):
 
 
 class JobMetaData(JobAttributes, JobParameters, extra="allow"):
-    """A model that combines both JobAttributes and JobParameters."""
+    """A model that combines both job attributes and job parameters.
+
+    Attributes:
+        The attributes and parameters inherited from ``JobAttributes`` and
+        ``JobParameters``.
+    """
 
 
 class JobStatus(StrEnum):
+    """Lifecycle statuses for a job."""
+
     SUBMITTING = "Submitting"
     RECEIVED = "Received"
     CHECKING = "Checking"
@@ -158,11 +250,24 @@ class JobStatus(StrEnum):
 
 
 class JobMinorStatus(StrEnum):
+    """Additional status values describing job scheduling outcomes."""
+
     MAX_RESCHEDULING = "Maximum of reschedulings reached"
     RESCHEDULED = "Job Rescheduled"
 
 
 class JobLoggingRecord(BaseModel):
+    """Record of a job status change written to the logging store.
+
+    Attributes:
+        job_id: Identifier of the job.
+        status: New job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+        date: Time of the status change.
+        source: Source of the status change.
+    """
+
     job_id: int
     status: JobStatus | Literal["idem"]
     minor_status: str
@@ -172,6 +277,15 @@ class JobLoggingRecord(BaseModel):
 
 
 class JobStatusUpdate(BaseModel):
+    """Requested update to a job's status information.
+
+    Attributes:
+        status: New job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+        source: Source of the status update.
+    """
+
     status: JobStatus | None = Field(None, alias="Status")
     minor_status: str | None = Field(None, alias="MinorStatus")
     application_status: str | None = Field(None, alias="ApplicationStatus")
@@ -179,19 +293,51 @@ class JobStatusUpdate(BaseModel):
 
 
 class LimitedJobStatusReturn(BaseModel):
+    """Status information returned without timing or source details.
+
+    Attributes:
+        status: Current job status.
+        minor_status: More detailed job status.
+        application_status: Application-specific status.
+    """
+
     status: JobStatus = Field(alias="Status")
     minor_status: str = Field(alias="MinorStatus")
     application_status: str = Field(alias="ApplicationStatus")
 
 
 class JobStatusReturn(LimitedJobStatusReturn):
+    """Status information returned with timing and source details.
+
+    Attributes:
+        status_time: Time associated with the status.
+        source: Source of the status information.
+    """
+
     status_time: UTCDatetime = Field(alias="StatusTime")
     source: str = Field(alias="Source")
 
 
 class SetJobStatusReturn(BaseModel):
+    """Result of applying a status update to one or more jobs.
+
+    Attributes:
+        success: Successful status updates keyed by job identifier.
+        failed: Failed status updates keyed by job identifier.
+    """
+
     class SetJobStatusReturnSuccess(BaseModel):
-        """Successful new status change."""
+        """Status information for a successful status change.
+
+        Attributes:
+            status: New job status.
+            minor_status: More detailed job status.
+            application_status: Application-specific status.
+            heart_beat_time: Time of the heartbeat.
+            start_exec_time: Time when execution started.
+            end_exec_time: Time when execution ended.
+            last_update_time: Time of the last update.
+        """
 
         status: JobStatus | None = Field(None, alias="Status")
         minor_status: str | None = Field(None, alias="MinorStatus")

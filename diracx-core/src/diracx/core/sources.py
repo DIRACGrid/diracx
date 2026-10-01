@@ -32,7 +32,13 @@ DEFAULT_CS_REV_CACHE_HARD_TTL = 60 * 60
 
 @dataclass(frozen=True)
 class Snapshot(Generic[T]):
-    """Wraps a cached data payload with its cache metadata."""
+    """Wrap a cached data payload with its cache metadata.
+
+    Attributes:
+        data: Cached source data.
+        hexsha: Identifier of the revision represented by the data.
+        modified: Time associated with the revision.
+    """
 
     data: T
     hexsha: str
@@ -43,6 +49,10 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
     """Abstract base class for sources that can be cached.
 
     Handles the caching of the latest revision and its content using a two-level cache.
+
+    Attributes:
+        _revision_cache: Cache containing the latest revision metadata.
+        _content_cache: Cache containing source content by revision.
     """
 
     def __init__(self):
@@ -64,30 +74,41 @@ class CacheableSource(Generic[T], metaclass=ABCMeta):
 
     @abstractmethod
     def latest_revision(self) -> tuple[str, datetime]:
-        """Abstract method.
+        """Return the latest revision and its modification time.
 
-        Must return:
-        * a unique hash as a string, representing the last version
-        * a datetime object corresponding to when the version dates.
+        Returns:
+            A tuple containing a unique revision identifier and its timestamp.
         """
 
     @abstractmethod
     def read_raw(self, hexsha: str, modified: datetime) -> T:
-        """Abstract method.
+        """Read source data for a specific revision.
 
-        Return the Source object that corresponds to the specific hash
-        The `modified` parameter is just added as a attribute to the source.
+        Args:
+            hexsha: Identifier of the requested revision.
+            modified: Time associated with the requested revision.
+
+        Returns:
+            The source data corresponding to the revision.
         """
 
     def read(self) -> T:
-        """Load the source from the backend with appropriate caching."""
+        """Load the source from the backend with appropriate caching.
+
+        Returns:
+            The latest source data.
+        """
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=True
         )
         return self._content_cache[hexsha]
 
     async def read_non_blocking(self) -> T:
-        """Load the source from the backend with appropriate caching."""
+        """Load the source from the backend with appropriate caching.
+
+        Returns:
+            The latest source data, potentially after a background refresh.
+        """
         hexsha = self._revision_cache.get(
             "latest_revision", self._read_work, blocking=False
         )
@@ -115,6 +136,13 @@ class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
 
     Async equivalent of CacheableSource. Uses AsyncTwoLevelCache so populate
     functions are native coroutines.
+
+    Attributes:
+        db_class: Database class associated with the source.
+        rev_cache_soft_ttl: Soft time-to-live for revision cache entries.
+        rev_cache_hard_ttl: Hard time-to-live for revision cache entries.
+        _revision_cache: Asynchronous cache containing latest revision metadata.
+        _content_cache: Cache containing source content by revision.
     """
 
     #: The database class this source reads from. Used by the application
@@ -138,11 +166,23 @@ class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
 
     @abstractmethod
     async def latest_revision(self) -> tuple[str, datetime]:
-        """Return (revision_str, modified) identifying the current revision."""
+        """Return the latest revision and its modification time.
+
+        Returns:
+            A tuple containing the revision identifier and its timestamp.
+        """
 
     @abstractmethod
     async def read_raw(self, hexsha: str, modified: datetime) -> T:
-        """Fetch and return the data for the given revision."""
+        """Fetch the data for a given revision.
+
+        Args:
+            hexsha: Identifier of the requested revision.
+            modified: Time associated with the requested revision.
+
+        Returns:
+            The source data corresponding to the revision.
+        """
 
     async def _read_work(self) -> str:
         hexsha, modified = await self.latest_revision()
@@ -151,14 +191,25 @@ class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
         return hexsha
 
     async def read(self) -> T:
-        """Blocking read — awaits refresh on a hard cache miss."""
+        """Perform a blocking read, awaiting refresh on a hard cache miss.
+
+        Returns:
+            The latest source data.
+        """
         hexsha = await self._revision_cache.get(
             "latest_revision", self._read_work, blocking=True
         )
         return self._content_cache[hexsha]
 
     async def read_non_blocking(self) -> T:
-        """Non-blocking read — raises NotReadyError on a hard cache miss."""
+        """Perform a non-blocking read.
+
+        Returns:
+            The latest source data.
+
+        Raises:
+            NotReadyError: If the data is not available after a hard cache miss.
+        """
         hexsha = await self._revision_cache.get(
             "latest_revision", self._read_work, blocking=False
         )
@@ -177,5 +228,11 @@ class AsyncCacheableSource(Generic[T], metaclass=ABCMeta):
         overrides ``cls.create`` with the instance's ``read`` method, so this
         should never actually be called. Each subclass's bound ``create``
         classmethod is a distinct dependency key.
+
+        Returns:
+            Source data from the wired dependency.
+
+        Raises:
+            NotImplementedError: If the source was not wired by the factory.
         """
         raise NotImplementedError(f"{cls.__name__} was not wired by the factory")

@@ -49,6 +49,8 @@ T = TypeVar("T")
 
 
 class SqlalchemyDsn(AnyUrl):
+    """Database URL type for supported asynchronous SQL drivers."""
+
     _constraints = UrlConstraints(
         allowed_schemes=[
             "sqlite+aiosqlite",
@@ -61,6 +63,8 @@ class SqlalchemyDsn(AnyUrl):
 
 
 class _TokenSigningKeyStore(SecretStr):
+    """Secret string wrapper containing an imported signing key set."""
+
     jwks: KeySet
 
     def __init__(self, data: str):
@@ -84,7 +88,14 @@ class _TokenSigningKeyStore(SecretStr):
 
 
 def _maybe_load_keys_from_file(value: Any) -> Any:
-    """Load jwks from files if needed."""
+    """Load a JWKS from a file URL when needed.
+
+    Args:
+        value: JWKS JSON data or a file URL containing the data.
+
+    Returns:
+        The loaded JWKS text, or the original value when no loading is needed.
+    """
     if isinstance(value, str):
         # If the value is a string, we need to check if it is a JSON string or a file URL
         if not (value.strip().startswith("{") or value.startswith("[")):
@@ -106,6 +117,8 @@ TokenSigningKeyStore = Annotated[
 
 
 class FernetKey(SecretStr):
+    """Secret string wrapper containing a Fernet encryption key."""
+
     fernet: Fernet
 
     def __init__(self, data: str):
@@ -114,7 +127,14 @@ class FernetKey(SecretStr):
 
 
 def _apply_default_scheme(value: str) -> str:
-    """Apply the default file:// scheme if not present."""
+    """Apply the default ``file://`` scheme if not present.
+
+    Args:
+        value: File path or URL to normalize.
+
+    Returns:
+        The value with a ``file://`` scheme when one was not provided.
+    """
     if "://" not in value:
         value = f"file://{value}"
     return value
@@ -124,20 +144,38 @@ LocalFileUrl = Annotated[FileUrl, BeforeValidator(_apply_default_scheme)]
 
 
 class ServiceSettingsBase(BaseSettings):
+    """Base class for service-specific settings."""
+
     model_config = SettingsConfigDict(frozen=True)
 
     @classmethod
     def create(cls) -> Self:
+        """Create service settings.
+
+        Returns:
+            A service settings instance.
+
+        Raises:
+            NotImplementedError: Always, because subclasses must implement this method.
+        """
         raise NotImplementedError("This should never be called")
 
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
-        """Context manager to run code at startup and shutdown."""
+        """Run service startup and shutdown handling around a context.
+
+        Yields:
+            ``None`` while the service is running.
+        """
         yield
 
 
 class DevelopmentSettings(ServiceSettingsBase):
-    """Settings for the Development Configuration that can influence run time."""
+    """Settings for the Development Configuration that can influence run time.
+
+    Attributes:
+        crash_on_missed_access_policy: Whether to fail when an access policy is missed.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="DIRACX_DEV_", use_attribute_docstrings=True
@@ -152,15 +190,40 @@ class DevelopmentSettings(ServiceSettingsBase):
 
     @classmethod
     def create(cls) -> Self:
+        """Create development settings from the current environment.
+
+        Returns:
+            The development settings instance.
+        """
         return cls()
 
 
 class AuthSettings(ServiceSettingsBase):
-    """Settings for the authentication service."""
+    """Settings for the authentication service.
+
+    Attributes:
+        dirac_client_id: OAuth2 client identifier for DIRAC clients.
+        allowed_redirects: Redirect URLs allowed during authorization.
+        device_flow_expiration_seconds: Device flow expiration time in seconds.
+        authorization_flow_expiration_seconds: Authorization code expiration time in seconds.
+        completed_flow_retention_minutes: Retention time for completed flows in minutes.
+        state_key: Key used to encrypt and decrypt OAuth2 state values.
+        token_issuer: Issuer identifier for JWT tokens.
+        token_keystore: Cryptographic keys used to sign and verify JWTs.
+        token_allowed_algorithms: Algorithms allowed for JWT signing.
+        access_token_expire_minutes: Access token lifetime in minutes.
+        refresh_token_expire_minutes: Refresh token lifetime in minutes.
+        refresh_token_retention_months: Refresh token retention period in months.
+        available_properties: Security properties available in the installation.
+    """
 
     @model_validator(mode="after")
     def check_retention_greater_than_expiration(self) -> Self:
-        """Ensure retention times are bigger than expiration times to avoid deleting valid flows."""
+        """Ensure retention exceeds expiration to avoid deleting valid flows.
+
+        Returns:
+            The validated authentication settings.
+        """
         if self.completed_flow_retention_minutes <= (
             self.device_flow_expiration_seconds / 60
         ) or self.completed_flow_retention_minutes <= (
@@ -273,7 +336,19 @@ class AuthSettings(ServiceSettingsBase):
 
 
 class SandboxStoreSettings(ServiceSettingsBase):
-    """Settings for the sandbox store."""
+    """Settings for the sandbox store.
+
+    Attributes:
+        bucket_name: S3 bucket used for job sandboxes.
+        s3_client_kwargs: Configuration passed to the S3 client.
+        auto_create_bucket: Whether to create a missing S3 bucket.
+        url_validity_seconds: Validity period for presigned S3 URLs.
+        se_name: Logical Storage Element name for the sandbox store.
+        s3_max_pool_connections: Maximum S3 client connection pool size.
+        clean_batch_size: Number of candidates selected per cleaning batch.
+        clean_delete_chunk_size: Number of database rows deleted per chunk.
+        clean_max_concurrent_db_deletes: Maximum concurrent database delete chunks.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="DIRACX_SANDBOX_STORE_", use_attribute_docstrings=True
@@ -335,6 +410,11 @@ class SandboxStoreSettings(ServiceSettingsBase):
 
     @contextlib.asynccontextmanager
     async def lifetime_function(self) -> AsyncIterator[None]:
+        """Create the S3 client and ensure the configured bucket is available.
+
+        Yields:
+            ``None`` while the S3 client is available.
+        """
         async with AsyncClient(
             **self.s3_client_kwargs, httpx_max_connections=self.s3_max_pool_connections
         ) as self._client:  # type: ignore
@@ -354,6 +434,14 @@ class SandboxStoreSettings(ServiceSettingsBase):
 
     @property
     def s3_client(self) -> AsyncClient:
+        """Return the active S3 client.
+
+        Returns:
+            The S3 client created by ``lifetime_function``.
+
+        Raises:
+            RuntimeError: If accessed before ``lifetime_function`` starts.
+        """
         if self._client is None:
             raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
@@ -364,6 +452,14 @@ class FactorySettings(ServiceSettingsBase):
 
     Settings which do not fit into dedicated classes,
     or are dynamically generated.
+
+    Attributes:
+        config_backend_url: URL of the configuration backend.
+        legacy_exchange_hashed_api_key: Hashed API key for legacy exchange.
+        tasks_redis_url: URL of the Redis server used for tasks.
+        enabled_services: Map of service names to enabled states.
+        opensearch_dbs: OpenSearch database connection URLs.
+        sql_dbs: SQL database connection URLs.
     """
 
     # We want to be able to read both from specific environment variables
@@ -408,7 +504,14 @@ class FactorySettings(ServiceSettingsBase):
     @model_validator(mode="before")
     @classmethod
     def load_dotenv_files(cls, data: Any) -> Any:
-        """Load dotenv files before reading settings from environment."""
+        """Load dotenv files before reading settings from the environment.
+
+        Args:
+            data: Raw settings data.
+
+        Returns:
+            The unchanged settings data after dotenv files are loaded.
+        """
         for env_file in dotenv_files_from_environment("DIRACX_SERVICE_DOTENV"):
             if not dotenv.load_dotenv(env_file):
                 raise NotImplementedError(f"Could not load dotenv file {env_file}")
@@ -417,7 +520,14 @@ class FactorySettings(ServiceSettingsBase):
     @field_validator("enabled_services", mode="before")
     @classmethod
     def build_enabled_services(cls, value: Any) -> dict[str, bool]:
-        """Build enabled services from the installed service entry points."""
+        """Build enabled services from installed service entry points.
+
+        Args:
+            value: Explicit service enablement values.
+
+        Returns:
+            Service enablement values merged with environment settings.
+        """
         enabled_services: dict[str, bool] = {
             entry_point.name: True
             for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES)
@@ -438,7 +548,14 @@ class FactorySettings(ServiceSettingsBase):
     @field_validator("opensearch_dbs", mode="before")
     @classmethod
     def build_opensearch_dbs(cls, value: Any) -> dict[str, str]:
-        """Build OpenSearch database URLs from the installed entry points."""
+        """Build OpenSearch database URLs from installed entry points.
+
+        Args:
+            value: Explicit OpenSearch database URLs.
+
+        Returns:
+            Database URLs merged with environment settings.
+        """
         opensearch_dbs: dict[str, str] = {
             entry_point.name: ""
             for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB)
@@ -456,7 +573,14 @@ class FactorySettings(ServiceSettingsBase):
     @field_validator("sql_dbs", mode="before")
     @classmethod
     def build_sql_dbs(cls, value: Any) -> dict[str, str]:
-        """Build SQL database URLs from the installed entry points."""
+        """Build SQL database URLs from installed entry points.
+
+        Args:
+            value: Explicit SQL database URLs.
+
+        Returns:
+            Database URLs merged with environment settings.
+        """
         sql_dbs: dict[str, str] = {
             entry_point.name: ""
             for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB)

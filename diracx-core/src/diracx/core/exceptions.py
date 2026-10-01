@@ -1,3 +1,5 @@
+"""Exception types raised by DiracX core components."""
+
 from __future__ import annotations
 
 __all__ = [
@@ -21,12 +23,19 @@ __all__ = [
 
 
 class DiracError(RuntimeError):
+    """Base exception for errors raised by DiracX.
+
+    Attributes:
+        detail: Human-readable details about the error.
+    """
+
     def __init__(self, detail: str = "Unknown"):
         self.detail = detail
         super().__init__(detail)
 
 
-class AuthorizationError(DiracError): ...
+class AuthorizationError(DiracError):
+    """Base exception for authorization failures."""
 
 
 class PendingAuthorizationError(AuthorizationError):
@@ -62,18 +71,37 @@ class DocumentUpsertError(DiracError):
 
 
 class TokenNotFoundError(DiracError):
+    """Raised when a token cannot be found.
+
+    Attributes:
+        jti: Identifier of the missing token.
+    """
+
     def __init__(self, jti: str, detail: str = ""):
         self.jti: str = jti
         super().__init__(f"Token {jti} not found" + (f" ({detail})" if detail else ""))
 
 
 class JobNotFoundError(DiracError):
+    """Raised when a job cannot be found.
+
+    Attributes:
+        job_id: Identifier of the missing job.
+    """
+
     def __init__(self, job_id: int, detail: str = ""):
         self.job_id: int = job_id
         super().__init__(f"Job {job_id} not found" + (f" ({detail})" if detail else ""))
 
 
 class SandboxNotFoundError(DiracError):
+    """Raised when a sandbox cannot be found.
+
+    Attributes:
+        pfn: Physical file name of the missing sandbox.
+        se_name: Storage element containing the sandbox.
+    """
+
     def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
@@ -84,12 +112,25 @@ class SandboxNotFoundError(DiracError):
 
 
 class ResourceNotFoundError(DiracError):
+    """Raised when a named resource cannot be found.
+
+    Attributes:
+        name: Name of the missing resource.
+    """
+
     def __init__(self, name: str, detail: str | None = None):
         self.name: str = name
         super().__init__(f"{name} not found" + (f" ({detail})" if detail else ""))
 
 
 class SandboxAlreadyAssignedError(DiracError):
+    """Raised when a sandbox is already assigned.
+
+    Attributes:
+        pfn: Physical file name of the sandbox.
+        se_name: Storage element to which the sandbox is assigned.
+    """
+
     def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
@@ -100,6 +141,13 @@ class SandboxAlreadyAssignedError(DiracError):
 
 
 class SandboxAlreadyInsertedError(DiracError):
+    """Raised when a sandbox is already inserted.
+
+    Attributes:
+        pfn: Physical file name of the sandbox.
+        se_name: Storage element containing the sandbox.
+    """
+
     def __init__(self, pfn: str, se_name: str, detail: str = ""):
         self.pfn: str = pfn
         self.se_name: str = se_name
@@ -110,6 +158,12 @@ class SandboxAlreadyInsertedError(DiracError):
 
 
 class JobError(DiracError):
+    """Base exception for errors concerning a job.
+
+    Attributes:
+        job_id: Identifier of the affected job.
+    """
+
     def __init__(self, job_id, detail: str = ""):
         self.job_id: int = job_id
         super().__init__(
