@@ -1,5 +1,23 @@
 extra_css:
   - assets/css/extra.css
+  - assets/css/workgraph-sim.css
+  - assets/css/playground.css
+
+# hooks/elkjs.py copies the layout engine out of the environment into the built site; it is a
+# conda dependency of this environment rather than a file in the tree
+hooks:
+  - hooks/elkjs.py
+
+extra_javascript:
+  # elkjs lays the workgraph simulator out, but it is 1.6 MB and only 11 of these pages carry a model,
+  # so the renderer fetches it itself when one comes into view, from assets/js/vendor/ where the hook
+  # above puts it
+  - assets/js/workgraph-sim-engine.js
+  - assets/js/workgraph-sim.js
+  # The playground (playground.md) compiles CWL into a spec for the simulator above; both files do nothing at
+  # all on a page that carries no workgraph block and no playground mount
+  - assets/js/workgraph-cwl.js
+  - assets/js/playground.js
 
 site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
@@ -27,9 +45,11 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to system preference
+  # One superfamily, drawn together, so the pairing is a decision rather than two faces that happen to sit at a similar
+  # weight; and a slashed zero in the mono, which the workgraph simulator needs for the hex file tags it displays.
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: IBM Plex Sans
+    code: IBM Plex Mono
   logo: assets/images/logo.svg
   icon:
     logo: logo
@@ -52,6 +72,8 @@ nav:
 
   - Roadmap: roadmap.md
 
+  - Playground: playground.md
+
   - User Guide:
     - user/index.md
     - Getting started: user/tutorials/getting-started.md
@@ -61,6 +83,17 @@ nav:
     - How-To:
       - user/how-to/index.md
       - Command Line: user/how-to/programmatic-usage/command-line-interface.md
+      - Expressing workflows:
+          - user/how-to/workflows/index.md
+          - Basic simulation: user/how-to/workflows/simulation.md
+          - Scouting simulation: user/how-to/workflows/scouting.md
+          - Removing intermediates: user/how-to/workflows/removal.md
+          - Replicating the output: user/how-to/workflows/replication.md
+          - Processing data from a query: user/how-to/workflows/data-processing.md
+          - Adding ancestor files: user/how-to/workflows/ancestry.md
+          - Collecting histograms: user/how-to/workflows/artifacts.md
+          - Splitting an output: user/how-to/workflows/splitting.md
+          - Joining two outputs: user/how-to/workflows/joining.md
       - Programmatic Usage:
         - user/how-to/programmatic-usage/index.md
         - Python: user/how-to/programmatic-usage/python-interface.md
@@ -72,6 +105,7 @@ nav:
         - Monitor jobs: user/how-to/web-interface/monitor-jobs.md
     - Explanations:
       - user/explanations/index.md
+      - How the Transformation System works: user/explanations/transformation-system.md
     - Reference:
       - user/reference/index.md
       - Client Config: user/reference/client-configuration.md
@@ -226,6 +260,7 @@ nav:
       - Test recipes: dev/reference/test-recipes.md
       - Pixi tasks: dev/reference/pixi-tasks.md
       - Dev env variables: dev/reference/env-variables.md
+      - Workgraph simulator: dev/reference/workgraph-sim.md
       - Backend:
           - Configuration: dev/reference/configuration.md
           - Dependency injection: dev/reference/dependency-injection.md
@@ -243,6 +278,14 @@ nav:
     - Architecture Design Records:
       - adr/index.md
       - DX-ADR-001 - Tasks: adr/DX-ADR-001_tasks.md
+      - DX-ADR-002 - Transformation System overview: adr/DX-ADR-002_overview.md
+      - DX-ADR-003 - Compute backends: adr/DX-ADR-003_compute_backends.md
+      - DX-ADR-004 - Transformation System database schema: adr/DX-ADR-004_schema.md
+      - DX-ADR-005 - Transformation System state machines: adr/DX-ADR-005_state_machines.md
+      - DX-ADR-006 - Transformation System extension points: adr/DX-ADR-006_extensions.md
+      - DX-ADR-007 - CWL specification: adr/DX-ADR-007_cwl.md
+      - DX-ADR-008 - Data management transformations: adr/DX-ADR-008_data_management.md
+      - DX-ADR-009 - Journalled counters: adr/DX-ADR-009_counters.md
 
 markdown_extensions:
   - admonition
@@ -259,6 +302,9 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+        - name: workgraph
+          class: workgraph
           format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.inlinehilite
   - pymdownx.snippets:

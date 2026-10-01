@@ -9,7 +9,7 @@
 
 ## Abstract
 
-DiracX tasks is a lightweight, async-first task execution framework built on Redis Streams. It replaces several DIRAC components with a unified broker/worker/scheduler model that supports prioritised queuing, distributed locking, periodic scheduling, dependency injection, dead-letter persistence, and extension via entry points. The components it replaces are:
+DiracX tasks is an async-first task execution framework built on Redis Streams, replacing DIRAC's Agents and Executors with one broker/worker/scheduler model. The components it replaces are:
 
 - **Agents** — long-running processes that periodically poll databases to perform work (e.g. `SiteDirector`, `TransformationAgent`).
 - **Executors / Optimisers** — reactive, push-based processors that receive tasks from a central Mind service and pass them through processing chains (e.g. the job optimisation pipeline: `JobPath` → `JobSanity` → `InputData` → `JobScheduling`).
@@ -24,8 +24,6 @@ DIRAC's current workload execution relies on Agents (periodic pollers) and Execu
 - **Latency:** Agents are fundamentally periodic, polling at a configured interval (default 120 seconds). They cannot react to external input in real time. The Executor/Mind model was introduced to address this for job optimisation, but it adds significant architectural complexity (Mind services, `ExecutorDispatcher`, task freezing, fast-track dispatch) despite being a generic framework that was only ever used for that single use case.
 - **Resource overhead:** Each agent type requires a dedicated process, making it expensive to scale the number of distinct task types. The Executor model allows pooling but requires its own infrastructure (Mind services, message clients).
 - **Kubernetes fit:** Long-running agent processes with internal state and configuration-based partitioning are awkward to operate in container-orchestrated environments where stateless, horizontally scalable workloads are the norm.
-
-The task system addresses these by unifying both Agents and Executors into a single model, decomposing workload execution into independent components (broker, worker, scheduler) that are stateless, horizontally scalable, and naturally suited to distributed deployments. Tasks are plain Python classes with declarative configuration for priority, size, locking, and retries, making them easy to write, test interactively, and extend through the standard DiracX entry-point mechanism.
 
 ## Specification
 
@@ -389,7 +387,7 @@ Periodic tasks default to a `MutexLock` on their class name (or class name + VO 
 
 ### Why three sizes / three priorities?
 
-The three size classes (`SMALL`, `MEDIUM`, `LARGE`) exist to allow independent worker scaling with different resource allocations — a worker consuming small tasks can run on a pod with minimal memory, while large tasks may need significantly more. The three priority levels (`BACKGROUND`, `NORMAL`, `REALTIME`) ensure that latency-sensitive work (e.g. job optimisation triggered by a user submission) is not blocked behind bulk background work (e.g. accounting aggregation). Using separate streams rather than a single stream with metadata-based routing means workers only consume from streams matching their size class, and within that class always drain higher-priority streams first.
+Sizes let workers scale independently: a worker consuming small tasks runs on a pod with minimal memory, while large tasks need more. Priorities keep latency-sensitive work, such as job optimisation triggered by a user submission, from queueing behind bulk background work such as accounting aggregation. Separate streams rather than one stream with metadata-based routing mean a worker consumes only the streams matching its size class, and within that class always drains higher-priority streams first.
 
 ### Dependency Injection
 

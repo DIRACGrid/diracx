@@ -16,6 +16,7 @@ This page documents the available pixi tasks.
 - `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)
 - `local-tasks`: Run diracx-tasks with the local environment variables
 - `test-tutorial`: Run only the advanced tutorial tests
+- `test-workgraph-sim`: Run the workgraph simulator checks and every workgraph fence in the docs
 - `tutorial-reset`: Strip tutorial code from gubbins for the advanced tutorial
 
 ## DiracX Tasks
