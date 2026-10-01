@@ -1,3 +1,5 @@
+"""SQL database operations for job status history and timestamps."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -13,7 +15,11 @@ from .schema import JobLoggingDBBase, LoggingInfo
 
 
 class JobLoggingDB(BaseSQLDB):
-    """Frontend for the JobLoggingDB. Provides the ability to store changes with timestamps."""
+    """Frontend for storing and retrieving timestamped job status changes.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the job logging table.
+    """
 
     metadata = JobLoggingDBBase.metadata
 
@@ -21,7 +27,11 @@ class JobLoggingDB(BaseSQLDB):
         self,
         records: list[JobLoggingRecord],
     ):
-        """Bulk insert entries to the JobLoggingDB table."""
+        """Bulk insert status history entries into the database.
+
+        Args:
+            records: Job status records to insert.
+        """
         # First, fetch the maximum SeqNums for the given job_ids
         seqnum_stmt = (
             select(
@@ -61,9 +71,16 @@ class JobLoggingDB(BaseSQLDB):
         )
 
     async def get_records(self, job_ids: list[int]) -> dict[int, JobStatusReturn]:
-        """Return a Status,MinorStatus,ApplicationStatus,StatusTime,Source tuple.
+        """Return status history for the specified jobs in chronological order.
 
-        For each record found for job specified by its jobID in historical order.
+        Replaces ``idem`` values with the preceding value and uses ``Unknown``
+        when the first application status is ``idem``.
+
+        Args:
+            job_ids: Job identifiers whose status history should be retrieved.
+
+        Returns:
+            Mapping from job identifiers to their ordered status records.
         """
         # We could potentially use a group_by here, but we need to post-process the
         # results later.
@@ -134,16 +151,24 @@ class JobLoggingDB(BaseSQLDB):
         return res
 
     async def delete_records(self, job_ids: list[int]):
-        """Delete logging records for given jobs."""
+        """Delete logging records for the specified jobs.
+
+        Args:
+            job_ids: Identifiers of jobs whose history should be deleted.
+        """
         stmt = delete(LoggingInfo).where(LoggingInfo.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def get_wms_time_stamps(
         self, job_ids: Iterable[int]
     ) -> dict[int, dict[str, datetime]]:
-        """Get TimeStamps for job MajorState transitions for multiple jobs at once.
+        """Get timestamps for major job status transitions.
 
-        return a {JobID: {State:timestamp}} dictionary.
+        Args:
+            job_ids: Job identifiers whose transition timestamps should be read.
+
+        Returns:
+            Mapping from job identifiers to status names and their timestamps.
         """
         result: defaultdict[int, dict[str, datetime]] = defaultdict(dict)
         stmt = select(

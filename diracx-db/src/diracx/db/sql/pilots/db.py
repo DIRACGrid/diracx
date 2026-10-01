@@ -1,3 +1,5 @@
+"""SQL database operations for pilot registration and job associations."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -22,7 +24,11 @@ from .schema import (
 
 
 class PilotAgentsDB(BaseSQLDB):
-    """Front-end to the PilotAgents database."""
+    """Database operations for pilot records and pilot-job mappings.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the pilot database tables.
+    """
 
     metadata = PilotAgentsDBBase.metadata
 
@@ -40,6 +46,15 @@ class PilotAgentsDB(BaseSQLDB):
 
         If a stamp has no entry in `pilot_references` the stamp is used as
         the reference.
+
+        Args:
+            pilot_stamps: Stamps identifying the pilots to register.
+            vo: Virtual organization associated with the pilots.
+            grid_type: Grid type for the pilots.
+            grid_site: Grid site for the pilots.
+            destination_site: Destination site assigned to the pilots.
+            pilot_references: Optional mapping from pilot stamps to references.
+            status: Initial status for the registered pilots.
         """
         if pilot_references is None:
             pilot_references = {}
@@ -70,6 +85,12 @@ class PilotAgentsDB(BaseSQLDB):
         Raises PilotAlreadyAssociatedWithJobError on duplicates. The legacy
         schema has no foreign key on JobToPilotMapping, so the caller must
         ensure the pilots and jobs exist.
+
+        Args:
+            job_to_pilot_mapping: Pilot-job association records to insert.
+
+        Raises:
+            PilotAlreadyAssociatedWithJobError: If an association already exists.
         """
         stmt = insert(JobToPilotMapping).values(job_to_pilot_mapping)
 
@@ -94,6 +115,12 @@ class PilotAgentsDB(BaseSQLDB):
         a per-column CASE expression to support heterogeneous updates,
         matching the pattern in JobDB.set_job_attributes. Raises
         PilotNotFoundError if any of the pilot stamps is not found.
+
+        Args:
+            updates: Mapping from pilot stamps to column/value updates.
+
+        Raises:
+            PilotNotFoundError: If any pilot stamp is not found.
         """
         if not updates:
             return
@@ -138,7 +165,19 @@ class PilotAgentsDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[str, Any]]]:
-        """Search for pilot information in the database."""
+        """Search for pilot information in the database.
+
+        Args:
+            parameters: Optional pilot fields to include in each result.
+            search: Search conditions to apply.
+            sorts: Sort specifications to apply.
+            distinct: Whether to return distinct results.
+            per_page: Maximum number of results per page.
+            page: Optional one-based page number for pagination.
+
+        Returns:
+            Total matching pilot count and the requested page of records.
+        """
         return await self._search(
             table=PilotAgents,
             parameters=parameters,
@@ -152,7 +191,15 @@ class PilotAgentsDB(BaseSQLDB):
     async def summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
-        """Aggregate pilot counts by the requested columns."""
+        """Aggregate pilot counts by the requested columns.
+
+        Args:
+            group_by: Pilot fields used to group the summary.
+            search: Search conditions to apply before aggregation.
+
+        Returns:
+            Summary rows containing grouped values and counts.
+        """
         return await self._summary(table=PilotAgents, group_by=group_by, search=search)
 
     async def get_job_ids_for_stamps(self, pilot_stamps: list[str]) -> list[int]:
@@ -161,6 +208,12 @@ class PilotAgentsDB(BaseSQLDB):
         Single round-trip SQL join over JobToPilotMapping and PilotAgents
         (both live in the same metadata, so the join is legitimate at the
         DB layer).
+
+        Args:
+            pilot_stamps: Pilot stamps to find associated jobs for.
+
+        Returns:
+            Distinct job identifiers associated with the supplied pilots.
         """
         if not pilot_stamps:
             return []
@@ -177,7 +230,14 @@ class PilotAgentsDB(BaseSQLDB):
         return [row[0] for row in result]
 
     async def get_pilot_ids_for_job_ids(self, job_ids: list[int]) -> list[int]:
-        """Return the IDs of pilots that have run any of the given jobs."""
+        """Return the IDs of pilots that have run any of the given jobs.
+
+        Args:
+            job_ids: Job identifiers to find associated pilots for.
+
+        Returns:
+            Distinct pilot identifiers associated with the supplied jobs.
+        """
         if not job_ids:
             return []
         stmt = (

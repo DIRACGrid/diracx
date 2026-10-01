@@ -1,3 +1,5 @@
+"""SQL database operations for resource and site status information."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -14,7 +16,11 @@ from .schema import (
 
 
 class ResourceStatusDB(BaseSQLDB):
-    """Class that defines the interactions with the tables of the ResourceStatusDB."""
+    """Database operations for resource and site status records.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the resource status tables.
+    """
 
     metadata = RSSBase.metadata
 

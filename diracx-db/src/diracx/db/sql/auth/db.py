@@ -1,3 +1,5 @@
+"""SQL database operations for authentication flows and refresh tokens."""
+
 from __future__ import annotations
 
 import logging
@@ -62,9 +64,17 @@ def plan_partition_maintenance(
 ) -> tuple[list[datetime], list[datetime]]:
     """Decide which monthly ``RefreshTokens`` partitions to drop and to add.
 
-    ``existing_months`` are the month-start datetimes of the existing
-    ``p_<year>_<month>`` partitions (excluding ``p_future``). Returns
-    ``(months_to_drop, months_to_add)`` as month-start datetimes.
+    Existing partitions are represented by their month-start datetimes,
+    excluding the ``p_future`` catch-all partition.
+
+    Args:
+        existing_months: Month starts for currently existing partitions.
+        now: Reference time for calculating retention and future coverage.
+        retention_months: Number of calendar months of token data to retain.
+        months_ahead: Number of future monthly partitions to maintain.
+
+    Returns:
+        Month starts of partitions to drop and add, respectively.
     """
     existing = sorted(existing_months)
 
@@ -88,16 +98,24 @@ def plan_partition_maintenance(
 
 
 class AuthDB(BaseSQLDB):
+    """SQL persistence for authentication flows and refresh tokens.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the authentication tables.
+    """
+
     metadata = AuthDBBase.metadata
 
     @classmethod
     async def post_create(cls, conn: AsyncConnection) -> None:
-        """Create partitions.
+        """Create initial monthly refresh-token partitions for MySQL.
 
-        If it is a MySQL DB and it does not have
-        it yet and the table does not have any data yet.
-        We do this as a post_create step as sqlalchemy does not support
-        partition so well.
+        Partitioning is performed after table creation because SQLAlchemy does
+        not directly manage this MySQL partition layout. Existing partitions
+        are left unchanged, and a non-empty unpartitioned table is not altered.
+
+        Args:
+            conn: Connection used to inspect and configure the database.
         """
         if conn.dialect.name == "mysql":
             check_partition_query = text(
@@ -157,10 +175,15 @@ class AuthDB(BaseSQLDB):
     ) -> str:
         """Validate that the user_code can be used (Pending status, not expired).
 
-        Returns the scope field for the given user_code
+        Args:
+            user_code: User code to validate.
+            max_validity: Maximum age of the pending flow in seconds.
+
+        Returns:
+            Scope associated with the pending device flow.
 
         Raises:
-            NoResultFound: if no such user code currently Pending
+            NoResultFound: If no matching unexpired pending flow exists.
         """
         stmt = select(DeviceFlows.scope).where(
             DeviceFlows.user_code == user_code,
@@ -171,7 +194,17 @@ class AuthDB(BaseSQLDB):
         return (await self.conn.execute(stmt)).scalar_one()
 
     async def get_device_flow(self, device_code: str):
-        """raise: NoResultFound."""
+        """Get device flow details for a device code.
+
+        Args:
+            device_code: Device code issued to the client.
+
+        Returns:
+            Device flow row represented as a dictionary.
+
+        Raises:
+            NoResultFound: If no flow has the corresponding device code.
+        """
         # The with_for_update
         # prevents that the token is retrieved
         # multiple time concurrently
@@ -184,6 +217,12 @@ class AuthDB(BaseSQLDB):
     async def update_device_flow_status(
         self, device_code: str, status: FlowStatus
     ) -> None:
+        """Update the status of a device flow.
+
+        Args:
+            device_code: Device code identifying the flow.
+            status: Status to assign to the flow.
+        """
         stmt = update(DeviceFlows).where(
             DeviceFlows.device_code == hash(device_code),
         )
@@ -193,7 +232,16 @@ class AuthDB(BaseSQLDB):
     async def device_flow_insert_id_token(
         self, user_code: str, id_token: dict[str, str], max_validity: int
     ) -> None:
-        """raise: AuthorizationError if no such code or status not pending."""
+        """Store an ID token and mark the pending device flow ready.
+
+        Args:
+            user_code: User code identifying the flow.
+            id_token: ID token claims to store.
+            max_validity: Maximum age of the pending flow in seconds.
+
+        Raises:
+            AuthorizationError: If exactly one valid pending flow was not updated.
+        """
         stmt = update(DeviceFlows)
         stmt = stmt.where(
             DeviceFlows.user_code == user_code,
@@ -212,6 +260,18 @@ class AuthDB(BaseSQLDB):
         client_id: str,
         scope: str,
     ) -> tuple[str, str]:
+        """Create a device flow and return its user and device codes.
+
+        Args:
+            client_id: OAuth client identifier initiating the flow.
+            scope: Requested authorization scope.
+
+        Returns:
+            The generated user code and device code.
+
+        Raises:
+            NotImplementedError: If a unique flow cannot be inserted after retries.
+        """
         # Because the user_code might be short, there is a risk of conflicts
         # This is why we retry multiple times
         for _ in range(MAX_RETRY):
@@ -253,6 +313,18 @@ class AuthDB(BaseSQLDB):
         code_challenge_method: str,
         redirect_uri: str,
     ) -> str:
+        """Create a pending authorization-code flow.
+
+        Args:
+            client_id: OAuth client identifier initiating the flow.
+            scope: Requested authorization scope.
+            code_challenge: PKCE code challenge for the flow.
+            code_challenge_method: Method used to derive the challenge.
+            redirect_uri: Client redirect URI for the completed flow.
+
+        Returns:
+            UUID identifying the new authorization flow.
+        """
         uuid = str(uuid7())
 
         stmt = insert(AuthorizationFlows).values(
@@ -271,10 +343,18 @@ class AuthDB(BaseSQLDB):
     async def authorization_flow_insert_id_token(
         self, uuid: str, id_token: dict[str, str], max_validity: int
     ) -> tuple[str, str]:
-        """Return the authorization code and redirect URI.
+        """Store an ID token and complete a pending authorization flow.
+
+        Args:
+            uuid: Identifier of the authorization flow.
+            id_token: ID token claims to store.
+            max_validity: Maximum age of the pending flow in seconds.
+
+        Returns:
+            Authorization code and redirect URI for the flow.
 
         Raises:
-            AuthorizationError: If no such UUID exists or the flow is not pending.
+            AuthorizationError: If exactly one valid pending flow was not updated.
         """
         # Hash the code to avoid leaking information
         code = secrets.token_urlsafe()
@@ -300,7 +380,18 @@ class AuthDB(BaseSQLDB):
         return code, row.RedirectURI
 
     async def get_authorization_flow(self, code: str, max_validity: int):
-        """Get the authorization flow details based on the code."""
+        """Get authorization flow details for an authorization code.
+
+        Args:
+            code: Authorization code issued for the flow.
+            max_validity: Maximum age of the flow in seconds.
+
+        Returns:
+            Authorization flow row represented as a dictionary.
+
+        Raises:
+            NoResultFound: If no unexpired flow has the corresponding code.
+        """
         hashed_code = hash(code)
         # The with_for_update
         # prevents that the token is retrieved
@@ -316,7 +407,12 @@ class AuthDB(BaseSQLDB):
     async def update_authorization_flow_status(
         self, code: str, status: FlowStatus
     ) -> None:
-        """Update the status of an authorization flow based on the code."""
+        """Update the status of an authorization flow.
+
+        Args:
+            code: Authorization code identifying the flow.
+            status: Status to assign to the flow.
+        """
         hashed_code = hash(code)
         await self.conn.execute(
             update(AuthorizationFlows)
@@ -333,6 +429,11 @@ class AuthDB(BaseSQLDB):
         """Insert a refresh token in the DB.
 
         As well as user attributes required to generate access tokens.
+
+        Args:
+            jti: JWT ID identifying the refresh token.
+            subject: Subject identifier associated with the token.
+            scope: Authorized scope associated with the token.
         """
         # Insert values into the DB
         stmt = insert(RefreshTokens).values(
@@ -343,7 +444,17 @@ class AuthDB(BaseSQLDB):
         await self.conn.execute(stmt)
 
     async def get_refresh_token(self, jti: UUID) -> dict:
-        """Get refresh token details bound to a given JWT ID."""
+        """Get refresh token details for a JWT ID.
+
+        Args:
+            jti: JWT ID identifying the refresh token.
+
+        Returns:
+            Refresh token row represented as a dictionary.
+
+        Raises:
+            TokenNotFoundError: If no refresh token has the given JWT ID.
+        """
         jti = str(jti)
         # The with_for_update
         # prevents that the token is retrieved
@@ -360,7 +471,14 @@ class AuthDB(BaseSQLDB):
         return res
 
     async def get_user_refresh_tokens(self, subject: str | None = None) -> list[dict]:
-        """Get a list of refresh token details based on a subject ID (not revoked)."""
+        """Get non-revoked refresh token details, optionally filtered by subject.
+
+        Args:
+            subject: Optional subject identifier to filter by.
+
+        Returns:
+            Refresh token rows represented as dictionaries.
+        """
         # Get a list of refresh tokens
         stmt = select(RefreshTokens).with_for_update()
 
@@ -380,7 +498,11 @@ class AuthDB(BaseSQLDB):
         return refresh_tokens
 
     async def revoke_refresh_token(self, jti: UUID):
-        """Revoke a token given by its JWT ID."""
+        """Revoke a refresh token by its JWT ID.
+
+        Args:
+            jti: JWT ID identifying the refresh token.
+        """
         await self.conn.execute(
             update(RefreshTokens)
             .where(RefreshTokens.jti == str(jti))
@@ -388,7 +510,11 @@ class AuthDB(BaseSQLDB):
         )
 
     async def revoke_user_refresh_tokens(self, subject):
-        """Revoke all the refresh tokens belonging to a user (subject ID)."""
+        """Revoke all refresh tokens belonging to a user.
+
+        Args:
+            subject: Subject identifier whose refresh tokens should be revoked.
+        """
         await self.conn.execute(
             update(RefreshTokens)
             .where(RefreshTokens.sub == subject)
@@ -409,6 +535,13 @@ class AuthDB(BaseSQLDB):
 
         Only implemented for MySQL; raises ``NotImplementedError`` for any other
         dialect (the table is only partitioned on MySQL).
+
+        Args:
+            retention_months: Number of calendar months of token data to retain.
+            months_ahead: Number of future monthly partitions to maintain.
+
+        Raises:
+            NotImplementedError: If the active database is not MySQL.
         """
         dialect = self.conn.dialect.name
         if dialect != "mysql":
@@ -477,8 +610,12 @@ class AuthDB(BaseSQLDB):
     async def clean_expired_authorization_flows(self, max_retention: int) -> int:
         """Delete old authorization flows.
 
-        max_retention: Maximum retention time in minutes for expired authorization flows.
-        Must be bigger than authorization_flow_expiration_seconds.
+        Args:
+            max_retention: Maximum retention time in minutes. It must exceed
+                ``authorization_flow_expiration_seconds``.
+
+        Returns:
+            Number of authorization flow rows deleted.
         """
         stmt_auth = delete(AuthorizationFlows).where(
             AuthorizationFlows.creation_time < substract_date(minutes=max_retention),
@@ -490,8 +627,12 @@ class AuthDB(BaseSQLDB):
     async def clean_expired_device_flows(self, max_retention: int) -> int:
         """Delete old device flows.
 
-        max_retention: Maximum retention time in minutes for expired device flows.
-        Must be bigger than device_flow_expiration_seconds.
+        Args:
+            max_retention: Maximum retention time in minutes. It must exceed
+                ``device_flow_expiration_seconds``.
+
+        Returns:
+            Number of device flow rows deleted.
         """
         stmt_device = delete(DeviceFlows).where(
             DeviceFlows.creation_time < substract_date(minutes=max_retention),

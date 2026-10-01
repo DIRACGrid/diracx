@@ -1,3 +1,5 @@
+"""SQL database operations for task queues and their associated records."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -22,12 +24,25 @@ from .schema import (
 
 
 class TaskQueueDB(BaseSQLDB):
+    """Database queries and updates for task queues.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the task queue tables.
+    """
+
     metadata = TaskQueueDBBase.metadata
 
     async def get_tq_infos_for_jobs(
         self, job_ids: list[int]
     ) -> set[tuple[int, str, str, str]]:
-        """Get the task queue info for given jobs."""
+        """Get task queue identifiers and ownership for the given jobs.
+
+        Args:
+            job_ids: Job identifiers to look up.
+
+        Returns:
+            Unique tuples of task queue ID, owner, owner group, and VO.
+        """
         stmt = (
             select(
                 TaskQueues.TQId, TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO
@@ -41,14 +56,28 @@ class TaskQueueDB(BaseSQLDB):
         )
 
     async def get_owner_for_task_queue(self, tq_id: int) -> dict[str, str]:
-        """Get the owner and owner group for a task queue."""
+        """Get the owner, owner group, and VO for a task queue.
+
+        Args:
+            tq_id: Task queue identifier.
+
+        Returns:
+            Mapping containing the task queue owner, owner group, and VO.
+        """
         stmt = select(TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO).where(
             TaskQueues.TQId == tq_id
         )
         return dict((await self.conn.execute(stmt)).one()._mapping)
 
     async def get_task_queue_owners_by_group(self, group: str) -> dict[str, int]:
-        """Get the owners for a task queue and group."""
+        """Count task queues for each owner in an owner group.
+
+        Args:
+            group: Owner group to query.
+
+        Returns:
+            Mapping from owner names to their task queue counts.
+        """
         stmt = (
             select(TaskQueues.Owner, func.count(TaskQueues.Owner))
             .where(TaskQueues.OwnerGroup == group)
@@ -63,7 +92,15 @@ class TaskQueueDB(BaseSQLDB):
     async def get_task_queue_priorities(
         self, group: str, owner: str | None = None
     ) -> dict[int, float]:
-        """Get the priorities for a list of task queues."""
+        """Get average real job priority for task queues in an owner group.
+
+        Args:
+            group: Owner group whose task queues should be queried.
+            owner: Optional owner name to further filter the task queues.
+
+        Returns:
+            Mapping from task queue identifiers to average job priority.
+        """
         stmt = (
             select(
                 TaskQueues.TQId,
@@ -79,12 +116,23 @@ class TaskQueueDB(BaseSQLDB):
         return {tq_id: priority for tq_id, priority in rows}
 
     async def remove_jobs(self, job_ids: list[int]):
-        """Remove jobs from the task queues."""
+        """Remove job-to-task-queue mappings for the specified jobs.
+
+        Args:
+            job_ids: Job identifiers to remove from task queues.
+        """
         stmt = delete(JobsQueue).where(JobsQueue.JobId.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def is_task_queue_empty(self, tq_id: int) -> bool:
-        """Check if a task queue is empty."""
+        """Check whether an enabled task queue has no associated jobs.
+
+        Args:
+            tq_id: Task queue identifier.
+
+        Returns:
+            Whether the task queue is empty.
+        """
         stmt = (
             select(TaskQueues.TQId)
             .where(TaskQueues.Enabled >= 1)
@@ -98,7 +146,11 @@ class TaskQueueDB(BaseSQLDB):
         self,
         tq_id: int,
     ):
-        """Delete a task queue."""
+        """Delete a task queue and its cascading associated records.
+
+        Args:
+            tq_id: Task queue identifier to delete.
+        """
         # Deleting the task queue (the other tables will be deleted in cascade)
         stmt = delete(TaskQueues).where(TaskQueues.TQId == tq_id)
         await self.conn.execute(stmt)
@@ -108,7 +160,12 @@ class TaskQueueDB(BaseSQLDB):
         tq_ids: list[int],
         priority: float,
     ):
-        """Set the priority for a user/userGroup combo given a split share."""
+        """Set the priority for task queues belonging to an entity.
+
+        Args:
+            tq_ids: Task queue identifiers to update.
+            priority: Priority value to assign.
+        """
         update_stmt = (
             update(TaskQueues)
             .where(TaskQueues.TQId.in_(tq_ids))
@@ -117,7 +174,16 @@ class TaskQueueDB(BaseSQLDB):
         await self.conn.execute(update_stmt)
 
     async def retrieve_task_queues(self, tq_id_list=None):
-        """Get all the task queues."""
+        """Retrieve task queue details and their associated values.
+
+        Args:
+            tq_id_list: Optional task queue identifiers to retrieve. An empty
+                list returns no results.
+
+        Returns:
+            Mapping from task queue identifiers to queue details, including
+            associated sites, grid CEs, platforms, job types, and tags.
+        """
         if tq_id_list is not None and not tq_id_list:
             # Empty list => Fast-track no matches
             return {}

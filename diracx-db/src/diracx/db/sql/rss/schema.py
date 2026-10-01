@@ -1,3 +1,5 @@
+"""SQLAlchemy schemas for resource and site status records."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,6 +15,12 @@ from ..utils import str32, str64, str128, str512
 
 
 class RSSBase(DeclarativeBase):
+    """Declarative base mapping string aliases to SQL column types.
+
+    Attributes:
+        type_annotation_map: SQL types associated with the string aliases.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str64: String(64),
@@ -22,6 +30,21 @@ class RSSBase(DeclarativeBase):
 
 
 class ElementStatusBase:
+    """Common mapped fields for resource and site status records.
+
+    Attributes:
+        name: Name of the site or resource.
+        status_type: Type of status represented by the record.
+        vo: Virtual organization associated with the record.
+        status: Current status value.
+        reason: Explanation for the status.
+        date_effective: Time when the status became effective.
+        token_expiration: Expiration time of the status token.
+        element_type: Type of element described by the record.
+        last_check_time: Time when the element was last checked.
+        token_owner: Owner of the status token.
+    """
+
     name: Mapped[str64] = mapped_column("Name", primary_key=True)
     status_type: Mapped[str128] = mapped_column(
         "StatusType", server_default="all", primary_key=True
@@ -48,6 +71,19 @@ class ElementStatusBaseWithID(ElementStatusBase):
     Differences:
     - there's an autoincrement ID column which is also the primary key
     - the name and statusType components are not part of the primary key
+
+    Attributes:
+        id: Autoincrementing primary key for the status record.
+        name: Name of the site or resource.
+        status_type: Type of status represented by the record.
+        vo: Virtual organization associated with the record.
+        status: Current status value.
+        reason: Explanation for the status.
+        date_effective: Time when the status became effective.
+        token_expiration: Expiration time of the status token.
+        element_type: Type of element described by the record.
+        last_check_time: Time when the element was last checked.
+        token_owner: Owner of the status token.
     """
 
     id: Mapped[int] = mapped_column(
@@ -75,10 +111,22 @@ class ElementStatusBaseWithID(ElementStatusBase):
 
 
 class SiteStatus(ElementStatusBase, RSSBase):
+    """Current status of a site.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBase``.
+    """
+
     __tablename__ = "SiteStatus"
 
 
 class ResourceStatus(ElementStatusBase, RSSBase):
+    """Current status of a resource.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBase``.
+    """
+
     __tablename__ = "ResourceStatus"
 
 
@@ -86,16 +134,40 @@ class ResourceStatus(ElementStatusBase, RSSBase):
 
 
 class SiteLog(ElementStatusBaseWithID, RSSBase):
+    """Historical status log entries for sites.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBaseWithID``.
+    """
+
     __tablename__ = "SiteLog"
 
 
 class SiteHistory(ElementStatusBaseWithID, RSSBase):
+    """Historical status records for sites.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBaseWithID``.
+    """
+
     __tablename__ = "SiteHistory"
 
 
 class ResourceLog(ElementStatusBaseWithID, RSSBase):
+    """Historical status log entries for resources.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBaseWithID``.
+    """
+
     __tablename__ = "ResourceLog"
 
 
 class ResourceHistory(ElementStatusBaseWithID, RSSBase):
+    """Historical status records for resources.
+
+    Attributes:
+        Inherits the status fields defined by ``ElementStatusBaseWithID``.
+    """
+
     __tablename__ = "ResourceHistory"

@@ -1,3 +1,5 @@
+"""SQLAlchemy column types and aliases used by DiracX database schemas."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,16 +28,43 @@ str1024 = Annotated[str, 1024]
 
 
 def enum_column(name, enum_type, **kwargs):
+    """Create a non-native SQLAlchemy enum column.
+
+    Args:
+        name: Database column name.
+        enum_type: Python enum class used for the column values.
+        **kwargs: Additional arguments passed to ``mapped_column``.
+
+    Returns:
+        A SQLAlchemy mapped column using a non-native enum type.
+    """
     return mapped_column(name, Enum(enum_type, native_enum=False, length=16), **kwargs)
 
 
 class EnumBackedBool(types.TypeDecorator):
-    """Maps a ``EnumBackedBool()`` column to True/False in Python."""
+    """Map a string enum column to Python boolean values.
+
+    Attributes:
+        impl: Database enum representation for boolean values.
+        cache_ok: Whether SQLAlchemy may cache statements using this type.
+    """
 
     impl = types.Enum("True", "False", name="enum_backed_bool")
     cache_ok = True
 
     def process_bind_param(self, value, dialect) -> str:
+        """Convert a Python boolean to its database string value.
+
+        Args:
+            value: Boolean value to store.
+            dialect: SQLAlchemy dialect handling the bind parameter.
+
+        Returns:
+            ``"True"`` or ``"False"`` for the supplied value.
+
+        Raises:
+            NotImplementedError: If the value is not a boolean.
+        """
         if value is True:
             return "True"
         elif value is False:
@@ -44,6 +73,18 @@ class EnumBackedBool(types.TypeDecorator):
             raise NotImplementedError(value, dialect)
 
     def process_result_value(self, value, dialect) -> bool:
+        """Convert a database string value to a Python boolean.
+
+        Args:
+            value: String value read from the database.
+            dialect: SQLAlchemy dialect handling the result value.
+
+        Returns:
+            The corresponding Python boolean.
+
+        Raises:
+            NotImplementedError: If the database value is not recognized.
+        """
         if value == "True":
             return True
         elif value == "False":
@@ -58,6 +99,9 @@ class SmarterDateTime(types.TypeDecorator):
     Takes into account converting timezone aware datetime objects into
     naive form and back when needed.
 
+    Attributes:
+        impl: Base SQLAlchemy datetime type wrapped by this decorator.
+        cache_ok: Whether SQLAlchemy may cache statements using this type.
     """
 
     impl = DateTime()
@@ -84,11 +128,36 @@ class SmarterDateTime(types.TypeDecorator):
         self._returned_tz: ZoneInfo = returned_tz
 
     def _stored_naive(self, dialect):
+        """Return whether datetimes are stored without timezone data.
+
+        Args:
+            dialect: SQLAlchemy dialect to look up.
+
+        Returns:
+            Whether values for the dialect are stored as naive datetimes.
+
+        Raises:
+            NotImplementedError: If the dialect is not configured.
+        """
         if dialect.name not in self._stored_naive_dialect:
             raise NotImplementedError(dialect.name)
         return self._stored_naive_dialect.get(dialect.name)
 
     def process_bind_param(self, value, dialect):
+        """Normalize a datetime or ISO 8601 string for database storage.
+
+        Args:
+            value: Timezone-aware datetime, ISO 8601 string, or ``None``.
+            dialect: SQLAlchemy dialect receiving the value.
+
+        Returns:
+            Datetime converted to the configured storage timezone and
+            naivety, or ``None``.
+
+        Raises:
+            ValueError: If the input cannot be parsed or is timezone-naive.
+            NotImplementedError: If the dialect is not configured.
+        """
         if value is None:
             return None
 
@@ -122,6 +191,20 @@ class SmarterDateTime(types.TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):
+        """Convert a database datetime to the configured return timezone.
+
+        Args:
+            value: Datetime value read from the database, or ``None``.
+            dialect: SQLAlchemy dialect that returned the value.
+
+        Returns:
+            Datetime converted to the configured return timezone, or ``None``.
+
+        Raises:
+            ValueError: If stored timezone handling conflicts with the result.
+            NotImplementedError: If the value is not a datetime or the dialect
+                is not configured.
+        """
         if value is None:
             return None
         if not isinstance(value, datetime):

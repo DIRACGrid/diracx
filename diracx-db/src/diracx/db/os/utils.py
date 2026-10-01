@@ -1,3 +1,5 @@
+"""Base classes and query helpers for OpenSearch-backed databases."""
+
 from __future__ import annotations
 
 import contextlib
@@ -22,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 
 class OpenSearchDBError(Exception):
-    pass
+    """Base exception for OpenSearch database errors."""
 
 
 class OpenSearchDBUnavailableError(DBUnavailableError, OpenSearchDBError):
-    pass
+    """Raised when an OpenSearch database is unavailable."""
 
 
 class BaseOSDB(metaclass=ABCMeta):
@@ -73,6 +75,11 @@ class BaseOSDB(metaclass=ABCMeta):
             # Do something with the OpenSearch client
             pass
     ```
+
+    Attributes:
+        fields: OpenSearch mapping for documents stored by this database.
+        index_prefix: Prefix used for the database's indices.
+        client: Active OpenSearch client, available inside ``client_context``.
     """
 
     # TODO: Make metadata an abstract property
@@ -80,7 +87,16 @@ class BaseOSDB(metaclass=ABCMeta):
     index_prefix: str
 
     @abstractmethod
-    def index_name(self, vo: str, doc_id: int) -> str: ...
+    def index_name(self, vo: str, doc_id: int) -> str:
+        """Return the index name for a document.
+
+        Args:
+            vo: Virtual organization associated with the document.
+            doc_id: Identifier of the document.
+
+        Returns:
+            The OpenSearch index name for the document.
+        """
 
     def __init__(
         self, connection_kwargs: dict[str, Any], *, global_prefix: str = ""
@@ -96,7 +112,17 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type[BaseOSDB]]:
-        """Return the available implementations of the DB in reverse priority order."""
+        """Return available implementations of a database in priority order.
+
+        Args:
+            db_name: Name of the OpenSearch database entry point.
+
+        Returns:
+            Database implementations ordered by extension priority.
+
+        Raises:
+            NotImplementedError: If no implementation is registered for the name.
+        """
         db_classes: list[type[BaseOSDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
@@ -114,6 +140,9 @@ class BaseOSDB(metaclass=ABCMeta):
         The list of available URLs is determined by the opensearch_dbs field
         in FactorySettings, which reads from environment variables
         prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
+
+        Returns:
+            Mapping of database names to their connection parameters.
         """
         factory_settings = FactorySettings()
 
@@ -131,19 +160,37 @@ class BaseOSDB(metaclass=ABCMeta):
 
     @classmethod
     def session(cls) -> Self:
-        """Fake method such that the Dependency overwrite has a hash to use."""
+        """Provide a dependency key for the session override.
+
+        Returns:
+            A database instance when replaced by dependency wiring.
+
+        Raises:
+            NotImplementedError: If called without dependency wiring.
+        """
         raise NotImplementedError("This should never be called")
 
     @property
     def client(self) -> AsyncOpenSearch:
-        """Just a getter for _client, making sure we entered the context manager."""
+        """Return the active OpenSearch client.
+
+        Returns:
+            The client initialized by ``client_context``.
+
+        Raises:
+            RuntimeError: If accessed before entering ``client_context``.
+        """
         if self._client is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return self._client
 
     @contextlib.asynccontextmanager
     async def client_context(self) -> AsyncIterator[None]:
-        """Context manager to manage the client lifecycle. This is called when starting fastapi."""
+        """Manage the OpenSearch client lifecycle for the application.
+
+        Yields:
+            ``None`` while the OpenSearch client is available.
+        """
         assert self._client is None, "client_context cannot be nested"
         async with AsyncOpenSearch(**self._connection_kwargs) as self._client:
             try:
@@ -156,6 +203,9 @@ class BaseOSDB(metaclass=ABCMeta):
 
         We could enable the ``pre_ping`` in the engine, but this would
         be ran at every query.
+
+        Raises:
+            OpenSearchDBUnavailableError: If the database cannot be reached.
         """
         if not await self.client.ping():
             raise OpenSearchDBUnavailableError(
@@ -178,6 +228,7 @@ class BaseOSDB(metaclass=ABCMeta):
         self._conn.set(False)
 
     async def create_index_template(self) -> None:
+        """Create the index template from this database's field mappings."""
         template_body = {
             "template": {"mappings": {"properties": self.fields}},
             "index_patterns": [f"{self.index_prefix}*"],
@@ -188,6 +239,16 @@ class BaseOSDB(metaclass=ABCMeta):
         assert result["acknowledged"]
 
     async def upsert(self, vo: str, doc_id: int, document: Any) -> None:
+        """Insert or update a document in the appropriate index.
+
+        Args:
+            vo: Virtual organization associated with the document.
+            doc_id: Identifier of the document.
+            document: Document fields to insert or update.
+
+        Raises:
+            DocumentUpsertError: If OpenSearch rejects the document.
+        """
         index_name = self.index_name(vo, doc_id)
         try:
             response = await self.client.update(
@@ -267,6 +328,21 @@ class BaseOSDB(metaclass=ABCMeta):
         """Search the database for matching results.
 
         See the DiracX search API documentation for details.
+
+        Args:
+            parameters: Optional document fields to include in each result.
+            search: Search conditions to apply.
+            sorts: Sort specifications to apply to the results.
+            per_page: Maximum number of results per page.
+            page: Optional one-based page number. When omitted, pagination is
+                not applied.
+
+        Returns:
+            Matching documents, with mapped date fields converted to datetimes.
+
+        Raises:
+            InvalidQueryError: If a search or sort condition is invalid for the
+                configured field mapping.
         """
         body = {}
         if parameters:
@@ -304,6 +380,17 @@ class BaseOSDB(metaclass=ABCMeta):
 
 
 def require_type(operator, field_name, field_type, allowed_types):
+    """Ensure a query operator supports the field's OpenSearch type.
+
+    Args:
+        operator: Query operator being applied.
+        field_name: Name of the indexed field.
+        field_type: OpenSearch type configured for the field.
+        allowed_types: Field types supported by the operator.
+
+    Raises:
+        InvalidQueryError: If the field type is not supported.
+    """
     if field_type not in allowed_types:
         raise InvalidQueryError(
             f"Cannot apply {operator} to {field_name} ({field_type=}, {allowed_types=})"
@@ -315,6 +402,17 @@ def apply_search_filters(db_fields, search):
 
     If the searched parameters cannot be efficiently translated to a query for
     OpenSearch an InvalidQueryError exception is raised.
+
+    Args:
+        db_fields: OpenSearch field mapping for the database.
+        search: Search specifications to convert.
+
+    Returns:
+        An OpenSearch boolean query containing the translated conditions.
+
+    Raises:
+        InvalidQueryError: If a field is unmapped, an operator is unsupported,
+            or the operator cannot be applied to the field type.
     """
     result = {
         "must": [],

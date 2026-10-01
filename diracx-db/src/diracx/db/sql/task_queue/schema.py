@@ -1,3 +1,5 @@
+"""SQLAlchemy schemas for task queues and their associations."""
+
 from __future__ import annotations
 
 from sqlalchemy import (
@@ -17,6 +19,12 @@ from diracx.db.sql.utils import (
 
 
 class TaskQueueDBBase(DeclarativeBase):
+    """Declarative base mapping string aliases to SQL column types.
+
+    Attributes:
+        type_annotation_map: SQL types associated with the string aliases.
+    """
+
     type_annotation_map = {
         str32: String(32),
         str64: String(64),
@@ -26,6 +34,18 @@ class TaskQueueDBBase(DeclarativeBase):
 
 
 class TaskQueues(TaskQueueDBBase):
+    """Task queue definitions and ownership information.
+
+    Attributes:
+        TQId: Task queue identifier.
+        Owner: User who owns the task queue.
+        OwnerGroup: Group of the task queue owner.
+        VO: Virtual organization associated with the queue.
+        CPUTime: CPU time requirement.
+        Priority: Task queue priority.
+        Enabled: Whether the task queue is enabled.
+    """
+
     __tablename__ = "tq_TaskQueues"
     TQId: Mapped[int] = mapped_column(primary_key=True)
     Owner: Mapped[str255]
@@ -38,6 +58,15 @@ class TaskQueues(TaskQueueDBBase):
 
 
 class JobsQueue(TaskQueueDBBase):
+    """Job assignments and priorities for task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        JobId: Identifier of the assigned job.
+        Priority: Job priority within the task queue.
+        RealPriority: Effective job priority.
+    """
+
     __tablename__ = "tq_Jobs"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -49,6 +78,13 @@ class JobsQueue(TaskQueueDBBase):
 
 
 class SitesQueue(TaskQueueDBBase):
+    """Site values associated with task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Site name associated with the queue.
+    """
+
     __tablename__ = "tq_TQToSites"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -61,6 +97,13 @@ class SitesQueue(TaskQueueDBBase):
 
 
 class GridCEsQueue(TaskQueueDBBase):
+    """Grid computing elements associated with task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Grid computing element associated with the queue.
+    """
+
     __tablename__ = "tq_TQToGridCEs"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -73,6 +116,13 @@ class GridCEsQueue(TaskQueueDBBase):
 
 
 class BannedSitesQueue(TaskQueueDBBase):
+    """Sites excluded from task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Banned site name.
+    """
+
     __tablename__ = "tq_TQToBannedSites"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -85,6 +135,13 @@ class BannedSitesQueue(TaskQueueDBBase):
 
 
 class PlatformsQueue(TaskQueueDBBase):
+    """Platforms supported by task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Platform associated with the queue.
+    """
+
     __tablename__ = "tq_TQToPlatforms"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -97,6 +154,13 @@ class PlatformsQueue(TaskQueueDBBase):
 
 
 class JobTypesQueue(TaskQueueDBBase):
+    """Job types supported by task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Job type associated with the queue.
+    """
+
     __tablename__ = "tq_TQToJobTypes"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True
@@ -109,6 +173,13 @@ class JobTypesQueue(TaskQueueDBBase):
 
 
 class TagsQueue(TaskQueueDBBase):
+    """Tags associated with task queues.
+
+    Attributes:
+        TQId: Identifier of the task queue.
+        Value: Tag associated with the queue.
+    """
+
     __tablename__ = "tq_TQToTags"
     TQId: Mapped[int] = mapped_column(
         ForeignKey("tq_TaskQueues.TQId", ondelete="CASCADE"), primary_key=True

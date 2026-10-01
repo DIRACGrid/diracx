@@ -1,3 +1,5 @@
+"""Command-line entry point for initializing DiracX databases."""
+
 from __future__ import annotations
 
 import argparse
@@ -8,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
+    """Parse command-line arguments and run the selected database command."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(required=True, dest="command")
 
@@ -34,6 +37,7 @@ def parse_args():
 
 
 async def init_sql():
+    """Initialize schemas for all registered SQL databases."""
     logger.info("Initialising SQL databases")
     from diracx.db.sql.utils import BaseSQLDB
 
@@ -50,6 +54,7 @@ async def init_sql():
 
 
 async def init_os():
+    """Initialize index templates for all registered OpenSearch databases."""
     logger.info("Initialising OpenSearch databases")
     from diracx.db.os.utils import BaseOSDB
 
@@ -66,6 +71,9 @@ def generate_local_urls(tmp_dir: str) -> None:
     Intended for use with eval in shell scripts::
 
         eval "$(python -m diracx.db generate-local-urls /tmp/dir)"
+
+    Args:
+        tmp_dir: Directory where local SQLite database files will be stored.
     """
     import json
 

@@ -1,3 +1,5 @@
+"""SQL database operations for jobs, JDLs, input data, and commands."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -24,6 +26,14 @@ from .schema import (
 
 
 class JobDB(BaseSQLDB):
+    """SQL operations for jobs.
+
+    Attributes:
+        metadata: SQLAlchemy metadata containing the job database tables.
+        heartbeat_fields: Fields permitted in heartbeat logging records.
+        jdl_2_db_parameters: JDL fields copied into job database records.
+    """
+
     metadata = JobDBBase.metadata
 
     # Field names which should be stored in the HeartBeatLoggingInfo table
@@ -44,7 +54,15 @@ class JobDB(BaseSQLDB):
     async def summary(
         self, group_by: list[str], search: list[SearchSpec]
     ) -> list[dict[str, str | int]]:
-        """Get a summary of the jobs."""
+        """Get a summary of the jobs.
+
+        Args:
+            group_by: Job fields used to group the summary.
+            search: Search conditions to apply before summarizing.
+
+        Returns:
+            Summary rows containing grouped values and counts.
+        """
         return await self._summary(table=Jobs, group_by=group_by, search=search)
 
     async def search(
@@ -57,7 +75,19 @@ class JobDB(BaseSQLDB):
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[Any, Any]]]:
-        """Search for jobs in the database."""
+        """Search for jobs in the database.
+
+        Args:
+            parameters: Optional job fields to include in each result.
+            search: Search conditions to apply.
+            sorts: Sort specifications to apply.
+            distinct: Whether to return distinct results.
+            per_page: Maximum number of results per page.
+            page: Optional one-based page number for pagination.
+
+        Returns:
+            Total matching job count and the requested page of job records.
+        """
         return await self._search(
             table=Jobs,
             parameters=parameters,
@@ -69,7 +99,14 @@ class JobDB(BaseSQLDB):
         )
 
     async def create_job(self, compressed_original_jdl: str):
-        """Insert a new job with original JDL. Returns inserted job id."""
+        """Insert a new job with its original JDL.
+
+        Args:
+            compressed_original_jdl: Compressed original JDL content.
+
+        Returns:
+            Database identifier assigned to the inserted job.
+        """
         result = await self.conn.execute(
             insert(JobJDLs).values(
                 JDL="",
@@ -80,12 +117,20 @@ class JobDB(BaseSQLDB):
         return result.lastrowid
 
     async def delete_jobs(self, job_ids: list[int]):
-        """Delete jobs from the database."""
+        """Delete jobs and their stored JDL records.
+
+        Args:
+            job_ids: Identifiers of jobs to delete.
+        """
         stmt = delete(JobJDLs).where(JobJDLs.job_id.in_(job_ids))
         await self.conn.execute(stmt)
 
     async def insert_input_data(self, lfns: dict[int, list[str]]):
-        """Insert input data for jobs."""
+        """Insert logical file names associated with jobs.
+
+        Args:
+            lfns: Mapping from job identifiers to input logical file names.
+        """
         await self.conn.execute(
             insert(InputData),
             [
@@ -99,7 +144,11 @@ class JobDB(BaseSQLDB):
         )
 
     async def insert_job_attributes(self, jobs_to_update: dict[int, dict]):
-        """Insert the job attributes."""
+        """Insert job attribute records.
+
+        Args:
+            jobs_to_update: Mapping from job identifiers to attribute values.
+        """
         await self.conn.execute(
             insert(Jobs),
             [
@@ -112,7 +161,11 @@ class JobDB(BaseSQLDB):
         )
 
     async def update_job_jdls(self, jdls_to_update: dict[int, str]):
-        """Update the JDL, typically just after inserting the original JDL, or rescheduling, for example."""
+        """Update stored JDLs, such as after insertion or rescheduling.
+
+        Args:
+            jdls_to_update: Mapping from job identifiers to compressed JDLs.
+        """
         await self.conn.execute(
             update(JobJDLs).where(JobJDLs.__table__.c.JobID == bindparam("b_JobID")),
             [
@@ -125,7 +178,15 @@ class JobDB(BaseSQLDB):
         )
 
     async def set_job_attributes(self, job_data):
-        """Update the parameters of the given jobs."""
+        """Update attributes for multiple jobs.
+
+        Args:
+            job_data: Mapping from job identifiers to attribute values. When a
+                status is updated, the last-update timestamp is refreshed.
+
+        Raises:
+            ValueError: If ``job_data`` is empty.
+        """
         # TODO: add myDate and force parameters.
 
         if not job_data:
@@ -165,7 +226,15 @@ class JobDB(BaseSQLDB):
         await self.conn.execute(stmt)
 
     async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int, str]:
-        """Get the JDLs for the given jobs."""
+        """Get JDLs for the specified jobs.
+
+        Args:
+            job_ids: Identifiers of the jobs to retrieve.
+            original: Whether to return original rather than current JDLs.
+
+        Returns:
+            Mapping from job identifiers to non-empty JDL content.
+        """
         if original:
             stmt = select(JobJDLs.job_id, JobJDLs.original_jdl).where(
                 JobJDLs.job_id.in_(job_ids)
@@ -178,7 +247,11 @@ class JobDB(BaseSQLDB):
         return {jobid: jdl for jobid, jdl in (await self.conn.execute(stmt)) if jdl}
 
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
-        """Store a command to be passed to the job together with the next heart beat."""
+        """Store commands to deliver to jobs with their next heartbeat.
+
+        Args:
+            commands: Tuples of job identifier, command name, and arguments.
+        """
         await self.conn.execute(
             insert(JobCommands),
             [
@@ -200,12 +273,15 @@ class JobDB(BaseSQLDB):
         All the jobs must update the same properties.
 
         Args:
-            properties: {job_id : {prop1: val1, prop2:val2}
-            update_timestamp: if True, update the LastUpdate to now
+            properties: Mapping from job identifiers to property/value mappings.
+                Every job must provide the same property names.
+            update_timestamp: Whether to set ``LastUpdateTime`` to now.
 
         Returns:
-            rowcount
+            Number of job rows updated.
 
+        Raises:
+            NotImplementedError: If jobs specify different property sets.
         """
         # Check that all we always update the same set of properties
         required_parameters_set = {tuple(sorted(k.keys())) for k in properties.values()}
@@ -240,9 +316,12 @@ class JobDB(BaseSQLDB):
         as it involves updating multiple databases.
 
         Args:
-            job_id: the job id
-            dynamic_data: mapping of the dynamic data to store, e.g.
-                {"AvailableDiskSpace": 123}
+            job_id: Identifier of the job.
+            dynamic_data: Heartbeat field names and values to store, such as
+                ``{"AvailableDiskSpace": "123"}``.
+
+        Raises:
+            InvalidQueryError: If ``dynamic_data`` contains unsupported fields.
         """
         if extra_fields := set(dynamic_data) - self.heartbeat_fields:
             raise InvalidQueryError(
@@ -264,10 +343,10 @@ class JobDB(BaseSQLDB):
         """Get a command to be passed to the job together with the next heartbeat.
 
         Args:
-            job_ids: the job ids
+            job_ids: Identifiers of jobs whose pending commands should be fetched.
 
         Returns:
-            mapping of job id to list of commands
+            Commands awaiting delivery, represented as ``JobCommand`` objects.
         """
         # Get the commands
         stmt = (

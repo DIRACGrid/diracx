@@ -1,3 +1,5 @@
+"""Base abstractions and query utilities for SQL-backed DiracX databases."""
+
 from __future__ import annotations
 
 import contextlib
@@ -35,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class SQLDBError(Exception):
-    pass
+    """Base exception for SQL database errors."""
 
 
 class SQLDBUnavailableError(DBUnavailableError, SQLDBError):
@@ -92,6 +94,11 @@ class BaseSQLDB(metaclass=ABCMeta):
             # This transaction will be rolled back due to the exception
             raise Exception(...)
     ```
+
+    Attributes:
+        metadata: SQLAlchemy metadata describing the database tables.
+        engine: Active asynchronous SQLAlchemy engine.
+        conn: Active asynchronous connection for the current transaction.
     """
 
     # engine: AsyncEngine
@@ -110,7 +117,17 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @classmethod
     def available_implementations(cls, db_name: str) -> list[type["BaseSQLDB"]]:
-        """Return the available implementations of the DB in reverse priority order."""
+        """Return database implementations in extension priority order.
+
+        Args:
+            db_name: Name of the SQL database entry point.
+
+        Returns:
+            Implementations ordered by extension priority.
+
+        Raises:
+            NotImplementedError: If no implementation is registered for the name.
+        """
         db_classes: list[type[BaseSQLDB]] = [
             entry_point.load()
             for entry_point in select_from_extension(
@@ -128,6 +145,9 @@ class BaseSQLDB(metaclass=ABCMeta):
         The list of available URLs is determined by the sql_dbs field
         in FactorySettings, which reads from environment variables
         prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
+
+        Returns:
+            Mapping from database names to validated connection URLs.
         """
         factory_settings = FactorySettings()
 
@@ -162,17 +182,35 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @classmethod
     async def post_create(cls, conn: AsyncConnection) -> None:
-        """Execute actions after the schema has been created."""
+        """Run subclass-specific setup after the schema has been created.
+
+        Args:
+            conn: Connection to the newly created database schema.
+        """
         return
 
     @classmethod
     def transaction(cls) -> Self:
-        """Dependency injection sentinel: overridden at startup to yield a DB inside a transaction."""
+        """Dependency injection sentinel for a database in a transaction.
+
+        Returns:
+            A database instance supplied by startup dependency wiring.
+
+        Raises:
+            NotImplementedError: If called before dependency wiring replaces it.
+        """
         raise NotImplementedError("This should never be called")
 
     @classmethod
     def no_transaction(cls) -> Self:
-        """Dependency injection sentinel: overridden at startup to yield a DB without a transaction."""
+        """Dependency injection sentinel for a database without a transaction.
+
+        Returns:
+            A database instance supplied by startup dependency wiring.
+
+        Raises:
+            NotImplementedError: If called before dependency wiring replaces it.
+        """
         raise NotImplementedError("This should never be called")
 
     @property
@@ -183,15 +221,21 @@ class BaseSQLDB(metaclass=ABCMeta):
         doing something special, like writing a test fixture that gives you a db.
 
         Requires that the engine_context has been entered.
+
+        Returns:
+            The active asynchronous SQLAlchemy engine.
         """
         assert self._engine is not None, "engine_context must be entered"
         return self._engine
 
     @contextlib.asynccontextmanager
     async def engine_context(self) -> AsyncIterator[None]:
-        """Context manage to manage the engine lifecycle.
+        """Manage the asynchronous engine lifecycle.
 
         This is called once at the application startup (see ``lifetime_functions``).
+
+        Yields:
+            ``None`` while the engine is available.
         """
         assert self._engine is None, "engine_context cannot be nested"
 
@@ -208,6 +252,14 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     @property
     def conn(self) -> AsyncConnection:
+        """Return the active connection for the current transaction.
+
+        Returns:
+            The connection established by entering this database instance.
+
+        Raises:
+            RuntimeError: If accessed outside the database context.
+        """
         if self._conn.get() is None:
             raise RuntimeError(f"{self.__class__} was used before entering")
         return cast(AsyncConnection, self._conn.get())
@@ -217,6 +269,12 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         This is called by the Dependency mechanism (see ``db_transaction``),
         It will create a new connection/transaction for each route call.
+
+        Returns:
+            This database instance with an active connection.
+
+        Raises:
+            SQLDBUnavailableError: If a connection cannot be established.
         """
         assert self._conn.get() is None, "BaseSQLDB context cannot be nested"
         try:
@@ -241,6 +299,11 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         If there was no exception, the changes in the DB are committed.
         Otherwise, they are rolled back.
+
+        Args:
+            exc_type: Exception type raised in the context, or ``None``.
+            exc: Exception raised in the context, or ``None``.
+            tb: Traceback for the exception, or ``None``.
         """
         if exc_type is None:
             await self._conn.get().commit()
@@ -252,6 +315,9 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         We could enable the ``pre_ping`` in the engine, but this would be ran at
         every query.
+
+        Raises:
+            SQLDBUnavailableError: If the database connection is unavailable.
         """
         try:
             await self.conn.scalar(select(1))
@@ -328,6 +394,8 @@ class BaseSQLDB(metaclass=ABCMeta):
 
 
 class TimeResolution(StrEnum):
+    """Precision levels accepted for partial datetime search values."""
+
     YEAR = "YEAR"
     MONTH = "MONTH"
     DAY = "DAY"
@@ -337,6 +405,18 @@ class TimeResolution(StrEnum):
 
 
 def find_time_resolution(value):
+    """Parse a datetime value and determine its specified precision.
+
+    Args:
+        value: Datetime object or string with year-to-second precision.
+
+    Returns:
+        A tuple of precision and normalized value. Precision is ``None`` for
+        datetime objects and fully specified timestamp strings.
+
+    Raises:
+        InvalidQueryError: If a string value is not a supported datetime format.
+    """
     if isinstance(value, datetime):
         return None, value
     if match := re.fullmatch(
@@ -456,6 +536,20 @@ def _build_datetime_range_multi_expr(
 
 
 def apply_search_filters(table, stmt, search):
+    """Apply search specifications to a SQLAlchemy select statement.
+
+    Args:
+        table: SQLAlchemy table whose columns are searchable.
+        stmt: Select statement to constrain.
+        search: Scalar and vector search specifications to apply.
+
+    Returns:
+        The statement with all search conditions applied.
+
+    Raises:
+        InvalidQueryError: If a column, operator, value, or datetime precision
+            is invalid for the requested search.
+    """
     for query in search:
         try:
             column = table.columns[query["parameter"]]
@@ -528,6 +622,19 @@ def apply_search_filters(table, stmt, search):
 
 
 def apply_sort_constraints(table, stmt, sorts):
+    """Apply sort specifications to a SQLAlchemy select statement.
+
+    Args:
+        table: SQLAlchemy table whose columns are sortable.
+        stmt: Select statement to order.
+        sorts: Sort specifications to apply.
+
+    Returns:
+        The statement with the requested ordering applied.
+
+    Raises:
+        InvalidQueryError: If a sort column or direction is invalid.
+    """
     sort_columns = []
     for sort in sorts or []:
         try:
@@ -550,7 +657,17 @@ def apply_sort_constraints(table, stmt, sorts):
 
 
 def uuid7_to_datetime(uuid: UUID | StdUUID | str) -> datetime:
-    """Convert a UUIDv7 to a datetime."""
+    """Convert a UUIDv7 timestamp to a UTC datetime.
+
+    Args:
+        uuid: UUIDv7 value as a ``uuid_utils.UUID``, standard UUID, or string.
+
+    Returns:
+        UTC datetime represented by the UUID timestamp.
+
+    Raises:
+        ValueError: If the UUID is not version 7.
+    """
     if isinstance(uuid, StdUUID):
         # Convert stdlib UUID to uuid_utils.UUID
         uuid = UUID(str(uuid))
@@ -568,6 +685,13 @@ def uuid7_from_datetime(dt: datetime, *, randomize: bool = True) -> UUID:
     If randomize is True, the standard uuid7 function is used resulting in the
     lowest 62-bits being random. If randomize is False, the UUIDv7 will be the
     lowest possible UUIDv7 for the given datetime.
+
+    Args:
+        dt: Datetime whose timestamp should be encoded.
+        randomize: Whether to randomize the UUID bits below the timestamp.
+
+    Returns:
+        UUIDv7 encoding the datetime timestamp.
     """
     timestamp = dt.timestamp()
     if randomize:
