@@ -24,6 +24,9 @@ dependencies = [
     "sqlalchemy",
     "uuid-utils",
     "pytest-github-actions-annotate-failures",
+    # For the minimal OpenTelemetry collector (diracx.testing.otel_printer)
+    "grpcio",
+    "opentelemetry-proto",
 ]
 dynamic = ["version"]
 
