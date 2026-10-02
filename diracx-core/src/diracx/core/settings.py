@@ -7,6 +7,7 @@ __all__ = [
     "DevelopmentSettings",
     "FactorySettings",
     "LocalFileUrl",
+    "LoggingSettings",
     "OTELSettings",
     "SandboxStoreSettings",
     "ServiceSettingsBase",
@@ -358,6 +359,30 @@ class SandboxStoreSettings(ServiceSettingsBase):
         if self._client is None:
             raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
+
+
+class LoggingSettings(ServiceSettingsBase):
+    """Settings for the logs written by the DiracX processes."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_LOG_", use_attribute_docstrings=True
+    )
+
+    level: str = "INFO"
+    """
+    Level of the DiracX loggers (including those of the extension).
+    """
+
+    libraries_level: str = "WARNING"
+    """
+    Level of the loggers of the other libraries (SQLAlchemy, httpx...).
+    """
+
+    format: Literal["text", "json"] = "text"
+    """
+    Format of the logs: ``text`` (human readable) or ``json`` (one JSON object
+    per line, for log collectors).
+    """
 
 
 class OTELSettings(ServiceSettingsBase):

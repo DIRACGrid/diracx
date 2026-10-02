@@ -80,7 +80,7 @@ This enables OpenTelemetry in all the services, and starts a minimal collector (
 - every 30 seconds, the metrics whose value changed.
 
 ```
-[otel      ] ━━ trace 894855bd1c5b7b3d5be5ce663ffe5edd 22:12:51 (22 spans: tasks-scheduler → tasks-worker)
+[otel      ] ━━ trace 894855bd1c5b7b3d5be5ce663ffe5edd 20:12:51Z (22 spans: tasks-scheduler → tasks-worker)
 [otel      ] task.submit jobs:DummyJobExecutorMonitorTask  [tasks-scheduler, producer] 0.4ms
 [otel      ] └─ task.process jobs:DummyJobExecutorMonitorTask  [tasks-worker, consumer] 49.2ms  queue_wait=0.00155
 [otel      ]    └─ task.execute jobs:DummyJobExecutorMonitorTask  [tasks-worker, internal] 48.7ms  task=ok

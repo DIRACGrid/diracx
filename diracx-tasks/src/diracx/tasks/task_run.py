@@ -14,7 +14,6 @@ __all__ = []
 import argparse
 import asyncio
 import json
-import logging
 import os
 import signal
 import sys
@@ -25,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Iterable
 
 from redis.asyncio import Redis
 
+from diracx.core.logs import configure_logging
 from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
@@ -50,11 +50,7 @@ def _get_redis_url(args: argparse.Namespace) -> str:
 
 def main() -> None:
     """Parse arguments and dispatch to the appropriate subcommand."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    configure_logging()
 
     parser = argparse.ArgumentParser(description="DiracX tasks CLI", allow_abbrev=False)
     subparsers = parser.add_subparsers(dest="command", required=True)

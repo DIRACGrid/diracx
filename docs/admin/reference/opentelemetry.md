@@ -136,7 +136,7 @@ On lock contention, a `task.retry_scheduled` event (`task.retry.reason=lock_cont
 
 ### Logs
 
-The log records of the `diracx` loggers (and of the `uvicorn` ones in the API servers) are exported once each:
+The log records of the DiracX and extension loggers (and of the `uvicorn` ones in the API servers) are exported once each, with the [context attributes](logs.md#context-attributes) (task, user...) as attributes:
 
 | Field                                                         | Content                                                            |
 | ------------------------------------------------------------- | ------------------------------------------------------------------ |

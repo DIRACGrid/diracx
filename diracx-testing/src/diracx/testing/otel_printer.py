@@ -85,9 +85,9 @@ def _component(resource_attributes: dict[str, object]) -> str:
     )
 
 
-def _local_time(unix_nano: int) -> datetime:
-    """Convert an OTLP timestamp to the local time, for display."""
-    return datetime.fromtimestamp(unix_nano / 1e9, tz=UTC).astimezone()
+def _utc_time(unix_nano: int) -> datetime:
+    """Convert an OTLP timestamp to a UTC datetime, for display."""
+    return datetime.fromtimestamp(unix_nano / 1e9, tz=UTC)
 
 
 def _format_value(value: object) -> str:
@@ -168,9 +168,9 @@ class TracePrinter:
         for received in spans:
             if received.component not in components:
                 components.append(received.component)
-        start = _local_time(spans[0].span.start_time_unix_nano)
+        start = _utc_time(spans[0].span.start_time_unix_nano)
         header = (
-            f"━━ trace {trace_id.hex()} {start:%H:%M:%S} "
+            f"━━ trace {trace_id.hex()} {start:%H:%M:%SZ} "
             f"({len(spans)} span{'s' if len(spans) > 1 else ''}: "
             f"{' → '.join(components)})"
         )
@@ -252,7 +252,7 @@ class MetricPrinter:
         if not changed:
             return []
         lines = [
-            f"━━ metrics {datetime.now(tz=UTC).astimezone():%H:%M:%S} ({len(changed)} changed)"
+            f"━━ metrics {datetime.now(tz=UTC):%H:%M:%SZ} ({len(changed)} changed)"
         ]
         for (name, component, attributes), value in sorted(changed.items()):
             rendered = ", ".join(f"{k}={_format_value(v)}" for k, v in attributes)
@@ -281,12 +281,12 @@ def _render_logs(request: logs_service_pb2.ExportLogsServiceRequest) -> list[str
         component = _component(_attributes(resource_logs.resource.attributes))
         for scope_logs in resource_logs.scope_logs:
             for record in scope_logs.log_records:
-                when = _local_time(
+                when = _utc_time(
                     record.time_unix_nano or record.observed_time_unix_nano
                 )
                 trace = f" trace={record.trace_id.hex()}" if record.trace_id else ""
                 lines.append(
-                    f"log {when:%H:%M:%S} [{component}] {record.severity_text} "
+                    f"log {when:%H:%M:%SZ} [{component}] {record.severity_text} "
                     f"{scope_logs.scope.name}: {_value(record.body)}{trace}"
                 )
     return lines

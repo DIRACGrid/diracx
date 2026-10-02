@@ -341,6 +341,33 @@ Maximum number of concurrent DB delete chunks during cleaning.
 
 Controls parallelism of database DELETE operations.
 
+## LoggingSettings
+
+Settings for the logs written by the DiracX processes.
+
+### `DIRACX_LOG_LEVEL`
+
+*Optional*, default value: `INFO`
+
+Level of the DiracX loggers (including those of the extension).
+
+### `DIRACX_LOG_LIBRARIES_LEVEL`
+
+*Optional*, default value: `WARNING`
+
+Level of the loggers of the other libraries (SQLAlchemy, httpx...).
+
+### `DIRACX_LOG_FORMAT`
+
+*Optional*, default value: `text`
+
+Format of the logs: `text` (human readable) or `json` (one JSON object
+per line, for log collectors).
+
+#### Possible values
+
+`text`, `json`
+
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.

@@ -489,3 +489,42 @@ def test_logs_are_exported_once_with_the_message_as_body(otel_providers):
     assert {r.trace_id for r in records} == {span.get_span_context().trace_id}
     assert records[1].attributes["exception.type"] == "ValueError"
     assert "boom" in records[1].attributes["exception.stacktrace"]
+
+
+def test_uvicorn_access_logs_are_structured_in_the_exported_records():
+    import logging
+
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogRecordExporter,
+        SimpleLogRecordProcessor,
+    )
+
+    from diracx.tasks.otel import _setup_log_handler
+
+    exporter = InMemoryLogRecordExporter()
+    logger_provider = LoggerProvider()
+    logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    access = logging.getLogger("uvicorn.access")
+    level = access.level
+    access.setLevel(logging.INFO)
+    handler = _setup_log_handler(logger_provider, ["uvicorn.access"])
+    try:
+        access.info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:1234",
+            "POST",
+            "/api/jobs/",
+            "1.1",
+            201,
+        )
+    finally:
+        access.removeHandler(handler)
+        access.setLevel(level)
+
+    [record] = [r.log_record for r in exporter.get_finished_logs()]
+    assert record.attributes["http.request.method"] == "POST"
+    assert record.attributes["url.path"] == "/api/jobs/"
+    assert record.attributes["http.response.status_code"] == 201
+    assert record.attributes["client.address"] == "127.0.0.1:1234"
+    assert record.attributes["network.protocol.version"] == "1.1"

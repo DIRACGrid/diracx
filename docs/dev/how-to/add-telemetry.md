@@ -117,6 +117,31 @@ Rules:
 - **Give a unit** (`s`, `By`) for durations and sizes: the Prometheus name gets the corresponding suffix.
 - **Document the metric** in the [OpenTelemetry reference](../../admin/reference/opentelemetry.md#metrics), and consider adding it to the dashboards of `diracx-charts`.
 
+## Add information to the logs
+
+Use the standard `logging` module, with a logger per module (`logger = logging.getLogger(__name__)`).
+The logs are [configured](../../admin/explanations/logs.md) by `diracx.core.logs.configure_logging`: do not add handlers.
+
+Give the values which could be searched for as attributes, rather than only in the message:
+
+```python
+logger.info("Killed %d jobs", len(job_ids), extra={"diracx.jobs.count": len(job_ids)})
+```
+
+They become fields of the JSON logs and attributes of the OpenTelemetry log records.
+
+The task being executed and the user of the request are added automatically.
+To add attributes to all the records emitted in a block (e.g. while processing a pilot), use `log_context`:
+
+```python
+from diracx.core.logs import log_context
+
+with log_context(**{"diracx.pilot.stamp": pilot_stamp}):
+    await process_pilot(...)  # all its logs carry diracx.pilot.stamp
+```
+
+`set_log_context` does the same for the rest of the current context, for code which cannot wrap what follows (e.g. a FastAPI dependency: each request has its own context).
+
 ## Test it
 
 The providers are global and can only be set once per process: set them once for the test session, with in memory exporters.
