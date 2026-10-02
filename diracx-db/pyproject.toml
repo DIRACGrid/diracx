@@ -20,7 +20,7 @@ dependencies = [
     # aiomysql 0.3.2 fails to escape bytes with PyMySQL >= 1.2.1 (aio-libs/aiomysql#1080)
     "pymysql <1.2.1",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
-    "uuid-utils<1.0.0",
+    "uuid-utils>=1.0.0",
     "python-dateutil",
 ]
 dynamic = ["version"]

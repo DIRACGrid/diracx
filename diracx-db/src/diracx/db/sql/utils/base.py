@@ -676,7 +676,9 @@ def uuid7_to_datetime(uuid: UUID | StdUUID | str) -> datetime:
         uuid = UUID(uuid)
     if uuid.version != 7:
         raise ValueError(f"UUID {uuid} is not a UUIDv7")
-    return datetime.fromtimestamp(uuid.timestamp / 1000.0, tz=timezone.utc)
+    return datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(
+        milliseconds=uuid.timestamp
+    )
 
 
 def uuid7_from_datetime(dt: datetime, *, randomize: bool = True) -> UUID:
@@ -693,11 +695,15 @@ def uuid7_from_datetime(dt: datetime, *, randomize: bool = True) -> UUID:
     Returns:
         UUIDv7 encoding the datetime timestamp.
     """
-    timestamp = dt.timestamp()
+    # astimezone preserves datetime.timestamp's local-time interpretation of
+    # naive datetimes while allowing exact integer arithmetic for aware values.
+    delta = dt.astimezone(timezone.utc) - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    nanoseconds = (
+        delta.days * 86_400 + delta.seconds
+    ) * 1_000_000_000 + delta.microseconds * 1_000
     if randomize:
-        uuid = uuid7(int(timestamp), int((timestamp % 1) * 1e9))
+        uuid = uuid7(nanoseconds=nanoseconds)
     else:
-        time_high = int(timestamp * 1000) >> 16
-        time_low = int(timestamp * 1000) & 0xFFFF
-        uuid = UUID.from_fields((time_high, time_low, 0x7000, 0x80, 0, 0))
+        milliseconds = nanoseconds // 1_000_000
+        uuid = UUID(int=(milliseconds << 80) | (7 << 76) | (2 << 62))
     return uuid
