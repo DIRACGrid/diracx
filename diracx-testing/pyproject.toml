@@ -27,6 +27,8 @@ dependencies = [
     # For the minimal OpenTelemetry collector (diracx.testing.otel_printer)
     "grpcio",
     "opentelemetry-proto",
+    # For the in-memory providers of the tests (diracx.testing.otel)
+    "opentelemetry-sdk",
 ]
 dynamic = ["version"]
 

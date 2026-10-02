@@ -13,6 +13,8 @@ from opentelemetry import metrics, propagate, trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 
+from diracx.core.logs import log_context
+
 from .._redis_types import CallbackRegistry, LockCoordinator
 from ..base_task import BaseTask
 from ..broker.models import ReceivedMessage, TaskMessage, TaskResult
@@ -361,18 +363,23 @@ class Worker:
             return
 
         attrs = _task_attributes(task_message)
-        with _tracer.start_as_current_span(
-            f"task.process {task_message.task_name}",
-            context=propagate.extract(task_message.trace_context),
-            kind=SpanKind.CONSUMER,
-            attributes={
-                "task.name": task_message.task_name,
-                "task.id": task_message.task_id,
-                "task.priority": attrs["priority"],
-                "task.size": attrs["size"],
-                "task.retry_count": task_message.labels.get("_retry_attempt", 0),
-            },
-        ) as span:
+        with (
+            log_context(
+                **{"task.name": task_message.task_name, "task.id": task_message.task_id}
+            ),
+            _tracer.start_as_current_span(
+                f"task.process {task_message.task_name}",
+                context=propagate.extract(task_message.trace_context),
+                kind=SpanKind.CONSUMER,
+                attributes={
+                    "task.name": task_message.task_name,
+                    "task.id": task_message.task_id,
+                    "task.priority": attrs["priority"],
+                    "task.size": attrs["size"],
+                    "task.retry_count": task_message.labels.get("_retry_attempt", 0),
+                },
+            ) as span,
+        ):
             if isinstance(message, ReceivedMessage):
                 self._record_queue_wait(message, attrs, span)
 

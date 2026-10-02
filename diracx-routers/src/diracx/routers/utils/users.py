@@ -15,6 +15,7 @@ from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from uuid_utils import UUID as _UUID
 
+from diracx.core.logs import set_log_context
 from diracx.core.models import UserInfo
 from diracx.core.properties import SecurityProperty
 from diracx.core.settings import AuthSettings
@@ -114,13 +115,14 @@ async def verify_dirac_access_token(
         ) from e
 
     # Allows to find the requests of a given user/community in the traces
-    trace.get_current_span().set_attributes(
-        {
-            "enduser.id": claims["sub"],
-            "diracx.vo": claims["vo"],
-            "diracx.group": claims["dirac_group"],
-        }
-    )
+    # and in the logs of the request
+    user_attributes = {
+        "enduser.id": claims["sub"],
+        "diracx.vo": claims["vo"],
+        "diracx.group": claims["dirac_group"],
+    }
+    trace.get_current_span().set_attributes(user_attributes)
+    set_log_context(**user_attributes)
 
     return AuthorizedUserInfo(
         bearer_token=raw_token,

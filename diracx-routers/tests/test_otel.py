@@ -5,35 +5,14 @@ from __future__ import annotations
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 from diracx.routers.factory import ClientMinVersionCheckMiddleware
-
-# The global providers can only be set once per process
-_METRIC_READER = InMemoryMetricReader()
+from diracx.testing.otel import install_otel_providers, metric_value
 
 
 @pytest.fixture(scope="session")
 def otel_metrics():
-    metrics.set_meter_provider(MeterProvider(metric_readers=[_METRIC_READER]))
-
-
-def metric_value(name: str, **attributes) -> float:
-    data = _METRIC_READER.get_metrics_data()
-    total = 0.0
-    if data is None:
-        return total
-    for resource_metrics in data.resource_metrics:
-        for scope_metrics in resource_metrics.scope_metrics:
-            for metric in scope_metrics.metrics:
-                if metric.name != name:
-                    continue
-                for point in metric.data.data_points:
-                    if all(point.attributes.get(k) == v for k, v in attributes.items()):
-                        total += point.value
-    return total
+    install_otel_providers()
 
 
 @pytest.fixture

@@ -53,7 +53,7 @@ The local instance runs `jobs:DummyJobExecutorMonitorTask` every 10 seconds.
 After a few seconds, a trace like this one is printed:
 
 ```
-[otel      ] ━━ trace dd8b0f331030ee3fd543cf9d076051cd 22:11:21 (5 spans: tasks-scheduler → tasks-worker)
+[otel      ] ━━ trace dd8b0f331030ee3fd543cf9d076051cd 20:11:21Z (5 spans: tasks-scheduler → tasks-worker)
 [otel      ] task.submit jobs:DummyJobExecutorMonitorTask  [tasks-scheduler, producer] 2.4ms
 [otel      ] └─ task.process jobs:DummyJobExecutorMonitorTask  [tasks-worker, consumer] 110.8ms  queue_wait=0.00375
 [otel      ]    └─ task.execute jobs:DummyJobExecutorMonitorTask  [tasks-worker, internal] 109.1ms  task=ok
@@ -82,7 +82,7 @@ pixi run local-tasks submit lollygag:SyncOwnersTask --args '["alice"]'
 The trace starts from the command line this time (`tasks-submit`):
 
 ```
-[otel      ] ━━ trace 2f9c836fdab3031253a7989e509cea35 22:19:46 (4 spans: tasks-submit → tasks-worker)
+[otel      ] ━━ trace 2f9c836fdab3031253a7989e509cea35 20:19:46Z (4 spans: tasks-submit → tasks-worker)
 [otel      ] task.submit lollygag:SyncOwnersTask  [tasks-submit, producer] 0.4ms
 [otel      ] └─ task.process lollygag:SyncOwnersTask  [tasks-worker, consumer] 6.5ms  queue_wait=0.00167
 [otel      ]    └─ task.execute lollygag:SyncOwnersTask  [tasks-worker, internal] 5.7ms  task=ok
@@ -106,7 +106,7 @@ This task is configured to be retried up to 3 times with an exponential backoff 
 Within a minute, the trace looks like this:
 
 ```
-[otel      ] ━━ trace 8eaf0def8b20e50cd4fcafc6d8399d9c 22:19:48 (8 spans: tasks-submit → tasks-worker) [updated]
+[otel      ] ━━ trace 8eaf0def8b20e50cd4fcafc6d8399d9c 20:19:48Z (8 spans: tasks-submit → tasks-worker) [updated]
 [otel      ] task.submit lollygag:SyncOwnersTask  [tasks-submit, producer] 0.3ms
 [otel      ] ├─ task.process lollygag:SyncOwnersTask  [tasks-worker, consumer] 4.0ms  queue_wait=0.00138 event=task.retry_scheduled
 [otel      ] │  └─ task.execute lollygag:SyncOwnersTask  [tasks-worker, internal] 2.5ms  ERROR TypeError: SyncOwnersTask.__init__() missing 1 required positional argument: 'owner_name' task=error error=TypeError

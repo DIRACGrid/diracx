@@ -41,6 +41,12 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
+from diracx.core.logs import (
+    AccessLogFilter,
+    LogContextFilter,
+    diracx_logger_names,
+    set_trace_context_getter,
+)
 from diracx.core.settings import OTELSettings
 
 if TYPE_CHECKING:
@@ -83,9 +89,9 @@ def configure_otel(
     Args:
         component: Name of the DiracX component (e.g. ``routers``, ``tasks-worker``),
             exported as the ``diracx.component`` resource attribute.
-        extra_logger_names: Loggers, in addition to ``diracx``, to which the OTEL
-            log handler is attached. Needed for loggers which do not propagate
-            (e.g. uvicorn's).
+        extra_logger_names: Loggers, in addition to those of DiracX and its
+            extension, to which the OTEL log handler is attached. Needed for
+            loggers which do not propagate (e.g. uvicorn's).
         settings: The settings to use. Read from the environment if not given.
 
     Returns:
@@ -145,7 +151,9 @@ def configure_otel(
     logger_provider = LoggerProvider(resource=resource)
     _logs.set_logger_provider(logger_provider)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-    _setup_log_handler(logger_provider, {"diracx", *extra_logger_names})
+    _setup_log_handler(logger_provider, {*diracx_logger_names(), *extra_logger_names})
+    # Add the trace context to the JSON logs written to stderr
+    set_trace_context_getter(_current_trace_context)
 
     _instrument_sqlalchemy(tracer_provider, meter_provider)
 
@@ -155,6 +163,13 @@ def configure_otel(
         logger_provider=logger_provider,
     )
     return _providers
+
+
+def _current_trace_context() -> tuple[str, str] | None:
+    span_context = trace.get_current_span().get_span_context()
+    if not span_context.is_valid:
+        return None
+    return format(span_context.trace_id, "032x"), format(span_context.span_id, "016x")
 
 
 def _setup_log_handler(
@@ -173,6 +188,10 @@ def _setup_log_handler(
     every record a second time (and those of all the other libraries).
     """
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
+    # e.g. the task being executed, or the user of the request
+    handler.addFilter(LogContextFilter())
+    # The fields of the uvicorn access logs, as in the JSON logs
+    handler.addFilter(AccessLogFilter())
     for logger_name in logger_names:
         logging.getLogger(logger_name).addHandler(handler)
     return handler

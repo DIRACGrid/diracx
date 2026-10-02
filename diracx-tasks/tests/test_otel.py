@@ -7,11 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import msgpack
 import pytest
-from opentelemetry import metrics, trace
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
@@ -29,48 +25,21 @@ from diracx.tasks.plumbing.broker.models import (
 )
 from diracx.tasks.plumbing.scheduler.scheduler import collect_stream_stats
 from diracx.tasks.plumbing.worker.worker import Worker
+from diracx.testing.otel import SPAN_EXPORTER, install_otel_providers, metric_value
 
 from .conftest import get_enqueued_messages
-
-# The global providers can only be set once per process
-_SPAN_EXPORTER = InMemorySpanExporter()
-_METRIC_READER = InMemoryMetricReader()
 
 
 @pytest.fixture(scope="session")
 def otel_providers():
-    tracer_provider = TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(_SPAN_EXPORTER))
-    meter_provider = MeterProvider(metric_readers=[_METRIC_READER])
-    trace.set_tracer_provider(tracer_provider)
-    metrics.set_meter_provider(meter_provider)
-    return tracer_provider, meter_provider
+    return install_otel_providers()
 
 
 @pytest.fixture
 def spans(otel_providers):
-    _SPAN_EXPORTER.clear()
-    yield _SPAN_EXPORTER
-    _SPAN_EXPORTER.clear()
-
-
-def metric_value(name: str, **attributes) -> float:
-    """Sum of the data points of a metric matching the given attributes."""
-    data = _METRIC_READER.get_metrics_data()
-    total = 0.0
-    if data is None:
-        return total
-    for resource_metrics in data.resource_metrics:
-        for scope_metrics in resource_metrics.scope_metrics:
-            for metric in scope_metrics.metrics:
-                if metric.name != name:
-                    continue
-                for point in metric.data.data_points:
-                    if all(point.attributes.get(k) == v for k, v in attributes.items()):
-                        total += getattr(point, "value", None) or getattr(
-                            point, "count", 0
-                        )
-    return total
+    SPAN_EXPORTER.clear()
+    yield SPAN_EXPORTER
+    SPAN_EXPORTER.clear()
 
 
 def span_named(exporter: InMemorySpanExporter, name: str):
@@ -489,3 +458,42 @@ def test_logs_are_exported_once_with_the_message_as_body(otel_providers):
     assert {r.trace_id for r in records} == {span.get_span_context().trace_id}
     assert records[1].attributes["exception.type"] == "ValueError"
     assert "boom" in records[1].attributes["exception.stacktrace"]
+
+
+def test_uvicorn_access_logs_are_structured_in_the_exported_records():
+    import logging
+
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import (
+        InMemoryLogRecordExporter,
+        SimpleLogRecordProcessor,
+    )
+
+    from diracx.tasks.otel import _setup_log_handler
+
+    exporter = InMemoryLogRecordExporter()
+    logger_provider = LoggerProvider()
+    logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    access = logging.getLogger("uvicorn.access")
+    level = access.level
+    access.setLevel(logging.INFO)
+    handler = _setup_log_handler(logger_provider, ["uvicorn.access"])
+    try:
+        access.info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:1234",
+            "POST",
+            "/api/jobs/",
+            "1.1",
+            201,
+        )
+    finally:
+        access.removeHandler(handler)
+        access.setLevel(level)
+
+    [record] = [r.log_record for r in exporter.get_finished_logs()]
+    assert record.attributes["http.request.method"] == "POST"
+    assert record.attributes["url.path"] == "/api/jobs/"
+    assert record.attributes["http.response.status_code"] == 201
+    assert record.attributes["client.address"] == "127.0.0.1:1234"
+    assert record.attributes["network.protocol.version"] == "1.1"
