@@ -357,17 +357,38 @@ Determines whether OpenTelemetry is enabled.
 
 The name of the application for OpenTelemetry.
 
+### `DIRACX_OTEL_PROTOCOL`
+
+*Optional*, default value: `grpc`
+
+The protocol used to send the data to the OpenTelemetry collector:
+OTLP over gRPC (`grpc`, see `grpc_endpoint`) or over HTTP
+(`http`, protobuf encoded, see `http_endpoint`).
+
+#### Possible values
+
+`grpc`, `http`
+
 ### `DIRACX_OTEL_GRPC_ENDPOINT`
 
 *Optional*, default value: \`\`
 
-The gRPC endpoint for the OpenTelemetry collector.
+The gRPC endpoint for the OpenTelemetry collector (`host:port`,
+e.g. `otel-collector:4317`), used with the `grpc` protocol.
 
 ### `DIRACX_OTEL_GRPC_INSECURE`
 
 *Optional*, default value: `True`
 
 Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+
+### `DIRACX_OTEL_HTTP_ENDPOINT`
+
+*Optional*, default value: \`\`
+
+The base URL of the OpenTelemetry collector (e.g. `http://otel-collector:4318`),
+used with the `http` protocol. `/v1/traces`, `/v1/metrics` and `/v1/logs`
+are appended to it. The scheme (`http` or `https`) decides whether TLS is used.
 
 ### `DIRACX_OTEL_HEADERS`
 

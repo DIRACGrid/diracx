@@ -37,7 +37,7 @@ from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
 
 from .fastapi_classes import DiracFastAPI, DiracxRouter
-from .otel import instrument_otel
+from .otel import instrument_otel, record_client_version
 from .utils.users import verify_dirac_access_token
 
 T = TypeVar("T")
@@ -581,6 +581,7 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                     f"Upgrade to a version >= {self.min_client_version}.",
                 )
         except HTTPException as exc:
+            record_client_version(str(request.url), client_version, rejected=True)
             # Return a JSONResponse because the HTTPException
             # is not handled nicely in the middleware
             logger.error("Error checking client version %s", client_version)
@@ -596,6 +597,7 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 exc_info=True,
             )
 
+        record_client_version(str(request.url), client_version, rejected=False)
         response = await call_next(request)
         return response
 

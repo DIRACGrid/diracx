@@ -10,6 +10,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OpenIdConnect
 from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
+from opentelemetry import trace
 from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from uuid_utils import UUID as _UUID
@@ -111,6 +112,15 @@ async def verify_dirac_access_token(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail="Invalid JWT",
         ) from e
+
+    # Allows to find the requests of a given user/community in the traces
+    trace.get_current_span().set_attributes(
+        {
+            "enduser.id": claims["sub"],
+            "diracx.vo": claims["vo"],
+            "diracx.group": claims["dirac_group"],
+        }
+    )
 
     return AuthorizedUserInfo(
         bearer_token=raw_token,

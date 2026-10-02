@@ -7,6 +7,7 @@ __all__ = [
     "DevelopmentSettings",
     "FactorySettings",
     "LocalFileUrl",
+    "OTELSettings",
     "SandboxStoreSettings",
     "ServiceSettingsBase",
     "SqlalchemyDsn",
@@ -18,7 +19,7 @@ import json
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Annotated, Any, Self, TypeVar, cast
+from typing import Annotated, Any, Literal, Self, TypeVar, cast
 
 import dotenv
 from cryptography.fernet import Fernet
@@ -357,6 +358,54 @@ class SandboxStoreSettings(ServiceSettingsBase):
         if self._client is None:
             raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
+
+
+class OTELSettings(ServiceSettingsBase):
+    """Settings for the Open Telemetry Configuration."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_OTEL_", use_attribute_docstrings=True
+    )
+
+    enabled: bool = False
+    """
+    Determines whether OpenTelemetry is enabled.
+    """
+
+    application_name: str = "diracx"
+    """
+    The name of the application for OpenTelemetry.
+    """
+
+    protocol: Literal["grpc", "http"] = "grpc"
+    """
+    The protocol used to send the data to the OpenTelemetry collector:
+    OTLP over gRPC (``grpc``, see ``grpc_endpoint``) or over HTTP
+    (``http``, protobuf encoded, see ``http_endpoint``).
+    """
+
+    grpc_endpoint: str = ""
+    """
+    The gRPC endpoint for the OpenTelemetry collector (``host:port``,
+    e.g. ``otel-collector:4317``), used with the ``grpc`` protocol.
+    """
+
+    grpc_insecure: bool = True
+    """
+    Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+    """
+
+    http_endpoint: str = ""
+    """
+    The base URL of the OpenTelemetry collector (e.g. ``http://otel-collector:4318``),
+    used with the ``http`` protocol. ``/v1/traces``, ``/v1/metrics`` and ``/v1/logs``
+    are appended to it. The scheme (``http`` or ``https``) decides whether TLS is used.
+    """
+
+    headers: dict[str, str] | None = None
+    """
+    A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g. {"tenant_id": "lhcbdiracx-cert"}.
+    """
 
 
 class FactorySettings(ServiceSettingsBase):

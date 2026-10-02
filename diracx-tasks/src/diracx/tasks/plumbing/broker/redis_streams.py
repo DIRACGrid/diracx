@@ -7,6 +7,7 @@ import uuid
 from typing import Any, AsyncGenerator, Awaitable, Callable
 from uuid import uuid4
 
+from opentelemetry import metrics
 from redis.asyncio import BlockingConnectionPool, Redis, ResponseError
 
 from ..enums import Priority, Size
@@ -15,6 +16,15 @@ from .models import ReceivedMessage, TaskMessage
 from .result_backend import RedisResultBackend
 
 logger = logging.getLogger(__name__)
+
+_meter = metrics.get_meter(__name__)
+_messages_reclaimed = _meter.create_counter(
+    "task_messages_reclaimed_total",
+    description=(
+        "Messages reclaimed from consumers which did not acknowledge them in time "
+        "(typically because the worker died while running the task)"
+    ),
+)
 
 # The nine streams: one per (priority, size) pair
 ALL_STREAM_NAMES = [f"diracx:tasks:{p}:{s}" for p in Priority for s in Size]
@@ -27,6 +37,10 @@ def _default_id_generator() -> str:
 def stream_name_for(priority: Priority | str, size: Size | str) -> str:
     """Return the Redis stream name for a given priority+size."""
     return f"diracx:tasks:{priority}:{size}"
+
+
+def _to_str(value: str | bytes) -> str:
+    return value.decode() if isinstance(value, bytes) else value
 
 
 class RedisStreamBroker:
@@ -186,6 +200,8 @@ class RedisStreamBroker:
                             renew=self._renew_generator(
                                 msg_id=msg_id, queue_name=stream
                             ),
+                            stream=_to_str(stream),
+                            message_id=_to_str(msg_id),
                         )
 
                 # Reclaim unacknowledged messages (throttled to idle_timeout interval)
@@ -210,6 +226,9 @@ class RedisStreamBroker:
                         )
 
                         if pending[1]:
+                            _messages_reclaimed.add(
+                                len(pending[1]), attributes={"stream": sname}
+                            )
                             logger.info(
                                 "Reclaimed %d unacked messages from %s (message-ids: %s)",
                                 len(pending[1]),
@@ -226,4 +245,7 @@ class RedisStreamBroker:
                                 renew=self._renew_generator(
                                     msg_id=msg_id, queue_name=sname
                                 ),
+                                stream=sname,
+                                message_id=_to_str(msg_id),
+                                reclaimed=True,
                             )
