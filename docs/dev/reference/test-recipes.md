@@ -1,4 +1,6 @@
-# UUIDv7 with frozen time
+# Test recipes
+
+## UUIDv7 with frozen time
 
 `freezegun` freezes the Python clock used by `datetime.now(...)`. A bare
 `uuid_utils.uuid7()` may use a different clock path, so use
