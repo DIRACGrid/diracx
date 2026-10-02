@@ -142,7 +142,7 @@ description = "Run the tests for gubbins-tasks"
 # Features for running DiracX locally
 [feature.run-local.tasks.local-start]
 cmd = "bash run_local.sh"
-description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"
+description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers), add --otel to print the OpenTelemetry data"
 [feature.run-local.tasks.local-tasks]
 cmd = "bash run_local_tasks.sh"
 description = "Run diracx-tasks with the local environment variables"

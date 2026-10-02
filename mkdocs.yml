@@ -106,6 +106,12 @@ nav:
         - Configure: admin/how-to/tasks/configure.md
         - Run a task manually: admin/how-to/tasks/run-task-manually.md
         - Operate: admin/how-to/tasks/operate.md
+      - Monitoring:
+        - admin/how-to/monitoring/index.md
+        - Enable OpenTelemetry: admin/how-to/monitoring/enable-opentelemetry.md
+        - Use the Grafana dashboards: admin/how-to/monitoring/use-the-dashboards.md
+        - Troubleshoot with telemetry: admin/how-to/monitoring/troubleshoot-with-telemetry.md
+        - Collect and read the logs: admin/how-to/monitoring/collect-and-read-logs.md
     - Explanations:
       - admin/explanations/index.md
       - Auth in DiracX: admin/explanations/auth-with-diracx.md
@@ -113,6 +119,7 @@ nav:
       - User Management: admin/explanations/user-management.md
       - Configuration: admin/explanations/configuration.md
       - OpenTelemetry: admin/explanations/opentelemetry.md
+      - Logs: admin/explanations/logs.md
       - Chart structure: admin/explanations/chart-structure.md
       - Databases: admin/explanations/database-management.md
       - Sandbox Store: admin/explanations/sandbox-store.md
@@ -130,6 +137,8 @@ nav:
       - Making and deploying releases: admin/reference/making-releases.md
       - Charts values: admin/reference/values.md
       - Tasks configuration: admin/reference/tasks-configuration.md
+      - OpenTelemetry: admin/reference/opentelemetry.md
+      - Logs: admin/reference/logs.md
       - RUN_PROD.md
       - SSO.md
 
@@ -172,6 +181,7 @@ nav:
           - New task: dev/how-to/add-a-task.md
           - Spawn a task: dev/how-to/spawn-a-task.md
           - Use task callbacks: dev/how-to/use-task-callbacks.md
+          - Add telemetry: dev/how-to/add-telemetry.md
           - New DB: dev/how-to/add-a-db.md
           - New settings: dev/how-to/add-a-setting.md
           - Add a test: dev/how-to/add-a-test.md

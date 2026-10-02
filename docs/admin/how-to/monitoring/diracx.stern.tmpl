@@ -1,0 +1,14 @@
+{{- /* Format the JSON logs of DiracX (DIRACX_LOG_FORMAT=json); other lines are printed as they are */ -}}
+{{- if .PodName }}{{ color .PodColor .PodName }} {{ end -}}
+{{- with $d := .Message | tryParseJSON -}}
+{{ colorBlue (toTimestamp $d.timestamp "15:04:05.000Z07:00" "UTC") }} {{ levelColor $d.severity_text }} {{ colorCyan $d.logger }} {{ $d.body }}
+{{- with index $d "http.response.status_code" }} {{ colorYellow (printf "status=%v" .) }}{{ end }}
+{{- with index $d "task.name" }} {{ colorMagenta (printf "task=%s" .) }}{{ end }}
+{{- with index $d "task.id" }} {{ colorMagenta (printf "task_id=%s" .) }}{{ end }}
+{{- with index $d "enduser.id" }} {{ colorGreen (printf "user=%s" .) }}{{ end }}
+{{- with index $d "diracx.vo" }} {{ colorGreen (printf "vo=%s" .) }}{{ end }}
+{{- with index $d "trace_id" }} {{ colorWhite (printf "trace=%s" .) }}{{ end }}
+{{- with index $d "exception.stacktrace" }}{{ "\n" }}{{ colorRed . }}{{ end }}
+{{- else -}}
+{{ .Message }}
+{{- end }}{{ "\n" -}}

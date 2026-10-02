@@ -14,16 +14,17 @@ __all__ = []
 import argparse
 import asyncio
 import json
-import logging
 import os
 import signal
 import sys
 import traceback
+from contextlib import AsyncExitStack
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Iterable
 
 from redis.asyncio import Redis
 
+from diracx.core.logs import configure_logging
 from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
@@ -49,11 +50,7 @@ def _get_redis_url(args: argparse.Namespace) -> str:
 
 def main() -> None:
     """Parse arguments and dispatch to the appropriate subcommand."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    configure_logging()
 
     parser = argparse.ArgumentParser(description="DiracX tasks CLI", allow_abbrev=False)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -170,6 +167,11 @@ def main() -> None:
     )
 
     parsed = parser.parse_args()
+
+    from .otel import configure_otel
+
+    configure_otel(f"tasks-{parsed.command}")
+
     parsed.func(parsed)
 
 
@@ -252,22 +254,34 @@ async def start_scheduler(redis_url: str) -> None:
         config_source = ConfigSource.create_from_url(backend_url=config_url)
         config = config_source.read()
 
+    # Used to report the size of the dead letter queue
+    task_db = None
+    task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
+    if task_db_url:
+        from .plumbing.persistence.dlq import TaskDB
+
+        task_db = TaskDB(task_db_url)
+
     scheduler = TaskScheduler(
         broker=broker,
         redis_url=redis_url,
         task_registry=task_classes,
         config=config,
+        task_db=task_db,
     )
 
-    await scheduler.startup()
-    finish_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, finish_event.set)
-    try:
-        await scheduler.run_forever(finish_event)
-    finally:
-        await scheduler.shutdown()
+    async with AsyncExitStack() as stack:
+        if task_db is not None:
+            await stack.enter_async_context(task_db.engine_context())
+        await scheduler.startup()
+        finish_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, finish_event.set)
+        try:
+            await scheduler.run_forever(finish_event)
+        finally:
+            await scheduler.shutdown()
 
 
 async def submit_task_cli(
