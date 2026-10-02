@@ -5,15 +5,36 @@ from uuid import UUID as StdUUID  # noqa: N811
 
 import freezegun
 import pytest
-from uuid_utils import UUID, uuid7
+from uuid_utils import UUID
 
 from diracx.db.sql.utils import uuid7_from_datetime, uuid7_to_datetime
+from diracx.testing.time import frozen_uuid7
 
 
-def frozen_uuid7() -> UUID:
-    """Create a UUID7 in a way which respects the freezegun context."""
-    timestamp = datetime.now(tz=timezone.utc).timestamp()
-    return uuid7(int(timestamp), int((timestamp % 1) * 1e9))
+class TestFrozenUuid7:
+    def test_follows_frozen_time_and_tick(self):
+        # Exact milliseconds guard against fractional-second float rounding.
+        with freezegun.freeze_time("2024-01-15 12:30:45.123000") as frozen_time:
+            initial = frozen_uuid7()
+
+            assert isinstance(initial, UUID)
+            assert uuid7_to_datetime(initial) == datetime.fromisoformat(
+                "2024-01-15T12:30:45.123000+00:00"
+            )
+
+            frozen_time.tick(timedelta(milliseconds=1234))
+            advanced = frozen_uuid7()
+            assert uuid7_to_datetime(advanced) == datetime.fromisoformat(
+                "2024-01-15T12:30:46.357000+00:00"
+            )
+
+    def test_multiple_uuids_at_same_frozen_time_are_distinct(self, frozen_time):
+        uuids = [frozen_uuid7() for _ in range(10)]
+
+        assert len(set(uuids)) == len(uuids)
+        assert {uuid.timestamp for uuid in uuids} == {
+            int(datetime.now(timezone.utc).timestamp()) * 1000
+        }
 
 
 class TestDatetimeToUuid7:
