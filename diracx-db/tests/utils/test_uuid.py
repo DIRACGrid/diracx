@@ -18,6 +18,7 @@ class TestFrozenUuid7:
             initial = frozen_uuid7()
 
             assert isinstance(initial, UUID)
+            assert initial.version == 7
             assert uuid7_to_datetime(initial) == datetime.fromisoformat(
                 "2024-01-15T12:30:45.123000+00:00"
             )
@@ -27,6 +28,16 @@ class TestFrozenUuid7:
             assert uuid7_to_datetime(advanced) == datetime.fromisoformat(
                 "2024-01-15T12:30:46.357000+00:00"
             )
+            assert advanced.timestamp - initial.timestamp == 1234
+
+    @freezegun.freeze_time("2500-01-15 12:30:45.123456")
+    def test_far_future_timestamp_uses_integer_arithmetic(self):
+        uuid = frozen_uuid7()
+
+        assert uuid.version == 7
+        assert uuid7_to_datetime(uuid) == datetime.fromisoformat(
+            "2500-01-15T12:30:45.123000+00:00"
+        )
 
     def test_multiple_uuids_at_same_frozen_time_are_distinct(self, frozen_time):
         uuids = [frozen_uuid7() for _ in range(10)]
@@ -44,14 +55,19 @@ class TestDatetimeToUuid7:
         """Test that the datetime_to_uuid7 function returns a UUID7 with the current timestamp."""
         dt = datetime.fromisoformat("2024-01-15T12:30:45.123456+00:00")
         result = uuid7_from_datetime(dt, randomize=True)
-        assert str(result)[:15] == "018d0d1a-5183-7"
-        assert len(set(str(result)[15:])) > 4
+        another = uuid7_from_datetime(dt, randomize=True)
+        assert result.version == another.version == 7
+        assert result.timestamp == another.timestamp == 1705321845123
+        assert result != another
+        assert uuid7_to_datetime(result) == dt.replace(microsecond=123000)
 
     def test_datetime_to_uuid7_deterministic(self):
         """Test that the datetime_to_uuid7 function returns a UUID7 with the current timestamp."""
         dt = datetime.fromisoformat("2024-01-15T12:30:45.123456+00:00")
         result = uuid7_from_datetime(dt, randomize=False)
         assert str(result) == "018d0d1a-5183-7000-8000-000000000000"
+        assert result.version == 7
+        assert uuid7_to_datetime(result) == dt.replace(microsecond=123000)
 
 
 class TestUuid7ToDatetime:

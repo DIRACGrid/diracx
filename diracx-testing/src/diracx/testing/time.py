@@ -48,7 +48,11 @@ def frozen_time():
 def frozen_uuid7() -> UUID:
     """Create a UUIDv7 using the current Python time, including frozen time."""
     current_time = datetime.now(UTC)
-    return uuid7(int(current_time.timestamp()), current_time.microsecond * 1000)
+    delta = current_time - datetime(1970, 1, 1, tzinfo=UTC)
+    nanoseconds = (
+        delta.days * 86_400 + delta.seconds
+    ) * 1_000_000_000 + delta.microseconds * 1_000
+    return uuid7(nanoseconds=nanoseconds)
 
 
 def install_sqlite_time_mock(engine) -> None:
