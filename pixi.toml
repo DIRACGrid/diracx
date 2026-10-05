@@ -32,7 +32,7 @@ seaweedfs = "*"
 [feature.diracx.pypi-dependencies]
 diracx = { path = ".", editable = true, extras = ["testing"] }
 [feature.diracx-core.pypi-dependencies]
-diracx-core = { path = "diracx-core", editable = true, extras = ["testing"] }
+diracx-core = { path = "diracx-core", editable = true, extras = ["testing", "otel"] }
 diracx-testing = { path = "diracx-testing", editable = true }
 [feature.diracx-cli.pypi-dependencies]
 diracx-cli = { path = "diracx-cli", editable = true, extras = ["testing"] }

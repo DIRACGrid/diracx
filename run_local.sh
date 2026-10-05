@@ -128,6 +128,8 @@ if [ "$enable_otel" = true ]; then
   export DIRACX_OTEL_GRPC_INSECURE=true
   export DIRACX_OTEL_HTTP_ENDPOINT="http://localhost:${otel_http_port}"
   export DIRACX_OTEL_APPLICATION_NAME=diracx-local
+  # See the metrics without waiting for the default interval (60s)
+  export OTEL_METRIC_EXPORT_INTERVAL=5000
 fi
 
 # Write all DIRACX env vars to a sourceable file for use in other terminals
@@ -187,7 +189,8 @@ redis_pid=$!
 otel_command="python -m diracx.testing.otel_printer --port ${otel_port} --http-port ${otel_http_port}"
 if [ "$enable_otel" = true ]; then
   # Started before the DiracX services so that no telemetry is lost
-  python -m diracx.testing.otel_printer --port "${otel_port}" --http-port "${otel_http_port}" > "${tmp_dir}/logs/otel.log" 2>&1 &
+  # eval as in restart_process: IFS does not split on spaces
+  eval "exec $otel_command" > "${tmp_dir}/logs/otel.log" 2>&1 &
   otel_pid=$!
 fi
 

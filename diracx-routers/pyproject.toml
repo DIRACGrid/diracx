@@ -32,6 +32,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+otel = ["diracx-core[otel]"]
 testing = ["diracx-testing", "moto[server]", "httpx2-pytest", "freezegun", "pyjwt"]
 types = [
     "types-cachetools",

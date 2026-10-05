@@ -115,8 +115,7 @@ class TracePrinter:
     A trace is printed once no new span arrived for ``idle_seconds``: the
     processes export their spans in batches, so the spans of a trace
     arrive from several processes at different times.
-    If more spans arrive afterwards (e.g. a task executed later), the
-    whole trace is printed again.
+    If more spans arrive afterwards, the whole trace is printed again.
     """
 
     def __init__(self, idle_seconds: float, retention_seconds: float = 600) -> None:
@@ -208,6 +207,9 @@ def _render_span(received: _ReceivedSpan) -> str:
     for event in span.events:
         if event.name != "exception":
             details.append(f"event={event.name}")
+    # e.g. the task.submit span of the task being processed, in another trace
+    for link in span.links:
+        details.append(f"link={link.trace_id.hex()}")
     kind = Span.SpanKind.Name(span.kind).removeprefix("SPAN_KIND_").lower()
     return f"{span.name}  [{received.component}, {kind}] {duration_ms:.1f}ms" + (
         f"  {' '.join(details)}" if details else ""

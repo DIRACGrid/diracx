@@ -29,6 +29,7 @@ from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
     from .plumbing._redis_types import LockCoordinator
+    from .plumbing.persistence.dlq import TaskDB
 
 DEFAULT_REDIS_URL = "redis://localhost"
 _factory_settings = FactorySettings()
@@ -46,6 +47,26 @@ def _get_redis_url(args: argparse.Namespace) -> str:
         return args.redis_url
 
     return _factory_settings.tasks_redis_url
+
+
+def _task_db_from_env() -> TaskDB | None:
+    """The TaskDB (dead letter queue), if ``DIRACX_DB_URL_TASKDB`` is set."""
+    task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
+    if not task_db_url:
+        return None
+    from .plumbing.persistence.dlq import TaskDB
+
+    return TaskDB(task_db_url)
+
+
+def _configure_otel(component: str) -> None:
+    """Send the OpenTelemetry data of a long running process, if enabled."""
+    from diracx.core.otel import configure_otel
+    from diracx.db.sql import instrument_sqlalchemy
+
+    providers = configure_otel(component)
+    if providers is not None:
+        instrument_sqlalchemy(providers.tracer_provider, providers.meter_provider)
 
 
 def main() -> None:
@@ -168,9 +189,10 @@ def main() -> None:
 
     parsed = parser.parse_args()
 
-    from .otel import configure_otel
-
-    configure_otel(f"tasks-{parsed.command}")
+    # Only the long running processes: the short lived commands (call, submit)
+    # would create new metric series at each invocation
+    if parsed.command in ("worker", "scheduler"):
+        _configure_otel(f"tasks-{parsed.command}")
 
     parsed.func(parsed)
 
@@ -205,12 +227,7 @@ async def start_worker(
     async with setup_dependency_overrides(task_dependants=dependants) as overrides:
         broker.dependency_overrides.update(overrides)
 
-        task_db = None
-        task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
-        if task_db_url:
-            from .plumbing.persistence.dlq import TaskDB
-
-            task_db = TaskDB(task_db_url)
+        task_db = _task_db_from_env()
 
         finish_event = asyncio.Event()
         loop = asyncio.get_running_loop()
@@ -255,12 +272,7 @@ async def start_scheduler(redis_url: str) -> None:
         config = config_source.read()
 
     # Used to report the size of the dead letter queue
-    task_db = None
-    task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
-    if task_db_url:
-        from .plumbing.persistence.dlq import TaskDB
-
-        task_db = TaskDB(task_db_url)
+    task_db = _task_db_from_env()
 
     scheduler = TaskScheduler(
         broker=broker,

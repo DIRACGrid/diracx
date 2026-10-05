@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
@@ -13,11 +14,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 from opentelemetry.trace import SpanKind, StatusCode
 from redis.asyncio import Redis
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from diracx.core.settings import OTELSettings
-from diracx.tasks.otel import _instrument_sqlalchemy, configure_otel
 from diracx.tasks.plumbing.broker.models import (
     ReceivedMessage,
     TaskMessage,
@@ -65,14 +62,10 @@ def make_worker(broker, task_class_registry, wrapped_registry) -> Worker:
     )
 
 
-def test_configure_otel_disabled():
-    assert configure_otel("test", settings=OTELSettings(enabled=False)) is None
-
-
-async def test_task_execution_continues_the_submitter_trace(
+async def test_task_execution_is_linked_to_the_submitter(
     broker, task_class_registry, wrapped_registry, spans
 ):
-    """Request -> task.submit -> task.process -> task.execute must be one trace."""
+    """task.process starts a new trace, linked to the task.submit span."""
     tracer = trace.get_tracer("test")
     with tracer.start_as_current_span("request") as request_span:
         task_id = await submit_task(
@@ -95,13 +88,33 @@ async def test_task_execution_continues_the_submitter_trace(
     assert submit.kind == SpanKind.PRODUCER
     assert process.kind == SpanKind.CONSUMER
     assert submit.parent.span_id == request_span.get_span_context().span_id
-    assert process.parent.span_id == submit.context.span_id
+    assert submit.context.trace_id == request_span.get_span_context().trace_id
+    # A new trace, linked to the submission
+    assert process.parent is None
+    assert process.context.trace_id != submit.context.trace_id
+    assert [link.context.span_id for link in process.links] == [submit.context.span_id]
     assert execute.parent.span_id == process.context.span_id
-    assert {s.context.trace_id for s in (submit, process, execute)} == {
-        request_span.get_span_context().trace_id
-    }
     assert process.attributes["task.id"] == task_id
     assert execute.attributes["task.status"] == "ok"
+
+
+async def test_message_without_trace_context_has_no_link(
+    broker, task_class_registry, wrapped_registry, spans
+):
+    worker = make_worker(broker, task_class_registry, wrapped_registry)
+    task_msg = TaskMessage(
+        task_id="t-old",
+        task_name="test:SuccessTask",
+        labels={"priority": "normal", "size": "small"},
+        task_args=[],
+        task_kwargs={},
+    )
+    with patch.object(worker, "_get_redis", return_value=mock_redis()):
+        await worker.process_message(task_msg.dumpb())
+
+    process = span_named(spans, "task.process test:SuccessTask")
+    assert process.parent is None
+    assert process.links == ()
 
 
 async def test_submit_counts_tasks(broker, spans):
@@ -176,30 +189,68 @@ async def test_lock_contention_is_a_retry_not_a_completion(
     assert "task.retry_scheduled" in [event.name for event in execute.events]
 
 
-async def test_retry_stays_in_the_original_trace(
-    broker, task_class_registry, wrapped_registry
+async def test_retry_is_linked_to_the_failed_attempt(
+    broker, task_class_registry, wrapped_registry, spans
 ):
     worker = make_worker(broker, task_class_registry, wrapped_registry)
-    trace_context = {
-        "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
-    }
     task_msg = TaskMessage(
         task_id="t-retry",
-        task_name="test:FailOnceTask",
+        task_name="test:SuccessTask",
         labels={"priority": "normal", "size": "small"},
         task_args=[],
         task_kwargs={},
-        trace_context=trace_context,
+        trace_context={
+            "traceparent": "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+        },
     )
     redis = mock_redis()
-    with patch.object(worker, "_get_redis", return_value=redis):
+    with (
+        patch.object(worker, "_get_redis", return_value=redis),
+        trace.get_tracer("test").start_as_current_span("attempt") as attempt,
+    ):
         await worker._schedule_retry(task_msg, datetime.now(tz=UTC), 1, reason="error")
 
     [(_, mapping), _] = redis.zadd.call_args
     [raw_message] = mapping
     retry_message = TaskMessage.loadb(raw_message)
     assert retry_message.task_id != task_msg.task_id
-    assert retry_message.trace_context == trace_context
+
+    with patch.object(worker, "_get_redis", return_value=mock_redis()):
+        await worker.process_message(retry_message.dumpb())
+    [retry] = [
+        s
+        for s in spans.get_finished_spans()
+        if s.name == "task.process test:SuccessTask"
+    ]
+    assert [link.context.span_id for link in retry.links] == [
+        attempt.get_span_context().span_id
+    ]
+
+
+async def test_cancelled_task_is_not_an_error(
+    broker, task_class_registry, wrapped_registry, spans
+):
+    async def cancelled_task(*args, **kwargs):
+        raise asyncio.CancelledError()
+
+    worker = make_worker(broker, task_class_registry, wrapped_registry)
+    task_msg = TaskMessage(
+        task_id="t-cancelled",
+        task_name="test:SuccessTask",
+        labels={"priority": "normal", "size": "small"},
+        task_args=[],
+        task_kwargs={},
+    )
+    before = metric_value("tasks_failed_total", task_name="test:SuccessTask")
+
+    with patch.object(worker, "_get_redis", return_value=mock_redis()):
+        await worker.run_task(cancelled_task, task_msg)
+
+    execute = span_named(spans, "task.execute test:SuccessTask")
+    assert execute.attributes["task.status"] == "cancelled"
+    assert execute.status.status_code != StatusCode.ERROR
+    assert execute.events == ()
+    assert metric_value("tasks_failed_total", task_name="test:SuccessTask") == before
 
 
 def test_message_without_trace_context_is_still_valid():
@@ -237,79 +288,6 @@ async def test_collect_stream_stats(broker):
     assert stats["diracx:tasks:normal:small"].length == 1
     assert stats["diracx:tasks:normal:small"].pending == 0
     assert stats["diracx:tasks:realtime:large"].length == 0
-
-
-async def test_sqlalchemy_instrumentation(otel_providers, spans):
-    tracer_provider, meter_provider = otel_providers
-    uninstrument = _instrument_sqlalchemy(tracer_provider, meter_provider)
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    error_attrs = {"db.namespace": ":memory:", "error.type": "OperationalError"}
-    errors_before = metric_value("db.client.operation.duration", **error_attrs)
-    try:
-        async with engine.connect() as conn:
-            # Outside of any span: metric only, no orphan trace
-            await conn.execute(text("SELECT 1"))
-            assert spans.get_finished_spans() == ()
-
-            with trace.get_tracer("test").start_as_current_span("request") as parent:
-                await conn.execute(text("SELECT 2"))
-                with pytest.raises(Exception, match="no such table"):
-                    await conn.execute(text("SELECT * FROM missing_table"))
-    finally:
-        uninstrument()
-        await engine.dispose()
-
-    queries = [s for s in spans.get_finished_spans() if s.name == "SELECT :memory:"]
-    assert len(queries) == 2
-    ok, failed = queries
-    for span in queries:
-        assert span.kind == SpanKind.CLIENT
-        assert span.parent.span_id == parent.get_span_context().span_id
-        assert span.attributes["db.system.name"] == "sqlite"
-        assert span.attributes["db.operation.name"] == "SELECT"
-    assert ok.attributes["db.query.text"] == "SELECT 2"
-    assert failed.status.status_code == StatusCode.ERROR
-    assert failed.attributes["error.type"] == "OperationalError"
-    assert (
-        metric_value("db.client.operation.duration", **error_attrs) == errors_before + 1
-    )
-
-
-async def test_sqlalchemy_connection_wait_and_timeouts(otel_providers, tmp_path):
-    import asyncio
-
-    from sqlalchemy.exc import TimeoutError as PoolTimeoutError
-    from sqlalchemy.pool import AsyncAdaptedQueuePool
-
-    tracer_provider, meter_provider = otel_providers
-    uninstrument = _instrument_sqlalchemy(tracer_provider, meter_provider)
-    db_path = tmp_path / "pool.db"
-    # A single connection, and a short timeout to wait for it
-    engine = create_async_engine(
-        f"sqlite+aiosqlite:///{db_path}",
-        poolclass=AsyncAdaptedQueuePool,
-        pool_size=1,
-        max_overflow=0,
-        pool_timeout=0.2,
-    )
-    attrs = {"db.client.connection.pool.name": str(db_path)}
-
-    async def hold(seconds: float) -> None:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-            await asyncio.sleep(seconds)
-
-    try:
-        results = await asyncio.gather(hold(0.5), hold(0), return_exceptions=True)
-    finally:
-        uninstrument()
-        await engine.dispose()
-
-    # The second connection waited for the first one until the timeout
-    assert results[0] is None
-    assert isinstance(results[1], PoolTimeoutError)
-    assert metric_value("db.client.connection.wait_time", **attrs) == 2
-    assert metric_value("db.client.connection.timeouts", **attrs) == 1
 
 
 @pytest.fixture
@@ -387,113 +365,3 @@ async def test_worker_stores_the_traceback_in_the_dead_letter_queue(
     last_error = task_db.insert_dlq_task.call_args.kwargs["last_error"]
     assert "Traceback" in last_error
     assert "RuntimeError: Always fails" in last_error
-
-
-@pytest.mark.parametrize(
-    "settings, module, endpoints",
-    [
-        (
-            OTELSettings(protocol="grpc", grpc_endpoint="collector:4317"),
-            "grpc",
-            ["collector:4317"] * 3,
-        ),
-        (
-            OTELSettings(protocol="http", http_endpoint="https://collector:4318/"),
-            "http",
-            [
-                "https://collector:4318/v1/traces",
-                "https://collector:4318/v1/metrics",
-                "https://collector:4318/v1/logs",
-            ],
-        ),
-    ],
-)
-def test_exporters_follow_the_protocol(settings, module, endpoints):
-    from diracx.tasks.otel import _create_exporters
-
-    exporters = _create_exporters(settings)
-    assert [type(e).__module__.split(".")[-2] for e in exporters] == [module] * 3
-    assert [e._endpoint for e in exporters] == endpoints
-
-
-def test_unknown_protocol_is_rejected():
-    from pydantic import ValidationError
-
-    with pytest.raises(ValidationError):
-        OTELSettings(protocol="udp")
-
-
-def test_logs_are_exported_once_with_the_message_as_body(otel_providers):
-    import logging
-
-    from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk._logs.export import (
-        InMemoryLogRecordExporter,
-        SimpleLogRecordProcessor,
-    )
-
-    from diracx.tasks.otel import _setup_log_handler
-
-    tracer_provider, _ = otel_providers
-    exporter = InMemoryLogRecordExporter()
-    logger_provider = LoggerProvider()
-    logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
-    handler = _setup_log_handler(logger_provider, ["diracx.test_otel_logs"])
-    logger = logging.getLogger("diracx.test_otel_logs.child")
-    logger.setLevel(logging.INFO)
-    try:
-        with tracer_provider.get_tracer("test").start_as_current_span("x") as span:
-            logger.info("hello %s", "world")
-            try:
-                raise ValueError("boom")
-            except ValueError:
-                logger.exception("failed")
-        # Not below the configured loggers: not exported
-        logging.getLogger("sqlalchemy.test_otel_logs").warning("third party")
-    finally:
-        logging.getLogger("diracx.test_otel_logs").removeHandler(handler)
-
-    records = [r.log_record for r in exporter.get_finished_logs()]
-    assert [r.body for r in records] == ["hello world", "failed"]
-    assert {r.trace_id for r in records} == {span.get_span_context().trace_id}
-    assert records[1].attributes["exception.type"] == "ValueError"
-    assert "boom" in records[1].attributes["exception.stacktrace"]
-
-
-def test_uvicorn_access_logs_are_structured_in_the_exported_records():
-    import logging
-
-    from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk._logs.export import (
-        InMemoryLogRecordExporter,
-        SimpleLogRecordProcessor,
-    )
-
-    from diracx.tasks.otel import _setup_log_handler
-
-    exporter = InMemoryLogRecordExporter()
-    logger_provider = LoggerProvider()
-    logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
-    access = logging.getLogger("uvicorn.access")
-    level = access.level
-    access.setLevel(logging.INFO)
-    handler = _setup_log_handler(logger_provider, ["uvicorn.access"])
-    try:
-        access.info(
-            '%s - "%s %s HTTP/%s" %d',
-            "127.0.0.1:1234",
-            "POST",
-            "/api/jobs/",
-            "1.1",
-            201,
-        )
-    finally:
-        access.removeHandler(handler)
-        access.setLevel(level)
-
-    [record] = [r.log_record for r in exporter.get_finished_logs()]
-    assert record.attributes["http.request.method"] == "POST"
-    assert record.attributes["url.path"] == "/api/jobs/"
-    assert record.attributes["http.response.status_code"] == 201
-    assert record.attributes["client.address"] == "127.0.0.1:1234"
-    assert record.attributes["network.protocol.version"] == "1.1"

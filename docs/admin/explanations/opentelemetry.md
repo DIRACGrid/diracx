@@ -11,8 +11,8 @@ The details of every span and metric are in the [OpenTelemetry reference](../ref
 ```text
  routers (uvicorn) ─┐
  tasks-scheduler  ──┤   OTLP         ┌─────────────────────┐   metrics   ┌────────────┐
- tasks-worker(s)  ──┼──────────────▶ │ OpenTelemetry       │ ──────────▶ │ Prometheus │──┐
- tasks CLI        ──┘                │ collector           │   traces    ┌────────────┐  ├─▶ Grafana
+ tasks-worker(s)  ──┴──────────────▶ │ OpenTelemetry       │ ──────────▶ │ Prometheus │──┐
+                                     │ collector           │   traces    ┌────────────┐  ├─▶ Grafana
                                      │                     │ ──────────▶ │ Jaeger     │──┤
                                      │                     │   logs      ┌────────────┐  │
                                      │                     │ ──────────▶ │ Elastic    │──┘
@@ -28,16 +28,18 @@ For development, `pixi run local-start --otel` runs a minimal collector which si
 
 ## One setup for all the processes
 
-All the processes (API servers, scheduler, workers, and the `diracx-tasks` command line) initialise OpenTelemetry in the same way, from the `DIRACX_OTEL_*` [settings](../reference/env-variables.md#otelsettings).
+All the long running processes (API servers, scheduler and workers) initialise OpenTelemetry in the same way, from the `DIRACX_OTEL_*` [settings](../reference/env-variables.md#otelsettings).
+The short lived `diracx-tasks call` and `diracx-tasks submit` commands do not: each invocation would create new metric series which are never updated again.
 Each process identifies itself with **resource attributes**, attached to everything it sends:
 
 - `service.name`: the name of the installation (`DIRACX_OTEL_APPLICATION_NAME`), identical for all the processes of an installation;
-- `diracx.component`: which kind of process it is (`routers`, `tasks-worker`, `tasks-scheduler`, `tasks-submit`...);
-- `service.instance.id`: the process, as `<host>-<pid>`. It must be unique per process, otherwise the counters of two processes running on the same host (several workers, the command line...) would overwrite each other. The host alone (the pod in kubernetes) is in `host.name`;
+- `diracx.component`: which kind of process it is (`routers`, `tasks-worker` or `tasks-scheduler`);
+- `service.instance.id`: the process, as `<host>-<pid>`. It must be unique per process, otherwise the counters of two processes running on the same host (several workers, several uvicorn workers...) would overwrite each other. The host alone (the pod in kubernetes) is in `host.name`;
 - `service.version`: the DiracX version, useful to compare the behaviour before and after an upgrade.
 
-The OpenTelemetry settings live in `diracx-core`, but the OpenTelemetry libraries are only used by `diracx-tasks` and `diracx-routers`: the core, the databases and the business logic do not depend on OpenTelemetry.
-For example, the SQL queries are traced by listening to SQLAlchemy events globally, rather than by instrumenting `diracx-db`.
+The code instrumented by DiracX (`diracx-db`, `diracx-tasks`, `diracx-routers`) only depends on the OpenTelemetry API, which does nothing until a process installs the SDK.
+The SDK and the exporters are installed with the `otel` extra of `diracx-core` (`diracx-core[otel]`, included in the DiracX container images), which sets them up for all the processes.
+The SQL queries are traced by listening to SQLAlchemy events globally, so the engines of all the databases are covered without instrumenting each of them.
 
 ## Traces: following a piece of work
 
@@ -65,34 +67,39 @@ Otherwise, the periodic housekeeping of the connection pools would create a floo
 
 ### Tasks
 
-The task system is where tracing matters the most, and where it is the most difficult: a task is submitted by one process (an API server, the scheduler, the CLI or another task) and executed later by another one (a worker).
+The task system is where tracing matters the most, and where it is the most difficult: a task is submitted by one process (an API server, the scheduler or another task) and executed later by another one (a worker).
 
-To connect the two, the submitter stores its trace context ([W3C `traceparent`](https://www.w3.org/TR/trace-context/)) in the task message, and the worker continues the trace from it:
+To connect the two, the submitter stores its trace context ([W3C `traceparent`](https://www.w3.org/TR/trace-context/)) in the task message, and the worker starts a new trace with a **link** to the `task.submit` span:
 
 ```text
 POST /api/jobs/jdl                         routers        (SERVER)
 ├── INSERT JobDB                           routers        (CLIENT)
 └── task.submit jobs:SomeTask              routers        (PRODUCER)
-    └── task.process jobs:SomeTask         tasks-worker   (CONSUMER)
-        └── task.execute jobs:SomeTask     tasks-worker
-            ├── SELECT JobDB               tasks-worker   (CLIENT)
-            └── task.submit jobs:ChildTask tasks-worker   (PRODUCER)
-                └── task.process ...
+        ▲
+        ┊ link
+task.process jobs:SomeTask                 tasks-worker   (CONSUMER)
+└── task.execute jobs:SomeTask             tasks-worker
+    ├── SELECT JobDB                       tasks-worker   (CLIENT)
+    └── task.submit jobs:ChildTask         tasks-worker   (PRODUCER)
+            ▲
+            ┊ link
+    task.process jobs:ChildTask ...
 ```
 
 A few choices are worth explaining:
 
-- **The execution is a child of the submission, not a separate trace linked to it.**
-    OpenTelemetry allows both. A child relationship means that the trace shows the whole story at once: the request, the task it triggered, the tasks that task spawned, and the SQL queries of each of them.
-    The price is that a trace can last as long as the task takes to be executed: a task scheduled for the next day gives a trace spanning a day.
+- **The execution is a separate trace linked to the submission, not a child of it.**
+    OpenTelemetry allows both. A child relationship would show the whole story in one trace, but a trace would then last as long as the task waits to be executed (a task scheduled for the next day would give a trace spanning a day), and a request submitting many tasks would give a very large trace.
+    Such traces are hard to work with in tracing backends, and the OpenTelemetry [messaging conventions](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) describe links for this case.
+    In a backend which supports links (Jaeger, Tempo...), one can follow them from a `task.process` span to the submission, and back.
 - **Periodic tasks start a new trace**, from the scheduler: each run of a periodic task is its own story.
-- **Retries stay in the trace of the original submission.** A task retried three times shows three `task.process` spans under the same `task.submit`, with their `task.retry_count`.
+- **Each retry is its own trace, linked to the previous attempt.** The retry is linked to the attempt which failed, which is linked to the previous one, and so on up to the original submission. `task.retry_count` gives the number of the attempt.
 - **`task.process` and `task.execute` are two spans.**
     `task.process` covers the whole handling of the message by the worker: execution, but also retry scheduling, dead letter queue, callbacks and result storage.
     `task.execute` only covers the code of the task, and is the one marked as failed (with the traceback) when the task raises an exception.
     The time a task waited in its queue before being picked up is recorded on `task.process` (`task.queue_wait_s`).
 
-Messages produced by an older version of DiracX (without trace context) are still processed: they simply start a new trace.
+Messages produced by an older version of DiracX (without trace context) are still processed: their trace simply has no link.
 
 ### Logs
 
@@ -124,6 +131,7 @@ Values like task IDs, job IDs or users are never metric attributes: they belong 
     Otherwise, a task constantly fighting for a lock would look healthy and fast.
 - **Durations use buckets adapted to their range**: from a few milliseconds to an hour for tasks, from half a millisecond to 10 seconds for SQL queries.
     OpenTelemetry's default buckets are meant for milliseconds, and would put nearly every task in the same bucket, making the percentiles meaningless.
+- **The time spent in the queue** (`task_queue_wait_seconds`) compares the time at which Redis received the message (from the clock of the Redis server) with the time at which a worker picked it up (from the clock of the worker): a clock skew between the two biases it.
 - **The backlog of a stream** (`task_stream_lag`) is the number of messages not yet delivered to any worker, and requires Redis 7.
     It is different from the in-progress count (`task_stream_pending`), which counts the messages delivered to a worker but not acknowledged yet.
 

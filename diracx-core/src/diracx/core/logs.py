@@ -86,6 +86,7 @@ class LogContextFilter(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Copy the attributes of the current log context to the record."""
         for key, value in _log_context.get().items():
             record.__dict__.setdefault(key, value)
         return True
@@ -101,6 +102,7 @@ class AccessLogFilter(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Structure the uvicorn access records, when they have the expected format."""
         if (
             record.name == "uvicorn.access"
             and isinstance(record.args, tuple)
@@ -147,9 +149,11 @@ class TextFormatter(logging.Formatter):
     def formatTime(  # noqa: N802
         self, record: logging.LogRecord, datefmt: str | None = None
     ) -> str:
+        """The time of the record, in UTC, in ISO 8601 with milliseconds."""
         return _utc_timestamp(record)
 
     def formatMessage(self, record: logging.LogRecord) -> str:  # noqa: N802
+        """The message, followed by the attributes of the current log context."""
         message = super().formatMessage(record)
         # Before the traceback, which is added after the message
         if context := _log_context.get():
@@ -171,6 +175,7 @@ class JSONFormatter(logging.Formatter):
     """
 
     def format(self, record: logging.LogRecord) -> str:
+        """The record as a JSON object on one line."""
         entry: dict[str, Any] = {
             "timestamp": _utc_timestamp(record),
             "severity_text": record.levelname,

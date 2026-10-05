@@ -9,7 +9,7 @@ Before adding anything, remember that the following is already instrumented:
 
 - every HTTP request is a span, with the route, the status code and the user;
 - every SQL query is a span, with the database and the query;
-- every task submission and execution is a span, connected to whatever submitted it;
+- every task submission and execution is a span, the execution being linked to whatever submitted it;
 - HTTP, SQL and task metrics (see the [reference](../../admin/reference/opentelemetry.md)).
 
 So there is no need, for example, to create a span around a database call or a whole route.
@@ -17,11 +17,11 @@ Instrument what these do not show: a significant step of an algorithm, a call to
 
 ## Decide where the instrumentation goes
 
-Only use the OpenTelemetry **API** (`opentelemetry-api`), never the SDK: the SDK is configured once per process by `diracx.tasks.otel.configure_otel`.
+Only use the OpenTelemetry **API** (`opentelemetry-api`), never the SDK: the SDK is configured once per process by `diracx.core.otel.configure_otel`.
 Without it (e.g. in the tests, or when `DIRACX_OTEL_ENABLED` is false), the API does nothing and costs almost nothing.
 
-`diracx-routers` and `diracx-tasks` (and their extensions) depend on `opentelemetry-api`.
-`diracx-core`, `diracx-db` and `diracx-logic` deliberately do not: if you need telemetry about something happening in the logic, add it in the router or the task calling it, or add attributes to the current span (see below) from the router or task.
+`diracx-routers`, `diracx-tasks` (and their extensions) and `diracx-db` (for the instrumentation of the SQL queries, `diracx.db.sql.instrument_sqlalchemy`) depend on `opentelemetry-api`.
+`diracx-logic` deliberately does not, and `diracx-core` only has the SDK as an optional dependency (`diracx-core[otel]`), to set it up: if you need telemetry about something happening in the logic, add it in the router or the task calling it, or add attributes to the current span (see below) from the router or task.
 An extension can of course add `opentelemetry-api` to the dependencies of any of its packages.
 
 ## Add information to the current span

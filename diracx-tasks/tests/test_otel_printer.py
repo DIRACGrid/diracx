@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
-from opentelemetry.trace import SpanKind, Status, StatusCode
+from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 
 from diracx.testing.otel_printer import MetricPrinter, TracePrinter
 
@@ -62,6 +62,24 @@ def test_trace_printer_joins_the_spans_of_several_processes():
 
     # Nothing new: not printed again
     assert printer.flush(force=True) == []
+
+
+def test_trace_printer_shows_the_links():
+    provider, spans = _provider("tasks-worker")
+    tracer = provider.get_tracer("test")
+    with tracer.start_as_current_span("task.submit jobs:X") as submit:
+        pass
+    with tracer.start_as_current_span(
+        "task.process jobs:X", links=[Link(submit.get_span_context())]
+    ):
+        pass
+
+    printer = TracePrinter(idle_seconds=3600)
+    printer.add(encode_spans(spans.get_finished_spans()))
+    submit_trace_id = f"{submit.get_span_context().trace_id:032x}"
+    rendered = printer.flush(force=True)
+    [process] = [r for r in rendered if "task.process" in r]
+    assert f"link={submit_trace_id}" in process
 
 
 def test_metric_printer_only_prints_changed_values():

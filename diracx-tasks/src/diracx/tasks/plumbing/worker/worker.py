@@ -10,7 +10,8 @@ from typing import Any, Awaitable, Callable
 
 import msgpack
 from opentelemetry import metrics, propagate, trace
-from opentelemetry.trace import SpanKind, Status, StatusCode
+from opentelemetry.context import Context
+from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 
 from diracx.core.logs import log_context
@@ -105,6 +106,14 @@ def _task_attributes(task_message: TaskMessage) -> dict[str, str]:
         "priority": str(task_message.labels.get("priority", "normal")),
         "size": str(task_message.labels.get("size", "medium")),
     }
+
+
+def _producer_links(task_message: TaskMessage) -> list[Link]:
+    """Link to the span which submitted the task, if its context was sent."""
+    producer = trace.get_current_span(
+        propagate.extract(task_message.trace_context)
+    ).get_span_context()
+    return [Link(producer)] if producer.is_valid else []
 
 
 # Sentinel value to signal queue completion
@@ -369,7 +378,12 @@ class Worker:
             ),
             _tracer.start_as_current_span(
                 f"task.process {task_message.task_name}",
-                context=propagate.extract(task_message.trace_context),
+                # Each execution is its own trace, linked to the span which
+                # submitted it: a task can wait for hours (delayed tasks,
+                # retries), and a request can submit many tasks, which would
+                # give traces too long or too large for the tracing backends
+                context=Context(),
+                links=_producer_links(task_message),
                 kind=SpanKind.CONSUMER,
                 attributes={
                     "task.name": task_message.task_name,
@@ -391,7 +405,12 @@ class Worker:
         attrs: dict[str, str],
         span: trace.Span,
     ) -> None:
-        """Record how long the message waited in its stream."""
+        """Record how long the message waited in its stream.
+
+        The enqueue time comes from the clock of the Redis server (in the
+        stream ID), and is compared with the clock of the worker: a clock
+        skew between the two biases the measurement.
+        """
         if message.stream:
             span.set_attribute("messaging.destination.name", message.stream)
         if message.message_id:
@@ -521,9 +540,10 @@ class Worker:
             labels=retry_labels,
             task_args=task_message.task_args,
             task_kwargs=task_message.task_kwargs,
-            # The retries belong to the same trace as the original submission
-            trace_context=task_message.trace_context,
         )
+        # The retry is linked to this attempt, which is linked to the previous
+        # one, and so on up to the original submission
+        propagate.inject(retry_task_message.trace_context)
         _tasks_retried.add(
             1, attributes={**_task_attributes(task_message), "reason": reason}
         )
@@ -685,6 +705,9 @@ class Worker:
             if result.labels.get("_lock_retry"):
                 # The task did not run: it is neither completed nor failed
                 span.set_attribute("task.status", "lock_contention")
+            elif result.is_err and (result.error or {}).get("type") == "CancelledError":
+                # e.g. the worker is shutting down: not an error of the task
+                span.set_attribute("task.status", "cancelled")
             elif result.is_err:
                 _task_duration.record(result.execution_time, attributes=attrs)
                 _tasks_failed.add(1, attributes=attrs)
@@ -752,8 +775,9 @@ class Worker:
 
         except BaseException as exc:
             found_exception = exc
-            # Attach the traceback to the task.execute span
-            trace.get_current_span().record_exception(exc)
+            if not isinstance(exc, asyncio.CancelledError):
+                # Attach the traceback to the task.execute span
+                trace.get_current_span().record_exception(exc)
             logger.error(
                 "Exception in task %s: %s",
                 task_message.task_name,

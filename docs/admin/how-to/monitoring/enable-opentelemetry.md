@@ -47,6 +47,10 @@ If the collector requires authentication or multi-tenancy headers, add them as J
     DIRACX_OTEL_HEADERS: '{"tenant_id": "lhcbdiracx-prod"}'
 ```
 
+The metrics are sent every minute; set `OTEL_METRIC_EXPORT_INTERVAL` (in milliseconds) to change it.
+
+The DiracX container images include the OpenTelemetry SDK. If you install DiracX with `pip`, install `diracx-core[otel]` too: with `DIRACX_OTEL_ENABLED` set and without the SDK, the processes refuse to start.
+
 Once restarted, the processes start sending data; DiracX does not log anything particular about it.
 If the collector cannot be reached, the OpenTelemetry exporters log warnings (`Transient error ... exporting ...`), but DiracX itself keeps working normally.
 
@@ -107,7 +111,8 @@ On a busy installation, keep a fraction of them with the standard OpenTelemetry 
 diracx:
   settings:
     # Keep 10% of the traces. "parentbased" means that a trace is either
-    # kept or dropped as a whole, including the tasks it triggered.
+    # kept or dropped as a whole. The execution of a task is a separate
+    # trace, so it is kept or dropped independently of its submission.
     OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
     OTEL_TRACES_SAMPLER_ARG: "0.1"
 ```

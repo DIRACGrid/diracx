@@ -41,7 +41,7 @@ Symptom: the *Backlog* stat and the *Backlog by stream* panel grow, and *Submitt
 
 *Retries* shows the reason:
 
-- **`error`**: the task raises an exception. The `task.execute` spans of the task have the `ERROR` status and the traceback; the retries of a task are in the same trace, so one trace shows all the attempts.
+- **`error`**: the task raises an exception. The `task.execute` spans of the task have the `ERROR` status and the traceback. Each attempt is its own trace, linked to the previous attempt: follow the links of the `task.process` spans to go through all the attempts.
 - **`lock_contention`**: the task could not acquire a lock or a limiter, and is rescheduled 5 seconds later. A few are normal; many mean that too many instances of the task run concurrently (e.g. a periodic task slower than its period), or that a lock is stuck. See [Operate the task system](../tasks/operate.md#check-locks) to inspect the locks.
 
 ## Tasks are lost or end in the dead letter queue
@@ -72,6 +72,7 @@ Check the restarts and the memory of the worker pods of the corresponding size.
 ## The database connection pool is exhausted
 
 Symptom: *Connection pool usage* is at 100% for a database, *Connection wait p95 by database* grows, and requests or tasks become slow without their SQL queries being slow.
+The connection wait also includes the time to open new connections (DNS, TLS, authentication) while the pool is not full: if it grows while the pool usage stays low, look at the database server or the network rather than at the pool size.
 In the worst case, *Connection timeouts* shows requests or tasks failing because no connection became available in time.
 
 Each process has a pool per database, of `pool_size + max_overflow` connections (15 by default).
@@ -81,5 +82,6 @@ Either some queries or transactions are too long (look at *Query latency p95 by 
 ## Find everything about a user's request
 
 1. Filter the traces on `enduser.id` (the `sub` of the user's token), `diracx.vo` or `diracx.group`, and the time of the problem.
-2. The trace contains the request, its SQL queries, and the tasks it submitted, including their retries.
-3. The logs with the same trace ID are those of the request and of the tasks.
+2. The trace contains the request, its SQL queries, and the submission of the tasks (`task.submit` spans).
+3. The execution of each task is a separate trace, linked to its `task.submit` span; its retries are linked in turn to the previous attempt.
+4. The logs with the trace ID of the request are those of the request; the logs of a task carry the trace ID of its execution, and its `task.id`.

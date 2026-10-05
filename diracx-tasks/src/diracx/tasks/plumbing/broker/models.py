@@ -41,7 +41,7 @@ class TaskMessage(BaseModel):
     task_args: list[Any]
     task_kwargs: dict[str, Any]
     # W3C trace context of the submitter (``traceparent``/``tracestate``),
-    # so that the execution of the task is part of the same trace.
+    # so that the trace of the execution of the task is linked to it.
     trace_context: dict[str, str] = Field(default_factory=dict)
 
     def dumpb(self) -> bytes:

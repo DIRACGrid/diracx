@@ -18,7 +18,8 @@ from opentelemetry import metrics, trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.util.http import parse_excluded_urls
 
-from diracx.tasks.otel import configure_otel
+from diracx.core.otel import configure_otel
+from diracx.db.sql import instrument_sqlalchemy
 
 # The kubernetes probes are called every few seconds,
 # and would drown the meaningful traces and skew the latency metrics
@@ -82,9 +83,10 @@ def record_client_version(url: str, header: str | None, *, rejected: bool) -> No
 def instrument_otel(app: FastAPI) -> None:
     """Instrument the application to send OpenTelemetryData.
 
-    The common setup (traces, metrics and logs exporters, SQL queries) is done by
-    :func:`diracx.tasks.otel.configure_otel`, and is controlled by
-    :class:`diracx.core.settings.OTELSettings`.
+    The common setup (traces, metrics and logs exporters) is done by
+    :func:`diracx.core.otel.configure_otel`, and is controlled by
+    :class:`diracx.core.settings.OTELSettings`. The SQL queries are
+    instrumented by :func:`diracx.db.sql.instrument_sqlalchemy`.
     On top of that, the FastAPI application itself is instrumented, which gives
     a span per request and the ``http.server.*`` metrics.
     """
@@ -99,6 +101,7 @@ def instrument_otel(app: FastAPI) -> None:
     providers = configure_otel("routers", extra_logger_names=uvicorn_loggers)
     if providers is None:
         return
+    instrument_sqlalchemy(providers.tracer_provider, providers.meter_provider)
 
     FastAPIInstrumentor.instrument_app(
         app,

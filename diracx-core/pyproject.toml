@@ -27,6 +27,12 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+# Needed to send OpenTelemetry data (DIRACX_OTEL_ENABLED)
+otel = [
+    "opentelemetry-exporter-otlp>=1.40.0",
+    "opentelemetry-instrumentation-logging>=0.63b1",
+    "opentelemetry-sdk>=1.40.0",
+]
 testing = [
     "diracx-testing",
     "moto[server]",

@@ -17,7 +17,8 @@ See the [OpenTelemetry explanation](../explanations/opentelemetry.md) for the re
 | `DIRACX_OTEL_HTTP_ENDPOINT`    |          | With `http`: base URL of the collector OTLP/HTTP receiver, e.g. `http://otel-collector:4318`. `/v1/traces`, `/v1/metrics` and `/v1/logs` are appended to it, and the scheme decides whether TLS is used |
 | `DIRACX_OTEL_HEADERS`          |          | JSON dictionary of headers sent to the collector, e.g. `{"tenant_id": "lhcbdiracx-cert"}`                                                                                                               |
 
-These settings are read by all the processes: API servers, scheduler, workers and the `diracx-tasks` command line.
+These settings are read by the long running processes: API servers, scheduler and workers. The `diracx-tasks call` and `diracx-tasks submit` commands do not send telemetry.
+Sending telemetry requires the `otel` extra of `diracx-core` (`diracx-core[otel]`), which the DiracX container images include.
 If the endpoint of the chosen protocol is empty, the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variables (or their defaults, `localhost:4317` and `http://localhost:4318`) are used.
 They are also listed with the other [environment variables](env-variables.md#otelsettings).
 
@@ -30,6 +31,7 @@ The standard [OpenTelemetry SDK variables](https://opentelemetry.io/docs/languag
 | `OTEL_RESOURCE_ATTRIBUTES`          |                         | Additional resource attributes, e.g. `deployment.environment.name=production`                            |
 | `OTEL_TRACES_SAMPLER`               | `parentbased_always_on` | Sampler, e.g. `parentbased_traceidratio`                                                                 |
 | `OTEL_TRACES_SAMPLER_ARG`           |                         | Argument of the sampler, e.g. `0.1` to keep 10% of the traces                                            |
+| `OTEL_METRIC_EXPORT_INTERVAL`       | `60000`                 | Milliseconds between two exports of the metrics                                                          |
 | `OTEL_PYTHON_FASTAPI_EXCLUDED_URLS` | `api/health/`           | Comma separated regular expressions of the URLs which are not instrumented (neither traced nor measured) |
 
 ### Local development
@@ -44,14 +46,14 @@ The standard [OpenTelemetry SDK variables](https://opentelemetry.io/docs/languag
 
 Attached to all the spans, metrics and logs of a process.
 
-| Attribute             | Example                          | Description                                                                |
-| --------------------- | -------------------------------- | -------------------------------------------------------------------------- |
-| `service.name`        | `diracx`                         | `DIRACX_OTEL_APPLICATION_NAME`                                             |
-| `service.version`     | `0.5.0`                          | Version of `diracx-core`                                                   |
-| `service.instance.id` | `diracx-demo-7c9d7d8b4f-xk2lp-7` | Host name (the pod name in kubernetes) and process ID: unique per process  |
-| `host.name`           | `diracx-demo-7c9d7d8b4f-xk2lp`   | Host name (the pod name in kubernetes)                                     |
-| `process.pid`         | `7`                              | Process ID                                                                 |
-| `diracx.component`    | `routers`                        | `routers`, `tasks-worker`, `tasks-scheduler`, `tasks-submit`, `tasks-call` |
+| Attribute             | Example                          | Description                                                               |
+| --------------------- | -------------------------------- | ------------------------------------------------------------------------- |
+| `service.name`        | `diracx`                         | `DIRACX_OTEL_APPLICATION_NAME`                                            |
+| `service.version`     | `0.5.0`                          | Version of `diracx-core`                                                  |
+| `service.instance.id` | `diracx-demo-7c9d7d8b4f-xk2lp-7` | Host name (the pod name in kubernetes) and process ID: unique per process |
+| `host.name`           | `diracx-demo-7c9d7d8b4f-xk2lp`   | Host name (the pod name in kubernetes)                                    |
+| `process.pid`         | `7`                              | Process ID                                                                |
+| `diracx.component`    | `routers`                        | `routers`, `tasks-worker` or `tasks-scheduler`                            |
 
 ## Spans
 
@@ -85,11 +87,11 @@ A failed query has the `ERROR` status, the `error.type` attribute (the exception
 
 ### Tasks
 
-| Span                  | Kind     | Emitted by      | Description                                                                                                            |
-| --------------------- | -------- | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `task.submit <task>`  | PRODUCER | whoever submits | Submission of a task to the broker. Its context is stored in the message.                                              |
-| `task.process <task>` | CONSUMER | worker          | Whole handling of a message: execution, retry or dead letter queue, callbacks, result storage. Child of `task.submit`. |
-| `task.execute <task>` | INTERNAL | worker          | Execution of the task code. Child of `task.process`.                                                                   |
+| Span                  | Kind     | Emitted by      | Description                                                                                                                                                                                 |
+| --------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `task.submit <task>`  | PRODUCER | whoever submits | Submission of a task to the broker. Its context is stored in the message.                                                                                                                   |
+| `task.process <task>` | CONSUMER | worker          | Whole handling of a message: execution, retry or dead letter queue, callbacks, result storage. Root of a new trace, linked to `task.submit` (or, for a retry, to the attempt which failed). |
+| `task.execute <task>` | INTERNAL | worker          | Execution of the task code. Child of `task.process`.                                                                                                                                        |
 
 `<task>` is the name of the task in the registry, e.g. `jobs:CleanSandboxStoreTask`.
 
@@ -124,14 +126,14 @@ and events:
 
 **`task.execute`** attributes:
 
-| Attribute                                                                | Description                                                                    |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `task.name`, `task.id`, `task.priority`, `task.size`, `task.retry_count` | As above                                                                       |
-| `task.status`                                                            | `ok`, `error`, or `lock_contention` if a lock or limiter could not be acquired |
-| `task.duration_ms`                                                       | Execution time                                                                 |
-| `error.type`                                                             | Exception class, if the task failed                                            |
+| Attribute                                                                | Description                                                                                                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `task.name`, `task.id`, `task.priority`, `task.size`, `task.retry_count` | As above                                                                                                                       |
+| `task.status`                                                            | `ok`, `error`, `lock_contention` if a lock or limiter could not be acquired, or `cancelled` (e.g. the worker is shutting down) |
+| `task.duration_ms`                                                       | Execution time                                                                                                                 |
+| `error.type`                                                             | Exception class, if the task failed                                                                                            |
 
-A failed task has the `ERROR` status and an `exception` event with the traceback.
+A failed task has the `ERROR` status and an `exception` event with the traceback. A cancelled task has neither, and is not counted in `tasks_failed_total`.
 On lock contention, a `task.retry_scheduled` event (`task.retry.reason=lock_contention`) is added.
 
 ### Logs
@@ -180,9 +182,9 @@ Requests per client version, from DiracX:
 | -------------------------------------- | --------- | ------------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tasks_submitted_total`                | counter   | `task_name`, `priority`, `size`, `delayed` | whoever submits | Tasks submitted                                                                                                                                                                              |
 | `tasks_completed_total`                | counter   | `task_name`, `priority`, `size`            | worker          | Tasks completed successfully                                                                                                                                                                 |
-| `tasks_failed_total`                   | counter   | `task_name`, `priority`, `size`            | worker          | Executions which raised an exception                                                                                                                                                         |
+| `tasks_failed_total`                   | counter   | `task_name`, `priority`, `size`            | worker          | Executions which raised an exception, except when cancelled                                                                                                                                  |
 | `task_duration_seconds`                | histogram | `task_name`, `priority`, `size`            | worker          | Execution time (not recorded on lock contention). Buckets from 10 ms to 1 h                                                                                                                  |
-| `task_queue_wait_seconds`              | histogram | `task_name`, `priority`, `size`            | worker          | Time spent in the stream before being picked up. Buckets from 10 ms to 1 h                                                                                                                   |
+| `task_queue_wait_seconds`              | histogram | `task_name`, `priority`, `size`            | worker          | Time spent in the stream before being picked up (clock of the Redis server at enqueue, clock of the worker at pick up). Buckets from 10 ms to 1 h                                            |
 | `tasks_in_progress`                    | gauge     | `task_name`, `priority`, `size`            | worker          | Tasks being processed                                                                                                                                                                        |
 | `worker_max_concurrent_tasks`          | gauge     | `worker_size`                              | worker          | Capacity of the worker (`--max-concurrent-tasks`)                                                                                                                                            |
 | `tasks_retried_total`                  | counter   | `task_name`, `priority`, `size`, `reason`  | worker          | Tasks rescheduled. `reason`: `error`, `lock_contention`                                                                                                                                      |

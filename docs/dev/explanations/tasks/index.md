@@ -121,8 +121,8 @@ The broker should provide functionality to:
 
 Most of this is covered by the [OpenTelemetry instrumentation](../../../admin/explanations/opentelemetry.md#tasks):
 
-- the trace context of the submitter is stored in the task message, so the execution of a task (`task.process`/`task.execute` spans) is part of the trace of whatever submitted it: the parent task or request is the parent span;
-- the retries stay in the same trace, with `task.retry_count` and the traceback of each failed attempt;
+- the trace context of the submitter is stored in the task message, so the execution of a task (`task.process`/`task.execute` spans) is a trace linked to the `task.submit` span of whatever submitted it (the parent task or request);
+- each retry is a trace linked to the previous attempt, with `task.retry_count` and the traceback of each failed attempt;
 - the submission and execution times give the time spent in the queue (`task.queue_wait_s`, `task_queue_wait_seconds`);
 - the scheduler reports the backlog of each stream and the delayed tasks, and the workers the tasks in progress.
 

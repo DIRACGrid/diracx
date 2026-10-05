@@ -20,8 +20,6 @@ dependencies = [
     "redis[hiredis]",
     "msgpack",
     "opentelemetry-api>=1.40.0",
-    "opentelemetry-exporter-otlp>=1.40.0",
-    "opentelemetry-sdk>=1.40.0",
     "python-dateutil",
     "croniter",
     "pydantic >=2.10",
@@ -29,6 +27,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+otel = ["diracx-core[otel]"]
 testing = ["diracx-testing", "fakeredis"]
 
 [project.scripts]
