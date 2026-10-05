@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 
 import pytest
+from pydantic import ValidationError
 
 from diracx.core import logs
 from diracx.core.logs import configure_logging
@@ -61,11 +63,23 @@ def test_uvicorn_console_handlers_are_replaced():
     access.propagate = False
     uvicorn_console = logging.StreamHandler()
     other = OtherHandler()
-    access.handlers = [uvicorn_console, other]
+    # A subclass of StreamHandler, which must be kept
+    log_file = logging.FileHandler(os.devnull)
+    access.handlers = [uvicorn_console, other, log_file]
 
-    handler = configure_logging()
+    try:
+        handler = configure_logging()
+    finally:
+        log_file.close()
 
-    assert access.handlers == [other, handler]
+    assert access.handlers == [other, log_file, handler]
+
+
+def test_level_names_are_validated():
+    assert LoggingSettings(level="debug", libraries_level="Warning").level == "DEBUG"
+    assert LoggingSettings(libraries_level="error").libraries_level == "ERROR"
+    with pytest.raises(ValidationError, match="Unknown log level 'verbose'"):
+        LoggingSettings(level="verbose")
 
 
 def json_lines(err: str) -> list[dict]:

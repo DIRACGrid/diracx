@@ -38,8 +38,8 @@ UVICORN_LOGGERS = ("uvicorn", "uvicorn.access")
 _handler: logging.Handler | None = None
 
 # Returns the (trace ID, span ID) of the current span, if any.
-# Set by diracx.tasks.otel when OpenTelemetry is enabled: diracx-core
-# does not depend on OpenTelemetry.
+# Set by diracx.core.otel when OpenTelemetry is enabled: the OpenTelemetry
+# SDK is an optional dependency of diracx-core.
 _trace_context_getter: Callable[[], tuple[str, str] | None] | None = None
 
 # Attributes of all the LogRecord: the others were given with ``extra=``
@@ -223,12 +223,12 @@ def configure_logging(settings: LoggingSettings | None = None) -> logging.Handle
     handler.addFilter(AccessLogFilter())
 
     root = logging.getLogger()
-    if _handler is not None:
-        root.removeHandler(_handler)
-    root.addHandler(handler)
     root.setLevel(settings.libraries_level)
     for name in diracx_logger_names():
         logging.getLogger(name).setLevel(settings.level)
+    if _handler is not None:
+        root.removeHandler(_handler)
+    root.addHandler(handler)
 
     for name in UVICORN_LOGGERS:
         uvicorn_logger = logging.getLogger(name)
@@ -237,11 +237,10 @@ def configure_logging(settings: LoggingSettings | None = None) -> logging.Handle
             # the records reach the root handler
             continue
         # Replace the console handlers set by uvicorn (and ours, if called
-        # again), but keep the others (e.g. the OpenTelemetry one)
+        # again), but keep the others (e.g. the OpenTelemetry one, or a
+        # FileHandler, which is a subclass of StreamHandler)
         uvicorn_logger.handlers = [
-            h
-            for h in uvicorn_logger.handlers
-            if not isinstance(h, logging.StreamHandler)
+            h for h in uvicorn_logger.handlers if type(h) is not logging.StreamHandler
         ] + [handler]
 
     _handler = handler

@@ -17,6 +17,7 @@ __all__ = [
 
 import contextlib
 import json
+import logging
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -471,6 +472,18 @@ class LoggingSettings(ServiceSettingsBase):
     Format of the logs: ``text`` (human readable) or ``json`` (one JSON object
     per line, for log collectors).
     """
+
+    @field_validator("level", "libraries_level")
+    @classmethod
+    def validate_level(cls, value: str) -> str:
+        """Accept the level names in any case, and reject unknown ones."""
+        level = value.upper()
+        if level not in logging.getLevelNamesMapping():
+            raise ValueError(
+                f"Unknown log level {value!r}, expected one of "
+                f"{', '.join(logging.getLevelNamesMapping())}"
+            )
+        return level
 
 
 class OTELSettings(ServiceSettingsBase):

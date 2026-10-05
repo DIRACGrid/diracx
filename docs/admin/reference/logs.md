@@ -12,6 +12,7 @@ See [Collect and read the logs](../how-to/monitoring/collect-and-read-logs.md) t
 | `DIRACX_LOG_LIBRARIES_LEVEL` | `WARNING` | Level of the loggers of the other libraries (SQLAlchemy, httpx...) |
 
 They are read by all the processes: API servers, scheduler, workers and the `diracx-tasks` command line.
+The level names are case insensitive (`debug` or `DEBUG`); an unknown level is rejected at startup with the list of valid ones.
 The logs are written to stderr. The access logs of uvicorn use the same format.
 
 ## Text format
@@ -66,6 +67,8 @@ They have the same names as the span attributes.
 | `diracx.group` | during a request, once the access token is validated | DIRAC group of the token                            |
 
 An attribute given explicitly with `extra=` takes precedence over the context.
+
+The access logs of uvicorn (`uvicorn.access`) do not carry the user attributes: they are emitted by uvicorn outside of the context in which the token is validated. The span of the request carries them.
 
 ## JSON logs and OpenTelemetry log records
 
