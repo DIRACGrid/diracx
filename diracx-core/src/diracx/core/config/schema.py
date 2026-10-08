@@ -1,3 +1,10 @@
+"""Pydantic models for DIRAC configuration schemas.
+
+This module defines immutable configuration models shared across DiracX
+components. It also provides compatibility conversion for legacy DIRAC CFG
+values and deterministic JSON serialization for set-valued fields.
+"""
+
 from __future__ import annotations
 
 import os
@@ -28,6 +35,8 @@ SerializableSet = Annotated[
 
 
 class BaseModel(_BaseModel):
+    """Base class for validated, immutable configuration models."""
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
@@ -38,7 +47,14 @@ class BaseModel(_BaseModel):
     @model_validator(mode="before")
     @classmethod
     def legacy_adaptor(cls, v):
-        """Apply transformations to interpret the legacy DIRAC CFG format."""
+        """Apply transformations to interpret the legacy DIRAC CFG format.
+
+        Args:
+            v: Configuration values to transform.
+
+        Returns:
+            The transformed configuration values.
+        """
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
 
@@ -84,6 +100,16 @@ class BaseModel(_BaseModel):
 
 
 class UserConfig(BaseModel):
+    """Configuration for a DIRAC user account.
+
+    Attributes:
+        prefered_username: Preferred username for the user account.
+        dns: Distinguished Names of the user's certificates.
+        email: User e-mail address.
+        suspended: List of VOs where the user is suspended.
+        quota: Quota assigned to the user, expressed in MBs.
+    """
+
     prefered_username: str = Field(alias="PreferedUsername")
     """Preferred username for the user account."""
     dns: list[str] = Field([], alias="DNs")
@@ -97,6 +123,21 @@ class UserConfig(BaseModel):
 
 
 class GroupConfig(BaseModel):
+    """Configuration for a DIRAC user group.
+
+    Attributes:
+        auto_add_voms: Whether to add the VOMS extension when creating proxies.
+        auto_upload_pilot_proxy: Whether to upload proxies for pilot groups.
+        auto_upload_proxy: Whether to upload proxies for users in this group.
+        job_share: Share of computing resources allocated to this group.
+        properties: Security properties assigned to the group.
+        quota: Group-specific quota override.
+        users: DIRAC user logins that belong to this group.
+        allow_background_tqs: Whether background Task Queues are allowed.
+        voms_role: Role of the users in the VO.
+        auto_sync_voms: Whether to synchronize group membership with VOMS.
+    """
+
     auto_add_voms: bool = Field(False, alias="AutoAddVOMS")
     """Controls automatic addition of VOMS extension when creating proxies."""
     auto_upload_pilot_proxy: bool = Field(False, alias="AutoUploadPilotProxy")
@@ -123,6 +164,13 @@ class GroupConfig(BaseModel):
 
 
 class IdpConfig(BaseModel):
+    """Configuration for an OpenID Connect identity provider.
+
+    Attributes:
+        url: Authorization server issuer identifier.
+        client_id: OAuth 2.0 client identifier.
+    """
+
     url: str = Field(alias="URL")
     """The authorization server's issuer identifier.
 
@@ -133,10 +181,23 @@ class IdpConfig(BaseModel):
 
     @property
     def server_metadata_url(self):
+        """Return the OpenID Connect discovery document URL.
+
+        Returns:
+            The URL for the identity provider's OpenID Connect metadata.
+        """
         return f"{self.url}/.well-known/openid-configuration"
 
 
 class SupportInfo(BaseModel):
+    """Support contact details for a virtual organization.
+
+    Attributes:
+        email: Support contact email address.
+        webpage: Support webpage URL.
+        message: Default support message displayed to users.
+    """
+
     email: str | None = Field(None, alias="Email")
     """Support contact email address."""
     webpage: str | None = Field(None, alias="Webpage")
@@ -146,6 +207,19 @@ class SupportInfo(BaseModel):
 
 
 class RegistryConfig(BaseModel):
+    """Registry configuration for a virtual organization.
+
+    Attributes:
+        idp: Registered identity provider associated with this VO.
+        support: Support contact information for this VO.
+        default_group: Default user group for new users in this VO.
+        default_storage_quota: Default storage quota in GB for users in this VO.
+        default_proxy_life_time: Default proxy lifetime in seconds.
+        voms_name: Real VOMS VO name, if associated with a VOMS VO.
+        users: DIRAC users keyed by username.
+        groups: DIRAC groups keyed by group name.
+    """
+
     idp: IdpConfig = Field(alias="IdP")
     """Registered identity provider associated with this VO."""
     support: SupportInfo = Field(default_factory=SupportInfo, alias="Support")
@@ -189,16 +263,35 @@ class RegistryConfig(BaseModel):
 
 
 class DIRACConfig(BaseModel):
+    """General DIRAC initialization configuration.
+
+    Attributes:
+        no_setup: Whether to skip setup procedures during DIRAC initialization.
+    """
+
     no_setup: bool = Field(False, alias="NoSetup")
     """Flag to skip setup procedures during DIRAC initialization. Takes a boolean value. By default false."""
 
 
 class JobMonitoringConfig(BaseModel):
+    """Job monitoring service configuration.
+
+    Attributes:
+        global_jobs_info: Whether global job information is enabled.
+    """
+
     global_jobs_info: bool = Field(True, alias="GlobalJobsInfo")
     """Enable global job information monitoring across all VOs."""
 
 
 class JobSchedulingConfig(BaseModel):
+    """Job scheduling service configuration.
+
+    Attributes:
+        enable_shares_correction: Whether to correct job shares based on usage.
+        max_rescheduling: Maximum number of times a job can be rescheduled.
+    """
+
     enable_shares_correction: bool = Field(False, alias="EnableSharesCorrection")
     """Enable correction of job shares based on historical usage."""
     max_rescheduling: int = Field(3, alias="MaxRescheduling")
@@ -206,6 +299,14 @@ class JobSchedulingConfig(BaseModel):
 
 
 class ServicesConfig(BaseModel):
+    """Configuration for DIRAC services.
+
+    Attributes:
+        catalogs: Configuration for data catalog services.
+        job_monitoring: Job monitoring service configuration.
+        job_scheduling: Job scheduling service configuration.
+    """
+
     catalogs: MutableMapping[str, Any] | None = Field(None, alias="Catalogs")
     """Configuration for data catalog services."""
     job_monitoring: JobMonitoringConfig = Field(
@@ -219,6 +320,19 @@ class ServicesConfig(BaseModel):
 
 
 class JobDescriptionConfig(BaseModel):
+    """Defaults and limits for job descriptions.
+
+    Attributes:
+        default_cpu_time: Default CPU time limit for jobs in seconds.
+        default_priority: Default job priority.
+        min_cpu_time: Minimum allowed CPU time for jobs in seconds.
+        min_priority: Minimum allowed job priority.
+        max_cpu_time: Maximum allowed CPU time for jobs in seconds.
+        max_priority: Maximum allowed job priority.
+        max_input_data: Maximum number of input data files per job.
+        allowed_job_types: Allowed job types.
+    """
+
     default_cpu_time: int = Field(86400, alias="DefaultCPUTime")
     """Default CPU time limit for jobs in seconds (default: 24 hours)."""
     default_priority: int = Field(1, alias="DefaultPriority")
@@ -240,6 +354,13 @@ class JobDescriptionConfig(BaseModel):
 
 
 class InputDataPolicyProtocolsConfig(BaseModel):
+    """Protocol groups used by the input data policy.
+
+    Attributes:
+        remote: Protocols considered remote access methods.
+        local: Protocols considered local access methods.
+    """
+
     remote: list[str] = Field([], alias="Remote")
     """List of protocols that should be considered as remote access methods (e.g., 'https', 'gsiftp', 'srm')."""
     local: list[str] = Field([], alias="Local")
@@ -247,6 +368,17 @@ class InputDataPolicyProtocolsConfig(BaseModel):
 
 
 class InputDataPolicyConfig(BaseModel):
+    """Configuration for resolving and accessing job input data.
+
+    Attributes:
+        default: Fallback input data access policy.
+        download: Policy for downloading input data to the worker node.
+        protocol: Policy for accessing input data through supported protocols.
+        all_replicas: Whether to consider all available replicas.
+        protocols: Protocol-specific input data configuration.
+        input_data_module: Module responsible for resolving input data locations.
+    """
+
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(
         extra="ignore",
@@ -281,6 +413,38 @@ class InputDataPolicyConfig(BaseModel):
 
 
 class OperationsConfig(BaseModel):
+    """Configuration for operations performed within a virtual organization.
+
+    Attributes:
+        enable_security_logging: Whether SecurityLogging is disabled globally.
+        input_data_policy: Job input data access policy.
+        job_description: Job description defaults and limits.
+        services: DIRAC services configuration.
+        software_dist_module: Module used for software distribution.
+        cloud: Cloud computing configuration.
+        data_consistency: Data consistency checking configuration.
+        data_management: Data management operations configuration.
+        email: Email notification configuration.
+        gaudi_execution: Gaudi framework execution configuration.
+        hospital: Job recovery and hospital configuration.
+        job_scheduling: Advanced job scheduling configuration.
+        job_type_mapping: Mapping of job types to execution environments.
+        log_files: Log file management configuration.
+        log_storage: Log storage backend configuration.
+        logging: General logging configuration.
+        matching: Job matching configuration.
+        monitoring_backends: Monitoring backend configuration.
+        nagios_connector: Nagios monitoring integration configuration.
+        pilot: Pilot job configuration.
+        productions: Production management configuration.
+        shares: Resource sharing configuration.
+        shifter: Shifter proxy configuration.
+        site_se_mapping_by_protocol: Site storage element mapping by protocol.
+        transformation_plugins: Data transformation plugin configuration.
+        transformations: Data transformation system configuration.
+        resource_status: Resource status monitoring configuration.
+    """
+
     enable_security_logging: bool = Field(False, alias="EnableSecurityLogging")
     """Flag for globally disabling the use of the SecurityLogging service.
 
@@ -366,6 +530,12 @@ class OperationsConfig(BaseModel):
 
 
 class ResourcesComputingConfig(BaseModel):
+    """Configuration for computing resource compatibility.
+
+    Attributes:
+        os_compatibility: Compatibility matrix between platforms and OS versions.
+    """
+
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(extra="ignore", frozen=True, populate_by_name=True)
 
@@ -380,7 +550,14 @@ class ResourcesComputingConfig(BaseModel):
     @field_validator("os_compatibility", mode="before")
     @classmethod
     def legacy_adaptor_os_compatibility(cls, v: Any) -> Any:
-        """Apply transformations to interpret the legacy DIRAC CFG format."""
+        """Apply transformations to interpret the legacy DIRAC CFG format.
+
+        Args:
+            v: Operating system compatibility values to transform.
+
+        Returns:
+            The transformed operating system compatibility values.
+        """
         if not os.environ.get("DIRAC_COMPAT_ENABLE_CS_CONVERSION"):
             return v
         os_compatibility = v.get("OSCompatibility", {})
@@ -391,13 +568,26 @@ class ResourcesComputingConfig(BaseModel):
     @field_validator("os_compatibility")
     @classmethod
     def ensure_self_compatibility(cls, v: dict[str, set[str]]) -> dict[str, set[str]]:
-        """Ensure platforms are compatible with themselves."""
+        """Ensure platforms are compatible with themselves.
+
+        Args:
+            v: Mapping of platforms to their compatible platforms.
+
+        Returns:
+            The compatibility mapping with each platform added to its own set.
+        """
         for platform, compatible_platforms in v.items():
             compatible_platforms.add(platform)
         return v
 
 
 class ResourcesConfig(BaseModel):
+    """Configuration for DIRAC resources.
+
+    Attributes:
+        computing: Computing resource configuration.
+    """
+
     # TODO: Remove this once the model is extended to support everything
     model_config = ConfigDict(
         extra="ignore",
@@ -413,6 +603,20 @@ class ResourcesConfig(BaseModel):
 
 
 class Config(BaseModel):
+    """Top-level DiracX configuration.
+
+    Attributes:
+        dirac: General DIRAC configuration.
+        operations: Operations configuration keyed by VO.
+        registry: Registry configuration keyed by VO.
+        resources: DIRAC resources configuration.
+        local_site: Local site-specific configuration.
+        log_level: Global logging level configuration.
+        mc_testing_destination: Monte Carlo testing destination configuration.
+        systems: Systems configuration.
+        web_app: Web application configuration.
+    """
+
     dirac: DIRACConfig = Field(alias="DIRAC")
     """The DIRAC section contains general parameters needed in most installation types."""
     operations: MutableMapping[str, OperationsConfig] = Field(alias="Operations")
@@ -436,7 +640,14 @@ class Config(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_operations_defaults(cls, v: dict[str, Any]):
-        """Merge the Defaults entry into the VO-specific config under Operations."""
+        """Merge the Defaults entry into the VO-specific config under Operations.
+
+        Args:
+            v: Raw input values for the ``Config`` model.
+
+        Returns:
+            The configuration values with operation defaults merged per VO.
+        """
         for field_name, field_info in cls.model_fields.items():
             if field_info.alias and field_name in v:
                 v[field_info.alias] = v.pop(field_name)

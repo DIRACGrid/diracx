@@ -28,17 +28,41 @@ if TYPE_CHECKING:
 
 
 class S3PresignedPostInfo(TypedDict):
+    """Presigned POST information for uploading an object to S3.
+
+    Attributes:
+        url: URL to which the upload should be submitted.
+        fields: Form fields required by the presigned POST.
+    """
+
     url: str
     fields: dict[str, str]
 
 
 async def s3_bucket_exists(s3_client: AsyncClient, bucket_name: str) -> bool:
-    """Check if a bucket exists in S3."""
+    """Check if a bucket exists in S3.
+
+    Args:
+        s3_client: S3 client used to query the bucket.
+        bucket_name: Name of the bucket to check.
+
+    Returns:
+        Whether the bucket exists.
+    """
     return await _s3_exists(s3_client.head_bucket, Bucket=bucket_name)
 
 
 async def s3_object_exists(s3_client: AsyncClient, bucket_name: str, key: str) -> bool:
-    """Check if an object exists in an S3 bucket."""
+    """Check if an object exists in an S3 bucket.
+
+    Args:
+        s3_client: S3 client used to query the object.
+        bucket_name: Name of the bucket containing the object.
+        key: Object key to check.
+
+    Returns:
+        Whether the object exists.
+    """
     return await _s3_exists(s3_client.head_object, Bucket=bucket_name, Key=key)
 
 
@@ -65,6 +89,18 @@ async def generate_presigned_upload(
     """Generate a presigned URL and fields for uploading a file to S3.
 
     The signature is restricted to only accept data with the given checksum and size.
+
+    Args:
+        s3_client: S3 client used to generate the presigned POST.
+        bucket_name: Name of the destination bucket.
+        key: Object key for the uploaded file.
+        checksum_algorithm: Algorithm used to calculate the checksum.
+        checksum: Expected hexadecimal checksum of the file.
+        size: Required file size in bytes.
+        validity_seconds: Number of seconds for which the upload is valid.
+
+    Returns:
+        The presigned upload URL and required form fields.
     """
     fields = {
         "x-amz-checksum-algorithm": checksum_algorithm,
@@ -84,7 +120,14 @@ async def generate_presigned_upload(
 
 
 def b16_to_b64(hex_string: str) -> str:
-    """Convert hexadecimal encoded data to base64 encoded data."""
+    """Convert hexadecimal encoded data to base64 encoded data.
+
+    Args:
+        hex_string: Hexadecimal data to encode.
+
+    Returns:
+        The data encoded as a base64 string.
+    """
     return base64.b64encode(base64.b16decode(hex_string.upper())).decode()
 
 
@@ -92,6 +135,11 @@ async def s3_bulk_delete_with_retry(
     s3_client, bucket: str, objects: list[S3Object]
 ) -> set[str]:
     """Delete objects from S3 in chunks of 1000, retrying failures.
+
+    Args:
+        s3_client: S3 client used to delete the objects.
+        bucket: Name of the bucket containing the objects.
+        objects: Objects to delete, represented by their S3 keys.
 
     Returns:
         Set of keys that failed to delete after all retries.

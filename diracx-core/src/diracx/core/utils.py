@@ -1,3 +1,5 @@
+"""General utilities for caching, credentials, configuration, and async work."""
+
 from __future__ import annotations
 
 __all__ = [
@@ -52,6 +54,13 @@ def recursive_merge(base: Any, override: Any) -> Any:
 
     - If both ``base`` and ``override`` are dicts, merge keys recursively.
     - Otherwise, return ``override`` if it is not ``None``; fallback to ``base``.
+
+    Args:
+        base: Base value or dictionary.
+        override: Value or dictionary whose values take precedence.
+
+    Returns:
+        The recursively merged value.
     """
     if isinstance(base, dict) and isinstance(override, dict):
         merged: dict[str, Any] = {}
@@ -68,7 +77,14 @@ def recursive_merge(base: Any, override: Any) -> Any:
 
 
 def dotenv_files_from_environment(prefix: str) -> list[str]:
-    """Get the sorted list of .env files to use for configuration."""
+    """Get the sorted list of .env files to use for configuration.
+
+    Args:
+        prefix: Environment variable prefix used to locate dotenv file paths.
+
+    Returns:
+        Dotenv file paths sorted by their numeric suffix.
+    """
     env_files = {}
     for key, value in os.environ.items():
         if match := re.fullmatch(rf"{prefix}(?:_(\d+))?", key):
@@ -82,6 +98,12 @@ def prepare_verify(verify: bool | str) -> bool | ssl.SSLContext:
     httpx2 deprecated passing ``verify`` as a path string. When ``verify`` is a
     path to a CA bundle file (or a directory of certificates) build an
     :class:`ssl.SSLContext` from it instead; booleans are returned unchanged.
+
+    Args:
+        verify: Boolean verification setting or path to a CA bundle.
+
+    Returns:
+        The original boolean setting or an SSL context configured from the path.
     """
     if isinstance(verify, str):
         if os.path.isdir(verify):
@@ -95,6 +117,12 @@ def serialize_credentials(token_response: TokenResponse) -> str:
 
     This method is separated from write_credentials to allow for DIRAC to be
     able to serialize credentials for inclusion in the proxy file.
+
+    Args:
+        token_response: Credentials to serialize.
+
+    Returns:
+        A JSON string containing the credentials and expiration timestamp.
     """
     expires = datetime.now(tz=timezone.utc) + timedelta(
         seconds=token_response.expires_in - EXPIRES_GRACE_SECONDS
@@ -108,7 +136,18 @@ def serialize_credentials(token_response: TokenResponse) -> str:
 
 
 def read_credentials(location: Path | None = None) -> TokenResponse:
-    """Read credentials from a file."""
+    """Read credentials from a file.
+
+    Args:
+        location: Optional credentials file path. The configured default is
+            used when omitted.
+
+    Returns:
+        The deserialized token response.
+
+    Raises:
+        RuntimeError: If the credentials file is missing or invalid.
+    """
     from diracx.core.preferences import get_diracx_preferences
 
     credentials_path = (
@@ -137,7 +176,13 @@ def read_credentials(location: Path | None = None) -> TokenResponse:
 
 
 def write_credentials(token_response: TokenResponse, *, location: Path | None = None):
-    """Write credentials received in dirax_preferences.credentials_path."""
+    """Write credentials to the configured credentials file.
+
+    Args:
+        token_response: Credentials to write.
+        location: Optional credentials file path. The configured default is
+            used when omitted.
+    """
     from diracx.core.preferences import get_diracx_preferences
 
     credentials_path = location or get_diracx_preferences().credentials_path
