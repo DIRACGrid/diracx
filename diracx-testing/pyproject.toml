@@ -22,7 +22,7 @@ dependencies = [
     "joserfc",
     "freezegun",
     "sqlalchemy",
-    "uuid-utils",
+    "uuid-utils>=1.0.0",
     "pytest-github-actions-annotate-failures",
 ]
 dynamic = ["version"]
