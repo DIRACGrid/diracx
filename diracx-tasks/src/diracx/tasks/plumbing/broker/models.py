@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generic, TypeVar
 
 import msgpack
+from opentelemetry import metrics, propagate, trace
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..exceptions import SendTaskError
@@ -17,6 +18,13 @@ if TYPE_CHECKING:
     from .redis_streams import RedisStreamBroker
 
 logger = logging.getLogger(__name__)
+
+_tracer = trace.get_tracer(__name__)
+_meter = metrics.get_meter(__name__)
+_tasks_submitted = _meter.create_counter(
+    "tasks_submitted_total",
+    description="Total number of tasks submitted to the broker",
+)
 
 _ReturnType = TypeVar("_ReturnType")
 
@@ -32,6 +40,9 @@ class TaskMessage(BaseModel):
     labels: dict[str, Any]
     task_args: list[Any]
     task_kwargs: dict[str, Any]
+    # W3C trace context of the submitter (``traceparent``/``tracestate``),
+    # so that the trace of the execution of the task is linked to it.
+    trace_context: dict[str, str] = Field(default_factory=dict)
 
     def dumpb(self) -> bytes:
         return msgpack.packb(self.model_dump(), datetime=True)
@@ -102,6 +113,24 @@ class ReceivedMessage(BaseModel):
     data: bytes
     ack: Callable[[], Awaitable[None]]
     renew: Callable[[], Awaitable[None]]
+    # Where the message comes from, used for observability only
+    stream: str | None = None
+    message_id: str | None = None
+    # True if the message was reclaimed from another (presumably dead) consumer
+    reclaimed: bool = False
+
+    @property
+    def enqueued_at(self) -> float | None:
+        """Unix timestamp at which the message was added to the stream.
+
+        Redis stream IDs are ``<milliseconds>-<sequence>``.
+        """
+        if self.message_id is None:
+            return None
+        try:
+            return int(self.message_id.split("-", 1)[0]) / 1000
+        except ValueError:
+            return None
 
 
 def _prepare_arg(arg: Any) -> Any:
@@ -163,6 +192,46 @@ async def submit_task(
         task_id=task_id,
     )
 
+    priority = str(task_message.labels.get("priority", "normal"))
+    size = str(task_message.labels.get("size", "medium"))
+    span_attrs: dict[str, str | bool] = {
+        "task.name": task_name,
+        "task.id": task_message.task_id,
+        "task.priority": priority,
+        "task.size": size,
+        "task.delayed": run_at is not None,
+    }
+    if run_at is not None:
+        span_attrs["task.run_at"] = run_at.isoformat()
+
+    with _tracer.start_as_current_span(
+        f"task.submit {task_name}",
+        kind=trace.SpanKind.PRODUCER,
+        attributes=span_attrs,
+    ):
+        # Propagate the submit span to the worker executing the task
+        propagate.inject(task_message.trace_context)
+        await _send_task_message(broker, task_message, run_at)
+
+    _tasks_submitted.add(
+        1,
+        attributes={
+            "task_name": task_name,
+            "priority": priority,
+            "size": size,
+            "delayed": run_at is not None,
+        },
+    )
+    return task_message.task_id
+
+
+async def _send_task_message(
+    broker: RedisStreamBroker,
+    task_message: TaskMessage,
+    run_at: datetime | None,
+) -> None:
+    """Add the message either to the delayed ZSET or to its stream."""
+    task_name = task_message.task_name
     if run_at is not None:
         from redis.asyncio import Redis
 
@@ -179,8 +248,6 @@ async def submit_task(
             await broker.enqueue(task_message)
         except Exception as exc:
             raise SendTaskError(f"Failed to send task {task_name} to broker") from exc
-
-    return task_message.task_id
 
 
 @dataclasses.dataclass

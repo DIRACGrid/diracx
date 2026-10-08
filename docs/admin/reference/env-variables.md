@@ -379,6 +379,33 @@ Maximum number of concurrent DB delete chunks during cleaning.
 
 Controls parallelism of database DELETE operations.
 
+## LoggingSettings
+
+Settings for the logs written by the DiracX processes.
+
+### `DIRACX_LOG_LEVEL`
+
+*Optional*, default value: `INFO`
+
+Level of the DiracX loggers (including those of the extension).
+
+### `DIRACX_LOG_LIBRARIES_LEVEL`
+
+*Optional*, default value: `WARNING`
+
+Level of the loggers of the other libraries (SQLAlchemy, httpx...).
+
+### `DIRACX_LOG_FORMAT`
+
+*Optional*, default value: `text`
+
+Format of the logs: `text` (human readable) or `json` (one JSON object
+per line, for log collectors).
+
+#### Possible values
+
+`text`, `json`
+
 ## OTELSettings
 
 Settings for the Open Telemetry Configuration.
@@ -395,17 +422,38 @@ Determines whether OpenTelemetry is enabled.
 
 The name of the application for OpenTelemetry.
 
+### `DIRACX_OTEL_PROTOCOL`
+
+*Optional*, default value: `grpc`
+
+The protocol used to send the data to the OpenTelemetry collector:
+OTLP over gRPC (`grpc`, see `grpc_endpoint`) or over HTTP
+(`http`, protobuf encoded, see `http_endpoint`).
+
+#### Possible values
+
+`grpc`, `http`
+
 ### `DIRACX_OTEL_GRPC_ENDPOINT`
 
 *Optional*, default value: \`\`
 
-The gRPC endpoint for the OpenTelemetry collector.
+The gRPC endpoint for the OpenTelemetry collector (`host:port`,
+e.g. `otel-collector:4317`), used with the `grpc` protocol.
 
 ### `DIRACX_OTEL_GRPC_INSECURE`
 
 *Optional*, default value: `True`
 
 Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+
+### `DIRACX_OTEL_HTTP_ENDPOINT`
+
+*Optional*, default value: \`\`
+
+The base URL of the OpenTelemetry collector (e.g. `http://otel-collector:4318`),
+used with the `http` protocol. `/v1/traces`, `/v1/metrics` and `/v1/logs`
+are appended to it. The scheme (`http` or `https`) decides whether TLS is used.
 
 ### `DIRACX_OTEL_HEADERS`
 

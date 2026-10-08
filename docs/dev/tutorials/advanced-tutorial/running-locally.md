@@ -66,6 +66,31 @@ development and debugging:
 pixi run local-tasks call <entry_point> [args...]
 ```
 
+## Observing the telemetry
+
+To see the traces and metrics produced by your code, start the stack with:
+
+```bash
+pixi run local-start --otel
+```
+
+This enables OpenTelemetry in all the services, and starts a minimal collector (`python -m diracx.testing.otel_printer`) which prints what it receives with the `[otel]` prefix:
+
+- each trace as a tree, gathering the spans of all the processes: a request or a task, its SQL queries, and the tasks it submitted. The execution of a task is a separate trace, whose `link` is the trace of its submission;
+- every 30 seconds, the metrics whose value changed.
+
+```
+[otel      ] ━━ trace 894855bd1c5b7b3d5be5ce663ffe5edd 20:12:51Z (4 spans: tasks-worker)
+[otel      ] task.process jobs:DummyJobExecutorMonitorTask  [tasks-worker, consumer] 49.2ms  queue_wait=0.00155 link=3c0f6d2a8b9e4f1d7a5c2e8b6d4f0a19
+[otel      ] └─ task.execute jobs:DummyJobExecutorMonitorTask  [tasks-worker, internal] 48.7ms  task=ok
+[otel      ]    ├─ SELECT /tmp/tmp.NLsk31WKwQ/jobdb.db  [tasks-worker, client] 19.4ms
+[otel      ]    └─ task.submit jobs:DummyJobExecutorTask  [tasks-worker, producer] 0.9ms
+```
+
+The collector listens for OTLP over gRPC on port 4317 and over HTTP on port 4318 (`DIRACX_LOCAL_OTEL_PORT` and `DIRACX_LOCAL_OTEL_HTTP_PORT` change them).
+DiracX sends its data over gRPC; set `DIRACX_LOCAL_OTEL_PROTOCOL=http` to use HTTP instead.
+See [Add telemetry to your code](../../how-to/add-telemetry.md) to instrument your own code.
+
 ## What's next
 
 - Read the [Tasks explanation](../../explanations/tasks/index.md) for

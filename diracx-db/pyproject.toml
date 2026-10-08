@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "diracx-core",
     "opensearch-py[async]",
+    "opentelemetry-api>=1.40.0",
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "uuid-utils",

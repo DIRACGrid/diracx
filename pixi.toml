@@ -32,7 +32,7 @@ seaweedfs = "*"
 [feature.diracx.pypi-dependencies]
 diracx = { path = ".", editable = true, extras = ["testing"] }
 [feature.diracx-core.pypi-dependencies]
-diracx-core = { path = "diracx-core", editable = true, extras = ["testing"] }
+diracx-core = { path = "diracx-core", editable = true, extras = ["testing", "otel"] }
 diracx-testing = { path = "diracx-testing", editable = true }
 [feature.diracx-cli.pypi-dependencies]
 diracx-cli = { path = "diracx-cli", editable = true, extras = ["testing"] }
@@ -142,7 +142,7 @@ description = "Run the tests for gubbins-tasks"
 # Features for running DiracX locally
 [feature.run-local.tasks.local-start]
 cmd = "bash run_local.sh"
-description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)"
+description = "Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers), add --otel to print the OpenTelemetry data"
 [feature.run-local.tasks.local-tasks]
 cmd = "bash run_local_tasks.sh"
 description = "Run diracx-tasks with the local environment variables"

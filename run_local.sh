@@ -3,6 +3,26 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+usage="Usage: $0 [--otel]
+
+  --otel  Enable OpenTelemetry, and print the traces and metrics received
+          by a minimal collector (python -m diracx.testing.otel_printer).
+          DIRACX_LOCAL_OTEL_PROTOCOL chooses how DiracX sends them: grpc (default) or http.
+          The ports can be changed with DIRACX_LOCAL_OTEL_PORT (gRPC, default: 4317)
+          and DIRACX_LOCAL_OTEL_HTTP_PORT (HTTP, default: 4318)."
+
+enable_otel=false
+for arg in "$@"; do
+  case "$arg" in
+    --otel) enable_otel=true ;;
+    -h|--help) echo "$usage"; exit 0 ;;
+    *) echo "Unknown argument: $arg"; echo "$usage"; exit 1 ;;
+  esac
+done
+otel_port=${DIRACX_LOCAL_OTEL_PORT:-4317}
+otel_http_port=${DIRACX_LOCAL_OTEL_HTTP_PORT:-4318}
+otel_protocol=${DIRACX_LOCAL_OTEL_PROTOCOL:-grpc}
+
 tmp_dir=$(mktemp -d)
 echo "Using temp dir: ${tmp_dir}"
 mkdir -p "${tmp_dir}/keystore" "${tmp_dir}/cs_store/" "${tmp_dir}/seaweedfs" "${tmp_dir}/logs"
@@ -101,6 +121,16 @@ export DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS='{"endpoint_url": "http://localhost
 export DIRACX_TASKS_REDIS_URL="redis://localhost:6379"
 export DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED=true
 export DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS=10
+if [ "$enable_otel" = true ]; then
+  export DIRACX_OTEL_ENABLED=true
+  export DIRACX_OTEL_PROTOCOL="${otel_protocol}"
+  export DIRACX_OTEL_GRPC_ENDPOINT="localhost:${otel_port}"
+  export DIRACX_OTEL_GRPC_INSECURE=true
+  export DIRACX_OTEL_HTTP_ENDPOINT="http://localhost:${otel_http_port}"
+  export DIRACX_OTEL_APPLICATION_NAME=diracx-local
+  # See the metrics without waiting for the default interval (60s)
+  export OTEL_METRIC_EXPORT_INTERVAL=5000
+fi
 
 # Write all DIRACX env vars to a sourceable file for use in other terminals
 script_dir="$(cd "$(dirname "$0")" && pwd)"
@@ -146,16 +176,33 @@ echo "🔍 Checking ports..."
 check_port 6379 "Redis"
 check_port 8333 "SeaweedFS S3"
 check_port 8000 "uvicorn"
+if [ "$enable_otel" = true ]; then
+  check_port "$otel_port" "OpenTelemetry printer (gRPC)"
+  check_port "$otel_http_port" "OpenTelemetry printer (HTTP)"
+fi
 
 # Start all services, directing output to log files
 weed mini -dir="${tmp_dir}/seaweedfs" -s3.config="${tmp_dir}/seaweedfs_s3.json" > "${tmp_dir}/logs/seaweedfs.log" 2>&1 &
 seaweedfs_pid=$!
 redis-server --port 6379 --save "" --appendonly no > "${tmp_dir}/logs/redis.log" 2>&1 &
 redis_pid=$!
+otel_command="python -m diracx.testing.otel_printer --port ${otel_port} --http-port ${otel_http_port}"
+if [ "$enable_otel" = true ]; then
+  # Started before the DiracX services so that no telemetry is lost
+  # eval as in restart_process: IFS does not split on spaces
+  eval "exec $otel_command" > "${tmp_dir}/logs/otel.log" 2>&1 &
+  otel_pid=$!
+fi
 
 # Ensure infrastructure is cleaned up if startup fails
 function cleanup_infra() {
-  kill "$seaweedfs_pid" "$redis_pid" 2>/dev/null || true
+  local pids=("$seaweedfs_pid" "$redis_pid")
+  # The other services are only set if the script died after starting them
+  for pid in "${otel_pid:-}" "${diracx_pid:-}" "${scheduler_pid:-}" \
+      "${worker_small_pid:-}" "${worker_medium_pid:-}" "${worker_large_pid:-}"; do
+    if [ -n "$pid" ]; then pids+=("$pid"); fi
+  done
+  kill "${pids[@]}" 2>/dev/null || true
   rm -f "${script_dir}/.run-local-env"
   rm -rf "${tmp_dir}"
 }
@@ -205,6 +252,13 @@ all_commands=(
   "diracx-tasks worker --worker-size large --max-concurrent-tasks 1"
 )
 all_restart_counts=(0 0 0 0 0 0 0)
+if [ "$enable_otel" = true ]; then
+  all_pid_names+=(otel)
+  all_pid_values+=("$otel_pid")
+  all_log_files+=("${tmp_dir}/logs/otel.log")
+  all_commands+=("$otel_command")
+  all_restart_counts+=(0)
+fi
 
 function restart_process() {
   local i=$1
@@ -214,7 +268,8 @@ function restart_process() {
   local count=${all_restart_counts[$i]}
   count=$((count + 1))
   all_restart_counts[$i]=$count
-  eval "$cmd" >> "$log" 2>&1 &
+  # exec so that $! is the PID of the service, not of a subshell running eval
+  eval "exec $cmd" >> "$log" 2>&1 &
   all_pid_values[$i]=$!
 }
 
@@ -253,10 +308,16 @@ ${status_line}
   1️⃣  Open a configured shell:  pixi run local-shell
   2️⃣  Submit a task:  pixi run local-tasks submit <entry_point> [--args JSON]
   3️⃣  Swagger UI: http://localhost:8000/api/docs
-
+OTEL_PLACEHOLDER
 SERVICES_PLACEHOLDER
 📁 Logs: ${tmp_dir}/logs/
 ⚡ Press Ctrl+C to stop"
+
+otel_line=""
+if [ "$enable_otel" = true ]; then
+  otel_line="  📡 OpenTelemetry (${otel_protocol}): traces and metrics are printed with the [otel] prefix"
+fi
+banner_static="${banner_static/OTEL_PLACEHOLDER/${otel_line}}"
 
 function build_banner() {
   echo "${banner_static/SERVICES_PLACEHOLDER/$(build_services_line)}"
@@ -269,7 +330,8 @@ term_height=$(tput lines 2>/dev/null || echo 0)
 use_alt_screen=false
 scroll_end=0
 
-if [ "$term_height" -gt 0 ] && [ "$((term_height - banner_height))" -ge 5 ]; then
+# Only pin the banner in an interactive terminal (not when the output is redirected)
+if [ -t 0 ] && [ -t 1 ] && [ "$term_height" -gt 0 ] && [ "$((term_height - banner_height))" -ge 5 ]; then
   use_alt_screen=true
   # Save terminal settings and disable keyboard echo
   original_stty=$(stty -g)
@@ -326,6 +388,9 @@ tail -f "${tmp_dir}/logs/scheduler.log" 2>/dev/null | log_prefix "scheduler" &
 tail -f "${tmp_dir}/logs/worker-sm.log" 2>/dev/null | log_prefix "worker-sm" &
 tail -f "${tmp_dir}/logs/worker-md.log" 2>/dev/null | log_prefix "worker-md" &
 tail -f "${tmp_dir}/logs/worker-lg.log" 2>/dev/null | log_prefix "worker-lg" &
+if [ "$enable_otel" = true ]; then
+  tail -f "${tmp_dir}/logs/otel.log" 2>/dev/null | log_prefix "otel" &
+fi
 
 # Ctrl+C handling: first press updates banner with shutdown message,
 # second press actually stops everything.

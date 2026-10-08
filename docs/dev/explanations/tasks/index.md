@@ -119,6 +119,15 @@ The broker should provide functionality to:
 - Understand the size and composition of pending and deferred tasks.
 - Observe the currently running tasks.
 
+Most of this is covered by the [OpenTelemetry instrumentation](../../../admin/explanations/opentelemetry.md#tasks):
+
+- the trace context of the submitter is stored in the task message, so the execution of a task (`task.process`/`task.execute` spans) is a trace linked to the `task.submit` span of whatever submitted it (the parent task or request);
+- each retry is a trace linked to the previous attempt, with `task.retry_count` and the traceback of each failed attempt;
+- the submission and execution times give the time spent in the queue (`task.queue_wait_s`, `task_queue_wait_seconds`);
+- the scheduler reports the backlog of each stream and the delayed tasks, and the workers the tasks in progress.
+
+The resource consumption of the individual tasks is not measured yet.
+
 ### Resource utilisation
 
 To ensure the stability of the system, all workers should be configured to enforce memory and CPU limits. If these limits are exceeded the DiracX task system must be able to detect and report the issue, however in the case of small workers such detection may be unreliable due to technical constraints in async environments.

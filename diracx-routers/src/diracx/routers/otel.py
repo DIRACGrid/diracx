@@ -1,164 +1,119 @@
 from __future__ import annotations
 
-__all__ = ["instrument_otel"]
+__all__ = ["instrument_otel", "record_client_version"]
 
 import logging
 import os
-from typing import Optional
+import threading
 
 from fastapi import FastAPI
+from packaging.version import InvalidVersion, Version
 
 # Required by FastAPIInstrumentor
 # to follow semantic conventions for HTTP metrics
 # https://opentelemetry.io/docs/specs/semconv/http/http-metrics/
 os.environ["OTEL_SEMCONV_STABILITY_OPT_IN"] = "http"
 
-# https://opentelemetry.io/blog/2023/logs-collection/
-# https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
-from opentelemetry import _logs, metrics, trace
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry import metrics, trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.logging.constants import DEFAULT_LOGGING_FORMAT
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from pydantic_settings import SettingsConfigDict
+from opentelemetry.util.http import parse_excluded_urls
 
-from diracx.core.settings import ServiceSettingsBase
+from diracx.core.otel import configure_otel
+from diracx.db.sql import instrument_sqlalchemy
+
+# The kubernetes probes are called every few seconds,
+# and would drown the meaningful traces and skew the latency metrics
+DEFAULT_EXCLUDED_URLS = "api/health/"
+
+_meter = metrics.get_meter(__name__)
+_client_requests = _meter.create_counter(
+    "client_requests_total",
+    description=(
+        "Requests per version of the DiracX client (DiracX-Client-Version header), "
+        "accepted or rejected because the client is too old"
+    ),
+)
+# The version comes from a header, which anyone can set: bound the number
+# of distinct versions reported, the others are reported as "other"
+MAX_CLIENT_VERSIONS = 50
+_client_versions: set[str] = set()
+_client_versions_lock = threading.Lock()
+_excluded_urls = parse_excluded_urls(
+    os.environ.get("OTEL_PYTHON_FASTAPI_EXCLUDED_URLS", DEFAULT_EXCLUDED_URLS)
+)
 
 
-class OTELSettings(ServiceSettingsBase):
-    """Settings for the Open Telemetry Configuration."""
+def _normalise_client_version(header: str | None) -> str:
+    if not header:
+        # e.g. the web interface, or a direct HTTP request
+        return "none"
+    try:
+        version = str(Version(header))
+    except InvalidVersion:
+        return "invalid"
+    with _client_versions_lock:
+        if version in _client_versions:
+            return version
+        if len(_client_versions) < MAX_CLIENT_VERSIONS:
+            _client_versions.add(version)
+            return version
+    return "other"
 
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_OTEL_", use_attribute_docstrings=True
+
+def record_client_version(url: str, header: str | None, *, rejected: bool) -> None:
+    """Count a request per client version, and tag its span with the version.
+
+    Called by ``ClientMinVersionCheckMiddleware`` for every request.
+    """
+    if _excluded_urls.url_disabled(url):
+        return
+    version = _normalise_client_version(header)
+    trace.get_current_span().set_attribute(
+        "diracx.client.version", (header or "none")[:64]
     )
-
-    enabled: bool = False
-    """
-    Determines whether OpenTelemetry is enabled.
-    """
-
-    application_name: str = "diracx"
-    """
-    The name of the application for OpenTelemetry.
-    """
-
-    grpc_endpoint: str = ""
-    """
-    The gRPC endpoint for the OpenTelemetry collector.
-    """
-
-    grpc_insecure: bool = True
-    """
-    Whether to use an insecure gRPC connection for the OpenTelemetry collector.
-    """
-
-    headers: Optional[dict[str, str]] = None
-    """
-    A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g. {"tenant_id": "lhcbdiracx-cert"}.
-    """
+    _client_requests.add(
+        1,
+        attributes={
+            "client_version": version,
+            "outcome": "rejected" if rejected else "accepted",
+        },
+    )
 
 
 def instrument_otel(app: FastAPI) -> None:
     """Instrument the application to send OpenTelemetryData.
 
-    Metrics, Traces and Logs are sent to an OTEL collector.
-    The Collector can then redirect it to whatever is configured.
-    Typically: Jaeger for traces, Prometheus for metrics, ElasticSearch for logs.
-
-    Note: this is highly experimental, and OpenTelemetry is a quickly moving target
-
+    The common setup (traces, metrics and logs exporters) is done by
+    :func:`diracx.core.otel.configure_otel`, and is controlled by
+    :class:`diracx.core.settings.OTELSettings`. The SQL queries are
+    instrumented by :func:`diracx.db.sql.instrument_sqlalchemy`.
+    On top of that, the FastAPI application itself is instrumented, which gives
+    a span per request and the ``http.server.*`` metrics.
     """
-    otel_settings = OTELSettings()
-    if not otel_settings.enabled:
-        return
-
-    # set the service name to show in traces
-    resource = Resource.create(
-        attributes={
-            "service.name": otel_settings.application_name,
-            "service.instance.id": os.uname().nodename,
-        }
-    )
-
-    # set the tracer provider
-    tracer_provider = TracerProvider(resource=resource)
-
-    # elif MODE == "otel-collector-http":
-    #     tracer.add_span_processor(
-    #         BatchSpanProcessor(OTLPSpanExporterHTTP(endpoint=OTEL_HTTP_ENDPOINT))
-    #     )
-    # else:
-    # default otel-collector-grpc
-    tracer_provider.add_span_processor(
-        BatchSpanProcessor(
-            OTLPSpanExporter(
-                endpoint=otel_settings.grpc_endpoint,
-                insecure=otel_settings.grpc_insecure,
-                headers=otel_settings.headers,
-            )
-        )
-    )
-    trace.set_tracer_provider(tracer_provider)
-    # http_exporter = httpOTPLMetricExporter()
-    # metric_reader = PeriodicExportingMetricReader(ConsoleMetricExporter(),export_interval_millis=1000)
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(
-            endpoint=otel_settings.grpc_endpoint,
-            insecure=otel_settings.grpc_insecure,
-            headers=otel_settings.headers,
-        ),
-        export_interval_millis=3000,
-    )
-    meter_provider = MeterProvider(metric_readers=[metric_reader], resource=resource)
-    metrics.set_meter_provider(meter_provider)
-
-    ###################################
-
-    # # override logger format which with trace id and span id
-    # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
-
-    # When set to True, the logs are too noisy to be read from the pods.
-    # Moreover, the data can't be ingested by CERN Opentelemtry
-    # setup. To be investigated
-    LoggingInstrumentor().instrument(set_logging_format=False)
-
-    logger_provider = LoggerProvider(resource=resource)
-    _logs.set_logger_provider(logger_provider)
-
-    otlp_exporter = OTLPLogExporter(
-        endpoint=otel_settings.grpc_endpoint,
-        insecure=otel_settings.grpc_insecure,
-        headers=otel_settings.headers,
-    )
-    logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
-    handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
-    # We need to give some default values for these keys, otherwise the service crashes
-    # https://github.com/DIRACGrid/diracx/pull/847/
-    # handler.setFormatter(logging.Formatter(DEFAULT_LOGGING_FORMAT))
-    default_format = dict.fromkeys(
-        ["otelTraceID", "otelSpanID", "otelServiceName", "otelTraceSampled"], "Default"
-    )
-    handler.setFormatter(
-        logging.Formatter(DEFAULT_LOGGING_FORMAT, defaults=default_format)
-    )
-    # Add the handler to diracx and all uvicorn logger
+    # Add the handler to all uvicorn loggers.
     # Note adding it to just 'uvicorn' or the root logger
     # is not enough because uvicorn sets propagate=False
-    for logger_name in logging.root.manager.loggerDict:
-        if "diracx" == logger_name or "uvicorn" in logger_name:
-            logging.getLogger(logger_name).addHandler(handler)
-
-    ####################
+    uvicorn_loggers = [
+        logger_name
+        for logger_name in logging.root.manager.loggerDict
+        if "uvicorn" in logger_name
+    ]
+    providers = configure_otel("routers", extra_logger_names=uvicorn_loggers)
+    if providers is None:
+        return
+    instrument_sqlalchemy(providers.tracer_provider, providers.meter_provider)
 
     FastAPIInstrumentor.instrument_app(
-        app, tracer_provider=tracer_provider, meter_provider=meter_provider
+        app,
+        tracer_provider=providers.tracer_provider,
+        meter_provider=providers.meter_provider,
+        # Can be overridden with OTEL_PYTHON_FASTAPI_EXCLUDED_URLS
+        excluded_urls=(
+            None
+            if "OTEL_PYTHON_FASTAPI_EXCLUDED_URLS" in os.environ
+            else DEFAULT_EXCLUDED_URLS
+        ),
+        # Do not create a span for each ASGI message: a streamed response
+        # would otherwise create hundreds of meaningless spans
+        exclude_spans=["receive", "send"],
     )

@@ -7,6 +7,8 @@ __all__ = [
     "DevelopmentSettings",
     "FactorySettings",
     "LocalFileUrl",
+    "LoggingSettings",
+    "OTELSettings",
     "SandboxStoreSettings",
     "ServiceSettingsBase",
     "SqlalchemyDsn",
@@ -15,10 +17,11 @@ __all__ = [
 
 import contextlib
 import json
+import logging
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Annotated, Any, Self, TypeVar, cast
+from typing import Annotated, Any, Literal, Self, TypeVar, cast
 
 import dotenv
 from cryptography.fernet import Fernet
@@ -445,6 +448,90 @@ class SandboxStoreSettings(ServiceSettingsBase):
         if self._client is None:
             raise RuntimeError("S3 client accessed before lifetime function")
         return self._client
+
+
+class LoggingSettings(ServiceSettingsBase):
+    """Settings for the logs written by the DiracX processes."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_LOG_", use_attribute_docstrings=True
+    )
+
+    level: str = "INFO"
+    """
+    Level of the DiracX loggers (including those of the extension).
+    """
+
+    libraries_level: str = "WARNING"
+    """
+    Level of the loggers of the other libraries (SQLAlchemy, httpx...).
+    """
+
+    format: Literal["text", "json"] = "text"
+    """
+    Format of the logs: ``text`` (human readable) or ``json`` (one JSON object
+    per line, for log collectors).
+    """
+
+    @field_validator("level", "libraries_level")
+    @classmethod
+    def validate_level(cls, value: str) -> str:
+        """Accept the level names in any case, and reject unknown ones."""
+        level = value.upper()
+        if level not in logging.getLevelNamesMapping():
+            raise ValueError(
+                f"Unknown log level {value!r}, expected one of "
+                f"{', '.join(logging.getLevelNamesMapping())}"
+            )
+        return level
+
+
+class OTELSettings(ServiceSettingsBase):
+    """Settings for the Open Telemetry Configuration."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_OTEL_", use_attribute_docstrings=True
+    )
+
+    enabled: bool = False
+    """
+    Determines whether OpenTelemetry is enabled.
+    """
+
+    application_name: str = "diracx"
+    """
+    The name of the application for OpenTelemetry.
+    """
+
+    protocol: Literal["grpc", "http"] = "grpc"
+    """
+    The protocol used to send the data to the OpenTelemetry collector:
+    OTLP over gRPC (``grpc``, see ``grpc_endpoint``) or over HTTP
+    (``http``, protobuf encoded, see ``http_endpoint``).
+    """
+
+    grpc_endpoint: str = ""
+    """
+    The gRPC endpoint for the OpenTelemetry collector (``host:port``,
+    e.g. ``otel-collector:4317``), used with the ``grpc`` protocol.
+    """
+
+    grpc_insecure: bool = True
+    """
+    Whether to use an insecure gRPC connection for the OpenTelemetry collector.
+    """
+
+    http_endpoint: str = ""
+    """
+    The base URL of the OpenTelemetry collector (e.g. ``http://otel-collector:4318``),
+    used with the ``http`` protocol. ``/v1/traces``, ``/v1/metrics`` and ``/v1/logs``
+    are appended to it. The scheme (``http`` or ``https``) decides whether TLS is used.
+    """
+
+    headers: dict[str, str] | None = None
+    """
+    A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g. {"tenant_id": "lhcbdiracx-cert"}.
+    """
 
 
 class FactorySettings(ServiceSettingsBase):

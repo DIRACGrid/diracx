@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     delete,
+    func,
     insert,
     select,
     update,
@@ -61,6 +62,7 @@ class TaskDB(BaseSQLDB):
         task_class: str,
         task_args: bytes,
         max_retries: int,
+        last_error: str | None = None,
     ) -> int:
         """Insert a task into the dead letter queue."""
         stmt = insert(DeadLetterQueue).values(
@@ -70,6 +72,7 @@ class TaskDB(BaseSQLDB):
             status=DLQStatus.PENDING,
             retry_count=0,
             max_retries=max_retries,
+            last_error=last_error,
         )
         result = await self.conn.execute(stmt)
         return result.lastrowid
@@ -100,6 +103,16 @@ class TaskDB(BaseSQLDB):
         """Remove a completed task from the dead letter queue."""
         stmt = delete(DeadLetterQueue).where(DeadLetterQueue.id == dlq_id)
         await self.conn.execute(stmt)
+
+    async def count_dlq_tasks(self) -> dict[tuple[str, str], int]:
+        """Number of tasks in the dead letter queue, per task class and status."""
+        stmt = select(
+            DeadLetterQueue.task_class, DeadLetterQueue.status, func.count()
+        ).group_by(DeadLetterQueue.task_class, DeadLetterQueue.status)
+        result = await self.conn.execute(stmt)
+        return {
+            (task_class, str(status)): count for task_class, status, count in result
+        }
 
     async def get_pending_tasks(self, batch_size: int = 100) -> list[dict[str, Any]]:
         """Get PENDING/DISPATCHED tasks for re-submission on broker startup."""

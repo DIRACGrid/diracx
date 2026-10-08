@@ -251,7 +251,25 @@ class LocalGitConfigSource(BaseGitConfigSource):
             raise ValueError(
                 f"{self.repo_location} is not a valid git repository"
             ) from e
-        sh.git.checkout(self.git_revision, _cwd=self.repo_location, _async=False)
+        # Only check that the revision exists: the configuration is read from
+        # the git objects (git show <revision>:<file>), not from the working
+        # tree. A "git checkout" would modify the repository, which is shared
+        # by all the DiracX processes (and possibly servers): they would race
+        # on its index.lock at startup.
+        try:
+            sh.git(
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                f"{self.git_revision}^{{commit}}",
+                _cwd=self.repo_location,
+                _tty_out=False,
+                _async=False,
+            )
+        except sh.ErrorReturnCode as e:
+            raise ValueError(
+                f"Revision {self.git_revision!r} not found in {self.repo_location}"
+            ) from e
 
     def __hash__(self):
         return hash(self.repo_location)

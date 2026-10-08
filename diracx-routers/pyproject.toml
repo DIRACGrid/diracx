@@ -26,14 +26,13 @@ dependencies = [
     "pydantic >=2.10",
     "uvicorn",
     "opentelemetry-api>=1.40.0",
-    "opentelemetry-exporter-otlp>=1.40.0",
     "opentelemetry-instrumentation-fastapi>=0.61b0",
-    "opentelemetry-instrumentation-logging>=0.61b0",
-    "opentelemetry-sdk>=1.40.0",
+    "opentelemetry-util-http>=0.61b0",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
+otel = ["diracx-core[otel]"]
 testing = ["diracx-testing", "moto[server]", "httpx2-pytest", "freezegun", "pyjwt"]
 types = [
     "types-cachetools",

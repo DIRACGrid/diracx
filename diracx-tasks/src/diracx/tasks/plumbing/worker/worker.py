@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import weakref
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from time import time
 from typing import Any, Awaitable, Callable
 
 import msgpack
-from opentelemetry import metrics, trace
+from opentelemetry import metrics, propagate, trace
+from opentelemetry.context import Context
+from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from redis.asyncio import Redis
+
+from diracx.core.logs import log_context
 
 from .._redis_types import CallbackRegistry, LockCoordinator
 from ..base_task import BaseTask
@@ -24,19 +30,91 @@ logger = logging.getLogger(__name__)
 
 _tracer = trace.get_tracer(__name__)
 _meter = metrics.get_meter(__name__)
+
+# The default histogram buckets are designed for milliseconds,
+# which would put nearly every task in the first bucket.
+_DURATION_BUCKETS_SECONDS = [
+    0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600, 1800, 3600,
+]  # fmt: skip
+
+# All task metrics have the task_name, priority and size attributes
 _tasks_completed = _meter.create_counter(
     "tasks_completed_total",
     description="Total number of tasks completed successfully",
 )
 _tasks_failed = _meter.create_counter(
     "tasks_failed_total",
-    description="Total number of tasks that failed",
+    description="Total number of task executions that raised an exception",
 )
 _task_duration = _meter.create_histogram(
     "task_duration_seconds",
     description="Duration of task execution in seconds",
     unit="s",
+    explicit_bucket_boundaries_advisory=_DURATION_BUCKETS_SECONDS,
 )
+_task_queue_wait = _meter.create_histogram(
+    "task_queue_wait_seconds",
+    description="Time spent by a task in its stream before being picked up by a worker",
+    unit="s",
+    explicit_bucket_boundaries_advisory=_DURATION_BUCKETS_SECONDS,
+)
+_tasks_in_progress = _meter.create_up_down_counter(
+    "tasks_in_progress",
+    description="Number of tasks currently being processed by the worker",
+)
+_tasks_retried = _meter.create_counter(
+    "tasks_retried_total",
+    description="Tasks rescheduled for a later attempt (reason: error or lock_contention)",
+)
+_tasks_given_up = _meter.create_counter(
+    "tasks_given_up_total",
+    description=(
+        "Tasks which exhausted their retries "
+        "(action: dlq, discarded or dlq_failed if they could not be persisted)"
+    ),
+)
+_messages_rejected = _meter.create_counter(
+    "task_messages_rejected_total",
+    description="Messages which could not be processed (reason: unparsable or unknown_task)",
+)
+
+_running_workers: weakref.WeakSet[Worker] = weakref.WeakSet()
+
+
+def _observe_worker_capacity(
+    options: metrics.CallbackOptions,
+) -> Iterable[metrics.Observation]:
+    for worker in list(_running_workers):
+        if worker.max_concurrent_tasks > 0:
+            yield metrics.Observation(
+                worker.max_concurrent_tasks,
+                {"worker_size": str(worker.broker.worker_size)},
+            )
+
+
+_meter.create_observable_gauge(
+    "worker_max_concurrent_tasks",
+    callbacks=[_observe_worker_capacity],
+    description="Maximum number of tasks the worker runs concurrently",
+)
+
+
+def _task_attributes(task_message: TaskMessage) -> dict[str, str]:
+    """Low cardinality attributes shared by all task metrics."""
+    return {
+        "task_name": task_message.task_name,
+        "priority": str(task_message.labels.get("priority", "normal")),
+        "size": str(task_message.labels.get("size", "medium")),
+    }
+
+
+def _producer_links(task_message: TaskMessage) -> list[Link]:
+    """Link to the span which submitted the task, if its context was sent."""
+    producer = trace.get_current_span(
+        propagate.extract(task_message.trace_context)
+    ).get_span_context()
+    return [Link(producer)] if producer.is_valid else []
+
 
 # Sentinel value to signal queue completion
 QUEUE_DONE = b"-1"
@@ -109,6 +187,7 @@ class Worker:
         self.task_registry = task_registry
         self.task_class_registry = task_class_registry
         self.task_db = task_db
+        self.max_concurrent_tasks = max_concurrent_tasks
 
         # Register CallbackSpawner dependency injection override
         from ..depends import _callback_spawner_placeholder, _CallbackSpawner
@@ -134,6 +213,7 @@ class Worker:
     async def listen(self, finish_event: asyncio.Event) -> None:
         """Start the prefetcher and runner tasks."""
         await self.broker.startup()
+        _running_workers.add(self)
 
         logger.info("Worker started listening for tasks")
 
@@ -142,7 +222,10 @@ class Worker:
         prefetcher_task = asyncio.create_task(self.prefetcher(queue, finish_event))
         runner_task = asyncio.create_task(self.runner(queue))
 
-        await asyncio.gather(prefetcher_task, runner_task)
+        try:
+            await asyncio.gather(prefetcher_task, runner_task)
+        finally:
+            _running_workers.discard(self)
 
         logger.info("Worker shutting down")
 
@@ -255,6 +338,9 @@ class Worker:
 
         After execution, handles retry scheduling or dead letter queue persistence for
         failed tasks, and fires callbacks for group-member tasks.
+
+        The whole processing is wrapped in a ``task.process`` span which continues
+        the trace of whoever submitted the task.
         """
         message_data = message.data if isinstance(message, ReceivedMessage) else message
 
@@ -266,6 +352,7 @@ class Worker:
                 message_data[:200].hex(),
                 exc_info=True,
             )
+            _messages_rejected.add(1, attributes={"reason": "unparsable"})
             if isinstance(message, ReceivedMessage):
                 await message.ack()
             return
@@ -273,10 +360,78 @@ class Worker:
         task_func = self.task_registry.get(task_message.task_name)
         if task_func is None:
             logger.warning("Task %r not found in registry", task_message.task_name)
+            _messages_rejected.add(
+                1,
+                attributes={
+                    "reason": "unknown_task",
+                    "task_name": task_message.task_name,
+                },
+            )
             if isinstance(message, ReceivedMessage):
                 await message.ack()
             return
 
+        attrs = _task_attributes(task_message)
+        with (
+            log_context(
+                **{"task.name": task_message.task_name, "task.id": task_message.task_id}
+            ),
+            _tracer.start_as_current_span(
+                f"task.process {task_message.task_name}",
+                # Each execution is its own trace, linked to the span which
+                # submitted it: a task can wait for hours (delayed tasks,
+                # retries), and a request can submit many tasks, which would
+                # give traces too long or too large for the tracing backends
+                context=Context(),
+                links=_producer_links(task_message),
+                kind=SpanKind.CONSUMER,
+                attributes={
+                    "task.name": task_message.task_name,
+                    "task.id": task_message.task_id,
+                    "task.priority": attrs["priority"],
+                    "task.size": attrs["size"],
+                    "task.retry_count": task_message.labels.get("_retry_attempt", 0),
+                },
+            ) as span,
+        ):
+            if isinstance(message, ReceivedMessage):
+                self._record_queue_wait(message, attrs, span)
+
+            await self._process_task_message(message, task_func, task_message, attrs)
+
+    def _record_queue_wait(
+        self,
+        message: ReceivedMessage,
+        attrs: dict[str, str],
+        span: trace.Span,
+    ) -> None:
+        """Record how long the message waited in its stream.
+
+        The enqueue time comes from the clock of the Redis server (in the
+        stream ID), and is compared with the clock of the worker: a clock
+        skew between the two biases the measurement.
+        """
+        if message.stream:
+            span.set_attribute("messaging.destination.name", message.stream)
+        if message.message_id:
+            span.set_attribute("messaging.message.id", message.message_id)
+        span.set_attribute("task.reclaimed", message.reclaimed)
+        enqueued_at = message.enqueued_at
+        # A reclaimed message waited for the idle timeout of the dead consumer,
+        # which says nothing about the load of the system
+        if enqueued_at is None or message.reclaimed:
+            return
+        queue_wait = max(0.0, time() - enqueued_at)
+        _task_queue_wait.record(queue_wait, attributes=attrs)
+        span.set_attribute("task.queue_wait_s", queue_wait)
+
+    async def _process_task_message(
+        self,
+        message: bytes | ReceivedMessage,
+        task_func: Callable[..., Any],
+        task_message: TaskMessage,
+        attrs: dict[str, str],
+    ) -> None:
         logger.info(
             "Executing task %s (ID: %s)", task_message.task_name, task_message.task_id
         )
@@ -291,6 +446,7 @@ class Worker:
                 _message_heartbeat(message.renew, heartbeat_stop, heartbeat_interval)
             )
 
+        _tasks_in_progress.add(1, attributes=attrs)
         try:
             result = await self.run_task(task_func, task_message)
 
@@ -310,6 +466,7 @@ class Worker:
                 logger.exception("Failed to save result")
 
         finally:
+            _tasks_in_progress.add(-1, attributes=attrs)
             if heartbeat_task is not None:
                 heartbeat_stop.set()
                 heartbeat_task.cancel()
@@ -346,10 +503,19 @@ class Worker:
         retry_at = task_cls.retry_policy.schedule_retry(attempt + 1, exc)
 
         if retry_at is not None:
-            await self._schedule_retry(task_message, retry_at, attempt + 1)
+            await self._schedule_retry(
+                task_message, retry_at, attempt + 1, reason="error"
+            )
         elif task_cls.dlq_eligible:
-            await self._send_to_dlq(task_message, task_cls, error_msg)
+            await self._send_to_dlq(
+                task_message,
+                task_cls,
+                error_msg,
+                # Keep the traceback, to debug the task from the dead letter queue
+                last_error=error_info.get("traceback") or f"{error_type}: {error_msg}",
+            )
         else:
+            self._record_given_up(task_message, "discarded")
             logger.warning(
                 "Task %s (ID: %s) failed after %d attempts, discarding",
                 task_message.task_name,
@@ -362,6 +528,8 @@ class Worker:
         task_message: TaskMessage,
         retry_at: datetime,
         attempt: int,
+        *,
+        reason: str,
     ) -> None:
         """Reschedule a failed task via the delayed ZSET."""
         # Build a new TaskMessage with incremented retry attempt
@@ -372,6 +540,21 @@ class Worker:
             labels=retry_labels,
             task_args=task_message.task_args,
             task_kwargs=task_message.task_kwargs,
+        )
+        # The retry is linked to this attempt, which is linked to the previous
+        # one, and so on up to the original submission
+        propagate.inject(retry_task_message.trace_context)
+        _tasks_retried.add(
+            1, attributes={**_task_attributes(task_message), "reason": reason}
+        )
+        trace.get_current_span().add_event(
+            "task.retry_scheduled",
+            {
+                "task.retry.reason": reason,
+                "task.retry.attempt": attempt,
+                "task.retry.at": retry_at.isoformat(),
+                "task.retry.task_id": retry_task_message.task_id,
+            },
         )
 
         try:
@@ -394,9 +577,11 @@ class Worker:
         task_message: TaskMessage,
         task_cls: type[BaseTask],
         error_msg: str,
+        last_error: str | None = None,
     ) -> None:
         """Persist a permanently failed task to the Dead Letter Queue."""
         if self.task_db is None:
+            self._record_given_up(task_message, "dlq_failed")
             logger.warning(
                 "Task %s (ID: %s) exhausted retries, dead-letter-queue-eligible but no TaskDB "
                 "configured. Error: %s",
@@ -422,7 +607,9 @@ class Worker:
                     task_class=task_message.task_name,
                     task_args=task_args,
                     max_retries=max_retries,
+                    last_error=last_error,
                 )
+            self._record_given_up(task_message, "dlq")
             logger.info(
                 "Task %s (ID: %s) persisted to dead letter queue (dlq_id=%d). Error: %s",
                 task_message.task_name,
@@ -431,9 +618,17 @@ class Worker:
                 error_msg,
             )
         except Exception:
+            self._record_given_up(task_message, "dlq_failed")
             logger.exception(
                 "Failed to persist task %s to dead letter queue", task_message.task_name
             )
+
+    @staticmethod
+    def _record_given_up(task_message: TaskMessage, action: str) -> None:
+        _tasks_given_up.add(
+            1, attributes={**_task_attributes(task_message), "action": action}
+        )
+        trace.get_current_span().add_event("task.given_up", {"task.action": action})
 
     async def _handle_success(
         self,
@@ -466,7 +661,9 @@ class Worker:
         """Reschedule a task that couldn't acquire a lock."""
         retry_at = datetime.now(tz=UTC) + timedelta(seconds=_LOCK_RETRY_DELAY_SECONDS)
         attempt = task_message.labels.get("_retry_attempt", 0)
-        await self._schedule_retry(task_message, retry_at, attempt)
+        await self._schedule_retry(
+            task_message, retry_at, attempt, reason="lock_contention"
+        )
 
     async def run_task(
         self,
@@ -504,14 +701,27 @@ class Worker:
             result = await self._execute_task(task_func, task_message)
 
             # Record metrics
-            attrs = {"task_name": task_message.task_name}
-            _task_duration.record(result.execution_time, attributes=attrs)
-            if result.is_err:
+            attrs = _task_attributes(task_message)
+            if result.labels.get("_lock_retry"):
+                # The task did not run: it is neither completed nor failed
+                span.set_attribute("task.status", "lock_contention")
+            elif result.is_err and (result.error or {}).get("type") == "CancelledError":
+                # e.g. the worker is shutting down: not an error of the task
+                span.set_attribute("task.status", "cancelled")
+            elif result.is_err:
+                _task_duration.record(result.execution_time, attributes=attrs)
                 _tasks_failed.add(1, attributes=attrs)
                 span.set_attribute("task.status", "error")
-                if result.error:
-                    span.set_attribute("task.error", result.error.get("message", ""))
+                error = result.error or {}
+                error_type = error.get("type", "Exception")
+                span.set_attribute("error.type", error_type)
+                span.set_status(
+                    Status(
+                        StatusCode.ERROR, f"{error_type}: {error.get('message', '')}"
+                    )
+                )
             else:
+                _task_duration.record(result.execution_time, attributes=attrs)
                 _tasks_completed.add(1, attributes=attrs)
                 span.set_attribute("task.status", "ok")
             span.set_attribute("task.duration_ms", result.execution_time * 1000)
@@ -565,6 +775,9 @@ class Worker:
 
         except BaseException as exc:
             found_exception = exc
+            if not isinstance(exc, asyncio.CancelledError):
+                # Attach the traceback to the task.execute span
+                trace.get_current_span().record_exception(exc)
             logger.error(
                 "Exception in task %s: %s",
                 task_message.task_name,

@@ -13,7 +13,7 @@ This page documents the available pixi tasks.
 
 - `description`: Run pre-commit hooks
 - `local-shell`: Open a shell with the local DiracX environment configured
-- `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers)
+- `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers), add --otel to print the OpenTelemetry data
 - `local-tasks`: Run diracx-tasks with the local environment variables
 - `test-tutorial`: Run only the advanced tutorial tests
 - `tutorial-reset`: Strip tutorial code from gubbins for the advanced tutorial
