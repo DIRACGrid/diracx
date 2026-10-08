@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/DIRACGrid/diracx/compare/v0.5.0...v0.6.0) (2026-10-08)
+
+
+### Features
+
+* add OpenTelemetry and structured logs ([#1056](https://github.com/DIRACGrid/diracx/issues/1056)) ([c7dda4f](https://github.com/DIRACGrid/diracx/commit/c7dda4fe48d495d3130733c98e6bf0f718e479ae))
+
 ## [0.5.0](https://github.com/DIRACGrid/diracx/compare/v0.4.1...v0.5.0) (2026-09-29)
 
 
