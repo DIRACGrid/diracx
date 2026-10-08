@@ -112,6 +112,8 @@ required-imports = ["from __future__ import annotations"]
 # Namespace package roots and standalone scripts intentionally lack __init__.py
 "*/src/diracx/_client_importer.py" = ["INP001"]
 ".github/workflows/*.py" = ["INP001"]
+# mkdocs loads a hook by path rather than importing it, so the directory is not a package
+"hooks/*.py" = ["INP001"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.

@@ -1,0 +1,1121 @@
+/* Workgraph simulator (docs/assets/js/workgraph-sim.js) */
+
+/* The tokens, on the simulator and on the playground that embeds it (docs/assets/css/playground.css) alike: the two are
+   one product, and a colour that lived in only one of them would drift. */
+.wgsim, .wgpg {
+  --wg-ink: #1f2330;
+  --wg-dim: #6b7180; /* 4.5:1 on the page's surface: the muted text is muted, not faint */
+  --wg-mono: var(--md-code-font-family, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+  --wg-sans: var(--md-text-font-family, "IBM Plex Sans", system-ui, sans-serif);
+  --wg-bg: #f6f7fb;
+  --wg-card: #ffffff;
+  --wg-line: #d9dce6;
+  --wg-grid: #cfd3df;
+  --wg-accent: #5b5bd6;
+  --wg-accent-soft: #eceefc;
+  --wg-accent-row: #dde1fa; /* a transition's row in the log: accent-soft is the band's own surface there */
+  --wg-green: #2e8b57;
+  --wg-green-soft: #cfeedd;
+  --wg-red: #c8434f;
+  --wg-red-soft: #f6d7da;
+  --wg-amber: #c58a1f;
+  --wg-amber-soft: #f6e9cc;
+  --wg-teal: #2f9e8f;
+  --wg-blue: #2f5fd6; /* Assigned, in the bars, the counts, the slots and the machines alike */
+  --wg-c-u: #9096a6; /* Unassigned, in the bars and the counts alike */
+  --wg-c-np: #c4c8d4; /* NotProcessed */
+  --wg-surface-2: #eceef6;
+  --wg-radius: 6px;
+
+  /* One scale, five steps a major second apart, and every font-size in both stylesheets is one of them. The widget is an
+     instrument panel rather than an article: at nine to fifteen pixels 1.125 is the smallest step the eye still reads as
+     a step, and the whole scale stays inside 1.6×, so a dialog never reads as a page of prose. A role takes a step once
+     and keeps it wherever it is drawn — a header is a title in a dialog and in the actions strip alike. A surface that
+     has to be tighter moves `--wg-t`, which is one declaration and leaves every ratio above it standing. */
+  --wg-t: 12px;
+  --wg-t-micro: calc(var(--wg-t) / 1.2656); /* counts, ages, statuses — never prose */
+  --wg-t-meta: calc(var(--wg-t) / 1.125); /* asides, legends, secondary rows */
+  --wg-t-body: var(--wg-t); /* rows, tables, controls, prose */
+  --wg-t-head: calc(var(--wg-t) * 1.125); /* section headings, tabs */
+  --wg-t-title: calc(var(--wg-t) * 1.2656); /* a surface's name, once per surface */
+
+  /* The canvas is a second coordinate system: these are viewBox units, which scale with the picture where the chrome's
+     pixels do not, so they carry names of their own. The same figure on either side of that boundary is two sizes. */
+  --wg-g-micro: 9.5px;
+  --wg-g-label: 11px;
+  --wg-g-title: 13px;
+}
+
+/* The lockup, on both surfaces the product has: the mark, then the name of the surface in ink. The grammar is that the mark
+   says the product and the words say what is being looked at — "◆ Workgraph simulator" in the maximised widget's band,
+   "◆ Playground" in the playground's toolbar, neither of them spelling DiracX out again. It sits here with the tokens, and
+   for the reason their own comment gives: a mark defined twice drifts the same way a colour does. Where it shows is each
+   surface's own business, below and in `playground.css`. */
+.wg-lockup { display: inline-flex; align-items: center; gap: 0.45rem; flex: 0 1 auto; min-width: 0; color: var(--wg-dim); font-size: var(--wg-t-body); white-space: nowrap; }
+.wg-logo { width: 20px; height: 20px; flex: 0 0 auto; }
+.wg-lockup-name { color: var(--wg-ink); }
+
+.wgsim {
+  position: relative; /* the marks layer's containing block: absolute, so help mode reserves nothing */
+  margin: 1.2em 0 1.6em;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  overflow: clip; /* clips the band and the foot to the card's corners */
+  background: var(--wg-bg);
+  outline: none;
+  color: var(--wg-ink);
+  font-family: var(--wg-sans);
+  font-size: var(--wg-t-body);
+}
+
+/* A density mode is one number. The ratios above it hold, so nothing is bumped selector by selector and no two elements
+   change their relationship with the mode. Narrow first, so that a widget that is somehow both is read at window size. */
+.wgsim.narrow { --wg-t: 11px; }
+.wgsim.wgsim-max { --wg-t: 13px; }
+/* A dialog takes the base back from whatever surface opened it: what it says is read at one size wherever it is read, and
+   a window gives a dialog more room rather than larger type. Set on the element, so it outranks what it would inherit. */
+.wgsim .wgsim-help { --wg-t: 12px; }
+
+/* Mono is for data — a tag, an id, a state's name, a count that has to stay in its column, the log, and everything drawn
+   on the canvas. Everything else is prose and takes the sans the widget is set in, so the face is a decision about what a
+   string is rather than about which block it happens to sit in. */
+.wgsim svg, .wgsim-help svg,
+.wgsim .wgsim-log-wrap .wgsim-log,
+.wgsim-panel .wgsim-counts td, .md-typeset .wgsim-panel .wgsim-counts td,
+.wgsim-mx,
+.wgsim-pill, .wgsim-panel-state, .wgsim-lists-status, .wgsim-atab-status, .wgsim-file-tag, .wgsim-mark, .wgsim .wg-mono {
+  font-family: var(--wg-mono);
+  font-feature-settings: "zero" 1; /* a slashed zero: a file tag is hex, and 0 must not be read as O */
+}
+
+/* and where a count moved to the sans it still has to line up down a column */
+.wgsim-log-n, .wgsim-log-time, .wgsim-log-now-t, .wgsim-mtab-n, .wgsim-modes-count, .wgsim-steps-count, .wgsim-file-age, .wgsim-h4-right, .wgsim-aside {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-md-color-scheme="slate"] .wgsim,
+[data-md-color-scheme="slate"] .wgpg {
+  --wg-ink: #e6e8f0;
+  --wg-dim: #9aa0b0;
+  --wg-bg: #1c1f2a;
+  --wg-card: #262a38;
+  --wg-line: #3a3f50;
+  --wg-grid: #3a3f50;
+  --wg-accent: #8f8fe8;
+  --wg-accent-soft: #2f3150;
+  --wg-accent-row: #32355f;
+  --wg-green-soft: #1f4a35;
+  --wg-red-soft: #4a2328;
+  --wg-amber-soft: #4a3a1c;
+  --wg-surface-2: #232736;
+  --wg-c-u: #8a90a2;
+  --wg-c-np: #4d526a;
+}
+
+.wgsim:focus-visible { box-shadow: 0 0 0 2px var(--wg-accent); }
+.wgsim [hidden] { display: none !important; }
+
+/* control band: the top of the card, on its own surface */
+.wgsim-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  padding: 9px 14px;
+  border-bottom: 0.5px solid var(--wg-accent);
+  background: var(--wg-surface-2);
+  white-space: nowrap;
+}
+.wgsim-left { display: flex; gap: 0.4rem; align-items: center; flex: 1 1 auto; min-width: 0; }
+.wgsim-actions { display: flex; gap: 0.4rem; align-items: center; }
+.wgsim-ctl { display: flex; gap: 0.4rem; align-items: center; flex: 0 0 auto; margin-left: auto; }
+.wgsim-divider { width: 0.5px; height: 18px; background: var(--wg-accent); opacity: 0.6; margin: 0 0.15rem; flex: 0 0 auto; }
+
+/* The lockup is shown here maximised only, the shape being the shared one above. The window covers the site header, the
+   page's heading and the model's name with them, so the band has to say what is being looked at; in the page it would be
+   saying it twice, and the band there is already out of room — the chips drop their words at narrow widths rather than grow
+   a badge. It takes the band's own grammar: a thing, then the divider the band already uses between groups. */
+.wgsim-lockup, .wgsim-lockup-rule { display: none; }
+.wgsim-max .wgsim-lockup { display: inline-flex; }
+.wgsim-max .wgsim-lockup-rule { display: block; }
+.wgsim-lockup-model { overflow: hidden; text-overflow: ellipsis; }
+
+/* the workgraph's header: two rows of bare content under the toolbar, the state strip and the line saying what the workgraph
+   is doing or waiting on, muted, with its status glyph at the left; the line is not there while there is nothing to say.
+   In expert mode the workgraph's pills sit at the right end of the line, or of the strip while the line is suppressed. */
+.wgsim-head { display: flex; flex-direction: column; gap: 3px; padding: 8px 14px 5px; cursor: pointer; transition: background-color 0.15s; }
+.wgsim-head:hover { background: var(--wg-surface-2); }
+/* the hint that the band opens the dialog: at the right end of the band's last row, shown on hover only, but keeping its
+   width throughout, so the line truncates before it rather than running under it */
+.wgsim-head-hint { visibility: hidden; flex: 0 0 auto; margin-left: auto; padding-left: 0.8rem; color: var(--wg-accent); font-size: var(--wg-t-meta); line-height: 18px; white-space: nowrap; pointer-events: none; }
+.wgsim-head:hover .wgsim-head-hint { visibility: visible; }
+/* in expert mode the workgraph's pills hold that corner, so the hint sits inline before them */
+.wgsim-head.expert .wgsim-head-hint + .wgsim-wgrail { margin-left: 0.8rem; }
+.wgsim-state-line { display: flex; align-items: center; gap: 0.5rem; min-height: 22px; font-size: var(--wg-t-meta); color: var(--wg-dim); white-space: nowrap; min-width: 0; }
+.wgsim-state-line-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.wgsim-state-item { color: var(--wg-ink); }
+.wgsim-state-glyph { color: var(--wg-dim); }
+.wgsim-state-pending > .wgsim-state-glyph, .wgsim-state-glyph.wgsim-state-pending { color: var(--wg-amber); }
+.wgsim-state-passed > .wgsim-state-glyph, .wgsim-state-glyph.wgsim-state-passed { color: var(--wg-green); }
+.wgsim-state-failed > .wgsim-state-glyph, .wgsim-state-glyph.wgsim-state-failed { color: var(--wg-red); }
+.wgsim-state-passed > .wgsim-state-item, .wgsim-state-todo > .wgsim-state-item { color: var(--wg-dim); }
+
+/* 26px controls */
+.wgsim-tb {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--wg-ink);
+  background: transparent;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--wg-t-body);
+}
+.wgsim-tb svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wgsim-tb svg .fill, .wgsim-chip svg .fill { fill: currentColor; stroke: none; }
+.wgsim-tb:hover, .wgsim-chip:hover { background: var(--wg-accent-soft); }
+.wgsim-tb:focus-visible, .wgsim-chip:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 1px; }
+.wgsim-round { font-weight: 600; }
+
+/* playback group: reset and the segmented speed radiogroup in one shape; the active step is tinted, not filled */
+.wgsim-playback { display: inline-flex; border: 0.5px solid var(--wg-accent); border-radius: var(--wg-radius); overflow: hidden; }
+.wgsim-speed { display: inline-flex; border-left: 0.5px solid var(--wg-accent); }
+.wgsim-playback .wgsim-tb { border: 0; border-radius: 0; color: var(--wg-dim); }
+.wgsim-playback .wgsim-tb + .wgsim-tb { border-left: 0.5px solid var(--wg-accent); }
+.wgsim-playback .wgsim-tb[aria-checked="true"] { background: var(--wg-accent-soft); color: var(--wg-accent); }
+
+/* chips: world-state switches, tinted when on */
+.wgsim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--wg-radius);
+  border: 0.5px solid var(--wg-accent);
+  color: var(--wg-dim);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--wg-t-body);
+  white-space: nowrap;
+}
+.wgsim-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wgsim-chip[aria-checked="true"], .wgsim-chip-help[aria-checked="true"] { background: var(--wg-accent-soft); color: var(--wg-accent); }
+.wgsim-chip-chaos[aria-checked="true"] { background: var(--wg-red-soft); border-color: var(--wg-red); color: var(--wg-red); }
+.wgsim.tight .wgsim-chip { padding: 0 6px; }
+.wgsim.tight .wgsim-chip .label { display: none; }
+
+.wgsim-btn {
+  font: inherit;
+  font-size: var(--wg-t-body);
+  color: var(--wg-ink);
+  background: transparent;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  padding: 0 8px;
+  height: 26px;
+  cursor: pointer;
+  line-height: 1;
+}
+.wgsim-btn:hover { background: var(--wg-accent-soft); }
+.wgsim-btn-accent { color: var(--wg-accent); background: var(--wg-accent-soft); }
+.wgsim-btn.small { height: auto; padding: 2px 6px; font-size: var(--wg-t-meta); }
+
+.wgsim-canvas { padding: 0; position: relative; user-select: none; -webkit-user-select: none; }
+.wgsim-canvas svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+
+/* the wait while the layout engine is fetched: a real bar where the response has a length, an
+   indeterminate one where it has not, and room to show it before the picture has any height */
+.wgsim.loading .wgsim-canvas { min-height: 200px; }
+.wgsim-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  background: var(--wg-bg);
+  color: var(--wg-dim);
+  font-size: var(--wg-t-body);
+  text-align: center;
+  padding: 0 14px;
+}
+.wgsim-loading-track { width: min(240px, 70%); height: 4px; border-radius: 999px; background: var(--wg-line); overflow: hidden; }
+/* no transition on the width: chunks arrive often enough to read smoothly, and a transition would
+   animate the bar down from its indeterminate width the moment the first real figure arrives */
+.wgsim-loading-bar { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--wg-accent); }
+.wgsim-loading.indeterminate .wgsim-loading-bar { width: 35%; animation: wg-slide 1.1s ease-in-out infinite; }
+@keyframes wg-slide { from { transform: translateX(-110%); } to { transform: translateX(400%); } }
+.wgsim-bar, .wgsim-states { user-select: none; -webkit-user-select: none; }
+
+/* The event log under the picture, on the band's surface: oldest at the top, columns that line up down the
+   whole log, and the newest line followed until the reader scrolls away from it. The height the pinned foot
+   takes is one number for both the rules that need it: the foot itself, and the ↓ latest pill that would
+   otherwise sit under it. It is nothing until the log is a column. */
+.wgsim-log-wrap { position: relative; border-top: 0.5px solid var(--wg-accent); background: var(--wg-surface-2); --wg-log-foot: 0px; --wg-log-said: 0px; }
+/* the press's foot takes its line and a half out of the band rather than off the widget, so pressing step moves nothing
+   below the log; the band is given back the moment the model runs again */
+.wgsim-log-wrap.wgsim-said { --wg-log-said: 2.2em; }
+/* Three classes deep on the list and its rows: the theme indents a list and its items by more than two
+   can override, and a row that carries a background has to start where the band does. */
+.wgsim .wgsim-log-wrap .wgsim-log { height: calc(11em - var(--wg-log-said)); margin: 0; padding: 4px 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; font-size: var(--wg-t-meta); line-height: 1.7; color: var(--wg-ink); }
+.wgsim .wgsim-log-wrap .wgsim-log li { display: flex; gap: 8px; margin: 0; padding: 1px 10px; white-space: nowrap; cursor: pointer; }
+.wgsim-log-n { flex: 0 0 26px; text-align: right; font-size: var(--wg-t-micro); color: var(--wg-dim); }
+.wgsim-log-s { flex: 0 0 84px; overflow: hidden; text-overflow: ellipsis; }
+.wgsim-log-m { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+/* The time heads the lines that happened at it rather than sitting in a column of its own. It is not a line of the log:
+   no subject to filter to, so no pointer and nothing to click. The rule beside the label is what makes it a break: the
+   rows around it are full-bleed tinted, and an unpainted gap between them reads as a hole torn in a stripe. The rule goes
+   after the label rather than along the top of the row, where about half the time it would land under a tinted band's own
+   edge and read as a double one. More space above than below, since the time heads what follows. */
+.wgsim .wgsim-log-wrap .wgsim-log li.wgsim-log-time { display: flex; align-items: center; gap: 0.5em; padding: 6px 10px 1px; font-size: var(--wg-t-micro); color: var(--wg-dim); cursor: default; }
+.wgsim .wgsim-log-wrap .wgsim-log li.wgsim-log-time::after { content: ''; flex: 1 1 auto; border-top: 0.5px solid var(--wg-line); }
+.wgsim .wgsim-log-wrap .wgsim-log li.wgsim-log-time:first-child { padding-top: 2px; }
+/* What brought a transition about, after the state and behind it; and the state itself, drawn as the card's badge is —
+   the state's own colour at the row's own rhythm, inline so that the hairline costs the line box no height, and square,
+   since a round end means clickable in this widget and a record is not a control. */
+.wgsim-log-why { color: var(--wg-dim); }
+.wgsim-log-to { display: inline; padding: 0 0.3em; border: 0.5px solid currentColor; border-radius: 2px; color: var(--wg-state); }
+/* The foot of the log column: the run's clock and the phase it is in. Shown only where the log is a column. */
+.wgsim-log-now { display: none; align-items: center; gap: 8px; height: var(--wg-log-foot); padding: 0 10px; border-top: 0.5px solid var(--wg-line); background: var(--wg-surface-2); font-size: var(--wg-t-meta); white-space: nowrap; overflow: hidden; }
+.wgsim-log-now-t { color: var(--wg-dim); }
+/* what the last press moved, in the shape the clock's foot wears, since the two are the same kind of line about the run */
+.wgsim-log-said { display: none; align-items: center; gap: 8px; height: var(--wg-log-said); padding: 0 10px; border-top: 0.5px solid var(--wg-line); background: var(--wg-surface-2); font-size: var(--wg-t-meta); white-space: nowrap; overflow: hidden; }
+.wgsim-log-wrap.wgsim-said .wgsim-log-said { display: flex; }
+.wgsim-log-said-t { flex: 0 0 auto; color: var(--wg-accent); }
+.wgsim-log-said-m { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--wg-ink); }
+/* Three levels: a transition is the skeleton of the run and carries the only background, finished work is
+   the body of the log, and a moment its own result supersedes a beat later is barely there. */
+.wgsim-log-state { background: var(--wg-accent-row); color: var(--wg-accent); }
+.wgsim-log-note { color: var(--wg-ink); }
+.wgsim-log-running { color: var(--wg-dim); opacity: 0.55; }
+.wgsim-log-empty { color: var(--wg-dim); }
+.wgsim-log-ok { color: var(--wg-green); }
+.wgsim-log-bad { color: var(--wg-red); }
+.wgsim-log-wait { color: var(--wg-amber); }
+.wgsim-log-off { color: var(--wg-c-np); }
+/* in the log's corners: the pill that follows the newest line again, and the subject the log is filtered to */
+.wgsim-log-chip { position: absolute; right: 10px; border: 0.5px solid var(--wg-line); border-radius: 999px; padding: 2px 8px; background: var(--wg-card); color: var(--wg-dim); font: inherit; font-size: var(--wg-t-micro); line-height: 1.4; cursor: pointer; }
+.wgsim-log-chip:hover { border-color: var(--wg-accent); color: var(--wg-accent); }
+.wgsim-log-pill { bottom: calc(7px + var(--wg-log-foot) + var(--wg-log-said)); }
+.wgsim-log-only { top: 7px; color: var(--wg-accent); border-color: var(--wg-accent); }
+
+/* Maximised: the widget fills the window over the page, the header included, rather than taking the screen — the browser's
+   own chrome stays and Esc leaves. The picture takes whatever the band and the log leave it and is fitted to that box, by
+   width or by height, whichever runs out first; the scaling is the viewBox's own, so every label and every card grows with
+   it. The chrome around it is drawn in pixels and does not follow, so it is set up a step by hand. */
+.wgsim.wgsim-max {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.wgsim-max .wgsim-canvas { flex: 1 1 auto; min-height: 0; }
+/* fitted to the box: the viewBox centres whatever of it the box does not use */
+.wgsim-max .wgsim-canvas svg { height: 100%; }
+.wgsim-max .wgsim-bar { padding: 11px 18px; }
+.wgsim-max .wgsim-head { padding: 10px 18px 6px; }
+.wgsim-max .wgsim-tb, .wgsim-max .wgsim-chip, .wgsim-max .wgsim-wgpill { height: 30px; }
+.wgsim-max .wgsim-tb { width: 30px; }
+.wgsim-max .wgsim-tb svg, .wgsim-max .wgsim-chip svg { width: 16px; height: 16px; }
+/* the scheme switch wears the theme's own icon, which is a filled shape where the band's icons are drawn strokes */
+.wgsim-max .wgsim-themebtn svg { width: 17px; height: 17px; fill: currentColor; stroke: none; }
+.wgsim.wgsim-max .wgsim-log-wrap .wgsim-log { height: 12em; }
+/* the ? panel is held to a third of the view so that it never becomes the page; the window has the room for more of it */
+.wgsim-max .wgsim-guide { max-height: min(62vh, 84%); }
+
+/* The panel is 980px in the page, which draws the machine's 1060-unit canvas at 0.9 of its own scale. Maximised there is a
+   window to use, so it widens and the machine follows, being drawn in a viewBox. The type does not change with it: a dialog
+   is read at the same size wherever it is opened. Each rule names both of a dialog's classes, since the rule they share caps
+   the width of all of them and is declared after the rules that widen one. */
+.wgsim-max .wgsim-help.wgsim-panel { width: min(1440px, 90vw); }
+.wgsim-max .wgsim-help.wgsim-lineage { max-width: min(1440px, 90vw); }
+
+/* A window is wide where the picture is tall, so in one the log stands beside the picture rather than under it: the height
+   the log gives back is the picture's scale, and the width it takes was empty beside a graph that runs downwards. The log
+   is then as long as the window, which is what it wants anyway. Under that width there is no room for the column, and the
+   log goes back under the picture. */
+@media (min-width: 900px) {
+  .wgsim.wgsim-max {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 26%, 520px);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+  }
+  .wgsim-max .wgsim-bar, .wgsim-max .wgsim-lists { grid-column: 1 / -1; }
+  .wgsim-max .wgsim-head { grid-column: 1; grid-row: 3; }
+  .wgsim-max .wgsim-canvas { grid-column: 1; grid-row: 4; }
+  .wgsim-max .wgsim-log-wrap { grid-column: 2; grid-row: 3 / span 2; display: flex; flex-direction: column; min-height: 0; border-top: 0; border-left: 0.5px solid var(--wg-accent); --wg-log-foot: 2.2em; }
+  .wgsim.wgsim-max .wgsim-log-wrap .wgsim-log { flex: 1 1 auto; height: auto; min-height: 0; }
+  .wgsim-max .wgsim-log-now { display: flex; }
+  /* The column is narrow and long where the band was wide and short, so the line stops being a row of columns: the entity,
+     the arrow, the chip and the message flow as one sentence that wraps under itself, and the entity is told apart by how it
+     is drawn rather than by where it sits. The band keeps its columns — it is 11em tall and every line is one line, and the
+     alignment is what makes it scannable at that size. Scanning down for one entity is what the inline flow gives up, and
+     the log answers that better anyway: a click on a line, or on a card, filters to that subject.
+     The event number goes too. The width is worth more here than the number is, and the band still carries it. */
+  .wgsim.wgsim-max .wgsim-log-wrap .wgsim-log li:not(.wgsim-log-time) { display: block; }
+  .wgsim.wgsim-max .wgsim-log-wrap .wgsim-log li { white-space: normal; }
+  .wgsim-max .wgsim-log-n { display: none; }
+  .wgsim-max .wgsim-log-s { display: inline; margin-right: 0.4em; overflow: visible; text-overflow: clip; font-weight: 600; }
+  .wgsim-max .wgsim-log-m { display: inline; overflow: visible; text-overflow: clip; }
+}
+
+/* a model in New glows on the transport until the reader starts it */
+@keyframes wg-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--wg-accent-soft), 0 0 0 0 var(--wg-accent); } 50% { box-shadow: 0 0 0 3px var(--wg-accent-soft), 0 0 12px 2px var(--wg-accent); } }
+.wgsim[data-hold="armed"] .wgsim-playback { animation: wg-glow 1.8s ease-in-out infinite; }
+
+/* The model is not advancing, and the picture says so rather than leaving it to the pressed state of one button in the
+   band. The canvas loses its colour for every cause, which is what a reader catches from the corner of the eye when they
+   expected motion and what works whatever is covering the picture; the word is drawn for the three a reader can undo.
+   No transition either way: it appears the instant a card is clicked and goes the instant the card is closed, and
+   anything that fades reads as lag. */
+.wgsim[data-hold] .wgsim-canvas svg { filter: saturate(0.25); }
+.wgsim .wg-hold, .wgsim .wg-hold-why { display: none; }
+.wgsim[data-hold="paused"] .wg-hold, .wgsim[data-hold="dialog"] .wg-hold, .wgsim[data-hold="help"] .wg-hold { display: block; }
+.wgsim[data-hold="paused"] .wg-hold-paused, .wgsim[data-hold="dialog"] .wg-hold-dialog, .wgsim[data-hold="help"] .wg-hold-help { display: block; }
+/* dim, and never a colour the surface has already spent: on that canvas the accent, green, red and amber each mean something */
+.wgsim .wg-hold-word { fill: var(--wg-dim); opacity: 0.22; font-weight: 600; }
+.wgsim .wg-hold-why { fill: var(--wg-dim); opacity: 0.4; }
+/* and a member held back for an operator glows on its start button, beside the transport, for the same reason */
+.wgsim-btn.wgsim-glow { animation: wg-glow 1.8s ease-in-out infinite; }
+
+/* a card is one target: every part of it opens the transformation's dialog, and the card is what lights under the pointer */
+.wgsim .wg-card[data-act] { cursor: pointer; }
+
+/* a card's pool glows while it waits for the reader: Problematic inputs, an action that failed, or a member held back. The
+   pool's own surface carries it, there being nothing else in there to draw it on since the pool stopped being a target. */
+@keyframes wg-glow-stroke { 0%, 100% { stroke-opacity: 0; stroke-width: 1; } 50% { stroke-opacity: 0.9; stroke-width: 2; } }
+.wgsim .wg-glow > .wg-pool { stroke: var(--wg-red); animation: wg-glow-stroke 1.8s ease-in-out infinite; }
+/* the far end of that chain: the one control a reader who followed the pulse came for. The same keyframe, since a machine's
+   button is an SVG group and the box-shadow the tabs pulse with is nothing at all on one. */
+.wgsim .wg-m-btn.wg-m-wants .wg-m-btn-bg { stroke: var(--wg-accent); animation: wg-glow-stroke 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wgsim *, .wgsim *::before, .wgsim *::after { transition: none !important; animation: none !important; }
+  .wgsim .wg-token { display: none; }
+  .wgsim[data-hold="armed"] .wgsim-playback { box-shadow: 0 0 0 3px var(--wg-accent-soft); }
+  .wgsim .wg-glow > .wg-pool { stroke: var(--wg-red); stroke-opacity: 0.9; }
+  .wgsim .wg-m-btn.wg-m-wants .wg-m-btn-bg { stroke: var(--wg-accent); stroke-opacity: 0.9; }
+  .wgsim-mtab.wgsim-glow { box-shadow: 0 0 0 3px var(--wg-accent-soft); }
+  .wgsim-btn.wgsim-glow { box-shadow: 0 0 0 3px var(--wg-accent-soft); }
+}
+
+/* SVG */
+.wgsim .wg-bg { fill: var(--wg-bg); }
+.wgsim .wg-griddot { fill: var(--wg-grid); }
+.wgsim .wg-edge { fill: none; stroke: var(--wg-grid); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* the casing: each edge is laid down in the background colour first, so where two cross the one
+   drawn later passes visibly over the other instead of the pair dissolving into each other */
+.wgsim .wg-edge-case { fill: none; stroke: var(--wg-bg); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.wgsim .wg-edge-wait { stroke-dasharray: 6 6; stroke-width: 1.5; opacity: 0.8; }
+.wgsim .wg-edge-join { stroke: var(--wg-accent); stroke-opacity: 0.55; stroke-dasharray: 4 5; stroke-width: 1.6; }
+.wgsim .wg-edge-artifact { stroke-dasharray: 2 4; stroke-width: 1.4; }
+/* where a fan-out splits, so the split reads as deliberate rather than as a crossing */
+.wgsim .wg-junction { fill: var(--wg-grid); }
+.wgsim .wg-arrowhead { stroke: var(--wg-grid); stroke-width: 1.5; }
+.wgsim .wg-retry { fill: none; stroke: var(--wg-red); stroke-width: 1.6; opacity: 0; transition: opacity 0.2s; }
+.wgsim .wg-retry.on { opacity: 0.85; }
+.wgsim .wg-retry-label { fill: var(--wg-red); font-size: var(--wg-g-label); opacity: 0; transition: opacity 0.2s; }
+.wgsim .wg-retry-label.on { opacity: 0.9; }
+
+.wgsim .wg-box { fill: var(--wg-card); stroke: var(--wg-line); stroke-width: 1.2; transition: stroke 0.15s; }
+/* an output box that lists files is one line tall, its count in primary and the rest muted; the whole box opens the list */
+/* a box whose files are behind a click says so under the pointer: an output box and an input query alike */
+.wgsim .wg-output-files, .wgsim .wg-source { cursor: pointer; }
+.wgsim .wg-output-files:hover .wg-box, .wgsim .wg-source:hover .wg-box { stroke: var(--wg-accent); }
+.wgsim .wg-out-count { fill: var(--wg-dim); font-size: var(--wg-g-label); }
+.wgsim .wg-out-n { fill: var(--wg-ink); font-size: var(--wg-g-title); font-weight: 600; }
+/* the sink exists before it holds anything: a zero is drawn, but muted until the count is above it */
+.wgsim .wg-out-empty .wg-out-n { fill: var(--wg-dim); font-weight: 400; }
+.wgsim .wg-out-more { fill: var(--wg-dim); font-weight: 600; }
+.wgsim .wg-box-title { fill: var(--wg-dim); font-size: var(--wg-g-title); }
+.wgsim .wg-strong { fill: var(--wg-ink); font-weight: 600; }
+/* the label sits in the gap the edges run through, so it knocks them out the way the casing does */
+.wgsim .wg-box-label { fill: var(--wg-dim); font-size: var(--wg-g-title); paint-order: stroke; stroke: var(--wg-bg); stroke-width: 5; stroke-linejoin: round; }
+.wgsim .wg-mono { fill: var(--wg-dim); font-size: var(--wg-t-body); }
+.wgsim .wg-tiny { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+
+.wgsim .wg-card-bg { fill: var(--wg-card); stroke: var(--wg-line); stroke-width: 1.2; filter: drop-shadow(0 1px 2px rgba(20, 24, 40, 0.08)); }
+/* the title is the body size, and leads the card on being the one thing in it in the primary colour */
+.wgsim .wg-card-title { fill: var(--wg-ink); font-size: var(--wg-g-label); font-weight: 600; font-family: var(--md-text-font-family, system-ui, sans-serif); }
+/* One tone map for a state, wherever the state is drawn: the card's badge reads it as a fill and a line of the log as a
+   colour, so a badge and a line cannot come to say different things about the same state. It is set on whatever element
+   carries the status and inherits down to the text, so a drawing joins the map by naming the state rather than by
+   repeating the colours. A blocked state covers two situations, and a sign-off nobody has given is a wait rather than a
+   problem — the one thing a state's name alone does not say. */
+.wgsim [data-status] { --wg-state: var(--wg-accent); }
+.wgsim [data-status="New"], .wgsim [data-status="Paused"] { --wg-state: var(--wg-dim); }
+.wgsim [data-status="Active"] { --wg-state: var(--wg-green); }
+.wgsim [data-status$="Blocked"] { --wg-state: var(--wg-red); }
+.wgsim [data-blocked="wait"] { --wg-state: var(--wg-amber); }
+.wgsim .wg-status-label { fill: var(--wg-state); font-size: var(--wg-g-label); font-family: var(--md-text-font-family, system-ui, sans-serif); }
+.wgsim .wg-kind-removal .wg-card-title { fill: var(--wg-red); }
+/* the unconsumed remainder of the card's bottom edge, in the border's own colour: with nothing consumed the edge is a border
+   and nothing more, which is what lets the bar be the edge */
+.wgsim .wg-bar-track { fill: var(--wg-line); }
+.wgsim .wg-bar-p { fill: var(--wg-green); }
+.wgsim .wg-bar-s { fill: var(--wg-amber); }
+.wgsim .wg-bar-a { fill: var(--wg-blue); }
+.wgsim .wg-bar-f { fill: var(--wg-red); }
+.wgsim .wg-bar-np { fill: var(--wg-c-np); }
+.wgsim .wg-bar-u { fill: var(--wg-c-u); }
+.wgsim .wg-pool-action { font-size: var(--wg-g-label); }
+
+/* the backlog chip over the last slot's corner opens the parcel counts */
+.wgsim .wg-backlog { cursor: pointer; }
+.wgsim .wg-backlog-bg { fill: var(--wg-accent-soft); stroke: var(--wg-accent); stroke-opacity: 0.5; transition: stroke-opacity 0.15s; }
+.wgsim .wg-backlog:hover .wg-backlog-bg { stroke-opacity: 1; }
+.wgsim .wg-backlog-label { fill: var(--wg-accent); font-size: var(--wg-g-micro); font-weight: 600; }
+.wgsim-num { text-align: right; font-weight: 600; }
+/* the rail: one row per sweep on a card's right edge, tinted and hairlined; the mode word on the right, accent in auto and muted by hand,
+   gives way to a pulsing run button while the row is by hand and its sweep has work, and the row takes a faint tint */
+.wgsim .wg-rail-bg { fill: var(--wg-surface-2); }
+.wgsim .wg-rail-line { stroke: var(--wg-line); stroke-width: 1; }
+.wgsim .wg-rail-row { cursor: pointer; color: var(--wg-dim); }
+.wgsim .wg-rail-row svg { overflow: visible; }
+.wgsim .wg-rail-row path.fill { fill: currentColor; stroke: none; }
+.wgsim .wg-rail-hit { fill: transparent; transition: fill 0.15s; }
+.wgsim .wg-rail-row:hover .wg-rail-hit { fill: var(--wg-accent-soft); }
+/* the left cell names the sweep: its glyph while the row is automatic, its name once by hand */
+.wgsim .wg-rail-glyph { fill: var(--wg-dim); font-size: var(--wg-g-label); }
+.wgsim .wg-rail-name { fill: var(--wg-ink); font-size: var(--wg-g-label); }
+.wgsim .wg-rail-row[data-state="auto"] .wg-rail-name { display: none; }
+.wgsim .wg-rail-row:not([data-state="auto"]) .wg-rail-glyph { display: none; }
+.wgsim .wg-rail-mode { fill: var(--wg-dim); font-size: var(--wg-g-label); }
+.wgsim .wg-rail-row[data-state="auto"] .wg-rail-mode { fill: var(--wg-accent); opacity: 0.75; }
+/* the hooks row covers two, HandleFailedInput and the Active hook: where they disagree it reads `mixed`, muted, since
+   neither word would be true */
+.wgsim .wg-rail-row[data-state="mixed"] .wg-rail-mode { fill: var(--wg-dim); opacity: 0.85; }
+.wgsim .wg-rail-row[data-state="run"] .wg-rail-hit { fill: var(--wg-accent-row); fill-opacity: 0.55; }
+.wgsim .wg-rail-row[data-state="run"] .wg-rail-mode { display: none; }
+.wgsim .wg-rail-row:not([data-state="run"]) .wg-rail-run { display: none; }
+@keyframes wg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.wgsim .wg-rail-run { cursor: pointer; color: var(--wg-accent); animation: wg-pulse 1.6s ease-in-out infinite; }
+.wgsim .wg-rail-run-bg { fill: var(--wg-card); stroke: var(--wg-accent); stroke-width: 1; }
+.wgsim .wg-rail-run:hover { animation: none; }
+.wgsim .wg-rail-run:hover .wg-rail-run-bg { fill: var(--wg-accent-soft); }
+.wgsim .wg-list-item { fill: var(--wg-ink); font-size: var(--wg-g-micro); }
+.wgsim .wg-res-none { fill: var(--wg-dim); }
+.wgsim .wg-res-running, .wgsim .wg-res-pending { fill: var(--wg-amber); }
+.wgsim .wg-res-passed, .wgsim .wg-res-done { fill: var(--wg-green); }
+.wgsim .wg-res-failed { fill: var(--wg-red); }
+.wgsim .wg-card[data-status="Archiving"] .wg-card-bg, .wgsim .wg-card[data-status="Cancelling"] .wg-card-bg { stroke: var(--wg-accent); stroke-dasharray: 4 3; }
+.wgsim .wg-card[data-status$="Blocked"] .wg-card-bg { stroke: var(--wg-red); stroke-dasharray: 4 3; }
+.wgsim .wg-card[data-status="Archived"] .wg-card-bg, .wgsim .wg-card[data-status="Cleaned"] .wg-card-bg { stroke: var(--wg-dim); }
+.wgsim .wg-card[data-status="Archived"] .wg-card-title, .wgsim .wg-card[data-status="Cleaned"] .wg-card-title { opacity: 0.55; }
+.wgsim [data-act="lineage"] { cursor: pointer; }
+/* the lineage dialog, in the entity dialogs' shape: the header band, the picture, the explanation folded */
+.wgsim-help.wgsim-lineage { max-width: min(1200px, 96vw); }
+.wgsim-lineage-body { overflow-x: auto; padding: 0.8rem 1rem 0.2rem; }
+.wgsim-lineage-body svg { display: block; height: auto; border: 1px solid var(--wg-line); border-radius: 8px; }
+.wgsim-lineage-what { padding: 0 1rem 0.6rem; margin: 0; }
+/* where the file stands as an input: a row per input made from it, the member's name opening that machine, the state in the
+   counts' colour, and the operator's edges where the state allows them */
+.wgsim-lineage-inputs { padding: 0.6rem 1rem 0.2rem; border-top: 0.5px solid var(--wg-line); font-size: var(--wg-t-body); }
+/* the grid is the list and a row is contents, as the hooks list does it, so every row's columns line up and a state as long
+   as NotProcessed sets the width rather than wrapping inside it */
+.wgsim .wgsim-lineage-rows, .md-typeset .wgsim .wgsim-lineage-rows { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr) max-content; column-gap: 0.9rem; row-gap: 0.35rem; align-items: center; margin: 0; padding: 0; list-style: none; }
+.wgsim .wgsim-lineage-rows li, .md-typeset .wgsim .wgsim-lineage-rows li { display: contents; }
+/* a button centres its label, and a column as wide as the longest member would indent every shorter name */
+.wgsim-lineage-rows .wgsim-link { justify-self: start; text-align: left; }
+.wgsim-lineage-ops { display: flex; justify-content: flex-end; gap: 0.3rem; }
+.wgsim-lineage-prose { padding: 0 1rem 0.8rem; margin: 0; max-width: 60em; font-size: var(--wg-t-body); }
+.wgsim-lineage-prose p { margin: 0; line-height: 1.5; }
+.wgsim .wg-lin-box { fill: var(--wg-card); stroke: var(--wg-ink); stroke-width: 1.2; }
+/* A parcel that moved data rather than computing something is a stadium, where a compute parcel keeps its rounded
+   rectangle. Shape because every other channel on this box is spent — the stroke is the status, the dashes a recovery
+   parcel, the fill and the dimmed label a failure — so a dimmed removal would read as a removal that failed, which is not
+   a thing to say by accident. Shape and stroke stay independent, so a finished removal is a green stadium and a failed one
+   a dim dashed stadium, and neither can be taken for a compute parcel in the same state.
+   Two kinds and not three: the model names replication and removal apart, but one data-management transformation may do
+   several operations at once, and a picture that ruled on which it mostly was would assert what the model does not know.
+   The card's red for a removal is the other statement, that this member destroys data, and the two sit on top of each
+   other without either having to mean the other. */
+.wgsim .wg-kind-removal .wg-lin-box, .wgsim .wg-kind-replication .wg-lin-box { rx: 12px; }
+.wgsim .wg-lin-done .wg-lin-box { stroke: var(--wg-green); }
+.wgsim .wg-lin-recovery .wg-lin-box { stroke-dasharray: 3 3; }
+.wgsim .wg-lin-failed .wg-lin-box, .wgsim .wg-lin-cancelled .wg-lin-box { fill: var(--wg-bg); stroke: var(--wg-dim); stroke-dasharray: 3 3; }
+.wgsim .wg-lin-failed .wg-lin-label, .wgsim .wg-lin-failed .wg-lin-sub, .wgsim .wg-lin-cancelled .wg-lin-label, .wgsim .wg-lin-cancelled .wg-lin-sub { fill: var(--wg-dim); }
+.wgsim .wg-lin-failed .wg-lin-sub { fill: var(--wg-red); }
+.wgsim .wg-lin-partiallydone .wg-lin-box { stroke: var(--wg-amber); }
+.wgsim .wg-lin-reserved .wg-lin-box, .wgsim .wg-lin-assigned .wg-lin-box, .wgsim .wg-lin-completing .wg-lin-box, .wgsim .wg-lin-unassigned .wg-lin-box { stroke: var(--wg-blue); }
+.wgsim .wg-lin-label { fill: var(--wg-ink); font-size: var(--wg-g-micro); }
+.wgsim .wg-lin-sub { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+.wgsim .wg-lin-edge { fill: none; stroke: var(--wg-grid); stroke-width: 1.5; }
+.wgsim .wg-lin-edge-partner { stroke: var(--wg-accent); stroke-dasharray: 4 4; }
+.wgsim .wg-lin-focus { fill: none; stroke: var(--wg-accent); stroke-width: 2; }
+.wgsim .wg-lin-dim, .wgsim .wg-lin-earlier { opacity: 0.45; }
+.wgsim .wg-lin-latest .wg-lin-box { stroke: var(--wg-red); stroke-dasharray: none; stroke-width: 1.4; }
+.wgsim .wg-lin-latest .wg-lin-label { fill: var(--wg-ink); }
+.wgsim .wg-lin-parcel .wg-lin-n, .wgsim .wg-lin-parcel .wg-lin-when { font-size: var(--wg-g-micro); fill: var(--wg-dim); }
+.wgsim .wg-lin-fold { cursor: pointer; }
+.wgsim .wg-lin-fold-bg { fill: transparent; stroke: var(--wg-line); stroke-dasharray: 3 3; }
+.wgsim .wg-lin-fold:hover .wg-lin-fold-bg { stroke: var(--wg-accent); }
+.wgsim .wg-lin-fold-label { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+.wgsim .wg-file-still { cursor: default; }
+.wgsim .wg-kind-removal .wg-card-bg { stroke: var(--wg-red); stroke-opacity: 0.5; stroke-dasharray: 5 4; }
+.wgsim .wg-card[data-status="Paused"] .wg-card-bg { stroke-dasharray: 4 4; }
+.wgsim .wg-card[data-status="Paused"] .wg-card-title { opacity: 0.55; }
+.wgsim .wg-card[data-status="Paused"] .wg-pool { opacity: 0.5; }
+.wgsim .wg-card[data-status="Finalizing"] .wg-card-bg { stroke: var(--wg-accent); stroke-dasharray: 4 3; }
+.wgsim .wg-card[data-status="Finalized"] .wg-card-bg, .wgsim .wg-card[data-status="Completed"] .wg-card-bg { stroke: var(--wg-green); }
+/* the log's link to the picture: the card a hovered line is about, and the one the log is filtered to; after
+   the per-status strokes, because the link holds whatever state the transformation is in. The pointer says the same thing
+   about the card it is over, so it says it the same way: the glow is free, where a stroke is already spoken for — a hover
+   that tinted the border would read as the card entering Archiving. */
+.wgsim .wg-card.wg-hi, .wgsim .wg-card[data-act]:hover { filter: drop-shadow(0 0 5px var(--wg-accent)); }
+.wgsim .wg-card.wg-picked .wg-card-bg { stroke: var(--wg-accent); stroke-width: 2; }
+/* the pool is a surface, not a box drawn around mostly nothing — and a dash here would say Reserved, which is a parcel's
+   business and not the pool's */
+.wgsim .wg-pool { fill: var(--wg-surface-2); stroke: none; }
+/* in the dark theme surface-2 is three units from the card and the region would not read at all, so the well is cut back to
+   the page's own surface instead, which is the relationship the card already has with the page */
+[data-md-color-scheme="slate"] .wgsim .wg-pool { fill: var(--wg-bg); }
+.wgsim .wg-more { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+.wgsim .wg-pool-parcel { cursor: pointer; }
+.wgsim .wg-pool-parcel .wg-slot { stroke-width: 1.2; }
+.wgsim .wg-pool-parcel:hover .wg-slot { stroke: var(--wg-accent); }
+.wgsim .wg-delayed { opacity: 0.3; }
+.wgsim .wg-problematic { opacity: 0.55; stroke: var(--wg-red); stroke-width: 1.5; }
+.wgsim .wg-child { stroke: var(--wg-card); stroke-width: 1.5; }
+
+/* a parcel's box, one dimension per channel: the border's colour is the state, in the counts' colours; a dashed border is a
+   parcel waiting on the backend's answer, Reserved and Completing; the fill is the job's progress, full at Completing; the halo
+   behind the box is a parcel that ended a moment ago, fading; the shapes inside are its inputs */
+.wgsim .wg-slot { fill: var(--wg-card); stroke: var(--wg-ink); stroke-width: 1.6; }
+.wgsim .wg-slot-empty { stroke: var(--wg-line); stroke-width: 1.2; }
+.wgsim .wg-slot-unassigned { stroke: var(--wg-c-u); }
+.wgsim .wg-slot-reserved { stroke-dasharray: 3 3; stroke: var(--wg-c-u); }
+.wgsim .wg-slot-assigned { stroke: var(--wg-blue); }
+.wgsim .wg-slot-completing { stroke: var(--wg-teal); stroke-dasharray: 3 3; }
+.wgsim .wg-slot-done { stroke: var(--wg-green); }
+.wgsim .wg-slot-partiallydone { stroke: var(--wg-amber); }
+.wgsim .wg-slot-failed { stroke: var(--wg-red); }
+.wgsim .wg-slot-cancelled { stroke: var(--wg-c-np); }
+.wgsim .wg-glow-done { fill: var(--wg-green-soft); }
+.wgsim .wg-glow-failed { fill: var(--wg-red-soft); }
+.wgsim .wg-glow-partial { fill: #f4e6c4; }
+.wgsim .wg-slot-fill { fill: var(--wg-blue); opacity: 0.22; pointer-events: none; }
+.wgsim .wg-slot-fill-completing { fill: var(--wg-teal); }
+[data-md-color-scheme="slate"] .wgsim .wg-slot-fill { opacity: 0.4; }
+/* A swatch is the real element, drawn small: square where it leads a row of the counts tables, and its own shape in a legend,
+   where the drawing carries the size it wants. */
+.wgsim .wgsim-swatch, .wgsim-help .wgsim-swatch { display: inline-block; width: 14px; height: 14px; margin: 0 5px -3px 0; border: 0; border-radius: 0; vertical-align: baseline; }
+.wgsim .wgsim-swatch .wg-slot { stroke-width: 1.4; }
+.wgsim .wgsim-swatch .wg-slot-reserved, .wgsim .wgsim-swatch .wg-slot-completing { stroke-dasharray: 2 2; }
+.wgsim-panel p.wgsim-slot-channels, .md-typeset .wgsim-panel p.wgsim-slot-channels, .md-typeset .wgsim-help p.wgsim-slot-channels { margin: 0.25rem 0 0; font-size: var(--wg-t-body); line-height: 1.5; white-space: normal; }
+
+.wgsim .wg-token { stroke: var(--wg-card); stroke-width: 1; }
+
+/* the workgraph's states, the current one lit: one row that never wraps, arrows only between the pills, and the lit pill the
+   one way into the workgraph's dialog */
+.wgsim-states { display: flex; align-items: center; gap: 3px 0.25rem; flex-wrap: wrap; min-height: 22px; font-size: var(--wg-t-meta); white-space: nowrap; }
+/* at column width the pills tighten so the eight states stay on one line rather than orphaning the last */
+.wgsim.narrow .wgsim-states { gap: 3px 0.12rem; }
+.wgsim.narrow .wgsim-pill { padding: 0.05rem 0.32rem; }
+.wgsim-arrow { color: var(--wg-line); flex: 0 0 auto; }
+.wgsim-pill { position: relative; display: inline-flex; align-items: center; flex: 0 0 auto; padding: 0.05rem 0.45rem; border-radius: 999px; border: 0.5px solid transparent; color: var(--wg-dim); opacity: 0.55; }
+.wgsim-pill.seen { opacity: 1; color: var(--wg-ink); border-color: var(--wg-line); }
+.wgsim-pill.on { opacity: 1; color: var(--wg-accent); border-color: var(--wg-accent); background: var(--wg-accent-soft); }
+.wgsim-pill.blocked { color: var(--wg-red); border-color: var(--wg-red); background: var(--wg-red-soft); }
+/* blocked on a sign-off nobody has given: the same state, a wait rather than a problem */
+.wgsim-pill.waiting { color: var(--wg-amber); border-color: var(--wg-amber); background: var(--wg-amber-soft); }
+/* the workgraph's pills, in expert mode: a rail row each, the glyph while automatic and the name once by hand, the mode word
+   giving way to the run button while by hand with work */
+.wgsim-wgrail { display: inline-flex; align-items: center; gap: 0.35rem; margin-left: auto; padding-left: 0.6rem; flex: 0 0 auto; }
+.wgsim-wgpill { display: inline-flex; align-items: center; gap: 0.45rem; height: 22px; padding: 0 8px; border: 0.5px solid var(--wg-line); border-radius: var(--wg-radius); background: var(--wg-card); color: var(--wg-dim); font-size: var(--wg-t-meta); cursor: pointer; transition: background-color 0.15s, border-color 0.15s; }
+.wgsim-wgpill:hover { border-color: var(--wg-accent); background: var(--wg-accent-soft); }
+.wgsim-wgpill:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 1px; }
+.wgsim-wgpill-glyph { font-size: var(--wg-t-body); }
+.wgsim-wgpill-name { color: var(--wg-ink); }
+.wgsim-wgpill[data-state="auto"] .wgsim-wgpill-name { display: none; }
+.wgsim-wgpill:not([data-state="auto"]) .wgsim-wgpill-glyph { display: none; }
+.wgsim-wgpill[data-state="auto"] .wgsim-wgpill-mode { color: var(--wg-accent); opacity: 0.75; }
+.wgsim-wgpill[data-state="run"] { background: var(--wg-accent-row); border-color: var(--wg-accent); }
+.wgsim-wgpill-run { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: -4px; padding: 0; border: 0.5px solid var(--wg-accent); border-radius: 4px; background: var(--wg-card); color: var(--wg-accent); cursor: pointer; animation: wg-pulse 1.6s ease-in-out infinite; }
+.wgsim-wgpill-run svg { width: 12px; height: 12px; }
+.wgsim-wgpill-run svg .fill { fill: currentColor; }
+.wgsim-wgpill-run:hover { animation: none; background: var(--wg-accent-soft); }
+
+
+/* the entity dialogs: as wide as a window will bear, so the 1060-unit canvas the machines share is drawn very nearly at its
+   own scale and a box holds eight full names at the app's type size. Both classes are named because .wgsim-help caps every
+   dialog below, and a cap declared later wins at equal specificity, which is how a width written here comes to do nothing. */
+.wgsim-help.wgsim-panel { width: min(980px, 94vw); max-width: none; }
+.wgsim-panel-head { display: flex; align-items: center; gap: 0.5rem; padding: 8px 14px; background: var(--wg-surface-2); border-bottom: 0.5px solid var(--wg-accent); font-family: var(--md-text-font-family, system-ui, sans-serif); font-size: var(--wg-t-title); }
+.wgsim-panel-title { font-weight: 600; }
+.wgsim-panel-sub { color: var(--wg-dim); font-weight: 400; }
+/* the header names the state once, on the right */
+.wgsim-panel-state { margin-left: auto; font-size: var(--wg-t-meta); color: var(--wg-accent); }
+.wgsim-panel-state[data-status="Active"] { color: var(--wg-green); }
+.wgsim-panel-state[data-status$="Blocked"] { color: var(--wg-red); }
+.wgsim-panel-state[data-blocked="wait"] { color: var(--wg-amber); }
+.wgsim-panel-state[data-status="New"], .wgsim-panel-state[data-status="Paused"] { color: var(--wg-dim); }
+/* where a file came from, in the state's place on the lineage dialog */
+.wgsim-panel-origin { color: var(--wg-dim); }
+.wgsim-panel-close { border-radius: 50%; font-size: var(--wg-t-title); line-height: 1; }
+/* the dialog's own ?, beside its close: the toolbar's control, in the shape its neighbour here wears */
+.wgsim-panel-head .wgsim-chip-help { border-radius: 50%; font-size: var(--wg-t-title); line-height: 1; }
+/* the machine region: the entity's machine full width, its legend beneath, a hairline under it; every machine of a card's
+   dialog is drawn on one canvas, so switching tabs never changes the dialog's height */
+/* One pane at a time, and the body holds one height across them, so a dialog never resizes under the tab the reader is
+   pressing. A machine is drawn to the width and centred in what is left; the columns run from the top. The height is what
+   a machine wants plus room for the list a box opens under it: the list takes the slack rather than adding to it, which is
+   what keeps the four tabs one height however many rows a state holds. Against the view as well as in pixels, so a short
+   window gives the height back rather than pushing the dialog past the bottom; there the list has fewer rows in view. */
+.wgsim-panel-body { --wg-pane: min(68vh, 620px); display: flex; flex-direction: column; min-height: var(--wg-pane); }
+/* a pane that holds a list is held to that floor as a ceiling too, which is what makes the list shrink into the slack
+   rather than the pane grow under it: without a definite height there is nothing to divide and a long list pushes the
+   dialog down the page. Only that pane — a pane of columns is free to be taller than the floor, as it is today, and a cap
+   on every pane would clip a member with more hooks and lists than this height holds. */
+.wgsim-panel-body:has(> .wgsim-machine-region > .wgsim-machine-list) { max-height: var(--wg-pane); }
+.wgsim-panel-body > .wgsim-machine-region { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.wgsim-panel-body > .wgsim-panel-cols { flex: 1 1 auto; }
+.wgsim-machine-region { border-bottom: 0.5px solid var(--wg-line); }
+/* the machine keeps its size and the list gives way: a machine is drawn at one scale on every tab, so it is the one thing
+   in this pane that must not shrink */
+.wgsim-machine-region > .wgsim-machine { flex: 0 0 auto; }
+.wgsim-machine-list { flex: 0 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 0.5rem 1rem 0.4rem; border-top: 0.5px solid var(--wg-line); font-size: var(--wg-t-head); }
+.wgsim-machine-list h4 { flex: 0 0 auto; }
+/* packed and wrapping, which is the pool's rule: a strip of chips has a height its line count predicts, so it settles into
+   the slack the machine leaves, where a stack of full-width rows had room for about one of them and scrolled */
+/* Material's `.md-typeset ul:not([hidden])` sets `display: flow-root` at two classes and an element, and `.md-typeset ul li`
+   indents every item, so the strip and its chips each carry a third class to beat them; without it the chips are blocks the
+   width of the pane and the packing never happens at all. */
+.wgsim .wgsim-mlist-chips, .md-typeset .wgsim .wgsim-mlist-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 0; list-style: none; font-size: var(--wg-t-body); }
+/* the chip wears its state's colour, on its border as well as its tag, so a strip holding several states reads at a glance
+   rather than asking the reader to know a four-character tag's state by heart */
+/* the chip's floor is what the renderer divides the strip's width by to know how many fit on a line: a shape, a
+   four-character tag and this padding. It is a floor and not a width, so a tag that ever runs longer still fits. */
+.wgsim .wgsim-mlist-chips li, .md-typeset .wgsim .wgsim-mlist-chips li { display: flex; align-items: center; gap: 5px; min-width: 59px; margin: 0; padding: 1px 7px; border: 0.5px solid currentColor; border-radius: 999px; white-space: nowrap; transition: background-color 0.12s; }
+.wgsim .wgsim-mlist-chips li[data-act] { cursor: pointer; }
+.wgsim .wgsim-mlist-chips li[data-act]:hover { background: var(--wg-accent-soft); }
+.wgsim .wgsim-mlist-chips .wgsim-file-tag { flex: 0 0 auto; color: inherit; }
+/* the count at the end is a chip of the strip and not a row under it, the strip being one shape */
+.wgsim .wgsim-mlist-chips .wgsim-mchip-more { color: var(--wg-dim); border-style: dashed; }
+/* a shape in a chip is the size it is drawn at, against the rule that makes an svg in a dialog the width of the dialog */
+.wgsim .wgsim-mlist-shape, .wgsim-help .wgsim-mlist-shape { display: block; flex: 0 0 auto; width: auto; height: 12px; border: 0; border-radius: 0; }
+.wgsim-mlist-swatch { flex: 0 0 auto; display: inline-flex; align-items: center; }
+.wgsim-mlist-swatch .wgsim-swatch { margin: 0; width: 12px; height: 12px; }
+.wgsim-mlist-empty { flex: 0 0 auto; margin: 0; padding: 0.3rem 0; }
+/* a section that counts what a machine holds opens that machine: the whole section is the control */
+/* the jump is the section itself, so that the panel's one rule policy reaches this column; see `jump()` in the renderer */
+.wgsim-jump { border-radius: 8px; cursor: pointer; transition: background-color 0.15s; }
+.wgsim-jump:hover { background: var(--wg-accent-soft); }
+.wgsim-jump:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 2px; }
+.wgsim-jump h4 .wgsim-aside::after { content: ' \203A'; color: var(--wg-accent); }
+.wgsim-machine-legend, .md-typeset .wgsim-machine-legend { margin: 0.15rem 0 0; font-size: var(--wg-t-micro); line-height: 1.4; color: var(--wg-dim); white-space: normal; }
+.wgsim-mtabs { display: flex; gap: 0.2rem; padding: 0.5rem 1rem 0; }
+.wgsim-mtab { font: inherit; font-size: var(--wg-t-head); color: var(--wg-dim); background: transparent; border: 0.5px solid transparent; border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; padding: 0.3rem 0.6rem; cursor: pointer; white-space: nowrap; transition: color 0.15s, background-color 0.15s; }
+.wgsim-mtab:hover { color: var(--wg-ink); background: var(--wg-surface-2); }
+.wgsim-mtab.on { color: var(--wg-accent); border-bottom-color: var(--wg-accent); }
+.wgsim-mtab-n { color: var(--wg-dim); font-size: var(--wg-t-meta); }
+.wgsim-mtab.wgsim-glow { animation: wg-glow-box 1.8s ease-in-out infinite; }
+
+/* the input state machine: occupancy in the boxes, transitions on the edges, the operator's edges dashed in the accent with a button */
+.wgsim-machine { padding: 0.5rem 1rem 0.4rem; }
+.wgsim .wg-machine, .wgsim-help .wg-machine { display: block; width: 100%; height: auto; border: 0; border-radius: 0; }
+.wgsim .wg-m-box-bg { fill: var(--wg-card); stroke: var(--wg-ink); stroke-width: 1.2; }
+.wgsim .wg-m-box.zero { opacity: 0.35; }
+/* a box with something in it opens the list beneath the machine, and the one chosen wears the accent it is drawn in there */
+.wgsim .wg-m-box.wg-m-pick { cursor: pointer; }
+.wgsim .wg-m-box.wg-m-pick:hover .wg-m-box-bg { fill: var(--wg-accent-soft); }
+.wgsim .wg-m-box.wg-m-pick:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 2px; }
+.wgsim .wg-m-box.wg-m-picked .wg-m-box-bg { fill: var(--wg-accent-soft); stroke: var(--wg-accent); stroke-width: 2; }
+.wgsim .wg-m-name { fill: var(--wg-ink); font-size: var(--wg-g-label); }
+/* the band captions, and the shared trunk into Cancelling: thin, faint and dashed, in its own channel below the spine */
+.wgsim .wg-m-band { fill: var(--wg-dim); font-size: var(--wg-g-micro); opacity: 0.85; }
+.wgsim .wg-m-trunk path { fill: none; stroke: var(--wg-dim); stroke-width: 0.9; stroke-dasharray: 2.5 3.5; opacity: 0.6; }
+.wgsim .wg-m-trunk.zero { opacity: 0.35; }
+.wgsim .wg-m-junction { fill: var(--wg-dim); }
+.wgsim .wg-m-num { font-size: var(--wg-g-title); font-weight: 600; }
+.wgsim .wg-m-p .wg-m-num { fill: var(--wg-green); }
+.wgsim .wg-m-a .wg-m-num { fill: var(--wg-blue); }
+.wgsim .wg-m-f .wg-m-num { fill: var(--wg-red); }
+.wgsim .wg-m-s .wg-m-num { fill: var(--wg-amber); }
+.wgsim .wg-m-u .wg-m-num { fill: var(--wg-c-u); }
+.wgsim .wg-m-np .wg-m-num { fill: var(--wg-c-np); }
+.wgsim .wg-m-edge path { fill: none; stroke: var(--wg-dim); stroke-width: 1.4; }
+.wgsim .wg-m-head { stroke: var(--wg-dim); stroke-width: 1.5; }
+.wgsim .wg-m-edge.zero { opacity: 0.3; }
+.wgsim .wg-m-op path { stroke: var(--wg-accent); stroke-dasharray: 5 4; }
+.wgsim .wg-m-head-op { stroke: var(--wg-accent); }
+.wgsim .wg-m-birth path { stroke-dasharray: none; }
+.wgsim .wg-m-origin { fill: var(--wg-dim); }
+.wgsim .wg-m-born { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+.wgsim .wg-m-seen .wg-m-box-bg { stroke: var(--wg-dim); stroke-width: 1; }
+.wgsim .wg-m-seen .wg-m-name { fill: var(--wg-dim); }
+.wgsim .wg-m-on .wg-m-box-bg { stroke: var(--wg-accent); fill: var(--wg-accent-soft); stroke-width: 1.4; }
+.wgsim .wg-m-on .wg-m-name { fill: var(--wg-accent); }
+.wgsim .wg-m-blocked .wg-m-box-bg { stroke: var(--wg-red); fill: var(--wg-red-soft); }
+.wgsim .wg-m-blocked .wg-m-name { fill: var(--wg-red); }
+/* the same Blocked state while a sign-off waits: amber, a wait rather than a problem */
+.wgsim .wg-m-waiting .wg-m-box-bg { stroke: var(--wg-amber); fill: var(--wg-amber-soft); }
+.wgsim .wg-m-waiting .wg-m-name { fill: var(--wg-amber); }
+.wgsim .wg-m-count-bg { fill: var(--wg-bg); stroke: var(--wg-line); stroke-width: 0.8; }
+.wgsim .wg-m-count-label { fill: var(--wg-dim); font-size: var(--wg-g-micro); }
+.wgsim .wg-m-count.op .wg-m-count-label { fill: var(--wg-accent); }
+/* an operator's button on an edge: a pill in the accent, its segments divided by hairlines, danger in red */
+.wgsim .wg-m-btn { cursor: pointer; }
+.wgsim .wg-m-btn-bg { fill: var(--wg-accent-soft); stroke: var(--wg-accent); stroke-width: 1; }
+/* the line back to the edge, for a button the edge is too short to hold: the button's colour, thinner than a transition */
+.wgsim .wg-m-leader { fill: none; stroke: var(--wg-accent); stroke-width: 1; opacity: 0.6; }
+.wgsim .wg-m-btn.danger .wg-m-leader { stroke: var(--wg-red); }
+.wgsim .wg-m-btn-div { stroke: var(--wg-accent); stroke-width: 1; opacity: 0.6; }
+.wgsim .wg-m-seg-hit { fill: transparent; }
+.wgsim .wg-m-seg:hover .wg-m-seg-hit { fill: var(--wg-accent); }
+.wgsim .wg-m-seg:hover .wg-m-btn-label { fill: #fff; }
+.wgsim .wg-m-btn:hover .wg-m-btn-bg { fill: var(--wg-accent-soft); }
+.wgsim .wg-m-btn-label { fill: var(--wg-accent); font-size: var(--wg-g-label); font-weight: 600; pointer-events: none; }
+.wgsim .wg-m-btn.danger .wg-m-btn-bg { fill: var(--wg-red-soft); stroke: var(--wg-red); }
+.wgsim .wg-m-btn.danger .wg-m-btn-label { fill: var(--wg-red); }
+.wgsim .wg-m-btn.danger .wg-m-seg:hover .wg-m-seg-hit { fill: var(--wg-red); }
+.wgsim-panel-cols { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+.wgsim-cols-wg { grid-template-columns: 42fr 58fr; }
+.wgsim-cols-node { grid-template-columns: 44fr 56fr; }
+.wgsim-panel-cols > div { padding: 0.8rem 1rem 1rem; min-width: 0; }
+.wgsim-panel-cols > div + div { border-left: 0.5px solid var(--wg-line); }
+.wgsim-panel section + section { border-top: 0.5px solid var(--wg-line); margin-top: 13px; padding-top: 15px; }
+.wgsim-panel-cols > div { font-size: var(--wg-t-head); }
+.wgsim-panel h4, .wgsim-lineage-inputs h4 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 0.45rem; min-height: 22px; font-size: var(--wg-t-head); font-weight: 500; letter-spacing: 0; color: var(--wg-accent); }
+.wgsim-h4-right { margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; font-size: var(--wg-t-meta); }
+/* the rows of a section take the size of the column they are in: one number governs what the dialog is read at */
+.wgsim-kv2 { display: grid; grid-template-columns: 10ch 1fr; column-gap: 0.6rem; row-gap: 0.2rem; margin: 0; }
+.wgsim-kv2 dt { color: var(--wg-dim); font-weight: 400; }
+.wgsim-kv2 dd { margin: 0; color: var(--wg-dim); }
+.wgsim-kv2 dd .wgsim-live, .wgsim-panel .wgsim-live { color: var(--wg-ink); }
+.md-typeset .wgsim-kv2 { margin: 0; }
+.md-typeset .wgsim-kv2 dt, .md-typeset .wgsim-kv2 dd { margin: 0; font-weight: 400; }
+.wgsim-aside { margin-left: auto; color: var(--wg-dim); font-size: var(--wg-t-meta); font-weight: 400; white-space: nowrap; }
+.wgsim-live { color: var(--wg-ink); }
+.wgsim-panel p.wgsim-dim { margin: 0 0 0.15rem; }
+.wgsim-st-on { color: var(--wg-green); }
+.wgsim-st-wait { color: var(--wg-amber); }
+.wgsim-st-off { color: var(--wg-dim); }
+.wgsim-hbar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--wg-line); margin: 0.1rem 0 0.3rem; }
+.wgsim-hbar span { display: block; flex: 0 0 auto; }
+.wgsim-hbar .wg-bar-p { background: var(--wg-green); }
+.wgsim-hbar .wg-bar-s { background: var(--wg-amber); }
+.wgsim-hbar .wg-bar-a { background: var(--wg-blue); }
+.wgsim-hbar .wg-bar-f { background: var(--wg-red); }
+.wgsim-hbar .wg-bar-np { background: var(--wg-c-np); }
+.wgsim-hbar .wg-bar-u { background: var(--wg-c-u); }
+/* an input state's tone, wherever the renderer writes the class: the counts table's number, the hooks' decision, the row
+   of a lineage and the rows of the list a machine's box opens. On the table cell alone the same class went uncoloured on
+   every surface that is not a table, which is a tone map read in one of the four places it is written. */
+.wgsim-help .wg-n-p { color: var(--wg-green); }
+.wgsim-help .wg-n-s { color: var(--wg-amber); }
+.wgsim-help .wg-n-a { color: var(--wg-blue); }
+.wgsim-help .wg-n-f { color: var(--wg-red); }
+.wgsim-help .wg-n-u { color: var(--wg-c-u); }
+.wgsim-help .wg-n-np { color: var(--wg-c-np); }
+.wgsim-guard { color: var(--wg-amber); white-space: normal; overflow-wrap: anywhere; }
+.wgsim-panel .wgsim-counts { margin: 0; }
+.wgsim-panel .wgsim-counts td, .md-typeset .wgsim-panel .wgsim-counts td { border-bottom: 0; padding: 0.14rem 0.5rem 0.14rem 0; vertical-align: middle; line-height: 1.4; white-space: nowrap; }
+.wgsim-panel .wgsim-counts td:first-child { flex: 0 0 2.4em; text-align: right; padding-right: 0.7rem; }
+.wgsim-panel .wgsim-counts tr { display: flex; align-items: center; }
+.wgsim-panel .wgsim-counts td:nth-child(2) { flex: 0 0 auto; cursor: help; }
+/* the inputs tab glows while Problematic inputs wait for the operator on that machine */
+@keyframes wg-glow-box { 0%, 100% { box-shadow: 0 0 0 0 var(--wg-accent-soft); } 50% { box-shadow: 0 0 0 3px var(--wg-accent-soft), 0 0 8px 1px var(--wg-accent); } }
+/* The terminal states are a group inside a table, not a section, so a space divides them and not a rule: a 0.5px line
+   means a section boundary everywhere in this panel, and one at two altitudes is a line a reader has to learn twice. */
+.wgsim-panel .wgsim-counts .wgsim-terminal tr:first-child { margin-top: 0.45rem; padding-top: 0; }
+/* the hooks: three columns down the whole list, the dot, the name and what the hook last decided, so a value that wraps
+   wraps inside its own column and never around the name */
+.wgsim-panel .wgsim-hooks, .md-typeset .wgsim-panel .wgsim-hooks { display: grid; grid-template-columns: 7px max-content minmax(0, 1fr); column-gap: 10px; row-gap: 0.35rem; align-items: start; margin: 0; padding: 0; }
+.wgsim-panel .wgsim-hooks li, .md-typeset .wgsim-panel .wgsim-hooks li { display: contents; }
+.wgsim-panel .wgsim-hooks .wgsim-dot { margin-top: 4px; }
+.wgsim-hook-value div { line-height: 1.35; }
+.wgsim-hook-name { white-space: nowrap; line-height: 1.35; }
+.wgsim-hook-value { min-width: 0; color: var(--wg-dim); white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.wgsim-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--wg-dim); opacity: 0.5; flex: 0 0 auto; }
+.wgsim-dot.on { background: var(--wg-green); opacity: 1; }
+.wgsim-hooks li.idle > * { opacity: 0.5; }
+.wgsim-hooks li.idle .wgsim-dot { background: transparent; border: 1px solid var(--wg-dim); opacity: 1; width: 5px; height: 5px; margin-left: 1px; }
+.wgsim-atabs { display: flex; gap: 0.2rem; border-bottom: 0.5px solid var(--wg-line); margin: 0 0 0.5rem; }
+.wgsim .wgsim-atab { font: inherit; font-size: var(--wg-t-head); color: var(--wg-dim); background: transparent; border: 0.5px solid transparent; border-bottom: 2px solid transparent; border-radius: 5px 5px 0 0; padding: 0.2rem 0.5rem 0.25rem; margin-bottom: -0.5px; cursor: pointer; white-space: nowrap; transition: color 0.15s, background-color 0.15s; }
+.wgsim .wgsim-atab:hover { color: var(--wg-ink); background: var(--wg-surface-2); }
+.wgsim .wgsim-atab.on { color: var(--wg-accent); border-bottom-color: var(--wg-accent); }
+.wgsim-atab.empty { opacity: 0.6; }
+.wgsim-atab-body { min-height: 0; }
+.wgsim-panel .wgsim-atab-body p, .md-typeset .wgsim-panel .wgsim-atab-body p { margin: 0.2rem 0 0; font-size: var(--wg-t-body); line-height: 1.5; }
+.wgsim-atab-body .wgsim-alist-items li { display: flex; align-items: center; gap: 0.4rem; padding: 0.12rem 0; }
+.wgsim-atab-status { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; font-size: var(--wg-t-micro); color: var(--wg-dim); white-space: nowrap; }
+.wgsim-atab-status.wgsim-state-pending { color: var(--wg-amber); }
+.wgsim-atab-status.wgsim-state-failed { color: var(--wg-red); }
+.wgsim-atab-status.wgsim-state-passed { color: var(--wg-green); }
+.wgsim-plain { list-style: none; margin: 0; padding: 0; font-size: var(--wg-t-body); }
+.wgsim-plain li { display: flex; align-items: center; gap: 0.4rem; padding: 0.12rem 0; flex-wrap: wrap; }
+.md-typeset .wgsim-plain { margin-left: 0; }
+.md-typeset .wgsim-plain li { margin: 0; }
+
+/* the packer dialog */
+.wgsim-help.wgsim-ask { max-width: min(520px, 94vw); }
+
+/* the action lists as they run: a panel docked under the control band, above the workgraph's header, full width, so it
+   covers nothing; its header has the dialogs' grammar, and the lists sit in one row, a column per entity with the running
+   action marked and, beneath, only what the ticks do not say. Collapsed, the header row stays where it is.
+   The row is a queue that drains to the left: a column never grows into the space its neighbours leave, since it would be
+   moving for a reason the reader cannot see, and the empty space at the right end is the work already done. What a column is
+   wide enough for is its own list, between a floor and a cap — a list carrying two operator buttons and a sentence about them
+   needs more than one at the floor, and a fixed width crushed the sentence to a word a line while the buttons hung over the
+   edge. The widget measures what it drew to count the columns that fit, and the floor is what it assumes for one it has not
+   drawn yet; `invariants.test.js` holds the two files to that number. A column that has moved is let go from where it stood,
+   which is the only thing the transition is for. */
+.wgsim-lists { border-bottom: 0.5px solid var(--wg-accent); background: var(--wg-card); font-size: var(--wg-t-body); }
+.wgsim-lists .wgsim-panel-head { border-bottom: 0; padding: 5px 14px; font-size: var(--wg-t-title); }
+.wgsim-lists-toggle { margin-left: auto; width: 22px; height: 22px; font-size: var(--wg-t-title); line-height: 1; }
+.wgsim-lists-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.45rem 14px; border-top: 0.5px solid var(--wg-line); color: var(--wg-dim); }
+.wgsim-lists-body { display: flex; align-items: flex-start; gap: 20px; padding: 0.35rem 14px 0.5rem; border-top: 0.5px solid var(--wg-line); overflow: hidden; }
+.wgsim-lists-entity { flex: 0 0 auto; min-width: 240px; max-width: 360px; padding: 0.3rem 0; transition: transform 0.22s ease; }
+/* The workgraph's own list is not one of a queue and takes the row. It runs only while the workgraph is Approving or
+   ApprovingBlocked, and a member in either of those is Active or Paused, neither of which runs a list, so it is always the
+   only column there is: nothing to keep a width against, no departure to read into a shift, and at the queue's cap its
+   sentence wrapped and its operator buttons dropped onto a line of their own with a thousand pixels of the band empty beside
+   them. Keyed on the entity rather than on how many columns the row holds, since a column that widened into the space a
+   neighbour left would move every survivor of a draining queue for a reason the reader cannot see. */
+.wgsim-lists-entity[data-list^="workgraph:"] { flex: 1 1 auto; max-width: none; }
+/* what the row has no room for, in a column's place at its right end: a count, and where the lists behind it are to be read */
+.wgsim-lists-more { flex: 0 0 56px; align-self: center; color: var(--wg-dim); font-size: var(--wg-t-meta); }
+.wgsim .wgsim-lists-entity h4 { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin: 0 0 0.25rem; font-size: var(--wg-t-head); font-weight: 600; color: var(--wg-ink); }
+/* Nothing in the heading is shaved to fit. A word cut to a stub takes the width it saves and says less than nothing —
+   `ap…` for `approving`, and a state cut to `ApprovingBlock…` is not a state — so where something has to give it goes
+   whole: the kind is not drawn at all where the panel's header has already said it, and the state keeps its width. What
+   gives instead is the name, which wraps, since it is the one thing saying which list the column is and the row's height
+   is its tallest column's either way. `anywhere` because a member's label is often one unbreakable token. */
+.wgsim .wgsim-lists-entity h4 > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.wgsim .wgsim-lists-entity h4 .wgsim-h4-right { flex: 0 0 auto; }
+.wgsim-lists-status { color: var(--wg-accent); }
+.wgsim-lists-status[data-status="Active"], .wgsim-lists-status[data-status="Finalized"], .wgsim-lists-status[data-status="Completed"] { color: var(--wg-green); }
+.wgsim-lists-status[data-status$="Blocked"] { color: var(--wg-red); }
+.wgsim-lists-status[data-blocked="wait"] { color: var(--wg-amber); }
+.wgsim-lists-status[data-status="Archived"], .wgsim-lists-status[data-status="Cleaned"] { color: var(--wg-dim); }
+.wgsim-lists-entity.done { opacity: 0.7; }
+.wgsim-lists-entity .wgsim-alist-items li { display: flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0; font-size: var(--wg-t-body); }
+/* the buttons drop under the sentence where they do not fit beside it, rather than taking the width from it: a column grows
+   a line taller for nothing, the row's height being its tallest column either way */
+.wgsim-lists-why { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.3rem 0.6rem; margin-top: 0.3rem; color: var(--wg-dim); }
+.wgsim-lists-why > span:first-child { min-width: 0; }
+.wgsim-lists-btns { display: inline-flex; gap: 0.3rem; flex: 0 0 auto; }
+
+/* an output's files, newest first: a header band, a row per file, the two oldest shown dimmed, ten rows before the rest fold
+   behind an expander; the model holds while it is open, so nothing moves under the reader */
+.wgsim-help.wgsim-files { width: min(560px, 94vw); font-size: var(--wg-t-body); }
+.wgsim-files-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.9rem; background: var(--wg-surface-2); border-bottom: 0.5px solid var(--wg-line); font-size: var(--wg-t-title); }
+.wgsim-files-head b { font-weight: 600; }
+.wgsim-files-n { color: var(--wg-accent); }
+.wgsim-files-order { margin-left: auto; color: var(--wg-dim); font-size: var(--wg-t-meta); }
+.wgsim-files-head .wgsim-panel-close { width: 22px; height: 22px; font-size: var(--wg-t-title); }
+.wgsim .wgsim-files-list { max-height: calc(10 * 33px); overflow-y: auto; overscroll-behavior: contain; font-size: var(--wg-t-body); }
+.wgsim .wgsim-files-list li { display: flex; align-items: center; gap: 0.7rem; height: 33px; padding: 0 0.9rem; margin: 0; border-bottom: 0.5px solid var(--wg-line); cursor: pointer; flex-wrap: nowrap; white-space: nowrap; transition: background-color 0.12s; }
+.wgsim .wgsim-files-list li:hover { background: var(--wg-accent-soft); }
+.wgsim .wgsim-files-list li.old { opacity: 0.55; }
+.wgsim .wgsim-files-list li.old:hover { opacity: 1; }
+.wgsim-help .wgsim-file svg { width: 12px; height: 12px; flex: 0 0 auto; border: 0; border-radius: 0; }
+.wgsim-file-tag { flex: 0 0 46px; color: var(--wg-ink); font-weight: 600; }
+.wgsim-file-from { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--wg-dim); }
+.wgsim-file-age { margin-left: auto; color: var(--wg-dim); font-size: var(--wg-t-micro); }
+.wgsim-file-more { color: var(--wg-dim); font-weight: 600; }
+.wgsim-files-empty { padding: 0.7rem 0.9rem; }
+.wgsim-files-older { display: block; width: 100%; padding: 0.55rem 0.9rem; border: 0; background: transparent; color: var(--wg-dim); font: inherit; font-size: var(--wg-t-meta); text-align: left; cursor: pointer; }
+.wgsim-files-older:hover { color: var(--wg-accent); background: var(--wg-accent-soft); }
+/* what runs by hand: the matrix the expert chip opens, a column per sweep and a row per entity. There are only ever five
+   sweeps, so the columns cannot grow; a workgraph of a dozen members adds rows the dialog scrolls. The workgraph is a row
+   like any other, separated from the members it owns by a gutter rather than a heavier rule. */
+.wgsim-help.wgsim-modes { width: max-content; min-width: min(520px, 94vw); max-width: min(1000px, 94vw); }
+.wgsim-modes-count { font-size: var(--wg-t-micro); color: var(--wg-dim); }
+.wgsim-modes-body { padding: 0 1rem 0.5rem; max-height: min(62vh, 560px); overflow: auto; overscroll-behavior: contain; }
+.wgsim-mx { width: 100%; border-collapse: collapse; font-size: var(--wg-t-body); white-space: nowrap; }
+.wgsim-mx th, .wgsim-mx td { padding: 0; font-weight: 400; text-align: center; border-bottom: 0.5px solid var(--wg-line); transition: opacity 0.12s, background-color 0.12s; }
+/* the header stays put while a long list of members scrolls under it */
+.wgsim-mx thead th { position: sticky; top: 0; z-index: 1; padding: 0.55rem 0 0.5rem; background: var(--wg-card); }
+.wgsim-mx-head, .wgsim-mx-cell { padding-left: 0.8rem; padding-right: 0.8rem; }
+.wgsim-mx-rowhead, .wgsim-mx-cell { height: 34px; }
+/* the entity column is as wide as its longest name and no wider, so the sweeps take the rest of the table */
+.wgsim-mx .wgsim-mx-rowhead, .wgsim-mx .wgsim-mx-corner { width: 1%; text-align: left; padding-right: 1.2rem; white-space: nowrap; }
+/* the gutter is spacing and nothing else: the hairline above it is the workgraph row's own */
+.wgsim-mx-gutter td { height: 10px; border-bottom: 0; }
+.wgsim-mx tbody tr:last-child th, .wgsim-mx tbody tr:last-child td { border-bottom: 0; }
+/* an aggregate: the dot and the name, and over them what a click would do. Both forms share one grid cell, so the wider of
+   them reserves the width and the swap moves nothing. */
+.wgsim-mx-label { display: inline-grid; align-items: center; padding: 0.2rem 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.wgsim-mx-label > * { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 0.45rem; }
+.wgsim-mx-label:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: 2px; border-radius: 4px; }
+.wgsim-mx-name { color: var(--wg-ink); }
+.wgsim-mx-swap { visibility: hidden; justify-self: start; color: var(--wg-accent); }
+.wgsim-mx-label:hover .wgsim-mx-shown, .wgsim-mx-label:focus-visible .wgsim-mx-shown { visibility: hidden; }
+.wgsim-mx-label:hover .wgsim-mx-swap, .wgsim-mx-label:focus-visible .wgsim-mx-swap { visibility: visible; }
+/* one hue, the fill as the scale: hollow none by hand, the left half some, solid every one */
+.wgsim-help .wgsim-mx-dot { display: block; width: 12px; height: 12px; flex: 0 0 auto; border: 0; border-radius: 0; }
+.wgsim-mx-ring { fill: none; stroke: var(--wg-accent); stroke-width: 1.2; }
+.wgsim-mx-fill { fill: var(--wg-accent); stroke: none; }
+/* a cell is only ever auto or manual; by hand is what the reader is managing, so it is the state that carries the weight */
+.wgsim-mx-mode { display: inline-block; min-width: 4.6em; padding: 0.2rem 0.55rem; border: 0; border-radius: var(--wg-radius); background: none; color: var(--wg-accent); opacity: 0.55; font: inherit; cursor: pointer; }
+.wgsim-mx-mode[data-mode="manual"] { background: var(--wg-surface-2); color: var(--wg-dim); opacity: 1; }
+.wgsim-mx-mode:hover { outline: 0.5px solid var(--wg-accent); opacity: 1; }
+.wgsim-mx-mode:focus-visible { outline: 2px solid var(--wg-accent); outline-offset: -1px; }
+/* a sweep the entity does not have: the dash states that the workgraph has no feeder, where a blank would read as unloaded */
+.wgsim-mx-dash { color: var(--wg-dim); opacity: 0.3; }
+/* the scope an aggregate covers, lit before the click, with everything outside it dropped back */
+.wgsim-mx[data-scope] th, .wgsim-mx[data-scope] td { opacity: 0.5; }
+.wgsim-mx[data-scope] .wgsim-mx-in { opacity: 1; background: var(--wg-surface-2); }
+.wgsim-mx[data-scope] .wgsim-mx-in.wgsim-mx-dash { opacity: 0.3; }
+/* by hand is the second surface, and so is the tint: inside a lit scope the cell keeps its edge so the two stay apart */
+.wgsim-mx[data-scope] .wgsim-mx-in .wgsim-mx-mode[data-mode="manual"] { outline: 0.5px solid var(--wg-line); }
+.wgsim-modes-foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.55rem 1rem; border-top: 0.5px solid var(--wg-line); background: var(--wg-surface-2); }
+.wgsim-modes-foot .wgsim-btn { border-radius: var(--wg-radius); min-width: 5.5em; }
+/* the footer reads the dot: one hue, the fill as the scale */
+.wgsim-modes-legend { display: flex; align-items: center; gap: 0.9rem; color: var(--wg-dim); font-size: var(--wg-t-meta); }
+.wgsim-modes-legend > span { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+/* the walk through what waits: a header band and a footer band on the dialog's own surface, the fact of the step between them, everything
+   at the app's 11px; the chip beside manual that counts the steps while the dialog is closed is muted like every chip */
+/* as wide as its content and no wider, so the strip's geometry stays legible rather than stretched to a fixed width */
+.wgsim-help.wgsim-steps { width: max-content; min-width: min(460px, 94vw); max-width: min(620px, 94vw); font-size: var(--wg-t-body); }
+.wgsim-steps::backdrop { background: rgba(10, 12, 20, 0.72); }
+.wgsim-steps code { font-size: inherit; }
+.wgsim-steps-head, .wgsim-steps-foot { display: flex; align-items: center; gap: 1rem; padding: 0.55rem 0.9rem; background: var(--wg-surface-2); }
+.wgsim-steps-head { justify-content: space-between; border-bottom: 0.5px solid var(--wg-line); font-size: var(--wg-t-title); }
+.wgsim-steps-foot { border-top: 0.5px solid var(--wg-line); }
+.wgsim-steps-count { color: var(--wg-dim); font-size: var(--wg-t-micro); white-space: nowrap; }
+.wgsim-steps-body { padding: 0.7rem 0.9rem 0.6rem; }
+.wgsim-steps-body p { margin: 0.4rem 0; line-height: 1.5; }
+.wgsim-steps-body .wgsim-alist-items { margin: 0.4rem 0; }
+.wgsim-steps-current .wgsim-state-item { font-weight: 600; }
+.wgsim-steps-fact { margin: 0 0 0.6rem; }
+.wgsim-steps-strip { position: relative; border: 0.5px solid var(--wg-line); border-radius: 8px; padding: 0.3rem 0.5rem 1.3rem; margin-bottom: 0.6rem; overflow-x: auto; }
+.wgsim-steps-strip svg, .wgsim-help .wgsim-steps-strip svg { display: block; width: auto; max-width: 100%; height: auto; border: 0; }
+.wgsim-steps-strip .wg-bg { fill: transparent; }
+.wgsim-steps-strip .wgsim-link { position: absolute; right: 0.6rem; bottom: 0.35rem; white-space: nowrap; }
+.wgsim-steps-choices { display: flex; flex-direction: column; gap: 0.35rem; }
+.wgsim-steps-choice { display: flex; align-items: center; gap: 0.7rem; width: 100%; height: 30px; padding: 0 0.7rem; border: 0.5px solid var(--wg-line); border-radius: 8px; background: transparent; color: var(--wg-ink); font: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
+.wgsim-steps-choice:hover { border-color: var(--wg-accent); }
+.wgsim-steps-choice.on { border-color: var(--wg-accent); background: var(--wg-accent-soft); }
+.wgsim-steps-choice[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.wgsim-steps-choice[aria-disabled="true"]:hover { border-color: var(--wg-line); }
+.wgsim-radio { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--wg-dim); flex: 0 0 auto; }
+.wgsim-steps-choice.on .wgsim-radio { border-color: var(--wg-accent); background: var(--wg-accent); }
+.wgsim-steps-dest { flex: 0 0 120px; font-weight: 600; white-space: nowrap; }
+.wgsim-steps-choice.on .wgsim-steps-dest { color: var(--wg-accent); }
+.wgsim-steps-what { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--wg-dim); }
+.wgsim-steps-default { margin-left: auto; color: var(--wg-accent); font-size: var(--wg-t-micro); }
+.wgsim-steps-what-row { display: flex; justify-content: flex-end; margin-top: 0.45rem; }
+.wgsim-steps-prose { margin-top: 0.2rem; color: var(--wg-dim); }
+.wgsim-link { background: none; border: 0; padding: 0; font: inherit; color: var(--wg-dim); cursor: pointer; }
+.wgsim-link:hover { color: var(--wg-accent); text-decoration: underline; }
+.wgsim-steps-foot .wgsim-link { color: var(--wg-ink); border-bottom: 1px dotted var(--wg-dim); line-height: 1.2; }
+.wgsim-steps-foot .wgsim-link:hover { color: var(--wg-accent); border-bottom-color: var(--wg-accent); text-decoration: none; }
+.wgsim-grow { flex: 1 1 auto; }
+.wgsim-steps-foot .wgsim-btn { border-radius: var(--wg-radius); min-width: 5.5em; }
+.wgsim.narrow .wgsim-steps-dest { flex-basis: 96px; }
+.wgsim .wg-lin-name { fill: var(--wg-ink); }
+@media (prefers-reduced-motion: reduce) { .wgsim .wg-rail-run { animation: none; } }
+.wgsim-ask-body p { margin: 0.5rem 0; line-height: 1.5; }
+.wgsim-ask-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.8rem; }
+
+/* help dialog */
+.wgsim-help { border: 1px solid var(--wg-line); border-radius: 12px; padding: 0; max-width: min(760px, 94vw); background: var(--wg-card); color: var(--wg-ink); font-size: var(--wg-t-body); }
+.wgsim-help::backdrop { background: rgba(10, 12, 20, 0.45); }
+.wgsim-help-body { padding: 0.8rem 1rem 1rem; }
+.wgsim-help-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-family: var(--md-text-font-family, system-ui, sans-serif); font-size: var(--wg-t-title); }
+.wgsim-help svg { display: block; width: 100%; height: auto; border: 1px solid var(--wg-line); border-radius: 8px; }
+/* Every legend is generated: one row per entry of the map the drawing itself reads, its swatch drawn by the function that
+   draws the real element. Nothing here styles a swatch — that would be the hand-written legend coming back by another door.
+   Material's `.md-typeset ul:not([hidden])` sets `display: flow-root` at two classes and an element, so every rule that has to
+   beat it carries a third class. */
+.wgsim .wgsim-legend, .md-typeset .wgsim .wgsim-legend { display: flex; flex-direction: column; gap: 0.22rem; margin: 0.45rem 0 0; padding: 0; list-style: none; }
+.wgsim .wgsim-legend li, .md-typeset .wgsim .wgsim-legend li { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0; line-height: 1.45; }
+/* in a legend a swatch is whatever shape it drew itself, not the square the counts tables want */
+.wgsim .wgsim-legend .wgsim-swatch, .wgsim-help .wgsim-legend .wgsim-swatch { flex: 0 0 auto; width: auto; height: auto; margin: 1px 0 0; }
+.wgsim .wgsim-legend > li > span { min-width: 0; }
+/* under a machine the legend is a caption rather than a table, and a machine is wide: it runs along one line */
+.wgsim .wgsim-machine-legend .wgsim-legend, .md-typeset .wgsim .wgsim-machine-legend .wgsim-legend { flex-flow: row wrap; gap: 0.1rem 0.9rem; margin: 0; }
+.wgsim .wgsim-machine-legend .wgsim-legend li { align-items: center; gap: 0.3rem; }
+.wgsim .wgsim-machine-legend .wgsim-swatch { margin: 0; }
+.wgsim-legend-log, .wgsim .wgsim-legend-log { height: auto; width: 190px; margin: 0; padding: 0; overflow: visible; list-style: none; }
+.wgsim .wgsim-legend-log li { display: flex; gap: 8px; margin: 0; padding: 0; white-space: nowrap; }
+.wgsim .wgsim-legend-log .wgsim-log-n { display: none; }
+.wgsim .wgsim-legend-log .wgsim-log-s { flex: 0 0 62px; }
+.wgsim-table { width: 100%; border-collapse: collapse; margin: 0 0 0.6rem; font-size: var(--wg-t-body); }
+.wgsim-table td { text-align: left; padding: 0.2rem 0.5rem 0.2rem 0; border-bottom: 1px solid var(--wg-line); vertical-align: top; }
+.wgsim-dim { color: var(--wg-dim); }
+.md-typeset .wgsim-table { display: table; font-size: var(--wg-t-body); }
+
+/* ------------------------------------------------------------------ */
+/* Help mode                                                          */
+/* ------------------------------------------------------------------ */
+
+/* The marks sit on a layer of their own, over the widget and outside its flow, so that turning help on and off cannot move a
+   pixel of anything underneath. The layer is always in the DOM and empty while help is off; nothing is reserved for it. */
+.wgsim-marks { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.wgsim-marks > * { pointer-events: auto; }
+
+/* A mark straddles its region's corner rather than sitting inside it, so it covers as little of the region as it can. */
+.wgsim-mark {
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wg-accent);
+  border-radius: 50%;
+  background: var(--wg-card);
+  color: var(--wg-accent);
+  font: inherit;
+  font-size: var(--wg-t-micro);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  animation: wg-mark-in 0.16s ease-out;
+}
+.wgsim-mark:hover, .wgsim-mark:focus-visible { background: var(--wg-accent-soft); outline: none; }
+.wgsim-mark.on { background: var(--wg-accent); color: var(--wg-card); }
+@keyframes wg-mark-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wgsim-mark { animation: none; } }
+
+/* A disclosure opens over the region it explains, and the ? panel under the chip that opened it. Neither is a dialog: the
+   model runs on underneath, one can be closed and the next opened, and the marks stay throughout. */
+.wgsim-disc {
+  position: absolute;
+  z-index: 6;
+  max-height: 62%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0.5px solid var(--wg-accent);
+  border-radius: var(--wg-radius);
+  background: var(--wg-card);
+  box-shadow: 0 6px 20px rgba(10, 12, 20, 0.18);
+  font-size: var(--wg-t-body);
+  color: var(--wg-ink);
+}
+.wgsim-guide { max-height: min(34vh, 72%); }
+.wgsim-disc-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 6px 8px 6px 12px; background: var(--wg-surface-2); border-bottom: 0.5px solid var(--wg-accent); }
+.wgsim-disc-head b { font-weight: 600; color: var(--wg-accent); }
+.wgsim-disc-close { width: 20px; height: 20px; border-radius: 50%; font-size: var(--wg-t-head); line-height: 1; flex: 0 0 auto; }
+.wgsim-disc-body { padding: 0.6rem 0.75rem; }
+.wgsim-disc-body p, .md-typeset .wgsim-disc-body p { margin: 0 0 0.45rem; font-size: var(--wg-t-body); line-height: 1.5; }
+.wgsim-disc-body p:last-child, .md-typeset .wgsim-disc-body p:last-child { margin-bottom: 0; }
+.wgsim-disc-body h5, .md-typeset .wgsim-disc-body h5 { margin: 0.7rem 0 0.25rem; font-size: var(--wg-t-head); font-weight: 500; color: var(--wg-accent); }
+.wgsim-disc-note { color: var(--wg-accent); }
+.wgsim-disc-links { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.5rem 0.75rem 0.6rem; border-top: 0.5px solid var(--wg-line); }
+.wgsim-disc-links a.wgsim-btn, .md-typeset .wgsim-disc-links a.wgsim-btn { text-decoration: none; color: var(--wg-dim); }
+.wgsim-disc-links a.wgsim-btn:hover, .md-typeset .wgsim-disc-links a.wgsim-btn:hover { color: var(--wg-accent); }
+
+/* the ? panel's two lists: the keys, and the words. Nothing in either says where anything sits. */
+.wgsim-guide-keys, .wgsim-guide-nouns, .md-typeset .wgsim-guide-keys, .md-typeset .wgsim-guide-nouns { display: grid; grid-template-columns: max-content 1fr; gap: 0.16rem 0.7rem; margin: 0; }
+.wgsim-guide-keys dt, .wgsim-guide-nouns dt, .md-typeset .wgsim-guide-keys dt, .md-typeset .wgsim-guide-nouns dt { margin: 0; font-weight: 500; color: var(--wg-accent); }
+.wgsim-guide-keys dd, .wgsim-guide-nouns dd, .md-typeset .wgsim-guide-keys dd, .md-typeset .wgsim-guide-nouns dd { margin: 0; color: var(--wg-ink); line-height: 1.45; }

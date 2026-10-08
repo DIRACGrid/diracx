@@ -65,6 +65,8 @@ repos:
         additional_dependencies:
           - mdformat-mkdocs
           - mdformat-gfm
+          # playground.md carries Material front matter; without this mdformat rewrites the --- fences as rules
+          - mdformat-frontmatter
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.3
@@ -73,7 +75,9 @@ repos:
         # Configuration lives in [tool.codespell] in pyproject.toml
         additional_dependencies:
           - tomli
-        exclude: pixi\.lock$
+        # hooks/elkjs.py drops the layout engine into docs/assets/js/vendor/ at build time;
+        # codespell "corrects" minified third-party identifiers there (nwe -> new)
+        exclude: (pixi\.lock|docs/assets/js/vendor/.*)$
 
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.20.0
