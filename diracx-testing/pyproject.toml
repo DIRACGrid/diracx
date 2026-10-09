@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "pytest",
+    "pytest<9.1.0", # Breaking changes https://docs.pytest.org/en/stable/changelog.html#pytest-9-1-0-2026-06-13
     "pytest-asyncio>=1.1.0",
     "pytest-cov",
     "pytest-lazy-fixtures",
@@ -22,7 +22,7 @@ dependencies = [
     "joserfc",
     "freezegun",
     "sqlalchemy",
-    "uuid-utils",
+    "uuid-utils<1.0.0", # Breaking changes in the API https://github.com/aminalaee/uuid-utils/releases/tag/1.0.0
     "pytest-github-actions-annotate-failures",
     # For the minimal OpenTelemetry collector (diracx.testing.otel_printer)
     "grpcio",

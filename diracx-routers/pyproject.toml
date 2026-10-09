@@ -14,13 +14,13 @@ classifiers = [
 ]
 dependencies = [
     "cachetools",
-    "diracx-core",
+    "diracx-core[otel]",
     "diracx-logic",
     "diracx-db",
     "diracx-tasks",
     "python-dotenv",    # TODO: We might not need this
     "python-multipart",
-    "fastapi>=0.121.0",
+    "fastapi>=0.121.0,<0.137.0",
     "httpx2",
     "joserfc",
     "pydantic >=2.10",
@@ -32,7 +32,6 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-otel = ["diracx-core[otel]"]
 testing = ["diracx-testing", "moto[server]", "httpx2-pytest", "freezegun", "pyjwt"]
 types = [
     "types-cachetools",
