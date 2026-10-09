@@ -459,8 +459,11 @@ class Worker:
             # Always persist the result to the backend
             try:
                 if self.broker.result_backend:
+                    task_cls = self.task_class_registry.get(task_message.task_name)
                     await self.broker.result_backend.set_result(
-                        task_message.task_id, result
+                        task_message.task_id,
+                        result,
+                        ttl_seconds=getattr(task_cls, "result_ttl_seconds", None),
                     )
             except Exception:
                 logger.exception("Failed to save result")
