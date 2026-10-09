@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "pytest<9.1.0", # Breaking changes https://docs.pytest.org/en/stable/changelog.html#pytest-9-1-0-2026-06-13
+    "pytest",
     "pytest-asyncio>=1.1.0",
     "pytest-cov",
     "pytest-lazy-fixtures",
