@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/DIRACGrid/diracx/compare/v0.6.0...v0.6.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* fix otel dependency such that extensions do not need to change ([#1061](https://github.com/DIRACGrid/diracx/issues/1061)) ([70826da](https://github.com/DIRACGrid/diracx/commit/70826da2d7428c1212b5901efbd0110cbea0d1bf))
+
 ## [0.6.0](https://github.com/DIRACGrid/diracx/compare/v0.5.0...v0.6.0) (2026-10-08)
 
 
