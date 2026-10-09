@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from pytest_lazy_fixtures import lf
 
 from diracx.core.exceptions import InvalidQueryError
 from diracx.testing.mock_osdb import MockOSDBMixin
@@ -10,13 +9,13 @@ from diracx.testing.osdb import DummyOSDB
 
 @pytest.fixture(
     params=[
-        pytest.param(lf("prefilled_dummy_opensearch_db"), id="dummy_opensearch_db"),
-        pytest.param(lf("prefilled_sql_opensearch_db"), id="sql_opensearch_db"),
+        pytest.param("prefilled_dummy_opensearch_db", id="dummy_opensearch_db"),
+        pytest.param("prefilled_sql_opensearch_db", id="sql_opensearch_db"),
     ]
 )
 def prefilled_db(request):
     """Provide a prefilled database for testing."""
-    return request.param
+    return request.getfixturevalue(request.param)
 
 
 async def test_specified_parameters(prefilled_db: DummyOSDB):
