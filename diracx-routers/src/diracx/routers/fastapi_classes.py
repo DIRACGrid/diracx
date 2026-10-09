@@ -7,6 +7,7 @@ import contextlib
 from typing import Any, Callable, TypeVar, cast
 
 from fastapi import APIRouter, FastAPI
+from fastapi.routing import APIRoute
 from starlette.routing import Route
 
 from diracx.tasks.plumbing.depends import auto_inject
@@ -111,6 +112,10 @@ class DiracxRouter(APIRouter):
     def _get_route_index_by_path_and_methods(self, path: str, methods: set[str]) -> int:
         routes = cast(list[Route], self.routes)
         for index, route in enumerate(routes):
+            # router.routes can contain _IncludedRouter objects since
+            # FastAPI 0.137, they don't have path/methods attributes
+            if not isinstance(route, APIRoute):
+                continue
             if route.path == path and methods == route.methods:
                 return index
         return -1
