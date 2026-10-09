@@ -18,7 +18,7 @@ dependencies = [
     "opentelemetry-api>=1.40.0",
     "pydantic >=2.10",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
-    "uuid-utils<1.0.0",
+    "uuid-utils<1.0.1",
     "python-dateutil",
 ]
 dynamic = ["version"]
