@@ -4,10 +4,10 @@ __all__ = ["DiracxRouter"]
 
 import asyncio
 import contextlib
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, Callable, TypeVar
 
 from fastapi import APIRouter, FastAPI
-from starlette.routing import Route
+from fastapi.routing import APIRoute
 
 from diracx.tasks.plumbing.depends import auto_inject
 
@@ -80,6 +80,30 @@ class DiracFastAPI(FastAPI):
         return self.openapi_schema
 
 
+def _pop_overridden_route(router: APIRouter, path: str, methods: set[str]) -> bool:
+    """Remove the first route matching ``path`` and ``methods`` from a router.
+
+    The route is searched in the router itself and, since FastAPI 0.137
+    where ``include_router`` preserves the original routers instead of
+    cloning their routes, in the routers it includes.
+
+    Returns:
+        True if a route was removed.
+    """
+    for index, route in enumerate(router.routes):
+        if isinstance(route, APIRoute):
+            if route.path == path and methods == route.methods:
+                router.routes.pop(index)
+                return True
+        else:
+            included_router = getattr(route, "original_router", None)
+            if isinstance(included_router, APIRouter) and _pop_overridden_route(
+                included_router, path, methods
+            ):
+                return True
+    return False
+
+
 class DiracxRouter(APIRouter):
     def __init__(
         self,
@@ -100,19 +124,8 @@ class DiracxRouter(APIRouter):
     def add_api_route(self, path: str, endpoint: Callable[..., Any], **kwargs):
         endpoint = auto_inject(endpoint)
 
-        route_index = self._get_route_index_by_path_and_methods(
-            path, set(kwargs.get("methods", []))
-        )
-        if route_index >= 0:
-            self.routes.pop(route_index)
+        _pop_overridden_route(self, path, set(kwargs.get("methods", [])))
 
         return super().add_api_route(path, endpoint, **kwargs)
-
-    def _get_route_index_by_path_and_methods(self, path: str, methods: set[str]) -> int:
-        routes = cast(list[Route], self.routes)
-        for index, route in enumerate(routes):
-            if route.path == path and methods == route.methods:
-                return index
-        return -1
 
     ######

@@ -4,6 +4,8 @@ import inspect
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
+from fastapi.routing import APIRoute, iter_route_contexts
+
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.routers.access_policies import (
     BaseAccessPolicy,
@@ -31,7 +33,12 @@ def test_all_routes_have_policy():
         if not router.diracx_require_auth:
             continue
 
-        for route in router.routes:
+        # router.routes can be a tree since FastAPI 0.137, iterate over the
+        # routes of the whole tree
+        for route_context in iter_route_contexts(router.routes):
+            route = route_context.original_route
+            if not isinstance(route, APIRoute):
+                continue
             # If the route is decorated with the diracx_open_access
             # decorator, we skip it
             if getattr(route.endpoint, "diracx_open_access", False):
