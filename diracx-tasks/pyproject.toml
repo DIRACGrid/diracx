@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-    "diracx-core",
+    "diracx-core[otel]",
     "diracx-db",
     "diracx-logic",
     "fastapi>=0.121.0",
@@ -27,7 +27,6 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-otel = ["diracx-core[otel]"]
 testing = ["diracx-testing", "fakeredis"]
 
 [project.scripts]

@@ -54,16 +54,16 @@ def non_mocked_hosts(test_client) -> list[str]:
 
 
 @pytest.fixture
-async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
+async def auth_httpx_mock(httpx2_mock: HTTPXMock, monkeypatch):
     data_dir = Path(__file__).parent.parent / "data"
     path = "idp-server.invalid/.well-known/openid-configuration"
-    httpx_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
+    httpx2_mock.add_response(url=f"https://{path}", text=(data_dir / path).read_text())
 
     # Since 0.32.0, pytest_httpx does not expect to be queried multiple
     # times for the same URL. So force it to allow it
     # By default, it should be done on a per test bases, but well...
     # https://colin-b.github.io/pytest_httpx/#allow-to-register-a-response-for-more-than-one-request
-    httpx_mock._options.can_send_already_matched_responses = True
+    httpx2_mock._options.can_send_already_matched_responses = True
 
     server_metadata = await get_server_metadata(f"https://{path}")
 
@@ -75,11 +75,11 @@ async def auth_httpx_mock(httpx_mock: HTTPXMock, monkeypatch):
             return httpx2.Response(status_code=200, json={"id_token": id_token})
         return httpx2.Response(status_code=401)
 
-    httpx_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
+    httpx2_mock.add_callback(custom_response, url=server_metadata["token_endpoint"])
 
     monkeypatch.setattr("diracx.logic.auth.utils.parse_id_token", fake_parse_id_token)
 
-    yield httpx_mock
+    yield httpx2_mock
 
     _server_metadata_cache.clear()
 
