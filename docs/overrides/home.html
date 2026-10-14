@@ -1,0 +1,133 @@
+{% extends "main.html" %}
+
+<!--
+  The landing page (docs/index.md). The hero is drawn here rather than in the page's markdown because it spans the whole
+  width under the tabs, which the theme only offers to a template, and because its markup is for the hero script
+  (assets/js/home.js) rather than for prose. What DiracX offers and where to start are bands across the hero's foot,
+  so the whole landing page shares one background.
+
+  The hero plays three short animations in turn: a workgraph running, data and jobs moving between sites, and the
+  communities that run DIRAC. The animations are SVG drawn by the script from the stage's shape, so a wide screen gets a
+  wide picture and a phone a tall one; everything a reader needs is in this markup, so without the script the hero is
+  the title and the two links.
+-->
+
+{% block hero %}
+  <section class="dxh" data-dxh aria-labelledby="dxh-title">
+    <div class="dxh__stage" data-dxh-stage>
+      <div class="dxh__sky" data-dxh-sky aria-hidden="true"></div>
+      <div class="dxh__act is-active" data-dxh-act data-dxh-scene="workgraph"></div>
+      <div class="dxh__act" data-dxh-act data-dxh-scene="grid" aria-hidden="true"></div>
+      <div class="dxh__act dxh__act--communities" data-dxh-act aria-hidden="true">
+        <div class="dxh__communities">
+          <p class="dxh__kicker">On DiracX</p>
+          <ul class="dxh__chips">
+            <li class="dxh__chip dxh__chip--lead">LHCb</li>
+          </ul>
+          <p class="dxh__kicker">DIRAC communities</p>
+          <ul class="dxh__chips">
+            <li class="dxh__chip">CMS</li>
+            <li class="dxh__chip">Belle II</li>
+            <li class="dxh__chip">CTAO</li>
+            <li class="dxh__chip">JUNO</li>
+            <li class="dxh__chip">BES III</li>
+            <li class="dxh__chip">CEPC</li>
+            <li class="dxh__chip">ILC · CLIC · FCC</li>
+          </ul>
+          <p class="dxh__kicker">Shared DIRAC services</p>
+          <ul class="dxh__services">
+            <li><strong>EGI Workload Manager</strong> WeNMR, biomed, Pierre Auger, KM3NeT</li>
+            <li><strong>GridPP</strong> T2K, NA62, Euclid</li>
+            <li><strong>JINR</strong> NICA, BM@N, MPD, Baikal</li>
+          </ul>
+          <a class="dxh__add" href="{{ 'user/reference/known-installations/' | url }}">Add your community →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="dxh__copy">
+      <!--
+        The full DiracX logo from DIRACGrid/management's branding: as drawn for the light scheme, and with its greys
+        lightened for the dark one. home.css shows the one that matches the scheme.
+      -->
+      <h1 class="dxh__title" id="dxh-title">
+        <img class="dxh__logo dxh__logo--on-dark" src="{{ 'assets/images/diracx-logo-full-dark.svg' | url }}" alt="DiracX" width="578" height="170">
+        <img class="dxh__logo dxh__logo--on-light" src="{{ 'assets/images/diracx-logo-full.svg' | url }}" alt="DiracX" width="578" height="170">
+      </h1>
+      <p class="dxh__tagline">The next-generation distributed computing platform for scalable, secure, and user-friendly scientific workflows.</p>
+      <div class="dxh__actions">
+        <a class="dxh__button dxh__button--primary" href="{{ 'user/tutorials/getting-started/' | url }}">Get started</a>
+        <a class="dxh__button" href="{{ 'playground/' | url }}">Write a workgraph</a>
+      </div>
+    </div>
+
+    <!--
+      The buttons that pick an animation, along the foot of the picture: under the copy on a wide screen, under the
+      picture once the hero stacks. The script shows them, since without it there is nothing to pick.
+    -->
+    <div class="dxh__tabs" role="group" aria-label="Animations" data-dxh-controls hidden>
+      <button type="button" class="dxh__tab" data-dxh-tab aria-pressed="true">
+        <span class="dxh__tab-label">Workgraphs</span>
+        <span class="dxh__progress" aria-hidden="true"><span></span></span>
+      </button>
+      <button type="button" class="dxh__tab" data-dxh-tab aria-pressed="false">
+        <span class="dxh__tab-label">Grid Computing</span>
+        <span class="dxh__progress" aria-hidden="true"><span></span></span>
+      </button>
+      <button type="button" class="dxh__tab" data-dxh-tab aria-pressed="false">
+        <span class="dxh__tab-label">Communities</span>
+        <span class="dxh__progress" aria-hidden="true"><span></span></span>
+      </button>
+    </div>
+
+    <ul class="dxh__features">
+      <li class="dxh__feature">
+        <p class="dxh__feature-title">{% include ".icons/material/sitemap-outline.svg" %} Standard workflows</p>
+        <p class="dxh__feature-text">Write workflows in CWL once, test them locally, then run them at scale without rewriting.</p>
+      </li>
+      <li class="dxh__feature">
+        <p class="dxh__feature-title">{% include ".icons/material/earth.svg" %} Any resource</p>
+        <p class="dxh__feature-text">Grid sites, clouds, HPC centres and opportunistic capacity, behind one interface.</p>
+      </li>
+      <li class="dxh__feature">
+        <p class="dxh__feature-title">{% include ".icons/material/battery-charging-high.svg" %} Batteries included</p>
+        <p class="dxh__feature-text">Everything a community needs to run its computing comes as standard.</p>
+      </li>
+      <li class="dxh__feature">
+        <p class="dxh__feature-title">{% include ".icons/material/puzzle-outline.svg" %} Extendable</p>
+        <p class="dxh__feature-text">Add your community's logic as an extension.</p>
+      </li>
+    </ul>
+
+    <!-- Where to start: each card is the link, so a click anywhere on it follows it. -->
+    <div class="dxh__start">
+      <h2 class="dxh__start-title">Where do you want to start?</h2>
+      <ul class="dxh__cards">
+        <li>
+          <a class="dxh__card" href="{{ 'user/' | url }}">
+            <span class="dxh__card-title">{% include ".icons/material/chart-areaspline.svg" %} Use DiracX</span>
+            <span class="dxh__card-text">Submit jobs, access data and run workflows on a DiracX installation.</span>
+          </a>
+        </li>
+        <li>
+          <a class="dxh__card" href="{{ 'admin/' | url }}">
+            <span class="dxh__card-title">{% include ".icons/material/server-network.svg" %} Run an installation</span>
+            <span class="dxh__card-text">Install and manage DiracX on Kubernetes, alongside an existing DIRAC.</span>
+          </a>
+        </li>
+        <li>
+          <a class="dxh__card" href="{{ 'dev/' | url }}">
+            <span class="dxh__card-title">{% include ".icons/material/code-braces.svg" %} Develop DiracX</span>
+            <span class="dxh__card-text">Contribute to the codebase, add features, or write an extension for your experiment.</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+{% endblock %}
+
+<!--
+  Everything on the page is in the hero, so the theme's content column has nothing to show; home.css hides it. The
+  block is emptied too, so the page carries no second, theme-made heading.
+-->
+{% block content %}{% endblock %}
