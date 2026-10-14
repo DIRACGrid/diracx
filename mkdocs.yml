@@ -2,6 +2,7 @@ extra_css:
   - assets/css/extra.css
   - assets/css/workgraph-sim.css
   - assets/css/playground.css
+  - assets/css/home.css
 
 # hooks/elkjs.py copies the layout engine out of the environment into the built site; it is a
 # conda dependency of this environment rather than a file in the tree
@@ -18,6 +19,8 @@ extra_javascript:
   # all on a page that carries no workgraph block and no playground mount
   - assets/js/workgraph-cwl.js
   - assets/js/playground.js
+  # The landing page's hero (overrides/home.html); it does nothing on a page without one
+  - assets/js/home.js
 
 site_name: DiracX
 repo_url: https://github.com/DIRACGrid/diracx
