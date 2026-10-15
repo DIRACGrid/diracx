@@ -21,7 +21,7 @@ Statuses are also the operator interface: shifters reason about a workgraph almo
 
 ### Conventions
 
-- Statuses are `VARCHAR(32)` columns (DX-ADR-004), validated in `diracx-logic`. There are no database triggers. Hooks propose transitions; only the core applies them (DX-ADR-006).
+- Statuses are `ENUM` columns over the states below (DX-ADR-004), so the database refuses a status no machine defines. Transitions are validated in `diracx-logic`, against the allowed transitions of each machine, transcribed from these diagrams as dictionaries in `diracx.core.models.transformation`. There are no database triggers. Hooks propose transitions; only the core applies them (DX-ADR-006).
 - Every input and parcel transition writes its counter-journal rows (DX-ADR-009) in the same transaction as the change itself. Workgraph and transformation transitions have no counters; they write a row in the corresponding log table. The last archiving or cleaning action is the exception to the first rule: it deletes a transformation's counter and journal rows outright rather than journalling the statuses it empties.
 - A workgraph and its member transformations are created in one transaction, and every workgraph transition that fans out to members moves the workgraph and the members in one transaction. Everything is in the single DiracX database, so there is never a partially created or partially transitioned workgraph.
 - Hooks and actions run while an entity is in a state, never between states. A transition is a plain database transaction, and entering a state resets the results of that state's actions (DX-ADR-004) in the same transaction.
@@ -54,9 +54,9 @@ stateDiagram-v2
     ApprovingBlocked --> Cancelling : operator
     Active --> Cancelling : operator
     Finalizing --> Cancelling : operator
-    Cancelling --> Cleaned : last member Cleaned
+    Cancelling --> Cancelled : last member Cancelled
     Archived --> [*]
-    Cleaned --> [*]
+    Cancelled --> [*]
 ```
 
 The workgraph status is a roll-up and a control surface. Operator transitions fan out to the member transformations; forward transitions are guarded by member states. The guards are cheap queries, since a workgraph has few members.
@@ -72,8 +72,8 @@ The workgraph status is a roll-up and a control surface. Operator transitions fa
 | `Completed`        | `Completed`                                    |
 | `Archiving`        | `Archiving`, `ArchivingBlocked`, `Archived`    |
 | `Archived`         | `Archived`                                     |
-| `Cancelling`       | `Cancelling`, `CancellingBlocked`, `Cleaned`   |
-| `Cleaned`          | `Cleaned`                                      |
+| `Cancelling`       | `Cancelling`, `CancellingBlocked`, `Cancelled` |
+| `Cancelled`        | `Cancelled`                                    |
 
 **Scouting** is the optional validate-by-doing phase: the transformations run on a reduced input sample to prove the configuration works and to measure resource requirements. It does not test the mechanics of DiracX, only the reliability of the payload at scale and how much it needs.
 
@@ -91,7 +91,7 @@ Operators bring a workgraph to a close at the workgraph level, in one of two way
 
 The transition moves the workgraph and every member to `Finalizing` in one transaction. The members are then finalised upstream first: a member's finalizing actions start once every member it depends on is `Finalized`, so members with no dependency between them are finalised at the same time, and a member that blocks holds back everything downstream of it. When the last member reaches `Finalized` the workgraph moves to `Completed`. If a member's finalisation fails, the operator either recovers it in place (see the transformation machine), or returns the workgraph to `Active`, which returns every member to `Active`, or cancels it.
 
-**Completed**, **Archiving** and **Cancelling** are housekeeping. After a configurable delay a completed workgraph moves to `Archiving`, its members run their archiving actions, and it reaches `Archived` when the last member does. A cancelling workgraph's members run their cleaning actions, and it reaches `Cleaned` when the last member does. Both run upstream first, as finalisation does.
+**Completed**, **Archiving** and **Cancelling** are housekeeping. After a configurable delay a completed workgraph moves to `Archiving`, its members run their archiving actions, and it reaches `Archived` when the last member does. A cancelling workgraph's members run their cleaning actions, and it reaches `Cancelled` when the last member does. Both run upstream first, as finalisation does.
 
 ### Transformation
 
@@ -119,11 +119,13 @@ stateDiagram-v2
     Active --> Cancelling : workgraph to Cancelling
     Paused --> Cancelling : workgraph to Cancelling
     Finalizing --> Cancelling : workgraph to Cancelling
+    FinalizingBlocked --> Cancelling : workgraph to Cancelling
+    Finalized --> Cancelling : workgraph to Cancelling
     Cancelling --> CancellingBlocked : an action fails
     CancellingBlocked --> Cancelling : operator
-    Cancelling --> Cleaned : all actions done, rows cleaned, outputs removed
+    Cancelling --> Cancelled : all actions done, rows cleaned, outputs removed
     Archived --> [*]
-    Cleaned --> [*]
+    Cancelled --> [*]
 ```
 
 A transformation is `Active` while its feeder and packer run and its parcels are dispatched. `Paused` suspends that: an operator pauses a transformation by hand, a hook pauses one whose failure rate has become excessive, and the workgraph holds back members that should not run yet. A standalone transformation takes the transitions marked as the workgraph's on its own, with the same guards.

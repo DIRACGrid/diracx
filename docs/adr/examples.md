@@ -43,8 +43,8 @@ When the last action has passed the workgraph moves to `Active`, which starts th
 
 - The workgraph's `Active` hook extends MCSimulation's feeder arguments in steps rather than requesting the whole workgraph at once. For a request of a billion events it keeps at most 10 million events in flight and extends by another step whenever fewer than a million remain in flight. What counts as in flight may be defined differently per transformation, and in-flight CPU may turn out to be a better measure than events.
 - MCMerge is flushed at least once a week if a notable amount of its input is `Unassigned`.
-- A transformation whose failure rate becomes excessive is moved to `Paused`, with the reason recorded in its `Metadata`.
-- The resource estimates are updated periodically, with `Metadata` recording when they were last updated.
+- A transformation whose failure rate becomes excessive is moved to `Paused`, with the reason recorded in its `Annotations`.
+- The resource estimates are updated periodically, with `Annotations` recording when they were last updated.
 - An operator looks at why inputs ended up `Problematic`, resets the recoverable ones to `Unassigned` and writes the rest off as `NotProcessed`.
 
 ### Finishing
@@ -73,7 +73,7 @@ A failed action moves its transformation to `FinalizingBlocked`. The operator fo
 
 After a configurable delay the completed workgraph moves to `Archiving`, and each member runs its archiving actions: remove the intermediate files, such as the outputs of inputs that ended `NotProcessed`, then `CleanDatabaseEntries`. The workgraph is `Archived` when the last member is.
 
-Cancelling the workgraph at any point before `Completed` moves it and its members to `Cancelling`. Each member runs `CancelInFlightParcels`, which stays `Pending` until every parcel is terminal, then removes its output files, removes its intermediate files, and cleans its database entries. The workgraph is `Cleaned` when the last member is.
+Cancelling the workgraph at any point before `Completed` moves it and its members to `Cancelling`. Each member runs `CancelInFlightParcels`, which stays `Pending` until every parcel is terminal, then removes its output files, removes its intermediate files, and cleans its database entries. The workgraph is `Cancelled` when the last member is.
 
 ### Variant: removal transformations
 
@@ -186,7 +186,7 @@ A single data transformation with no workgraph. It takes the workgraph's transit
 4. When a parcel finishes, its inputs move to `Processed` or `Failed` and the counters follow. The input failure hook sends every failed input to `Problematic`; nothing is retried automatically.
 5. When the feeder reports that no more inputs are coming, and an operator has reset or written off every quarantined input so that every input is terminal, the transformation moves to `Finalizing`. Its finalizing list is probably empty, so it moves on to `Finalized` and `Completed`.
 6. After the cooldown it moves to `Archiving`, runs `CleanDatabaseEntries`, and is `Archived`.
-7. If it is cancelled instead, it runs `CancelInFlightParcels` and `CleanDatabaseEntries` and is `Cleaned`.
+7. If it is cancelled instead, it runs `CancelInFlightParcels` and `CleanDatabaseEntries` and is `Cancelled`.
 
 ## Raw data distribution
 
