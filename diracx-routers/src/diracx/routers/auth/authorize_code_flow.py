@@ -1,6 +1,11 @@
-"""Authorization code flow.
+"""FastAPI routes for the OAuth 2.0 authorization code flow.
 
-See docs/admin/explanations/authentication.md
+The endpoints initiate authentication with a VO identity provider and complete
+the flow when the provider redirects the user back to DiracX. Both steps use
+PKCE.
+
+See Also:
+    docs/admin/explanations/auth-with-diracx.md: End-to-end authentication flow.
 """
 
 from __future__ import annotations
@@ -49,25 +54,37 @@ async def initiate_authorization_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Initiate the authorization flow.
+    """Start an authorization flow with the configured identity provider.
 
-    It will redirect to the actual OpenID server (IAM, CheckIn) to
-    perform a authorization code flow.
+    The request details are stored before the user is redirected to the VO's
+    OpenID provider (such as IAM or CheckIn). Scope may specify a VO, an
+    optional group, and optional security properties. If no group is supplied,
+    the VO's default group is used. If properties are supplied without a group,
+    they are combined with the default group's properties; if both are
+    supplied, they are combined with the selected group's properties.
 
-    Scope details:
-    - If only VO is provided: Uses the default group and its properties for the VO.
+    The user authorization details are stored in a cookie so the flow can be
+    associated with the corresponding user authorization request.
 
-    - If VO and group are provided: Uses the specified group and its properties for the VO.
+    Args:
+        request: Incoming request used to construct the callback URL.
+        response_type: OAuth response type. Only ``"code"`` is supported.
+        code_challenge: PKCE challenge supplied by the client.
+        code_challenge_method: PKCE challenge method. Only ``"S256"`` is supported.
+        client_id: Identifier of the client requesting authorization.
+        redirect_uri: Client URI to redirect to after authorization completes.
+        scope: Requested VO, group, and security properties.
+        state: Opaque client state to return after authorization completes.
+        auth_db: Database used to persist the authorization flow.
+        config: DiracX configuration used to select the identity provider.
+        available_properties: Security properties available for this request.
+        settings: Authentication settings used to validate and configure the flow.
 
-    - If VO and properties are provided: Uses the default group and combines its properties with the
-      provided properties.
+    Returns:
+        A redirect response to the VO identity provider.
 
-    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
-      provided properties.
-
-    We set the user details obtained from the user authorize flow in a cookie
-    to be able to map the authorization flow with the corresponding
-    user authorize flow.
+    Raises:
+        HTTPException: If the client ID, redirect URI, or scope is invalid.
     """
     try:
         redirect_uri = await initiate_authorization_flow_bl(
@@ -101,11 +118,29 @@ async def complete_authorization_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Complete the authorization flow.
+    """Complete the flow after the identity provider redirects back to DiracX.
 
-    The user is redirected back to the DIRAC auth service after completing the IAM's authorization flow.
-    We retrieve the original flow details from the decrypted state and store the ID token requested from the IAM.
-    The user is then redirected to the client's redirect URI.
+    The endpoint retrieves the original flow details from the encrypted state,
+    exchanges the provider's authorization code for an ID token, stores that
+    token, and redirects the user to the client's redirect URI. The original
+    client state is included in the redirect.
+
+    Args:
+        code: Authorization code returned by the identity provider.
+        state: Encrypted state returned by the identity provider.
+        request: Incoming request used to construct the token-exchange callback URL.
+        auth_db: Database containing the pending authorization flow.
+        config: DiracX configuration used to contact the identity provider.
+        settings: Authentication settings used to decrypt state and expire the flow.
+
+    Returns:
+        A redirect response to the client with the authorization code and
+        original state.
+
+    Raises:
+        HTTPException: If the state is invalid (400), the identity provider
+            returns a server error (502), or the authorization code is invalid
+            (401).
     """
     try:
         redirect_uri = await complete_authorization_flow_bl(

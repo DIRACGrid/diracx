@@ -1,3 +1,10 @@
+"""Define access rules for pilot management and pilot metadata reads.
+
+The policy scopes regular users to their own VO, permits service
+administrators cross-VO access, and optionally permits legacy pilots to
+manage a limited set of pilot records.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -15,6 +22,8 @@ from diracx.routers.utils.users import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):
+    """Operations protected by the pilot access policy."""
+
     # Change pilot metadata (status, fields, etc.). Admin-only by default;
     # legacy pilot X.509 identities can be allowed via `allow_legacy_pilots`.
     MANAGE_PILOTS = auto()
@@ -24,12 +33,12 @@ class ActionType(StrEnum):
 
 
 class PilotManagementAccessPolicy(BaseAccessPolicy):
-    """Pilot management access policy.
+    """Authorize pilot management and metadata reads.
 
-    * Every user can read pilots from their own VO.
-    * Service administrators can read across VOs and manage pilots.
-    * Legacy X.509 pilot identities may be allowed to manage themselves when
-      `allow_legacy_pilots=True` is passed by the route.
+    Users can read pilot metadata in their own VO. Service administrators can
+    read across VOs and manage pilots. When enabled by a route, legacy X.509
+    pilot identities can manage one pilot per call, but cannot read pilot
+    metadata.
     """
 
     @staticmethod
@@ -44,6 +53,27 @@ class PilotManagementAccessPolicy(BaseAccessPolicy):
         target_vo: str | None = None,
         allow_legacy_pilots: bool = False,
     ):
+        """Check whether the caller may perform the requested pilot operation.
+
+        Authorization is scoped to the caller's VO, not to ownership of a
+        specific pilot stamp. Service administrators are exempt from VO
+        restrictions.
+
+        Args:
+            policy_name: Name of the access policy being evaluated.
+            user_info: Authenticated identity and security properties.
+            action: Pilot operation to authorize.
+            pilot_db: Database used to verify pilot stamps and their VOs.
+            pilot_stamps: Pilot stamps affected by the operation.
+            target_vo: VO for which new pilots are being registered.
+            allow_legacy_pilots: Whether generic pilot identities may manage pilots.
+
+        Raises:
+            ValueError: If the required action is not provided.
+            HTTPException: If the caller lacks permission (403), a requested
+                pilot does not exist (404), or a requested pilot is outside
+                the caller's VO (403).
+        """
         # Authorization is VO-scoped, not bound to the caller's
         # own pilot stamp. This mirrors DIRAC's PilotManagerHandler, which has
         # no ownership check either.

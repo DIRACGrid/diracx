@@ -1,4 +1,9 @@
-"""Logic for creating and configuring the FastAPI application."""
+"""Create and configure the DiracX FastAPI application.
+
+The factory loads enabled service routers, resolves their settings and
+database dependencies, installs extension overrides, and registers middleware
+and exception handlers.
+"""
 
 from __future__ import annotations
 
@@ -68,17 +73,29 @@ def create_app_inner(
     config_source: ConfigSource,
     all_access_policies: dict[str, Sequence[BaseAccessPolicy]],
 ) -> DiracFastAPI:
-    """Assemble all the application components.
+    """Assemble the application from resolved settings and dependencies.
 
-    When starting the application normally, this method is called by create_app,
-    and the values of the parameters are taken from environment variables or
-    entrypoints.
+    ``create_app`` supplies values discovered from the environment and
+    extension entry points. Tests may call this function directly with mocks
+    or test settings. Dependency overrides provide the configured settings,
+    databases, cacheable sources, and access policies to routes.
 
-    When running tests, the parameters are mocks or test settings.
+    Args:
+        enabled_systems: Names of service routers to load and mount.
+        all_service_settings: Settings instances required by the enabled services.
+        database_urls: Database name-to-URL mapping for SQL databases.
+        os_database_conn_kwargs: Database name-to-connection options for OpenSearch.
+        config_source: Source used to load the DiracX configuration.
+        all_access_policies: Access-policy names mapped to implementations in
+            priority order.
 
-    We rely on the dependency_override mechanism to implement
-    the actual behavior we are interested in for settings, DBs or policy.
-    This allows an extension to override any of these components
+    Returns:
+        A configured FastAPI application.
+
+    Raises:
+        Exception: If no SQL database can be initialized.
+        NotImplementedError: If an enabled service cannot be found or requires
+            a settings class, database, or cacheable source that is unavailable.
 
     Args:
         enabled_systems: this contains the name of all the routers we
@@ -331,21 +348,22 @@ def create_app_inner(
 
 
 def create_app() -> DiracFastAPI:
-    """Load settings from the environment and create the application object.
+    """Load enabled services and settings, then create the application.
 
-    The configuration may be placed in .env files pointed to by
-    environment variables DIRACX_SERVICE_DOTENV.
-    They can be followed by "_X" where X is a number, and the order
-    is respected.
+    Settings can be loaded from dotenv files named by ``DIRACX_SERVICE_DOTENV``
+    and its numbered variants. Services are discovered through entry points;
+    ``DIRACX_SERVICE_<name>_ENABLED=false`` disables a service.
 
-    We then loop over all the diracx.services definitions.
-    A specific route can be disabled with an environment variable
-    DIRACX_SERVICE_<name>_ENABLED=false
-    For each of the enabled route, we inspect which Setting classes
-    are needed.
+    The required settings classes and access-policy implementations are
+    discovered from the enabled service routers before the application is
+    assembled.
 
-    We attempt to load each setting classes to make sure that the
-    settings are correctly defined.
+    Returns:
+        The configured DiracX FastAPI application.
+
+    Raises:
+        NotImplementedError: If a required service or access-policy
+            implementation cannot be found.
     """
     # Load all available routers
     enabled_systems = set()
@@ -391,7 +409,15 @@ def create_app() -> DiracFastAPI:
 
 
 def dirac_error_handler(request: Request, exc: DiracError) -> Response:
-    """Fallback for the domain errors a router did not translate itself."""
+    """Convert an unhandled DiracX domain error to a client error response.
+
+    Args:
+        request: Request that raised the domain error.
+        exc: Domain error not translated by the route.
+
+    Returns:
+        A JSON response with status 400 and the error detail.
+    """
     return JSONResponse(
         status_code=HTTPStatus.BAD_REQUEST,
         content={"detail": exc.detail},
@@ -405,6 +431,13 @@ def document_upsert_error_handler(
 
     The values which cannot be stored are already rejected by the models, so
     reaching this point means the server is at fault, e.g. a mapping conflict.
+
+    Args:
+        request: Request during which document indexing failed.
+        exc: Error raised when the document could not be indexed.
+
+    Returns:
+        A JSON response with status 500 and the error detail.
     """
     logger.error(
         "500 Internal Server Error: %s (path=%s)",
@@ -419,6 +452,15 @@ def document_upsert_error_handler(
 
 
 def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
+    """Return a retryable service-unavailable response for a database error.
+
+    Args:
+        request: Request that could not be served because a database was unavailable.
+        exc: Database availability error to report.
+
+    Returns:
+        A JSON response with status 503, a retry header, and the error detail.
+    """
     logger.warning(
         "503 Service Unavailable: %s (path=%s)",
         exc,
@@ -433,7 +475,14 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
 
 
 def _replace_non_finite(obj):
-    """Replace NaN and infinity with their repr as they cannot be serialized to JSON."""
+    """Replace non-finite floats recursively with JSON-serializable strings.
+
+    Args:
+        obj: Value that may contain nested NaN or infinity values.
+
+    Returns:
+        The value with non-finite floats replaced by their representations.
+    """
     if isinstance(obj, float) and not math.isfinite(obj):
         return repr(obj)
     if isinstance(obj, dict):
@@ -444,6 +493,18 @@ def _replace_non_finite(obj):
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Log a request validation failure and return its JSON-encoded details.
+
+    Non-finite numbers in the validation errors are converted to strings so
+    the error response remains valid JSON.
+
+    Args:
+        request: Request that failed validation.
+        exc: FastAPI request-validation error.
+
+    Returns:
+        A JSON response with status 422 and the validation error details.
+    """
     logger_422.warning(
         "Got validation error: %s in %s %s with body %r",
         exc.errors(),
@@ -472,7 +533,15 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 def find_dependents(
     obj: APIRouter | Iterable[Dependant], cls: type[T]
 ) -> Iterable[type[T]]:
+    """Yield dependency classes used by a router or dependency tree.
 
+    Args:
+        obj: Router or FastAPI dependency nodes to inspect recursively.
+        cls: Base class whose subclasses should be found.
+
+    Yields:
+        Classes bound to dependencies that are subclasses of ``cls``.
+    """
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
@@ -492,9 +561,17 @@ _db_alive_cache: TTLCache = TTLCache(maxsize=1024, ttl=10)
 
 
 async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
-    """Cache the result of pinging the DB.
+    """Return the cached result of checking database availability.
 
-    (exceptions are not cacheable).
+    Availability results are cached for ten seconds. Successful pings are
+    represented by an empty string; database-unavailable errors are returned
+    as their message. Other exceptions are not cached.
+
+    Args:
+        db: SQL or OpenSearch database to ping.
+
+    Returns:
+        Empty string when available, otherwise the cached failure message.
     """
     if db not in _db_alive_cache:
         try:
@@ -508,7 +585,17 @@ async def is_db_unavailable(db: BaseSQLDB | BaseOSDB) -> str:
 
 
 async def db_transaction(db: T2) -> AsyncGenerator[T2]:
-    """Initiate a DB transaction."""
+    """Open a database transaction and verify the connection before yielding.
+
+    Args:
+        db: Database whose transaction context should be entered.
+
+    Yields:
+        The database instance inside its transaction context.
+
+    Raises:
+        DBUnavailableError: If the database ping reports that it is unavailable.
+    """
     # Entering the context already triggers a connection to the DB
     # that may fail
     async with db:
@@ -519,19 +606,44 @@ async def db_transaction(db: T2) -> AsyncGenerator[T2]:
 
 
 async def db_no_transaction(db: T2) -> AsyncGenerator[T2]:
-    """Yield a DB instance without entering a transaction."""
+    """Yield a database instance without opening a transaction.
+
+    Args:
+        db: Database instance to provide to the dependency consumer.
+
+    Yields:
+        The unchanged database instance.
+    """
     yield db
 
 
 class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
-    """Custom FastAPI middleware to verify that the client has the required minimum version."""
+    """Reject requests from clients older than the configured minimum version.
+
+    Requests without a client-version header, or with an unparsable version,
+    are allowed through; invalid-version errors are logged for diagnosis.
+    """
 
     def __init__(self, app: FastAPI):
+        """Initialize middleware and load the minimum supported client version.
+
+        Args:
+            app: FastAPI application wrapped by this middleware.
+        """
         super().__init__(app)
         self.min_client_version = get_min_client_version()
         self.parsed_min_client_version = parse(self.min_client_version)
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        """Check the client version before dispatching a request.
+
+        Args:
+            request: Incoming request to check and forward.
+            call_next: ASGI handler that dispatches the request to the next layer.
+
+        Returns:
+            A 400 JSON response for an obsolete version, or the downstream response.
+        """
         client_version = request.headers.get("DiracX-Client-Version")
 
         try:
@@ -566,7 +678,17 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
         return response
 
     def is_version_too_old(self, client_version: str) -> bool | None:
-        """Verify that client version is ge than min."""
+        """Compare a client version with the configured minimum.
+
+        Args:
+            client_version: Version string supplied by the client.
+
+        Returns:
+            Whether the version is older than the minimum supported version.
+
+        Raises:
+            HTTPException: If ``client_version`` is not a valid version string (400).
+        """
         try:
             return parse(client_version) < self.parsed_min_client_version
         except InvalidVersion as iv_exc:
@@ -577,7 +699,14 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
 
 
 def get_min_client_version():
-    """Extract min client version from entry_points and search for extension."""
+    """Load the minimum client version declared by an extension or DiracX.
+
+    The first non-core version entry point takes precedence. If no extension
+    declares a version, the core DiracX entry point is used.
+
+    Returns:
+        The value loaded from the selected minimum-client-version entry point.
+    """
     matched_entry_points: EntryPoints = entry_points(
         group=DiracEntryPoint.MIN_CLIENT_VERSION
     )

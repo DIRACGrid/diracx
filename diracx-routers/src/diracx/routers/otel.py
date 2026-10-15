@@ -1,3 +1,9 @@
+"""Configure OpenTelemetry instrumentation and record client-version metrics.
+
+The module instruments FastAPI and SQLAlchemy when telemetry is enabled, and
+tracks accepted or rejected requests grouped by the DiracX client version.
+"""
+
 from __future__ import annotations
 
 __all__ = ["instrument_otel", "record_client_version"]
@@ -44,6 +50,17 @@ _excluded_urls = parse_excluded_urls(
 
 
 def _normalise_client_version(header: str | None) -> str:
+    """Normalize a client-version header for use as a metric label.
+
+    Distinct valid versions are tracked up to ``MAX_CLIENT_VERSIONS`` to bound
+    metric cardinality. Additional versions are grouped as ``other``.
+
+    Args:
+        header: Client-version header value, or ``None`` when it is absent.
+
+    Returns:
+        Normalized version, or ``none``, ``invalid``, or ``other`` as applicable.
+    """
     if not header:
         # e.g. the web interface, or a direct HTTP request
         return "none"
@@ -61,9 +78,15 @@ def _normalise_client_version(header: str | None) -> str:
 
 
 def record_client_version(url: str, header: str | None, *, rejected: bool) -> None:
-    """Count a request per client version, and tag its span with the version.
+    """Count a request by client version and tag the active trace span.
 
-    Called by ``ClientMinVersionCheckMiddleware`` for every request.
+    Called by ``ClientMinVersionCheckMiddleware`` for each request. Excluded
+    URLs are ignored for both metrics and span attributes.
+
+    Args:
+        url: Request URL used to check the configured exclusion patterns.
+        header: Client-version header value, if provided.
+        rejected: Whether the request was rejected as using an old client.
     """
     if _excluded_urls.url_disabled(url):
         return
@@ -81,14 +104,16 @@ def record_client_version(url: str, header: str | None, *, rejected: bool) -> No
 
 
 def instrument_otel(app: FastAPI) -> None:
-    """Instrument the application to send OpenTelemetryData.
+    """Configure OpenTelemetry and instrument the FastAPI application.
 
-    The common setup (traces, metrics and logs exporters) is done by
-    :func:`diracx.core.otel.configure_otel`, and is controlled by
-    :class:`diracx.core.settings.OTELSettings`. The SQL queries are
-    instrumented by :func:`diracx.db.sql.instrument_sqlalchemy`.
-    On top of that, the FastAPI application itself is instrumented, which gives
-    a span per request and the ``http.server.*`` metrics.
+    Exporter setup is handled by ``configure_otel`` and controlled by
+    ``OTELSettings``. SQL queries and HTTP requests are instrumented when
+    telemetry providers are available. Health-probe URLs are excluded by
+    default; the exclusion list can be overridden with
+    ``OTEL_PYTHON_FASTAPI_EXCLUDED_URLS``.
+
+    Args:
+        app: FastAPI application to instrument.
     """
     # Add the handler to all uvicorn loggers.
     # Note adding it to just 'uvicorn' or the root logger

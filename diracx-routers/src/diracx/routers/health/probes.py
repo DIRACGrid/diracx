@@ -1,4 +1,8 @@
-"""Health probes for use in Kubernetes and other orchestration systems."""
+"""Expose health probes for Kubernetes and other orchestration systems.
+
+The liveness probe checks that configuration is available, while readiness
+and startup probes also verify connectivity to the authentication database.
+"""
 
 from __future__ import annotations
 
@@ -19,10 +23,16 @@ router = DiracxRouter(require_auth=False)
 
 @router.get("/live", include_in_schema=False)
 async def liveness(config: Config):
-    """Return a simple status to indicate the app is running.
+    """Report whether the application is alive.
 
-    The method doesn't use the config but we want to depend on it so the check
-    fails if the config expires without managing to refresh.
+    The configuration dependency ensures this probe fails if the configuration
+    expires and cannot be refreshed.
+
+    Args:
+        config: Loaded DiracX configuration required for the probe to succeed.
+
+    Returns:
+        A JSON response with the ``live`` status.
     """
     assert (
         config is not None
@@ -32,10 +42,20 @@ async def liveness(config: Config):
 
 @router.get("/ready", include_in_schema=False)
 async def ready(config: Config, auth_db: AuthDB):
-    """Readiness endpoint.
+    """Report whether the application is ready to serve requests.
 
-    Checks if at least the configuration is loaded and the AuthDB database
-    connection is available.
+    The probe requires loaded configuration and a successful authentication
+    database ping.
+
+    Args:
+        config: Loaded DiracX configuration required for the probe to succeed.
+        auth_db: Authentication database to check for connectivity.
+
+    Returns:
+        A JSON response with the ``ready`` status.
+
+    Raises:
+        HTTPException: If the authentication database ping fails (503).
     """
     assert (
         config is not None
@@ -50,10 +70,20 @@ async def ready(config: Config, auth_db: AuthDB):
 
 @router.get("/startup", include_in_schema=False)
 async def startup(config: Config, auth_db: AuthDB):
-    """Startup endpoint.
+    """Report whether startup dependencies are available.
 
-    Checks if at least the configuration is loaded and the AuthDB database
-    connection is available.
+    Startup completes when configuration is loaded and the authentication
+    database responds to a ping.
+
+    Args:
+        config: Loaded DiracX configuration required for the probe to succeed.
+        auth_db: Authentication database to check for connectivity.
+
+    Returns:
+        A JSON response with the ``startup complete`` status.
+
+    Raises:
+        HTTPException: If the authentication database ping fails (503).
     """
     assert (
         config is not None
