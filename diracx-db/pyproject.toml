@@ -37,6 +37,7 @@ PilotAgentsDB = "diracx.db.sql:PilotAgentsDB"
 ResourceStatusDB = "diracx.db.sql:ResourceStatusDB"
 SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
+TransformationDB = "diracx.db.sql:TransformationDB"
 
 [project.entry-points."diracx.dbs.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
