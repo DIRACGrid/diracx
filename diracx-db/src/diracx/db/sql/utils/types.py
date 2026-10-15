@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import sqlalchemy.types as types
 from sqlalchemy import DateTime, Enum
+from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import mapped_column
 from typing_extensions import Annotated
 from uuid_utils import UUID
@@ -286,3 +287,22 @@ class SmarterDateTime(types.TypeDecorator):
 
         # phew...
         return value
+
+
+class MicrosecondDateTime(SmarterDateTime):
+    """A ``SmarterDateTime`` stored as ``DATETIME(6)`` on MySQL and MariaDB."""
+
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        """Select the microsecond-precision type for MySQL.
+
+        Args:
+            dialect: SQLAlchemy dialect the type is used with.
+
+        Returns:
+            The dialect-specific type descriptor.
+        """
+        if dialect.name == "mysql":
+            return dialect.type_descriptor(mysql.DATETIME(fsp=6))
+        return dialect.type_descriptor(DateTime())
