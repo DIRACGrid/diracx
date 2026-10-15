@@ -2,6 +2,7 @@ from __future__ import annotations
 
 __all__ = [
     "BaseSQLDB",
+    "BinaryUUID",
     "EnumBackedBool",
     "SQLDBUnavailableError",
     "_get_columns",
@@ -33,6 +34,7 @@ from .base import (
 )
 from .functions import hash, substract_date, utcnow
 from .types import (
+    BinaryUUID,
     EnumBackedBool,
     datetime_now,
     enum_column,
