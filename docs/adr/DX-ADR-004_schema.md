@@ -41,7 +41,7 @@ The illustrative DDL is MySQL; the SQLAlchemy Core table definitions in `diracx-
 
 - **UUIDv7** identifiers (`BINARY(16)`) wherever an id is minted rather than derived: `Workgraphs`, `Ownership`, `Transformations` and `TransformationOutputs` on the definition side, `Inputs`, `Parcels` and `ParcelOutputs` on the execution side. They are time-ordered, so bulk inserts stay index-local, any worker can mint an id without a round-trip, and a row's creation time is in its key rather than in a column, which is why none of these tables carries `CreatedAt`. `Processes`, `Requirements` and `ResolvedHints` are keyed by content hashes instead (see their sections); `Actions`, the journals and the logs keep `AUTO_INCREMENT` ids, which nothing outside them references.
 - **The bulk tables are clustered on the transformation.** `Inputs` and `ParcelInputs` take `TransformationID` as the first column of the primary key, and `ParcelOutputs` the id of the declared output it belongs to, so each transformation's rows are contiguous, inserts still append within it, and cleaning is a range delete rather than a scatter over the whole table. Their foreign keys are composite for the same reason (see the Rationale). `Parcels` is the exception, keyed on `ParcelID` alone, because a user parcel has no transformation.
-- Everything lives in the **single unified DiracX database** with the WMS/job-submission tables, so every reference shown is an enforced foreign key.
+- Everything lives in the **single unified DiracX database** with the WMS/job-submission tables, so every reference shown is an enforced foreign key, except the dashed links to the counter tables, which DX-ADR-009 deliberately leaves without one.
 - **Status columns are `ENUM`s** whose values are exactly the states of [DX-ADR-005](DX-ADR-005_state_machines.md), so the database refuses a status no state machine defines and the two documents cannot drift apart unnoticed. The *transitions* are still enforced in `diracx-logic` rather than by triggers. Adding a state is then a migration, but appending a value to an `ENUM` rewrites no rows in either MySQL 8.0 or MariaDB while the list stays under 256 entries, so the lists are written in state-machine order and extended at the end. Columns whose value set comes from configuration and extensions rather than from this ADR (`Type`, `Feeder`, `Packer`, `Backend`, `EventType`) stay `VARCHAR`.
 - Both **MySQL 8.0 and MariaDB** are supported targets, so the schema stays within their common dialect. The consequential differences: MariaDB stores `JSON` as validated text rather than a binary format, and `FOR UPDATE SKIP LOCKED` (DX-ADR-006) requires MariaDB 10.6, which sets the version floor.
 
@@ -68,7 +68,7 @@ erDiagram
         uuid7 WorkgraphID PK
         enum Status
         varchar Type "drives default behaviour"
-        json Metadata "human-facing labels"
+        json Annotations "human-facing labels"
         json Hooks "single-hook bindings"
         json StrippedSpec "stripped cwl document"
     }
@@ -91,7 +91,7 @@ erDiagram
         bool FeederEnabled
         varchar Packer
         json PackerArgs
-        json Metadata
+        json Annotations
         json Hooks "single-hook bindings"
     }
     ComputeTransformations {
@@ -170,7 +170,7 @@ erDiagram
         uuid7 TransformationID FK "nullable for user parcels"
         enum Status
         varchar Backend
-        json Metadata
+        json Annotations
     }
     GlideInIDs {
         uuid ParcelID PK "also FK"
@@ -231,10 +231,10 @@ erDiagram
 
 ```mermaid
 erDiagram
-    Transformations ||--o{ TransformationCounters : summarises
-    Transformations ||--o{ TransformationCounterJournal : "pending deltas"
-    Transformations ||--o{ DataParcelsCounters : summarises
-    Transformations ||--o{ DataParcelsCounterJournal : "pending deltas"
+    Transformations ||..o{ TransformationCounters : summarises
+    Transformations ||..o{ TransformationCounterJournal : "pending deltas"
+    Transformations ||..o{ DataParcelsCounters : summarises
+    Transformations ||..o{ DataParcelsCounterJournal : "pending deltas"
     Transformations ||--o{ TransformationLog : logs
     Workgraphs ||--o{ WorkgraphLog : logs
 
@@ -250,7 +250,7 @@ erDiagram
         enum Entity
         enum Status
         bigint Delta
-        varchar BatchTag "claim batch"
+        datetime InsertedAt "set by the database"
     }
     DataParcelsCounters {
         uuid7 TransformationID PK "also FK"
@@ -270,7 +270,7 @@ erDiagram
         bigint LFNSizeAddedDelta
         bigint LFNCountFreedDelta
         bigint LFNSizeFreedDelta
-        varchar BatchTag "claim batch"
+        datetime InsertedAt "set by the database"
     }
     TransformationLog {
         bigint LogID PK
@@ -302,10 +302,10 @@ CREATE TABLE Workgraphs (
     Type         VARCHAR(32)  NOT NULL,      -- VO label driving default behaviour
     Status       ENUM('New', 'Scouting', 'Approving', 'ApprovingBlocked',
                       'Active', 'Finalizing', 'Completed', 'Archiving',
-                      'Archived', 'Cancelling', 'Cleaned')
+                      'Archived', 'Cancelling', 'Cancelled')
                               NOT NULL DEFAULT 'New',
     StrippedSpec JSON         NOT NULL,
-    Metadata     JSON         NULL,
+    Annotations  JSON         NULL,
     Hooks        JSON         NULL,          -- single-hook bindings (DX-ADR-006); ordered lists live in Actions
     UpdatedAt    DATETIME     NOT NULL,
     PRIMARY KEY (WorkgraphID),
@@ -315,7 +315,7 @@ CREATE TABLE Workgraphs (
 
 - **The DAG is declared, and there is still no edge table.** A workgraph is submitted as a CWL document (DX-ADR-007) whose dataflow declares the edges; `StrippedSpec` keeps that declaration, with each step's run body replaced by its `Processes` hash. Inputs arriving from outside the workgraph carry feeder queries; internal edges are served by the edge feeder over the `ParcelOutputs` rows recorded as upstream parcels finish (DX-ADR-006), and a consumer's `FeederArgs` names the declared output it feeds from.
 - `Type`, here and on `Transformations`, is a VO-defined label that selects default behaviour; anything the document leaves unset is filled from the configuration service (DX-ADR-007).
-- There is no name column, here or on `Transformations`. Identity is the `WorkgraphID`; human-facing labels are key-value pairs in `Metadata`, queried by each community's own conventions, and a key that becomes hot can be indexed later with a generated column.
+- There is no name column, here or on `Transformations`. Identity is the `WorkgraphID`; human-facing labels are key-value pairs in `Annotations` (not `Metadata`, which in DIRAC means file-catalogue metadata), queried by each community's own conventions, and a key that becomes hot can be indexed later with a generated column.
 - Cross-transformation behaviour is expressed through **hooks** rather than schema structure. The workgraph status is a roll-up of its transformations and a control surface (DX-ADR-005).
 - A workgraph and its member transformations are created in one transaction, and the transitions that fan out to members are applied in one transaction, so there is never a partially created or partially transitioned workgraph (DX-ADR-005).
 
@@ -352,7 +352,7 @@ CREATE TABLE Transformations (
     Status            ENUM('New', 'Active', 'Paused', 'Finalizing',
                            'FinalizingBlocked', 'Finalized', 'Completed',
                            'Archiving', 'ArchivingBlocked', 'Archived',
-                           'Cancelling', 'CancellingBlocked', 'Cleaned')
+                           'Cancelling', 'CancellingBlocked', 'Cancelled')
                                    NOT NULL DEFAULT 'New',
     Feeder            VARCHAR(64)  NULL,       -- input plugin (DX-ADR-006); NULL when inputs arrive by other means
     FeederArgs        JSON         NULL,       -- from the input's dirac:Feeder hint; changed by the active hook
@@ -360,7 +360,7 @@ CREATE TABLE Transformations (
     FeederEnabled     BOOLEAN      NOT NULL DEFAULT TRUE,
     Packer            VARCHAR(64)  NOT NULL,   -- input-packing plugin
     PackerArgs        JSON         NULL,       -- group size, policy; from the step's dirac:Transformation hint
-    Metadata          JSON         NULL,
+    Annotations       JSON         NULL,
     Hooks             JSON         NULL,       -- single-hook bindings (DX-ADR-006); ordered lists live in Actions
     UpdatedAt         DATETIME     NOT NULL,
     PRIMARY KEY (TransformationID),
@@ -414,7 +414,8 @@ CREATE TABLE Actions (
     FOREIGN KEY (WorkgraphID)      REFERENCES Workgraphs (WorkgraphID),
     FOREIGN KEY (TransformationID) REFERENCES Transformations (TransformationID),
     UNIQUE KEY (WorkgraphID, State, Position),
-    UNIQUE KEY (TransformationID, State, Position)
+    UNIQUE KEY (TransformationID, State, Position),
+    CHECK ((WorkgraphID IS NULL) <> (TransformationID IS NULL))
 );
 ```
 
@@ -434,7 +435,7 @@ CREATE TABLE Inputs (
     InputID          BINARY(16)   NOT NULL,        -- UUIDv7
     ParentInputID    BINARY(16)   NULL,            -- set when created by splitting; same transformation
     InputHash        BINARY(16)   NOT NULL,        -- XXH3-128 over the canonical (LFN, Descriptor)
-    LFN              VARCHAR(255) NULL,            -- promoted out of JSON: indexed, joinable
+    LFN              VARCHAR(512) COLLATE utf8mb4_bin NULL, -- promoted out of JSON: indexed, joinable
     LFNSize          BIGINT       NULL,            -- size of the whole file, whatever the mask selects
     Descriptor       JSON         NULL,            -- {"Mask": "11-20", "Run": 1234, "Seed": 42}
     Status           ENUM('Unassigned', 'Assigned', 'Processed', 'Split',
@@ -446,7 +447,8 @@ CREATE TABLE Inputs (
     UpdatedAt        DATETIME     NOT NULL,
     PRIMARY KEY (TransformationID, InputID),
     FOREIGN KEY (TransformationID) REFERENCES Transformations (TransformationID),
-    FOREIGN KEY (TransformationID, ParentInputID) REFERENCES Inputs (TransformationID, InputID),
+    FOREIGN KEY (TransformationID, ParentInputID) REFERENCES Inputs (TransformationID, InputID)
+        ON DELETE CASCADE,
     UNIQUE  KEY (TransformationID, InputHash),
     INDEX (TransformationID, Status),
     INDEX (TransformationID, LFN),
@@ -456,7 +458,8 @@ CREATE TABLE Inputs (
 
 - **The mask is opaque to the core.** Only packers and backends interpret it; the core state machine treats every row identically (CMS luminosity sections, LHCb event ranges, and future schemes all fit). What the core does with `Descriptor` is hash it, which needs no understanding of what is inside.
 - **`LFNSize` is the size of the whole file**, whatever the mask selects. A feeder that wants the size of the selected fraction puts it under its own key in `Descriptor`. A size-based packer that puts several masks of one LFN into a parcel can still account for the transfer by summing over distinct LFNs (DX-ADR-006).
-- **Splitting** sets the parent row to `Split` (terminal) and inserts children pointing at it, in one transaction. Lineage is explicit and queryable without parsing masks, and a child is always in the same transformation as its parent, which is what lets the reference be composite.
+- **`LFN` compares case-sensitively** (`utf8mb4_bin`). LFNs are paths, and the `(TransformationID, LFN)` lookups of the reconciliation action and the joining packer must not treat `/lhcb/A.dst` and `/lhcb/a.dst` as one file. `VARCHAR(512)` leaves room for long LFNs while the index stays within InnoDB's 3072-byte key limit. The same applies to `ParcelOutputs.LFN`.
+- **Splitting** sets the parent row to `Split` (terminal) and inserts children pointing at it, in one transaction. Lineage is explicit and queryable without parsing masks, and a child is always in the same transformation as its parent, which is what lets the reference be composite. Deleting a parent cascades to its children, so the range delete that cleans a transformation is not refused by MySQL's row-by-row foreign key checks. InnoDB stops cascading after 15 levels and split depth is not bounded, so cleaning deletes split lineages bottom-up rather than relying on the cascade alone.
 - **`InputHash` is what an input is deduplicated on.** It is an `XXH3-128` digest over the canonical form of the pair `(LFN, Descriptor)`, computed by the core rather than by the feeder so that two feeders describing the same thing agree, and unique within the transformation. Hashing the descriptor as well as the LFN is what makes the key survive splitting, which a unique key on `(TransformationID, LFN)` could not: a parent `{"Run": 1234}` and its children `{"Run": 1234, "Mask": "1-10"}` hash differently, while a feeder yielding the same bare LFN twice does not. A feeder pass is therefore an unconditional insert that the database itself resolves, with no per-input lookup, and the bookmark becomes an optimisation rather than the guarantee. The cost is sixteen bytes and a second unique index on the hottest insert path in the system, which an earlier draft of this ADR refused to pay; it is paid because deduplication then holds for every feeder, including one whose bookmark is wrong.
 - **A file may legitimately come round again.** Because the hash covers the descriptor and not the LFN alone, a feeder that has to yield the same file more than once distinguishes the occurrences with a field of its own in `Descriptor`, and each becomes a row. A standalone data transformation is where this arises: files staged to disk at users' requests are removed, staged again later, and have to be removed again, and each round is a unit of work in its own right rather than a repeat of one that is already `Processed`. The field is the feeder's and opaque to the core, like the mask, and no schema change is needed to allow it. The cost falls inside that transformation, where `(TransformationID, LFN)` stops identifying at most one row, so anything that reads an input by LFN there has to say which occurrence it means, including the reconciliation action at `Finalizing` (DX-ADR-006).
 - **The digest is non-cryptographic on purpose.** Nothing here defends against an adversary choosing an input, and the key is scoped to one transformation, so the fast hash is the right one. The width is not free of consequence: a collision silently drops a legitimate input, so at 128 bits it stays negligible over a billion inputs where a 64-bit variant would not. The algorithm and the canonical byte form are the same question as for the content hashes below (see Open Issues), with one difference: this hash never leaves the database, so it can be changed by a migration that rewrites one column, while a content hash cannot.
@@ -558,7 +561,7 @@ CREATE TABLE Parcels (
                           'Done', 'PartiallyDone', 'Failed', 'Cancelled')
                                   NOT NULL DEFAULT 'Unassigned',
     Backend          VARCHAR(32)  NULL,           -- DX-ADR-003 reference set; chosen by the dispatcher
-    Metadata         JSON         NULL,           -- output manifest, backend extras
+    Annotations      JSON         NULL,           -- output manifest, backend extras
     UpdatedAt        DATETIME     NOT NULL,
     CompletedAt      DATETIME     NULL,
     PRIMARY KEY (ParcelID),
@@ -678,7 +681,7 @@ CREATE TABLE ParcelOutputs (
     TransformationOutputID BINARY(16)   NOT NULL,
     OutputID               BINARY(16)   NOT NULL,   -- UUIDv7, the feed order
     ParcelID               BINARY(16)   NOT NULL,   -- the parcel that produced the file
-    LFN                    VARCHAR(255) NOT NULL,
+    LFN                    VARCHAR(512) COLLATE utf8mb4_bin NOT NULL,
     LFNSize                BIGINT       NULL,
     PRIMARY KEY (TransformationOutputID, OutputID),
     FOREIGN KEY (TransformationOutputID) REFERENCES TransformationOutputs (TransformationOutputID),
@@ -706,7 +709,7 @@ Monitoring needs "how many inputs and parcels of transformation X are in status 
 | `TransformationCounters` | `TransformationID`, `Entity`, `Status`         | `Count`                                                          |
 | `DataParcelsCounters`    | `TransformationID`, `Status`, `StorageElement` | `LFNCountAdded`, `LFNSizeAdded`, `LFNCountFreed`, `LFNSizeFreed` |
 
-- **Inputs and parcels share one counter**, discriminated by `Entity`, because the shapes are identical and there is no polymorphic reference to break. `Status` is then the union of the two state machines, so the column admits combinations the logic never writes, such as an `Input` row in `Completing`; what it still rules out is a status belonging to neither machine.
+- **Inputs and parcels share one counter**, discriminated by `Entity`, because the shapes are identical and there is no polymorphic reference to break. `Status` is then the union of the two state machines, so the column admits combinations the logic never writes, such as an `Input` row in `Completing`; what it still rules out is a status belonging to neither machine. Its value list is written out rather than derived from the two enums, so that appending a state to either machine is an append to this column too.
 - **The data counters are a second counter** rather than extra measures on the first, because their key carries a storage element a compute transformation has no use for and their measures are quantities moved rather than populations. The task that runs the packer journals the `Unassigned` deltas in the transaction that creates the data parcel, one per `DataParcelDeltas` row, each carrying that row's four columns straight across; every later parcel transition moves the same quantities from the old status to the new.
 - **One row per storage element, with the two directions as separate measures.** The packer declares what its request costs each storage element (DX-ADR-006), so a parcel replicating to three destinations counts against each of the three and one that removes counts under the freed measures of what it frees. Keeping the directions apart as measures rather than as a fourth part of the key is what lets one primary-key lookup answer all three questions an operator asks of a storage element: what is about to be written to it, what is about to be freed on it, and the net of the two. A direction in the key would make the net two rows subtracted, and would be single-valued in almost every row, since a parcel rarely writes and frees at the same storage element. The price that remains is that summing the table over storage elements counts a multi-destination parcel once per destination, which is the right answer for transfers and the wrong one for parcels; parcel counts come from `TransformationCounters`.
 - **The cleanup does not maintain the counters.** The last archiving or cleaning action deletes a transformation's input and parcel rows together with its counter and journal rows (DX-ADR-006), so it journals no deltas for the statuses it empties.
@@ -723,12 +726,12 @@ CREATE TABLE TransformationLog (
     OldStatus        ENUM('New', 'Active', 'Paused', 'Finalizing',
                            'FinalizingBlocked', 'Finalized', 'Completed',
                            'Archiving', 'ArchivingBlocked', 'Archived',
-                           'Cancelling', 'CancellingBlocked', 'Cleaned')
+                           'Cancelling', 'CancellingBlocked', 'Cancelled')
                                   NULL,                -- EventType = 'StateChange'
     NewStatus        ENUM('New', 'Active', 'Paused', 'Finalizing',
                            'FinalizingBlocked', 'Finalized', 'Completed',
                            'Archiving', 'ArchivingBlocked', 'Archived',
-                           'Cancelling', 'CancellingBlocked', 'Cleaned')
+                           'Cancelling', 'CancellingBlocked', 'Cancelled')
                                   NULL,
     Author           VARCHAR(64)  NOT NULL,            -- user or component responsible
     Message          VARCHAR(512) NULL,
@@ -752,7 +755,7 @@ The transformation state machine, including scouting, the drain into `Finalizing
 - **Clustering the bulk tables on the transformation.** A bare UUIDv7 key orders every transformation's rows by time together, so a per-transformation scan and the cleaning delete touch pages across the whole table, which is what the abandoned per-transformation-table sketch existed to fix. Leading the key with `TransformationID` makes each transformation a contiguous range while inserts still append within it, since InnoDB records insert direction per page and splits at the insertion point for each ascending stream separately. The costs are one hot page per active transformation and the width of a `TransformationID`, sixteen bytes now that it is a UUIDv7, on every secondary index entry. Making the foreign keys composite avoids the obvious trap: a reference to `InputID` alone would need its own unique index, giving back the space, and nothing needs one, because a split child and a parcel link are always in the same transformation as the input. `Parcels` keeps a bare key because user parcels have no transformation, and parcels are an order of magnitude fewer than inputs, so the scattered delete matters less. The argument rests on InnoDB's split heuristics and is written down to be measured, not assumed.
 - **A uniqueness constraint *and* a feeder bookmark.** The obvious defence against a feeder re-yielding an input is a unique key over the transformation and the LFN, but splitting means several rows legitimately share an LFN, so that key would have to exclude split children through a generated column. Hashing the whole of `(LFN, Descriptor)` removes the obstacle rather than working around it, because a split child differs from its parent in the descriptor and so in the hash, and what is left is an ordinary unique index the database enforces on insert. An earlier draft rejected any such index as a second large index on the hottest insert path, and that cost is real; it is accepted because the two mechanisms answer different questions and neither substitutes for the other. `InputHash` guarantees that a duplicate never becomes a row, including when a bookmark is wrong, a feeder is rewritten, or two components insert the same thing; `FeederState` stops the feeder doing the work of re-yielding in the first place, which no constraint can. Neither catches the opposite failure, an input the feeder never yielded at all, so the reconciliation action at `Finalizing` stays.
 - **Recovery as a backend.** Retryable parcels or multi-owner inputs both break "an input is successfully processed by exactly one parcel", which output registration and deduplication rely on. Born-`Done` recovery parcels keep the failed parcel immutable, claim the recovered portions as `Processed` children, and leave failed portions as ordinary `Unassigned` inputs.
-- **Metadata instead of name columns.** An earlier draft gave workgraphs and transformations unique name columns. The uniqueness scope was ambiguous (per VO? forever, given the rows survive cleaning?) and every community labels its workgraphs differently, so there is no name column at all: the `WorkgraphID` is the identity, and labels are key-value pairs in `Metadata` that each community queries by its own conventions.
+- **Annotations instead of name columns.** An earlier draft gave workgraphs and transformations unique name columns. The uniqueness scope was ambiguous (per VO? forever, given the rows survive cleaning?) and every community labels its workgraphs differently, so there is no name column at all: the `WorkgraphID` is the identity, and labels are key-value pairs in `Annotations` that each community queries by its own conventions.
 - **UUIDv7 wherever an id is minted.** Concurrent workers mint input and parcel ids without coordination, the time prefix keeps each transformation's range append-mostly, and the legacy per-transformation `TaskID` trigger disappears. The definition entities take the same keys, for uniformity rather than for throughput: one convention means a foreign key has the same shape wherever it points, a workgraph and its transformations and their declared outputs can all be built before anything is written and inserted in one round trip, and the creation time is carried in the key, so none of those tables needs a `CreatedAt` column at all. What it costs is the human currency, since a transformation becomes a UUID in a ticket rather than a six-digit number; that is a display problem, and the same one parcels already have.
 - **Content-addressed processes and requirements.** A named, versioned store needs uniqueness rules, a latest-version convention and an immutability promise. Keying on a hash removes the machinery: immutability holds by construction, identical bodies are stored once however many workgraphs use them, and provenance is a hash comparison. Requirement sets and the resolved-hints sidecars get the same treatment because they recur across thousands of parcels.
 - **Naming as an index, not as identity.** The registry puts names and versions back, but strictly above the hash: submission resolves a name once and stores what it resolved to. That keeps the property the content store was chosen for, since nothing a name is later repointed at can change what a running transformation executes, while making lineage questions about a shared library step answerable without walking every stored document.
@@ -783,7 +786,7 @@ The transformation state machine, including scouting, the drain into `Finalizing
 - **A shared `ExternalID` column.** See the Rationale; replaced by one identifier table per backend.
 - **Action results in the `Hooks` JSON.** See the Rationale; replaced by the `Actions` table.
 - **Reschedule-in-place for user jobs.** DIRAC behaviour; resubmission is a new parcel referencing the same process, so every parcel stays an immutable record of one attempt.
-- **Unique name columns on workgraphs and transformations.** See the Rationale; replaced by key-value labels in `Metadata`.
+- **Unique name columns on workgraphs and transformations.** See the Rationale; replaced by key-value labels in `Annotations`.
 - **Naming and versioning as the store's identity.** An earlier draft of this ADR and DX-ADR-007 keyed the store itself on a name, a version and a parent link, which needs uniqueness rules and a latest-version convention, and lets a document change under a running transformation. The content hash is the identity; `ProcessRegistry` adds the names back as a lookup over it.
 - **Edge outputs recorded per consumer.** See the Rationale; replaced by producer-owned `ParcelOutputs` rows and the feeder bookmark.
 
