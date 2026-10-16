@@ -17,6 +17,8 @@ dependencies = [
     "opensearch-py[async]",
     "opentelemetry-api>=1.40.0",
     "pydantic >=2.10",
+    # aiomysql 0.3.2 fails to escape bytes with PyMySQL >= 1.2.1 (aio-libs/aiomysql#1080)
+    "pymysql <1.2.1",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "uuid-utils<1.0.0",
     "python-dateutil",
@@ -35,6 +37,7 @@ PilotAgentsDB = "diracx.db.sql:PilotAgentsDB"
 ResourceStatusDB = "diracx.db.sql:ResourceStatusDB"
 SandboxMetadataDB = "diracx.db.sql:SandboxMetadataDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
+TransformationDB = "diracx.db.sql:TransformationDB"
 
 [project.entry-points."diracx.dbs.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
