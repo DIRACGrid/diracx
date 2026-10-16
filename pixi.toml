@@ -15,7 +15,7 @@ diraccommon= "0d"
 signurlarity= "0d"
 
 [dependencies]
-python = ">=3.11.3,<3.12"
+python = ">=3.15,<3.16"
 # Add some useful development dependencies to most environments
 pip = ">=25.1.1"
 ipython = ">=9.2.0"
