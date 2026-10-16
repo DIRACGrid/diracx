@@ -183,7 +183,7 @@ class TestAvailableUrls:
             result = DummyOSDB.available_urls()
         assert result == {"dummy": kwargs}
 
-    def test_skips_missing_env_var(self):
+    def test_raises_on_missing_env_var(self):
         ep = MagicMock()
         ep.name = "dummy"
         mock_settings = MagicMock()
@@ -192,8 +192,8 @@ class TestAvailableUrls:
             patch("diracx.db.os.utils.select_from_extension", return_value=[ep]),
             patch("diracx.db.os.utils.FactorySettings", return_value=mock_settings),
         ):
-            result = DummyOSDB.available_urls()
-        assert result == {}
+            with pytest.raises(Exception, match="DIRACX_OS_DB_DUMMY"):
+                DummyOSDB.available_urls()
 
     def test_raises_on_invalid_json(self):
         ep = MagicMock()
