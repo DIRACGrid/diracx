@@ -63,8 +63,11 @@ async def initiate_authorization_flow(
     they are combined with the default group's properties; if both are
     supplied, they are combined with the selected group's properties.
 
-    The user authorization details are stored in a cookie so the flow can be
-    associated with the corresponding user authorization request.
+    The ID of the stored flow is carried in the encrypted ``state`` sent to
+    the identity provider so that its callback can be associated with the
+    corresponding user authorization request.
+
+    \f
 
     Args:
         request: Incoming request used to construct the callback URL.
@@ -124,6 +127,8 @@ async def complete_authorization_flow(
     exchanges the provider's authorization code for an ID token, stores that
     token, and redirects the user to the client's redirect URI. The original
     client state is included in the redirect.
+
+    \f
 
     Args:
         code: Authorization code returned by the identity provider.

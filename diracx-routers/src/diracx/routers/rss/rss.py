@@ -85,6 +85,8 @@ async def get_storage_status(
 ) -> dict[str, StorageElementStatus]:
     """Return storage-element statuses visible to the caller's VO.
 
+    \f
+
     Args:
         response: Response whose conditional-cache headers are populated.
         user_info: Authenticated user information used to select the VO.
@@ -114,6 +116,8 @@ async def get_compute_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, ComputeElementStatus]:
     """Return compute element statuses visible to the caller's VO.
+
+    \f
 
     Args:
         response: Response whose conditional-cache headers are populated.
@@ -145,6 +149,8 @@ async def get_site_status(
 ) -> dict[str, SiteStatus]:
     """Return site statuses visible to the caller's VO.
 
+    \f
+
     Args:
         response: Response whose conditional-cache headers are populated.
         user_info: Authenticated user information used to select the VO.
@@ -174,6 +180,8 @@ async def get_fts_status(
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, FTSStatus]:
     """Return FTS server statuses visible to the caller's VO.
+
+    \f
 
     Args:
         response: Response whose conditional-cache headers are populated.

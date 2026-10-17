@@ -28,6 +28,8 @@ async def liveness(config: Config):
     The configuration dependency ensures this probe fails if the configuration
     expires and cannot be refreshed.
 
+    \f
+
     Args:
         config: Loaded DiracX configuration required for the probe to succeed.
 
@@ -46,6 +48,8 @@ async def ready(config: Config, auth_db: AuthDB):
 
     The probe requires loaded configuration and a successful authentication
     database ping.
+
+    \f
 
     Args:
         config: Loaded DiracX configuration required for the probe to succeed.
@@ -74,6 +78,8 @@ async def startup(config: Config, auth_db: AuthDB):
 
     Startup completes when configuration is loaded and the authentication
     database responds to a ping.
+
+    \f
 
     Args:
         config: Loaded DiracX configuration required for the probe to succeed.

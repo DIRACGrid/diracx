@@ -124,12 +124,15 @@ async def search(
     Results are restricted to the caller's VO unless they are a service
     administrator. ``JobID`` is accepted as a pseudo-parameter in filters
     with ``eq`` or ``in`` operators and is resolved through
-    ``JobToPilotMapping`` to a ``PilotID`` filter.
+    ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+    pilots that ran a given job.
 
     If the requested page contains only part of the matching results, the
     response includes a ``Content-Range`` header and status 206. If the page
     is beyond the available results, it includes the total in ``Content-Range``
     and uses status 416.
+
+    \f
 
     Args:
         pilot_db: Database used to search pilot records.
@@ -254,10 +257,12 @@ async def summary(
         SummaryParams, Body(openapi_examples=EXAMPLE_SUMMARY)  # type: ignore
     ],
 ):
-    """Group matching pilots and return counts for each group.
+    """Group matching pilots and return counts suitable for plotting.
 
     Results are restricted to the caller's VO unless they are a service
     administrator.
+
+    \f
 
     Args:
         pilot_db: Database used to aggregate pilot records.

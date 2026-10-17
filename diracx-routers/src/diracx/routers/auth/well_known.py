@@ -37,6 +37,8 @@ async def get_openid_configuration(
     The document includes route URLs, supported grants and scopes, token
     authentication methods, and PKCE capabilities.
 
+    \f
+
     Args:
         request: Incoming request used to build absolute endpoint URLs.
         config: DiracX configuration used to list supported VOs and groups.
@@ -63,6 +65,8 @@ async def get_jwks(
 ) -> dict:
     """Return the public JSON Web Keys used to verify DiracX tokens.
 
+    \f
+
     Args:
         settings: Authentication settings containing the token signing key store.
 
@@ -78,6 +82,8 @@ async def get_installation_metadata(
 ) -> Metadata:
     """Return authentication metadata for the configured VOs.
 
+    \f
+
     Args:
         config: DiracX configuration containing VO, group, and support information.
 
@@ -90,6 +96,8 @@ async def get_installation_metadata(
 @router.get("/security.txt")
 async def get_security_txt() -> str:
     """Return the installation's security contact information.
+
+    \f
 
     Returns:
         The ``security.txt`` contents as plain text.

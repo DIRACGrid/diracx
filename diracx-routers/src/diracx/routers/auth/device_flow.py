@@ -61,6 +61,11 @@ async def initiate_device_flow(
     properties. Without a group, the VO's default group is used; requested
     properties are combined with the selected group's properties.
 
+    The user is then directed to open ``auth/<vo>/device?user_code=XYZ`` in a
+    browser to complete the flow.
+
+    \f
+
     Args:
         client_id: Identifier of the client requesting authorization.
         scope: Requested VO, group, and security properties.
@@ -109,6 +114,13 @@ async def do_device_flow(
     The user opens this URI in a browser and enters the user code. DiracX then
     redirects the browser to the VO identity provider (such as IAM or CheckIn)
     to complete an authorization code flow.
+
+    The user code is carried in the encrypted ``state`` sent to the identity
+    provider so that its callback can be linked to the corresponding device
+    flow, as the user code cannot be passed as a plain parameter or in the
+    callback URL.
+
+    \f
 
     Args:
         request: Incoming request used to construct the identity-provider callback URI.
@@ -171,6 +183,8 @@ async def finish_device_flow(
     page. The original device client can then exchange its device code for
     DiracX tokens.
 
+    \f
+
     Args:
         request: Incoming request used to construct the token-exchange callback URI.
         code: Authorization code returned by the identity provider.
@@ -216,6 +230,8 @@ async def finish_device_flow(
 @router.get("/device/complete/finished")
 def finished(response: Response):
     """Display the completion page after the device flow.
+
+    \f
 
     Args:
         response: Response object populated with the completion page.

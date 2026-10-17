@@ -55,9 +55,11 @@ async def initiate_sandbox_upload(
 ) -> SandboxUploadResponse:
     """Return a sandbox PFN and initiate an upload when needed.
 
-    If the sandbox is already available, the response contains its PFN without
-    an upload URL. Otherwise, the response includes the presigned URL and
-    fields required to upload it to the storage backend.
+    If the sandbox already exists, the response contains its PFN and has no
+    ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+    be used to upload the sandbox to the storage backend.
+
+    \f
 
     Args:
         user_info: Authenticated user who owns the sandbox.
@@ -99,8 +101,12 @@ async def get_sandbox_file(
 ) -> SandboxDownloadResponse:
     """Return a presigned URL for downloading a sandbox file.
 
-    The endpoint returns the URL instead of redirecting, preventing clients
-    from forwarding their authorization header to the storage backend.
+    The URL is returned rather than redirected to, as most clients resend
+    the authorization header when following a redirect. That would leak the
+    token to the storage backend, and most storage backends reject requests
+    for presigned URLs that include an authorization header.
+
+    \f
 
     Args:
         pfn: Sandbox physical file name to download.
@@ -142,6 +148,8 @@ async def get_job_sandboxes(
 ) -> dict[str, list[Any]]:
     """Return the input and output sandboxes assigned to a job.
 
+    \f
+
     Args:
         job_id: Identifier of the job whose sandboxes are requested.
         sandbox_metadata_db: Database containing job-to-sandbox mappings.
@@ -167,6 +175,8 @@ async def get_job_sandbox(
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[Any]:
     """Return one type of sandbox assigned to a job.
+
+    \f
 
     Args:
         job_id: Identifier of the job whose sandbox is requested.
@@ -195,6 +205,8 @@ async def assign_sandbox_to_job(
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Assign a sandbox as the output sandbox for a job.
+
+    \f
 
     Args:
         job_id: Identifier of the job to receive the sandbox.
@@ -229,6 +241,8 @@ async def unassign_job_sandboxes(
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Remove all sandbox mappings for a job.
+
+    \f
 
     Args:
         job_id: Identifier of the job whose sandbox mappings are removed.
@@ -270,6 +284,8 @@ async def unassign_bulk_jobs_sandboxes(
     check_permissions: CheckWMSPolicyCallable,
 ):
     """Remove sandbox mappings for multiple jobs.
+
+    \f
 
     Args:
         job_ids: Identifiers of the jobs whose sandbox mappings are removed.
