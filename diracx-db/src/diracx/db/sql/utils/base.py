@@ -305,10 +305,14 @@ class BaseSQLDB(metaclass=ABCMeta):
             exc: Exception raised in the context, or ``None``.
             tb: Traceback for the exception, or ``None``.
         """
-        if exc_type is None:
-            await self._conn.get().commit()
-        await self._conn.get().__aexit__(exc_type, exc, tb)
-        self._conn.set(None)
+        try:
+            if exc_type is None:
+                await self._conn.get().commit()
+        finally:
+            # If the commit fails, the connection must still be returned to
+            # the pool, otherwise it leaks until garbage collected
+            await self._conn.get().__aexit__(exc_type, exc, tb)
+            self._conn.set(None)
 
     async def ping(self):
         """Check whether the connection to the DB is still working.
