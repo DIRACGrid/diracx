@@ -24,6 +24,9 @@ Attributes:
     enabled_services: Map of service names to enabled states.
     opensearch_dbs: OpenSearch database connection URLs.
     sql_dbs: SQL database connection URLs.
+    sql_db_pool_size: Number of connections to keep open in each SQL pool.
+    sql_db_max_overflow: Extra connections allowed per SQL pool beyond its size.
+    sql_db_pool_timeout: Seconds to wait for a free SQL pool connection.
 ```
 
 ### `DIRACX_CONFIG_BACKEND_URL`
@@ -150,6 +153,21 @@ The URL for the SQL database TaskDB.
 *Optional*, default value: \`\`
 
 The URL for the SQL database TaskQueueDB.
+
+### `DIRACX_DB_POOL_SIZE`
+
+*Optional*, default value: `5`
+The number of connections to keep open in each SQL database pool.
+
+### `DIRACX_DB_MAX_OVERFLOW`
+
+*Optional*, default value: `10`
+The number of extra connections allowed in each SQL database pool.
+
+### `DIRACX_DB_POOL_TIMEOUT`
+
+*Optional*, default value: `30`
+The number of seconds to wait for a connection from a SQL database pool.
 
 ## AuthSettings
 
