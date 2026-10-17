@@ -239,10 +239,20 @@ class BaseSQLDB(metaclass=ABCMeta):
         """
         assert self._engine is None, "engine_context cannot be nested"
 
+        factory_settings = FactorySettings()
         # Set the pool_recycle to 30mn
         # That should prevent the problem of MySQL expiring connection
         # after 60mn by default
-        engine = create_async_engine(self._db_url, pool_recycle=60 * 30)
+        pool_args: dict[str, Any] = {"pool_recycle": 60 * 30}
+        # The sqlite dialects use StaticPool which does not accept these
+        # arguments (sqlite is only used for testing)
+        if not self._db_url.startswith("sqlite"):
+            pool_args |= {
+                "pool_size": factory_settings.sql_db_pool_size,
+                "max_overflow": factory_settings.sql_db_max_overflow,
+                "pool_timeout": factory_settings.sql_db_pool_timeout,
+            }
+        engine = create_async_engine(self._db_url, **pool_args)
         self._engine = engine
         try:
             yield

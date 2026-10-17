@@ -547,6 +547,9 @@ class FactorySettings(ServiceSettingsBase):
         enabled_services: Map of service names to enabled states.
         opensearch_dbs: OpenSearch database connection URLs.
         sql_dbs: SQL database connection URLs.
+        sql_db_pool_size: Number of connections to keep open in each SQL pool.
+        sql_db_max_overflow: Extra connections allowed per SQL pool beyond its size.
+        sql_db_pool_timeout: Seconds to wait for a free SQL pool connection.
     """
 
     # We want to be able to read both from specific environment variables
@@ -587,6 +590,21 @@ class FactorySettings(ServiceSettingsBase):
 
     sql_dbs: dict[str, str] = Field(default_factory=dict)
     """The following environment variables configure the SQL database connections."""
+
+    sql_db_pool_size: int = Field(
+        default=5, validation_alias="DIRACX_DB_POOL_SIZE", ge=1
+    )
+    """The number of connections to keep open in each SQL database pool."""
+
+    sql_db_max_overflow: int = Field(
+        default=10, validation_alias="DIRACX_DB_MAX_OVERFLOW", ge=0
+    )
+    """The number of extra connections allowed in each SQL database pool."""
+
+    sql_db_pool_timeout: int = Field(
+        default=30, validation_alias="DIRACX_DB_POOL_TIMEOUT", ge=1
+    )
+    """The number of seconds to wait for a connection from a SQL database pool."""
 
     @model_validator(mode="before")
     @classmethod
