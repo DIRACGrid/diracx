@@ -156,14 +156,21 @@ async def search(
 ) -> list[dict[str, Any]]:
     """Search jobs using filters, selected fields, and pagination.
 
-    By default, the endpoint returns all fields for jobs the user can access.
-    The request body can limit returned fields, filter results, and specify
-    sort order. ``PilotStamp`` is accepted as a pseudo-parameter in filters
-    with ``eq`` or ``in`` operators and is resolved to a job-ID filter.
+    The search can be based on job attributes such as the job ID, status or
+    owner. In the request body, use ``search`` to filter jobs, ``parameters``
+    to select which job parameters are returned, and ``sort`` to order the
+    results; all are optional. By default, all fields are returned for all
+    jobs the user has access to.
+
+    ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+    (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+    filter, so callers can look up the jobs run by a given pilot.
 
     The response uses ``Content-Range`` when results span multiple pages. It
     returns 206 when only part of the matching range is returned, or 416 when
     the requested page is beyond the available results.
+
+    \f
 
     Args:
         config: DiracX configuration used to determine the VO's job visibility rules.
@@ -333,9 +340,15 @@ async def summary(
 ):
     """Group matching jobs and return counts for each group.
 
-    The request body specifies grouping fields and optional search filters.
+    The request body contains ``grouping``, the list of parameters to group
+    jobs by, and optionally ``search``, a list of filters to apply first. The
+    response is an array of rows, each containing the values of the grouping
+    parameters and the number of jobs matching those values.
+
     Results are scoped to the user's VO and, when global job visibility is
     disabled, to the user's own jobs unless they are a job administrator.
+
+    \f
 
     Args:
         config: DiracX configuration used to determine the VO's job visibility rules.

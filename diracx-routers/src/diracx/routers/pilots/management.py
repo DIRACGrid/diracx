@@ -39,8 +39,10 @@ async def register_pilot(
     """Register a pilot and its external reference.
 
     Legacy X.509 pilot identities may self-register one pilot per request when
-    permitted by the access policy. Registration into an unconfigured VO is
-    rejected, as is a stamp that already exists.
+    permitted by the access policy. Registration is rejected with 409 if the
+    stamp already exists, and with 400 if the VO is not in the registry.
+
+    \f
 
     Args:
         config: DiracX configuration used to validate the pilot's VO.
@@ -109,6 +111,8 @@ async def update_pilot_metadata(
     by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
     cannot be modified. Legacy pilot identities may update one pilot per call
     when permitted by the access policy.
+
+    \f
 
     Args:
         updates: Pilot metadata keyed by pilot stamp.

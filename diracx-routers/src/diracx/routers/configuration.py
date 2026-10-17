@@ -34,9 +34,12 @@ async def serve_config(
 ):
     """Return the latest configuration snapshot.
 
-    The response includes ETag and Last-Modified headers. When a supplied
-    conditional header indicates the client's cached snapshot is current, the
-    cache helper raises an HTTP exception with status 304.
+    The response includes ETag and Last-Modified headers. A 304 response is
+    returned if ``If-None-Match`` matches the latest ETag, or if
+    ``If-Modified-Since`` is newer than the latest revision (to avoid
+    flip-flopping between revisions).
+
+    \f
 
     Args:
         config: Current configuration snapshot and its revision metadata.

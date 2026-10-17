@@ -53,6 +53,9 @@ ignore = [
   "B905",
   "B006",
   "S101", # bandit: use of assert https://docs.astral.sh/ruff/rules/assert/
+  # FastAPI truncates the OpenAPI description at a "\f" in route docstrings,
+  # which must not be raw strings for it to be a real form feed
+  "D301",
   # TODO: Maybe enable these
   "D104",
   "D105",

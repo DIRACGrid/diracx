@@ -146,7 +146,10 @@ async def get_oidc_token(
 
     Supports authorization-code, device-code, and refresh-token grants. A
     device-code request may return ``authorization_pending`` until the user
-    completes browser authorization.
+    completes browser authorization; this is the endpoint polled by clients
+    such as ``dirac login`` during the device flow.
+
+    \f
 
     Args:
         grant_type: OAuth grant type to exchange.
@@ -236,8 +239,10 @@ async def perform_legacy_exchange(
 ) -> TokenResponse:
     """Exchange a legacy DIRAC proxy credential for DiracX tokens.
 
-    The route is hidden from the OpenAPI schema and is disabled unless a
-    hashed legacy-exchange API key is configured.
+    The route is hidden from the OpenAPI schema and is disabled unless
+    ``DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`` is set in the environment.
+
+    \f
 
     Args:
         preferred_username: Username of the user represented by the legacy proxy.

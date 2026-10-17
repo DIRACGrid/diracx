@@ -74,6 +74,8 @@ async def submit_jdl_jobs(
     cannot contain parametric jobs, and no submission may create more than 20
     jobs at once.
 
+    \f
+
     Args:
         job_definitions: JDL descriptions for the jobs to submit.
         job_db: Database used to create job records.

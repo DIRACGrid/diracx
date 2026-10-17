@@ -68,6 +68,8 @@ async def get_refresh_tokens(
     Users with the ``proxy_management`` property can list tokens belonging to
     any subject; other users see only tokens bound to their own subject.
 
+    \f
+
     Args:
         auth_db: Database used to retrieve refresh tokens.
         user_info: Authenticated user and security properties from the access token.
@@ -100,6 +102,8 @@ async def revoke_refresh_token_by_refresh_token(
 
     Invalid or undecodable tokens are treated as successfully revoked, as
     required by the token-revocation response semantics.
+
+    \f
 
     Args:
         auth_db: Database containing the refresh token.
@@ -151,6 +155,8 @@ async def revoke_refresh_token_by_jti(
     Users with the ``proxy_management`` property can revoke tokens belonging
     to any subject; other users can revoke only their own tokens.
 
+    \f
+
     Args:
         auth_db: Database containing the refresh token.
         user_info: Authenticated user and security properties from the access token.
@@ -192,6 +198,8 @@ async def userinfo(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> UserInfoResponse:
     """Return identity and authorisation details from the authenticated access token.
+
+    \f
 
     Args:
         user_info: Authenticated user information extracted from the access token.

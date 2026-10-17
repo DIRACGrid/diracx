@@ -90,6 +90,8 @@ async def set_job_statuses(
     source defaults to ``"Unknown"``. Set ``force`` to override normal status
     transition checks.
 
+    \f
+
     Args:
         job_update: Timestamped status changes keyed by job ID.
         config: DiracX configuration used when applying status transitions.
@@ -187,6 +189,9 @@ async def add_heartbeat(
 
     The JobAgent uses this endpoint to report runtime data and retrieve WMS
     commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
+    The request body is a mapping keyed by job ID.
+
+    \f
 
     Args:
         data: Heartbeat fields keyed by job ID.
@@ -245,9 +250,12 @@ async def reschedule_jobs(
 ) -> dict[str, Any]:
     """Reschedule eligible failed or killed jobs.
 
+    The request body contains ``job_ids``, the list of jobs to reschedule.
     Set ``reset_jobs`` to reset each job's reschedule counter instead of
     incrementing it. Jobs that are unverified or exceed their configured
     reschedule limit are reported as failures.
+
+    \f
 
     Args:
         job_ids: Identifiers of the jobs to reschedule.
@@ -316,8 +324,12 @@ async def patch_metadata(
 ):
     """Update job attributes and parameters.
 
-    Metadata fields matching known job attributes are updated on the job
-    record; other fields are stored as job parameters.
+    The request body maps job IDs to the attributes or parameters to update
+    (such as ``UserPriority`` or ``HeartBeatTime``); any field of a job
+    except its ID may be set. Fields matching known job attributes are
+    updated on the job record; other fields are stored as job parameters.
+
+    \f
 
     Args:
         updates: Metadata updates keyed by job ID.

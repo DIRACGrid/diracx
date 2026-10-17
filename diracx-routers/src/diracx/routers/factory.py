@@ -78,13 +78,18 @@ def create_app_inner(
     ``create_app`` supplies values discovered from the environment and
     extension entry points. Tests may call this function directly with mocks
     or test settings. Dependency overrides provide the configured settings,
-    databases, cacheable sources, and access policies to routes.
+    databases, cacheable sources, and access policies to routes, which allows
+    an extension to override any of these components.
 
     Args:
         enabled_systems: Names of service routers to load and mount.
-        all_service_settings: Settings instances required by the enabled services.
-        database_urls: Database name-to-URL mapping for SQL databases.
-        os_database_conn_kwargs: Database name-to-connection options for OpenSearch.
+        all_service_settings: One instance of each settings class required by
+            the enabled services.
+        database_urls: Database name-to-URL mapping for SQL databases. When
+            testing, sqlite URLs are used.
+        os_database_conn_kwargs: Database name-to-connection options for
+            OpenSearch, containing all the parameters the OpenSearch client
+            takes.
         config_source: Source used to load the DiracX configuration.
         all_access_policies: Access-policy names mapped to implementations in
             priority order.
@@ -96,18 +101,6 @@ def create_app_inner(
         Exception: If no SQL database can be initialized.
         NotImplementedError: If an enabled service cannot be found or requires
             a settings class, database, or cacheable source that is unavailable.
-
-    Args:
-        enabled_systems: this contains the name of all the routers we
-            have to load
-        all_service_settings: list of instance of each Settings type
-            required
-        database_urls: dict <db_name: url>. When testing, sqlite urls
-            are used
-        os_database_conn_kwargs: <db_name:dict> containing all the
-            parameters the OpenSearch client takes
-        config_source: Source of the configuration to use
-        all_access_policies: <policy_name: [implementations]>
     """
     app = DiracFastAPI()
 
