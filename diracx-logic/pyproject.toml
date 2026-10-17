@@ -19,7 +19,7 @@ dependencies = [
     "diracx-db",
     "joserfc",
     "pydantic >=2.10",
-    "uuid-utils",
+    "uuid-utils<1.0.0",
 ]
 dynamic = ["version"]
 

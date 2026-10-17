@@ -20,7 +20,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, iter_route_contexts
 from packaging.version import InvalidVersion, parse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -476,7 +476,10 @@ def find_dependents(
     if isinstance(obj, APIRouter):
         # TODO: Support dependencies of the router itself
         # yield from find_dependents(obj.dependencies, cls)
-        for route in obj.routes:
+        # router.routes can be a tree since FastAPI 0.137, iterate over the
+        # routes of the whole tree
+        for route_context in iter_route_contexts(obj.routes):
+            route = route_context.original_route
             if isinstance(route, APIRoute):
                 yield from find_dependents(route.dependant.dependencies, cls)
         return

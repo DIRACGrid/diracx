@@ -4,7 +4,13 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, Callable
 
 from fastapi.concurrency import contextmanager_in_threadpool
-from fastapi.dependencies.models import Dependant
+from fastapi.dependencies.models import (
+    Dependant,
+    _get_cache_key,
+    _is_async_gen_callable,
+    _is_coroutine_callable,
+    _is_gen_callable,
+)
 from fastapi.dependencies.utils import get_dependant
 from starlette.concurrency import run_in_threadpool
 
@@ -67,11 +73,11 @@ async def _resolve_dependant(
             call = override_call
 
         # Check cache
-        if (
-            use_sub_dependant.use_cache
-            and use_sub_dependant.cache_key in dependency_cache
-        ):
-            solved = dependency_cache[use_sub_dependant.cache_key]
+        # Since FastAPI 0.137 the cache key is computed by _get_cache_key
+        # instead of the Dependant.cache_key property
+        sub_dependant_cache_key = _get_cache_key(dependant=use_sub_dependant)
+        if use_sub_dependant.use_cache and sub_dependant_cache_key in dependency_cache:
+            solved = dependency_cache[sub_dependant_cache_key]
         else:
             # Recursively resolve sub-dependencies
             sub_values = await _resolve_dependant(
@@ -81,20 +87,22 @@ async def _resolve_dependant(
                 async_exit_stack=async_exit_stack,
             )
 
-            if use_sub_dependant.is_async_gen_callable:
+            # Since FastAPI 0.137 the callable type checks are module level
+            # functions instead of Dependant properties
+            if _is_async_gen_callable(call):
                 cm = asynccontextmanager(call)(**sub_values)
                 solved = await async_exit_stack.enter_async_context(cm)
-            elif use_sub_dependant.is_gen_callable:
+            elif _is_gen_callable(call):
                 solved = await async_exit_stack.enter_async_context(
                     contextmanager_in_threadpool(call(**sub_values))
                 )
-            elif use_sub_dependant.is_coroutine_callable:
+            elif _is_coroutine_callable(call):
                 solved = await call(**sub_values)
             else:
                 solved = await run_in_threadpool(call, **sub_values)
 
             if use_sub_dependant.use_cache:
-                dependency_cache[use_sub_dependant.cache_key] = solved
+                dependency_cache[sub_dependant_cache_key] = solved
 
         if sub_dependant.name is not None:
             values[sub_dependant.name] = solved
