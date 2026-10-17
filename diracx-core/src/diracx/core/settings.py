@@ -534,6 +534,21 @@ class FactorySettings(ServiceSettingsBase):
     sql_dbs: dict[str, str] = Field(default_factory=dict)
     """The following environment variables configure the SQL database connections."""
 
+    sql_db_pool_size: int = Field(
+        default=5, validation_alias="DIRACX_DB_POOL_SIZE", ge=1
+    )
+    """The number of connections to keep open in each SQL database pool."""
+
+    sql_db_max_overflow: int = Field(
+        default=10, validation_alias="DIRACX_DB_MAX_OVERFLOW", ge=0
+    )
+    """The number of extra connections allowed in each SQL database pool."""
+
+    sql_db_pool_timeout: int = Field(
+        default=30, validation_alias="DIRACX_DB_POOL_TIMEOUT", ge=1
+    )
+    """The number of seconds to wait for a connection from a SQL database pool."""
+
     @model_validator(mode="before")
     @classmethod
     def load_dotenv_files(cls, data: Any) -> Any:
