@@ -1,6 +1,12 @@
-"""Device flow.
+"""FastAPI routes for the OAuth 2.0 device authorization flow.
 
-See docs/admin/explanations/authentication.md
+The routes let a client start authorization on a device with limited input,
+then let the user authenticate in a browser with the configured VO identity
+provider. DiracX associates the browser callback with the pending device flow
+and stores the resulting ID token for the client to exchange.
+
+See Also:
+    docs/admin/explanations/auth-with-diracx.md: Overview of DiracX authentication flows.
 """
 
 from __future__ import annotations
@@ -49,21 +55,31 @@ async def initiate_device_flow(
     available_properties: AvailableSecurityProperties,
     settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
-    """Initiate the device flow against DIRAC authorization Server.
+    """Start a device authorization flow for a client.
 
-    Scope details:
-    - If only VO is provided: Uses the default group and its properties for the VO.
+    The scope may request a VO, an optional group, and optional security
+    properties. Without a group, the VO's default group is used; requested
+    properties are combined with the selected group's properties.
 
-    - If VO and group are provided: Uses the specified group and its properties for the VO.
+    The user is then directed to open ``auth/<vo>/device?user_code=XYZ`` in a
+    browser to complete the flow.
 
-    - If VO and properties are provided: Uses the default group and combines its properties with the
-      provided properties.
+    \f
 
-    - If VO, group, and properties are provided: Uses the specified group and combines its properties with the
-      provided properties.
+    Args:
+        client_id: Identifier of the client requesting authorization.
+        scope: Requested VO, group, and security properties.
+        request: Incoming request used to construct the verification URI.
+        auth_db: Database used to store the pending device flow.
+        config: DiracX configuration used to validate the requested scope.
+        available_properties: Security properties available for this request.
+        settings: Authentication settings used to validate the client and set flow expiry.
 
-    Offers the user to go with the browser to
-    `auth/<vo>/device?user_code=XYZ`
+    Returns:
+        Device and user codes, the browser verification URIs, and the expiry time.
+
+    Raises:
+        HTTPException: If the client ID or requested scope is invalid (400).
     """
     try:
         device_flow_response = await initiate_device_flow_bl(
@@ -95,13 +111,31 @@ async def do_device_flow(
 ) -> RedirectResponse:
     """Serve as the verification URI for the device flow.
 
-    It will redirect to the actual OpenID server (IAM, CheckIn) to
-    perform a authorization code flow.
+    The user opens this URI in a browser and enters the user code. DiracX then
+    redirects the browser to the VO identity provider (such as IAM or CheckIn)
+    to complete an authorization code flow.
 
-    We set the user_code obtained from the device flow in a cookie
-    to be able to map the authorization flow with the corresponding
-    device flow.
-    (note: it can't be put as parameter or in the URL)
+    The user code is carried in the encrypted ``state`` sent to the identity
+    provider so that its callback can be linked to the corresponding device
+    flow, as the user code cannot be passed as a plain parameter or in the
+    callback URL.
+
+    \f
+
+    Args:
+        request: Incoming request used to construct the identity-provider callback URI.
+        auth_db: Database containing the pending device flow.
+        user_code: User code displayed by the client and entered in the browser.
+        config: DiracX configuration used to select the identity provider.
+        available_properties: Security properties available for this request.
+        settings: Authentication settings used to validate and expire the flow.
+
+    Returns:
+        A redirect response to the VO identity provider.
+
+    Raises:
+        HTTPException: If the user code is invalid, expired, or its scope is invalid (400),
+            or if the identity provider is unavailable (502).
     """
     try:
         authorization_flow_url = await do_device_flow_bl(
@@ -142,11 +176,29 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ) -> RedirectResponse:
-    """Handle the URL callbacked by IAM/CheckIn after authorization flow.
+    """Complete the browser callback from the VO identity provider.
 
-    It gets us the code we need for the authorization flow, and we
-    can map it to the corresponding device flow using the user_code
-    in the cookie/session.
+    DiracX exchanges the authorization code for an ID token, associates it
+    with the pending device flow, and redirects the browser to the finished
+    page. The original device client can then exchange its device code for
+    DiracX tokens.
+
+    \f
+
+    Args:
+        request: Incoming request used to construct the token-exchange callback URI.
+        code: Authorization code returned by the identity provider.
+        state: Encrypted state used to identify the pending device flow.
+        auth_db: Database containing the pending device flow.
+        config: DiracX configuration used to contact the identity provider.
+        settings: Authentication settings used to decrypt state and expire the flow.
+
+    Returns:
+        A redirect response to the device-flow finished page.
+
+    Raises:
+        HTTPException: If the identity provider returns a server error (502) or
+            the authorization code is invalid (401).
     """
     request_url = str(request.url.replace(query={}))
 
@@ -177,7 +229,16 @@ async def finish_device_flow(
 
 @router.get("/device/complete/finished")
 def finished(response: Response):
-    """Mark the final step of the device flow."""
+    """Display the completion page after the device flow.
+
+    \f
+
+    Args:
+        response: Response object populated with the completion page.
+
+    Returns:
+        An HTML response asking the user to close the browser window.
+    """
     response.body = b"<h1>Please close the window</h1>"
     response.status_code = 200
     response.media_type = "text/html"

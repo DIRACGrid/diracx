@@ -1,3 +1,9 @@
+"""Provide an endpoint for submitting jobs described in JDL format.
+
+Submitted jobs are associated with the authenticated user's VO and group and
+are returned with their initial status information.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -19,6 +25,8 @@ router = DiracxRouter()
 
 
 class JobID(BaseModel):
+    """Identify a job by its database-assigned ID."""
+
     job_id: int
 
 
@@ -60,7 +68,29 @@ async def submit_jdl_jobs(
     check_permissions: CheckWMSPolicyCallable,
     config: Config,
 ) -> list[InsertedJob]:
-    """Submit a list of jobs in JDL format."""
+    """Submit one or more jobs described in JDL format.
+
+    A single parametric JDL may expand into multiple jobs. Bulk submissions
+    cannot contain parametric jobs, and no submission may create more than 20
+    jobs at once.
+
+    \f
+
+    Args:
+        job_definitions: JDL descriptions for the jobs to submit.
+        job_db: Database used to create job records.
+        job_logging_db: Database used to record each job's initial status.
+        user_info: Authenticated user, VO, and group used as the job owner.
+        check_permissions: Access-policy dependency used to authorize job creation.
+        config: DiracX configuration used to validate and prepare the JDLs.
+
+    Returns:
+        Details of the inserted jobs, including IDs and initial statuses.
+
+    Raises:
+        HTTPException: If a JDL is invalid or the submission exceeds the job
+            limit (400), or the user is not permitted to create jobs (403).
+    """
     await check_permissions(action=ActionType.CREATE, job_db=job_db)
 
     try:

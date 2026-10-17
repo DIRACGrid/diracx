@@ -1947,7 +1947,15 @@ class TokenResponse(_serialization.Model):
 
 
 class UserInfoResponse(_serialization.Model):
-    """Response for the userinfo endpoint.
+    """Identity information returned by the userinfo endpoint.
+
+    Attributes:
+        sub: Subject identifier from the access token.
+        vo: Virtual organisation associated with the user.
+        dirac_group: DIRAC group associated with the user.
+        policies: Policies included in the access token.
+        properties: DIRAC security properties included in the access token.
+        preferred_username: Preferred username for display.
 
     All required parameters must be populated in order to send to server.
 

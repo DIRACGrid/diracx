@@ -30,6 +30,20 @@ def test_openapi(test_client):
     assert r.json()
 
 
+@pytest.mark.parametrize("forbidden", ["Args:", "Raises:", "auth_db", "HTTPException"])
+def test_openapi_descriptions_exclude_docstring_sections(test_client, forbidden):
+    """Server-side docstring sections must be hidden from the API docs by a "\f"."""
+    r = test_client.get("/api/openapi.json")
+    assert r.status_code == 200
+    leaked = [
+        f"{method.upper()} {path}"
+        for path, operations in r.json()["paths"].items()
+        for method, operation in operations.items()
+        if forbidden in operation.get("description", "")
+    ]
+    assert not leaked, f"{forbidden!r} found in OpenAPI description of {leaked}"
+
+
 def test_oidc_configuration(test_client):
     r = test_client.get("/.well-known/openid-configuration")
     assert r.status_code == 200, r.json()

@@ -1,7 +1,7 @@
-"""Module for auth management endpoints.
+"""FastAPI endpoints for managing authentication tokens and user identity.
 
-These endpoints are used to manage the user's authentication tokens and
-to get information about the user's identity.
+The endpoints list and revoke refresh tokens and return identity information
+from the authenticated user's access token.
 """
 
 from __future__ import annotations
@@ -39,7 +39,16 @@ logger = logging.getLogger(__name__)
 
 
 class UserInfoResponse(TypedDict):
-    """Response for the userinfo endpoint."""
+    """Identity information returned by the userinfo endpoint.
+
+    Attributes:
+        sub: Subject identifier from the access token.
+        vo: Virtual organisation associated with the user.
+        dirac_group: DIRAC group associated with the user.
+        policies: Policies included in the access token.
+        properties: DIRAC security properties included in the access token.
+        preferred_username: Preferred username for display.
+    """
 
     sub: str
     vo: str
@@ -54,10 +63,19 @@ async def get_refresh_tokens(
     auth_db: AuthDB,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> list:
-    """Get all refresh tokens for the user.
+    """List refresh tokens available to the authenticated user.
 
-    If the user has the `proxy_management` property, then
-    the subject is not used to filter the refresh tokens.
+    Users with the ``proxy_management`` property can list tokens belonging to
+    any subject; other users see only tokens bound to their own subject.
+
+    \f
+
+    Args:
+        auth_db: Database used to retrieve refresh tokens.
+        user_info: Authenticated user and security properties from the access token.
+
+    Returns:
+        Refresh-token records visible to the user.
     """
     subject: str | None = user_info.sub
     if PROXY_MANAGEMENT in user_info.properties:
@@ -80,7 +98,27 @@ async def revoke_refresh_token_by_refresh_token(
         Form(description="The client ID of the application requesting the revocation"),
     ] = "myDIRACClientID",
 ) -> str:
-    """Revoke a refresh token. Closely follows RFC 7009 (or try to, at least)."""
+    """Revoke a refresh token using the RFC 7009 token-revocation flow.
+
+    Invalid or undecodable tokens are treated as successfully revoked, as
+    required by the token-revocation response semantics.
+
+    \f
+
+    Args:
+        auth_db: Database containing the refresh token.
+        settings: Authentication settings used to validate the client and token.
+        token: Refresh token to revoke.
+        token_type_hint: Optional hint identifying the token type.
+        client_id: Identifier of the client requesting revocation.
+
+    Returns:
+        A confirmation string.
+
+    Raises:
+        HTTPException: If the token type is unsupported (400) or client
+            credentials are invalid (401).
+    """
     try:
         await revoke_refresh_token_by_refresh_token_bl(
             auth_db, None, token, token_type_hint, client_id, settings
@@ -112,10 +150,24 @@ async def revoke_refresh_token_by_jti(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     jti: str,
 ) -> str:
-    """Revoke a refresh token.
+    """Revoke a refresh token by its unique identifier.
 
-    If the user has the `proxy_management` property, then
-    the subject is not used to filter the refresh tokens.
+    Users with the ``proxy_management`` property can revoke tokens belonging
+    to any subject; other users can revoke only their own tokens.
+
+    \f
+
+    Args:
+        auth_db: Database containing the refresh token.
+        user_info: Authenticated user and security properties from the access token.
+        jti: Unique identifier of the refresh token to revoke.
+
+    Returns:
+        A confirmation string.
+
+    Raises:
+        HTTPException: If the identifier is invalid (400), the token belongs
+            to another user (403), or the token does not exist (404).
     """
     subject: str | None = user_info.sub
     if PROXY_MANAGEMENT in user_info.properties:
@@ -145,7 +197,16 @@ async def revoke_refresh_token_by_jti(
 async def userinfo(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
 ) -> UserInfoResponse:
-    """Get information about the user's identity."""
+    """Return identity and authorisation details from the authenticated access token.
+
+    \f
+
+    Args:
+        user_info: Authenticated user information extracted from the access token.
+
+    Returns:
+        The user's subject, VO, DIRAC group, policies, properties, and preferred username.
+    """
     return {
         "sub": user_info.sub,
         "vo": user_info.vo,
