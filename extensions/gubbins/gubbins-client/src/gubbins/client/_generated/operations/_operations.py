@@ -859,14 +859,6 @@ class WellKnownOperations:
         The document includes route URLs, supported grants and scopes, token
         authentication methods, and PKCE capabilities.
 
-        Args:
-            request: Incoming request used to build absolute endpoint URLs.
-            config: DiracX configuration used to list supported VOs and groups.
-            settings: Authentication settings used to populate issuer and supported algorithms.
-
-        Returns:
-            OpenID Connect configuration for this installation.
-
         :return: OpenIDConfiguration
         :rtype: ~_generated.models.OpenIDConfiguration
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -914,12 +906,6 @@ class WellKnownOperations:
 
         Return the public JSON Web Keys used to verify DiracX tokens.
 
-        Args:
-            settings: Authentication settings containing the token signing key store.
-
-        Returns:
-            A JSON Web Key Set containing public keys only.
-
         :return: dict mapping str to any
         :rtype: dict[str, any]
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -966,9 +952,6 @@ class WellKnownOperations:
         """Get Security Txt.
 
         Return the installation's security contact information.
-
-        Returns:
-            The ``security.txt`` contents as plain text.
 
         :return: str
         :rtype: str
@@ -1096,20 +1079,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         properties. Without a group, the VO's default group is used; requested
         properties are combined with the selected group's properties.
 
-        Args:
-            client_id: Identifier of the client requesting authorization.
-            scope: Requested VO, group, and security properties.
-            request: Incoming request used to construct the verification URI.
-            auth_db: Database used to store the pending device flow.
-            config: DiracX configuration used to validate the requested scope.
-            available_properties: Security properties available for this request.
-            settings: Authentication settings used to validate the client and set flow expiry.
-
-        Returns:
-            Device and user codes, the browser verification URIs, and the expiry time.
-
-        Raises:
-            HTTPException: If the client ID or requested scope is invalid (400).
+        The user is then directed to open ``auth/<vo>/device?user_code=XYZ`` in a
+        browser to complete the flow.
 
         :keyword client_id: Required.
         :paramtype client_id: str
@@ -1168,20 +1139,10 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         redirects the browser to the VO identity provider (such as IAM or CheckIn)
         to complete an authorization code flow.
 
-        Args:
-            request: Incoming request used to construct the identity-provider callback URI.
-            auth_db: Database containing the pending device flow.
-            user_code: User code displayed by the client and entered in the browser.
-            config: DiracX configuration used to select the identity provider.
-            available_properties: Security properties available for this request.
-            settings: Authentication settings used to validate and expire the flow.
-
-        Returns:
-            A redirect response to the VO identity provider.
-
-        Raises:
-            HTTPException: If the user code is invalid, expired, or its scope is invalid (400),
-                or if the identity provider is unavailable (502).
+        The user code is carried in the encrypted ``state`` sent to the identity
+        provider so that its callback can be linked to the corresponding device
+        flow, as the user code cannot be passed as a plain parameter or in the
+        callback URL.
 
         :keyword user_code: Required.
         :paramtype user_code: str
@@ -1238,21 +1199,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         page. The original device client can then exchange its device code for
         DiracX tokens.
 
-        Args:
-            request: Incoming request used to construct the token-exchange callback URI.
-            code: Authorization code returned by the identity provider.
-            state: Encrypted state used to identify the pending device flow.
-            auth_db: Database containing the pending device flow.
-            config: DiracX configuration used to contact the identity provider.
-            settings: Authentication settings used to decrypt state and expire the flow.
-
-        Returns:
-            A redirect response to the device-flow finished page.
-
-        Raises:
-            HTTPException: If the identity provider returns a server error (502) or
-                the authorization code is invalid (401).
-
         :keyword code: Required.
         :paramtype code: str
         :keyword state: Required.
@@ -1306,12 +1252,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         Display the completion page after the device flow.
 
-        Args:
-            response: Response object populated with the completion page.
-
-        Returns:
-            An HTML response asking the user to close the browser window.
-
         :return: any
         :rtype: any
         :raises ~azure.core.exceptions.HttpResponseError:
@@ -1361,13 +1301,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         Users with the ``proxy_management`` property can list tokens belonging to
         any subject; other users see only tokens bound to their own subject.
-
-        Args:
-            auth_db: Database used to retrieve refresh tokens.
-            user_info: Authenticated user and security properties from the access token.
-
-        Returns:
-            Refresh-token records visible to the user.
 
         :return: list of any
         :rtype: list[any]
@@ -1419,18 +1352,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         Users with the ``proxy_management`` property can revoke tokens belonging
         to any subject; other users can revoke only their own tokens.
 
-        Args:
-            auth_db: Database containing the refresh token.
-            user_info: Authenticated user and security properties from the access token.
-            jti: Unique identifier of the refresh token to revoke.
-
-        Returns:
-            A confirmation string.
-
-        Raises:
-            HTTPException: If the identifier is invalid (400), the token belongs
-                to another user (403), or the token does not exist (404).
-
         :param jti: Required.
         :type jti: str
         :return: str
@@ -1480,12 +1401,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         """Userinfo.
 
         Return identity and authorisation details from the authenticated access token.
-
-        Args:
-            user_info: Authenticated user information extracted from the access token.
-
-        Returns:
-            The user's subject, VO, DIRAC group, policies, properties, and preferred username.
 
         :return: UserInfoResponse
         :rtype: ~_generated.models.UserInfoResponse
@@ -1552,28 +1467,9 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         they are combined with the default group's properties; if both are
         supplied, they are combined with the selected group's properties.
 
-        The user authorization details are stored in a cookie so the flow can be
-        associated with the corresponding user authorization request.
-
-        Args:
-            request: Incoming request used to construct the callback URL.
-            response_type: OAuth response type. Only ``"code"`` is supported.
-            code_challenge: PKCE challenge supplied by the client.
-            code_challenge_method: PKCE challenge method. Only ``"S256"`` is supported.
-            client_id: Identifier of the client requesting authorization.
-            redirect_uri: Client URI to redirect to after authorization completes.
-            scope: Requested VO, group, and security properties.
-            state: Opaque client state to return after authorization completes.
-            auth_db: Database used to persist the authorization flow.
-            config: DiracX configuration used to select the identity provider.
-            available_properties: Security properties available for this request.
-            settings: Authentication settings used to validate and configure the flow.
-
-        Returns:
-            A redirect response to the VO identity provider.
-
-        Raises:
-            HTTPException: If the client ID, redirect URI, or scope is invalid.
+        The ID of the stored flow is carried in the encrypted ``state`` sent to
+        the identity provider so that its callback can be associated with the
+        corresponding user authorization request.
 
         :keyword response_type: Required.
         :paramtype response_type: str
@@ -1647,23 +1543,6 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         exchanges the provider's authorization code for an ID token, stores that
         token, and redirects the user to the client's redirect URI. The original
         client state is included in the redirect.
-
-        Args:
-            code: Authorization code returned by the identity provider.
-            state: Encrypted state returned by the identity provider.
-            request: Incoming request used to construct the token-exchange callback URL.
-            auth_db: Database containing the pending authorization flow.
-            config: DiracX configuration used to contact the identity provider.
-            settings: Authentication settings used to decrypt state and expire the flow.
-
-        Returns:
-            A redirect response to the client with the authorization code and
-            original state.
-
-        Raises:
-            HTTPException: If the state is invalid (400), the identity provider
-                returns a server error (502), or the authorization code is invalid
-                (401).
 
         :keyword code: Required.
         :paramtype code: str
@@ -1745,22 +1624,10 @@ class ConfigOperations:
 
         Return the latest configuration snapshot.
 
-        The response includes ETag and Last-Modified headers. When a supplied
-        conditional header indicates the client's cached snapshot is current, the
-        cache helper raises an HTTP exception with status 304.
-
-        Args:
-            config: Current configuration snapshot and its revision metadata.
-            response: Response whose cache headers are populated.
-            if_none_match: Optional ETag from the client's cached response.
-            if_modified_since: Optional modification date from the client's cached response.
-
-        Returns:
-            The current configuration snapshot.
-
-        Raises:
-            HTTPException: With status 304 when the client's cached snapshot is
-                still current.
+        The response includes ETag and Last-Modified headers. A 304 response is
+        returned if ``If-None-Match`` matches the latest ETag, or if
+        ``If-Modified-Since`` is newer than the latest revision (to avoid
+        flip-flopping between revisions).
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -1847,23 +1714,9 @@ class JobsOperations:
 
         Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox is already available, the response contains its PFN without
-        an upload URL. Otherwise, the response includes the presigned URL and
-        fields required to upload it to the storage backend.
-
-        Args:
-            user_info: Authenticated user who owns the sandbox.
-            sandbox_info: Archive format, size, and checksum metadata.
-            sandbox_metadata_db: Database used to register and look up the sandbox.
-            settings: Storage configuration used to prepare the upload.
-            check_permissions: Access-policy dependency used to authorize sandbox creation.
-
-        Returns:
-            Sandbox PFN and, when needed, presigned upload details.
-
-        Raises:
-            HTTPException: If the sandbox exceeds the size limit or metadata is
-                invalid (400), or the user cannot create a sandbox (403).
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Required.
         :type body: ~_generated.models.SandboxInfo
@@ -1883,23 +1736,9 @@ class JobsOperations:
 
         Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox is already available, the response contains its PFN without
-        an upload URL. Otherwise, the response includes the presigned URL and
-        fields required to upload it to the storage backend.
-
-        Args:
-            user_info: Authenticated user who owns the sandbox.
-            sandbox_info: Archive format, size, and checksum metadata.
-            sandbox_metadata_db: Database used to register and look up the sandbox.
-            settings: Storage configuration used to prepare the upload.
-            check_permissions: Access-policy dependency used to authorize sandbox creation.
-
-        Returns:
-            Sandbox PFN and, when needed, presigned upload details.
-
-        Raises:
-            HTTPException: If the sandbox exceeds the size limit or metadata is
-                invalid (400), or the user cannot create a sandbox (403).
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1919,23 +1758,9 @@ class JobsOperations:
 
         Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox is already available, the response contains its PFN without
-        an upload URL. Otherwise, the response includes the presigned URL and
-        fields required to upload it to the storage backend.
-
-        Args:
-            user_info: Authenticated user who owns the sandbox.
-            sandbox_info: Archive format, size, and checksum metadata.
-            sandbox_metadata_db: Database used to register and look up the sandbox.
-            settings: Storage configuration used to prepare the upload.
-            check_permissions: Access-policy dependency used to authorize sandbox creation.
-
-        Returns:
-            Sandbox PFN and, when needed, presigned upload details.
-
-        Raises:
-            HTTPException: If the sandbox exceeds the size limit or metadata is
-                invalid (400), or the user cannot create a sandbox (403).
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Is either a SandboxInfo type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SandboxInfo or IO[bytes]
@@ -1998,22 +1823,10 @@ class JobsOperations:
 
         Return a presigned URL for downloading a sandbox file.
 
-        The endpoint returns the URL instead of redirecting, preventing clients
-        from forwarding their authorization header to the storage backend.
-
-        Args:
-            pfn: Sandbox physical file name to download.
-            settings: Storage configuration used to generate the presigned URL.
-            sandbox_metadata_db: Database used to verify and update sandbox access.
-            user_info: Authenticated user and sandbox ownership context.
-            check_permissions: Access-policy dependency used to authorize the download.
-
-        Returns:
-            Presigned download URL and its expiry duration.
-
-        Raises:
-            HTTPException: If the PFN is invalid or the user is not permitted to
-                download the sandbox (403).
+        The URL is returned rather than redirected to, as most clients resend
+        the authorization header when following a redirect. That would leak the
+        token to the storage backend, and most storage backends reject requests
+        for presigned URLs that include an authorization header.
 
         :keyword pfn: Required.
         :paramtype pfn: str
@@ -2065,18 +1878,6 @@ class JobsOperations:
 
         Return the input and output sandboxes assigned to a job.
 
-        Args:
-            job_id: Identifier of the job whose sandboxes are requested.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job access permissions.
-            check_permissions: Access-policy dependency used to authorize the read.
-
-        Returns:
-            A mapping from input and output sandbox types to their sandbox records.
-
-        Raises:
-            HTTPException: If the user is not permitted to read the job (403).
-
         :param job_id: Required.
         :type job_id: int
         :return: dict mapping str to list of any
@@ -2127,15 +1928,6 @@ class JobsOperations:
 
         Remove all sandbox mappings for a job.
 
-        Args:
-            job_id: Identifier of the job whose sandbox mappings are removed.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job management permissions.
-            check_permissions: Access-policy dependency used to authorize the update.
-
-        Raises:
-            HTTPException: If the user is not permitted to manage the job (403).
-
         :param job_id: Required.
         :type job_id: int
         :return: any
@@ -2185,19 +1977,6 @@ class JobsOperations:
         """Get Job Sandbox.
 
         Return one type of sandbox assigned to a job.
-
-        Args:
-            job_id: Identifier of the job whose sandbox is requested.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job access permissions.
-            sandbox_type: Whether to retrieve the input or output sandbox.
-            check_permissions: Access-policy dependency used to authorize the read.
-
-        Returns:
-            Sandbox records of the requested type assigned to the job.
-
-        Raises:
-            HTTPException: If the user is not permitted to read the job (403).
 
         :param job_id: Required.
         :type job_id: int
@@ -2251,18 +2030,6 @@ class JobsOperations:
         """Assign Sandbox To Job.
 
         Assign a sandbox as the output sandbox for a job.
-
-        Args:
-            job_id: Identifier of the job to receive the sandbox.
-            pfn: Physical file name of the sandbox to assign.
-            sandbox_metadata_db: Database containing sandbox and job mappings.
-            job_db: Database used to check job management permissions.
-            settings: Storage settings used to identify the storage element.
-            check_permissions: Access-policy dependency used to authorize the update.
-
-        Raises:
-            HTTPException: If the sandbox is missing or already assigned (400),
-                or the user is not permitted to manage the job (403).
 
         :param job_id: Required.
         :type job_id: int
@@ -2323,16 +2090,6 @@ class JobsOperations:
 
         Remove sandbox mappings for multiple jobs.
 
-        Args:
-            job_ids: Identifiers of the jobs whose sandbox mappings are removed.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job management permissions.
-            check_permissions: Access-policy dependency used to authorize the update.
-
-        Raises:
-            HTTPException: If the user is not permitted to manage any requested
-                job (403).
-
         :param body: Required.
         :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
@@ -2351,16 +2108,6 @@ class JobsOperations:
 
         Remove sandbox mappings for multiple jobs.
 
-        Args:
-            job_ids: Identifiers of the jobs whose sandbox mappings are removed.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job management permissions.
-            check_permissions: Access-policy dependency used to authorize the update.
-
-        Raises:
-            HTTPException: If the user is not permitted to manage any requested
-                job (403).
-
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
@@ -2378,16 +2125,6 @@ class JobsOperations:
         """Unassign Bulk Jobs Sandboxes.
 
         Remove sandbox mappings for multiple jobs.
-
-        Args:
-            job_ids: Identifiers of the jobs whose sandbox mappings are removed.
-            sandbox_metadata_db: Database containing job-to-sandbox mappings.
-            job_db: Database used to check job management permissions.
-            check_permissions: Access-policy dependency used to authorize the update.
-
-        Raises:
-            HTTPException: If the user is not permitted to manage any requested
-                job (403).
 
         :param body: Is either a BodyJobsUnassignBulkJobsSandboxes type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes or IO[bytes]
@@ -2458,22 +2195,6 @@ class JobsOperations:
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
 
-        Args:
-            job_update: Timestamped status changes keyed by job ID.
-            config: DiracX configuration used when applying status transitions.
-            job_db: Database storing current job attributes.
-            job_logging_db: Database storing job status history.
-            task_queue_db: Database used to update task-queue state when required.
-            check_permissions: Access-policy dependency used to authorize job management.
-            force: Whether to bypass normal status transition checks.
-
-        Returns:
-            Per-job status-update successes and failures.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
-
         :param body: Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
         :keyword force: Default value is False.
@@ -2498,22 +2219,6 @@ class JobsOperations:
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
-
-        Args:
-            job_update: Timestamped status changes keyed by job ID.
-            config: DiracX configuration used when applying status transitions.
-            job_db: Database storing current job attributes.
-            job_logging_db: Database storing job status history.
-            task_queue_db: Database used to update task-queue state when required.
-            check_permissions: Access-policy dependency used to authorize job management.
-            force: Whether to bypass normal status transition checks.
-
-        Returns:
-            Per-job status-update successes and failures.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2543,22 +2248,6 @@ class JobsOperations:
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
-
-        Args:
-            job_update: Timestamped status changes keyed by job ID.
-            config: DiracX configuration used when applying status transitions.
-            job_db: Database storing current job attributes.
-            job_logging_db: Database storing job status history.
-            task_queue_db: Database used to update task-queue state when required.
-            check_permissions: Access-policy dependency used to authorize job management.
-            force: Whether to bypass normal status transition checks.
-
-        Returns:
-            Per-job status-update successes and failures.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
 
         :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
@@ -2628,22 +2317,7 @@ class JobsOperations:
 
         The JobAgent uses this endpoint to report runtime data and retrieve WMS
         commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
-
-        Args:
-            data: Heartbeat fields keyed by job ID.
-            config: DiracX configuration used when restoring job status.
-            job_db: Database used to update job attributes and status.
-            job_logging_db: Database used to record status changes.
-            task_queue_db: Database used when status changes affect task queues.
-            job_parameters_db: Database used to store heartbeat job parameters.
-            check_permissions: Access-policy dependency used to authorize pilot actions.
-
-        Returns:
-            Pending commands for the reported jobs.
-
-        Raises:
-            HTTPException: If any requested job does not exist (404) or the caller
-                is not permitted to perform the pilot action (403).
+        The request body is a mapping keyed by job ID.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.HeartbeatData]
@@ -2665,22 +2339,7 @@ class JobsOperations:
 
         The JobAgent uses this endpoint to report runtime data and retrieve WMS
         commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
-
-        Args:
-            data: Heartbeat fields keyed by job ID.
-            config: DiracX configuration used when restoring job status.
-            job_db: Database used to update job attributes and status.
-            job_logging_db: Database used to record status changes.
-            task_queue_db: Database used when status changes affect task queues.
-            job_parameters_db: Database used to store heartbeat job parameters.
-            check_permissions: Access-policy dependency used to authorize pilot actions.
-
-        Returns:
-            Pending commands for the reported jobs.
-
-        Raises:
-            HTTPException: If any requested job does not exist (404) or the caller
-                is not permitted to perform the pilot action (403).
+        The request body is a mapping keyed by job ID.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2702,22 +2361,7 @@ class JobsOperations:
 
         The JobAgent uses this endpoint to report runtime data and retrieve WMS
         commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
-
-        Args:
-            data: Heartbeat fields keyed by job ID.
-            config: DiracX configuration used when restoring job status.
-            job_db: Database used to update job attributes and status.
-            job_logging_db: Database used to record status changes.
-            task_queue_db: Database used when status changes affect task queues.
-            job_parameters_db: Database used to store heartbeat job parameters.
-            check_permissions: Access-policy dependency used to authorize pilot actions.
-
-        Returns:
-            Pending commands for the reported jobs.
-
-        Raises:
-            HTTPException: If any requested job does not exist (404) or the caller
-                is not permitted to perform the pilot action (403).
+        The request body is a mapping keyed by job ID.
 
         :param body: Is either a {str: HeartbeatData} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.HeartbeatData] or IO[bytes]
@@ -2787,25 +2431,10 @@ class JobsOperations:
 
         Reschedule eligible failed or killed jobs.
 
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
         incrementing it. Jobs that are unverified or exceed their configured
         reschedule limit are reported as failures.
-
-        Args:
-            job_ids: Identifiers of the jobs to reschedule.
-            config: DiracX configuration containing per-VO scheduling limits.
-            job_db: Database used to retrieve and update job records.
-            job_logging_db: Database used to record rescheduling status changes.
-            task_queue_db: Database used to update task queues.
-            check_permissions: Access-policy dependency used to authorize job management.
-            reset_jobs: Whether to reset, rather than increment, reschedule counters.
-
-        Returns:
-            Per-job results describing successful and failed rescheduling operations.
-
-        Raises:
-            HTTPException: If no requested job can be rescheduled (400) or the
-                user cannot manage the requested jobs (403).
 
         :param body: Required.
         :type body: ~_generated.models.BodyJobsRescheduleJobs
@@ -2827,25 +2456,10 @@ class JobsOperations:
 
         Reschedule eligible failed or killed jobs.
 
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
         incrementing it. Jobs that are unverified or exceed their configured
         reschedule limit are reported as failures.
-
-        Args:
-            job_ids: Identifiers of the jobs to reschedule.
-            config: DiracX configuration containing per-VO scheduling limits.
-            job_db: Database used to retrieve and update job records.
-            job_logging_db: Database used to record rescheduling status changes.
-            task_queue_db: Database used to update task queues.
-            check_permissions: Access-policy dependency used to authorize job management.
-            reset_jobs: Whether to reset, rather than increment, reschedule counters.
-
-        Returns:
-            Per-job results describing successful and failed rescheduling operations.
-
-        Raises:
-            HTTPException: If no requested job can be rescheduled (400) or the
-                user cannot manage the requested jobs (403).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2867,25 +2481,10 @@ class JobsOperations:
 
         Reschedule eligible failed or killed jobs.
 
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
         incrementing it. Jobs that are unverified or exceed their configured
         reschedule limit are reported as failures.
-
-        Args:
-            job_ids: Identifiers of the jobs to reschedule.
-            config: DiracX configuration containing per-VO scheduling limits.
-            job_db: Database used to retrieve and update job records.
-            job_logging_db: Database used to record rescheduling status changes.
-            task_queue_db: Database used to update task queues.
-            check_permissions: Access-policy dependency used to authorize job management.
-            reset_jobs: Whether to reset, rather than increment, reschedule counters.
-
-        Returns:
-            Per-job results describing successful and failed rescheduling operations.
-
-        Raises:
-            HTTPException: If no requested job can be rescheduled (400) or the
-                user cannot manage the requested jobs (403).
 
         :param body: Is either a BodyJobsRescheduleJobs type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyJobsRescheduleJobs or IO[bytes]
@@ -2953,18 +2552,10 @@ class JobsOperations:
 
         Update job attributes and parameters.
 
-        Metadata fields matching known job attributes are updated on the job
-        record; other fields are stored as job parameters.
-
-        Args:
-            updates: Metadata updates keyed by job ID.
-            job_db: Database used to update job attributes.
-            job_parameters_db: Database used to update job parameters.
-            check_permissions: Access-policy dependency used to authorize job management.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.JobMetaData]
@@ -2982,18 +2573,10 @@ class JobsOperations:
 
         Update job attributes and parameters.
 
-        Metadata fields matching known job attributes are updated on the job
-        record; other fields are stored as job parameters.
-
-        Args:
-            updates: Metadata updates keyed by job ID.
-            job_db: Database used to update job attributes.
-            job_parameters_db: Database used to update job parameters.
-            check_permissions: Access-policy dependency used to authorize job management.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3013,18 +2596,10 @@ class JobsOperations:
 
         Update job attributes and parameters.
 
-        Metadata fields matching known job attributes are updated on the job
-        record; other fields are stored as job parameters.
-
-        Args:
-            updates: Metadata updates keyed by job ID.
-            job_db: Database used to update job attributes.
-            job_parameters_db: Database used to update job parameters.
-            check_permissions: Access-policy dependency used to authorize job management.
-
-        Raises:
-            HTTPException: If an update is invalid (400), a job is not found (404),
-                or the user cannot manage the requested jobs (403).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Is either a {str: JobMetaData} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.JobMetaData] or IO[bytes]
@@ -3091,33 +2666,19 @@ class JobsOperations:
 
         Search jobs using filters, selected fields, and pagination.
 
-        By default, the endpoint returns all fields for jobs the user can access.
-        The request body can limit returned fields, filter results, and specify
-        sort order. ``PilotStamp`` is accepted as a pseudo-parameter in filters
-        with ``eq`` or ``in`` operators and is resolved to a job-ID filter.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
+
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
         The response uses ``Content-Range`` when results span multiple pages. It
         returns 206 when only part of the matching range is returned, or 416 when
         the requested page is beyond the available results.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to search job records.
-            job_parameters_db: Database used to retrieve job parameters.
-            job_logging_db: Database used to retrieve requested job logging information.
-            pilot_db: Database used to resolve ``PilotStamp`` filters.
-            user_info: Authenticated user identity, VO, and security properties.
-            check_permissions: Access-policy dependency used to authorize job queries.
-            response: Response object used to set range headers and status codes.
-            page: One-based page number to return.
-            per_page: Maximum number of jobs to return on this page.
-            body: Optional filters, selected fields, sorting, and distinct-result settings.
-
-        Returns:
-            Job records matching the query and the user's access permissions.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -3147,33 +2708,19 @@ class JobsOperations:
 
         Search jobs using filters, selected fields, and pagination.
 
-        By default, the endpoint returns all fields for jobs the user can access.
-        The request body can limit returned fields, filter results, and specify
-        sort order. ``PilotStamp`` is accepted as a pseudo-parameter in filters
-        with ``eq`` or ``in`` operators and is resolved to a job-ID filter.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
+
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
         The response uses ``Content-Range`` when results span multiple pages. It
         returns 206 when only part of the matching range is returned, or 416 when
         the requested page is beyond the available results.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to search job records.
-            job_parameters_db: Database used to retrieve job parameters.
-            job_logging_db: Database used to retrieve requested job logging information.
-            pilot_db: Database used to resolve ``PilotStamp`` filters.
-            user_info: Authenticated user identity, VO, and security properties.
-            check_permissions: Access-policy dependency used to authorize job queries.
-            response: Response object used to set range headers and status codes.
-            page: One-based page number to return.
-            per_page: Maximum number of jobs to return on this page.
-            body: Optional filters, selected fields, sorting, and distinct-result settings.
-
-        Returns:
-            Job records matching the query and the user's access permissions.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Default value is None.
         :type body: IO[bytes]
@@ -3202,33 +2749,19 @@ class JobsOperations:
 
         Search jobs using filters, selected fields, and pagination.
 
-        By default, the endpoint returns all fields for jobs the user can access.
-        The request body can limit returned fields, filter results, and specify
-        sort order. ``PilotStamp`` is accepted as a pseudo-parameter in filters
-        with ``eq`` or ``in`` operators and is resolved to a job-ID filter.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
+
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
         The response uses ``Content-Range`` when results span multiple pages. It
         returns 206 when only part of the matching range is returned, or 416 when
         the requested page is beyond the available results.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to search job records.
-            job_parameters_db: Database used to retrieve job parameters.
-            job_logging_db: Database used to retrieve requested job logging information.
-            pilot_db: Database used to resolve ``PilotStamp`` filters.
-            user_info: Authenticated user identity, VO, and security properties.
-            check_permissions: Access-policy dependency used to authorize job queries.
-            response: Response object used to set range headers and status codes.
-            page: One-based page number to return.
-            per_page: Maximum number of jobs to return on this page.
-            body: Optional filters, selected fields, sorting, and distinct-result settings.
-
-        Returns:
-            Job records matching the query and the user's access permissions.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -3305,22 +2838,13 @@ class JobsOperations:
 
         Group matching jobs and return counts for each group.
 
-        The request body specifies grouping fields and optional search filters.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
+
         Results are scoped to the user's VO and, when global job visibility is
         disabled, to the user's own jobs unless they are a job administrator.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to aggregate job records.
-            user_info: Authenticated user identity, VO, and security properties.
-            body: Grouping fields and optional search filters.
-            check_permissions: Access-policy dependency used to authorize job queries.
-
-        Returns:
-            Rows containing each grouping-field combination and its matching job count.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -3338,22 +2862,13 @@ class JobsOperations:
 
         Group matching jobs and return counts for each group.
 
-        The request body specifies grouping fields and optional search filters.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
+
         Results are scoped to the user's VO and, when global job visibility is
         disabled, to the user's own jobs unless they are a job administrator.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to aggregate job records.
-            user_info: Authenticated user identity, VO, and security properties.
-            body: Grouping fields and optional search filters.
-            check_permissions: Access-policy dependency used to authorize job queries.
-
-        Returns:
-            Rows containing each grouping-field combination and its matching job count.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3371,22 +2886,13 @@ class JobsOperations:
 
         Group matching jobs and return counts for each group.
 
-        The request body specifies grouping fields and optional search filters.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
+
         Results are scoped to the user's VO and, when global job visibility is
         disabled, to the user's own jobs unless they are a job administrator.
-
-        Args:
-            config: DiracX configuration used to determine the VO's job visibility rules.
-            job_db: Database used to aggregate job records.
-            user_info: Authenticated user identity, VO, and security properties.
-            body: Grouping fields and optional search filters.
-            check_permissions: Access-policy dependency used to authorize job queries.
-
-        Returns:
-            Rows containing each grouping-field combination and its matching job count.
-
-        Raises:
-            HTTPException: If the authenticated user is not permitted to query jobs (403).
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]
@@ -3455,21 +2961,6 @@ class JobsOperations:
         cannot contain parametric jobs, and no submission may create more than 20
         jobs at once.
 
-        Args:
-            job_definitions: JDL descriptions for the jobs to submit.
-            job_db: Database used to create job records.
-            job_logging_db: Database used to record each job's initial status.
-            user_info: Authenticated user, VO, and group used as the job owner.
-            check_permissions: Access-policy dependency used to authorize job creation.
-            config: DiracX configuration used to validate and prepare the JDLs.
-
-        Returns:
-            Details of the inserted jobs, including IDs and initial statuses.
-
-        Raises:
-            HTTPException: If a JDL is invalid or the submission exceeds the job
-                limit (400), or the user is not permitted to create jobs (403).
-
         :param body: Required.
         :type body: list[str]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
@@ -3492,21 +2983,6 @@ class JobsOperations:
         cannot contain parametric jobs, and no submission may create more than 20
         jobs at once.
 
-        Args:
-            job_definitions: JDL descriptions for the jobs to submit.
-            job_db: Database used to create job records.
-            job_logging_db: Database used to record each job's initial status.
-            user_info: Authenticated user, VO, and group used as the job owner.
-            check_permissions: Access-policy dependency used to authorize job creation.
-            config: DiracX configuration used to validate and prepare the JDLs.
-
-        Returns:
-            Details of the inserted jobs, including IDs and initial statuses.
-
-        Raises:
-            HTTPException: If a JDL is invalid or the submission exceeds the job
-                limit (400), or the user is not permitted to create jobs (403).
-
         :param body: Required.
         :type body: IO[bytes]
         :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
@@ -3526,21 +3002,6 @@ class JobsOperations:
         A single parametric JDL may expand into multiple jobs. Bulk submissions
         cannot contain parametric jobs, and no submission may create more than 20
         jobs at once.
-
-        Args:
-            job_definitions: JDL descriptions for the jobs to submit.
-            job_db: Database used to create job records.
-            job_logging_db: Database used to record each job's initial status.
-            user_info: Authenticated user, VO, and group used as the job owner.
-            check_permissions: Access-policy dependency used to authorize job creation.
-            config: DiracX configuration used to validate and prepare the JDLs.
-
-        Returns:
-            Details of the inserted jobs, including IDs and initial statuses.
-
-        Raises:
-            HTTPException: If a JDL is invalid or the submission exceeds the job
-                limit (400), or the user is not permitted to create jobs (403).
 
         :param body: Is either a [str] type or a IO[bytes] type. Required.
         :type body: list[str] or IO[bytes]
@@ -3907,18 +3368,8 @@ class PilotsOperations:
         Register a pilot and its external reference.
 
         Legacy X.509 pilot identities may self-register one pilot per request when
-        permitted by the access policy. Registration into an unconfigured VO is
-        rejected, as is a stamp that already exists.
-
-        Args:
-            config: DiracX configuration used to validate the pilot's VO.
-            pilot_db: Database where the pilot record is registered.
-            registration: Pilot stamp, VO, site details, reference, and initial status.
-            check_permissions: Access-policy dependency used to authorize registration.
-
-        Raises:
-            HTTPException: If the VO is not configured (400), the stamp already
-                exists (409), or the caller is not permitted to register the pilot (403).
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Required.
         :type body: ~_generated.models.PilotRegistrationParams
@@ -3937,18 +3388,8 @@ class PilotsOperations:
         Register a pilot and its external reference.
 
         Legacy X.509 pilot identities may self-register one pilot per request when
-        permitted by the access policy. Registration into an unconfigured VO is
-        rejected, as is a stamp that already exists.
-
-        Args:
-            config: DiracX configuration used to validate the pilot's VO.
-            pilot_db: Database where the pilot record is registered.
-            registration: Pilot stamp, VO, site details, reference, and initial status.
-            check_permissions: Access-policy dependency used to authorize registration.
-
-        Raises:
-            HTTPException: If the VO is not configured (400), the stamp already
-                exists (409), or the caller is not permitted to register the pilot (403).
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3967,18 +3408,8 @@ class PilotsOperations:
         Register a pilot and its external reference.
 
         Legacy X.509 pilot identities may self-register one pilot per request when
-        permitted by the access policy. Registration into an unconfigured VO is
-        rejected, as is a stamp that already exists.
-
-        Args:
-            config: DiracX configuration used to validate the pilot's VO.
-            pilot_db: Database where the pilot record is registered.
-            registration: Pilot stamp, VO, site details, reference, and initial status.
-            check_permissions: Access-policy dependency used to authorize registration.
-
-        Raises:
-            HTTPException: If the VO is not configured (400), the stamp already
-                exists (409), or the caller is not permitted to register the pilot (403).
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Is either a PilotRegistrationParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.PilotRegistrationParams or IO[bytes]
@@ -4048,15 +3479,6 @@ class PilotsOperations:
         cannot be modified. Legacy pilot identities may update one pilot per call
         when permitted by the access policy.
 
-        Args:
-            updates: Pilot metadata keyed by pilot stamp.
-            pilot_db: Database containing pilot records to update.
-            check_permissions: Access-policy dependency used to authorize updates.
-
-        Raises:
-            HTTPException: If a pilot is not found (404) or the caller is not
-                permitted to update the requested pilots (403).
-
         :param body: Required.
         :type body: dict[str, ~_generated.models.PilotMetadata]
         :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
@@ -4077,15 +3499,6 @@ class PilotsOperations:
         by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
         cannot be modified. Legacy pilot identities may update one pilot per call
         when permitted by the access policy.
-
-        Args:
-            updates: Pilot metadata keyed by pilot stamp.
-            pilot_db: Database containing pilot records to update.
-            check_permissions: Access-policy dependency used to authorize updates.
-
-        Raises:
-            HTTPException: If a pilot is not found (404) or the caller is not
-                permitted to update the requested pilots (403).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -4109,15 +3522,6 @@ class PilotsOperations:
         by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
         cannot be modified. Legacy pilot identities may update one pilot per call
         when permitted by the access policy.
-
-        Args:
-            updates: Pilot metadata keyed by pilot stamp.
-            pilot_db: Database containing pilot records to update.
-            check_permissions: Access-policy dependency used to authorize updates.
-
-        Raises:
-            HTTPException: If a pilot is not found (404) or the caller is not
-                permitted to update the requested pilots (403).
 
         :param body: Is either a {str: PilotMetadata} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.PilotMetadata] or IO[bytes]
@@ -4187,27 +3591,13 @@ class PilotsOperations:
         Results are restricted to the caller's VO unless they are a service
         administrator. ``JobID`` is accepted as a pseudo-parameter in filters
         with ``eq`` or ``in`` operators and is resolved through
-        ``JobToPilotMapping`` to a ``PilotID`` filter.
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
         If the requested page contains only part of the matching results, the
         response includes a ``Content-Range`` header and status 206. If the page
         is beyond the available results, it includes the total in ``Content-Range``
         and uses status 416.
-
-        Args:
-            pilot_db: Database used to search pilot records.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            response: Response used to set range headers and status codes.
-            user_info: Authenticated identity used to scope results by VO.
-            page: One-based page number to return.
-            per_page: Maximum number of pilots to return on this page.
-            body: Optional search fields, filters, sort order, and distinct setting.
-
-        Returns:
-            Pilot records matching the search and VO constraint.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -4240,27 +3630,13 @@ class PilotsOperations:
         Results are restricted to the caller's VO unless they are a service
         administrator. ``JobID`` is accepted as a pseudo-parameter in filters
         with ``eq`` or ``in`` operators and is resolved through
-        ``JobToPilotMapping`` to a ``PilotID`` filter.
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
         If the requested page contains only part of the matching results, the
         response includes a ``Content-Range`` header and status 206. If the page
         is beyond the available results, it includes the total in ``Content-Range``
         and uses status 416.
-
-        Args:
-            pilot_db: Database used to search pilot records.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            response: Response used to set range headers and status codes.
-            user_info: Authenticated identity used to scope results by VO.
-            page: One-based page number to return.
-            per_page: Maximum number of pilots to return on this page.
-            body: Optional search fields, filters, sort order, and distinct setting.
-
-        Returns:
-            Pilot records matching the search and VO constraint.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Default value is None.
         :type body: IO[bytes]
@@ -4292,27 +3668,13 @@ class PilotsOperations:
         Results are restricted to the caller's VO unless they are a service
         administrator. ``JobID`` is accepted as a pseudo-parameter in filters
         with ``eq`` or ``in`` operators and is resolved through
-        ``JobToPilotMapping`` to a ``PilotID`` filter.
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
         If the requested page contains only part of the matching results, the
         response includes a ``Content-Range`` header and status 206. If the page
         is beyond the available results, it includes the total in ``Content-Range``
         and uses status 416.
-
-        Args:
-            pilot_db: Database used to search pilot records.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            response: Response used to set range headers and status codes.
-            user_info: Authenticated identity used to scope results by VO.
-            page: One-based page number to return.
-            per_page: Maximum number of pilots to return on this page.
-            body: Optional search fields, filters, sort order, and distinct setting.
-
-        Returns:
-            Pilot records matching the search and VO constraint.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -4387,22 +3749,10 @@ class PilotsOperations:
     def summary(self, body: _models.SummaryParams, *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Group matching pilots and return counts for each group.
+        Group matching pilots and return counts suitable for plotting.
 
         Results are restricted to the caller's VO unless they are a service
         administrator.
-
-        Args:
-            pilot_db: Database used to aggregate pilot records.
-            user_info: Authenticated identity used to scope results by VO.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            body: Grouping fields and optional search filters.
-
-        Returns:
-            Aggregated rows containing grouping values and pilot counts.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -4418,22 +3768,10 @@ class PilotsOperations:
     def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Group matching pilots and return counts for each group.
+        Group matching pilots and return counts suitable for plotting.
 
         Results are restricted to the caller's VO unless they are a service
         administrator.
-
-        Args:
-            pilot_db: Database used to aggregate pilot records.
-            user_info: Authenticated identity used to scope results by VO.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            body: Grouping fields and optional search filters.
-
-        Returns:
-            Aggregated rows containing grouping values and pilot counts.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Required.
         :type body: IO[bytes]
@@ -4449,22 +3787,10 @@ class PilotsOperations:
     def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Group matching pilots and return counts for each group.
+        Group matching pilots and return counts suitable for plotting.
 
         Results are restricted to the caller's VO unless they are a service
         administrator.
-
-        Args:
-            pilot_db: Database used to aggregate pilot records.
-            user_info: Authenticated identity used to scope results by VO.
-            check_permissions: Access-policy dependency used to authorize metadata reads.
-            body: Grouping fields and optional search filters.
-
-        Returns:
-            Aggregated rows containing grouping values and pilot counts.
-
-        Raises:
-            HTTPException: If the caller is not permitted to read pilot metadata (403).
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]
@@ -4554,21 +3880,6 @@ class RssOperations:
 
         Return storage-element statuses visible to the caller's VO.
 
-        Args:
-            response: Response whose conditional-cache headers are populated.
-            user_info: Authenticated user information used to select the VO.
-            check_permissions: Access-policy dependency for the RSS request.
-            snapshot: Cached storage-element statuses across all VOs.
-            if_none_match: Optional ETag from the client's cached response.
-            if_modified_since: Optional modification date from the client's cached response.
-
-        Returns:
-            Storage-element statuses shared across VOs and specific to the caller's VO.
-
-        Raises:
-            HTTPException: With status 304 if the client's cached representation
-                is still current.
-
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
         :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
@@ -4638,21 +3949,6 @@ class RssOperations:
         """Get Compute Status.
 
         Return compute element statuses visible to the caller's VO.
-
-        Args:
-            response: Response whose conditional-cache headers are populated.
-            user_info: Authenticated user information used to select the VO.
-            check_permissions: Access-policy dependency for the RSS request.
-            snapshot: Cached compute element statuses across all VOs.
-            if_none_match: Optional ETag from the client's cached response.
-            if_modified_since: Optional modification date from the client's cached response.
-
-        Returns:
-            Compute element statuses shared across VOs and specific to the caller's VO.
-
-        Raises:
-            HTTPException: With status 304 if the client's cached representation
-                is still current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -4724,21 +4020,6 @@ class RssOperations:
 
         Return site statuses visible to the caller's VO.
 
-        Args:
-            response: Response whose conditional-cache headers are populated.
-            user_info: Authenticated user information used to select the VO.
-            check_permissions: Access-policy dependency for the RSS request.
-            snapshot: Cached site statuses across all VOs.
-            if_none_match: Optional ETag from the client's cached response.
-            if_modified_since: Optional modification date from the client's cached response.
-
-        Returns:
-            Site statuses shared across VOs and specific to the caller's VO.
-
-        Raises:
-            HTTPException: With status 304 if the client's cached representation
-                is still current.
-
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
         :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
@@ -4808,21 +4089,6 @@ class RssOperations:
         """Get Fts Status.
 
         Return FTS server statuses visible to the caller's VO.
-
-        Args:
-            response: Response whose conditional-cache headers are populated.
-            user_info: Authenticated user information used to select the VO.
-            check_permissions: Access-policy dependency for the RSS request.
-            snapshot: Cached FTS server statuses across all VOs.
-            if_none_match: Optional ETag from the client's cached response.
-            if_modified_since: Optional modification date from the client's cached response.
-
-        Returns:
-            FTS statuses shared across VOs and specific to the caller's VO.
-
-        Raises:
-            HTTPException: With status 304 if the client's cached representation
-                is still current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
