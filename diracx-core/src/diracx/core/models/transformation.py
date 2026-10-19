@@ -172,8 +172,6 @@ TRANSFORMATION_TRANSITIONS: dict[
             TransformationStatus.CANCELLING,
         }
     ),
-    # Not drawn in DX-ADR-005: a workgraph may be cancelled while Finalizing,
-    # when its members can be FinalizingBlocked or Finalized
     TransformationStatus.FINALIZING_BLOCKED: frozenset(
         {
             TransformationStatus.FINALIZING,
