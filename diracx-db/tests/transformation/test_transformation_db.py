@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import delete, event, func, insert, select
+from sqlalchemy import delete, event, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import UUID, uuid7
 
@@ -98,6 +98,15 @@ async def test_transformation_round_trip(
             )
         ).one()
     assert row == (transformation_id, TransformationStatus.NEW, True)
+
+    # Clearing a JSON column stores SQL NULL, not the JSON literal null
+    async with transformation_db as db:
+        await db.conn.execute(update(Transformations).values(feeder_state={"a": 1}))
+        await db.conn.execute(update(Transformations).values(feeder_state=None))
+        cleared = await db.conn.scalar(
+            select(func.count()).where(Transformations.feeder_state.is_(None))
+        )
+    assert cleared == 1
 
 
 async def test_inputs_deduplicate_on_hash_not_lfn(

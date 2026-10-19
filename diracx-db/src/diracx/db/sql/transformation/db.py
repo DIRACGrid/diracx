@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from diracx.db.sql.utils import BaseSQLDB
-from diracx.db.sql.utils.counters import counter_locks_table
+from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
-from .schema import DATA_PARCELS_COUNTER, TRANSFORMATION_COUNTER
 from .schema import Base as TransformationDBBase
-
-COUNTERS = (TRANSFORMATION_COUNTER, DATA_PARCELS_COUNTER)
 
 
 class TransformationDB(BaseSQLDB):
@@ -29,21 +26,21 @@ class TransformationDB(BaseSQLDB):
 
         The fold and rebuild operations of a journalled counter (DX-ADR-009)
         serialise on these rows, so they must exist before any delta is
-        journalled.
+        journalled. Rows that already exist are skipped, so concurrent or
+        repeated runs are safe.
 
         Args:
             conn: Connection to the newly created database schema.
         """
-        locks = counter_locks_table(cls.metadata)
-        existing = {
-            (row.CounterName, row.Operation)
-            for row in await conn.execute(select(locks))
-        }
-        missing = [
+        rows = [
             row
-            for counter in COUNTERS
+            for counter in journalled_counters(cls.metadata)
             for row in counter.lock_rows()
-            if (row["CounterName"], row["Operation"]) not in existing
         ]
-        if missing:
-            await conn.execute(insert(locks), missing)
+        if rows:
+            await conn.execute(
+                insert(counter_locks_table(cls.metadata))
+                .prefix_with("IGNORE", dialect="mysql")
+                .prefix_with("OR IGNORE", dialect="sqlite"),
+                rows,
+            )

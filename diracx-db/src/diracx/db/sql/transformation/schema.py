@@ -124,7 +124,8 @@ class Base(DeclarativeBase):
         UUID: BinaryUUID(),
         bytes16: BINARY(16),
         bytes32: BINARY(32),
-        dict[str, Any]: JSON,
+        # Python None is SQL NULL, so "IS NULL" finds a cleared column
+        dict[str, Any]: JSON(none_as_null=True),
     }
 
 
