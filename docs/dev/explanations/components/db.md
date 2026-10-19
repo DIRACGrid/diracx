@@ -24,6 +24,8 @@ The value of this URL is taken from the environment variable of the form `DIRACX
 export DIRACX_DB_URL_MYDB="mysql+aiomysql://user:pass@hostname:3306/MyDB"
 ```
 
+A database needs a URL only if something enabled uses it. The API server refuses to start if an enabled router uses a database without a URL, directly or through a cacheable source; the tasks worker does the same for the databases of the installed tasks. Both raise a `MissingDBURLError` that lists every variable to set (and, for the API server, the `DIRACX_SERVICE_<system-name>_ENABLED=false` alternative). Other tools, such as `python -m diracx.db init-sql`, skip databases without a URL with a warning.
+
 See the DiracX helm chart for more details about configuring access to databases.
 
 ### Using SQL databases

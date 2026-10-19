@@ -30,7 +30,7 @@ from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.logs import configure_logging
 from diracx.core.settings import FactorySettings, ServiceSettingsBase
 from diracx.core.sources import AsyncCacheableSource
-from diracx.db.exceptions import DBUnavailableError
+from diracx.db.exceptions import DBUnavailableError, MissingDBURLError
 from diracx.db.os.utils import BaseOSDB
 from diracx.db.sql.utils import BaseSQLDB
 from diracx.routers.access_policies import BaseAccessPolicy, check_permissions
@@ -171,8 +171,11 @@ def create_app_inner(
         except Exception:
             logger.exception("Failed to initialize DB %s", db_name)
 
-    if fail_startup:
-        raise Exception("No SQL database could be initialized, aborting")
+    if database_urls and fail_startup:
+        raise Exception(
+            "No SQL database could be initialized, aborting: see the DB "
+            "initialisation errors logged above"
+        )
 
     # Instantiate the cacheable sources and override their create methods,
     # mirroring the SQL DB wiring above. A single instance is used for each
@@ -244,22 +247,33 @@ def create_app_inner(
                     f"Cannot enable {system_name=} as it requires {cls=}"
                 )
 
-        # Ensure required DBs are available
+        # Ensure required SQL DBs are available
         missing_sql_dbs = (
             set(find_dependents(router, BaseSQLDB)) - available_sql_db_classes
         )
-
         if missing_sql_dbs:
             raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_sql_dbs=}"
+                f"Cannot enable {system_name=}: "
+                + _describe_missing_dbs(
+                    missing_sql_dbs,
+                    FactorySettings.sql_db_env_var,
+                    "failed to initialise (see the errors logged above) or have no URL",
+                )
             )
+
+        # Ensure required OpenSearch DBs are available
         missing_os_dbs = (
             set(find_dependents(router, BaseOSDB))  # type: ignore[type-abstract]
             - available_os_db_classes
         )
         if missing_os_dbs:
             raise NotImplementedError(
-                f"Cannot enable {system_name=} as it requires {missing_os_dbs=}"
+                f"Cannot enable {system_name=}: "
+                + _describe_missing_dbs(
+                    missing_os_dbs,
+                    FactorySettings.os_db_env_var,
+                    "have no connection parameters",
+                )
             )
 
         # Ensure required cacheable sources have been wired, i.e. that the
@@ -330,6 +344,65 @@ def create_app_inner(
     return app
 
 
+def _describe_missing_dbs(
+    db_classes: Iterable[type[BaseSQLDB] | type[BaseOSDB]],
+    env_var: Callable[[str], str],
+    reason: str,
+) -> str:
+    """Explain why the DBs required by a router are not available.
+
+    The variable is named after the entry point rather than the class, as
+    extensions override DBs under the original name, so a base class and its
+    override share one variable. A class that is not registered as an entry
+    point cannot be enabled by any variable.
+    """
+    env_vars: dict[str, None] = {}
+    unregistered = []
+    for db_class in sorted(db_classes, key=lambda x: x.__name__):
+        if db_name := db_class.entry_point_name():
+            env_vars[env_var(db_name)] = None
+        else:
+            unregistered.append(db_class.__name__)
+    lines = []
+    if env_vars:
+        lines.append(f"it requires DBs that {reason}:")
+        lines.extend(env_vars)
+    if unregistered:
+        lines.append("it requires DBs that are not registered as entry points:")
+        lines.extend(unregistered)
+    return "\n ".join(lines)
+
+
+def _missing_db_env_vars(
+    router: APIRouter,
+    database_urls: dict[str, str],
+    os_database_conn_kwargs: dict[str, dict[str, Any]],
+) -> set[str]:
+    """Return the variables to set for the DBs a router uses to have a URL."""
+    # create_app_inner wires the highest priority class of each source
+    source_classes_by_name: dict[str, list[type[AsyncCacheableSource]]] = {}
+    for entry_point in select_from_extension(group=DiracEntryPoint.CACHEABLE_SOURCES):
+        source_classes_by_name.setdefault(entry_point.name, []).append(
+            entry_point.load()
+        )
+    preferred_sources = {
+        source_cls: source_classes[0]
+        for source_classes in source_classes_by_name.values()
+        for source_cls in source_classes
+    }
+    sql_dbs = set(find_dependents(router, BaseSQLDB)) | {
+        cast(type[BaseSQLDB], preferred_sources.get(source_cls, source_cls).db_class)
+        for source_cls in find_dependents(
+            router,
+            AsyncCacheableSource,  # type: ignore[type-abstract]
+        )
+    }
+    os_dbs = set(find_dependents(router, BaseOSDB))  # type: ignore[type-abstract]
+    return BaseSQLDB.missing_env_vars(
+        sql_dbs, database_urls
+    ) | BaseOSDB.missing_env_vars(os_dbs, os_database_conn_kwargs)
+
+
 def create_app() -> DiracFastAPI:
     """Load settings from the environment and create the application object.
 
@@ -344,23 +417,54 @@ def create_app() -> DiracFastAPI:
     For each of the enabled route, we inspect which Setting classes
     are needed.
 
+    We refuse to start if an enabled route uses a DB, directly or through
+    a cacheable source, that has no URL. The DBs that only disabled routes
+    use need none.
+
     We attempt to load each setting classes to make sure that the
     settings are correctly defined.
+
+    Raises:
+        MissingDBURLError: Listing, for each enabled system, the variables
+            of the DBs it uses that have no URL.
     """
+    factory_settings = FactorySettings()
+    database_urls = BaseSQLDB.available_urls()
+    os_database_conn_kwargs = BaseOSDB.available_urls()
+
     # Load all available routers
     enabled_systems = set()
     settings_classes = set()
-    factory_settings = FactorySettings()
+    missing_by_system: dict[str, set[str]] = {}
     for entry_point in select_from_extension(group=DiracEntryPoint.SERVICES):
         enabled = factory_settings.enabled_services.get(entry_point.name, True)
         logger.debug("Found service %r: enabled=%s", entry_point, enabled)
         if not enabled:
             continue
         router: APIRouter = entry_point.load()
+        # Only the highest priority router of a system is mounted
+        if entry_point.name not in enabled_systems and (
+            env_vars := _missing_db_env_vars(
+                router, database_urls, os_database_conn_kwargs
+            )
+        ):
+            missing_by_system[entry_point.name] = env_vars
         enabled_systems.add(entry_point.name)
         dependencies = set(find_dependents(router, ServiceSettingsBase))
         logger.debug("Found dependencies for %r: enabled=%s", entry_point, dependencies)
         settings_classes |= dependencies
+
+    if missing_by_system:
+        raise MissingDBURLError(
+            "Enabled systems use DBs without a URL: set the variables, "
+            "or disable the systems\n "
+            + "\n ".join(
+                f"{system} ({FactorySettings.service_enabled_env_var(system)}"
+                f"=false): {', '.join(sorted(env_vars))}"
+                for system, env_vars in sorted(missing_by_system.items())
+            ),
+            sorted(set().union(*missing_by_system.values())),
+        )
 
     # Load settings classes required by the routers
     all_service_settings = [settings_class() for settings_class in settings_classes]
@@ -383,8 +487,8 @@ def create_app() -> DiracFastAPI:
     return create_app_inner(
         enabled_systems=enabled_systems,
         all_service_settings=all_service_settings,
-        database_urls=BaseSQLDB.available_urls(),
-        os_database_conn_kwargs=BaseOSDB.available_urls(),
+        database_urls=database_urls,
+        os_database_conn_kwargs=os_database_conn_kwargs,
         config_source=ConfigSource.create(),
         all_access_policies=all_access_policies,
     )

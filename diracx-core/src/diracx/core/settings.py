@@ -580,13 +580,62 @@ class FactorySettings(ServiceSettingsBase):
     """Global prefix for OpenSearch database indices."""
 
     enabled_services: dict[str, bool] = Field(default_factory=dict)
-    """The following environment variables dictates which routers are enabled."""
+    """The following environment variables dictates which routers are enabled.
+
+    Disabling a router also lifts the need for the databases that only it uses.
+    """
 
     opensearch_dbs: dict[str, str] = Field(default_factory=dict)
-    """The following environment variables configure the OpenSearch database connections."""
+    """The following environment variables configure the OpenSearch database connections.
+
+    A database needs them only if an enabled router or an installed task uses it:
+    the API server and the tasks worker refuse to start otherwise, and list the
+    variables to set.
+    """
 
     sql_dbs: dict[str, str] = Field(default_factory=dict)
-    """The following environment variables configure the SQL database connections."""
+    """The following environment variables configure the SQL database connections.
+
+    A database needs a URL only if an enabled router or an installed task uses it:
+    the API server and the tasks worker refuse to start otherwise, and list the
+    variables to set.
+    """
+
+    @staticmethod
+    def sql_db_env_var(db_name: str) -> str:
+        """Return the environment variable holding the URL of an SQL DB.
+
+        Args:
+            db_name: Name of the SQL database entry point.
+
+        Returns:
+            The ``DIRACX_DB_URL_*`` variable name.
+        """
+        return f"DIRACX_DB_URL_{db_name.upper()}"
+
+    @staticmethod
+    def os_db_env_var(db_name: str) -> str:
+        """Return the environment variable holding the parameters of an OpenSearch DB.
+
+        Args:
+            db_name: Name of the OpenSearch database entry point.
+
+        Returns:
+            The ``DIRACX_OS_DB_*`` variable name.
+        """
+        return f"DIRACX_OS_DB_{db_name.upper()}"
+
+    @staticmethod
+    def service_enabled_env_var(service_name: str) -> str:
+        """Return the environment variable enabling or disabling a service.
+
+        Args:
+            service_name: Name of the service entry point.
+
+        Returns:
+            The ``DIRACX_SERVICE_*_ENABLED`` variable name.
+        """
+        return f"DIRACX_SERVICE_{service_name.upper()}_ENABLED"
 
     @model_validator(mode="before")
     @classmethod
@@ -622,7 +671,7 @@ class FactorySettings(ServiceSettingsBase):
         }
 
         for service_name in enabled_services:
-            env_name = f"DIRACX_SERVICE_{service_name.upper()}_ENABLED"
+            env_name = cls.service_enabled_env_var(service_name)
             if env_value := os.environ.get(env_name):
                 enabled_services[service_name] = TypeAdapter(bool).validate_python(
                     env_value
@@ -649,7 +698,7 @@ class FactorySettings(ServiceSettingsBase):
         }
 
         for db_name in opensearch_dbs:
-            env_name = f"DIRACX_OS_DB_{db_name.upper()}"
+            env_name = cls.os_db_env_var(db_name)
             if env_value := os.environ.get(env_name):
                 opensearch_dbs[db_name] = env_value
 
@@ -674,7 +723,7 @@ class FactorySettings(ServiceSettingsBase):
         }
 
         for db_name in sql_dbs:
-            env_name = f"DIRACX_DB_URL_{db_name.upper()}"
+            env_name = cls.sql_db_env_var(db_name)
             if env_value := os.environ.get(env_name):
                 sql_dbs[db_name] = env_value
 

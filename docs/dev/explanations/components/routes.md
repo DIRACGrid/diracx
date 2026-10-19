@@ -19,7 +19,7 @@ This setup considers environment variables and installed packages to enable Dira
 <div class="annotate" markdown>
 - Services are served under `/api/`(1)
 - A `DiracxRouter` corresponds to a prefix under `/api/<system-name>`, where `<system-name>` is defined by the entry in the `diracx.services` entrypoint in the `pyproject.toml`.
-- Services can be disabled by setting `DIRACX_SERVICE_<system-name>_ENABLED=false`.
+- Services can be disabled by setting `DIRACX_SERVICE_<system-name>_ENABLED=false`. The databases that only a disabled service uses then need no URL.
 </div>
 
 1. The only exception is `/.well-known/`.

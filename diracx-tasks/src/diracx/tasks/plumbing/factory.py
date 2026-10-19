@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Collection, Iterable
 from contextlib import AsyncExitStack, asynccontextmanager
 from functools import partial
 from importlib.metadata import entry_points
@@ -235,17 +235,43 @@ def find_missing_overrides(
     for sub in dependant.dependencies:
         if sub.call not in overrides:
             bound = getattr(sub.call, "__self__", None)
-            if inspect.isclass(bound):
-                if issubclass(bound, BaseSQLDB):
-                    missing.append(
-                        f"DIRACX_DB_URL_{bound.__name__.upper()} (for {bound.__name__})"
+            if inspect.isclass(bound) and issubclass(bound, (BaseSQLDB, BaseOSDB)):
+                if db_name := bound.entry_point_name():
+                    env_var = (
+                        FactorySettings.sql_db_env_var
+                        if issubclass(bound, BaseSQLDB)
+                        else FactorySettings.os_db_env_var
                     )
-                elif issubclass(bound, BaseOSDB):
+                    missing.append(f"{env_var(db_name)} (for {bound.__name__})")
+                else:
                     missing.append(
-                        f"DIRACX_OS_DB_{bound.__name__.upper()} (for {bound.__name__})"
+                        f"{bound.__name__} (not registered as an entry point)"
                     )
         missing.extend(find_missing_overrides(sub, overrides))
     return missing
+
+
+def find_missing_db_env_vars(
+    dependant: Dependant,
+    sql_db_names: Collection[str],
+    os_db_names: Collection[str],
+) -> set[str]:
+    """Return the variables to set for the DBs a task uses to have a URL.
+
+    Args:
+        dependant: Dependency tree of the task.
+        sql_db_names: Names of the SQL DBs that have a URL.
+        os_db_names: Names of the OpenSearch DBs that have a URL.
+    """
+    from diracx.db.os.utils import BaseOSDB
+    from diracx.db.sql.utils import BaseSQLDB
+
+    return BaseSQLDB.missing_env_vars(
+        _find_dependents(dependant, BaseSQLDB), sql_db_names
+    ) | BaseOSDB.missing_env_vars(
+        _find_dependents(dependant, BaseOSDB),  # type: ignore[type-abstract]
+        os_db_names,
+    )
 
 
 def _find_dependents(dependant: Dependant, cls: type[T]) -> set[type[T]]:

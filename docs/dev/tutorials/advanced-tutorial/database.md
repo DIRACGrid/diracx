@@ -129,7 +129,9 @@ For deployed environments (including CI), the database must also be
 listed in the extension's Helm chart values. This tells the
 infrastructure to create the database and set the
 `DIRACX_DB_URL_MYPILOTDB` environment variable that the application
-reads at startup.
+reads at startup. If it is missing, the API server (when a service using the
+database is enabled) and the tasks worker (when a task using it is installed)
+refuse to start with a `MissingDBURLError` naming `DIRACX_DB_URL_MYPILOTDB`.
 
 Add under `diracx.diracx.sqlDbs.dbs` in your chart's `values.yaml`:
 
