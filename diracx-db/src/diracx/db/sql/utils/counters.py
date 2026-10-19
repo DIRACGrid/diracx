@@ -37,6 +37,8 @@ from .types import MicrosecondDateTime
 
 COUNTER_LOCKS_TABLE = "CounterLocks"
 COUNTER_LOCK_OPERATIONS = ("rebuild", "fold")
+# Key of MetaData.info under which journalled_counter() registers each counter
+COUNTERS_INFO_KEY = "journalled_counters"
 
 # SQLite only auto-increments a column declared exactly as INTEGER PRIMARY KEY
 BIGINT_AUTOINCREMENT = BigInteger().with_variant(Integer(), "sqlite")
@@ -169,10 +171,24 @@ def journalled_counter(
         Index(f"{name}CounterJournalKey", *key_names),
     )
 
-    return JournalledCounter(
+    counter = JournalledCounter(
         name=name,
         key=key_names,
         measures=tuple(measures),
         counters=counters,
         journal=journal,
     )
+    metadata.info.setdefault(COUNTERS_INFO_KEY, []).append(counter)
+    return counter
+
+
+def journalled_counters(metadata: MetaData) -> list[JournalledCounter]:
+    """Return every journalled counter declared on a metadata.
+
+    Args:
+        metadata: Metadata of the database holding the counters.
+
+    Returns:
+        The counters, in declaration order.
+    """
+    return list(metadata.info.get(COUNTERS_INFO_KEY, []))
