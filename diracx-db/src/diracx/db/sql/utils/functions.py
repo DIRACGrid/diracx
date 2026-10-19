@@ -86,6 +86,50 @@ def sqlite_utcnow(element, compiler, **kw) -> str:
     return "DATETIME('now')"
 
 
+class utcnow_us(expression.FunctionElement):  # noqa: N801
+    """Current UTC time, with microsecond precision on MySQL and MariaDB.
+
+    Like ``utcnow``, but for ``DATETIME(6)`` columns, whose default must keep
+    the sub-second part.
+    """
+
+    type = DateTime()
+    inherit_cache = True
+
+
+@compiles(utcnow_us)
+def default_utcnow_us(element, compiler, **kw) -> str:
+    """Compile ``utcnow_us`` for dialects without a dedicated rule.
+
+    Falls back to the dialect's ``utcnow``, so that the time stays UTC and,
+    on SQLite, follows the test time mock.
+
+    Args:
+        element: SQLAlchemy expression being compiled.
+        compiler: SQLAlchemy SQL compiler.
+        **kw: Additional compiler options.
+
+    Returns:
+        SQL for the current UTC timestamp.
+    """
+    return compiler.process(utcnow(), **kw)
+
+
+@compiles(utcnow_us, "mysql")
+def mysql_utcnow_us(element, compiler, **kw) -> str:
+    """Compile ``utcnow_us`` for MySQL and MariaDB.
+
+    Args:
+        element: SQLAlchemy expression being compiled.
+        compiler: SQLAlchemy SQL compiler.
+        **kw: Additional compiler options.
+
+    Returns:
+        MySQL SQL for the current UTC timestamp in microseconds.
+    """
+    return "(UTC_TIMESTAMP(6))"
+
+
 class days_since(expression.FunctionElement):  # noqa: N801
     """Sqlalchemy function to get the number of days since a given date.
 

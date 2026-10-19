@@ -8,6 +8,7 @@ __all__ = [
     "ResourceStatusDB",
     "SandboxMetadataDB",
     "TaskQueueDB",
+    "TransformationDB",
     "instrument_sqlalchemy",
 ]
 
@@ -19,3 +20,4 @@ from .pilots.db import PilotAgentsDB
 from .rss.db import ResourceStatusDB
 from .sandbox_metadata.db import SandboxMetadataDB
 from .task_queue.db import TaskQueueDB
+from .transformation.db import TransformationDB

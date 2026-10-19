@@ -362,6 +362,7 @@ class ClientFactory:
             else:
                 async with db.engine.begin() as conn:
                     await conn.run_sync(db.metadata.create_all)
+                    await db.post_create(conn)
 
                 async with aiosqlite.connect(ref_db) as ref_conn:
                     conn = await db.engine.raw_connection()

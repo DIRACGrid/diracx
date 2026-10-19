@@ -151,6 +151,12 @@ The URL for the SQL database TaskDB.
 
 The URL for the SQL database TaskQueueDB.
 
+#### `DIRACX_DB_URL_TRANSFORMATIONDB`
+
+*Optional*, default value: \`\`
+
+The URL for the SQL database TransformationDB.
+
 ## AuthSettings
 
 Settings for the authentication service.

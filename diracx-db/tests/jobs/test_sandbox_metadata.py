@@ -189,6 +189,43 @@ async def test_assign_and_unsassign_sandbox_to_jobs(
     assert sb_id_1 not in res_sb_id
 
 
+async def test_get_sandbox_assigned_to_job(sandbox_metadata_db: SandboxMetadataDB):
+    user_info = UserInfo(
+        sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"
+    )
+    job_id = 666
+    sandbox_se = "SandboxSE"
+    pfns = [secrets.token_hex() for _ in range(3)]
+    async with sandbox_metadata_db:
+        owner_id = await sandbox_metadata_db.insert_owner(user_info)
+        for pfn in pfns:
+            await sandbox_metadata_db.insert_sandbox(owner_id, sandbox_se, pfn, 100)
+
+    async with sandbox_metadata_db:
+        assert (
+            await sandbox_metadata_db.get_sandbox_assigned_to_job(job_id, "Input") == []
+        )
+
+    # A job can have more than one sandbox of a given type
+    async with sandbox_metadata_db:
+        for pfn in pfns[:2]:
+            await sandbox_metadata_db.assign_sandbox_to_jobs(
+                jobs_ids=[job_id], pfn=pfn, sb_type="Input", se_name=sandbox_se
+            )
+        await sandbox_metadata_db.assign_sandbox_to_jobs(
+            jobs_ids=[job_id], pfn=pfns[2], sb_type="Output", se_name=sandbox_se
+        )
+
+    async with sandbox_metadata_db:
+        assert (
+            await sandbox_metadata_db.get_sandbox_assigned_to_job(job_id, "Input")
+            == pfns[:2]
+        )
+        assert await sandbox_metadata_db.get_sandbox_assigned_to_job(
+            job_id, "Output"
+        ) == [pfns[2]]
+
+
 async def test_get_sandbox_owner_id(sandbox_metadata_db: SandboxMetadataDB):
     user_info = UserInfo(
         sub="vo:sub", preferred_username="user1", dirac_group="group1", vo="vo"

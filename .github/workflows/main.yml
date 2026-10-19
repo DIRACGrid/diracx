@@ -44,6 +44,24 @@ jobs:
       - name: Run shellcheck
         run: pixi run shellcheck
 
+  workgraph-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+        with:
+          run-install: false
+          post-cleanup: false
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+        with:
+          cache: false
+          environments: workgraph-sim
+      - name: Run the workgraph simulator checks
+        run: pixi run test-workgraph-sim
+
   unittest:
     name: Unit test - ${{ matrix.package }}
     runs-on: ubuntu-latest
