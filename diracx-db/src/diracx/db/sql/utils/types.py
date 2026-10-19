@@ -7,8 +7,10 @@ from zoneinfo import ZoneInfo
 
 import sqlalchemy.types as types
 from sqlalchemy import DateTime, Enum
+from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import mapped_column
 from typing_extensions import Annotated
+from uuid_utils import UUID
 
 from .functions import utcnow
 
@@ -91,6 +93,59 @@ class EnumBackedBool(types.TypeDecorator):
             return False
         else:
             raise NotImplementedError(f"Unknown {value=}")
+
+
+class BinaryUUID(types.TypeDecorator):
+    """Store a UUID as ``BINARY(16)`` rather than as text.
+
+    SQLAlchemy's ``Uuid`` falls back to ``CHAR(32)`` on MySQL and MariaDB,
+    which doubles the width of every key and of every secondary index entry
+    that carries it. Any object with a ``bytes`` attribute holding the 16 raw
+    bytes is accepted, so both ``uuid_utils.UUID`` and ``uuid.UUID`` can be
+    bound; values are returned as ``uuid_utils.UUID``, whose UUIDv7 helpers
+    (``uuid7_to_datetime``) diracx relies on.
+
+    Attributes:
+        impl: Fixed-width binary type the UUID is stored as.
+        cache_ok: Whether SQLAlchemy may cache statements using this type.
+    """
+
+    impl = types.BINARY(16)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect) -> bytes | None:
+        """Convert a UUID to its 16 raw bytes.
+
+        Args:
+            value: UUID to store, or ``None``.
+            dialect: SQLAlchemy dialect handling the bind parameter.
+
+        Returns:
+            The raw bytes of the UUID, or ``None``.
+
+        Raises:
+            TypeError: If the value is not a UUID.
+        """
+        if value is None:
+            return None
+        raw = getattr(value, "bytes", None)
+        if not isinstance(raw, bytes) or len(raw) != 16:
+            raise TypeError(f"Expected a UUID, got {value!r}")
+        return raw
+
+    def process_result_value(self, value, dialect) -> UUID | None:
+        """Convert 16 raw bytes read from the database to a UUID.
+
+        Args:
+            value: Raw bytes read from the database, or ``None``.
+            dialect: SQLAlchemy dialect that returned the value.
+
+        Returns:
+            The corresponding ``uuid_utils.UUID``, or ``None``.
+        """
+        if value is None:
+            return None
+        return UUID(bytes=bytes(value))
 
 
 class SmarterDateTime(types.TypeDecorator):
@@ -232,3 +287,22 @@ class SmarterDateTime(types.TypeDecorator):
 
         # phew...
         return value
+
+
+class MicrosecondDateTime(SmarterDateTime):
+    """A ``SmarterDateTime`` stored as ``DATETIME(6)`` on MySQL and MariaDB."""
+
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        """Select the microsecond-precision type for MySQL.
+
+        Args:
+            dialect: SQLAlchemy dialect the type is used with.
+
+        Returns:
+            The dialect-specific type descriptor.
+        """
+        if dialect.name == "mysql":
+            return dialect.type_descriptor(mysql.DATETIME(fsp=6))
+        return dialect.type_descriptor(DateTime())
