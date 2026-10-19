@@ -203,14 +203,14 @@ class SandboxMetadataDB(BaseSQLDB):
     async def get_sandbox_assigned_to_job(
         self, job_id: int, sb_type: SandboxType
     ) -> list[Any]:
-        """Get the sandbox PFN assigned to a job for a sandbox type.
+        """Get the sandbox PFNs assigned to a job for a sandbox type.
 
         Args:
             job_id: Identifier of the job.
             sb_type: Type of sandbox to retrieve.
 
         Returns:
-            A list containing the matching sandbox PFN, or ``None`` if absent.
+            A list of the matching sandbox PFNs, empty if there are none.
         """
         entity_id = self.jobid_to_entity_id(job_id)
         stmt = (
@@ -220,9 +220,10 @@ class SandboxMetadataDB(BaseSQLDB):
                 SBEntityMapping.EntityId == entity_id,
                 SBEntityMapping.Type == sb_type,
             )
+            .order_by(SandBoxes.SBId)
         )
         result = await self.conn.execute(stmt)
-        return [result.scalar()]
+        return list(result.scalars().all())
 
     async def assign_sandbox_to_jobs(
         self,

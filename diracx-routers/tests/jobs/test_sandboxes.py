@@ -136,13 +136,13 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     # Should be empty because
     # (i) JDL doesn't specify any input sb
     # (ii) The sb is not assigned to the job yet
-    assert r.json()[0] is None
+    assert r.json() == []
 
     # Getting job output sb:
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/output")
     assert r.status_code == 200
     # Should be empty
-    assert r.json()[0] is None
+    assert r.json() == []
 
     # Assign sb to job:
     r = normal_user_client.patch(
@@ -155,7 +155,7 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     short_pfn = sandbox_pfn.split("|", 1)[-1]
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
     assert r.status_code == 200
-    assert r.json()["Input"] == [None]
+    assert r.json()["Input"] == []
     assert r.json()["Output"] == [short_pfn]
 
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox/output")
@@ -171,8 +171,8 @@ def test_assign_then_unassign_sandboxes_to_jobs(normal_user_client: TestClient):
     short_pfn = sandbox_pfn.split("|", 1)[-1]
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
     assert r.status_code == 200
-    assert r.json()["Input"] == [None]
-    assert r.json()["Output"] == [None]
+    assert r.json()["Input"] == []
+    assert r.json()["Output"] == []
 
 
 def test_upload_malformed_checksum(normal_user_client: TestClient):
@@ -243,7 +243,7 @@ def test_get_empty_job_sandboxes(normal_user_client: TestClient):
     # Malformed request:
     r = normal_user_client.get(f"/api/jobs/{job_id}/sandbox")
     assert r.status_code == 200
-    assert r.json() == {"Input": [None], "Output": [None]}
+    assert r.json() == {"Input": [], "Output": []}
 
 
 def test_assign_nonexisting_sb_to_job(normal_user_client: TestClient):
