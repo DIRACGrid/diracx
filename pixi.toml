@@ -10,6 +10,12 @@ requires-pixi = ">=0.68.0"
 # CVE fix), override per package via [exclude-newer] (conda) or [pypi-exclude-newer] (PyPI).
 exclude-newer = "7d"
 
+# elkjs reached conda-forge on 2026-09-11, inside the cooldown, and until it clears a fresh
+# clone builds documentation whose simulator cannot lay anything out. 0.9.3 is the version
+# the tree vendored by hand and ran the checks against.
+[exclude-newer]
+elkjs = "0d"
+
 [pypi-exclude-newer]
 diraccommon= "0d"
 signurlarity= "0d"
@@ -153,6 +159,7 @@ description = "Open a shell with the local DiracX environment configured"
 # Features for generating the documentation
 [feature.mkdocs.dependencies]
 python = "*"
+elkjs = "0.9.3.*"    # The simulator's layout engine; the mkdocs hook copies it into the built site
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-mermaid2-plugin = "*"
@@ -162,6 +169,14 @@ mkdocs-diracx-plugin = { git = "https://github.com/DIRACGrid/mkdocs-diracx-plugi
 mkdocs = "mkdocs serve"
 mkdocs-build = "mkdocs build --strict"
 description = "Generate the documentation with mkdocs"
+
+# Feature for checking the workgraph simulator used in the documentation
+[feature.workgraph-sim.dependencies]
+nodejs = "*"
+elkjs = "0.9.3.*"    # The same engine the site serves; the checks lay out every model in the docs
+[feature.workgraph-sim.tasks.test-workgraph-sim]
+cmd = "bash tests/workgraph-sim/run.sh"
+description = "Run the workgraph simulator checks and every workgraph fence in the docs"
 
 # Container runtime dependencies (from current base images)
 [feature.container.dependencies]
@@ -271,6 +286,7 @@ gubbins-generate-client = {features = ["client-gen", "diracx-client", "gubbins-c
 
 # Tooling environments
 mkdocs = {features = ["mkdocs"], no-default-feature = true}
+workgraph-sim = {features = ["workgraph-sim"], no-default-feature = true}
 shellcheck = {features = ["shellcheck"], no-default-feature = true}
 pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}

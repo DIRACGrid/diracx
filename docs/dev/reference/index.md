@@ -9,6 +9,7 @@ Technical reference material for DiracX developers.
 - [Test recipes](test-recipes.md)
 - [Pixi tasks](pixi-tasks.md)
 - [Dev env variables](env-variables.md)
+- [Workgraph simulator](workgraph-sim.md)
 
 ## Backend
 
