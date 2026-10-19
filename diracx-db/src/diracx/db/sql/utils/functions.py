@@ -101,15 +101,18 @@ class utcnow_us(expression.FunctionElement):  # noqa: N801
 def default_utcnow_us(element, compiler, **kw) -> str:
     """Compile ``utcnow_us`` for dialects without a dedicated rule.
 
+    Falls back to the dialect's ``utcnow``, so that the time stays UTC and,
+    on SQLite, follows the test time mock.
+
     Args:
         element: SQLAlchemy expression being compiled.
         compiler: SQLAlchemy SQL compiler.
         **kw: Additional compiler options.
 
     Returns:
-        SQL for the current timestamp.
+        SQL for the current UTC timestamp.
     """
-    return "CURRENT_TIMESTAMP"
+    return compiler.process(utcnow(), **kw)
 
 
 @compiles(utcnow_us, "mysql")
