@@ -18876,7 +18876,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h1df4ec4_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: git+https://github.com/DIRACGrid/mkdocs-diracx-plugin.git?branch=master#5666488291add5d6abf274b0a2cce80ac23c7299
@@ -18941,7 +18941,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/tk-8.6.13-noxft_hf03c496_4.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.7-h9d15635_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: git+https://github.com/DIRACGrid/mkdocs-diracx-plugin.git?branch=master#5666488291add5d6abf274b0a2cce80ac23c7299
@@ -18985,7 +18985,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f7/ec/67fbef5d497f86283db54c22eec6f6140243aae73265799baaaa19cd17fb/ghp_import-2.1.0-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h4e30115_10.conda
@@ -19598,7 +19598,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.6.5-h781a0a9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/c-ares-1.34.8-h29ee22c_2.conda
@@ -19619,10 +19619,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/openssl-3.6.5-he6ad1d5_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.7-h9d15635_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/c-ares-1.34.8-h74c22ad_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/icu-78.3-py310h579977c_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libabseil-20260526.0-cxx17_h4c27e2a_2.conda
@@ -23567,14 +23567,14 @@ packages:
   run_exports: {}
   size: 303705
   timestamp: 1781320269259
-- conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.9.3-h7b269df_0.conda
-  sha256: f0a0e815d8dbca8de39aac53e568af86afc16dec33927f3a9a70412679efc4ed
-  md5: 76e4422fc5cd8c468f01c1e84f641d65
+- conda: https://conda.anaconda.org/conda-forge/noarch/elkjs-0.12.0-hee61e0b_0.conda
+  sha256: f059abd611439dd27a2ed07954f33bbd3834eefead3ee212a483bb9146129f6d
+  md5: 0f12a27630afb4031500c6359b4a238c
   license: EPL-2.0 AND EPL-1.0 AND Apache-2.0 AND Apache-1.1 AND MIT
   purls: []
   run_exports: {}
-  size: 1003811
-  timestamp: 1789524584141
+  size: 999978
+  timestamp: 1789966070202
 - conda: https://conda.anaconda.org/conda-forge/noarch/executing-2.2.1-pyhd8ed1ab_0.conda
   sha256: 210c8165a58fdbf16e626aac93cc4c14dbd551a01d1516be5ecad795d2422cad
   md5: ff9efb7f7469aed3c4a8106ffa29593c

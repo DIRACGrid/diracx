@@ -159,7 +159,7 @@ description = "Open a shell with the local DiracX environment configured"
 # Features for generating the documentation
 [feature.mkdocs.dependencies]
 python = "*"
-elkjs = "0.9.3.*"    # The simulator's layout engine; the mkdocs hook copies it into the built site
+elkjs = "0.12.0.*"    # The simulator's layout engine; the mkdocs hook copies it into the built site
 [feature.mkdocs.pypi-dependencies]
 mkdocs-material = "*"
 mkdocs-mermaid2-plugin = "*"
@@ -173,7 +173,7 @@ description = "Generate the documentation with mkdocs"
 # Feature for checking the workgraph simulator used in the documentation
 [feature.workgraph-sim.dependencies]
 nodejs = "*"
-elkjs = "0.9.3.*"    # The same engine the site serves; the checks lay out every model in the docs
+elkjs = "0.12.0.*"    # The same engine the site serves; the checks lay out every model in the docs
 [feature.workgraph-sim.tasks.test-workgraph-sim]
 cmd = "bash tests/workgraph-sim/run.sh"
 description = "Run the workgraph simulator checks and every workgraph fence in the docs"
