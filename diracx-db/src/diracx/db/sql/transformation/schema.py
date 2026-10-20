@@ -5,7 +5,7 @@ The tables fall into three groups:
 * the definition side (``Workgraphs``, ``Ownership``, ``Transformations``,
   ``ComputeTransformations``, ``TransformationOutputs``, ``Actions`` and the
   content-addressed ``Processes``, ``ProcessReferences``, ``ProcessRegistry``,
-  ``Requirements`` and ``ResolvedHints``): few rows, written at submission;
+  ``RequirementsTemplates`` and ``ResolvedHints``): few rows, written at submission;
 * the execution side (``Inputs``, ``Parcels`` and their facets,
   ``ParcelInputs`` and ``ParcelOutputs``): bulk rows, written constantly;
 * the accounting side (the journalled counters of DX-ADR-009 and the
@@ -316,18 +316,22 @@ class ProcessRegistry(Base):
     __table_args__ = (Index("ProcessRegistryProcess", "ProcessID"),)
 
 
-class Requirements(Base):
+class RequirementsTemplates(Base):
     """Content-addressed matching criteria, shared by parcels and templates.
 
     Attributes:
-        requirements_id: Content hash of the canonicalised requirement set.
-        requirements: The requirement set.
+        requirements_template_id: Content hash of the canonicalised requirement set.
+        requirements_template: The requirement set.
         created_at: When the set was first stored.
     """
 
-    __tablename__ = "Requirements"
-    requirements_id: Mapped[bytes32] = mapped_column("RequirementsID", primary_key=True)
-    requirements: Mapped[dict[str, Any]] = mapped_column("Requirements")
+    __tablename__ = "RequirementsTemplates"
+    requirements_template_id: Mapped[bytes32] = mapped_column(
+        "RequirementsTemplateID", primary_key=True
+    )
+    requirements_template: Mapped[dict[str, Any]] = mapped_column(
+        "RequirementsTemplate"
+    )
     created_at: Mapped[created_ts] = mapped_column("CreatedAt")
 
 
@@ -368,7 +372,8 @@ class ComputeTransformations(Base):
         "ProcessID", ForeignKey(Processes.process_id)
     )
     requirements_template_id: Mapped[bytes32 | None] = mapped_column(
-        "RequirementsTemplateID", ForeignKey(Requirements.requirements_id)
+        "RequirementsTemplateID",
+        ForeignKey(RequirementsTemplates.requirements_template_id),
     )
 
 
@@ -603,7 +608,7 @@ class ComputeParcels(Base):
     Attributes:
         parcel_id: The parcel this row extends.
         process_id: Content hash of the process run.
-        requirements_id: Deduplicated matching criteria.
+        requirements_template_id: Deduplicated matching criteria.
         resolved_hints_id: Configuration defaults in force at dispatch.
         parameters: CWL input object for this run.
     """
@@ -615,8 +620,9 @@ class ComputeParcels(Base):
     process_id: Mapped[bytes32] = mapped_column(
         "ProcessID", ForeignKey(Processes.process_id)
     )
-    requirements_id: Mapped[bytes32 | None] = mapped_column(
-        "RequirementsID", ForeignKey(Requirements.requirements_id)
+    requirements_template_id: Mapped[bytes32 | None] = mapped_column(
+        "RequirementsTemplateID",
+        ForeignKey(RequirementsTemplates.requirements_template_id),
     )
     resolved_hints_id: Mapped[bytes32 | None] = mapped_column(
         "ResolvedHintsID", ForeignKey(ResolvedHints.resolved_hints_id)
