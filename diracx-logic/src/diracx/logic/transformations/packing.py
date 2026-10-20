@@ -2,7 +2,9 @@
 
 The packer plugin only proposes; this module checks every proposal and is the
 only thing that writes. Everything happens inside the caller's transaction, so
-a proposal that fails a check rolls back the whole invocation.
+a proposal that fails a check rolls back the whole invocation, provided the
+caller rolls back on an exception. The task worker does not yet
+(DIRACGrid/diracx#1101).
 """
 
 from __future__ import annotations

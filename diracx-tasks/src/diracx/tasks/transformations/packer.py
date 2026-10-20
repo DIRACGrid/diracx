@@ -89,6 +89,9 @@ class PackTransformationTask(BaseTask):
         return [MutexLock(TRANSFORMATION, self.transformation_id)]
 
     async def execute(self, transformation_db: TransformationDB) -> dict[str, Any]:
+        # The worker commits an injected transaction even when the task raises
+        # (DIRACGrid/diracx#1101), so until that is fixed a failed run keeps the
+        # writes it made before the failure instead of rolling them back.
         summary = await pack_transformation(
             transformation_db,
             UUID(self.transformation_id),
