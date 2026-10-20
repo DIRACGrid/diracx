@@ -57,7 +57,7 @@ Rebuilding (from a maintenance task, opens its own transaction)::
 Deleting a scope (after counted rows are already unwritable and deleted)::
 
     await MY_COUNTER.delete_scope(
-        engine, MY_COUNTER.counters.c.DatasetID == 7
+        engine, MY_COUNTER.counters_table.c.DatasetID == 7
     )
 """
 
@@ -128,15 +128,15 @@ class JournalledCounter:
         name: Name of the counter, as used in ``CounterLocks``.
         key: Names of the key columns, in primary-key order.
         measures: Names of the measures summed by the counter.
-        counters: Table of folded counts, one row per key.
-        journal: Table of signed deltas waiting to be folded.
+        counters_table: Table of folded counts, one row per key.
+        journal_table: Table of signed deltas waiting to be folded.
     """
 
     name: str
     key: tuple[str, ...]
     measures: tuple[str, ...]
-    counters: Table
-    journal: Table
+    counters_table: Table
+    journal_table: Table
 
     @staticmethod
     def delta_column(measure: str) -> str:
@@ -180,7 +180,7 @@ class JournalledCounter:
         """
         if not deltas:
             return
-        await conn.execute(insert(self.journal), list(deltas))
+        await conn.execute(insert(self.journal_table), list(deltas))
 
     async def read(
         self,
@@ -202,8 +202,8 @@ class JournalledCounter:
             Rows of ``(key…, measure…, UpdatedAt)``. A key with no counter
             row and no journal rows is absent; callers treat absence as zero.
         """
-        ct = self.counters
-        jt = self.journal
+        ct = self.counters_table
+        jt = self.journal_table
 
         key_cols_ct = [ct.c[k] for k in self.key]
         key_cols_jt = [jt.c[k] for k in self.key]
@@ -258,9 +258,9 @@ class JournalledCounter:
             Number of journal rows folded. If equal to ``batch_size``, the
             caller should schedule another fold immediately.
         """
-        jt = self.journal
-        ct = self.counters
-        locks = self.counters.metadata.tables[COUNTER_LOCKS_TABLE]
+        jt = self.journal_table
+        ct = self.counters_table
+        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
@@ -406,9 +406,9 @@ class JournalledCounter:
         Returns:
             Number of correction deltas written.
         """
-        ct = self.counters
-        jt = self.journal
-        locks = self.counters.metadata.tables[COUNTER_LOCKS_TABLE]
+        ct = self.counters_table
+        jt = self.journal_table
+        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
@@ -486,40 +486,13 @@ class JournalledCounter:
                 combined = union_all(*branches).subquery("t")
 
                 key_refs = [combined.c[k] for k in self.key]
-                corrections_q = (
-                    select(
-                        *key_refs,
-                        *[
-                            func.sum(combined.c[f"__m_{m}"]).label(
-                                self.delta_column(m)
-                            )
-                            for m in self.measures
-                        ],
-                    )
-                    .group_by(*key_refs)
-                    .having(
-                        func.sum(combined.c[f"__m_{self.measures[0]}"]) != 0
-                        if len(self.measures) == 1
-                        else and_(
-                            *(
-                                func.sum(combined.c[f"__m_{m}"]) != 0
-                                for m in self.measures
-                            )
-                        )
-                    )
-                )
 
-                # The HAVING should filter rows where ALL corrections are zero.
-                # A row is needed if ANY correction is non-zero.
-                having_clause = None
-                for m in self.measures:
-                    cond = func.sum(combined.c[f"__m_{m}"]) != 0
-                    if having_clause is None:
-                        having_clause = cond
-                    else:
-                        from sqlalchemy import or_
+                from sqlalchemy import or_
 
-                        having_clause = or_(having_clause, cond)
+                having_clause = or_(*(
+                    func.sum(combined.c[f"__m_{m}"]) != 0
+                    for m in self.measures
+                ))
 
                 corrections_q = (
                     select(
@@ -566,9 +539,9 @@ class JournalledCounter:
             engine: Database engine.
             where: Scope predicate (e.g. ``counters.c.DatasetID == 7``).
         """
-        ct = self.counters
-        jt = self.journal
-        locks = self.counters.metadata.tables[COUNTER_LOCKS_TABLE]
+        ct = self.counters_table
+        jt = self.journal_table
+        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
@@ -737,8 +710,8 @@ def journalled_counter(
         name=name,
         key=key_names,
         measures=tuple(measures),
-        counters=counters,
-        journal=journal,
+        counters_table=counters,
+        journal_table=journal,
     )
     metadata.info.setdefault(COUNTERS_INFO_KEY, []).append(counter)
     return counter
