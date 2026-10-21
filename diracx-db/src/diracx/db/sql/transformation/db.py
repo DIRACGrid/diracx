@@ -296,7 +296,7 @@ class TransformationDB(BaseSQLDB):
                 {
                     "ParcelID": parcel.parcel_id,
                     "ProcessID": process_id,
-                    "RequirementsID": parcel.requirements_id,
+                    "RequirementsTemplateID": parcel.requirements_id,
                     "Parameters": parcel.parameters or None,
                 }
                 for parcel in parcels
