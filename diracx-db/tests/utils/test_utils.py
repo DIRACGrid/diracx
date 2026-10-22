@@ -195,6 +195,28 @@ class TestAvailableUrls:
             result = DummyOSDB.available_urls()
         assert result == {}
 
+    def test_entry_point_name(self):
+        """Extensions override a DB under the original entry point name."""
+
+        class ExtensionOSDB(DummyOSDB):
+            pass
+
+        class UnregisteredOSDB(DummyOSDB):
+            pass
+
+        # The extension registers its override under the same name, first
+        extension_ep, base_ep = MagicMock(), MagicMock()
+        extension_ep.name = base_ep.name = "dummy"
+        extension_ep.load.return_value = ExtensionOSDB
+        base_ep.load.return_value = DummyOSDB
+        with patch(
+            "diracx.db.os.utils.select_from_extension",
+            return_value=[extension_ep, base_ep],
+        ):
+            assert ExtensionOSDB.entry_point_name() == "dummy"
+            assert DummyOSDB.entry_point_name() == "dummy"
+            assert UnregisteredOSDB.entry_point_name() is None
+
     def test_raises_on_invalid_json(self):
         ep = MagicMock()
         ep.name = "dummy"

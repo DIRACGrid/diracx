@@ -6,7 +6,7 @@ import contextlib
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Collection, Iterable
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, Self
@@ -139,7 +139,10 @@ class BaseOSDB(metaclass=ABCMeta):
 
         The list of available URLs is determined by the opensearch_dbs field
         in FactorySettings, which reads from environment variables
-        prefixed with ``DIRACX_OS_DB_{DB_NAME}``.
+        prefixed with ``DIRACX_OS_DB_{DB_NAME}``. Databases without
+        connection parameters are skipped with a warning: the API server and
+        the tasks worker refuse to start if a router or task they enable uses
+        one of them.
 
         Returns:
             Mapping of database names to their connection parameters.
@@ -150,13 +153,58 @@ class BaseOSDB(metaclass=ABCMeta):
         for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
             db_name = entry_point.name
             # Get the field value from the OpenSearchDBSettings model
-            if field_value := factory_settings.opensearch_dbs.get(db_name):
+            field_value = factory_settings.opensearch_dbs.get(db_name)
+            if field_value == "" or not field_value:
+                logger.warning(
+                    "%s found but no URL connection set: please set "
+                    "%s env variable to enable it.",
+                    db_name,
+                    FactorySettings.os_db_env_var(db_name),
+                )
+            else:
                 try:
                     conn_kwargs[db_name] = json.loads(field_value)
                 except Exception:
                     logger.error("Error loading connection parameters for %s", db_name)
                     raise
         return conn_kwargs
+
+    @classmethod
+    def entry_point_name(cls) -> str | None:
+        """Return the name of the entry point registering this database.
+
+        It differs from the class name when an extension overrides a
+        database, as the override is registered under the original name.
+
+        Returns:
+            The entry point name, or None if the class is not registered.
+        """
+        for entry_point in select_from_extension(group=DiracEntryPoint.OS_DB):
+            if entry_point.load() is cls:
+                return entry_point.name
+        return None
+
+    @classmethod
+    def missing_env_vars(
+        cls, db_classes: Iterable[type[Self]], configured_db_names: Collection[str]
+    ) -> set[str]:
+        """Return the variables to set so that the given DBs have a URL.
+
+        Args:
+            db_classes: DB classes that an enabled component uses.
+            configured_db_names: Names of the DBs that have a URL.
+
+        Returns:
+            The variable of every registered DB without a URL. Classes that
+            are not registered as entry points are left out: no variable can
+            enable them.
+        """
+        missing: set[str] = set()
+        for db_class in db_classes:
+            db_name = db_class.entry_point_name()
+            if db_name is not None and db_name not in configured_db_names:
+                missing.add(FactorySettings.os_db_env_var(db_name))
+        return missing
 
     @classmethod
     def session(cls) -> Self:

@@ -51,6 +51,8 @@ Global prefix for OpenSearch database indices.
 *Optional*
 The following environment variables dictates which routers are enabled.
 
+Disabling a router also lifts the need for the databases that only it uses.
+
 #### `DIRACX_SERVICE_AUTH_ENABLED`
 
 *Optional*, default value: `True`
@@ -92,6 +94,10 @@ Enable the RSS router
 *Optional*
 The following environment variables configure the OpenSearch database connections.
 
+A database needs them only if an enabled router or an installed task uses it:
+the API server and the tasks worker refuse to start otherwise, and list the
+variables to set.
+
 #### `DIRACX_OS_DB_JOBPARAMETERSDB`
 
 *Optional*, default value: \`\`
@@ -102,6 +108,10 @@ A JSON-encoded dictionary of connection keyword arguments for the OpenSearch dat
 
 *Optional*
 The following environment variables configure the SQL database connections.
+
+A database needs a URL only if an enabled router or an installed task uses it:
+the API server and the tasks worker refuse to start otherwise, and list the
+variables to set.
 
 #### `DIRACX_DB_URL_AUTHDB`
 

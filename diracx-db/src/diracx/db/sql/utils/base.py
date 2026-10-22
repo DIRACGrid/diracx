@@ -6,7 +6,7 @@ import contextlib
 import logging
 import re
 from abc import ABCMeta
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Collection, Iterable
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
@@ -144,7 +144,9 @@ class BaseSQLDB(metaclass=ABCMeta):
 
         The list of available URLs is determined by the sql_dbs field
         in FactorySettings, which reads from environment variables
-        prefixed with ``DIRACX_DB_URL_{DB_NAME}``.
+        prefixed with ``DIRACX_DB_URL_{DB_NAME}``. Databases without a URL
+        are skipped with a warning: the API server and the tasks worker refuse
+        to start if a router or task they enable uses one of them.
 
         Returns:
             Mapping from database names to validated connection URLs.
@@ -155,7 +157,15 @@ class BaseSQLDB(metaclass=ABCMeta):
         for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
             db_name = entry_point.name
             # Get the field value from the SqlDBSettings model
-            if db_url := factory_settings.sql_dbs.get(db_name):
+            db_url = factory_settings.sql_dbs.get(db_name)
+            if db_url == "" or not db_url:
+                logger.warning(
+                    "%s found but no URL connection set: please set "
+                    "%s env variable to enable it.",
+                    db_name,
+                    FactorySettings.sql_db_env_var(db_name),
+                )
+            else:
                 try:
                     if db_url == "sqlite+aiosqlite:///:memory:":
                         db_urls[db_name] = db_url
@@ -179,6 +189,43 @@ class BaseSQLDB(metaclass=ABCMeta):
                     logger.error("Error loading URL for %s", db_name)
                     raise
         return db_urls
+
+    @classmethod
+    def entry_point_name(cls) -> str | None:
+        """Return the name of the entry point registering this database.
+
+        It differs from the class name when an extension overrides a
+        database, as the override is registered under the original name.
+
+        Returns:
+            The entry point name, or None if the class is not registered.
+        """
+        for entry_point in select_from_extension(group=DiracEntryPoint.SQL_DB):
+            if entry_point.load() is cls:
+                return entry_point.name
+        return None
+
+    @classmethod
+    def missing_env_vars(
+        cls, db_classes: Iterable[type[Self]], configured_db_names: Collection[str]
+    ) -> set[str]:
+        """Return the variables to set so that the given DBs have a URL.
+
+        Args:
+            db_classes: DB classes that an enabled component uses.
+            configured_db_names: Names of the DBs that have a URL.
+
+        Returns:
+            The variable of every registered DB without a URL. Classes that
+            are not registered as entry points are left out: no variable can
+            enable them.
+        """
+        missing: set[str] = set()
+        for db_class in db_classes:
+            db_name = db_class.entry_point_name()
+            if db_name is not None and db_name not in configured_db_names:
+                missing.add(FactorySettings.sql_db_env_var(db_name))
+        return missing
 
     @classmethod
     async def post_create(cls, conn: AsyncConnection) -> None:

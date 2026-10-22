@@ -37,7 +37,11 @@ def parse_args():
 
 
 async def init_sql():
-    """Initialize schemas for all registered SQL databases."""
+    """Initialize schemas for the registered SQL databases that have a URL.
+
+    Databases without a URL are skipped, so that a deployment sharing some
+    databases with another system (e.g. DIRAC) only initialises its own.
+    """
     logger.info("Initialising SQL databases")
     from diracx.db.sql.utils import BaseSQLDB
 
@@ -54,7 +58,7 @@ async def init_sql():
 
 
 async def init_os():
-    """Initialize index templates for all registered OpenSearch databases."""
+    """Initialize index templates for the registered OpenSearch DBs with a URL."""
     logger.info("Initialising OpenSearch databases")
     from diracx.db.os.utils import BaseOSDB
 
@@ -78,6 +82,7 @@ def generate_local_urls(tmp_dir: str) -> None:
     import json
 
     from diracx.core.extensions import DiracEntryPoint, select_from_extension
+    from diracx.core.settings import FactorySettings
 
     seen: set[str] = set()
     for ep in select_from_extension(group=DiracEntryPoint.SQL_DB):
@@ -85,7 +90,7 @@ def generate_local_urls(tmp_dir: str) -> None:
             continue
         seen.add(ep.name)
         url = f"sqlite+aiosqlite:///{tmp_dir}/{ep.name.lower()}.db"
-        print(f'export DIRACX_DB_URL_{ep.name.upper()}="{url}"')
+        print(f'export {FactorySettings.sql_db_env_var(ep.name)}="{url}"')
 
     seen.clear()
     for ep in select_from_extension(group=DiracEntryPoint.OS_DB):
@@ -95,7 +100,7 @@ def generate_local_urls(tmp_dir: str) -> None:
         v = json.dumps(
             {"sqlalchemy_dsn": f"sqlite+aiosqlite:///{tmp_dir}/{ep.name.lower()}.db"}
         )
-        print(f"export DIRACX_OS_DB_{ep.name.upper()}='{v}'")
+        print(f"export {FactorySettings.os_db_env_var(ep.name)}='{v}'")
 
 
 if __name__ == "__main__":

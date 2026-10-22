@@ -51,7 +51,7 @@ def _get_redis_url(args: argparse.Namespace) -> str:
 
 def _task_db_from_env() -> TaskDB | None:
     """The TaskDB (dead letter queue), if ``DIRACX_DB_URL_TASKDB`` is set."""
-    task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
+    task_db_url = os.environ.get(FactorySettings.sql_db_env_var("TaskDB"))
     if not task_db_url:
         return None
     from .plumbing.persistence.dlq import TaskDB
@@ -203,11 +203,14 @@ async def start_worker(
     worker_size: str,
 ) -> None:
     """Start a worker to execute tasks from the broker."""
+    from diracx.db.exceptions import MissingDBURLError
+
     from .plumbing.broker import RedisStreamBroker
     from .plumbing.enums import Size
     from .plumbing.factory import (
         BaseTask,
         create_task_bindings,
+        find_missing_db_env_vars,
         load_task_registry,
         setup_dependency_overrides,
     )
@@ -218,6 +221,32 @@ async def start_worker(
     task_classes = load_task_registry()
     task_bindings, wrapped_registry = create_task_bindings(broker, task_classes)
     BaseTask.bind_broker(task_bindings)
+
+    # Tasks cannot be disabled: every installed task needs its DBs
+    factory_settings = FactorySettings()
+    sql_db_names = {name for name, url in factory_settings.sql_dbs.items() if url}
+    os_db_names = {
+        name for name, params in factory_settings.opensearch_dbs.items() if params
+    }
+    missing_by_task = {
+        task_name: env_vars
+        for task_name, wrapped in wrapped_registry.items()
+        if hasattr(wrapped, "_dependant")
+        and (
+            env_vars := find_missing_db_env_vars(
+                wrapped._dependant, sql_db_names, os_db_names
+            )
+        )
+    }
+    if missing_by_task:
+        raise MissingDBURLError(
+            "Installed tasks use DBs without a URL, please set:\n "
+            + "\n ".join(
+                f"{task_name}: {', '.join(sorted(env_vars))}"
+                for task_name, env_vars in sorted(missing_by_task.items())
+            ),
+            sorted(set().union(*missing_by_task.values())),
+        )
 
     # Collect all task dependants for settings discovery
     dependants = [
