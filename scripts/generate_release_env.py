@@ -73,6 +73,11 @@ POLICY_ENTRIES = (
     ),
     ("DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED", Rule("safe_literal", "true")),
     ("DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS", Rule("safe_literal", "10")),
+    ("DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_ENABLED", Rule("safe_literal", "true")),
+    (
+        "DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_INTERVAL_SECONDS",
+        Rule("safe_literal", "10"),
+    ),
     (
         "DIRACX_TASKS_REDIS_URL",
         Rule("url_placeholder", "redis://redis.example.invalid:6379"),
@@ -124,6 +129,13 @@ POLICY_ENTRIES = (
         ),
     ),
     (
+        "DIRACX_DB_URL_TRANSFORMATIONDB",
+        Rule(
+            "url_placeholder",
+            "mysql+aiomysql://USER:PASSWORD@DB_HOST:3306/TransformationDB",
+        ),
+    ),
+    (
         "DIRACX_OS_DB_JOBPARAMETERSDB",
         Rule(
             "json_placeholder",
@@ -146,6 +158,7 @@ CLASS_SOURCES = {
     "FactorySettings": "diracx-core/src/diracx/core/settings.py",
     "OTELSettings": "diracx-core/src/diracx/core/settings.py",
     "DummyJobExecutorSettings": "diracx-tasks/src/diracx/tasks/jobs/dummy_job_executor.py",
+    "DummyComputeBackendSettings": "diracx-tasks/src/diracx/tasks/transformation/dummy_compute_backend.py",
 }
 
 
