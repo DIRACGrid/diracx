@@ -9,6 +9,7 @@ __all__ = [
     "IAMClientError",
     "IAMServerError",
     "InvalidCredentialsError",
+    "InvalidParcelTransitionError",
     "InvalidQueryError",
     "NotReadyError",
     "PendingAuthorizationError",
@@ -185,3 +186,20 @@ class PilotAlreadyExistsError(DiracError):
 
 class PilotAlreadyAssociatedWithJobError(DiracError):
     """We can't associate a pilot with the same job twice."""
+
+
+class InvalidParcelTransitionError(DiracError):
+    """A parcel status change that the state machine of DX-ADR-005 forbids.
+
+    Attributes:
+        from_status: Status the parcels were to leave.
+        to_status: Status the parcels were to enter.
+    """
+
+    def __init__(self, from_status: str, to_status: str, detail: str = ""):
+        self.from_status = from_status
+        self.to_status = to_status
+        super().__init__(
+            f"Parcels cannot move from {from_status} to {to_status}"
+            + (f" ({detail})" if detail else "")
+        )
