@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Form, HTTPException
 from joserfc.errors import DecodeError
+from pydantic import ConfigDict, with_config
 from typing_extensions import TypedDict
 from uuid_utils import UUID
 
@@ -38,24 +39,22 @@ router = DiracxRouter(require_auth=False)
 logger = logging.getLogger(__name__)
 
 
+@with_config(ConfigDict(use_attribute_docstrings=True))
 class UserInfoResponse(TypedDict):
-    """Identity information returned by the userinfo endpoint.
-
-    Attributes:
-        sub: Subject identifier from the access token.
-        vo: Virtual organisation associated with the user.
-        dirac_group: DIRAC group associated with the user.
-        policies: Policies included in the access token.
-        properties: DIRAC security properties included in the access token.
-        preferred_username: Preferred username for display.
-    """
+    """Identity information returned by the userinfo endpoint."""
 
     sub: str
+    """Subject identifier from the access token."""
     vo: str
+    """Virtual organisation associated with the user."""
     dirac_group: str
+    """DIRAC group associated with the user."""
     policies: dict[str, Any]
+    """Policies included in the access token."""
     properties: list[SecurityProperty]
+    """DIRAC security properties included in the access token."""
     preferred_username: str
+    """Preferred username for display."""
 
 
 @router.get("/refresh-tokens")
