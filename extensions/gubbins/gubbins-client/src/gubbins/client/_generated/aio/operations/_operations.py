@@ -1677,7 +1677,7 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule eligible failed or killed jobs.
+        Reschedule jobs so that they are matched and run again.
 
         The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
@@ -1702,7 +1702,7 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule eligible failed or killed jobs.
+        Reschedule jobs so that they are matched and run again.
 
         The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
@@ -1727,7 +1727,7 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule eligible failed or killed jobs.
+        Reschedule jobs so that they are matched and run again.
 
         The request body contains ``job_ids``\\ , the list of jobs to reschedule.
         Set ``reset_jobs`` to reset each job's reschedule counter instead of
