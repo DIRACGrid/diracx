@@ -119,8 +119,8 @@ async def get_sandbox_file(
         Presigned download URL and its expiry duration.
 
     Raises:
-        HTTPException: If the PFN is invalid or the user is not permitted to
-            download the sandbox (403).
+        HTTPException: If the PFN is outside the user's sandbox area, or the
+            user does not own the sandbox (403).
     """
     short_pfn = pfn.split("|", 1)[-1]
     required_prefix = (

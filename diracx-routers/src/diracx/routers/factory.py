@@ -613,8 +613,9 @@ async def db_no_transaction(db: T2) -> AsyncGenerator[T2]:
 class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
     """Reject requests from clients older than the configured minimum version.
 
-    Requests without a client-version header, or with an unparsable version,
-    are allowed through; invalid-version errors are logged for diagnosis.
+    Requests without a client-version header (e.g. from Swagger or a web
+    browser) are allowed through. Requests whose version is older than the
+    minimum, or cannot be parsed, are rejected with a 400.
     """
 
     def __init__(self, app: FastAPI):
@@ -658,7 +659,7 @@ class ClientMinVersionCheckMiddleware(BaseHTTPMiddleware):
                 status_code=exc.status_code,
                 content={"detail": exc.detail},
             )
-        # If the version is not given or cannot be parsed
+        # Never block a request because the check itself failed unexpectedly
         except Exception:
             logger.debug(
                 "Failed to check client version header: %s",

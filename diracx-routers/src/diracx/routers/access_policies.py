@@ -115,6 +115,7 @@ class BaseAccessPolicy(metaclass=ABCMeta):
 
         Raises:
             HTTPException: If the user is not permitted to perform the action.
+                Policies must deny access with a 403 status code.
         """
         return
 
