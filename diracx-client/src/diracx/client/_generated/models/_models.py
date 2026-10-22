@@ -19,15 +19,11 @@ JSON = MutableMapping[str, Any]
 class AllowedStatus(_serialization.Model):
     """Status indicating that a resource is allowed.
 
-    Attributes:
-        allowed: Literal indicating that the resource is allowed.
-        warnings: Optional warning associated with the allowed status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar allowed: Allowed. Required.
+    :ivar allowed: Literal indicating that the resource is allowed. Required.
     :vartype allowed: bool
-    :ivar warnings: Warnings.
+    :ivar warnings: Optional warning associated with the allowed status.
     :vartype warnings: str
     """
 
@@ -42,9 +38,9 @@ class AllowedStatus(_serialization.Model):
 
     def __init__(self, *, allowed: bool, warnings: Optional[str] = None, **kwargs: Any) -> None:
         """
-        :keyword allowed: Allowed. Required.
+        :keyword allowed: Literal indicating that the resource is allowed. Required.
         :paramtype allowed: bool
-        :keyword warnings: Warnings.
+        :keyword warnings: Optional warning associated with the allowed status.
         :paramtype warnings: str
         """
         super().__init__(**kwargs)
@@ -55,15 +51,11 @@ class AllowedStatus(_serialization.Model):
 class BannedStatus(_serialization.Model):
     """Status indicating that a resource is not allowed.
 
-    Attributes:
-        allowed: Literal indicating that the resource is banned.
-        reason: Reason associated with the banned status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar allowed: Allowed. Required.
+    :ivar allowed: Literal indicating that the resource is banned. Required.
     :vartype allowed: bool
-    :ivar reason: Reason.
+    :ivar reason: Reason associated with the banned status.
     :vartype reason: str
     """
 
@@ -78,9 +70,9 @@ class BannedStatus(_serialization.Model):
 
     def __init__(self, *, allowed: bool, reason: str = "Unknown", **kwargs: Any) -> None:
         """
-        :keyword allowed: Allowed. Required.
+        :keyword allowed: Literal indicating that the resource is banned. Required.
         :paramtype allowed: bool
-        :keyword reason: Reason.
+        :keyword reason: Reason associated with the banned status.
         :paramtype reason: str
         """
         super().__init__(**kwargs)
@@ -259,12 +251,9 @@ class BodyJobsUnassignBulkJobsSandboxes(_serialization.Model):
 class ComputeElementStatus(_serialization.Model):
     """Status of a compute element.
 
-    Attributes:
-        all: Overall compute element status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar all: All. Required.
+    :ivar all: Overall compute element status. Required.
     :vartype all: ~_generated.models.ComputeElementStatusAll
     """
 
@@ -278,7 +267,7 @@ class ComputeElementStatus(_serialization.Model):
 
     def __init__(self, *, all: "_models.ComputeElementStatusAll", **kwargs: Any) -> None:
         """
-        :keyword all: All. Required.
+        :keyword all: Overall compute element status. Required.
         :paramtype all: ~_generated.models.ComputeElementStatusAll
         """
         super().__init__(**kwargs)
@@ -286,18 +275,15 @@ class ComputeElementStatus(_serialization.Model):
 
 
 class ComputeElementStatusAll(_serialization.Model):
-    """All."""
+    """Overall compute element status."""
 
 
 class FTSStatus(_serialization.Model):
     """Status of an FTS resource.
 
-    Attributes:
-        all: Overall FTS status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar all: All. Required.
+    :ivar all: Overall FTS status. Required.
     :vartype all: ~_generated.models.FTSStatusAll
     """
 
@@ -311,7 +297,7 @@ class FTSStatus(_serialization.Model):
 
     def __init__(self, *, all: "_models.FTSStatusAll", **kwargs: Any) -> None:
         """
-        :keyword all: All. Required.
+        :keyword all: Overall FTS status. Required.
         :paramtype all: ~_generated.models.FTSStatusAll
         """
         super().__init__(**kwargs)
@@ -319,7 +305,7 @@ class FTSStatus(_serialization.Model):
 
 
 class FTSStatusAll(_serialization.Model):
-    """All."""
+    """Overall FTS status."""
 
 
 class GroupInfo(_serialization.Model):
@@ -351,28 +337,19 @@ class GroupInfo(_serialization.Model):
 class HeartbeatData(_serialization.Model):
     """Runtime resource and output data reported by a job heartbeat.
 
-    Attributes:
-        load_average: System load average.
-        memory_used: Memory used by the job.
-        vsize: Virtual memory size used by the job.
-        available_disk_space: Available disk space.
-        cpu_consumed: CPU time consumed by the job.
-        wall_clock_time: Wall-clock time consumed by the job.
-        standard_output: Standard output reported by the job.
-
-    :ivar load_average: Loadaverage.
+    :ivar load_average: System load average.
     :vartype load_average: float
-    :ivar memory_used: Memoryused.
+    :ivar memory_used: Memory used by the job.
     :vartype memory_used: float
-    :ivar vsize: Vsize.
+    :ivar vsize: Virtual memory size used by the job.
     :vartype vsize: float
-    :ivar available_disk_space: Availablediskspace.
+    :ivar available_disk_space: Available disk space.
     :vartype available_disk_space: float
-    :ivar cpu_consumed: Cpuconsumed.
+    :ivar cpu_consumed: CPU time consumed by the job.
     :vartype cpu_consumed: float
-    :ivar wall_clock_time: Wallclocktime.
+    :ivar wall_clock_time: Wall-clock time consumed by the job.
     :vartype wall_clock_time: float
-    :ivar standard_output: Standardoutput.
+    :ivar standard_output: Standard output reported by the job.
     :vartype standard_output: str
     """
 
@@ -399,19 +376,19 @@ class HeartbeatData(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword load_average: Loadaverage.
+        :keyword load_average: System load average.
         :paramtype load_average: float
-        :keyword memory_used: Memoryused.
+        :keyword memory_used: Memory used by the job.
         :paramtype memory_used: float
-        :keyword vsize: Vsize.
+        :keyword vsize: Virtual memory size used by the job.
         :paramtype vsize: float
-        :keyword available_disk_space: Availablediskspace.
+        :keyword available_disk_space: Available disk space.
         :paramtype available_disk_space: float
-        :keyword cpu_consumed: Cpuconsumed.
+        :keyword cpu_consumed: CPU time consumed by the job.
         :paramtype cpu_consumed: float
-        :keyword wall_clock_time: Wallclocktime.
+        :keyword wall_clock_time: Wall-clock time consumed by the job.
         :paramtype wall_clock_time: float
-        :keyword standard_output: Standardoutput.
+        :keyword standard_output: Standard output reported by the job.
         :paramtype standard_output: str
         """
         super().__init__(**kwargs)
@@ -510,21 +487,15 @@ class InitiateDeviceFlowResponse(_serialization.Model):
 class InsertedJob(_serialization.Model):
     """Information returned for a newly inserted job.
 
-    Attributes:
-        job_id: Identifier assigned to the inserted job.
-        status: Current job status.
-        minor_status: More detailed job status.
-        time_stamp: Time associated with the insertion.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar job_id: Jobid. Required.
+    :ivar job_id: Identifier assigned to the inserted job. Required.
     :vartype job_id: int
-    :ivar status: Status. Required.
+    :ivar status: Current job status. Required.
     :vartype status: str
-    :ivar minor_status: Minorstatus. Required.
+    :ivar minor_status: More detailed job status. Required.
     :vartype minor_status: str
-    :ivar time_stamp: Timestamp. Required.
+    :ivar time_stamp: Time associated with the insertion. Required.
     :vartype time_stamp: ~datetime.datetime
     """
 
@@ -546,13 +517,13 @@ class InsertedJob(_serialization.Model):
         self, *, job_id: int, status: str, minor_status: str, time_stamp: datetime.datetime, **kwargs: Any
     ) -> None:
         """
-        :keyword job_id: Jobid. Required.
+        :keyword job_id: Identifier assigned to the inserted job. Required.
         :paramtype job_id: int
-        :keyword status: Status. Required.
+        :keyword status: Current job status. Required.
         :paramtype status: str
-        :keyword minor_status: Minorstatus. Required.
+        :keyword minor_status: More detailed job status. Required.
         :paramtype minor_status: str
-        :keyword time_stamp: Timestamp. Required.
+        :keyword time_stamp: Time associated with the insertion. Required.
         :paramtype time_stamp: ~datetime.datetime
         """
         super().__init__(**kwargs)
@@ -565,18 +536,13 @@ class InsertedJob(_serialization.Model):
 class JobCommand(_serialization.Model):
     """Command to apply to a job.
 
-    Attributes:
-        job_id: Identifier of the target job.
-        command: Command to execute.
-        arguments: Optional command arguments.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar job_id: Job Id. Required.
+    :ivar job_id: Identifier of the target job. Required.
     :vartype job_id: int
-    :ivar command: Command. Required.
+    :ivar command: Command to execute. Required.
     :vartype command: str
-    :ivar arguments: Arguments.
+    :ivar arguments: Optional command arguments.
     :vartype arguments: str
     """
 
@@ -593,11 +559,11 @@ class JobCommand(_serialization.Model):
 
     def __init__(self, *, job_id: int, command: str, arguments: Optional[str] = None, **kwargs: Any) -> None:
         """
-        :keyword job_id: Job Id. Required.
+        :keyword job_id: Identifier of the target job. Required.
         :paramtype job_id: int
-        :keyword command: Command. Required.
+        :keyword command: Command to execute. Required.
         :paramtype command: str
-        :keyword arguments: Arguments.
+        :keyword arguments: Optional command arguments.
         :paramtype arguments: str
         """
         super().__init__(**kwargs)
@@ -609,80 +575,76 @@ class JobCommand(_serialization.Model):
 class JobMetaData(_serialization.Model):
     """A model that combines both job attributes and job parameters.
 
-    Attributes:
-        The attributes and parameters inherited from ``JobAttributes`` and
-        ``JobParameters``.
-
     :ivar additional_properties: Unmatched properties from the message are deserialized to this
      collection.
     :vartype additional_properties: dict[str, any]
-    :ivar timestamp: Timestamp.
+    :ivar timestamp: Time associated with the job parameters.
     :vartype timestamp: ~datetime.datetime
-    :ivar cpu_normalization_factor: Cpunormalizationfactor.
+    :ivar cpu_normalization_factor: CPU normalization factor.
     :vartype cpu_normalization_factor: int
-    :ivar norm_cpu_time_s: Normcputime(S).
+    :ivar norm_cpu_time_s: Normalized CPU time in seconds.
     :vartype norm_cpu_time_s: int
-    :ivar total_cpu_time_s: Totalcputime(S).
+    :ivar total_cpu_time_s: Total CPU time in seconds.
     :vartype total_cpu_time_s: int
-    :ivar host_name: Hostname.
+    :ivar host_name: Host running the job.
     :vartype host_name: str
-    :ivar grid_ce: Gridce.
+    :ivar grid_ce: Grid computing element.
     :vartype grid_ce: str
-    :ivar model_name: Modelname.
+    :ivar model_name: Computing model name.
     :vartype model_name: str
-    :ivar pilot_agent: Pilotagent.
+    :ivar pilot_agent: Pilot agent name.
     :vartype pilot_agent: str
-    :ivar pilot_reference: Pilot Reference.
+    :ivar pilot_reference: Pilot reference.
     :vartype pilot_reference: str
-    :ivar memory_mb: Memory(Mb).
+    :ivar memory_mb: Memory used in megabytes.
     :vartype memory_mb: int
-    :ivar local_account: Localaccount.
+    :ivar local_account: Local account used by the job.
     :vartype local_account: str
-    :ivar payload_pid: Payloadpid.
+    :ivar payload_pid: Payload process identifier.
     :vartype payload_pid: int
-    :ivar ce_queue: Cequeue.
+    :ivar ce_queue: Computing element queue.
     :vartype ce_queue: str
-    :ivar batch_system: Batchsystem.
+    :ivar batch_system: Batch system name.
     :vartype batch_system: str
-    :ivar job_type: Jobtype.
+    :ivar job_type: Type of the job.
     :vartype job_type: str
-    :ivar job_group: Jobgroup.
+    :ivar job_group: Group associated with the job.
     :vartype job_group: str
-    :ivar site: Site.
+    :ivar site: Site associated with the job.
     :vartype site: str
-    :ivar job_name: Jobname.
+    :ivar job_name: User-defined job name.
     :vartype job_name: str
-    :ivar owner: Owner.
+    :ivar owner: User who owns the job.
     :vartype owner: str
-    :ivar owner_group: Ownergroup.
+    :ivar owner_group: Group of the job owner.
     :vartype owner_group: str
-    :ivar vo: Vo.
+    :ivar vo: Virtual organization associated with the job.
     :vartype vo: str
-    :ivar submission_time: Submissiontime.
+    :ivar submission_time: Time when the job was submitted.
     :vartype submission_time: ~datetime.datetime
-    :ivar reschedule_time: Rescheduletime.
+    :ivar reschedule_time: Time when the job was rescheduled.
     :vartype reschedule_time: ~datetime.datetime
-    :ivar last_update_time: Lastupdatetime.
+    :ivar last_update_time: Time of the last job update.
     :vartype last_update_time: ~datetime.datetime
-    :ivar start_exec_time: Startexectime.
+    :ivar start_exec_time: Time when job execution started.
     :vartype start_exec_time: ~datetime.datetime
-    :ivar heart_beat_time: Heartbeattime.
+    :ivar heart_beat_time: Time of the last heartbeat.
     :vartype heart_beat_time: ~datetime.datetime
-    :ivar end_exec_time: Endexectime.
+    :ivar end_exec_time: Time when job execution ended.
     :vartype end_exec_time: ~datetime.datetime
-    :ivar status: Status.
+    :ivar status: Current job status.
     :vartype status: str
-    :ivar minor_status: Minorstatus.
+    :ivar minor_status: More detailed job status.
     :vartype minor_status: str
-    :ivar application_status: Applicationstatus.
+    :ivar application_status: Application-specific job status.
     :vartype application_status: str
-    :ivar user_priority: Userpriority.
+    :ivar user_priority: Priority assigned by the user.
     :vartype user_priority: int
-    :ivar reschedule_counter: Reschedulecounter.
+    :ivar reschedule_counter: Number of times the job was rescheduled.
     :vartype reschedule_counter: int
-    :ivar verified_flag: Verifiedflag.
+    :ivar verified_flag: Whether the job has been verified.
     :vartype verified_flag: bool
-    :ivar accounted_flag: Accountedflag.
+    :ivar accounted_flag: Whether the job has been accounted for.
     :vartype accounted_flag: any
     """
 
@@ -768,73 +730,73 @@ class JobMetaData(_serialization.Model):
         :keyword additional_properties: Unmatched properties from the message are deserialized to this
          collection.
         :paramtype additional_properties: dict[str, any]
-        :keyword timestamp: Timestamp.
+        :keyword timestamp: Time associated with the job parameters.
         :paramtype timestamp: ~datetime.datetime
-        :keyword cpu_normalization_factor: Cpunormalizationfactor.
+        :keyword cpu_normalization_factor: CPU normalization factor.
         :paramtype cpu_normalization_factor: int
-        :keyword norm_cpu_time_s: Normcputime(S).
+        :keyword norm_cpu_time_s: Normalized CPU time in seconds.
         :paramtype norm_cpu_time_s: int
-        :keyword total_cpu_time_s: Totalcputime(S).
+        :keyword total_cpu_time_s: Total CPU time in seconds.
         :paramtype total_cpu_time_s: int
-        :keyword host_name: Hostname.
+        :keyword host_name: Host running the job.
         :paramtype host_name: str
-        :keyword grid_ce: Gridce.
+        :keyword grid_ce: Grid computing element.
         :paramtype grid_ce: str
-        :keyword model_name: Modelname.
+        :keyword model_name: Computing model name.
         :paramtype model_name: str
-        :keyword pilot_agent: Pilotagent.
+        :keyword pilot_agent: Pilot agent name.
         :paramtype pilot_agent: str
-        :keyword pilot_reference: Pilot Reference.
+        :keyword pilot_reference: Pilot reference.
         :paramtype pilot_reference: str
-        :keyword memory_mb: Memory(Mb).
+        :keyword memory_mb: Memory used in megabytes.
         :paramtype memory_mb: int
-        :keyword local_account: Localaccount.
+        :keyword local_account: Local account used by the job.
         :paramtype local_account: str
-        :keyword payload_pid: Payloadpid.
+        :keyword payload_pid: Payload process identifier.
         :paramtype payload_pid: int
-        :keyword ce_queue: Cequeue.
+        :keyword ce_queue: Computing element queue.
         :paramtype ce_queue: str
-        :keyword batch_system: Batchsystem.
+        :keyword batch_system: Batch system name.
         :paramtype batch_system: str
-        :keyword job_type: Jobtype.
+        :keyword job_type: Type of the job.
         :paramtype job_type: str
-        :keyword job_group: Jobgroup.
+        :keyword job_group: Group associated with the job.
         :paramtype job_group: str
-        :keyword site: Site.
+        :keyword site: Site associated with the job.
         :paramtype site: str
-        :keyword job_name: Jobname.
+        :keyword job_name: User-defined job name.
         :paramtype job_name: str
-        :keyword owner: Owner.
+        :keyword owner: User who owns the job.
         :paramtype owner: str
-        :keyword owner_group: Ownergroup.
+        :keyword owner_group: Group of the job owner.
         :paramtype owner_group: str
-        :keyword vo: Vo.
+        :keyword vo: Virtual organization associated with the job.
         :paramtype vo: str
-        :keyword submission_time: Submissiontime.
+        :keyword submission_time: Time when the job was submitted.
         :paramtype submission_time: ~datetime.datetime
-        :keyword reschedule_time: Rescheduletime.
+        :keyword reschedule_time: Time when the job was rescheduled.
         :paramtype reschedule_time: ~datetime.datetime
-        :keyword last_update_time: Lastupdatetime.
+        :keyword last_update_time: Time of the last job update.
         :paramtype last_update_time: ~datetime.datetime
-        :keyword start_exec_time: Startexectime.
+        :keyword start_exec_time: Time when job execution started.
         :paramtype start_exec_time: ~datetime.datetime
-        :keyword heart_beat_time: Heartbeattime.
+        :keyword heart_beat_time: Time of the last heartbeat.
         :paramtype heart_beat_time: ~datetime.datetime
-        :keyword end_exec_time: Endexectime.
+        :keyword end_exec_time: Time when job execution ended.
         :paramtype end_exec_time: ~datetime.datetime
-        :keyword status: Status.
+        :keyword status: Current job status.
         :paramtype status: str
-        :keyword minor_status: Minorstatus.
+        :keyword minor_status: More detailed job status.
         :paramtype minor_status: str
-        :keyword application_status: Applicationstatus.
+        :keyword application_status: Application-specific job status.
         :paramtype application_status: str
-        :keyword user_priority: Userpriority.
+        :keyword user_priority: Priority assigned by the user.
         :paramtype user_priority: int
-        :keyword reschedule_counter: Reschedulecounter.
+        :keyword reschedule_counter: Number of times the job was rescheduled.
         :paramtype reschedule_counter: int
-        :keyword verified_flag: Verifiedflag.
+        :keyword verified_flag: Whether the job has been verified.
         :paramtype verified_flag: bool
-        :keyword accounted_flag: Accountedflag.
+        :keyword accounted_flag: Whether the job has been accounted for.
         :paramtype accounted_flag: any
         """
         super().__init__(**kwargs)
@@ -878,21 +840,15 @@ class JobMetaData(_serialization.Model):
 class JobStatusUpdate(_serialization.Model):
     """Requested update to a job's status information.
 
-    Attributes:
-        status: New job status.
-        minor_status: More detailed job status.
-        application_status: Application-specific status.
-        source: Source of the status update.
-
-    :ivar status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
-     "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
-     "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
+    :ivar status: New job status. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~_generated.models.JobStatus
-    :ivar minor_status: Minorstatus.
+    :ivar minor_status: More detailed job status.
     :vartype minor_status: str
-    :ivar application_status: Applicationstatus.
+    :ivar application_status: Application-specific status.
     :vartype application_status: str
-    :ivar source: Source.
+    :ivar source: Source of the status update.
     :vartype source: str
     """
 
@@ -913,15 +869,15 @@ class JobStatusUpdate(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
-         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
-         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
+        :keyword status: New job status. Known values are: "Submitting", "Received", "Checking",
+         "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+         "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~_generated.models.JobStatus
-        :keyword minor_status: Minorstatus.
+        :keyword minor_status: More detailed job status.
         :paramtype minor_status: str
-        :keyword application_status: Applicationstatus.
+        :keyword application_status: Application-specific status.
         :paramtype application_status: str
-        :keyword source: Source.
+        :keyword source: Source of the status update.
         :paramtype source: str
         """
         super().__init__(**kwargs)
@@ -1097,17 +1053,6 @@ class PilotMetadata(_serialization.Model):
     (e.g. as the mapping key on ``PATCH /api/pilots/metadata``\\ ). Every
     field is optional; when absent it is left untouched by an update.
 
-    Attributes:
-        status_reason: Human-readable reason for the current status.
-        status: Current pilot status.
-        benchmark: Pilot benchmark value.
-        destination_site: Destination site.
-        queue: Batch queue name.
-        grid_site: Grid site.
-        grid_type: Grid type.
-        accounting_sent: Whether accounting has been sent for this pilot.
-        current_job_id: ID of the job currently running on this pilot.
-
     :ivar status_reason: Human-readable reason for the current status.
     :vartype status_reason: str
     :ivar status: Current pilot status. Known values are: "Submitted", "Waiting", "Running",
@@ -1203,15 +1148,6 @@ class PilotRegistrationParams(_serialization.Model):
     ``PilotAgents`` table so that oversized values are rejected with a 422
     instead of a backend-dependent database error.
 
-    Attributes:
-        pilot_stamp: Stamp identifying the pilot to create.
-        vo: Virtual organization associated with the pilot.
-        grid_type: Grid type of the pilot.
-        grid_site: Grid site where the pilot is running.
-        destination_site: Site to which the pilot is assigned.
-        pilot_reference: CE job reference of the pilot.
-        pilot_status: Initial status of the pilot.
-
     All required parameters must be populated in order to send to server.
 
     :ivar pilot_stamp: Stamp of the pilot to create. Required.
@@ -1292,15 +1228,11 @@ class PilotRegistrationParams(_serialization.Model):
 class SandboxDownloadResponse(_serialization.Model):
     """Response containing a URL for downloading a sandbox.
 
-    Attributes:
-        url: URL from which the sandbox can be downloaded.
-        expires_in: Number of seconds until the URL expires.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar url: Url. Required.
+    :ivar url: URL from which the sandbox can be downloaded. Required.
     :vartype url: str
-    :ivar expires_in: Expires In. Required.
+    :ivar expires_in: Number of seconds until the URL expires. Required.
     :vartype expires_in: int
     """
 
@@ -1316,9 +1248,9 @@ class SandboxDownloadResponse(_serialization.Model):
 
     def __init__(self, *, url: str, expires_in: int, **kwargs: Any) -> None:
         """
-        :keyword url: Url. Required.
+        :keyword url: URL from which the sandbox can be downloaded. Required.
         :paramtype url: str
-        :keyword expires_in: Expires In. Required.
+        :keyword expires_in: Number of seconds until the URL expires. Required.
         :paramtype expires_in: int
         """
         super().__init__(**kwargs)
@@ -1329,22 +1261,16 @@ class SandboxDownloadResponse(_serialization.Model):
 class SandboxInfo(_serialization.Model):
     """Metadata describing a sandbox archive.
 
-    Attributes:
-        checksum_algorithm: Algorithm used to calculate the checksum.
-        checksum: Hexadecimal checksum of the sandbox archive.
-        size: Sandbox size in bytes.
-        format: Archive format of the sandbox.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar checksum_algorithm: Algorithms used to calculate sandbox checksums. Required. "sha256"
+    :ivar checksum_algorithm: Algorithm used to calculate the checksum. Required. "sha256"
     :vartype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
-    :ivar checksum: Checksum. Required.
+    :ivar checksum: Hexadecimal checksum of the sandbox archive. Required.
     :vartype checksum: str
-    :ivar size: Size. Required.
+    :ivar size: Sandbox size in bytes. Required.
     :vartype size: int
-    :ivar format: Archive formats supported for sandboxes. Required. Known values are: "tar.bz2"
-     and "tar.zst".
+    :ivar format: Archive format of the sandbox. Required. Known values are: "tar.bz2" and
+     "tar.zst".
     :vartype format: str or ~_generated.models.SandboxFormat
     """
 
@@ -1372,14 +1298,14 @@ class SandboxInfo(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword checksum_algorithm: Algorithms used to calculate sandbox checksums. Required. "sha256"
+        :keyword checksum_algorithm: Algorithm used to calculate the checksum. Required. "sha256"
         :paramtype checksum_algorithm: str or ~_generated.models.ChecksumAlgorithm
-        :keyword checksum: Checksum. Required.
+        :keyword checksum: Hexadecimal checksum of the sandbox archive. Required.
         :paramtype checksum: str
-        :keyword size: Size. Required.
+        :keyword size: Sandbox size in bytes. Required.
         :paramtype size: int
-        :keyword format: Archive formats supported for sandboxes. Required. Known values are: "tar.bz2"
-         and "tar.zst".
+        :keyword format: Archive format of the sandbox. Required. Known values are: "tar.bz2" and
+         "tar.zst".
         :paramtype format: str or ~_generated.models.SandboxFormat
         """
         super().__init__(**kwargs)
@@ -1392,18 +1318,13 @@ class SandboxInfo(_serialization.Model):
 class SandboxUploadResponse(_serialization.Model):
     """Response containing details for uploading a sandbox.
 
-    Attributes:
-        pfn: Physical file name assigned to the uploaded sandbox.
-        url: Optional upload URL.
-        fields: Form fields required for the upload.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar pfn: Pfn. Required.
+    :ivar pfn: Physical file name assigned to the uploaded sandbox. Required.
     :vartype pfn: str
-    :ivar url: Url.
+    :ivar url: Optional upload URL.
     :vartype url: str
-    :ivar fields: Fields.
+    :ivar fields: Form fields required for the upload.
     :vartype fields: dict[str, str]
     """
 
@@ -1421,11 +1342,11 @@ class SandboxUploadResponse(_serialization.Model):
         self, *, pfn: str, url: Optional[str] = None, fields: Optional[dict[str, str]] = None, **kwargs: Any
     ) -> None:
         """
-        :keyword pfn: Pfn. Required.
+        :keyword pfn: Physical file name assigned to the uploaded sandbox. Required.
         :paramtype pfn: str
-        :keyword url: Url.
+        :keyword url: Optional upload URL.
         :paramtype url: str
-        :keyword fields: Fields.
+        :keyword fields: Form fields required for the upload.
         :paramtype fields: dict[str, str]
         """
         super().__init__(**kwargs)
@@ -1437,19 +1358,14 @@ class SandboxUploadResponse(_serialization.Model):
 class ScalarSearchSpec(_serialization.Model):
     """Search condition applied to a scalar parameter.
 
-    Attributes:
-        parameter: Parameter to search.
-        operator: Comparison operator to apply.
-        value: Value to compare with the parameter.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar parameter: Parameter. Required.
+    :ivar parameter: Parameter to search. Required.
     :vartype parameter: str
-    :ivar operator: Operators for comparing scalar search values. Required. Known values are: "eq",
-     "neq", "gt", "lt", "like", "not like", and "regex".
+    :ivar operator: Comparison operator to apply. Required. Known values are: "eq", "neq", "gt",
+     "lt", "like", "not like", and "regex".
     :vartype operator: str or ~_generated.models.ScalarSearchOperator
-    :ivar value: Value. Required.
+    :ivar value: Value to compare with the parameter. Required.
     :vartype value: any
     """
 
@@ -1469,12 +1385,12 @@ class ScalarSearchSpec(_serialization.Model):
         self, *, parameter: str, operator: Union[str, "_models.ScalarSearchOperator"], value: Any, **kwargs: Any
     ) -> None:
         """
-        :keyword parameter: Parameter. Required.
+        :keyword parameter: Parameter to search. Required.
         :paramtype parameter: str
-        :keyword operator: Operators for comparing scalar search values. Required. Known values are:
-         "eq", "neq", "gt", "lt", "like", "not like", and "regex".
+        :keyword operator: Comparison operator to apply. Required. Known values are: "eq", "neq", "gt",
+         "lt", "like", "not like", and "regex".
         :paramtype operator: str or ~_generated.models.ScalarSearchOperator
-        :keyword value: Value. Required.
+        :keyword value: Value to compare with the parameter. Required.
         :paramtype value: any
         """
         super().__init__(**kwargs)
@@ -1486,19 +1402,13 @@ class ScalarSearchSpec(_serialization.Model):
 class SearchParams(_serialization.Model):
     """Parameters for searching, sorting, and selecting job results.
 
-    Attributes:
-        parameters: Parameters to include in the search results.
-        search: Search conditions to apply.
-        sort: Sort configurations for the results.
-        distinct: Whether duplicate results should be removed.
-
-    :ivar parameters: Parameters.
+    :ivar parameters: Parameters to include in the search results.
     :vartype parameters: list[str]
-    :ivar search: Search.
+    :ivar search: Search conditions to apply.
     :vartype search: list[~_generated.models.SearchParamsSearchItem]
-    :ivar sort: Sort.
+    :ivar sort: Sort configurations for the results.
     :vartype sort: list[~_generated.models.SortSpec]
-    :ivar distinct: Distinct.
+    :ivar distinct: Whether duplicate results should be removed.
     :vartype distinct: bool
     """
 
@@ -1519,13 +1429,13 @@ class SearchParams(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword parameters: Parameters.
+        :keyword parameters: Parameters to include in the search results.
         :paramtype parameters: list[str]
-        :keyword search: Search.
+        :keyword search: Search conditions to apply.
         :paramtype search: list[~_generated.models.SearchParamsSearchItem]
-        :keyword sort: Sort.
+        :keyword sort: Sort configurations for the results.
         :paramtype sort: list[~_generated.models.SortSpec]
-        :keyword distinct: Distinct.
+        :keyword distinct: Whether duplicate results should be removed.
         :paramtype distinct: bool
         """
         super().__init__(**kwargs)
@@ -1542,15 +1452,11 @@ class SearchParamsSearchItem(_serialization.Model):
 class SetJobStatusReturn(_serialization.Model):
     """Result of applying a status update to one or more jobs.
 
-    Attributes:
-        success: Successful status updates keyed by job identifier.
-        failed: Failed status updates keyed by job identifier.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar success: Success. Required.
+    :ivar success: Successful status updates keyed by job identifier. Required.
     :vartype success: dict[str, ~_generated.models.SetJobStatusReturnSuccess]
-    :ivar failed: Failed. Required.
+    :ivar failed: Failed status updates keyed by job identifier. Required.
     :vartype failed: dict[str, dict[str, str]]
     """
 
@@ -1572,9 +1478,9 @@ class SetJobStatusReturn(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword success: Success. Required.
+        :keyword success: Successful status updates keyed by job identifier. Required.
         :paramtype success: dict[str, ~_generated.models.SetJobStatusReturnSuccess]
-        :keyword failed: Failed. Required.
+        :keyword failed: Failed status updates keyed by job identifier. Required.
         :paramtype failed: dict[str, dict[str, str]]
         """
         super().__init__(**kwargs)
@@ -1585,30 +1491,21 @@ class SetJobStatusReturn(_serialization.Model):
 class SetJobStatusReturnSuccess(_serialization.Model):
     """Status information for a successful status change.
 
-    Attributes:
-        status: New job status.
-        minor_status: More detailed job status.
-        application_status: Application-specific status.
-        heart_beat_time: Time of the heartbeat.
-        start_exec_time: Time when execution started.
-        end_exec_time: Time when execution ended.
-        last_update_time: Time of the last update.
-
-    :ivar status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
-     "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
-     "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
+    :ivar status: New job status. Known values are: "Submitting", "Received", "Checking",
+     "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+     "Failed", "Deleted", "Killed", and "Rescheduled".
     :vartype status: str or ~_generated.models.JobStatus
-    :ivar minor_status: Minorstatus.
+    :ivar minor_status: More detailed job status.
     :vartype minor_status: str
-    :ivar application_status: Applicationstatus.
+    :ivar application_status: Application-specific status.
     :vartype application_status: str
-    :ivar heart_beat_time: Heartbeattime.
+    :ivar heart_beat_time: Time of the heartbeat.
     :vartype heart_beat_time: ~datetime.datetime
-    :ivar start_exec_time: Startexectime.
+    :ivar start_exec_time: Time when execution started.
     :vartype start_exec_time: ~datetime.datetime
-    :ivar end_exec_time: Endexectime.
+    :ivar end_exec_time: Time when execution ended.
     :vartype end_exec_time: ~datetime.datetime
-    :ivar last_update_time: Lastupdatetime.
+    :ivar last_update_time: Time of the last update.
     :vartype last_update_time: ~datetime.datetime
     """
 
@@ -1635,21 +1532,21 @@ class SetJobStatusReturnSuccess(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword status: Lifecycle statuses for a job. Known values are: "Submitting", "Received",
-         "Checking", "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done",
-         "Completed", "Failed", "Deleted", "Killed", and "Rescheduled".
+        :keyword status: New job status. Known values are: "Submitting", "Received", "Checking",
+         "Staging", "Waiting", "Matched", "Running", "Stalled", "Completing", "Done", "Completed",
+         "Failed", "Deleted", "Killed", and "Rescheduled".
         :paramtype status: str or ~_generated.models.JobStatus
-        :keyword minor_status: Minorstatus.
+        :keyword minor_status: More detailed job status.
         :paramtype minor_status: str
-        :keyword application_status: Applicationstatus.
+        :keyword application_status: Application-specific status.
         :paramtype application_status: str
-        :keyword heart_beat_time: Heartbeattime.
+        :keyword heart_beat_time: Time of the heartbeat.
         :paramtype heart_beat_time: ~datetime.datetime
-        :keyword start_exec_time: Startexectime.
+        :keyword start_exec_time: Time when execution started.
         :paramtype start_exec_time: ~datetime.datetime
-        :keyword end_exec_time: Endexectime.
+        :keyword end_exec_time: Time when execution ended.
         :paramtype end_exec_time: ~datetime.datetime
-        :keyword last_update_time: Lastupdatetime.
+        :keyword last_update_time: Time of the last update.
         :paramtype last_update_time: ~datetime.datetime
         """
         super().__init__(**kwargs)
@@ -1665,12 +1562,9 @@ class SetJobStatusReturnSuccess(_serialization.Model):
 class SiteStatus(_serialization.Model):
     """Status of a site.
 
-    Attributes:
-        all: Overall site status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar all: All. Required.
+    :ivar all: Overall site status. Required.
     :vartype all: ~_generated.models.SiteStatusAll
     """
 
@@ -1684,7 +1578,7 @@ class SiteStatus(_serialization.Model):
 
     def __init__(self, *, all: "_models.SiteStatusAll", **kwargs: Any) -> None:
         """
-        :keyword all: All. Required.
+        :keyword all: Overall site status. Required.
         :paramtype all: ~_generated.models.SiteStatusAll
         """
         super().__init__(**kwargs)
@@ -1692,22 +1586,18 @@ class SiteStatus(_serialization.Model):
 
 
 class SiteStatusAll(_serialization.Model):
-    """All."""
+    """Overall site status."""
 
 
 class SortSpec(_serialization.Model):
     """Sort configuration for a search parameter.
 
-    Attributes:
-        parameter: Parameter by which to sort.
-        direction: Direction in which to sort the parameter.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar parameter: Parameter. Required.
+    :ivar parameter: Parameter by which to sort. Required.
     :vartype parameter: str
-    :ivar direction: Directions in which search results can be sorted. Required. Known values are:
-     "asc" and "desc".
+    :ivar direction: Direction in which to sort the parameter. Required. Known values are: "asc"
+     and "desc".
     :vartype direction: str or ~_generated.models.SortDirection
     """
 
@@ -1723,10 +1613,10 @@ class SortSpec(_serialization.Model):
 
     def __init__(self, *, parameter: str, direction: Union[str, "_models.SortDirection"], **kwargs: Any) -> None:
         """
-        :keyword parameter: Parameter. Required.
+        :keyword parameter: Parameter by which to sort. Required.
         :paramtype parameter: str
-        :keyword direction: Directions in which search results can be sorted. Required. Known values
-         are: "asc" and "desc".
+        :keyword direction: Direction in which to sort the parameter. Required. Known values are: "asc"
+         and "desc".
         :paramtype direction: str or ~_generated.models.SortDirection
         """
         super().__init__(**kwargs)
@@ -1737,21 +1627,15 @@ class SortSpec(_serialization.Model):
 class StorageElementStatus(_serialization.Model):
     """Status of the operations supported by a storage element.
 
-    Attributes:
-        read: Read operation status.
-        write: Write operation status.
-        check: Check operation status.
-        remove: Remove operation status.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar read: Read. Required.
+    :ivar read: Read operation status. Required.
     :vartype read: ~_generated.models.StorageElementStatusRead
-    :ivar write: Write. Required.
+    :ivar write: Write operation status. Required.
     :vartype write: ~_generated.models.StorageElementStatusWrite
-    :ivar check: Check. Required.
+    :ivar check: Check operation status. Required.
     :vartype check: ~_generated.models.StorageElementStatusCheck
-    :ivar remove: Remove. Required.
+    :ivar remove: Remove operation status. Required.
     :vartype remove: ~_generated.models.StorageElementStatusRemove
     """
 
@@ -1779,13 +1663,13 @@ class StorageElementStatus(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword read: Read. Required.
+        :keyword read: Read operation status. Required.
         :paramtype read: ~_generated.models.StorageElementStatusRead
-        :keyword write: Write. Required.
+        :keyword write: Write operation status. Required.
         :paramtype write: ~_generated.models.StorageElementStatusWrite
-        :keyword check: Check. Required.
+        :keyword check: Check operation status. Required.
         :paramtype check: ~_generated.models.StorageElementStatusCheck
-        :keyword remove: Remove. Required.
+        :keyword remove: Remove operation status. Required.
         :paramtype remove: ~_generated.models.StorageElementStatusRemove
         """
         super().__init__(**kwargs)
@@ -1796,33 +1680,29 @@ class StorageElementStatus(_serialization.Model):
 
 
 class StorageElementStatusCheck(_serialization.Model):
-    """Check."""
+    """Check operation status."""
 
 
 class StorageElementStatusRead(_serialization.Model):
-    """Read."""
+    """Read operation status."""
 
 
 class StorageElementStatusRemove(_serialization.Model):
-    """Remove."""
+    """Remove operation status."""
 
 
 class StorageElementStatusWrite(_serialization.Model):
-    """Write."""
+    """Write operation status."""
 
 
 class SummaryParams(_serialization.Model):
     """Parameters for grouping and summarizing search results.
 
-    Attributes:
-        grouping: Parameters used to group the search results.
-        search: Search conditions to apply before grouping.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar grouping: Grouping. Required.
+    :ivar grouping: Parameters used to group the search results. Required.
     :vartype grouping: list[str]
-    :ivar search: Search.
+    :ivar search: Search conditions to apply before grouping.
     :vartype search: list[~_generated.models.SummaryParamsSearchItem]
     """
 
@@ -1839,9 +1719,9 @@ class SummaryParams(_serialization.Model):
         self, *, grouping: list[str], search: list["_models.SummaryParamsSearchItem"] = [], **kwargs: Any
     ) -> None:
         """
-        :keyword grouping: Grouping. Required.
+        :keyword grouping: Parameters used to group the search results. Required.
         :paramtype grouping: list[str]
-        :keyword search: Search.
+        :keyword search: Search conditions to apply before grouping.
         :paramtype search: list[~_generated.models.SummaryParamsSearchItem]
         """
         super().__init__(**kwargs)
@@ -1949,27 +1829,19 @@ class TokenResponse(_serialization.Model):
 class UserInfoResponse(_serialization.Model):
     """Identity information returned by the userinfo endpoint.
 
-    Attributes:
-        sub: Subject identifier from the access token.
-        vo: Virtual organisation associated with the user.
-        dirac_group: DIRAC group associated with the user.
-        policies: Policies included in the access token.
-        properties: DIRAC security properties included in the access token.
-        preferred_username: Preferred username for display.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar sub: Sub. Required.
+    :ivar sub: Subject identifier from the access token. Required.
     :vartype sub: str
-    :ivar vo: Vo. Required.
+    :ivar vo: Virtual organisation associated with the user. Required.
     :vartype vo: str
-    :ivar dirac_group: Dirac Group. Required.
+    :ivar dirac_group: DIRAC group associated with the user. Required.
     :vartype dirac_group: str
-    :ivar policies: Policies. Required.
+    :ivar policies: Policies included in the access token. Required.
     :vartype policies: dict[str, any]
-    :ivar properties: Properties. Required.
+    :ivar properties: DIRAC security properties included in the access token. Required.
     :vartype properties: list[str]
-    :ivar preferred_username: Preferred Username. Required.
+    :ivar preferred_username: Preferred username for display. Required.
     :vartype preferred_username: str
     """
 
@@ -2003,17 +1875,17 @@ class UserInfoResponse(_serialization.Model):
         **kwargs: Any
     ) -> None:
         """
-        :keyword sub: Sub. Required.
+        :keyword sub: Subject identifier from the access token. Required.
         :paramtype sub: str
-        :keyword vo: Vo. Required.
+        :keyword vo: Virtual organisation associated with the user. Required.
         :paramtype vo: str
-        :keyword dirac_group: Dirac Group. Required.
+        :keyword dirac_group: DIRAC group associated with the user. Required.
         :paramtype dirac_group: str
-        :keyword policies: Policies. Required.
+        :keyword policies: Policies included in the access token. Required.
         :paramtype policies: dict[str, any]
-        :keyword properties: Properties. Required.
+        :keyword properties: DIRAC security properties included in the access token. Required.
         :paramtype properties: list[str]
-        :keyword preferred_username: Preferred Username. Required.
+        :keyword preferred_username: Preferred username for display. Required.
         :paramtype preferred_username: str
         """
         super().__init__(**kwargs)
@@ -2089,19 +1961,14 @@ class ValidationError(_serialization.Model):
 class VectorSearchSpec(_serialization.Model):
     """Search condition applied to a collection of values.
 
-    Attributes:
-        parameter: Parameter to search.
-        operator: Collection comparison operator to apply.
-        values: Values to compare with the parameter.
-
     All required parameters must be populated in order to send to server.
 
-    :ivar parameter: Parameter. Required.
+    :ivar parameter: Parameter to search. Required.
     :vartype parameter: str
-    :ivar operator: Operators for comparing values against a collection. Required. Known values
-     are: "in" and "not in".
+    :ivar operator: Collection comparison operator to apply. Required. Known values are: "in" and
+     "not in".
     :vartype operator: str or ~_generated.models.VectorSearchOperator
-    :ivar values: Values. Required.
+    :ivar values: Values to compare with the parameter. Required.
     :vartype values: any
     """
 
@@ -2121,12 +1988,12 @@ class VectorSearchSpec(_serialization.Model):
         self, *, parameter: str, operator: Union[str, "_models.VectorSearchOperator"], values: Any, **kwargs: Any
     ) -> None:
         """
-        :keyword parameter: Parameter. Required.
+        :keyword parameter: Parameter to search. Required.
         :paramtype parameter: str
-        :keyword operator: Operators for comparing values against a collection. Required. Known values
-         are: "in" and "not in".
+        :keyword operator: Collection comparison operator to apply. Required. Known values are: "in"
+         and "not in".
         :paramtype operator: str or ~_generated.models.VectorSearchOperator
-        :keyword values: Values. Required.
+        :keyword values: Values to compare with the parameter. Required.
         :paramtype values: any
         """
         super().__init__(**kwargs)
