@@ -31,7 +31,7 @@ from diracx.db.sql.transformation.schema import (
     ParcelInputs,
     Parcels,
     Processes,
-    Requirements,
+    RequirementsTemplates,
     TransformationLog,
     Transformations,
     Workgraphs,
@@ -260,8 +260,8 @@ async def compute_facet(transformation_db: TransformationDB, transformation_id: 
             insert(Processes).values(process_id=PROCESS_ID, process={"class": "Tool"})
         )
         await db.conn.execute(
-            insert(Requirements).values(
-                requirements_id=TEMPLATE_ID, requirements={"cpu": 1}
+            insert(RequirementsTemplates).values(
+                requirements_template_id=TEMPLATE_ID, requirements_template={"cpu": 1}
             )
         )
         await db.conn.execute(
@@ -396,7 +396,9 @@ async def test_insert_requirements_deduplicates(transformation_db: Transformatio
         await db.insert_requirements(b"\x01" * 32, {"cpu": 4})
     async with transformation_db as db:
         await db.insert_requirements(b"\x01" * 32, {"cpu": 4})
-        count = await db.conn.scalar(select(func.count()).select_from(Requirements))
+        count = await db.conn.scalar(
+            select(func.count()).select_from(RequirementsTemplates)
+        )
     assert count == 1
 
 
@@ -430,7 +432,7 @@ async def test_insert_compute_parcels(
                 select(
                     ComputeParcels.parcel_id,
                     ComputeParcels.process_id,
-                    ComputeParcels.requirements_id,
+                    ComputeParcels.requirements_template_id,
                     ComputeParcels.parameters,
                 ).order_by(ComputeParcels.parcel_id)
             )

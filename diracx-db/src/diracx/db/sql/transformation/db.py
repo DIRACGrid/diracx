@@ -31,7 +31,7 @@ from .schema import (
     Inputs,
     ParcelInputs,
     Parcels,
-    Requirements,
+    RequirementsTemplates,
     TransformationLog,
     Transformations,
 )
@@ -230,10 +230,13 @@ class TransformationDB(BaseSQLDB):
                 facet.
         """
         stmt = (
-            select(ComputeTransformations.process_id, Requirements.requirements)
+            select(
+                ComputeTransformations.process_id,
+                RequirementsTemplates.requirements_template,
+            )
             .outerjoin(
-                Requirements,
-                Requirements.requirements_id
+                RequirementsTemplates,
+                RequirementsTemplates.requirements_template_id
                 == ComputeTransformations.requirements_template_id,
             )
             .where(ComputeTransformations.transformation_id == transformation_id)
@@ -241,7 +244,7 @@ class TransformationDB(BaseSQLDB):
         row = (await self.conn.execute(stmt)).one_or_none()
         if row is None:
             raise TransformationNotFoundError(transformation_id, "no compute facet")
-        return row.ProcessID, row.Requirements or {}
+        return row.ProcessID, row.RequirementsTemplate or {}
 
     async def insert_requirements(
         self, requirements_id: bytes, requirements: dict[str, Any]
@@ -253,10 +256,13 @@ class TransformationDB(BaseSQLDB):
             requirements: The requirement set.
         """
         await self.conn.execute(
-            insert(Requirements)
+            insert(RequirementsTemplates)
             .prefix_with("IGNORE", dialect="mysql")
             .prefix_with("OR IGNORE", dialect="sqlite")
-            .values(requirements_id=requirements_id, requirements=requirements)
+            .values(
+                requirements_template_id=requirements_id,
+                requirements_template=requirements,
+            )
         )
 
     async def insert_compute_parcels(

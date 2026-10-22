@@ -26,7 +26,7 @@ from diracx.db.sql.transformation.schema import (
     ParcelInputs,
     Parcels,
     Processes,
-    Requirements,
+    RequirementsTemplates,
     TransformationLog,
     Transformations,
     Workgraphs,
@@ -95,8 +95,8 @@ async def transformation_id(transformation_db: TransformationDB) -> UUID:
             insert(Processes).values(process_id=PROCESS_ID, process={"class": "Tool"})
         )
         await db.conn.execute(
-            insert(Requirements).values(
-                requirements_id=template_id, requirements=TEMPLATE
+            insert(RequirementsTemplates).values(
+                requirements_template_id=template_id, requirements_template=TEMPLATE
             )
         )
         await db.conn.execute(
@@ -264,17 +264,19 @@ async def test_requirements_merged_over_template(
         rows = (
             await db.conn.execute(
                 select(
-                    Requirements.requirements,
+                    RequirementsTemplates.requirements_template,
                     ComputeParcels.process_id,
                     ComputeParcels.parameters,
                     Parcels.annotations,
                 )
-                .join(Requirements)
+                .join(RequirementsTemplates)
                 .join(Parcels)
                 .order_by(Parcels.parcel_id)
             )
         ).all()
-        n_requirements = len((await db.conn.execute(select(Requirements))).all())
+        n_requirements = len(
+            (await db.conn.execute(select(RequirementsTemplates))).all()
+        )
     merged = {"cpu": 8, "platform": "x86_64"}
     assert rows == [
         (merged, PROCESS_ID, {"seed": 1}, {"note": "big"}),
