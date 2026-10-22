@@ -35,7 +35,7 @@ def test_openapi(test_client):
     ["Args:", "Raises:", "Returns:", "Yields:", "auth_db", "HTTPException"],
 )
 def test_openapi_descriptions_exclude_docstring_sections(test_client, forbidden):
-    """Server-side docstring sections must be hidden from the API docs by a "\f"."""
+    r"""Server-side docstring sections must be hidden from the API docs by a "\f"."""
     r = test_client.get("/api/openapi.json")
     assert r.status_code == 200
     leaked = [
