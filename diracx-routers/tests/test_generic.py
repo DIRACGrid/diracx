@@ -30,7 +30,10 @@ def test_openapi(test_client):
     assert r.json()
 
 
-@pytest.mark.parametrize("forbidden", ["Args:", "Raises:", "auth_db", "HTTPException"])
+@pytest.mark.parametrize(
+    "forbidden",
+    ["Args:", "Raises:", "Returns:", "Yields:", "auth_db", "HTTPException"],
+)
 def test_openapi_descriptions_exclude_docstring_sections(test_client, forbidden):
     """Server-side docstring sections must be hidden from the API docs by a "\f"."""
     r = test_client.get("/api/openapi.json")
@@ -41,7 +44,35 @@ def test_openapi_descriptions_exclude_docstring_sections(test_client, forbidden)
         for method, operation in operations.items()
         if forbidden in operation.get("description", "")
     ]
-    assert not leaked, f"{forbidden!r} found in OpenAPI description of {leaked}"
+    assert not leaked, (
+        f"{forbidden!r} found in the OpenAPI description of {leaked}. FastAPI "
+        "publishes the route's docstring as its description, which ends up in "
+        "Swagger and in the generated clients. Put a line containing only '\\f' "
+        "between the user-facing summary and the server-side sections "
+        "(Args, Raises, ...) so that FastAPI cuts the description there."
+    )
+
+
+@pytest.mark.parametrize("forbidden", ["Attributes:", "Args:", "Raises:"])
+def test_openapi_schemas_exclude_docstring_sections(test_client, forbidden):
+    """Model docstrings must not carry Google-style sections into the API docs."""
+    r = test_client.get("/api/openapi.json")
+    assert r.status_code == 200
+    leaked = [
+        name
+        for name, schema in r.json()["components"]["schemas"].items()
+        if forbidden in schema.get("description", "")
+    ]
+    assert not leaked, (
+        f"{forbidden!r} found in the OpenAPI schema description of {leaked}. "
+        "Pydantic publishes the whole class docstring as the schema description "
+        "(a '\\f' does not cut it), so it ends up in Swagger and in the generated "
+        "clients. Keep the class docstring to a plain description and document "
+        "each field with a docstring directly below it, enabling "
+        "use_attribute_docstrings=True on the model (or "
+        "@with_config(ConfigDict(use_attribute_docstrings=True)) on a TypedDict) "
+        "so that pydantic uses them as the field descriptions."
+    )
 
 
 def test_oidc_configuration(test_client):
