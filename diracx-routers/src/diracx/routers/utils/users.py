@@ -81,26 +81,19 @@ class UUID(_UUID):
 
 
 class AuthInfo(BaseModel):
-    """Authentication claims and token metadata for an authorised user.
+    """Authentication claims and token metadata for an authorised user."""
 
-    Attributes:
-        bearer_token: Raw access token, retained for forwarding.
-        token_id: Unique token identifier used to reference the token in the database.
-        properties: DIRAC security properties granted to the user.
-        policies: Additional policy data carried by the token.
-    """
-
-    # raw token for propagation
     bearer_token: str
+    """Raw access token, retained for forwarding."""
 
-    # token ID in the DB for Component
-    # unique jwt identifier for user
     token_id: UUID
+    """Unique token identifier used to reference the token in the database."""
 
-    # list of DIRAC properties
     properties: list[SecurityProperty]
+    """DIRAC security properties granted to the user."""
 
     policies: dict[str, Any] = {}
+    """Additional policy data carried by the token."""
 
 
 class AuthorizedUserInfo(AuthInfo, UserInfo):
