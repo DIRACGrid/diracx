@@ -258,13 +258,13 @@ async def test_the_replacement_is_validated(
     transformation_id, _, _ = paused
     broken = gauss("v57r2")
     broken["steps"]["gauss"]["run"]["inputs"]["seed"]["type"] = "File"
-    docker = gauss("v57r2")
-    docker["requirements"] = {"DockerRequirement": {"dockerPull": "gauss:latest"}}
+    unsupported = gauss("v57r2")
+    unsupported["requirements"] = {"SoftwareRequirement": {"packages": {"gauss": {}}}}
     async with transformation_db as db:
         with pytest.raises(InvalidProcessError):
             await replace(db, transformation_id, broken)
         with pytest.raises(PolicyViolationError):
-            await replace(db, transformation_id, docker)
+            await replace(db, transformation_id, unsupported)
 
 
 async def test_unknown_transformation(transformation_db: TransformationDB):

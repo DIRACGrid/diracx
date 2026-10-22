@@ -15,6 +15,8 @@ from .canonical import CanonicalProcess
 # safe, tightening it would break documents already accepted.
 ALLOWED_REQUIREMENTS = frozenset(
     {
+        # Run with Apptainer, which grid sites and compute backends provide
+        "DockerRequirement",
         "EnvVarRequirement",
         "InitialWorkDirRequirement",
         "InlineJavascriptRequirement",
@@ -30,6 +32,12 @@ ALLOWED_REQUIREMENTS = frozenset(
         "ToolTimeLimit",
     }
 )
+
+# DockerRequirement fields that make the worker node build an image or fetch
+# one from a URL at run time, rather than pull a published one: Apptainer
+# cannot build from a Dockerfile there. Refused in hints too, since a runner
+# with a container engine acts on a DockerRequirement hint.
+UNSUPPORTED_DOCKER_FIELDS = ("dockerFile", "dockerImport", "dockerLoad")
 
 # Largest canonical form of a single process. A year of LHCb submissions
 # peaks below 20 kB; large data belongs in a sandbox, not in the document.
@@ -72,13 +80,19 @@ def check_policy(
                 "replace it with a CommandLineTool, ExpressionTool or Workflow "
                 "taking and producing the same inputs and outputs"
             )
-        requirement_sets = [body.get("requirements") or {}]
-        requirement_sets += [
-            step.get("requirements") or {}
-            for step in (body.get("steps") or {}).values()
-        ]
-        for requirements in requirement_sets:
+        holders = [body, *(body.get("steps") or {}).values()]
+        for holder in holders:
+            requirements = holder.get("requirements") or {}
             for cls in sorted(set(requirements) - allowed_requirements):
                 problems.append(f"{name} requires {cls}, which DiracX does not support")
+            for classes in (requirements, holder.get("hints") or {}):
+                docker = classes.get("DockerRequirement") or {}
+                for field in UNSUPPORTED_DOCKER_FIELDS:
+                    if field in docker:
+                        problems.append(
+                            f"{name} uses DockerRequirement {field}, which would "
+                            "build or fetch an image on the worker node; publish "
+                            "the image to a registry and name it with dockerPull"
+                        )
     if problems:
         raise PolicyViolationError("; ".join(problems))

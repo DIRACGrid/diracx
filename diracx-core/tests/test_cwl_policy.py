@@ -35,9 +35,7 @@ def test_unsupported_requirements_are_refused_wherever_they_are():
         "outputs": {},
         "steps": {
             "s0": {
-                "run": tool(
-                    requirements=[{"class": "DockerRequirement", "dockerPull": "a"}]
-                ),
+                "run": tool(requirements=[{"class": "InplaceUpdateRequirement"}]),
                 "requirements": {"SoftwareRequirement": {"packages": []}},
                 "in": {},
                 "out": [],
@@ -46,7 +44,7 @@ def test_unsupported_requirements_are_refused_wherever_they_are():
     }
     with pytest.raises(PolicyViolationError) as e:
         check_policy(decompose(workflow)[1])
-    assert "DockerRequirement" in str(e.value)
+    assert "InplaceUpdateRequirement" in str(e.value)
     assert "SoftwareRequirement" in str(e.value)
 
 
@@ -79,3 +77,29 @@ def test_abstract_operations_are_refused_wherever_they_are():
         with pytest.raises(PolicyViolationError, match="is an Operation") as e:
             check_policy(decompose(process)[1])
         assert "CommandLineTool, ExpressionTool or Workflow" in str(e.value)
+
+
+def test_docker_images_are_accepted_when_pulled():
+    for image in (
+        "harbor.cta-observatory.org/ctapipe:0.24",
+        "alpine@sha256:" + "a" * 64,
+    ):
+        check_policy(
+            decompose(tool(requirements={"DockerRequirement": {"dockerPull": image}}))[
+                1
+            ]
+        )
+    check_policy(
+        decompose(
+            tool(requirements={"DockerRequirement": {"dockerImageId": "ctapipe"}})
+        )[1]
+    )
+
+
+@pytest.mark.parametrize("field", ["dockerFile", "dockerImport", "dockerLoad"])
+@pytest.mark.parametrize("where", ["requirements", "hints"])
+def test_docker_images_built_or_fetched_on_the_worker_are_refused(field, where):
+    docker = {"DockerRequirement": {"dockerImageId": "x", field: "x"}}
+    with pytest.raises(PolicyViolationError, match=f"DockerRequirement {field}") as e:
+        check_policy(decompose(tool(**{where: docker}))[1])
+    assert "dockerPull" in str(e.value)

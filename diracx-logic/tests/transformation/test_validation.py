@@ -114,3 +114,15 @@ def test_validation_starts_no_process(monkeypatch):
     tool["requirements"] = {"InlineJavascriptRequirement": {}}
     tool["arguments"] = ["$(inputs.files.length + 1)"]
     validate_packed(packed(process))
+
+
+def test_a_docker_image_validates_without_being_pulled(monkeypatch):
+    def refuse(*args, **kwargs):
+        raise AssertionError(f"started a process: {args[0]!r}")
+
+    monkeypatch.setattr(subprocess, "Popen", refuse)
+    process = workflow("File[]")
+    process["steps"]["s0"]["run"]["requirements"] = {
+        "DockerRequirement": {"dockerPull": "harbor.cta-observatory.org/ctapipe:0.24"}
+    }
+    validate_packed(packed(process))

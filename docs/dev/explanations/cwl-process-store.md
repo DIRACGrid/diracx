@@ -83,7 +83,10 @@ flowchart LR
     backend can honour are refused, `dirac:` requirements included. So are
     abstract `Operation`s, which no runner can execute, and processes larger
     than 256 kB, whose content belongs in a sandbox or `File` input. Hints are
-    not restricted.
+    not restricted. `DockerRequirement` is accepted, to run with Apptainer,
+    when it names an image to pull (`dockerPull`, `dockerImageId`); its
+    `dockerFile`, `dockerLoad` and `dockerImport` fields are refused, even in
+    a hint, since they build or fetch an image on the worker node.
 4. **Hash first**: a process already in the store was validated when it was
     stored, so resubmitting it costs a lookup.
 5. **Validate** (`diracx.logic.transformation.validation.validate_packed`):
@@ -139,5 +142,7 @@ exception to them.
     references to arbitrary components;
 - `ProcessRegistry` names and versions, garbage collection, and VO visibility
     of stored bodies;
-- pinning mutable references inside bodies, such as container tags;
+- pinning mutable references inside bodies, such as container tags: a
+    `dockerPull` tag is accepted as written, so the same identity can name
+    different software if the tag moves;
 - recording `CANONICAL_VERSION` per row.
