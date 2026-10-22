@@ -14,6 +14,8 @@ classifiers = [
 ]
 dependencies = [
     "cachetools",
+    # Validates submitted CWL: schema and static type checks (DX-ADR-007)
+    "cwltool",
     "diraccommon >=9.0.18",
     "diracx-core",
     "diracx-db",
