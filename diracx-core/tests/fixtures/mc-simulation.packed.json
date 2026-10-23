@@ -1,0 +1,442 @@
+{
+  "$graph": [
+    {
+      "class": "Workflow",
+      "id": "#main",
+      "label": "MC simulation",
+      "doc": "Produce a requested number of events, reconstruct them, and merge the reconstructed files into the deliverable.",
+      "requirements": [
+        {
+          "class": "SubworkflowFeatureRequirement"
+        }
+      ],
+      "hints": [
+        {
+          "schema_version": "1.0",
+          "type": "MCSimulation",
+          "target": {
+            "output": "datasets",
+            "files": 20
+          },
+          "output_sandbox": [
+            "prodConf_*.json",
+            "summary*.xml",
+            "prmon*",
+            "*.log"
+          ],
+          "class": "https://diracgrid.org/cwl#Workgraph"
+        }
+      ],
+      "inputs": [
+        {
+          "doc": "Seeds, issued until the requested number of events has been produced",
+          "type": {
+            "type": "array",
+            "items": [
+              "File",
+              "string"
+            ]
+          },
+          "id": "#main/events",
+          "https://diracgrid.org/cwl#Feeder": {
+            "name": "#main/events/Seeds",
+            "args": {
+              "target_events": 600000,
+              "events_per_seed": 1000,
+              "batch": 60000,
+              "max_in_flight": 300000
+            }
+          }
+        }
+      ],
+      "steps": [
+        {
+          "label": "MCMerge",
+          "doc": "Merge about 10 GB of reconstructed data per job",
+          "hints": [
+            {
+              "packer": {
+                "name": "#main/MCMerge/ByGroupSizeRun",
+                "args": {
+                  "group_size": 4,
+                  "keep_storage_together": true
+                }
+              },
+              "actions": {
+                "Finalizing": [
+                  {
+                    "action": "NoInputProcessedTwice"
+                  }
+                ]
+              },
+              "class": "https://diracgrid.org/cwl#Transformation"
+            }
+          ],
+          "run": "#merge.cwl",
+          "in": [
+            {
+              "source": "#main/MCReconstruction/reco-files",
+              "id": "#main/MCMerge/input-data"
+            }
+          ],
+          "out": [
+            "#main/MCMerge/merged"
+          ],
+          "id": "#main/MCMerge"
+        },
+        {
+          "label": "MCReconstruction",
+          "doc": "Boole and Moore over about 3 GB of simulated data per job",
+          "hints": [
+            {
+              "packer": {
+                "name": "#main/MCReconstruction/ByGroupSizeRun",
+                "args": {
+                  "group_size": 3,
+                  "keep_storage_together": true
+                }
+              },
+              "actions": {
+                "Finalizing": [
+                  {
+                    "action": "NoInputProcessedTwice"
+                  }
+                ]
+              },
+              "class": "https://diracgrid.org/cwl#Transformation"
+            }
+          ],
+          "run": "#boole-moore.cwl",
+          "in": [
+            {
+              "source": "#main/MCSimulation/sim-files",
+              "id": "#main/MCReconstruction/input-data"
+            }
+          ],
+          "out": [
+            "#main/MCReconstruction/reco-files"
+          ],
+          "id": "#main/MCReconstruction"
+        },
+        {
+          "label": "MCSimulation",
+          "doc": "Gauss, one seed per job",
+          "hints": [
+            {
+              "packer": {
+                "name": "#main/MCSimulation/PerInput"
+              },
+              "actions": {
+                "Finalizing": [
+                  {
+                    "action": "NoInputProcessedTwice"
+                  }
+                ]
+              },
+              "class": "https://diracgrid.org/cwl#Transformation"
+            }
+          ],
+          "run": "#gauss.cwl",
+          "in": [
+            {
+              "source": "#main/events",
+              "id": "#main/MCSimulation/seed"
+            }
+          ],
+          "out": [
+            "#main/MCSimulation/sim-files"
+          ],
+          "id": "#main/MCSimulation"
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Merged MC datasets",
+          "outputSource": "#main/MCMerge/merged",
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "id": "#main/datasets"
+        }
+      ]
+    },
+    {
+      "class": "CommandLineTool",
+      "doc": "Run one LHCb application step described by a prodConf.",
+      "requirements": [
+        {
+          "listing": [
+            {
+              "entryname": "prodConf.json",
+              "entry": "$(inputs[\"prod-conf\"])"
+            }
+          ],
+          "class": "InitialWorkDirRequirement"
+        },
+        {
+          "class": "InlineJavascriptRequirement"
+        }
+      ],
+      "baseCommand": [
+        "lb-prod-run"
+      ],
+      "arguments": [
+        "prodConf.json"
+      ],
+      "inputs": [
+        {
+          "type": [
+            "null",
+            {
+              "type": "array",
+              "items": [
+                "File",
+                "string"
+              ]
+            }
+          ],
+          "inputBinding": {
+            "prefix": "--input"
+          },
+          "id": "#lb-run-app.cwl/input-data"
+        },
+        {
+          "type": "string",
+          "id": "#lb-run-app.cwl/output-glob"
+        },
+        {
+          "type": "string",
+          "doc": "The application, its version and options, as JSON",
+          "id": "#lb-run-app.cwl/prod-conf"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "outputBinding": {
+            "glob": "$(inputs[\"output-glob\"])"
+          },
+          "id": "#lb-run-app.cwl/output-data"
+        }
+      ],
+      "id": "#lb-run-app.cwl"
+    },
+    {
+      "class": "Workflow",
+      "doc": "Boole and Moore over about 3 GB of simulated data per job.",
+      "requirements": [
+        {
+          "class": "SubworkflowFeatureRequirement"
+        }
+      ],
+      "inputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "id": "#boole-moore.cwl/input-data"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "outputSource": "#boole-moore.cwl/digi-reco/reco-files",
+          "id": "#boole-moore.cwl/reco-files"
+        }
+      ],
+      "steps": [
+        {
+          "run": "#digi-reco.cwl",
+          "in": [
+            {
+              "source": "#boole-moore.cwl/input-data",
+              "id": "#boole-moore.cwl/digi-reco/input-data"
+            }
+          ],
+          "out": [
+            "#boole-moore.cwl/digi-reco/reco-files"
+          ],
+          "id": "#boole-moore.cwl/digi-reco"
+        }
+      ],
+      "id": "#boole-moore.cwl"
+    },
+    {
+      "class": "Workflow",
+      "doc": "Boole then Moore, inside one job.",
+      "inputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "id": "#digi-reco.cwl/input-data"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "outputSource": "#digi-reco.cwl/moore/output-data",
+          "id": "#digi-reco.cwl/reco-files"
+        }
+      ],
+      "steps": [
+        {
+          "run": "#lb-run-app.cwl",
+          "in": [
+            {
+              "source": "#digi-reco.cwl/input-data",
+              "id": "#digi-reco.cwl/boole/input-data"
+            },
+            {
+              "default": "*.digi",
+              "id": "#digi-reco.cwl/boole/output-glob"
+            },
+            {
+              "default": "{\"application\": {\"name\": \"Boole\", \"version\": \"v46r1\"}}",
+              "id": "#digi-reco.cwl/boole/prod-conf"
+            }
+          ],
+          "out": [
+            "#digi-reco.cwl/boole/output-data"
+          ],
+          "id": "#digi-reco.cwl/boole"
+        },
+        {
+          "run": "#lb-run-app.cwl",
+          "in": [
+            {
+              "source": "#digi-reco.cwl/boole/output-data",
+              "id": "#digi-reco.cwl/moore/input-data"
+            },
+            {
+              "default": "*.dst",
+              "id": "#digi-reco.cwl/moore/output-glob"
+            },
+            {
+              "default": "{\"application\": {\"name\": \"Moore\", \"version\": \"v57r2\"}}",
+              "id": "#digi-reco.cwl/moore/prod-conf"
+            }
+          ],
+          "out": [
+            "#digi-reco.cwl/moore/output-data"
+          ],
+          "id": "#digi-reco.cwl/moore"
+        }
+      ],
+      "id": "#digi-reco.cwl"
+    },
+    {
+      "class": "Workflow",
+      "doc": "Gauss, one seed per job.",
+      "inputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": [
+              "File",
+              "string"
+            ]
+          },
+          "id": "#gauss.cwl/seed"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "outputSource": "#gauss.cwl/gauss/output-data",
+          "id": "#gauss.cwl/sim-files"
+        }
+      ],
+      "steps": [
+        {
+          "run": "#lb-run-app.cwl",
+          "in": [
+            {
+              "source": "#gauss.cwl/seed",
+              "id": "#gauss.cwl/gauss/input-data"
+            },
+            {
+              "default": "*.sim",
+              "id": "#gauss.cwl/gauss/output-glob"
+            },
+            {
+              "default": "{\"application\": {\"name\": \"Gauss\", \"version\": \"v57r1\"}, \"event_type\": \"13144011\"}",
+              "id": "#gauss.cwl/gauss/prod-conf"
+            }
+          ],
+          "out": [
+            "#gauss.cwl/gauss/output-data"
+          ],
+          "id": "#gauss.cwl/gauss"
+        }
+      ],
+      "id": "#gauss.cwl"
+    },
+    {
+      "class": "Workflow",
+      "doc": "Merge about 10 GB of reconstructed data per job.",
+      "inputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "id": "#merge.cwl/input-data"
+        }
+      ],
+      "outputs": [
+        {
+          "type": {
+            "type": "array",
+            "items": "File"
+          },
+          "outputSource": "#merge.cwl/merge/output-data",
+          "id": "#merge.cwl/merged"
+        }
+      ],
+      "steps": [
+        {
+          "run": "#lb-run-app.cwl",
+          "in": [
+            {
+              "source": "#merge.cwl/input-data",
+              "id": "#merge.cwl/merge/input-data"
+            },
+            {
+              "default": "*.dst",
+              "id": "#merge.cwl/merge/output-glob"
+            },
+            {
+              "default": "{\"application\": {\"name\": \"LHCb\", \"version\": \"v57r2\"}, \"merge\": true}",
+              "id": "#merge.cwl/merge/prod-conf"
+            }
+          ],
+          "out": [
+            "#merge.cwl/merge/output-data"
+          ],
+          "id": "#merge.cwl/merge"
+        }
+      ],
+      "id": "#merge.cwl"
+    }
+  ],
+  "cwlVersion": "v1.2",
+  "$namespaces": {
+    "dirac": "https://diracgrid.org/cwl#"
+  }
+}
