@@ -22,6 +22,8 @@ dependencies = [
     "rich",
     "typer>=0.15.4",
     "pyyaml",
+    # CWL documents are YAML 1.2, which pyyaml does not parse
+    "ruamel.yaml",
 ]
 dynamic = ["version"]
 
