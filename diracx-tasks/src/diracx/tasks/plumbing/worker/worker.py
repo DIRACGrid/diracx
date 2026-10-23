@@ -788,8 +788,21 @@ class Worker:
         finally:
             if async_exit_stack:
                 try:
-                    await async_exit_stack.aclose()
-                except Exception:
+                    if found_exception is not None:
+                        await async_exit_stack.__aexit__(
+                            type(found_exception),
+                            found_exception,
+                            found_exception.__traceback__,
+                        )
+                    else:
+                        # Includes the UnableToAcquireLockError early return: the task
+                        # never ran, so nothing was written and a normal close is fine.
+                        await async_exit_stack.aclose()
+                except asyncio.CancelledError:
+                    # Cancelled again while cleaning up: let it propagate
+                    logger.debug("Cancelled while closing exit stack", exc_info=True)
+                    raise
+                except BaseException:
                     logger.debug("Error closing exit stack", exc_info=True)
 
         execution_time = time() - start_time
