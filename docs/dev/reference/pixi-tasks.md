@@ -15,6 +15,7 @@ This page documents the available pixi tasks.
 - `local-shell`: Open a shell with the local DiracX environment configured
 - `local-start`: Launch the full DiracX stack locally (seaweedfs, Redis, uvicorn, scheduler, workers), add --otel to print the OpenTelemetry data
 - `local-tasks`: Run diracx-tasks with the local environment variables
+- `lock-diff`: Summarise how pixi.lock differs from origin/main, e.g. `pixi run lock-diff --base upstream/main`
 - `test-tutorial`: Run only the advanced tutorial tests
 - `test-workgraph-sim`: Run the workgraph simulator checks and every workgraph fence in the docs
 - `tutorial-reset`: Strip tutorial code from gubbins for the advanced tutorial
