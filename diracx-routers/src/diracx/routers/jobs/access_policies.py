@@ -39,10 +39,10 @@ class ActionType(StrEnum):
 class WMSAccessPolicy(BaseAccessPolicy):
     """Authorize workload-management actions for users and pilots.
 
-    Users need the ``NORMAL_USER`` or ``JOB_ADMINISTRATOR`` property. Normal
-    users may create and query jobs, but may read or manage only their own
-    jobs. Job administrators may read and manage all jobs but cannot create
-    them. Generic pilots may perform manage actions.
+    Creating a job requires the ``NORMAL_USER`` property, whatever other
+    properties the token holds. For other actions, generic pilots may perform
+    manage and pilot actions, job administrators may read, query and manage
+    any job, and normal users may query jobs but read or manage only their own.
     """
 
     @staticmethod

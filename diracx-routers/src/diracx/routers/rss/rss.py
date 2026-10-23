@@ -85,22 +85,13 @@ async def get_storage_status(
 ) -> dict[str, StorageElementStatus]:
     """Return storage-element statuses visible to the caller's VO.
 
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
     \f
 
-    Args:
-        response: Response whose conditional-cache headers are populated.
-        user_info: Authenticated user information used to select the VO.
-        check_permissions: Access-policy dependency for the RSS request.
-        snapshot: Cached storage-element statuses across all VOs.
-        if_none_match: Optional ETag from the client's cached response.
-        if_modified_since: Optional modification date from the client's cached response.
-
-    Returns:
-        Storage-element statuses shared across VOs and specific to the caller's VO.
-
-    Raises:
-        HTTPException: With status 304 if the client's cached representation
-            is still current.
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
     """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
@@ -117,22 +108,13 @@ async def get_compute_status(
 ) -> dict[str, ComputeElementStatus]:
     """Return compute element statuses visible to the caller's VO.
 
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
     \f
 
-    Args:
-        response: Response whose conditional-cache headers are populated.
-        user_info: Authenticated user information used to select the VO.
-        check_permissions: Access-policy dependency for the RSS request.
-        snapshot: Cached compute element statuses across all VOs.
-        if_none_match: Optional ETag from the client's cached response.
-        if_modified_since: Optional modification date from the client's cached response.
-
-    Returns:
-        Compute element statuses shared across VOs and specific to the caller's VO.
-
-    Raises:
-        HTTPException: With status 304 if the client's cached representation
-            is still current.
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
     """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
@@ -149,22 +131,13 @@ async def get_site_status(
 ) -> dict[str, SiteStatus]:
     """Return site statuses visible to the caller's VO.
 
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
     \f
 
-    Args:
-        response: Response whose conditional-cache headers are populated.
-        user_info: Authenticated user information used to select the VO.
-        check_permissions: Access-policy dependency for the RSS request.
-        snapshot: Cached site statuses across all VOs.
-        if_none_match: Optional ETag from the client's cached response.
-        if_modified_since: Optional modification date from the client's cached response.
-
-    Returns:
-        Site statuses shared across VOs and specific to the caller's VO.
-
-    Raises:
-        HTTPException: With status 304 if the client's cached representation
-            is still current.
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
     """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
@@ -181,22 +154,13 @@ async def get_fts_status(
 ) -> dict[str, FTSStatus]:
     """Return FTS server statuses visible to the caller's VO.
 
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
     \f
 
-    Args:
-        response: Response whose conditional-cache headers are populated.
-        user_info: Authenticated user information used to select the VO.
-        check_permissions: Access-policy dependency for the RSS request.
-        snapshot: Cached FTS server statuses across all VOs.
-        if_none_match: Optional ETag from the client's cached response.
-        if_modified_since: Optional modification date from the client's cached response.
-
-    Returns:
-        FTS statuses shared across VOs and specific to the caller's VO.
-
-    Raises:
-        HTTPException: With status 304 if the client's cached representation
-            is still current.
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
     """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)

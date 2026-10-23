@@ -90,6 +90,9 @@ async def set_job_statuses(
     source defaults to ``"Unknown"``. Set ``force`` to override normal status
     transition checks.
 
+    Jobs that cannot be updated are listed under ``failed`` in the response. The
+    request fails with 404 only when no job could be updated.
+
     \f
 
     Args:
@@ -105,8 +108,8 @@ async def set_job_statuses(
         Per-job status-update successes and failures.
 
     Raises:
-        HTTPException: If an update is invalid (400), a job is not found (404),
-            or the user cannot manage the requested jobs (403).
+        HTTPException: If an update is invalid (400), no job could be updated
+            (404), or the user cannot manage the requested jobs (403).
     """
     await check_permissions(
         action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)

@@ -32,7 +32,16 @@ def test_openapi(test_client):
 
 @pytest.mark.parametrize(
     "forbidden",
-    ["Args:", "Raises:", "Returns:", "Yields:", "auth_db", "HTTPException"],
+    [
+        "Args:",
+        "Raises:",
+        "Returns:",
+        "Yields:",
+        "Note:",
+        "Example:",
+        "auth_db",
+        "HTTPException",
+    ],
 )
 def test_openapi_descriptions_exclude_docstring_sections(test_client, forbidden):
     r"""Server-side docstring sections must be hidden from the API docs by a "\f"."""

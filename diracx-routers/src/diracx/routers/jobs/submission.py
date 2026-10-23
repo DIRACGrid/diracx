@@ -71,8 +71,8 @@ async def submit_jdl_jobs(
     """Submit one or more jobs described in JDL format.
 
     A single parametric JDL may expand into multiple jobs. Bulk submissions
-    cannot contain parametric jobs, and no submission may create more than 20
-    jobs at once.
+    cannot contain parametric jobs, and a submission may not create more jobs
+    than the server's per-submission limit; the error response states the limit.
 
     \f
 

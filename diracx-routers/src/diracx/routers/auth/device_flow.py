@@ -61,8 +61,8 @@ async def initiate_device_flow(
     properties. Without a group, the VO's default group is used; requested
     properties are combined with the selected group's properties.
 
-    The user is then directed to open ``auth/<vo>/device?user_code=XYZ`` in a
-    browser to complete the flow.
+    The user then opens the returned ``verification_uri_complete``
+    (``<this endpoint>?user_code=XYZ``) in a browser to complete the flow.
 
     \f
 
