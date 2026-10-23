@@ -14,11 +14,14 @@ classifiers = [
 ]
 dependencies = [
     "cachetools",
+    # Validates submitted CWL against the CWL v1.2 schema (DX-ADR-007)
+    "cwl-utils >=0.45",
     "diraccommon >=9.0.18",
     "diracx-core",
     "diracx-db",
     "joserfc",
     "pydantic >=2.10",
+    "schema-salad >=8.10",
     "uuid-utils",
 ]
 dynamic = ["version"]
