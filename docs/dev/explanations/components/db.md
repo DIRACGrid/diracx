@@ -14,6 +14,15 @@ While the code is designed to be compatible with multiple database systems, only
 Support for Postgresql or other databases will be added if demand and resources are found.
 For convenience SQLite is used for testing and development however this should never be used in production.
 
+The `TransformationDB` tests also run on MySQL and MariaDB, which differ from SQLite where those tables rely on them (`JSON` normalisation, foreign keys, error reporting).
+Set either variable to the SQLAlchemy URL of an empty database the tests may create tables in, and each test runs on SQLite and on that server; CI does this for MySQL 8.4 and MariaDB 11.4:
+
+```bash
+export DIRACX_TEST_MYSQL_URL="mysql+aiomysql://root:pw@127.0.0.1:3306/transformation"
+export DIRACX_TEST_MARIADB_URL="mysql+aiomysql://root:pw@127.0.0.1:3307/transformation"
+pixi run pytest-diracx-db tests/transformation
+```
+
 ### Connecting to SQL databases
 
 Connections to DiracX DBs are configured using the [SQLAlchemy connection URL format](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls).
