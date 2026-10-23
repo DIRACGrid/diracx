@@ -66,6 +66,11 @@ The reviewer will be re-notified and can continue the review.
 
 A daily digest of open (non-draft) PRs is posted to Mattermost on weekday mornings. The digest includes the PR title, author, assigned reviewer, age, and review status for all repositories in the DIRACGrid organisation. This ensures that open PRs don't get forgotten.
 
+#### Changes to `pixi.lock`
+
+When a PR changes `pixi.lock`, a comment summarises which packages were added, removed, upgraded or downgraded, and the "Pixi Lock" check fails if any package is downgraded.
+See [Changing `pixi.lock` in other pull requests](../explanations/dependency-management.md#changing-pixilock-in-other-pull-requests) for how to make minimal lock changes and how to resolve conflicts in `pixi.lock`.
+
 #### Testing against PRs in other repositories
 
 If a `diracx` PR needs a change in `diracx-charts` or `DIRAC`, add a `Depends-On` line to the PR description for each PR it needs:

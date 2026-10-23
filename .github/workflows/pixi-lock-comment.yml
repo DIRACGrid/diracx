@@ -1,0 +1,62 @@
+name: Pixi Lock Comment
+
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] workflow is safe, it only posts the markdown from the artifact.
+    workflows: ["Pixi Lock"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        id: download
+        # The artifact is missing if the summary couldn't be generated
+        continue-on-error: true
+        with:
+          name: pixi-lock-diff
+          path: pixi-lock-diff
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Update the comment
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          pr_number="$(cat pixi-lock-diff/pr_number.txt)"
+          if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid pull request number: $pr_number"
+            exit 1
+          fi
+          # The artifact was written by the pull request's own workflow run, so
+          # check it is for this pull request and hasn't been superseded
+          pr_head_sha="$(gh api "repos/$REPO/pulls/$pr_number" --jq .head.sha)"
+          if [[ "$pr_head_sha" != "$HEAD_SHA" ]]; then
+            echo "Pull request #$pr_number is now at $pr_head_sha, not $HEAD_SHA, skipping"
+            exit 0
+          fi
+
+          comment_id="$(gh api --paginate "repos/$REPO/issues/$pr_number/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- pixi-lock-diff -->"))) | .id' \
+            | head -n 1)"
+
+          if [[ -f pixi-lock-diff/comment.md ]]; then
+            if [[ -n "$comment_id" ]]; then
+              gh api --method PATCH "repos/$REPO/issues/comments/$comment_id" -F body=@pixi-lock-diff/comment.md > /dev/null
+            else
+              gh api --method POST "repos/$REPO/issues/$pr_number/comments" -F body=@pixi-lock-diff/comment.md > /dev/null
+            fi
+          elif [[ -n "$comment_id" ]]; then
+            gh api --method DELETE "repos/$REPO/issues/comments/$comment_id"
+          fi

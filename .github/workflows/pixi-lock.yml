@@ -26,6 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Compare file changes
+        id: changes
         env:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
@@ -51,14 +52,6 @@ jobs:
             esac
           done <<< "$changed_files"
 
-          if [[ "$pixi_lock_changed" != "true" ]]; then
-            exit 0
-          fi
-
-          if [[ "$dependency_source_changed" == "true" ]]; then
-            exit 0
-          fi
-
           renovate_lock_maintenance=false
           if [[ "$PR_ACTOR" == "renovate[bot]" ]]; then
             renovate_lock_maintenance=true
@@ -68,14 +61,63 @@ jobs:
             renovate_lock_maintenance=true
           fi
 
-          if [[ "$renovate_lock_maintenance" == "true" ]]; then
-            exit 0
+          lock_only_change=false
+          if [[ "$pixi_lock_changed" == "true" && "$dependency_source_changed" != "true" && "$renovate_lock_maintenance" != "true" ]]; then
+            if [[ "$PR_LABELS" != *'"deps: intentional-lock-change"'* ]]; then
+              lock_only_change=true
+            fi
           fi
 
-          if [[ "$PR_LABELS" == *'"deps: intentional-lock-change"'* ]]; then
-            exit 0
-          fi
+          {
+            echo "pixi-lock-changed=$pixi_lock_changed"
+            echo "lock-only-change=$lock_only_change"
+          } >> "$GITHUB_OUTPUT"
 
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        if: steps.changes.outputs.pixi-lock-changed == 'true'
+        with:
+          run-install: false
+          post-cleanup: false
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        if: steps.changes.outputs.pixi-lock-changed == 'true'
+        with:
+          cache: false
+          environments: lock-diff
+
+      - name: Summarise pixi.lock changes
+        id: diff
+        if: steps.changes.outputs.pixi-lock-changed == 'true'
+        env:
+          DETAILS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p pixi-lock-diff
+          # HEAD is the merge commit, so its first parent is the current base branch
+          pixi run --frozen -e lock-diff lock-diff \
+            --base HEAD^1 \
+            --head HEAD \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --comment pixi-lock-diff/comment.md \
+            --details-url "$DETAILS_URL"
+
+      # The comment is posted by pixi-lock-comment.yml as pull requests from forks
+      # only get a read-only token. Without comment.md any existing comment is
+      # removed, which is what we want once pixi.lock is no longer changed.
+      - name: Record the pull request number
+        if: ${{ !cancelled() && steps.diff.outcome != 'failure' }}
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p pixi-lock-diff
+          echo "$PR_NUMBER" > pixi-lock-diff/pr_number.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && steps.diff.outcome != 'failure' }}
+        with:
+          name: pixi-lock-diff
+          path: pixi-lock-diff/
+
+      - name: Check for a dependency source change
+        if: ${{ !cancelled() && steps.changes.outputs.lock-only-change == 'true' }}
+        run: |
           cat <<'EOF' >&2
           pixi.lock changed without a dependency source change.
 
@@ -88,6 +130,39 @@ jobs:
           - if this is a deliberate manual lock-only update, ask a maintainer to add the deps: intentional-lock-change label.
 
           Renovate lockFileMaintenance PRs are exempt automatically.
+          EOF
+
+          exit 1
+
+      - name: Check for downgrades
+        if: ${{ !cancelled() && steps.diff.outputs.downgrades != '' && steps.diff.outputs.downgrades != '0' }}
+        env:
+          DOWNGRADES: ${{ steps.diff.outputs.downgrades }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          # Check the author as, unlike the branch name and title, it can't be
+          # chosen by whoever opens the pull request
+          if [[ "$PR_AUTHOR" == "renovate[bot]" ]]; then
+            exit 0
+          fi
+          if [[ "$PR_LABELS" == *'"deps: intentional-lock-change"'* ]]; then
+            echo "::notice::$DOWNGRADES package(s) downgraded, allowed by the deps: intentional-lock-change label"
+            exit 0
+          fi
+
+          cat <<'EOF' >&2
+          pixi.lock downgrades packages, see the job summary for which ones.
+
+          This usually comes from resolving a pixi.lock conflict by keeping this
+          branch's version, which rolls back changes made on main. To fix it,
+          take the lock file from main and re-lock:
+
+              git checkout origin/main -- pixi.lock
+              pixi lock
+
+          If the downgrade is deliberate, explain why in the PR description and
+          ask a maintainer to add the deps: intentional-lock-change label.
           EOF
 
           exit 1
