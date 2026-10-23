@@ -705,5 +705,12 @@ def uuid7_from_datetime(dt: datetime, *, randomize: bool = True) -> UUID:
         uuid = uuid7(nanoseconds=nanoseconds)
     else:
         milliseconds = nanoseconds // 1_000_000
+        # Build the 128-bit UUIDv7 layout from RFC 9562 directly, with every
+        # random bit set to zero:
+        #   bits 127-80: 48-bit Unix timestamp in milliseconds
+        #   bits  79-76: version (7)
+        #   bits  75-64: rand_a (0)
+        #   bits  63-62: variant (0b10, i.e. RFC 9562)
+        #   bits  61-0:  rand_b (0)
         uuid = UUID(int=(milliseconds << 80) | (7 << 76) | (2 << 62))
     return uuid
