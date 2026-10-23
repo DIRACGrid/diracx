@@ -29,9 +29,7 @@ jobs:
         id: changes
         env:
           BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-          PR_ACTOR: ${{ github.actor }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
@@ -52,17 +50,10 @@ jobs:
             esac
           done <<< "$changed_files"
 
-          renovate_lock_maintenance=false
-          if [[ "$PR_ACTOR" == "renovate[bot]" ]]; then
-            renovate_lock_maintenance=true
-          elif [[ "$HEAD_REF" == renovate/* ]]; then
-            renovate_lock_maintenance=true
-          elif [[ "$PR_TITLE" == "chore(deps): lock file maintenance" ]]; then
-            renovate_lock_maintenance=true
-          fi
-
+          # Check the author as, unlike the branch name and title, it can't be
+          # chosen by whoever opens the pull request
           lock_only_change=false
-          if [[ "$pixi_lock_changed" == "true" && "$dependency_source_changed" != "true" && "$renovate_lock_maintenance" != "true" ]]; then
+          if [[ "$pixi_lock_changed" == "true" && "$dependency_source_changed" != "true" && "$PR_AUTHOR" != "renovate[bot]" ]]; then
             if [[ "$PR_LABELS" != *'"deps: intentional-lock-change"'* ]]; then
               lock_only_change=true
             fi
@@ -129,7 +120,7 @@ jobs:
           - regenerate pixi.lock with a pixi version satisfying requires-pixi in pixi.toml, and commit any matching dependency source change; or
           - if this is a deliberate manual lock-only update, ask a maintainer to add the deps: intentional-lock-change label.
 
-          Renovate lockFileMaintenance PRs are exempt automatically.
+          Pull requests opened by Renovate are exempt automatically.
           EOF
 
           exit 1
@@ -141,8 +132,6 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
-          # Check the author as, unlike the branch name and title, it can't be
-          # chosen by whoever opens the pull request
           if [[ "$PR_AUTHOR" == "renovate[bot]" ]]; then
             exit 0
           fi
