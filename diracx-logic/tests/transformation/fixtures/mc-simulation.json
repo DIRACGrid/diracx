@@ -1,0 +1,494 @@
+{
+  "cwlVersion": "v1.2",
+  "class": "Workflow",
+  "id": "MC_2026_Bs2JpsiPhi_Sim12_plain",
+  "label": "MC simulation",
+  "doc": "Produce a requested number of events, reconstruct them, and merge the reconstructed files into the deliverable.",
+  "$namespaces": {
+    "dirac": "https://diracgrid.org/cwl#"
+  },
+  "requirements": {
+    "SubworkflowFeatureRequirement": {}
+  },
+  "hints": {
+    "dirac:Workgraph": {
+      "schema_version": "1.0",
+      "type": "MCSimulation",
+      "target": {
+        "output": "datasets",
+        "files": 20
+      },
+      "output_sandbox": [
+        "prodConf_*.json",
+        "summary*.xml",
+        "prmon*",
+        "*.log"
+      ]
+    }
+  },
+  "inputs": {
+    "events": {
+      "doc": "Seeds, issued until the requested number of events has been produced",
+      "dirac:Feeder": {
+        "name": "Seeds",
+        "args": {
+          "target_events": 600000,
+          "events_per_seed": 1000,
+          "batch": 60000,
+          "max_in_flight": 300000
+        }
+      },
+      "type": {
+        "type": "array",
+        "items": [
+          "File",
+          "string"
+        ]
+      }
+    }
+  },
+  "steps": {
+    "MCSimulation": {
+      "label": "MCSimulation",
+      "doc": "Gauss, one seed per job",
+      "hints": {
+        "dirac:Transformation": {
+          "packer": {
+            "name": "PerInput"
+          },
+          "actions": {
+            "Finalizing": [
+              {
+                "action": "NoInputProcessedTwice"
+              }
+            ]
+          }
+        }
+      },
+      "run": {
+        "cwlVersion": "v1.2",
+        "class": "Workflow",
+        "doc": "Gauss, one seed per job.",
+        "inputs": {
+          "seed": {
+            "type": {
+              "type": "array",
+              "items": [
+                "File",
+                "string"
+              ]
+            }
+          }
+        },
+        "outputs": {
+          "sim-files": {
+            "type": "File[]",
+            "outputSource": "gauss/output-data"
+          }
+        },
+        "steps": {
+          "gauss": {
+            "run": {
+              "cwlVersion": "v1.2",
+              "class": "CommandLineTool",
+              "doc": "Run one LHCb application step described by a prodConf.",
+              "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {
+                  "listing": [
+                    {
+                      "entryname": "prodConf.json",
+                      "entry": "$(inputs[\"prod-conf\"])"
+                    }
+                  ]
+                }
+              },
+              "baseCommand": [
+                "lb-prod-run"
+              ],
+              "arguments": [
+                "prodConf.json"
+              ],
+              "inputs": {
+                "prod-conf": {
+                  "type": "string",
+                  "doc": "The application, its version and options, as JSON"
+                },
+                "input-data": {
+                  "type": [
+                    "null",
+                    {
+                      "type": "array",
+                      "items": [
+                        "File",
+                        "string"
+                      ]
+                    }
+                  ],
+                  "inputBinding": {
+                    "prefix": "--input"
+                  }
+                },
+                "output-glob": {
+                  "type": "string"
+                }
+              },
+              "outputs": {
+                "output-data": {
+                  "type": "File[]",
+                  "outputBinding": {
+                    "glob": "$(inputs[\"output-glob\"])"
+                  }
+                }
+              }
+            },
+            "in": {
+              "input-data": "seed",
+              "prod-conf": {
+                "default": "{\"application\": {\"name\": \"Gauss\", \"version\": \"v57r1\"}, \"event_type\": \"13144011\"}"
+              },
+              "output-glob": {
+                "default": "*.sim"
+              }
+            },
+            "out": [
+              "output-data"
+            ]
+          }
+        }
+      },
+      "in": {
+        "seed": "events"
+      },
+      "out": [
+        "sim-files"
+      ]
+    },
+    "MCReconstruction": {
+      "label": "MCReconstruction",
+      "doc": "Boole and Moore over about 3 GB of simulated data per job",
+      "hints": {
+        "dirac:Transformation": {
+          "packer": {
+            "name": "ByGroupSizeRun",
+            "args": {
+              "group_size": 3,
+              "keep_storage_together": true
+            }
+          },
+          "actions": {
+            "Finalizing": [
+              {
+                "action": "NoInputProcessedTwice"
+              }
+            ]
+          }
+        }
+      },
+      "run": {
+        "cwlVersion": "v1.2",
+        "class": "Workflow",
+        "doc": "Boole and Moore over about 3 GB of simulated data per job.",
+        "requirements": {
+          "SubworkflowFeatureRequirement": {}
+        },
+        "inputs": {
+          "input-data": "File[]"
+        },
+        "outputs": {
+          "reco-files": {
+            "type": "File[]",
+            "outputSource": "digi-reco/reco-files"
+          }
+        },
+        "steps": {
+          "digi-reco": {
+            "run": {
+              "cwlVersion": "v1.2",
+              "class": "Workflow",
+              "doc": "Boole then Moore, inside one job.",
+              "inputs": {
+                "input-data": "File[]"
+              },
+              "outputs": {
+                "reco-files": {
+                  "type": "File[]",
+                  "outputSource": "moore/output-data"
+                }
+              },
+              "steps": {
+                "boole": {
+                  "run": {
+                    "cwlVersion": "v1.2",
+                    "class": "CommandLineTool",
+                    "doc": "Run one LHCb application step described by a prodConf.",
+                    "requirements": {
+                      "InlineJavascriptRequirement": {},
+                      "InitialWorkDirRequirement": {
+                        "listing": [
+                          {
+                            "entryname": "prodConf.json",
+                            "entry": "$(inputs[\"prod-conf\"])"
+                          }
+                        ]
+                      }
+                    },
+                    "baseCommand": [
+                      "lb-prod-run"
+                    ],
+                    "arguments": [
+                      "prodConf.json"
+                    ],
+                    "inputs": {
+                      "prod-conf": {
+                        "type": "string",
+                        "doc": "The application, its version and options, as JSON"
+                      },
+                      "input-data": {
+                        "type": [
+                          "null",
+                          {
+                            "type": "array",
+                            "items": [
+                              "File",
+                              "string"
+                            ]
+                          }
+                        ],
+                        "inputBinding": {
+                          "prefix": "--input"
+                        }
+                      },
+                      "output-glob": {
+                        "type": "string"
+                      }
+                    },
+                    "outputs": {
+                      "output-data": {
+                        "type": "File[]",
+                        "outputBinding": {
+                          "glob": "$(inputs[\"output-glob\"])"
+                        }
+                      }
+                    }
+                  },
+                  "in": {
+                    "input-data": "input-data",
+                    "prod-conf": {
+                      "default": "{\"application\": {\"name\": \"Boole\", \"version\": \"v46r1\"}}"
+                    },
+                    "output-glob": {
+                      "default": "*.digi"
+                    }
+                  },
+                  "out": [
+                    "output-data"
+                  ]
+                },
+                "moore": {
+                  "run": {
+                    "cwlVersion": "v1.2",
+                    "class": "CommandLineTool",
+                    "doc": "Run one LHCb application step described by a prodConf.",
+                    "requirements": {
+                      "InlineJavascriptRequirement": {},
+                      "InitialWorkDirRequirement": {
+                        "listing": [
+                          {
+                            "entryname": "prodConf.json",
+                            "entry": "$(inputs[\"prod-conf\"])"
+                          }
+                        ]
+                      }
+                    },
+                    "baseCommand": [
+                      "lb-prod-run"
+                    ],
+                    "arguments": [
+                      "prodConf.json"
+                    ],
+                    "inputs": {
+                      "prod-conf": {
+                        "type": "string",
+                        "doc": "The application, its version and options, as JSON"
+                      },
+                      "input-data": {
+                        "type": [
+                          "null",
+                          {
+                            "type": "array",
+                            "items": [
+                              "File",
+                              "string"
+                            ]
+                          }
+                        ],
+                        "inputBinding": {
+                          "prefix": "--input"
+                        }
+                      },
+                      "output-glob": {
+                        "type": "string"
+                      }
+                    },
+                    "outputs": {
+                      "output-data": {
+                        "type": "File[]",
+                        "outputBinding": {
+                          "glob": "$(inputs[\"output-glob\"])"
+                        }
+                      }
+                    }
+                  },
+                  "in": {
+                    "input-data": "boole/output-data",
+                    "prod-conf": {
+                      "default": "{\"application\": {\"name\": \"Moore\", \"version\": \"v57r2\"}}"
+                    },
+                    "output-glob": {
+                      "default": "*.dst"
+                    }
+                  },
+                  "out": [
+                    "output-data"
+                  ]
+                }
+              }
+            },
+            "in": {
+              "input-data": "input-data"
+            },
+            "out": [
+              "reco-files"
+            ]
+          }
+        }
+      },
+      "in": {
+        "input-data": "MCSimulation/sim-files"
+      },
+      "out": [
+        "reco-files"
+      ]
+    },
+    "MCMerge": {
+      "label": "MCMerge",
+      "doc": "Merge about 10 GB of reconstructed data per job",
+      "hints": {
+        "dirac:Transformation": {
+          "packer": {
+            "name": "ByGroupSizeRun",
+            "args": {
+              "group_size": 4,
+              "keep_storage_together": true
+            }
+          },
+          "actions": {
+            "Finalizing": [
+              {
+                "action": "NoInputProcessedTwice"
+              }
+            ]
+          }
+        }
+      },
+      "run": {
+        "cwlVersion": "v1.2",
+        "class": "Workflow",
+        "doc": "Merge about 10 GB of reconstructed data per job.",
+        "inputs": {
+          "input-data": "File[]"
+        },
+        "outputs": {
+          "merged": {
+            "type": "File[]",
+            "outputSource": "merge/output-data"
+          }
+        },
+        "steps": {
+          "merge": {
+            "run": {
+              "cwlVersion": "v1.2",
+              "class": "CommandLineTool",
+              "doc": "Run one LHCb application step described by a prodConf.",
+              "requirements": {
+                "InlineJavascriptRequirement": {},
+                "InitialWorkDirRequirement": {
+                  "listing": [
+                    {
+                      "entryname": "prodConf.json",
+                      "entry": "$(inputs[\"prod-conf\"])"
+                    }
+                  ]
+                }
+              },
+              "baseCommand": [
+                "lb-prod-run"
+              ],
+              "arguments": [
+                "prodConf.json"
+              ],
+              "inputs": {
+                "prod-conf": {
+                  "type": "string",
+                  "doc": "The application, its version and options, as JSON"
+                },
+                "input-data": {
+                  "type": [
+                    "null",
+                    {
+                      "type": "array",
+                      "items": [
+                        "File",
+                        "string"
+                      ]
+                    }
+                  ],
+                  "inputBinding": {
+                    "prefix": "--input"
+                  }
+                },
+                "output-glob": {
+                  "type": "string"
+                }
+              },
+              "outputs": {
+                "output-data": {
+                  "type": "File[]",
+                  "outputBinding": {
+                    "glob": "$(inputs[\"output-glob\"])"
+                  }
+                }
+              }
+            },
+            "in": {
+              "input-data": "input-data",
+              "prod-conf": {
+                "default": "{\"application\": {\"name\": \"LHCb\", \"version\": \"v57r2\"}, \"merge\": true}"
+              },
+              "output-glob": {
+                "default": "*.dst"
+              }
+            },
+            "out": [
+              "output-data"
+            ]
+          }
+        }
+      },
+      "in": {
+        "input-data": "MCReconstruction/reco-files"
+      },
+      "out": [
+        "merged"
+      ]
+    }
+  },
+  "outputs": {
+    "datasets": {
+      "label": "Merged MC datasets",
+      "outputSource": "MCMerge/merged",
+      "type": "File[]"
+    }
+  }
+}
