@@ -100,6 +100,43 @@ flowchart LR
 A `run` may reference a stored process by identity, provided it is the root
 of a stored row; its body is inlined into the new row.
 
+## Replacing a transformation's process (operators only)
+
+A stored process never changes: its key is its hash. What an operator can
+change, for a hotfix such as a new software version, is which process a
+transformation runs:
+`diracx.logic.transformation.processes.replace_transformation_process`.
+End users cannot: it needs the `ProductionManagement` or `Operator`
+property, and the submission API offers no such change.
+
+It refuses unless the transformation is `Paused` (its row is locked for the
+change), a reason is given, the replacement passes the same policy and
+validation as any submission, and the replacement keeps the
+interface (input and output names and types, named types compared by
+definition) of the process it replaces,
+because the feeder, the packer, the declared outputs and downstream edges
+depend on it. A different interface is a new transformation.
+
+It then, in the caller's transaction:
+
+1. points `ComputeTransformations.ProcessID` at the replacement, so new
+    parcels run it;
+2. repoints the transformation's `Unassigned` parcels, which no backend has
+    seen yet;
+3. records `ProcessReplaced` in `TransformationLog`, with both identities,
+    the number of parcels repointed, the operator and the reason.
+
+From `Reserved` on, a parcel keeps the process it was created with. This is
+why `ComputeParcels.ProcessID` must stay a column of every compute parcel,
+rather than being derived from the transformation: once a transformation's
+process can change, a parcel's own copy is the only record of what it ran,
+and "which parcels ran the hotfix" is a query on it.
+
+DX-ADR-004 states that a transformation's `ProcessID` is frozen once it has
+parcels, and DX-ADR-005 that a wrong configuration is cancelled and
+resubmitted. Both still hold for owners; this operation is the operator's
+exception to them.
+
 ## Not yet covered
 
 - per-component rows, lineage ("which transformations contain this tool") and
