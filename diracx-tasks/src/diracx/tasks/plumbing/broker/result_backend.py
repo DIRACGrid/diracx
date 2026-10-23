@@ -38,12 +38,26 @@ class RedisResultBackend:
     async def shutdown(self) -> None:
         await self.redis_pool.disconnect()
 
-    async def set_result(self, task_id: str, result: TaskResult) -> None:
+    async def set_result(
+        self,
+        task_id: str,
+        result: TaskResult,
+        ttl_seconds: int | None = None,
+    ) -> None:
+        """Store the result of a task.
+
+        ``ttl_seconds`` overrides the backend-wide ``result_ttl_seconds`` for
+        this result only (e.g. from ``BaseTask.result_ttl_seconds``).
+        """
+        if ttl_seconds is None:
+            ttl_seconds = self.result_ttl_seconds
+        if ttl_seconds <= 0:
+            raise ValueError(f"Result TTL must be positive, got {ttl_seconds}")
         async with Redis(connection_pool=self.redis_pool) as redis:
             serialized = msgpack.packb(result.model_dump(), datetime=True)
             await redis.setex(
                 name=self._task_key(task_id),
-                time=self.result_ttl_seconds,
+                time=ttl_seconds,
                 value=serialized,
             )
 
