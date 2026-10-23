@@ -320,8 +320,8 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
         properties. Without a group, the VO's default group is used; requested
         properties are combined with the selected group's properties.
 
-        The user is then directed to open ``auth/<vo>/device?user_code=XYZ`` in a
-        browser to complete the flow.
+        The user then opens the returned ``verification_uri_complete``
+        (\\ ``<this endpoint>?user_code=XYZ``\\ ) in a browser to complete the flow.
 
         :keyword client_id: Required.
         :paramtype client_id: str
@@ -1438,6 +1438,9 @@ class JobsOperations:
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
 
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
+
         :param body: Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
         :keyword force: Default value is False.
@@ -1462,6 +1465,9 @@ class JobsOperations:
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
+
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1491,6 +1497,9 @@ class JobsOperations:
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
         source defaults to ``"Unknown"``. Set ``force`` to override normal status
         transition checks.
+
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
 
         :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
@@ -2201,8 +2210,8 @@ class JobsOperations:
         Submit one or more jobs described in JDL format.
 
         A single parametric JDL may expand into multiple jobs. Bulk submissions
-        cannot contain parametric jobs, and no submission may create more than 20
-        jobs at once.
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Required.
         :type body: list[str]
@@ -2223,8 +2232,8 @@ class JobsOperations:
         Submit one or more jobs described in JDL format.
 
         A single parametric JDL may expand into multiple jobs. Bulk submissions
-        cannot contain parametric jobs, and no submission may create more than 20
-        jobs at once.
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2243,8 +2252,8 @@ class JobsOperations:
         Submit one or more jobs described in JDL format.
 
         A single parametric JDL may expand into multiple jobs. Bulk submissions
-        cannot contain parametric jobs, and no submission may create more than 20
-        jobs at once.
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Is either a [str] type or a IO[bytes] type. Required.
         :type body: list[str] or IO[bytes]
@@ -2846,6 +2855,9 @@ class RssOperations:
 
         Return storage-element statuses visible to the caller's VO.
 
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
+
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
         :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
@@ -2915,6 +2927,9 @@ class RssOperations:
         """Get Compute Status.
 
         Return compute element statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -2986,6 +3001,9 @@ class RssOperations:
 
         Return site statuses visible to the caller's VO.
 
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
+
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
         :keyword etag: check if resource is changed. Set None to skip checking etag. Default value is
@@ -3055,6 +3073,9 @@ class RssOperations:
         """Get Fts Status.
 
         Return FTS server statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
