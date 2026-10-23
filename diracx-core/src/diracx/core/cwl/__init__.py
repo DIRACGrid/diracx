@@ -5,7 +5,9 @@ from __future__ import annotations
 __all__ = [
     "CANONICAL_VERSION",
     "CanonicalProcess",
+    "PolicyViolationError",
     "canonical_bytes",
+    "check_policy",
     "decompose",
     "format_reference",
     "pack",
@@ -23,3 +25,4 @@ from .canonical import (
     parse_reference,
     unpack,
 )
+from .policy import PolicyViolationError, check_policy
