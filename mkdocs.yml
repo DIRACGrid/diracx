@@ -250,6 +250,7 @@ nav:
           - Testing: dev/explanations/testing.md
           - Extensions: dev/explanations/extensions.md
           - Designing functionality: dev/explanations/designing-functionality.md
+          - CWL process identity: dev/explanations/cwl-process-identity.md
           - Tasks:
               - dev/explanations/tasks/index.md
               - Class details: dev/explanations/tasks/class-details.md
