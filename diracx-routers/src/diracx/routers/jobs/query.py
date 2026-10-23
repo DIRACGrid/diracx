@@ -1,3 +1,10 @@
+"""Expose authenticated job search and summary endpoints.
+
+Both endpoints restrict results according to the requesting user's access
+policy and VO configuration. Search supports filtering, sorting, pagination,
+and selecting returned fields; summary groups matching jobs for aggregation.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -147,23 +154,42 @@ async def search(
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)
     ] = None,
 ) -> list[dict[str, Any]]:
-    """Create a search query to the job database.
+    """Search jobs using filters, selected fields, and pagination.
 
-    This search can be based on different parameters, such as jobID, status, owner, etc.
+    The search can be based on job attributes such as the job ID, status or
+    owner. In the request body, use ``search`` to filter jobs, ``parameters``
+    to select which job parameters are returned, and ``sort`` to order the
+    results; all are optional. By default, all fields are returned for all
+    jobs the user has access to.
 
-    **Possibilities**
-    - Use `search` to filter jobs based on various parameters (optional).
-    - Use `parameters` to specify which job parameters to return (optional).
-    - Use `sort` to order the results based on specific parameters (optional).
+    ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+    (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+    filter, so callers can look up the jobs run by a given pilot.
 
-    By default, the search will return all jobs the user has access to, and all the fields
-    of the job will be returned.
+    The response uses ``Content-Range`` when results span multiple pages. It
+    returns 206 when only part of the matching range is returned, or 416 when
+    the requested page is beyond the available results.
 
-    A `PilotStamp` pseudo-parameter is also accepted in the `search`
-    filter list (operators `eq` / `in` only): it is transparently
-    resolved through `JobToPilotMapping` into a `JobID` filter,
-    allowing callers to ask "jobs run by this pilot" through the same
-    endpoint.
+    \f
+
+    Args:
+        config: DiracX configuration used to determine the VO's job visibility rules.
+        job_db: Database used to search job records.
+        job_parameters_db: Database used to retrieve job parameters.
+        job_logging_db: Database used to retrieve requested job logging information.
+        pilot_db: Database used to resolve ``PilotStamp`` filters.
+        user_info: Authenticated user identity, VO, and security properties.
+        check_permissions: Access-policy dependency used to authorize job queries.
+        response: Response object used to set range headers and status codes.
+        page: One-based page number to return.
+        per_page: Maximum number of jobs to return on this page.
+        body: Optional filters, selected fields, sorting, and distinct-result settings.
+
+    Returns:
+        Job records matching the query and the user's access permissions.
+
+    Raises:
+        HTTPException: If the authenticated user is not permitted to query jobs (403).
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 
@@ -312,15 +338,30 @@ async def summary(
     body: SummaryParams,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Group jobs by a specific list of parameters.
+    """Group matching jobs and return counts for each group.
 
-    Returns an array of n-uplets, where each n-uplet contains the
-    values of the grouping parameters and the number of jobs that match those values.
+    The request body contains ``grouping``, the list of parameters to group
+    jobs by, and optionally ``search``, a list of filters to apply first. The
+    response is an array of rows, each containing the values of the grouping
+    parameters and the number of jobs matching those values.
 
-    Body parameters:
-    - `grouping`: List of parameters to group the jobs by.
-    - `search`: List of search parameters to filter the jobs by (optional).
+    Results are scoped to the user's VO and, when global job visibility is
+    disabled, to the user's own jobs unless they are a job administrator.
 
+    \f
+
+    Args:
+        config: DiracX configuration used to determine the VO's job visibility rules.
+        job_db: Database used to aggregate job records.
+        user_info: Authenticated user identity, VO, and security properties.
+        body: Grouping fields and optional search filters.
+        check_permissions: Access-policy dependency used to authorize job queries.
+
+    Returns:
+        Rows containing each grouping-field combination and its matching job count.
+
+    Raises:
+        HTTPException: If the authenticated user is not permitted to query jobs (403).
     """
     await check_permissions(action=ActionType.QUERY, job_db=job_db)
 

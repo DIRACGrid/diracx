@@ -40,27 +40,54 @@ from diracx.routers.utils import AuthorizedUserInfo, verify_dirac_access_token
 
 
 class BaseAccessPolicy(metaclass=ABCMeta):
-    """Base class to be used by all the other Access Policy.
+    """Base class for access-policy implementations.
 
-    Each child class should implement the policy staticmethod.
+    Subclasses implement the asynchronous ``policy`` method. They may also
+    override ``enrich_tokens`` to add policy-specific token claims.
     """
 
     @classmethod
     def check(cls) -> Self:
-        """Provide a placeholder in the dependency override."""
+        """Provide a dependency placeholder replaced during application setup.
+
+        Returns:
+            An instance of the concrete access-policy class.
+
+        Raises:
+            NotImplementedError: Always; application setup must override this
+                dependency before it is used.
+        """
         raise NotImplementedError("This should never be called")
 
     @classmethod
     def all_used_access_policies(cls) -> dict[str, "BaseAccessPolicy"]:
-        """Return the list of classes that are actually called.
+        """Provide a placeholder for retrieving the active policy implementations.
 
-        This should be overridden by the dependency_override.
+        Returns:
+            Mapping from policy names to the implementations used by the application.
+
+        Raises:
+            NotImplementedError: Always; application setup must override this
+                dependency before it is used.
         """
         raise NotImplementedError("This should never be called")
 
     @classmethod
     def available_implementations(cls, access_policy_name: str):
-        """Return the available implementations of the AccessPolicy in reverse priority order."""
+        """Load registered implementations of a named access policy.
+
+        Implementations are returned in the priority order provided by the
+        extension entry-point selection.
+
+        Args:
+            access_policy_name: Entry-point name identifying the policy.
+
+        Returns:
+            Registered policy implementation classes.
+
+        Raises:
+            NotImplementedError: If no implementation is registered for the name.
+        """
         policy_classes: list[type["BaseAccessPolicy"]] = [
             entry_point.load()
             for entry_point in select_from_extension(
@@ -76,15 +103,19 @@ class BaseAccessPolicy(metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     async def policy(policy_name: str, user_info: AuthorizedUserInfo, /):
-        """Implement the method in child classes.
+        """Evaluate whether an authenticated user may perform an action.
 
-        It should always take an AuthorizedUserInfo parameter, which
-        is passed by check_permissions.
-        The rest is whatever the policy actually needs. There are rules to write it:
-            * This method must be static and async
-            * All parameters must be kw only arguments
-            * All parameters must have a default value (Liskov Substitution principle)
-        It is expected that a policy denying the access raises HTTPException(status.HTTP_403_FORBIDDEN).
+        Implementations must be static and asynchronous. ``user_info`` is
+        supplied by ``check_permissions``; any additional parameters must be
+        keyword-only and have defaults so policies remain substitutable.
+
+        Args:
+            policy_name: Name used to select the policy implementation.
+            user_info: Authenticated user identity and token claims.
+
+        Raises:
+            HTTPException: If the user is not permitted to perform the action.
+                Policies must deny access with a 403 status code.
         """
         return
 
@@ -92,16 +123,18 @@ class BaseAccessPolicy(metaclass=ABCMeta):
     def enrich_tokens(
         access_payload: AccessTokenPayload, refresh_payload: RefreshTokenPayload | None
     ) -> tuple[dict, dict]:
-        """Add content to access or refresh payload when issuing a token.
+        """Add policy-specific claims to token payloads.
 
-        Content can be whatever is desired inside the access or refresh payload.
+        Override this method to add content to either token payload when a
+        token is issued.
 
         Args:
-            access_payload: access token payload
-            refresh_payload: refresh token payload
+            access_payload: Access-token claims being issued.
+            refresh_payload: Refresh-token claims being issued, if applicable.
 
         Returns:
-            extra content for both payload
+            A pair of dictionaries containing additional access-token and
+            refresh-token claims, respectively.
         """
         return {}, {}
 
@@ -113,19 +146,37 @@ def check_permissions(
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     dev_settings: DevelopmentSettings,
 ):
-    """Call the actual policy implementation and ensure it has been invoked.
+    """Create a dependency wrapper that verifies the route invokes its policy.
 
-    If not, diracx will abruptly crash. It is violent, but necessary to make
-    sure that it gets noticed :-).
+    The yielded callable passes the policy name and authenticated user to the
+    implementation. If ``crash_on_missed_access_policy`` is enabled, the
+    application will terminate after the request if the route failed to call
+    the policy.
 
-    This method is never called directly, but used in the dependency_override
-    at startup
+    This helper is not called directly by route handlers; it is installed as
+    a dependency override during application startup.
+
+    Args:
+        policy: Policy callable to invoke for the request.
+        policy_name: Name associated with the selected policy implementation.
+        user_info: Authenticated user information supplied to the policy.
+        dev_settings: Development settings controlling missed-policy handling.
+
+    Yields:
+        An asynchronous callable that invokes the policy with request arguments.
     """
     has_been_called = False
 
     @functools.wraps(policy)
     async def wrapped_policy(**kwargs):
-        """Update the has_been_called flag."""
+        """Mark the policy as invoked and run it with the request arguments.
+
+        Args:
+            **kwargs: Policy-specific keyword arguments supplied by the route.
+
+        Returns:
+            The result of the policy implementation.
+        """
         nonlocal has_been_called
         has_been_called = True
         return await policy(policy_name, user_info, **kwargs)
@@ -151,16 +202,23 @@ def check_permissions(
 
 
 def open_access(f):
-    """Decorate routes that are part of a DiracxRouter and do not require access policy checks.
+    """Mark a route as intentionally exempt from access-policy checks.
 
-    The presence of a token will still be checked if the router has require_auth to True.
-    This is useful to allow the CI to detect routes which may have forgotten
-    to have an access check.
+    Authentication is still enforced when the router requires it. The marker
+    also lets checks distinguish intentional open access from a missing policy
+    invocation.
+
+    Args:
+        f: Route function to mark as open access.
+
+    Returns:
+        A wrapped route function carrying the open-access marker.
     """
     f.diracx_open_access = True
 
     @functools.wraps(f)
     def inner(*args, **kwargs):
+        """Call the original route function unchanged."""
         return f(*args, **kwargs)
 
     return inner

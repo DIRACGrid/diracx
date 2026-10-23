@@ -36,42 +36,32 @@ LEGACY_EXCHANGE_PATTERN = rf"diracx:legacy:({BASE_64_URL_SAFE_PATTERN})"
 
 
 class IdPConfig(BaseModel):
-    """Identity provider configuration used during legacy conversion.
-
-    Attributes:
-        url: Identity provider URL.
-        client_id: OAuth2 client identifier.
-    """
+    """Identity provider configuration used during legacy conversion."""
 
     url: str = Field(alias="URL")
+    """Identity provider URL."""
     client_id: str = Field(alias="ClientID")
+    """OAuth2 client identifier."""
 
 
 class VOConfig(BaseModel):
-    """Per-VO conversion settings extracted from the legacy CS.
-
-    Attributes:
-        default_group: Default group name for the VO.
-        idp: Identity provider settings for the VO.
-        user_subjects: Mapping from legacy usernames to
-            subject identifiers.
-        support: Contact and support metadata for the VO.
-    """
+    """Per-VO conversion settings extracted from the legacy CS."""
 
     default_group: str = Field(alias="DefaultGroup")
+    """Default group name for the VO."""
     idp: IdPConfig = Field(alias="IdP")
+    """Identity provider settings for the VO."""
     user_subjects: dict[str, str] = Field(alias="UserSubjects")
+    """Mapping from legacy usernames to subject identifiers."""
     support: SupportInfo = Field(default_factory=SupportInfo, alias="Support")
+    """Contact and support metadata for the VO."""
 
 
 class ConversionConfig(BaseModel):
-    """Top-level conversion settings for all virtual organizations.
-
-    Attributes:
-        vos: Conversion settings keyed by VO name.
-    """
+    """Top-level conversion settings for all virtual organizations."""
 
     vos: dict[str, VOConfig] = Field(alias="VOs")
+    """Conversion settings keyed by VO name."""
 
 
 @app.command()

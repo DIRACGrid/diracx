@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel
 from typing_extensions import TypedDict
 
+from ._base import BaseModel
 from .types import UTCDatetime
 
 

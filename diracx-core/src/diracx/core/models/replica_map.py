@@ -46,11 +46,12 @@ from typing import Annotated, Iterator
 
 from pydantic import (
     AnyUrl,
-    BaseModel,
     BeforeValidator,
     RootModel,
     field_validator,
 )
+
+from ._base import BaseModel
 
 
 def _validate_lfn(value: str) -> str:
@@ -155,39 +156,24 @@ Adler32Checksum = Annotated[str, BeforeValidator(_validate_adler32)]
 GUIDChecksum = Annotated[str, BeforeValidator(_validate_guid)]
 
 
-class ReplicaMap(RootModel):
+class ReplicaMap(RootModel, use_attribute_docstrings=True):
     """A map of Logical File Names to their physical replicas.
 
     The map is a dictionary-like structure where keys are LFNs and values
     are MapEntry objects containing replica information, file size, and
     checksums.
-
-    Attributes:
-        root: The underlying dictionary mapping LFNs to map entries.
-
     """
 
     class MapEntry(BaseModel):
-        """Metadata and replica information for a single logical file.
-
-        Attributes:
-            replicas: List of physical replicas (at least one required).
-            size_bytes: File size in bytes (optional).
-            checksum: Checksum information for integrity verification (optional).
-
-        """
+        """Metadata and replica information for a single logical file."""
 
         class Replica(BaseModel):
-            """A physical copy of a file at a specific storage element.
-
-            Attributes:
-                url: The physical file name (URL or path) where the replica is stored.
-                se: The storage element identifier hosting this replica.
-
-            """
+            """A physical copy of a file at a specific storage element."""
 
             url: PFN
+            """The physical file name (URL or path) where the replica is stored."""
             se: StorageElementId
+            """The storage element identifier hosting this replica."""
 
             @field_validator("se")
             @classmethod
@@ -205,20 +191,19 @@ class ReplicaMap(RootModel):
                 return v.strip()
 
         class Checksum(BaseModel):
-            """Checksum information for file integrity verification.
-
-            Attributes:
-                adler32: Adler-32 checksum as 8 hexadecimal characters (e.g., "788c5caa").
-                guid: GUID in UUID format (e.g., "6032CB7C-32DC-EC11-9A66-D85ED3091D71").
-
-            """
+            """Checksum information for file integrity verification."""
 
             adler32: Adler32Checksum | None = None
+            """Adler-32 checksum as 8 hexadecimal characters (e.g., "788c5caa")."""
             guid: GUIDChecksum | None = None
+            """GUID in UUID format (e.g., "6032CB7C-32DC-EC11-9A66-D85ED3091D71")."""
 
         replicas: list[Replica]
+        """Physical replicas of the file (at least one required)."""
         size_bytes: int | None = None
+        """File size in bytes."""
         checksum: Checksum | None = None
+        """Checksum information for integrity verification."""
 
         @field_validator("replicas")
         @classmethod
@@ -251,6 +236,7 @@ class ReplicaMap(RootModel):
             return v
 
     root: dict[LFN, MapEntry]
+    """Mapping from LFNs to their map entries."""
 
     def __iter__(self) -> Iterator[LFN]:  # type: ignore[override]
         """Iterate over the Logical File Names in the map.

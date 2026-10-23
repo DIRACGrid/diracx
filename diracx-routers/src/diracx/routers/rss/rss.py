@@ -1,3 +1,9 @@
+"""Expose cached, VO-scoped resource status endpoints.
+
+Authenticated callers can retrieve storage, compute, site, and FTS statuses
+for their VO. Responses support conditional HTTP caching.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -36,12 +42,26 @@ def _vo_view(
     if_none_match: str | None,
     if_modified_since: str | None,
 ) -> dict[str, Any]:
-    """Apply cache headers and return the caller's VO view of a snapshot.
+    """Apply conditional-cache headers and select a snapshot's VO-specific view.
 
-    The snapshot covers all VOs so it can be cached once; the response is the
-    "all" entries overlaid with the caller's VO-specific entries. The ETag is
-    suffixed with the VO (and Vary: Authorization set) since the same URL
-    serves different content per VO.
+    The snapshot covers all VOs and is cached once. The returned mapping
+    overlays the caller's VO-specific entries on the shared ``all`` entries.
+    The VO-specific ETag and ``Vary: Authorization`` header distinguish the
+    different response views for the same URL.
+
+    Args:
+        snapshot: Cached snapshot containing status data for all VOs.
+        vo: Caller's VO used to select and overlay status entries.
+        response: Response whose cache headers are populated.
+        if_none_match: Client's conditional ETag, if supplied.
+        if_modified_since: Client's conditional modification date, if supplied.
+
+    Returns:
+        Status entries shared across VOs, overlaid with entries for ``vo``.
+
+    Raises:
+        HTTPException: With status 304 if the client's cached representation
+            is still current.
     """
     apply_cache_headers(
         response,
@@ -63,7 +83,16 @@ async def get_storage_status(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, StorageElementStatus]:
-    """Get the latest status of storage elements, scoped to the caller's VO."""
+    """Return storage-element statuses visible to the caller's VO.
+
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
+    \f
+
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
+    """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
@@ -77,7 +106,16 @@ async def get_compute_status(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, ComputeElementStatus]:
-    """Get the latest status of compute elements, scoped to the caller's VO."""
+    """Return compute element statuses visible to the caller's VO.
+
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
+    \f
+
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
+    """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
@@ -91,7 +129,16 @@ async def get_site_status(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, SiteStatus]:
-    """Get the latest status of sites, scoped to the caller's VO."""
+    """Return site statuses visible to the caller's VO.
+
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
+    \f
+
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
+    """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
 
@@ -105,6 +152,15 @@ async def get_fts_status(
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
 ) -> dict[str, FTSStatus]:
-    """Get the latest status of FTS servers, scoped to the caller's VO."""
+    """Return FTS server statuses visible to the caller's VO.
+
+    Supports conditional requests with ``If-None-Match`` and
+    ``If-Modified-Since``, and returns 304 when the cached copy is current.
+
+    \f
+
+    Arguments, return value and caching behaviour are shared by all RSS
+    routes; see ``_vo_view``.
+    """
     await check_permissions()
     return _vo_view(snapshot, user_info.vo, response, if_none_match, if_modified_since)
