@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from typing import Any, Callable
 
 from fastapi.concurrency import contextmanager_in_threadpool
@@ -94,7 +94,7 @@ async def _resolve_dependant(
                 solved = await async_exit_stack.enter_async_context(cm)
             elif _is_gen_callable(call):
                 solved = await async_exit_stack.enter_async_context(
-                    contextmanager_in_threadpool(call(**sub_values))
+                    contextmanager_in_threadpool(contextmanager(call)(**sub_values))
                 )
             elif _is_coroutine_callable(call):
                 solved = await call(**sub_values)
