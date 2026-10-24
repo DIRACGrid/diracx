@@ -13,7 +13,7 @@ import contextlib
 from typing import Any, Callable, TypeVar
 
 from fastapi import APIRouter, FastAPI
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, _IncludedRouter
 
 from diracx.tasks.plumbing.depends import auto_inject
 
@@ -122,27 +122,36 @@ class DiracFastAPI(FastAPI):
         return self.openapi_schema
 
 
-def _pop_overridden_route(router: APIRouter, path: str, methods: set[str]) -> bool:
+def _pop_overridden_route(
+    router: APIRouter, path: str, methods: set[str], prefix: str = ""
+) -> bool:
     """Remove the first route matching ``path`` and ``methods`` from a router.
 
     The route is searched in the router itself and, since FastAPI 0.137
     where ``include_router`` preserves the original routers instead of
     cloning their routes, in the routers it includes.
 
+    Args:
+        router: Router to search.
+        path: Full path of the route, including the prefix of every include.
+        methods: HTTP methods of the route.
+        prefix: Prefix under which the routes of ``router`` are served.
+
     Returns:
         True if a route was removed.
     """
     for index, route in enumerate(router.routes):
         if isinstance(route, APIRoute):
-            if route.path == path and methods == route.methods:
+            if prefix + route.path == path and methods == route.methods:
                 router.routes.pop(index)
                 return True
-        else:
-            included_router = getattr(route, "original_router", None)
-            if isinstance(included_router, APIRouter) and _pop_overridden_route(
-                included_router, path, methods
-            ):
-                return True
+        elif isinstance(route, _IncludedRouter) and _pop_overridden_route(
+            route.original_router,
+            path,
+            methods,
+            prefix + route.include_context.prefix,
+        ):
+            return True
     return False
 
 
@@ -188,7 +197,7 @@ class DiracxRouter(APIRouter):
         """
         endpoint = auto_inject(endpoint)
 
-        _pop_overridden_route(self, path, set(kwargs.get("methods", [])))
+        _pop_overridden_route(self, self.prefix + path, set(kwargs.get("methods", [])))
 
         return super().add_api_route(path, endpoint, **kwargs)
 
