@@ -141,6 +141,57 @@ jobs:
       - name: Upload coverage report
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
 
+  pytest-sql-servers:
+    name: Unit test - diracx-db on MySQL and MariaDB
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69
+        env:
+          MYSQL_ROOT_PASSWORD: diracx
+          MYSQL_DATABASE: transformation
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pdiracx"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      mariadb:
+        image: mariadb:11.4@sha256:250e1609e93c0e6aecf64bfbab2d84d5e89d2481540fe77447ff6c855c3b1873
+        env:
+          MARIADB_ROOT_PASSWORD: diracx
+          MARIADB_DATABASE: transformation
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Apply workarounds
+        run: |
+          # Workaround for https://github.com/prefix-dev/pixi/issues/3762
+          sed -i.bak 's@editable = true@editable = false@g' pixi.toml
+          rm pixi.toml.bak
+          # Show any changes
+          git diff
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+        with:
+          cache: false
+          environments: diracx-db
+      - name: Run pytest
+        # The transformation tests run on SQLite, then again on each server
+        env:
+          DIRACX_TEST_MYSQL_URL: mysql+aiomysql://root:diracx@127.0.0.1:3306/transformation
+          DIRACX_TEST_MARIADB_URL: mysql+aiomysql://root:diracx@127.0.0.1:3307/transformation
+        run: pixi run pytest-diracx-db tests/transformation --no-cov
+
   pytest-integration:
     needs: resolve-deps
     runs-on: ubuntu-latest
