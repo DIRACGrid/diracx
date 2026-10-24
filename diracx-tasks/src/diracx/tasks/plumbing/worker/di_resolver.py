@@ -1,18 +1,39 @@
 from __future__ import annotations
 
+import inspect
 from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
+from functools import partial
 from typing import Any, Callable
 
 from fastapi.concurrency import contextmanager_in_threadpool
-from fastapi.dependencies.models import (
-    Dependant,
-    _get_cache_key,
-    _is_async_gen_callable,
-    _is_coroutine_callable,
-    _is_gen_callable,
-)
+from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant
 from starlette.concurrency import run_in_threadpool
+
+
+def _is_callable_kind(
+    call: Callable[..., Any], predicate: Callable[[Any], bool]
+) -> bool:
+    """Check the kind of a dependency callable like FastAPI does.
+
+    ``predicate`` is applied to the callable without its ``functools.partial``
+    wrappers, before and after unwrapping its decorators, and then in the same
+    way to ``__call__`` for instances of classes defining it.
+    """
+
+    def matches(func: Any) -> bool:
+        while isinstance(func, partial):
+            func = func.func
+        return predicate(func) or predicate(inspect.unwrap(func))
+
+    if matches(call):
+        return True
+    while isinstance(call, partial):
+        call = call.func
+    if inspect.isclass(inspect.unwrap(call)):
+        return False
+    dunder_call = getattr(call, "__call__", None)  # noqa: B004
+    return dunder_call is not None and matches(dunder_call)
 
 
 async def solve_task_dependencies(
@@ -72,10 +93,9 @@ async def _resolve_dependant(
             )
             call = override_call
 
-        # Check cache
-        # Since FastAPI 0.137 the cache key is computed by _get_cache_key
-        # instead of the Dependant.cache_key property
-        sub_dependant_cache_key = _get_cache_key(dependant=use_sub_dependant)
+        # Check cache, tasks have no security scopes so unlike FastAPI's key
+        # it doesn't include them
+        sub_dependant_cache_key = (call, use_sub_dependant.scope)
         # use_cache is taken from the original dependency like FastAPI does,
         # the dependant of an override has the default
         if sub_dependant.use_cache and sub_dependant_cache_key in dependency_cache:
@@ -89,16 +109,14 @@ async def _resolve_dependant(
                 async_exit_stack=async_exit_stack,
             )
 
-            # Since FastAPI 0.137 the callable type checks are module level
-            # functions instead of Dependant properties
-            if _is_async_gen_callable(call):
+            if _is_callable_kind(call, inspect.isasyncgenfunction):
                 cm = asynccontextmanager(call)(**sub_values)
                 solved = await async_exit_stack.enter_async_context(cm)
-            elif _is_gen_callable(call):
+            elif _is_callable_kind(call, inspect.isgeneratorfunction):
                 solved = await async_exit_stack.enter_async_context(
                     contextmanager_in_threadpool(contextmanager(call)(**sub_values))
                 )
-            elif _is_coroutine_callable(call):
+            elif _is_callable_kind(call, inspect.iscoroutinefunction):
                 solved = await call(**sub_values)
             else:
                 solved = await run_in_threadpool(call, **sub_values)
