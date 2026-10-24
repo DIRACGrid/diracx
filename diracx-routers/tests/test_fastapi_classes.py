@@ -55,3 +55,27 @@ def test_override_route_after_routes_are_listed():
         return "outer"
 
     assert [ctx.name for ctx in iter_route_contexts(outer.routes)] == ["outer_foo"]
+
+
+def test_override_route_keeps_included_router():
+    inner = DiracxRouter()
+
+    @inner.get("/foo")
+    def inner_foo():
+        return "inner"
+
+    @inner.get("/bar")
+    def inner_bar():
+        return "inner"
+
+    outer = DiracxRouter()
+    outer.include_router(inner)
+
+    @outer.get("/foo")
+    def outer_foo():
+        return "outer"
+
+    assert _get(outer, "/foo").json() == "outer"
+    assert _get(outer, "/bar").json() == "inner"
+    # The included router can be shared, e.g. by the vanilla DiracX app
+    assert _get(inner, "/foo").json() == "inner"

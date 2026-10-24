@@ -10,10 +10,13 @@ __all__ = ["DiracxRouter"]
 
 import asyncio
 import contextlib
+import copy
+import dataclasses
 from typing import Any, Callable, TypeVar
 
 from fastapi import APIRouter, FastAPI
 from fastapi.routing import APIRoute, _IncludedRouter
+from starlette.routing import BaseRoute
 
 from diracx.tasks.plumbing.depends import auto_inject
 
@@ -122,39 +125,51 @@ class DiracFastAPI(FastAPI):
         return self.openapi_schema
 
 
-def _pop_overridden_route(
-    router: APIRouter, path: str, methods: set[str], prefix: str = ""
-) -> bool:
-    """Remove the first route matching ``path`` and ``methods`` from a router.
+def _without_overridden_route(
+    routes: list[BaseRoute], path: str, methods: set[str], prefix: str = ""
+) -> list[BaseRoute] | None:
+    """Return a copy of ``routes`` without the first route matching ``path`` and ``methods``.
 
-    The route is searched in the router itself and, since FastAPI 0.137
-    where ``include_router`` preserves the original routers instead of
-    cloning their routes, in the routers it includes.
+    The route is searched in ``routes`` and, since FastAPI 0.137 where
+    ``include_router`` preserves the original routers instead of cloning their
+    routes, in the routers they include. An included router containing the route
+    is replaced by a copy without it, as the original can be shared, e.g. an
+    extension includes and overrides the module level routers of DiracX.
 
     Args:
-        router: Router to search.
+        routes: Routes to search.
         path: Full path of the route, including the prefix of every include.
         methods: HTTP methods of the route.
-        prefix: Prefix under which the routes of ``router`` are served.
+        prefix: Prefix under which ``routes`` are served.
 
     Returns:
-        True if a route was removed.
+        The new list of routes, or None if no route matched.
     """
-    for index, route in enumerate(router.routes):
+    for index, route in enumerate(routes):
         if isinstance(route, APIRoute):
             if prefix + route.path == path and methods == route.methods:
-                router.routes.pop(index)
-                # Invalidate the routes FastAPI caches for the included routers
-                router._mark_routes_changed()
-                return True
-        elif isinstance(route, _IncludedRouter) and _pop_overridden_route(
-            route.original_router,
-            path,
-            methods,
-            prefix + route.include_context.prefix,
-        ):
-            return True
-    return False
+                return [*routes[:index], *routes[index + 1 :]]
+        elif isinstance(route, _IncludedRouter):
+            included_routes = _without_overridden_route(
+                route.original_router.routes,
+                path,
+                methods,
+                prefix + route.include_context.prefix,
+            )
+            if included_routes is not None:
+                included_router = copy.copy(route.original_router)
+                included_router.routes = included_routes
+                included_router._low_priority_routes = list(
+                    included_router._low_priority_routes
+                )
+                included_route = _IncludedRouter(
+                    original_router=included_router,
+                    include_context=dataclasses.replace(
+                        route.include_context, included_router=included_router
+                    ),
+                )
+                return [*routes[:index], included_route, *routes[index + 1 :]]
+    return None
 
 
 class DiracxRouter(APIRouter):
@@ -199,7 +214,13 @@ class DiracxRouter(APIRouter):
         """
         endpoint = auto_inject(endpoint)
 
-        _pop_overridden_route(self, self.prefix + path, set(kwargs.get("methods", [])))
+        routes = _without_overridden_route(
+            self.routes, self.prefix + path, set(kwargs.get("methods", []))
+        )
+        if routes is not None:
+            self.routes[:] = routes
+            # Invalidate the routes FastAPI caches for the included routers
+            self._mark_routes_changed()
 
         return super().add_api_route(path, endpoint, **kwargs)
 
