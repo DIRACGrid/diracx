@@ -144,6 +144,8 @@ def _pop_overridden_route(
         if isinstance(route, APIRoute):
             if prefix + route.path == path and methods == route.methods:
                 router.routes.pop(index)
+                # Invalidate the routes FastAPI caches for the included routers
+                router._mark_routes_changed()
                 return True
         elif isinstance(route, _IncludedRouter) and _pop_overridden_route(
             route.original_router,
