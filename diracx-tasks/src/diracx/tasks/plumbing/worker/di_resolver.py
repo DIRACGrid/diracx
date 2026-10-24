@@ -76,7 +76,9 @@ async def _resolve_dependant(
         # Since FastAPI 0.137 the cache key is computed by _get_cache_key
         # instead of the Dependant.cache_key property
         sub_dependant_cache_key = _get_cache_key(dependant=use_sub_dependant)
-        if use_sub_dependant.use_cache and sub_dependant_cache_key in dependency_cache:
+        # use_cache is taken from the original dependency like FastAPI does,
+        # the dependant of an override has the default
+        if sub_dependant.use_cache and sub_dependant_cache_key in dependency_cache:
             solved = dependency_cache[sub_dependant_cache_key]
         else:
             # Recursively resolve sub-dependencies
@@ -101,7 +103,7 @@ async def _resolve_dependant(
             else:
                 solved = await run_in_threadpool(call, **sub_values)
 
-            if use_sub_dependant.use_cache:
+            if sub_dependant.use_cache:
                 dependency_cache[sub_dependant_cache_key] = solved
 
         if sub_dependant.name is not None:

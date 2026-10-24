@@ -79,3 +79,40 @@ async def test_resolve_kinds_of_dependencies():
     assert EVENTS == []
     await stack.aclose()
     assert sorted(EVENTS) == ["async gen closed", "gen closed"]
+
+
+CALLS: list[str] = []
+
+
+async def counted() -> str:
+    CALLS.append("counted")
+    return "original"
+
+
+async def counted_override() -> str:
+    CALLS.append("override")
+    return "override"
+
+
+async def test_resolve_cache_and_overrides():
+    CALLS.clear()
+
+    async def task(
+        first: Annotated[str, Depends(counted)],
+        second: Annotated[str, Depends(counted)],
+        uncached: Annotated[str, Depends(counted, use_cache=False)],
+    ):
+        pass
+
+    values, stack = await solve_task_dependencies(call=task)
+    await stack.aclose()
+    assert values == {"first": "original", "second": "original", "uncached": "original"}
+    assert CALLS == ["counted", "counted"]
+
+    CALLS.clear()
+    values, stack = await solve_task_dependencies(
+        call=task, dependency_overrides={counted: counted_override}
+    )
+    await stack.aclose()
+    assert values == {"first": "override", "second": "override", "uncached": "override"}
+    assert CALLS == ["override", "override"]
