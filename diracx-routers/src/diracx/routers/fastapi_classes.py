@@ -214,8 +214,12 @@ class DiracxRouter(APIRouter):
         """
         endpoint = auto_inject(endpoint)
 
+        # Same default and normalisation as APIRoute
+        methods = kwargs.get("methods")
         routes = _without_overridden_route(
-            self.routes, self.prefix + path, set(kwargs.get("methods", []))
+            self.routes,
+            self.prefix + path,
+            {method.upper() for method in (["GET"] if methods is None else methods)},
         )
         if routes is not None:
             self.routes[:] = routes

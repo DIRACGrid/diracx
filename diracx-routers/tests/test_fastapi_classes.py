@@ -79,3 +79,19 @@ def test_override_route_keeps_included_router():
     assert _get(outer, "/bar").json() == "inner"
     # The included router can be shared, e.g. by the vanilla DiracX app
     assert _get(inner, "/foo").json() == "inner"
+
+
+def test_override_route_without_methods():
+    router = DiracxRouter()
+
+    @router.get("/foo")
+    def get_foo():
+        return "get"
+
+    # api_route defaults to GET, like APIRoute
+    @router.api_route("/foo")
+    def api_route_foo():
+        return "api_route"
+
+    assert _get(router, "/foo").json() == "api_route"
+    assert [ctx.name for ctx in iter_route_contexts(router.routes)] == ["api_route_foo"]
