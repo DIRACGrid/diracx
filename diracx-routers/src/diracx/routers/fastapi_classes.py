@@ -10,10 +10,13 @@ __all__ = ["DiracxRouter"]
 
 import asyncio
 import contextlib
-from typing import Any, Callable, TypeVar, cast
+import copy
+import dataclasses
+from typing import Any, Callable, TypeVar
 
 from fastapi import APIRouter, FastAPI
-from starlette.routing import Route
+from fastapi.routing import APIRoute, _IncludedRouter
+from starlette.routing import BaseRoute
 
 from diracx.tasks.plumbing.depends import auto_inject
 
@@ -122,6 +125,53 @@ class DiracFastAPI(FastAPI):
         return self.openapi_schema
 
 
+def _without_overridden_route(
+    routes: list[BaseRoute], path: str, methods: set[str], prefix: str = ""
+) -> list[BaseRoute] | None:
+    """Return a copy of ``routes`` without the first route matching ``path`` and ``methods``.
+
+    The route is searched in ``routes`` and, since FastAPI 0.137 where
+    ``include_router`` preserves the original routers instead of cloning their
+    routes, in the routers they include. An included router containing the route
+    is replaced by a copy without it, as the original can be shared, e.g. an
+    extension includes and overrides the module level routers of DiracX.
+
+    Args:
+        routes: Routes to search.
+        path: Full path of the route, including the prefix of every include.
+        methods: HTTP methods of the route.
+        prefix: Prefix under which ``routes`` are served.
+
+    Returns:
+        The new list of routes, or None if no route matched.
+    """
+    for index, route in enumerate(routes):
+        if isinstance(route, APIRoute):
+            if prefix + route.path == path and methods == route.methods:
+                return [*routes[:index], *routes[index + 1 :]]
+        elif isinstance(route, _IncludedRouter):
+            included_routes = _without_overridden_route(
+                route.original_router.routes,
+                path,
+                methods,
+                prefix + route.include_context.prefix,
+            )
+            if included_routes is not None:
+                included_router = copy.copy(route.original_router)
+                included_router.routes = included_routes
+                included_router._low_priority_routes = list(
+                    included_router._low_priority_routes
+                )
+                included_route = _IncludedRouter(
+                    original_router=included_router,
+                    include_context=dataclasses.replace(
+                        route.include_context, included_router=included_router
+                    ),
+                )
+                return [*routes[:index], included_route, *routes[index + 1 :]]
+    return None
+
+
 class DiracxRouter(APIRouter):
     """APIRouter carrying DiracX authentication and mount configuration."""
 
@@ -164,28 +214,18 @@ class DiracxRouter(APIRouter):
         """
         endpoint = auto_inject(endpoint)
 
-        route_index = self._get_route_index_by_path_and_methods(
-            path, set(kwargs.get("methods", []))
+        # Same default and normalisation as APIRoute
+        methods = kwargs.get("methods")
+        routes = _without_overridden_route(
+            self.routes,
+            self.prefix + path,
+            {method.upper() for method in (["GET"] if methods is None else methods)},
         )
-        if route_index >= 0:
-            self.routes.pop(route_index)
+        if routes is not None:
+            self.routes[:] = routes
+            # Invalidate the routes FastAPI caches for the included routers
+            self._mark_routes_changed()
 
         return super().add_api_route(path, endpoint, **kwargs)
-
-    def _get_route_index_by_path_and_methods(self, path: str, methods: set[str]) -> int:
-        """Find the index of a route matching a path and HTTP methods.
-
-        Args:
-            path: Route path to match.
-            methods: HTTP methods to match.
-
-        Returns:
-            Index of the matching route, or ``-1`` if no route matches.
-        """
-        routes = cast(list[Route], self.routes)
-        for index, route in enumerate(routes):
-            if route.path == path and methods == route.methods:
-                return index
-        return -1
 
     ######
