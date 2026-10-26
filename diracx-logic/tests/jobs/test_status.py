@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 
 import pytest
 
@@ -109,20 +108,14 @@ async def test_patch_metadata_updates_attributes_and_parameters(
 ):
     """Patch metadata mixing.
 
-    - Attribute only (UserPriority)
-    - Attribute only, not duplicated as a parameter (JobType)
+    - Mutable attribute (Site)
     - Parameter only (CPUNormalizationFactor)
-    - Attribute (HeartBeatTime)
     - Non identified Metadata (does_not_exist)
     and verify correct persistence in the two backends.
     """
-    hbt = datetime.now(timezone.utc)
-
     metadata = {
-        "UserPriority": "2",  # attr
-        "JobType": "VerySpecialIndeed",  # attr only
+        "Site": "Meyrin",  # attr
         "CPUNormalizationFactor": "10",  # param only
-        "HeartBeatTime": hbt.isoformat(),  # attr
         "does_not_exist": "unknown",  # Does not exist should be treated as a job param
     }
 
@@ -142,10 +135,7 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     assert len(rows) == 1
     row = rows[0]
     assert int(row["JobID"]) == valid_job_id
-    assert row["UserPriority"] == 2
-    assert row["JobType"] == "VerySpecialIndeed"
-    # HeartBeatTime stored as ISO string (without tz) in DB helper; just ensure present
-    assert row["HeartBeatTime"] is not None
+    assert row["Site"] == "Meyrin"
     assert "CPUNormalizationFactor" not in row
     assert "does_not_exist" not in row
 
@@ -158,7 +148,7 @@ async def test_patch_metadata_updates_attributes_and_parameters(
     prow = params_rows[0]
     assert prow["CPUNormalizationFactor"] == 10
     assert prow["does_not_exist"] == "unknown"
-    assert "UserPriority" not in prow
+    assert "Site" not in prow
     assert "HeartBeatTime" not in prow
     assert "JobType" not in prow
 

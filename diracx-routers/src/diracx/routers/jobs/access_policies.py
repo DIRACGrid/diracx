@@ -34,6 +34,8 @@ class ActionType(StrEnum):
     QUERY = auto()
     # Actions from a pilot (e.g. heartbeat)
     PILOT = auto()
+    # MANAGE, and set a job status bypassing the job state machine
+    FORCE_STATUS = auto()
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
@@ -43,6 +45,8 @@ class WMSAccessPolicy(BaseAccessPolicy):
     properties the token holds. For other actions, generic pilots may perform
     manage and pilot actions, job administrators may read, query and manage
     any job, and normal users may query jobs but read or manage only their own.
+    Forcing a job status (bypassing the job state machine) is restricted to
+    job administrators.
     """
 
     @staticmethod
@@ -81,6 +85,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
             # TODO: For now we map this to MANAGE but it should be changed once
             # we have pilot credentials
             action = ActionType.MANAGE
+
+        if action == ActionType.FORCE_STATUS:
+            if JOB_ADMINISTRATOR not in user_info.properties:
+                raise HTTPException(HTTPStatus.FORBIDDEN)
+            return
 
         if action == ActionType.CREATE:
             if job_ids is not None:
