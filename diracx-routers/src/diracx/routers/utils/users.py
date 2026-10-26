@@ -1,3 +1,9 @@
+"""Define user authentication models and access-token verification helpers.
+
+The module provides Pydantic support for the project's UUID type and a FastAPI
+dependency that validates DiracX access tokens and extracts user claims.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -35,13 +41,22 @@ oidc_scheme = OpenIdConnect(
 
 
 class UUID(_UUID):
-    """Subclass of uuid_utils.UUID to add pydantic support."""
+    """Add Pydantic validation and serialization support to ``uuid_utils.UUID``."""
 
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
-        """Use the stdlib uuid.UUID schema for validation and serialization."""
+        """Build a core schema using the standard-library UUID type.
+
+        Args:
+            source_type: Type for which Pydantic is generating a schema.
+            handler: Pydantic handler used to generate the standard UUID schema.
+
+        Returns:
+            A core schema that validates standard UUIDs and converts them to
+            this ``uuid_utils.UUID`` subclass.
+        """
         std_schema = handler(std_uuid.UUID)
 
         def to_uuid_utils(u: std_uuid.UUID) -> UUID:
@@ -53,25 +68,37 @@ class UUID(_UUID):
     def __get_pydantic_json_schema__(
         cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
     ) -> dict[str, Any]:
-        """Return the stdlib uuid.UUID schema for JSON serialization."""
+        """Return the JSON schema generated for the standard UUID type.
+
+        Args:
+            core_schema: Core schema for this UUID type.
+            handler: Pydantic handler used to generate the JSON schema.
+
+        Returns:
+            JSON schema compatible with the standard-library UUID type.
+        """
         return handler(core_schema)
 
 
 class AuthInfo(BaseModel):
-    # raw token for propagation
+    """Authentication claims and token metadata for an authorised user."""
+
     bearer_token: str
+    """Raw access token, retained for forwarding."""
 
-    # token ID in the DB for Component
-    # unique jwt identifier for user
     token_id: UUID
+    """Unique token identifier used to reference the token in the database."""
 
-    # list of DIRAC properties
     properties: list[SecurityProperty]
+    """DIRAC security properties granted to the user."""
 
     policies: dict[str, Any] = {}
+    """Additional policy data carried by the token."""
 
 
 class AuthorizedUserInfo(AuthInfo, UserInfo):
+    """Combined identity and authentication information for an authorised user."""
+
     pass
 
 
@@ -80,9 +107,22 @@ async def verify_dirac_access_token(
     authorization: Annotated[str, Depends(oidc_scheme)],
     settings: AuthSettings,
 ) -> AuthorizedUserInfo:
-    """Verify dirac user token and return a UserInfo class.
+    """Validate a DiracX bearer token and extract its user information.
 
-    Used for each API endpoint.
+    The token's signature and issuer are checked against the configured key
+    store and allowed algorithms. User identity is also added to the current
+    trace and logging context.
+
+    Args:
+        authorization: Optional OpenID Connect authorization header value.
+        settings: Authentication settings containing issuer and token-validation keys.
+
+    Returns:
+        Authenticated user identity, properties, policy data, and token metadata.
+
+    Raises:
+        HTTPException: If the authorization header is missing (401), malformed
+            (400), or contains an invalid token (401).
     """
     if not authorization:
         raise HTTPException(

@@ -98,7 +98,10 @@ class WellKnownOperations:
     async def get_openid_configuration(self, **kwargs: Any) -> _models.OpenIDConfiguration:
         """Get Openid Configuration.
 
-        OpenID Connect discovery endpoint.
+        Return the OpenID Connect discovery document.
+
+        The document includes route URLs, supported grants and scopes, token
+        authentication methods, and PKCE capabilities.
 
         :return: OpenIDConfiguration
         :rtype: ~_generated.models.OpenIDConfiguration
@@ -145,7 +148,7 @@ class WellKnownOperations:
     async def get_jwks(self, **kwargs: Any) -> dict[str, Any]:
         """Get Jwks.
 
-        Get the JWKs (public keys).
+        Return the public JSON Web Keys used to verify DiracX tokens.
 
         :return: dict mapping str to any
         :rtype: dict[str, any]
@@ -192,7 +195,7 @@ class WellKnownOperations:
     async def get_security_txt(self, **kwargs: Any) -> str:
         """Get Security Txt.
 
-        Get the security.txt file.
+        Return the installation's security contact information.
 
         :return: str
         :rtype: str
@@ -316,29 +319,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     ) -> _models.InitiateDeviceFlowResponse:
         """Initiate Device Flow.
 
-        Initiate the device flow against DIRAC authorization Server.
+        Start a device authorization flow for a client.
 
-        Scope details:
+        The scope may request a VO, an optional group, and optional security
+        properties. Without a group, the VO's default group is used; requested
+        properties are combined with the selected group's properties.
 
-
-        *
-          If only VO is provided: Uses the default group and its properties for the VO.
-
-        *
-          If VO and group are provided: Uses the specified group and its properties for the VO.
-
-        *
-          If VO and properties are provided: Uses the default group and combines its properties with
-        the
-          provided properties.
-
-        *
-          If VO, group, and properties are provided: Uses the specified group and combines its
-        properties with the
-          provided properties.
-
-        Offers the user to go with the browser to
-        ``auth/<vo>/device?user_code=XYZ``.
+        The user then opens the returned ``verification_uri_complete``
+        (\\ ``<this endpoint>?user_code=XYZ``\\ ) in a browser to complete the flow.
 
         :keyword client_id: Required.
         :paramtype client_id: str
@@ -393,13 +381,14 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
 
         Serve as the verification URI for the device flow.
 
-        It will redirect to the actual OpenID server (IAM, CheckIn) to
-        perform a authorization code flow.
+        The user opens this URI in a browser and enters the user code. DiracX then
+        redirects the browser to the VO identity provider (such as IAM or CheckIn)
+        to complete an authorization code flow.
 
-        We set the user_code obtained from the device flow in a cookie
-        to be able to map the authorization flow with the corresponding
-        device flow.
-        (note: it can't be put as parameter or in the URL).
+        The user code is carried in the encrypted ``state`` sent to the identity
+        provider so that its callback can be linked to the corresponding device
+        flow, as the user code cannot be passed as a plain parameter or in the
+        callback URL.
 
         :keyword user_code: Required.
         :paramtype user_code: str
@@ -449,11 +438,12 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def finish_device_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Finish Device Flow.
 
-        Handle the URL callbacked by IAM/CheckIn after authorization flow.
+        Complete the browser callback from the VO identity provider.
 
-        It gets us the code we need for the authorization flow, and we
-        can map it to the corresponding device flow using the user_code
-        in the cookie/session.
+        DiracX exchanges the authorization code for an ID token, associates it
+        with the pending device flow, and redirects the browser to the finished
+        page. The original device client can then exchange its device code for
+        DiracX tokens.
 
         :keyword code: Required.
         :paramtype code: str
@@ -506,7 +496,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def finished(self, **kwargs: Any) -> Any:
         """Finished.
 
-        Mark the final step of the device flow.
+        Display the completion page after the device flow.
 
         :return: any
         :rtype: any
@@ -553,10 +543,10 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def get_refresh_tokens(self, **kwargs: Any) -> list[Any]:
         """Get Refresh Tokens.
 
-        Get all refresh tokens for the user.
+        List refresh tokens available to the authenticated user.
 
-        If the user has the ``proxy_management`` property, then
-        the subject is not used to filter the refresh tokens.
+        Users with the ``proxy_management`` property can list tokens belonging to
+        any subject; other users see only tokens bound to their own subject.
 
         :return: list of any
         :rtype: list[any]
@@ -603,10 +593,10 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def revoke_refresh_token_by_jti(self, jti: str, **kwargs: Any) -> str:
         """Revoke Refresh Token By Jti.
 
-        Revoke a refresh token.
+        Revoke a refresh token by its unique identifier.
 
-        If the user has the ``proxy_management`` property, then
-        the subject is not used to filter the refresh tokens.
+        Users with the ``proxy_management`` property can revoke tokens belonging
+        to any subject; other users can revoke only their own tokens.
 
         :param jti: Required.
         :type jti: str
@@ -656,7 +646,7 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def userinfo(self, **kwargs: Any) -> _models.UserInfoResponse:
         """Userinfo.
 
-        Get information about the user's identity.
+        Return identity and authorisation details from the authenticated access token.
 
         :return: UserInfoResponse
         :rtype: ~_generated.models.UserInfoResponse
@@ -714,33 +704,18 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     ) -> Any:
         """Initiate Authorization Flow.
 
-        Initiate the authorization flow.
+        Start an authorization flow with the configured identity provider.
 
-        It will redirect to the actual OpenID server (IAM, CheckIn) to
-        perform a authorization code flow.
+        The request details are stored before the user is redirected to the VO's
+        OpenID provider (such as IAM or CheckIn). Scope may specify a VO, an
+        optional group, and optional security properties. If no group is supplied,
+        the VO's default group is used. If properties are supplied without a group,
+        they are combined with the default group's properties; if both are
+        supplied, they are combined with the selected group's properties.
 
-        Scope details:
-
-
-        *
-          If only VO is provided: Uses the default group and its properties for the VO.
-
-        *
-          If VO and group are provided: Uses the specified group and its properties for the VO.
-
-        *
-          If VO and properties are provided: Uses the default group and combines its properties with
-        the
-          provided properties.
-
-        *
-          If VO, group, and properties are provided: Uses the specified group and combines its
-        properties with the
-          provided properties.
-
-        We set the user details obtained from the user authorize flow in a cookie
-        to be able to map the authorization flow with the corresponding
-        user authorize flow.
+        The ID of the stored flow is carried in the encrypted ``state`` sent to
+        the identity provider so that its callback can be associated with the
+        corresponding user authorization request.
 
         :keyword response_type: Required.
         :paramtype response_type: str
@@ -808,13 +783,12 @@ class AuthOperations:  # pylint: disable=abstract-class-instantiated
     async def complete_authorization_flow(self, *, code: str, state: str, **kwargs: Any) -> Any:
         """Complete Authorization Flow.
 
-        Complete the authorization flow.
+        Complete the flow after the identity provider redirects back to DiracX.
 
-        The user is redirected back to the DIRAC auth service after completing the IAM's authorization
-        flow.
-        We retrieve the original flow details from the decrypted state and store the ID token requested
-        from the IAM.
-        The user is then redirected to the client's redirect URI.
+        The endpoint retrieves the original flow details from the encrypted state,
+        exchanges the provider's authorization code for an ID token, stores that
+        token, and redirects the user to the client's redirect URI. The original
+        client state is included in the redirect.
 
         :keyword code: Required.
         :paramtype code: str
@@ -894,12 +868,12 @@ class ConfigOperations:
     ) -> Any:
         """Serve Config.
 
-        Get the latest view of the config.
+        Return the latest configuration snapshot.
 
-        If If-None-Match header is given and matches the latest ETag, return 304
-
-        If If-Modified-Since is given and is newer than latest,
-            return 304: this is to avoid flip/flopping.
+        The response includes ETag and Last-Modified headers. A 304 response is
+        returned if ``If-None-Match`` matches the latest ETag, or if
+        ``If-Modified-Since`` is newer than the latest revision (to avoid
+        flip-flopping between revisions).
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -984,13 +958,11 @@ class JobsOperations:
     ) -> _models.SandboxUploadResponse:
         """Initiate Sandbox Upload.
 
-        Get the PFN for the given sandbox, initiate an upload as required.
+        Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox already exists in the database then the PFN is returned
-        and there is no "url" field in the response.
-
-        If the sandbox does not exist in the database then the "url" and "fields"
-        should be used to upload the sandbox to the storage backend.
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Required.
         :type body: ~_generated.models.SandboxInfo
@@ -1008,13 +980,11 @@ class JobsOperations:
     ) -> _models.SandboxUploadResponse:
         """Initiate Sandbox Upload.
 
-        Get the PFN for the given sandbox, initiate an upload as required.
+        Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox already exists in the database then the PFN is returned
-        and there is no "url" field in the response.
-
-        If the sandbox does not exist in the database then the "url" and "fields"
-        should be used to upload the sandbox to the storage backend.
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1032,13 +1002,11 @@ class JobsOperations:
     ) -> _models.SandboxUploadResponse:
         """Initiate Sandbox Upload.
 
-        Get the PFN for the given sandbox, initiate an upload as required.
+        Return a sandbox PFN and initiate an upload when needed.
 
-        If the sandbox already exists in the database then the PFN is returned
-        and there is no "url" field in the response.
-
-        If the sandbox does not exist in the database then the "url" and "fields"
-        should be used to upload the sandbox to the storage backend.
+        If the sandbox already exists, the response contains its PFN and has no
+        ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+        be used to upload the sandbox to the storage backend.
 
         :param body: Is either a SandboxInfo type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SandboxInfo or IO[bytes]
@@ -1099,13 +1067,12 @@ class JobsOperations:
     async def get_sandbox_file(self, *, pfn: str, **kwargs: Any) -> _models.SandboxDownloadResponse:
         """Get Sandbox File.
 
-        Get a presigned URL to download a sandbox file.
+        Return a presigned URL for downloading a sandbox file.
 
-        This route cannot use a redirect response most clients will also send the
-        authorization header when following a redirect. This is not desirable as
-        it would leak the authorization token to the storage backend. Additionally,
-        most storage backends return an error when they receive an authorization
-        header for a presigned URL.
+        The URL is returned rather than redirected to, as most clients resend
+        the authorization header when following a redirect. That would leak the
+        token to the storage backend, and most storage backends reject requests
+        for presigned URLs that include an authorization header.
 
         :keyword pfn: Required.
         :paramtype pfn: str
@@ -1155,7 +1122,7 @@ class JobsOperations:
     async def get_job_sandboxes(self, job_id: int, **kwargs: Any) -> dict[str, list[Any]]:
         """Get Job Sandboxes.
 
-        Get input and output sandboxes of given job.
+        Return the input and output sandboxes assigned to a job.
 
         :param job_id: Required.
         :type job_id: int
@@ -1205,7 +1172,7 @@ class JobsOperations:
     async def unassign_job_sandboxes(self, job_id: int, **kwargs: Any) -> Any:
         """Unassign Job Sandboxes.
 
-        Delete single job sandbox mapping.
+        Remove all sandbox mappings for a job.
 
         :param job_id: Required.
         :type job_id: int
@@ -1257,7 +1224,7 @@ class JobsOperations:
     ) -> list[Any]:
         """Get Job Sandbox.
 
-        Get input or output sandbox of given job.
+        Return one type of sandbox assigned to a job.
 
         :param job_id: Required.
         :type job_id: int
@@ -1310,7 +1277,7 @@ class JobsOperations:
     async def assign_sandbox_to_job(self, job_id: int, body: str, **kwargs: Any) -> Any:
         """Assign Sandbox To Job.
 
-        Map the pfn as output sandbox to job.
+        Assign a sandbox as the output sandbox for a job.
 
         :param job_id: Required.
         :type job_id: int
@@ -1369,7 +1336,7 @@ class JobsOperations:
     ) -> None:
         """Unassign Bulk Jobs Sandboxes.
 
-        Delete bulk jobs sandbox mapping.
+        Remove sandbox mappings for multiple jobs.
 
         :param body: Required.
         :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes
@@ -1387,7 +1354,7 @@ class JobsOperations:
     ) -> None:
         """Unassign Bulk Jobs Sandboxes.
 
-        Delete bulk jobs sandbox mapping.
+        Remove sandbox mappings for multiple jobs.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1405,7 +1372,7 @@ class JobsOperations:
     ) -> None:
         """Unassign Bulk Jobs Sandboxes.
 
-        Delete bulk jobs sandbox mapping.
+        Remove sandbox mappings for multiple jobs.
 
         :param body: Is either a BodyJobsUnassignBulkJobsSandboxes type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyJobsUnassignBulkJobsSandboxes or IO[bytes]
@@ -1469,15 +1436,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set the status of a job or a list of jobs.
+        Apply status updates to one or more jobs.
 
-        Body parameters:
+        Each job ID maps to one or more timestamped updates. The update fields are
+        ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
+        source defaults to ``"Unknown"``. Set ``force`` to override normal status
+        transition checks.
 
-
-        * ``Status``\\ : The new status of the job.
-        * ``MinorStatus``\\ : The minor status of the job.
-        * ``ApplicationStatus``\\ : The application-specific status of the job.
-        * ``Source``\\ : The source of the status update (default is "Unknown").
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
 
         :param body: Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]]
@@ -1497,15 +1464,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set the status of a job or a list of jobs.
+        Apply status updates to one or more jobs.
 
-        Body parameters:
+        Each job ID maps to one or more timestamped updates. The update fields are
+        ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
+        source defaults to ``"Unknown"``. Set ``force`` to override normal status
+        transition checks.
 
-
-        * ``Status``\\ : The new status of the job.
-        * ``MinorStatus``\\ : The minor status of the job.
-        * ``ApplicationStatus``\\ : The application-specific status of the job.
-        * ``Source``\\ : The source of the status update (default is "Unknown").
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1529,15 +1496,15 @@ class JobsOperations:
     ) -> _models.SetJobStatusReturn:
         """Set Job Statuses.
 
-        Set the status of a job or a list of jobs.
+        Apply status updates to one or more jobs.
 
-        Body parameters:
+        Each job ID maps to one or more timestamped updates. The update fields are
+        ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
+        source defaults to ``"Unknown"``. Set ``force`` to override normal status
+        transition checks.
 
-
-        * ``Status``\\ : The new status of the job.
-        * ``MinorStatus``\\ : The minor status of the job.
-        * ``ApplicationStatus``\\ : The application-specific status of the job.
-        * ``Source``\\ : The source of the status update (default is "Unknown").
+        Jobs that cannot be updated are listed under ``failed`` in the response. The
+        request fails with 404 only when no job could be updated.
 
         :param body: Is either a {str: {str: JobStatusUpdate}} type or a IO[bytes] type. Required.
         :type body: dict[str, dict[str, ~_generated.models.JobStatusUpdate]] or IO[bytes]
@@ -1603,13 +1570,11 @@ class JobsOperations:
     ) -> list[_models.JobCommand]:
         """Add Heartbeat.
 
-        Register a heartbeat from the job.
+        Record heartbeat data from jobs and return pending commands.
 
-        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-        receive job commands from the WMS. It also results in stalled jobs being
-        restored to the RUNNING status.
-
-        The ``data`` parameter and return value are mappings keyed by job ID.
+        The JobAgent uses this endpoint to report runtime data and retrieve WMS
+        commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
+        The request body is a mapping keyed by job ID.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.HeartbeatData]
@@ -1627,13 +1592,11 @@ class JobsOperations:
     ) -> list[_models.JobCommand]:
         """Add Heartbeat.
 
-        Register a heartbeat from the job.
+        Record heartbeat data from jobs and return pending commands.
 
-        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-        receive job commands from the WMS. It also results in stalled jobs being
-        restored to the RUNNING status.
-
-        The ``data`` parameter and return value are mappings keyed by job ID.
+        The JobAgent uses this endpoint to report runtime data and retrieve WMS
+        commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
+        The request body is a mapping keyed by job ID.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1651,13 +1614,11 @@ class JobsOperations:
     ) -> list[_models.JobCommand]:
         """Add Heartbeat.
 
-        Register a heartbeat from the job.
+        Record heartbeat data from jobs and return pending commands.
 
-        This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-        receive job commands from the WMS. It also results in stalled jobs being
-        restored to the RUNNING status.
-
-        The ``data`` parameter and return value are mappings keyed by job ID.
+        The JobAgent uses this endpoint to report runtime data and retrieve WMS
+        commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
+        The request body is a mapping keyed by job ID.
 
         :param body: Is either a {str: HeartbeatData} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.HeartbeatData] or IO[bytes]
@@ -1725,13 +1686,12 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule a list of killed or failed jobs.
+        Reschedule jobs so that they are matched and run again.
 
-        Body parameters:
-
-
-        * ``job_ids``\\ : List of job IDs to reschedule.
-        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
+        Set ``reset_jobs`` to reset each job's reschedule counter instead of
+        incrementing it. Jobs that are unverified or exceed their configured
+        reschedule limit are reported as failures.
 
         :param body: Required.
         :type body: ~_generated.models.BodyJobsRescheduleJobs
@@ -1751,13 +1711,12 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule a list of killed or failed jobs.
+        Reschedule jobs so that they are matched and run again.
 
-        Body parameters:
-
-
-        * ``job_ids``\\ : List of job IDs to reschedule.
-        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
+        Set ``reset_jobs`` to reset each job's reschedule counter instead of
+        incrementing it. Jobs that are unverified or exceed their configured
+        reschedule limit are reported as failures.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1777,13 +1736,12 @@ class JobsOperations:
     ) -> dict[str, Any]:
         """Reschedule Jobs.
 
-        Reschedule a list of killed or failed jobs.
+        Reschedule jobs so that they are matched and run again.
 
-        Body parameters:
-
-
-        * ``job_ids``\\ : List of job IDs to reschedule.
-        * ``reset_jobs``\\ : If True, reset the count of reschedules for the jobs.
+        The request body contains ``job_ids``\\ , the list of jobs to reschedule.
+        Set ``reset_jobs`` to reset each job's reschedule counter instead of
+        incrementing it. Jobs that are unverified or exceed their configured
+        reschedule limit are reported as failures.
 
         :param body: Is either a BodyJobsRescheduleJobs type or a IO[bytes] type. Required.
         :type body: ~_generated.models.BodyJobsRescheduleJobs or IO[bytes]
@@ -1849,9 +1807,12 @@ class JobsOperations:
     ) -> None:
         """Patch Metadata.
 
-        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        Update job attributes and parameters.
 
-        The argument  are all the attributes/parameters of a job (except the ID).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.JobMetaData]
@@ -1867,9 +1828,12 @@ class JobsOperations:
     async def patch_metadata(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
         """Patch Metadata.
 
-        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        Update job attributes and parameters.
 
-        The argument  are all the attributes/parameters of a job (except the ID).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1885,9 +1849,12 @@ class JobsOperations:
     async def patch_metadata(self, body: Union[dict[str, _models.JobMetaData], IO[bytes]], **kwargs: Any) -> None:
         """Patch Metadata.
 
-        Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+        Update job attributes and parameters.
 
-        The argument  are all the attributes/parameters of a job (except the ID).
+        The request body maps job IDs to the attributes or parameters to update
+        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
+        except its ID may be set. Fields matching known job attributes are
+        updated on the job record; other fields are stored as job parameters.
 
         :param body: Is either a {str: JobMetaData} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.JobMetaData] or IO[bytes]
@@ -1952,25 +1919,21 @@ class JobsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Create a search query to the job database.
+        Search jobs using filters, selected fields, and pagination.
 
-        This search can be based on different parameters, such as jobID, status, owner, etc.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
 
-        **Possibilities**
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
-
-        * Use ``search`` to filter jobs based on various parameters (optional).
-        * Use ``parameters`` to specify which job parameters to return (optional).
-        * Use ``sort`` to order the results based on specific parameters (optional).
-
-        By default, the search will return all jobs the user has access to, and all the fields
-        of the job will be returned.
-
-        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
-        filter list (operators ``eq`` / ``in`` only): it is transparently
-        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
-        allowing callers to ask "jobs run by this pilot" through the same
-        endpoint.
+        The response uses ``Content-Range`` when results span multiple pages. It
+        returns 206 when only part of the matching range is returned, or 416 when
+        the requested page is beyond the available results.
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -1998,25 +1961,21 @@ class JobsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Create a search query to the job database.
+        Search jobs using filters, selected fields, and pagination.
 
-        This search can be based on different parameters, such as jobID, status, owner, etc.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
 
-        **Possibilities**
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
-
-        * Use ``search`` to filter jobs based on various parameters (optional).
-        * Use ``parameters`` to specify which job parameters to return (optional).
-        * Use ``sort`` to order the results based on specific parameters (optional).
-
-        By default, the search will return all jobs the user has access to, and all the fields
-        of the job will be returned.
-
-        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
-        filter list (operators ``eq`` / ``in`` only): it is transparently
-        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
-        allowing callers to ask "jobs run by this pilot" through the same
-        endpoint.
+        The response uses ``Content-Range`` when results span multiple pages. It
+        returns 206 when only part of the matching range is returned, or 416 when
+        the requested page is beyond the available results.
 
         :param body: Default value is None.
         :type body: IO[bytes]
@@ -2043,25 +2002,21 @@ class JobsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Create a search query to the job database.
+        Search jobs using filters, selected fields, and pagination.
 
-        This search can be based on different parameters, such as jobID, status, owner, etc.
+        The search can be based on job attributes such as the job ID, status or
+        owner. In the request body, use ``search`` to filter jobs, ``parameters``
+        to select which job parameters are returned, and ``sort`` to order the
+        results; all are optional. By default, all fields are returned for all
+        jobs the user has access to.
 
-        **Possibilities**
+        ``PilotStamp`` is accepted as a pseudo-parameter in the ``search`` filters
+        (with the ``eq`` or ``in`` operators only) and is resolved to a ``JobID``
+        filter, so callers can look up the jobs run by a given pilot.
 
-
-        * Use ``search`` to filter jobs based on various parameters (optional).
-        * Use ``parameters`` to specify which job parameters to return (optional).
-        * Use ``sort`` to order the results based on specific parameters (optional).
-
-        By default, the search will return all jobs the user has access to, and all the fields
-        of the job will be returned.
-
-        A ``PilotStamp`` pseudo-parameter is also accepted in the ``search``
-        filter list (operators ``eq`` / ``in`` only): it is transparently
-        resolved through ``JobToPilotMapping`` into a ``JobID`` filter,
-        allowing callers to ask "jobs run by this pilot" through the same
-        endpoint.
+        The response uses ``Content-Range`` when results span multiple pages. It
+        returns 206 when only part of the matching range is returned, or 416 when
+        the requested page is beyond the available results.
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -2138,16 +2093,15 @@ class JobsOperations:
     ) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters.
+        Group matching jobs and return counts for each group.
 
-        Returns an array of n-uplets, where each n-uplet contains the
-        values of the grouping parameters and the number of jobs that match those values.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
 
-        Body parameters:
-
-
-        * ``grouping``\\ : List of parameters to group the jobs by.
-        * ``search``\\ : List of search parameters to filter the jobs by (optional).
+        Results are scoped to the user's VO and, when global job visibility is
+        disabled, to the user's own jobs unless they are a job administrator.
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -2163,16 +2117,15 @@ class JobsOperations:
     async def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters.
+        Group matching jobs and return counts for each group.
 
-        Returns an array of n-uplets, where each n-uplet contains the
-        values of the grouping parameters and the number of jobs that match those values.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
 
-        Body parameters:
-
-
-        * ``grouping``\\ : List of parameters to group the jobs by.
-        * ``search``\\ : List of search parameters to filter the jobs by (optional).
+        Results are scoped to the user's VO and, when global job visibility is
+        disabled, to the user's own jobs unless they are a job administrator.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2188,16 +2141,15 @@ class JobsOperations:
     async def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Group jobs by a specific list of parameters.
+        Group matching jobs and return counts for each group.
 
-        Returns an array of n-uplets, where each n-uplet contains the
-        values of the grouping parameters and the number of jobs that match those values.
+        The request body contains ``grouping``\\ , the list of parameters to group
+        jobs by, and optionally ``search``\\ , a list of filters to apply first. The
+        response is an array of rows, each containing the values of the grouping
+        parameters and the number of jobs matching those values.
 
-        Body parameters:
-
-
-        * ``grouping``\\ : List of parameters to group the jobs by.
-        * ``search``\\ : List of search parameters to filter the jobs by (optional).
+        Results are scoped to the user's VO and, when global job visibility is
+        disabled, to the user's own jobs unless they are a job administrator.
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]
@@ -2260,7 +2212,11 @@ class JobsOperations:
     ) -> list[_models.InsertedJob]:
         """Submit Jdl Jobs.
 
-        Submit a list of jobs in JDL format.
+        Submit one or more jobs described in JDL format.
+
+        A single parametric JDL may expand into multiple jobs. Bulk submissions
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Required.
         :type body: list[str]
@@ -2278,7 +2234,11 @@ class JobsOperations:
     ) -> list[_models.InsertedJob]:
         """Submit Jdl Jobs.
 
-        Submit a list of jobs in JDL format.
+        Submit one or more jobs described in JDL format.
+
+        A single parametric JDL may expand into multiple jobs. Bulk submissions
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2294,7 +2254,11 @@ class JobsOperations:
     async def submit_jdl_jobs(self, body: Union[list[str], IO[bytes]], **kwargs: Any) -> list[_models.InsertedJob]:
         """Submit Jdl Jobs.
 
-        Submit a list of jobs in JDL format.
+        Submit one or more jobs described in JDL format.
+
+        A single parametric JDL may expand into multiple jobs. Bulk submissions
+        cannot contain parametric jobs, and a submission may not create more jobs
+        than the server's per-submission limit; the error response states the limit.
 
         :param body: Is either a [str] type or a IO[bytes] type. Required.
         :type body: list[str] or IO[bytes]
@@ -2658,10 +2622,11 @@ class PilotsOperations:
     ) -> Any:
         """Register Pilot.
 
-        Register a pilot with its reference.
+        Register a pilot and its external reference.
 
-        If the stamp already exists, the registration is rejected with a 409.
-        Registering into a VO that is not in the registry is rejected with a 400.
+        Legacy X.509 pilot identities may self-register one pilot per request when
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Required.
         :type body: ~_generated.models.PilotRegistrationParams
@@ -2677,10 +2642,11 @@ class PilotsOperations:
     async def register_pilot(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Register Pilot.
 
-        Register a pilot with its reference.
+        Register a pilot and its external reference.
 
-        If the stamp already exists, the registration is rejected with a 409.
-        Registering into a VO that is not in the registry is rejected with a 400.
+        Legacy X.509 pilot identities may self-register one pilot per request when
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2696,10 +2662,11 @@ class PilotsOperations:
     async def register_pilot(self, body: Union[_models.PilotRegistrationParams, IO[bytes]], **kwargs: Any) -> Any:
         """Register Pilot.
 
-        Register a pilot with its reference.
+        Register a pilot and its external reference.
 
-        If the stamp already exists, the registration is rejected with a 409.
-        Registering into a VO that is not in the registry is rejected with a 400.
+        Legacy X.509 pilot identities may self-register one pilot per request when
+        permitted by the access policy. Registration is rejected with 409 if the
+        stamp already exists, and with 400 if the VO is not in the registry.
 
         :param body: Is either a PilotRegistrationParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.PilotRegistrationParams or IO[bytes]
@@ -2762,10 +2729,12 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Metadata.
 
-        Update pilot metadata (status, benchmark, etc.).
+        Update mutable metadata for one or more pilots.
 
-        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
-        (the mapping key) identifies the pilot and cannot be changed.
+        Each mapping key is a pilot stamp, and each value contains fields defined
+        by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
+        cannot be modified. Legacy pilot identities may update one pilot per call
+        when permitted by the access policy.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.PilotMetadata]
@@ -2783,10 +2752,12 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Metadata.
 
-        Update pilot metadata (status, benchmark, etc.).
+        Update mutable metadata for one or more pilots.
 
-        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
-        (the mapping key) identifies the pilot and cannot be changed.
+        Each mapping key is a pilot stamp, and each value contains fields defined
+        by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
+        cannot be modified. Legacy pilot identities may update one pilot per call
+        when permitted by the access policy.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -2804,10 +2775,12 @@ class PilotsOperations:
     ) -> None:
         """Update Pilot Metadata.
 
-        Update pilot metadata (status, benchmark, etc.).
+        Update mutable metadata for one or more pilots.
 
-        Only fields defined in ``PilotMetadata`` are mutable. The pilot stamp
-        (the mapping key) identifies the pilot and cannot be changed.
+        Each mapping key is a pilot stamp, and each value contains fields defined
+        by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
+        cannot be modified. Legacy pilot identities may update one pilot per call
+        when permitted by the access policy.
 
         :param body: Is either a {str: PilotMetadata} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.PilotMetadata] or IO[bytes]
@@ -2872,15 +2845,18 @@ class PilotsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Retrieve information about pilots.
+        Search pilot records with optional filtering, sorting, and pagination.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator. ``JobID`` is accepted as a pseudo-parameter in filters
+        with ``eq`` or ``in`` operators and is resolved through
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
-        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
-        list (operators ``eq`` / ``in`` only): it is transparently resolved
-        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
-        callers to ask "pilots that ran this job" through the same endpoint.
+        If the requested page contains only part of the matching results, the
+        response includes a ``Content-Range`` header and status 206. If the page
+        is beyond the available results, it includes the total in ``Content-Range``
+        and uses status 416.
 
         :param body: Default value is None.
         :type body: ~_generated.models.SearchParams
@@ -2908,15 +2884,18 @@ class PilotsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Retrieve information about pilots.
+        Search pilot records with optional filtering, sorting, and pagination.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator. ``JobID`` is accepted as a pseudo-parameter in filters
+        with ``eq`` or ``in`` operators and is resolved through
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
-        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
-        list (operators ``eq`` / ``in`` only): it is transparently resolved
-        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
-        callers to ask "pilots that ran this job" through the same endpoint.
+        If the requested page contains only part of the matching results, the
+        response includes a ``Content-Range`` header and status 206. If the page
+        is beyond the available results, it includes the total in ``Content-Range``
+        and uses status 416.
 
         :param body: Default value is None.
         :type body: IO[bytes]
@@ -2943,15 +2922,18 @@ class PilotsOperations:
     ) -> list[dict[str, Any]]:
         """Search.
 
-        Retrieve information about pilots.
+        Search pilot records with optional filtering, sorting, and pagination.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator. ``JobID`` is accepted as a pseudo-parameter in filters
+        with ``eq`` or ``in`` operators and is resolved through
+        ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+        pilots that ran a given job.
 
-        A ``JobID`` pseudo-parameter is also accepted in the ``search`` filter
-        list (operators ``eq`` / ``in`` only): it is transparently resolved
-        through ``JobToPilotMapping`` into a ``PilotID`` filter, allowing
-        callers to ask "pilots that ran this job" through the same endpoint.
+        If the requested page contains only part of the matching results, the
+        response includes a ``Content-Range`` header and status 206. If the page
+        is beyond the available results, it includes the total in ``Content-Range``
+        and uses status 416.
 
         :param body: Is either a SearchParams type or a IO[bytes] type. Default value is None.
         :type body: ~_generated.models.SearchParams or IO[bytes]
@@ -3028,10 +3010,10 @@ class PilotsOperations:
     ) -> Any:
         """Summary.
 
-        Aggregate pilot counts suitable for plotting.
+        Group matching pilots and return counts suitable for plotting.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator.
 
         :param body: Required.
         :type body: ~_generated.models.SummaryParams
@@ -3047,10 +3029,10 @@ class PilotsOperations:
     async def summary(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> Any:
         """Summary.
 
-        Aggregate pilot counts suitable for plotting.
+        Group matching pilots and return counts suitable for plotting.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3066,10 +3048,10 @@ class PilotsOperations:
     async def summary(self, body: Union[_models.SummaryParams, IO[bytes]], **kwargs: Any) -> Any:
         """Summary.
 
-        Aggregate pilot counts suitable for plotting.
+        Group matching pilots and return counts suitable for plotting.
 
-        Normal users see only their own VO's pilots. Service administrators see
-        pilots from all VOs.
+        Results are restricted to the caller's VO unless they are a service
+        administrator.
 
         :param body: Is either a SummaryParams type or a IO[bytes] type. Required.
         :type body: ~_generated.models.SummaryParams or IO[bytes]
@@ -3157,7 +3139,10 @@ class RssOperations:
     ) -> dict[str, _models.StorageElementStatus]:
         """Get Storage Status.
 
-        Get the latest status of storage elements, scoped to the caller's VO.
+        Return storage-element statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -3227,7 +3212,10 @@ class RssOperations:
     ) -> dict[str, _models.ComputeElementStatus]:
         """Get Compute Status.
 
-        Get the latest status of compute elements, scoped to the caller's VO.
+        Return compute element statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -3297,7 +3285,10 @@ class RssOperations:
     ) -> dict[str, _models.SiteStatus]:
         """Get Site Status.
 
-        Get the latest status of sites, scoped to the caller's VO.
+        Return site statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str
@@ -3367,7 +3358,10 @@ class RssOperations:
     ) -> dict[str, _models.FTSStatus]:
         """Get Fts Status.
 
-        Get the latest status of FTS servers, scoped to the caller's VO.
+        Return FTS server statuses visible to the caller's VO.
+
+        Supports conditional requests with ``If-None-Match`` and
+        ``If-Modified-Since``\\ , and returns 304 when the cached copy is current.
 
         :keyword if_modified_since: Default value is None.
         :paramtype if_modified_since: str

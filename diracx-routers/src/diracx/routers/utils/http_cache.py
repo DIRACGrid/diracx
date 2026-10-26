@@ -1,4 +1,8 @@
-"""Helpers for HTTP conditional-request caching (ETag / Last-Modified / 304)."""
+"""Provide helpers for HTTP conditional-request caching.
+
+These utilities set ETag and Last-Modified response headers and handle
+conditional requests whose cached representations are still current.
+"""
 
 from __future__ import annotations
 
@@ -22,26 +26,27 @@ def apply_cache_headers(
     if_modified_since: str | None,
     vary: str | None = None,
 ) -> None:
-    """Set ETag / Last-Modified headers and raise 304 when appropriate.
+    """Set cache headers or raise an HTTP 304 for a current cached representation.
 
-    If If-None-Match matches the current ETag, return 304.
-
-    If If-Modified-Since is given and is newer than the current Last-Modified,
-    return 304: this is to avoid flip/flopping in case a server gets out of
-    sync with the source of truth.
+    A matching ``If-None-Match`` value raises ``HTTPException`` with status
+    304. A valid ``If-Modified-Since`` value later than the current
+    modification time raises the same exception, avoiding cache flip-flopping
+    when a server is out of sync with the source of truth. Invalid date headers
+    are ignored. If neither condition applies, the cache headers are added to
+    the response.
 
     Args:
-        response: The response whose headers should be updated.
-        etag: The current entity tag.
-        modified: The current modification time (timezone-aware).
-        if_none_match: Value of the If-None-Match request header, if any.
-        if_modified_since: Value of the If-Modified-Since request header, if any.
-        vary: Optional value for the Vary header, for responses whose content
-              depends on more than the URL (e.g. the caller's identity).
+        response: Response whose cache headers are updated when no 304 is raised.
+        etag: Entity tag identifying the current representation.
+        modified: Time the representation was last modified; must be timezone-aware.
+        if_none_match: Optional value of the request's ``If-None-Match`` header.
+        if_modified_since: Optional value of the request's ``If-Modified-Since`` header.
+        vary: Optional ``Vary`` header value when the response depends on more
+            than the URL, such as the caller's identity.
 
     Raises:
-        HTTPException(304): when the client's cached copy is still current.
-
+        HTTPException: With status 304 when the client's cached representation
+            is still current.
     """
     headers = {
         "ETag": etag,
