@@ -433,9 +433,7 @@ diracx-tasks call transformation:DummyComputeBackendTask --args '["<parcel uuid>
 ```
 
 To see it work, a packer (or a test) must first create `Unassigned` compute
-parcels, with their inputs `Assigned` and linked through `ParcelInputs`; in
-`pixi run local-shell`, `python scripts/local_parcels.py seed` creates some and
-`python scripts/local_parcels.py list` shows their UUIDs and states. After
+parcels, with their inputs `Assigned` and linked through `ParcelInputs`. After
 one monitor cycle the parcels are `Assigned` on the `dummy` backend;
 `runtime_seconds` later they are `Done` and their inputs `Processed`.
 
