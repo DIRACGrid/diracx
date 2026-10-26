@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
@@ -342,3 +343,52 @@ def test_own_broker_uses_the_tasks_redis_url(monkeypatch):
     broker = dummy_compute_backend_module._make_broker()
     kwargs = broker.connection_pool.connection_kwargs
     assert (kwargs["host"], kwargs["port"]) == ("example.invalid", 6390)
+
+
+async def test_seeded_demo_parcels_run_to_done(
+    transformation_db: TransformationDB, scheduled
+):
+    async with transformation_db as db:
+        parcel_ids = await dummy_compute_backend_module.seed_demo_parcels(db, 2)
+    async with transformation_db as db:
+        assert await dummy_compute_backend_module.list_parcels(db) == [
+            (parcel_id, ParcelStatus.UNASSIGNED, None, InputStatus.ASSIGNED)
+            for parcel_id in parcel_ids
+        ]
+
+    assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 2
+    async with transformation_db as db:
+        assert await DummyComputeBackendTask(parcel_id=str(parcel_ids[0])).execute(db)
+    async with transformation_db as db:
+        assert await dummy_compute_backend_module.list_parcels(db) == [
+            (parcel_ids[0], ParcelStatus.DONE, "dummy", InputStatus.PROCESSED),
+            (parcel_ids[1], ParcelStatus.ASSIGNED, "dummy", InputStatus.ASSIGNED),
+        ]
+
+
+def test_demo_command_line(tmp_path, monkeypatch, capsys):
+    db_url = f"sqlite+aiosqlite:///{tmp_path}/transformation.db"
+    monkeypatch.setenv("DIRACX_DB_URL_TRANSFORMATIONDB", db_url)
+
+    async def create_tables():
+        db = TransformationDB(db_url)
+        async with db.engine_context():
+            async with db.engine.begin() as conn:
+                await conn.run_sync(db.metadata.create_all)
+                await db.post_create(conn)
+
+    asyncio.run(create_tables())
+
+    asyncio.run(dummy_compute_backend_module._demo(["seed", "2"]))
+    created = capsys.readouterr().out.splitlines()
+    assert len(created) == 2
+    assert all(line.startswith("Created Unassigned parcel ") for line in created)
+
+    asyncio.run(dummy_compute_backend_module._demo(["list"]))
+    listed = capsys.readouterr().out.splitlines()
+    assert [line.split()[:2] for line in listed] == [
+        [line.split()[-1], "Unassigned"] for line in created
+    ]
+
+    with pytest.raises(SystemExit, match="Usage"):
+        asyncio.run(dummy_compute_backend_module._demo(["bogus"]))
