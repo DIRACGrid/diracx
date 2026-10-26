@@ -3,8 +3,8 @@
 The Dummy Compute Backend pretends to execute the **parcels** of the
 Transformation System. It gives every compute parcel a successful outcome
 without running anything, so that the loop of feeder → packer → execution can
-be exercised end to end, in a local or `diracx-charts` demo deployment, before
-any real compute backend exists.
+be exercised end to end, in a local deployment, before any real compute
+backend exists.
 
 It is the Transformation System counterpart of the **Dummy Job Executor**
 (`diracx-tasks/src/diracx/tasks/jobs/dummy_job_executor.py`), which does the
@@ -458,8 +458,8 @@ python -m diracx.tasks.transformation.dummy_compute_backend list   # that one Do
 - `python -m` warns that the module is already in `sys.modules`: the package
     imports it. The warning is harmless; `2>/dev/null` hides it.
 
-In the `diracx-charts` demo, `demo/values.tpl.yaml` sets the same two variables
-as `run_local.sh` and lists `TransformationDB` under `diracx.sqlDbs.dbs`.
+The `diracx-charts` demo does not run it: it would need the same two variables
+as `run_local.sh`, and `TransformationDB` under `diracx.sqlDbs.dbs`.
 
 ## Tests
 
