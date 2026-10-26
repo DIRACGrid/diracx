@@ -8,8 +8,10 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 
+import msgpack
 import pytest
 from pydantic import ValidationError
+from redis.asyncio import Redis
 from sqlalchemy import insert, select
 from uuid_utils import UUID, uuid7
 
@@ -26,7 +28,10 @@ from diracx.db.sql.transformation.schema import (
     Parcels,
     Transformations,
 )
+from diracx.tasks.plumbing.base_task import BaseTask
+from diracx.tasks.plumbing.broker import TaskBinding
 from diracx.tasks.plumbing.locks import MutexLock
+from diracx.tasks.plumbing.scheduler.scheduler import DELAYED_ZSET_KEY
 from diracx.tasks.transformation import (
     DummyComputeBackendMonitorTask,
     DummyComputeBackendTask,
@@ -167,7 +172,7 @@ async def input_status(db: TransformationDB, parcel_id: UUID) -> InputStatus:
 
 
 @pytest.fixture
-def scheduled(monkeypatch) -> list[tuple[str, datetime | None]]:
+def scheduled(monkeypatch, broker) -> list[tuple[str, datetime | None]]:
     """Capture the completion tasks the monitor schedules."""
     calls: list[tuple[str, datetime | None]] = []
 
@@ -176,6 +181,8 @@ def scheduled(monkeypatch) -> list[tuple[str, datetime | None]]:
         return "task-id"
 
     monkeypatch.setattr(DummyComputeBackendTask, "schedule", fake_schedule)
+    # No task is bound to a broker here, so the monitor binds its own
+    monkeypatch.setattr(dummy_compute_backend_module, "_make_broker", lambda: broker)
     return calls
 
 
@@ -279,3 +286,59 @@ async def test_monitor_respects_the_batch_size(
     assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
     assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
     assert [parcel_id for parcel_id, _ in scheduled] == [str(first), str(second)]
+
+
+async def test_monitor_schedules_without_a_bound_broker(
+    transformation_db: TransformationDB, transformation_id: UUID, broker, monkeypatch
+):
+    """``diracx-tasks call`` runs the monitor without binding a broker."""
+    monkeypatch.setattr(dummy_compute_backend_module, "_make_broker", lambda: broker)
+    assert BaseTask._broker_registry.get() is None
+    async with transformation_db as db:
+        parcel_id = await add_parcel(db, transformation_id)
+
+    assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
+
+    # The completion task waits in the delayed ZSET for the scheduler...
+    async with Redis(connection_pool=broker.connection_pool) as redis:
+        delayed = await redis.zrange(DELAYED_ZSET_KEY, 0, -1)
+    assert len(delayed) == 1
+    message = msgpack.unpackb(delayed[0])
+    assert message["task_name"] == "transformation:DummyComputeBackendTask"
+    assert message["task_args"] == [str(parcel_id)]
+    # ...and the broker is unbound again afterwards
+    assert BaseTask._broker_registry.get() is None
+
+
+async def test_monitor_uses_the_bound_broker(
+    transformation_db: TransformationDB, transformation_id: UUID, broker, monkeypatch
+):
+    """On a worker, the monitor schedules through the worker's broker."""
+
+    def no_broker():
+        raise AssertionError("the monitor must not create its own broker")
+
+    monkeypatch.setattr(dummy_compute_backend_module, "_make_broker", no_broker)
+    token = BaseTask._broker_registry.set(
+        {
+            DummyComputeBackendTask: TaskBinding(
+                broker=broker, task_name="transformation:DummyComputeBackendTask"
+            )
+        }
+    )
+    try:
+        async with transformation_db as db:
+            await add_parcel(db, transformation_id)
+        assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
+    finally:
+        BaseTask._broker_registry.reset(token)
+
+    async with Redis(connection_pool=broker.connection_pool) as redis:
+        assert await redis.zcard(DELAYED_ZSET_KEY) == 1
+
+
+def test_own_broker_uses_the_tasks_redis_url(monkeypatch):
+    monkeypatch.setenv("DIRACX_TASKS_REDIS_URL", "redis://example.invalid:6390")
+    broker = dummy_compute_backend_module._make_broker()
+    kwargs = broker.connection_pool.connection_kwargs
+    assert (kwargs["host"], kwargs["port"]) == ("example.invalid", 6390)
