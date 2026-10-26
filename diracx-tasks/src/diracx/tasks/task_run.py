@@ -14,7 +14,6 @@ __all__ = []
 import argparse
 import asyncio
 import json
-import os
 import signal
 import sys
 import traceback
@@ -52,7 +51,7 @@ def _get_redis_url(args: argparse.Namespace) -> str:
 
 def _task_db_from_env() -> TaskDB | None:
     """The TaskDB (dead letter queue), if ``DIRACX_DB_URL_TASKDB`` is set."""
-    task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
+    task_db_url = FactorySettings().sql_dbs.get("TaskDB")
     if not task_db_url:
         return None
     from diracx.db.sql import TaskDB
