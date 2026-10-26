@@ -292,7 +292,7 @@ async def test_collect_stream_stats(broker):
 
 @pytest.fixture
 async def task_db():
-    from diracx.tasks.plumbing.persistence.dlq import TaskDB
+    from diracx.db.sql import TaskDB
 
     db = TaskDB("sqlite+aiosqlite:///:memory:")
     async with db.engine_context():

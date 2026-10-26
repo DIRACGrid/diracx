@@ -28,8 +28,9 @@ from diracx.core.logs import configure_logging
 from diracx.core.settings import FactorySettings
 
 if TYPE_CHECKING:
+    from diracx.db.sql import TaskDB
+
     from .plumbing._redis_types import LockCoordinator
-    from .plumbing.persistence.dlq import TaskDB
 
 DEFAULT_REDIS_URL = "redis://localhost"
 _factory_settings = FactorySettings()
@@ -54,7 +55,7 @@ def _task_db_from_env() -> TaskDB | None:
     task_db_url = os.environ.get("DIRACX_DB_URL_TASKDB")
     if not task_db_url:
         return None
-    from .plumbing.persistence.dlq import TaskDB
+    from diracx.db.sql import TaskDB
 
     return TaskDB(task_db_url)
 
