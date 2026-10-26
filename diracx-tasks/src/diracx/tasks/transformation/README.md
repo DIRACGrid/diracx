@@ -175,11 +175,13 @@ forms on purpose:
 # Monitor: manages its own transaction
 async def execute(
     self, transformation_db: Annotated[TransformationDB, NoTransaction()]
-) -> int: ...
+) -> int:
+    ...
 
 
 # Completion task: one transaction around the whole of execute()
-async def execute(self, transformation_db: TransformationDB) -> bool: ...
+async def execute(self, transformation_db: TransformationDB) -> bool:
+    ...
 ```
 
 The monitor must **commit before it schedules** the completion tasks. If it
