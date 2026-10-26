@@ -9,6 +9,8 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 
+import fakeredis
+import fakeredis.aioredis
 import msgpack
 import pytest
 from pydantic import ValidationError
@@ -30,7 +32,7 @@ from diracx.db.sql.transformation.schema import (
     Transformations,
 )
 from diracx.tasks.plumbing.base_task import BaseTask
-from diracx.tasks.plumbing.broker import TaskBinding
+from diracx.tasks.plumbing.broker import RedisStreamBroker, TaskBinding
 from diracx.tasks.plumbing.locks import MutexLock
 from diracx.tasks.plumbing.scheduler.scheduler import DELAYED_ZSET_KEY
 from diracx.tasks.transformation import (
@@ -170,6 +172,22 @@ async def input_status(db: TransformationDB, parcel_id: UUID) -> InputStatus:
     return await db.conn.scalar(
         select(Inputs.status).where(Inputs.last_parcel_id == parcel_id)
     )
+
+
+@pytest.fixture
+async def broker():
+    """A broker on fake Redis.
+
+    Overrides the conftest one, whose ``FakeConnection`` is deprecated.
+    """
+    b = RedisStreamBroker(
+        url="redis://fake",
+        connection_class=fakeredis.aioredis.FakeAsyncRedisConnection,
+        server=fakeredis.FakeServer(),
+    )
+    await b.startup()
+    yield b
+    await b.shutdown()
 
 
 @pytest.fixture
