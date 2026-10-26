@@ -119,16 +119,16 @@ The code follows the repository's layering: SQL in `diracx-db`, business rules
 in `diracx-logic`, scheduling in `diracx-tasks`. Each layer only calls the one
 below it.
 
-| Layer    | File                                                                    | Contents                                                                                   |
-| -------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Tasks    | `diracx-tasks/src/diracx/tasks/transformation/dummy_compute_backend.py` | `DummyComputeBackendSettings`, `DummyComputeBackendMonitorTask`, `DummyComputeBackendTask` |
-| Tasks    | `diracx-tasks/src/diracx/tasks/plumbing/lock_registry.py`               | the `parcel` lock type                                                                     |
-| Tasks    | `diracx-tasks/pyproject.toml`                                           | entry points in the `diracx.tasks.transformation` group                                    |
-| Logic    | `diracx-logic/src/diracx/logic/transformations/parcels.py`              | `set_parcel_status`: checks the transition, applies the outcome to the inputs              |
-| Database | `diracx-db/src/diracx/db/sql/transformation/db.py`                      | `get_parcel_ids`, `set_parcel_status`, `set_parcel_input_status`, `_journal_transition`    |
-| Database | `diracx-db/src/diracx/db/sql/transformation/schema.py`                  | the `Parcels`, `Inputs`, `ParcelInputs` tables and the transformation counter (unchanged)  |
-| Core     | `diracx-core/src/diracx/core/models/transformation.py`                  | `ParcelStatus`, `InputStatus`, `PARCEL_TRANSITIONS` (unchanged)                            |
-| Core     | `diracx-core/src/diracx/core/exceptions.py`                             | `InvalidParcelTransitionError`                                                             |
+| Layer    | File                                                                    | Contents                                                                                                                                          |
+| -------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tasks    | `diracx-tasks/src/diracx/tasks/transformation/dummy_compute_backend.py` | `DummyComputeBackendSettings`, `DummyComputeBackendMonitorTask`, `DummyComputeBackendTask`, and the demo's `seed_demo_parcels` and `list_parcels` |
+| Tasks    | `diracx-tasks/src/diracx/tasks/plumbing/lock_registry.py`               | the `parcel` lock type                                                                                                                            |
+| Tasks    | `diracx-tasks/pyproject.toml`                                           | entry points in the `diracx.tasks.transformation` group                                                                                           |
+| Logic    | `diracx-logic/src/diracx/logic/transformations/parcels.py`              | `set_parcel_status`: checks the transition, applies the outcome to the inputs                                                                     |
+| Database | `diracx-db/src/diracx/db/sql/transformation/db.py`                      | `get_parcel_ids`, `set_parcel_status`, `set_parcel_input_status`, `_journal_transition`                                                           |
+| Database | `diracx-db/src/diracx/db/sql/transformation/schema.py`                  | the `Parcels`, `Inputs`, `ParcelInputs` tables and the transformation counter (unchanged)                                                         |
+| Core     | `diracx-core/src/diracx/core/models/transformation.py`                  | `ParcelStatus`, `InputStatus`, `PARCEL_TRANSITIONS` (unchanged)                                                                                   |
+| Core     | `diracx-core/src/diracx/core/exceptions.py`                             | `InvalidParcelTransitionError`                                                                                                                    |
 
 ## Code flow
 
@@ -418,42 +418,67 @@ task system needs `DIRACX_TASKS_REDIS_URL`.
 
 ## Running it
 
-- **Locally**, `run_local.sh` sets `..._ENABLED=true` and
-    `..._INTERVAL_SECONDS=10`.
-- **In the `diracx-charts` demo**, `demo/values.tpl.yaml` sets the same two
-    variables and lists `TransformationDB` under `diracx.sqlDbs.dbs`.
-- **By hand**, with the `diracx-tasks` CLI:
+The easiest way is the local stack, with the demo parcels the module can
+seed: nothing creates parcels yet, as there is no packer.
 
 ```bash
-# Run the monitor once: claim and submit the waiting parcels
-diracx-tasks call transformation:DummyComputeBackendMonitorTask
+# Terminal 1: start the stack, and leave it running
+pixi run local-start
 
-# Complete one Assigned parcel now, without waiting for its scheduled task
-diracx-tasks call transformation:DummyComputeBackendTask --args '["<parcel uuid>"]'
+# Terminal 2: a shell with the stack's environment, once the stack is up
+pixi run local-shell
+python -m diracx.tasks.transformation.dummy_compute_backend seed 3
+python -m diracx.tasks.transformation.dummy_compute_backend list
 ```
 
-To see it work, a packer (or a test) must first create `Unassigned` compute
-parcels, with their inputs `Assigned` and linked through `ParcelInputs`. After
-one monitor cycle the parcels are `Assigned` on the `dummy` backend;
-`runtime_seconds` later they are `Done` and their inputs `Processed`.
+`run_local.sh` sets `..._ENABLED=true` and `..._INTERVAL_SECONDS=10`, so the
+stack's scheduler runs the monitor itself: within about 15 seconds `list` shows
+the parcels `Done` on the `dummy` backend, and their inputs `Processed`.
+
+To walk a parcel through by hand instead, run the monitor straight after
+seeding, before the scheduler does, and give it a long run time so the
+completion is left to you:
+
+```bash
+python -m diracx.tasks.transformation.dummy_compute_backend seed 3 \
+  && DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_RUNTIME_SECONDS=600 \
+     diracx-tasks call transformation:DummyComputeBackendMonitorTask
+python -m diracx.tasks.transformation.dummy_compute_backend list   # Assigned
+diracx-tasks call transformation:DummyComputeBackendTask --args '["<parcel uuid>"]'
+python -m diracx.tasks.transformation.dummy_compute_backend list   # that one Done
+```
+
+- The monitor's `Result` is the number of parcels it claimed. It only takes
+    `Unassigned` parcels, so it is `0` once the scheduler has claimed them
+    first; seed again and rerun.
+- The completion's `Result` is `False` when the parcel is no longer
+    `Assigned`, for instance already completed: nothing is done twice.
+- The completions the monitor scheduled still run `runtime_seconds` later and
+    complete the parcels left `Assigned`.
+- `python -m` warns that the module is already in `sys.modules`: the package
+    imports it. The warning is harmless; `2>/dev/null` hides it.
+
+In the `diracx-charts` demo, `demo/values.tpl.yaml` sets the same two variables
+as `run_local.sh` and lists `TransformationDB` under `diracx.sqlDbs.dbs`.
 
 ## Tests
 
-| Test file                                              | What it covers                                                                                                 |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `diracx-db/tests/transformation/test_parcel_status.py` | filters and ordering, compare-and-set, journal rows, `CompletedAt`, user parcels, input moves and `ErrorCount` |
-| `diracx-logic/tests/transformations/test_parcels.py`   | forbidden transitions, `PartiallyDone`, the input outcome of `Done`, `Failed` and `Cancelled`                  |
-| `diracx-tasks/tests/test_dummy_compute_backend.py`     | scheduling controlled by the environment, settings validation, the parcel lock, a full `Unassigned → Done` run |
+| Test file                                              | What it covers                                                                                                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `diracx-db/tests/transformation/test_parcel_status.py` | filters and ordering, compare-and-set, journal rows, `CompletedAt`, user parcels, input moves and `ErrorCount`                                                           |
+| `diracx-logic/tests/transformations/test_parcels.py`   | forbidden transitions, `PartiallyDone`, the input outcome of `Done`, `Failed` and `Cancelled`                                                                            |
+| `diracx-tasks/tests/test_dummy_compute_backend.py`     | scheduling controlled by the environment, settings validation, the parcel lock, a full `Unassigned → Done` run, scheduling with and without a bound broker, demo parcels |
 
 The full run in `test_dummy_compute_backend.py` uses a real SQLite
 `TransformationDB`. It checks that a data parcel and a parcel pinned to
 another backend are left alone, that a second monitor run claims nothing, and
-that running the completion task again changes nothing.
+that running the completion task again changes nothing. Redis is faked with
+`fakeredis`, so the tests need neither the local stack nor a Redis server.
 
 ```bash
-pixi run pytest-diracx-db    tests/transformation
-pixi run pytest-diracx-logic tests/transformations
 pixi run pytest-diracx-tasks tests/test_dummy_compute_backend.py
+pixi run pytest-diracx-logic tests/transformations
+pixi run pytest-diracx-db    tests/transformation
 ```
 
 ## Limitations and next steps
