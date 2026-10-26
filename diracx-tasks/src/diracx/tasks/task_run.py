@@ -339,17 +339,23 @@ async def call_task(
     kwargs: dict[str, Any],
     debugger: DebugOptions,
 ) -> None:
-    """Execute a task interactively (no broker).
+    """Execute a task interactively, in this process rather than on a worker.
 
     Uses ``task_wrapper`` with ``_interactive=True`` so that structural
     locks (Mutex, RW) are acquired, while limiters (rate/concurrency)
     are skipped.
 
+    The tasks are bound to the broker, so that the tasks this one schedules
+    are submitted to the workers.
+
     Dependency injection (databases, config, settings) is resolved
     automatically from environment variables via
     ``setup_dependency_overrides``.
     """
+    from .plumbing.broker import RedisStreamBroker
     from .plumbing.factory import (
+        BaseTask,
+        create_task_bindings,
         find_missing_overrides,
         load_task_registry,
         setup_dependency_overrides,
@@ -391,6 +397,11 @@ async def call_task(
             dependency_overrides=overrides,
         )
 
+        broker = RedisStreamBroker(url=_factory_settings.tasks_redis_url)
+        task_bindings, _ = create_task_bindings(broker, registry)
+        BaseTask.bind_broker(task_bindings)
+        await broker.startup()
+
         try:
             all_kwargs = {**dep_kwargs, **kwargs}
 
@@ -411,4 +422,5 @@ async def call_task(
             pdb.post_mortem(traceback_info[2])
         finally:
             await async_exit_stack.aclose()
+            await broker.shutdown()
             await redis.aclose()
