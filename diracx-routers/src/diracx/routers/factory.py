@@ -536,14 +536,12 @@ def find_dependents(
         Classes bound to dependencies that are subclasses of ``cls``.
     """
     if isinstance(obj, APIRouter):
-        # TODO: Support dependencies of the router itself
-        # yield from find_dependents(obj.dependencies, cls)
         # router.routes can be a tree since FastAPI 0.137, iterate over the
-        # routes of the whole tree
+        # routes of the whole tree. The dependant of a route context also has
+        # the dependencies of the routers and include_router calls above it.
         for route_context in iter_route_contexts(obj.routes):
-            route = route_context.original_route
-            if isinstance(route, APIRoute):
-                yield from find_dependents(route.dependant.dependencies, cls)
+            if isinstance(route_context.original_route, APIRoute):
+                yield from find_dependents(route_context.dependant.dependencies, cls)
         return
 
     for dependency in obj:
