@@ -37,19 +37,23 @@ class DLQBase(DeclarativeBase):
 
 
 class DeadLetterQueue(DLQBase):
-    __tablename__ = "dlq_tasks"
+    __tablename__ = "dlq_Tasks"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_class: Mapped[str] = mapped_column(String(255), nullable=False)
-    task_args: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    status: Mapped[str] = mapped_column(
-        Enum(DLQStatus), default=DLQStatus.PENDING, nullable=False
+    id: Mapped[int] = mapped_column("ID", Integer, primary_key=True, autoincrement=True)
+    task_class: Mapped[str] = mapped_column("TaskClass", String(255), nullable=False)
+    task_args: Mapped[bytes] = mapped_column("TaskArgs", LargeBinary, nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(
+        "SubmittedAt", DateTime, nullable=False
     )
-    retry_count: Mapped[int] = mapped_column(Integer, default=0)
-    max_retries: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(
+        "Status", Enum(DLQStatus), default=DLQStatus.PENDING, nullable=False
+    )
+    retry_count: Mapped[int] = mapped_column("RetryCount", Integer, default=0)
+    max_retries: Mapped[int] = mapped_column("MaxRetries", Integer, nullable=False)
+    last_error: Mapped[str | None] = mapped_column("LastError", Text, nullable=True)
+    last_attempted_at: Mapped[datetime | None] = mapped_column(
+        "LastAttemptedAt", DateTime, nullable=True
+    )
 
 
 class TaskDB(BaseSQLDB):

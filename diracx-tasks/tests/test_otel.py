@@ -313,7 +313,7 @@ async def test_task_db_counts_the_dead_letter_queue(task_db):
             ("test:A", "PENDING"): 2,
             ("test:B", "FAILED"): 1,
         }
-        errors = {task["last_error"] for task in await task_db.get_pending_tasks()}
+        errors = {task["LastError"] for task in await task_db.get_pending_tasks()}
     assert errors == {"ValueError: boom", None}
 
 

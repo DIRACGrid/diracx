@@ -45,7 +45,7 @@ The scheduler is a **singleton** process (enforced by a Redis mutex with a 30-se
 
 ## Dead-letter queue
 
-Tasks marked with `dlq_eligible = True` that exhaust their retries are persisted to the `dlq_tasks` table in the SQL database. This provides a durable safety net — critical tasks are never silently dropped, even if Redis is restarted. Dead letter queue tasks can be inspected and resubmitted.
+Tasks marked with `dlq_eligible = True` that exhaust their retries are persisted to the `dlq_Tasks` table in the SQL database. This provides a durable safety net — critical tasks are never silently dropped, even if Redis is restarted. Dead letter queue tasks can be inspected and resubmitted.
 
 ## Ephemeral broker state
 
