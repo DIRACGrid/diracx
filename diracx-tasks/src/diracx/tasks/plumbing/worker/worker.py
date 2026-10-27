@@ -15,6 +15,7 @@ from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 
 from diracx.core.logs import log_context
+from diracx.db.sql import TaskDB
 
 from .._redis_types import CallbackRegistry, LockCoordinator
 from ..base_task import BaseTask
@@ -22,7 +23,6 @@ from ..broker.models import ReceivedMessage, TaskMessage, TaskResult
 from ..broker.redis_streams import RedisStreamBroker
 from ..callbacks import fire_callback, on_child_complete
 from ..exceptions import UnableToAcquireLockError
-from ..persistence.dlq import TaskDB
 from ..scheduler.scheduler import schedule_delayed
 from .di_resolver import solve_task_dependencies
 

@@ -1,55 +1,23 @@
+"""SQL database operations for task dead letter queue persistence."""
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
-    DateTime,
-    Enum,
-    Integer,
-    LargeBinary,
-    String,
-    Text,
     delete,
     func,
     insert,
     select,
     update,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from diracx.db.sql.task.schema import DeadLetterQueue, DLQBase, DLQStatus
 from diracx.db.sql.utils.base import BaseSQLDB
 from diracx.db.sql.utils.functions import utcnow
 
 logger = logging.getLogger(__name__)
-
-
-class DLQStatus(StrEnum):
-    PENDING = "PENDING"
-    DISPATCHED = "DISPATCHED"
-    FAILED = "FAILED"
-
-
-class DLQBase(DeclarativeBase):
-    pass
-
-
-class DeadLetterQueue(DLQBase):
-    __tablename__ = "dlq_tasks"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    task_class: Mapped[str] = mapped_column(String(255), nullable=False)
-    task_args: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    status: Mapped[str] = mapped_column(
-        Enum(DLQStatus), default=DLQStatus.PENDING, nullable=False
-    )
-    retry_count: Mapped[int] = mapped_column(Integer, default=0)
-    max_retries: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class TaskDB(BaseSQLDB):
