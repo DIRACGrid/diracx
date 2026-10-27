@@ -33,7 +33,7 @@ class DLQBase(DeclarativeBase):
 class DeadLetterQueue(DLQBase):
     """Table for the dead letter queue."""
 
-    __tablename__ = "dlq_Tasks"
+    __tablename__ = "DeadLetterQueue"
 
     id: Mapped[int] = mapped_column("ID", Integer, primary_key=True, autoincrement=True)
     task_class: Mapped[str] = mapped_column("TaskClass", String(255), nullable=False)

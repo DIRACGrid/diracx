@@ -189,14 +189,14 @@ The score is the Unix time at which the scheduler will put the task back in its 
 
 ## 7. Find the task in the dead letter queue
 
-The tasks given up are stored in the `dlq_Tasks` table of the `TaskDB`.
+The tasks given up are stored in the `DeadLetterQueue` table of the `TaskDB`.
 Locally, it is a SQLite file, whose path is shown in the `INSERT ... taskdb.db` span above:
 
 ```bash
 pixi run -e default-gubbins python -c "
 import sqlite3
 db = sqlite3.connect('/tmp/tmp.lNn1symIA9/taskdb.db')  # use your path
-for row in db.execute('SELECT ID, TaskClass, Status, SubmittedAt, LastError FROM dlq_Tasks'):
+for row in db.execute('SELECT ID, TaskClass, Status, SubmittedAt, LastError FROM DeadLetterQueue'):
     print(row)
 "
 ```
