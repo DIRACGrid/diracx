@@ -18,7 +18,7 @@ dependencies = [
     "opentelemetry-api>=1.40.0",
     "pydantic >=2.10",
     # aiomysql 0.3.2 fails to escape bytes with PyMySQL >= 1.2.1 (aio-libs/aiomysql#1080)
-    "pymysql <1.2.1",
+    "pymysql <1.2.4",
     "sqlalchemy[aiomysql,aiosqlite] >= 2",
     "uuid-utils>=1.0.0",
     "python-dateutil",
