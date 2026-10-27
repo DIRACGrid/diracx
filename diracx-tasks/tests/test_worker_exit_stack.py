@@ -59,15 +59,6 @@ async def _tracked_dep():
         _exits.append(None)
 
 
-async def _slow_cleanup_dep():
-    """A dependency whose cleanup hangs until it is cancelled."""
-    try:
-        yield "resource"
-    finally:
-        _events["cleanup_started"].set()
-        await asyncio.Event().wait()
-
-
 async def _failing_cleanup_dep():
     """A dependency whose cleanup always raises a new exception."""
     try:
