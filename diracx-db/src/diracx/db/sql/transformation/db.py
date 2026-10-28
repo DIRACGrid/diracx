@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from collections import Counter
 from collections.abc import Collection, Iterable
 from datetime import datetime
 from typing import Any, NamedTuple, TypeAlias
@@ -18,7 +17,6 @@ from diracx.core.exceptions import (
 )
 from diracx.core.models.transformation import (
     PARCEL_TRANSITIONS,
-    CounterEntity,
     InputStatus,
     PackerInput,
     ParcelStatus,
@@ -28,8 +26,8 @@ from diracx.core.models.transformation import (
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
+from .schema import Base as TransformationDBBase
 from .schema import (
-    TRANSFORMATION_COUNTER,
     ComputeParcels,
     ComputeTransformations,
     Inputs,
@@ -39,7 +37,6 @@ from .schema import (
     TransformationLog,
     Transformations,
 )
-from .schema import Base as TransformationDBBase
 
 # BinaryUUID binds either kind; rows come back as uuid_utils.UUID
 AnyUUID: TypeAlias = UUID | uuid.UUID
@@ -455,18 +452,13 @@ class TransformationDB(BaseSQLDB):
         *,
         backend: str | None = None,
     ) -> list[UUID]:
-        """Move parcels from one status to another and journal the change.
+        """Move parcels from one status to another.
 
         Only the parcels that are in ``from_status`` when the transaction
         locks them are moved; the others (unknown, or already moved by a
         concurrent writer) are silently skipped, and the caller can tell
         which by comparing with the returned list. This compare-and-set is
         what makes a claim safe without any lock outside the database.
-
-        The counter deltas of DX-ADR-009 are derived from the rows locked here
-        and appended in the caller's transaction, so they commit or roll back
-        with the change. User parcels have no transformation and therefore no
-        counter row.
 
         This method does not check that the transition is allowed: the state
         machine is enforced in ``diracx-logic`` (DX-ADR-005).
@@ -482,20 +474,21 @@ class TransformationDB(BaseSQLDB):
         """
         if not parcel_ids:
             return []
-        # Lock the rows first, so the deltas count exactly what is updated.
+        # Lock the rows first, so the caller learns exactly what is updated.
         # Locking in key order keeps concurrent writers from deadlocking.
-        locked = (
-            await self.conn.execute(
-                select(Parcels.parcel_id, Parcels.transformation_id)
-                .where(Parcels.parcel_id.in_(list(parcel_ids)))
-                .where(Parcels.status == from_status)
-                .order_by(Parcels.parcel_id)
-                .with_for_update()
-            )
-        ).all()
-        if not locked:
+        moved = list(
+            (
+                await self.conn.scalars(
+                    select(Parcels.parcel_id)
+                    .where(Parcels.parcel_id.in_(list(parcel_ids)))
+                    .where(Parcels.status == from_status)
+                    .order_by(Parcels.parcel_id)
+                    .with_for_update()
+                )
+            ).all()
+        )
+        if not moved:
             return []
-        moved = [parcel_id for parcel_id, _ in locked]
 
         values: dict = {"status": to_status}
         if backend is not None:
@@ -508,17 +501,6 @@ class TransformationDB(BaseSQLDB):
             .where(Parcels.parcel_id.in_(moved))
             .where(Parcels.status == from_status)
             .values(**values)
-        )
-
-        await self._journal_transition(
-            CounterEntity.PARCEL,
-            Counter(
-                transformation_id
-                for _, transformation_id in locked
-                if transformation_id is not None
-            ),
-            from_status,
-            to_status,
         )
         return moved
 
@@ -584,46 +566,7 @@ class TransformationDB(BaseSQLDB):
                 .values(**values)
             )
 
-        await self._journal_transition(
-            CounterEntity.INPUT,
-            Counter(
-                {tid: len(input_ids) for tid, input_ids in by_transformation.items()}
-            ),
-            from_status,
-            to_status,
-        )
         return len(locked)
-
-    async def _journal_transition(
-        self,
-        entity: CounterEntity,
-        counts: Counter[UUID],
-        from_status: ParcelStatus | InputStatus,
-        to_status: ParcelStatus | InputStatus,
-    ) -> None:
-        """Append the counter deltas of a bulk transition (DX-ADR-009).
-
-        A transition of ``N`` rows of one transformation journals two rows,
-        ``(-N, from_status)`` and ``(+N, to_status)``, already aggregated.
-
-        Args:
-            entity: Whether inputs or parcels moved.
-            counts: Number of rows moved, per transformation.
-            from_status: Status the rows left.
-            to_status: Status the rows entered.
-        """
-        rows = [
-            {
-                "TransformationID": transformation_id,
-                "Entity": entity,
-                "Status": status.value,
-                "CountDelta": sign * count,
-            }
-            for transformation_id, count in counts.items()
-            for status, sign in ((from_status, -1), (to_status, +1))
-        ]
-        if rows:
-            await self.conn.execute(insert(TRANSFORMATION_COUNTER.journal), rows)
 
     async def _update_unassigned_inputs(
         self,

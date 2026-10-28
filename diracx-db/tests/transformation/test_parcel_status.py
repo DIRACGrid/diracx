@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import event, func, insert, select
+from sqlalchemy import event, insert, select
 from uuid_utils import UUID, uuid7
 
 from diracx.core.models.transformation import (
-    CounterEntity,
     InputStatus,
     ParcelStatus,
     TransformationKind,
 )
 from diracx.db.sql import TransformationDB
 from diracx.db.sql.transformation.schema import (
-    TRANSFORMATION_COUNTER,
     Inputs,
     Ownership,
     ParcelInputs,
@@ -102,17 +100,6 @@ async def add_parcel(
     return parcel_id
 
 
-async def journal(db: TransformationDB) -> dict[tuple[str, str], int]:
-    """Sum the transformation counter journal per ``(Entity, Status)``."""
-    table = TRANSFORMATION_COUNTER.journal
-    rows = await db.conn.execute(
-        select(table.c.Entity, table.c.Status, func.sum(table.c.CountDelta)).group_by(
-            table.c.Entity, table.c.Status
-        )
-    )
-    return {(str(entity), str(status)): total for entity, status, total in rows}
-
-
 async def test_get_parcel_ids_filters_and_orders(
     transformation_db: TransformationDB, transformation_id: UUID
 ):
@@ -165,7 +152,6 @@ async def test_set_parcel_status_is_compare_and_set(
                 select(Parcels.parcel_id, Parcels.status, Parcels.backend)
             )
         ).all()
-        deltas = await journal(db)
 
     assert moved == [unassigned]
     assert moved_again == []
@@ -175,11 +161,6 @@ async def test_set_parcel_status_is_compare_and_set(
             (already_reserved, ParcelStatus.RESERVED, None),
         ]
     )
-    # Only the parcel actually moved is journalled
-    assert deltas == {
-        (CounterEntity.PARCEL, ParcelStatus.UNASSIGNED): -1,
-        (CounterEntity.PARCEL, ParcelStatus.RESERVED): 1,
-    }
 
 
 async def test_final_status_stamps_completion_time(
@@ -199,17 +180,10 @@ async def test_final_status_stamps_completion_time(
             [parcel_id], ParcelStatus.COMPLETING, ParcelStatus.DONE
         )
         assert await db.conn.scalar(select(Parcels.completed_at)) is not None
-        deltas = await journal(db)
-
-    # Passing through Completing nets to zero
-    assert deltas == {
-        (CounterEntity.PARCEL, ParcelStatus.ASSIGNED): -1,
-        (CounterEntity.PARCEL, ParcelStatus.COMPLETING): 0,
-        (CounterEntity.PARCEL, ParcelStatus.DONE): 1,
-    }
 
 
-async def test_user_parcels_are_not_journalled(transformation_db: TransformationDB):
+async def test_user_parcels_can_move(transformation_db: TransformationDB):
+    """User parcels have no transformation."""
     async with transformation_db as db:
         parcel_id = await add_parcel(db, None)
 
@@ -217,10 +191,8 @@ async def test_user_parcels_are_not_journalled(transformation_db: Transformation
         moved = await db.set_parcel_status(
             [parcel_id], ParcelStatus.UNASSIGNED, ParcelStatus.RESERVED
         )
-        deltas = await journal(db)
 
     assert moved == [parcel_id]
-    assert deltas == {}
 
 
 async def test_set_parcel_input_status(
@@ -246,17 +218,12 @@ async def test_set_parcel_input_status(
                 select(Inputs.last_parcel_id, Inputs.status, Inputs.error_count)
             )
         ).all()
-        deltas = await journal(db)
 
     assert moved == 3
     assert sorted(rows) == sorted(
         [(parcel_id, InputStatus.FAILED, 1)] * 3
         + [(other_parcel_id, InputStatus.ASSIGNED, 0)]
     )
-    assert deltas == {
-        (CounterEntity.INPUT, InputStatus.ASSIGNED): -3,
-        (CounterEntity.INPUT, InputStatus.FAILED): 3,
-    }
 
 
 async def test_empty_transitions_do_nothing(transformation_db: TransformationDB):
@@ -273,4 +240,3 @@ async def test_empty_transitions_do_nothing(transformation_db: TransformationDB)
             )
             == 0
         )
-        assert await journal(db) == {}
