@@ -5,9 +5,8 @@ and what else it implies, because the state machines are enforced here rather
 than in the database (DX-ADR-005, Rejected Ideas).
 
 Every change made by :func:`set_parcel_status` happens on the connection of the
-``TransformationDB`` it is given, so the parcel transition, the input
-transitions it implies and all their counter-journal rows commit or roll back
-together.
+``TransformationDB`` it is given, so the parcel transition and the input
+transitions it implies commit or roll back together.
 """
 
 from __future__ import annotations
