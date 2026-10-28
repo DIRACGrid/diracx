@@ -6,6 +6,13 @@ import pytest
 from sqlalchemy import event, insert, select
 from uuid_utils import UUID, uuid7
 
+from diracx.core.exceptions import InvalidQueryError
+from diracx.core.models.search import (
+    ScalarSearchOperator,
+    SearchSpec,
+    SortDirection,
+    SortSpec,
+)
 from diracx.core.models.transformation import (
     InputStatus,
     ParcelStatus,
@@ -100,31 +107,75 @@ async def add_parcel(
     return parcel_id
 
 
-async def test_get_parcel_ids_filters_and_orders(
+def unassigned(kind: TransformationKind) -> list[SearchSpec]:
+    return [
+        {
+            "parameter": "Status",
+            "operator": ScalarSearchOperator.EQUAL,
+            "value": ParcelStatus.UNASSIGNED,
+        },
+        {"parameter": "Kind", "operator": ScalarSearchOperator.EQUAL, "value": kind},
+    ]
+
+
+OLDEST_FIRST: list[SortSpec] = [
+    {"parameter": "ParcelID", "direction": SortDirection.ASC}
+]
+
+
+async def test_search_parcels_filters_and_orders(
     transformation_db: TransformationDB, transformation_id: UUID
 ):
     async with transformation_db as db:
         first = await add_parcel(db, transformation_id)
         second = await add_parcel(db, transformation_id)
         pinned = await add_parcel(db, transformation_id, backend="htcondor")
+        dummy = await add_parcel(db, transformation_id, backend="dummy")
         await add_parcel(db, transformation_id, kind=TransformationKind.DATA)
         await add_parcel(db, transformation_id, status=ParcelStatus.DONE)
 
     async with transformation_db as db:
-        compute = await db.get_parcel_ids(
-            ParcelStatus.UNASSIGNED, kind=TransformationKind.COMPUTE
+        compute = await db.search_parcels(
+            ["ParcelID"], unassigned(TransformationKind.COMPUTE), OLDEST_FIRST
         )
-        unconstrained = await db.get_parcel_ids(
-            ParcelStatus.UNASSIGNED,
-            kind=TransformationKind.COMPUTE,
+        unconstrained = await db.search_parcels(
+            ["ParcelID"],
+            unassigned(TransformationKind.COMPUTE),
+            OLDEST_FIRST,
             backends=[None, "dummy"],
         )
-        limited = await db.get_parcel_ids(ParcelStatus.UNASSIGNED, limit=1)
+        only_dummy = await db.search_parcels(
+            ["ParcelID"],
+            unassigned(TransformationKind.COMPUTE),
+            OLDEST_FIRST,
+            backends=["dummy"],
+        )
+        limited = await db.search_parcels(
+            ["ParcelID", "Backend"],
+            unassigned(TransformationKind.COMPUTE),
+            OLDEST_FIRST,
+            backends=[None, "dummy"],
+            per_page=1,
+            page=2,
+        )
+
+    def ids(result):
+        return [row["ParcelID"] for row in result[1]]
 
     # UUIDv7 key order is creation order
-    assert compute == [first, second, pinned]
-    assert unconstrained == [first, second]
-    assert limited == [first]
+    assert compute[0] == 4
+    assert ids(compute) == [first, second, pinned, dummy]
+    assert ids(unconstrained) == [first, second, dummy]
+    assert ids(only_dummy) == [dummy]
+    # The total counts every match, the page holds only the requested rows
+    assert limited == (3, [{"ParcelID": second, "Backend": None}])
+
+
+async def test_search_parcels_rejects_bad_pages(transformation_db: TransformationDB):
+    async with transformation_db as db:
+        for page, per_page in [(0, 10), (1, 0)]:
+            with pytest.raises(InvalidQueryError):
+                await db.search_parcels(None, [], [], per_page=per_page, page=page)
 
 
 async def test_set_parcel_status_is_compare_and_set(
