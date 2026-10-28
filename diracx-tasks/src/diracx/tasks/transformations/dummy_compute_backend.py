@@ -36,6 +36,7 @@ from typing import Annotated
 from pydantic import NonNegativeInt, PositiveInt
 from uuid_utils import UUID
 
+from diracx.core.models.search import ScalarSearchOperator, SortDirection
 from diracx.core.models.transformation import ParcelStatus, TransformationKind
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
@@ -102,13 +103,30 @@ class DummyComputeBackendMonitorTask(PeriodicBaseTask):
         transformation_db: Annotated[TransformationDB, NoTransaction()],
     ) -> int:
         async with transformation_db:
-            parcel_ids = await transformation_db.get_parcel_ids(
-                ParcelStatus.UNASSIGNED,
-                kind=TransformationKind.COMPUTE,
+            # The oldest first: the parcel identifier is a UUIDv7, so key
+            # order is creation order, the order the dispatcher claims in
+            # (DX-ADR-003)
+            _, parcels = await transformation_db.search_parcels(
+                ["ParcelID"],
+                [
+                    {
+                        "parameter": "Status",
+                        "operator": ScalarSearchOperator.EQUAL,
+                        "value": ParcelStatus.UNASSIGNED,
+                    },
+                    {
+                        "parameter": "Kind",
+                        "operator": ScalarSearchOperator.EQUAL,
+                        "value": TransformationKind.COMPUTE,
+                    },
+                ],
+                [{"parameter": "ParcelID", "direction": SortDirection.ASC}],
                 # Leave alone parcels the packer pinned to another backend
                 backends=[None, BACKEND_NAME],
-                limit=_settings.max_parcels_per_cycle,
+                per_page=_settings.max_parcels_per_cycle,
+                page=1,
             )
+            parcel_ids = [parcel["ParcelID"] for parcel in parcels]
             if not parcel_ids:
                 return 0
 

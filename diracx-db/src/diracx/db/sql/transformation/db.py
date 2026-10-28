@@ -13,8 +13,10 @@ from uuid_utils import UUID
 
 from diracx.core.exceptions import (
     InputStatusConflictError,
+    InvalidQueryError,
     TransformationNotFoundError,
 )
+from diracx.core.models.search import SearchSpec, SortSpec
 from diracx.core.models.transformation import (
     PARCEL_TRANSITIONS,
     InputStatus,
@@ -23,7 +25,13 @@ from diracx.core.models.transformation import (
     TransformationKind,
     TransformationStatus,
 )
-from diracx.db.sql.utils import BaseSQLDB, utcnow
+from diracx.db.sql.utils import (
+    BaseSQLDB,
+    _get_columns,
+    apply_search_filters,
+    apply_sort_constraints,
+    utcnow,
+)
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
 from .schema import Base as TransformationDBBase
@@ -407,42 +415,65 @@ class TransformationDB(BaseSQLDB):
             transformation_id, input_ids, delayed_until=until
         )
 
-    async def get_parcel_ids(
+    async def search_parcels(
         self,
-        status: ParcelStatus,
+        parameters: list[str] | None,
+        search: list[SearchSpec],
+        sorts: list[SortSpec],
         *,
-        kind: TransformationKind | None = None,
         backends: Collection[str | None] | None = None,
-        limit: int | None = None,
-    ) -> list[UUID]:
-        """Return the identifiers of the parcels in a status, in key order.
+        distinct: bool = False,
+        per_page: int = 100,
+        page: int | None = None,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        """Search for parcels in the database.
 
-        The parcel identifier is a UUIDv7, so key order is creation order:
-        the oldest parcels come first, which is the order the dispatcher
-        claims in (DX-ADR-003).
+        This follows the ``search`` of the other databases, with one addition:
+        a parcel's backend can be matched against a set of names that includes
+        "no backend", which the search conditions cannot express.
 
         Args:
-            status: Status the parcels must be in.
-            kind: If given, only parcels of this kind.
+            parameters: Optional parcel fields to include in each result.
+            search: Search conditions to apply.
+            sorts: Sort specifications to apply.
             backends: If given, only parcels whose backend is one of these;
                 ``None`` in the collection matches parcels with no backend
                 yet, i.e. those the packer did not constrain (DX-ADR-003).
-            limit: Maximum number of identifiers to return.
+            distinct: Whether to return distinct results.
+            per_page: Maximum number of results per page.
+            page: Optional one-based page number for pagination.
 
         Returns:
-            The parcel identifiers, oldest first.
+            Total matching parcel count and the requested page of parcel
+            records.
         """
-        stmt = select(Parcels.parcel_id).where(Parcels.status == status)
-        if kind is not None:
-            stmt = stmt.where(Parcels.kind == kind)
+        table = Parcels.__table__
+        stmt = select(*_get_columns(table, parameters))
+        stmt = apply_search_filters(table, stmt, search)
         if backends is not None:
             names = [name for name in backends if name is not None]
             condition = Parcels.backend.in_(names)
             if None in backends:
                 condition = condition | Parcels.backend.is_(None)
             stmt = stmt.where(condition)
-        stmt = stmt.order_by(Parcels.parcel_id).limit(limit)
-        return list((await self.conn.scalars(stmt)).all())
+        stmt = apply_sort_constraints(table, stmt, sorts)
+        if distinct:
+            stmt = stmt.distinct()
+
+        total = (
+            await self.conn.execute(select(func.count()).select_from(stmt.alias()))
+        ).scalar_one()
+
+        if page is not None:
+            if page < 1:
+                raise InvalidQueryError("Page must be a positive integer")
+            if per_page < 1:
+                raise InvalidQueryError("Per page must be a positive integer")
+            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+        return total, [
+            dict(row._mapping) async for row in (await self.conn.stream(stmt))
+        ]
 
     async def set_parcel_status(
         self,
