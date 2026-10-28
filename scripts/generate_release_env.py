@@ -71,8 +71,6 @@ POLICY_ENTRIES = (
         "DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE",
         Rule("structural_placeholder", "file:///path/to/jwks.json"),
     ),
-    ("DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED", Rule("safe_literal", "true")),
-    ("DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS", Rule("safe_literal", "10")),
     (
         "DIRACX_TASKS_REDIS_URL",
         Rule("url_placeholder", "redis://redis.example.invalid:6379"),
@@ -145,7 +143,6 @@ CLASS_SOURCES = {
     "SandboxStoreSettings": "diracx-core/src/diracx/core/settings.py",
     "FactorySettings": "diracx-core/src/diracx/core/settings.py",
     "OTELSettings": "diracx-routers/src/diracx/routers/otel.py",
-    "DummyJobExecutorSettings": "diracx-tasks/src/diracx/tasks/jobs/dummy_job_executor.py",
 }
 
 

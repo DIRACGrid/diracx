@@ -1,9 +1,7 @@
 """A compute backend that pretends to run parcels, for demo deployments.
 
-This replaces, for the Transformation System, what the dummy job executor
-does for WMS jobs: it reads parcels from the ``TransformationDB`` rather than
-jobs from the ``JobDB``, and walks each one through the parcel state machine
-of DX-ADR-005 instead of the job state machine.
+It reads parcels from the ``TransformationDB`` and walks each one through the
+parcel state machine of DX-ADR-005.
 
 It stands in for two components that do not exist yet:
 
@@ -16,7 +14,7 @@ Every parcel succeeds and produces no output files, so no output is
 registered while it is ``Completing``. Reaching ``Done`` moves the parcel's
 inputs to ``Processed`` (see ``diracx.logic.transformations``).
 
-The work is split the same way as for the dummy job executor:
+The work is split in two tasks:
 
 * :class:`DummyComputeBackendMonitorTask` runs periodically, claims and
   "submits" a batch of parcels, then schedules one
