@@ -41,8 +41,6 @@ import asyncio
 import dataclasses
 import logging
 import sys
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -55,7 +53,7 @@ from diracx.core.models.transformation import (
     ParcelStatus,
     TransformationKind,
 )
-from diracx.core.settings import FactorySettings, ServiceSettingsBase
+from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
 from diracx.db.sql.transformation.schema import (
     Inputs,
@@ -67,7 +65,6 @@ from diracx.db.sql.transformation.schema import (
 from diracx.db.sql.utils import BaseSQLDB
 from diracx.logic.transformations import set_parcel_status
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
-from diracx.tasks.plumbing.broker import RedisStreamBroker, TaskBinding
 from diracx.tasks.plumbing.depends import NoTransaction
 from diracx.tasks.plumbing.enums import Priority, Size
 from diracx.tasks.plumbing.lock_registry import PARCEL
@@ -80,8 +77,6 @@ logger = logging.getLogger(__name__)
 # Recorded in Parcels.Backend, so the dummy's parcels can be told apart from
 # those of real backends
 BACKEND_NAME = "dummy"
-# Entry point of DummyComputeBackendTask, under which the workers look it up
-COMPLETION_TASK_NAME = "transformation:DummyComputeBackendTask"
 
 
 class DummyComputeBackendSettings(ServiceSettingsBase):
@@ -166,43 +161,11 @@ class DummyComputeBackendMonitorTask(PeriodicBaseTask):
         # parcels Assigned with no completion task; reconciling such parcels
         # is an open issue of DX-ADR-003 for real backends too
         complete_at = datetime.now(UTC) + timedelta(seconds=_settings.runtime_seconds)
-        async with _broker_bound():
-            for parcel_id in submitted:
-                await DummyComputeBackendTask(parcel_id=str(parcel_id)).schedule(
-                    at_time=complete_at
-                )
-        return len(submitted)
-
-
-def _make_broker() -> RedisStreamBroker:
-    return RedisStreamBroker(url=FactorySettings().tasks_redis_url)
-
-
-@asynccontextmanager
-async def _broker_bound() -> AsyncIterator[None]:
-    """Make sure the completion tasks can be scheduled.
-
-    A worker binds the tasks to its broker, but ``diracx-tasks call`` runs the
-    monitor without one, so in that case a broker is bound here while the
-    completion tasks are scheduled.
-    """
-    if BaseTask._broker_registry.get() is not None:
-        yield
-        return
-    broker = _make_broker()
-    await broker.startup()
-    token = BaseTask._broker_registry.set(
-        {
-            DummyComputeBackendTask: TaskBinding(
-                broker=broker, task_name=COMPLETION_TASK_NAME
+        for parcel_id in submitted:
+            await DummyComputeBackendTask(parcel_id=str(parcel_id)).schedule(
+                at_time=complete_at
             )
-        }
-    )
-    try:
-        yield
-    finally:
-        BaseTask._broker_registry.reset(token)
-        await broker.shutdown()
+        return len(submitted)
 
 
 @dataclasses.dataclass
