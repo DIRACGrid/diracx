@@ -60,7 +60,9 @@ parcels in the `TransformationDB` rather than on jobs. The periodic
 parcels, moves them through `Reserved` to `Assigned` on the `dummy` backend,
 and schedules a one-shot `transformations:DummyComputeBackendTask` for each,
 which walks the parcel through `Completing` to `Done` and moves its inputs to
-`Processed`. Parcels the packer pinned to another backend are left alone.
+`Processed`. Parcels the packer pinned to another backend are left alone. See
+[Dummy compute backend](../../../dev/explanations/tasks/dummy-compute-backend.md)
+for how it works.
 
 Automatic monitoring is disabled by default. `run_local.sh` enables it every
 10 seconds with `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_ENABLED=true` and
