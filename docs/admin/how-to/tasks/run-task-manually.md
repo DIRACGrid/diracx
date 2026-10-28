@@ -56,9 +56,9 @@ diracx-tasks call jobs:DummyJobExecutorTask --args '[42]'
 
 The Transformation System counterpart of the dummy job executor works on
 parcels in the `TransformationDB` rather than on jobs. The periodic
-`transformation:DummyComputeBackendMonitorTask` claims `Unassigned` compute
+`transformations:DummyComputeBackendMonitorTask` claims `Unassigned` compute
 parcels, moves them through `Reserved` to `Assigned` on the `dummy` backend,
-and schedules a one-shot `transformation:DummyComputeBackendTask` for each,
+and schedules a one-shot `transformations:DummyComputeBackendTask` for each,
 which walks the parcel through `Completing` to `Done` and moves its inputs to
 `Processed`. Parcels the packer pinned to another backend are left alone.
 
@@ -70,13 +70,13 @@ Automatic monitoring is disabled by default. `run_local.sh` enables it every
 Run the monitor once to submit the waiting parcels:
 
 ```bash
-diracx-tasks call transformation:DummyComputeBackendMonitorTask
+diracx-tasks call transformations:DummyComputeBackendMonitorTask
 ```
 
 Or complete a single `Assigned` parcel by passing its identifier:
 
 ```bash
-diracx-tasks call transformation:DummyComputeBackendTask --args '["0199c5a4-7c1e-7d3f-8a2b-3c4d5e6f7a8b"]'
+diracx-tasks call transformations:DummyComputeBackendTask --args '["0199c5a4-7c1e-7d3f-8a2b-3c4d5e6f7a8b"]'
 ```
 
 ## Debugging
