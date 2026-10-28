@@ -48,7 +48,7 @@ Symptom: the *Backlog* stat and the *Backlog by stream* panel grow, and *Submitt
 
 *Given up* shows the tasks which exhausted their retries:
 
-- `dlq`: persisted in the dead letter queue. The *Dead letter queue* panel shows how many tasks it contains, per task and status; the traceback of the last attempt is in the `last_error` column of the `dlq_tasks` table. See [Operate the task system](../tasks/operate.md#handle-the-dead-letter-queue);
+- `dlq`: persisted in the dead letter queue. The *Dead letter queue* panel shows how many tasks it contains, per task and status; the traceback of the last attempt is in the `LastError` column of the `DeadLetterQueue` table. See [Operate the task system](../tasks/operate.md#handle-the-dead-letter-queue);
 - `discarded`: the task is not dlq-eligible, it is dropped by design;
 - `dlq_failed`: the task should have been persisted but could not be (no `TaskDB` configured, or database error). **It is lost**: check the worker logs.
 

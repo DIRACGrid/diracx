@@ -292,7 +292,7 @@ async def test_collect_stream_stats(broker):
 
 @pytest.fixture
 async def task_db():
-    from diracx.tasks.plumbing.persistence.dlq import TaskDB
+    from diracx.db.sql import TaskDB
 
     db = TaskDB("sqlite+aiosqlite:///:memory:")
     async with db.engine_context():
@@ -313,7 +313,7 @@ async def test_task_db_counts_the_dead_letter_queue(task_db):
             ("test:A", "PENDING"): 2,
             ("test:B", "FAILED"): 1,
         }
-        errors = {task["last_error"] for task in await task_db.get_pending_tasks()}
+        errors = {task["LastError"] for task in await task_db.get_pending_tasks()}
     assert errors == {"ValueError: boom", None}
 
 

@@ -1435,8 +1435,8 @@ class JobsOperations:
 
         Each job ID maps to one or more timestamped updates. The update fields are
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
-        source defaults to ``"Unknown"``. Set ``force`` to override normal status
-        transition checks.
+        source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+        machine; only job administrators may do so.
 
         Jobs that cannot be updated are listed under ``failed`` in the response. The
         request fails with 404 only when no job could be updated.
@@ -1463,8 +1463,8 @@ class JobsOperations:
 
         Each job ID maps to one or more timestamped updates. The update fields are
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
-        source defaults to ``"Unknown"``. Set ``force`` to override normal status
-        transition checks.
+        source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+        machine; only job administrators may do so.
 
         Jobs that cannot be updated are listed under ``failed`` in the response. The
         request fails with 404 only when no job could be updated.
@@ -1495,8 +1495,8 @@ class JobsOperations:
 
         Each job ID maps to one or more timestamped updates. The update fields are
         ``Status``\\ , ``MinorStatus``\\ , ``ApplicationStatus``\\ , and ``Source``\\ ; the
-        source defaults to ``"Unknown"``. Set ``force`` to override normal status
-        transition checks.
+        source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+        machine; only job administrators may do so.
 
         Jobs that cannot be updated are listed under ``failed`` in the response. The
         request fails with 404 only when no job could be updated.
@@ -1802,12 +1802,14 @@ class JobsOperations:
     ) -> None:
         """Patch Metadata.
 
-        Update job attributes and parameters.
+        Update job parameters and a restricted set of job attributes.
 
-        The request body maps job IDs to the attributes or parameters to update
-        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
-        except its ID may be set. Fields matching known job attributes are
-        updated on the job record; other fields are stored as job parameters.
+        The request body maps job IDs to the fields to update. Only the ``Site``
+        job attribute may be set here; any other job attribute (such as ``Owner``
+        or ``UserPriority``\\ ) is refused with 400 and nothing is written. Statuses
+        are set through ``PATCH /api/jobs/status`` and the heartbeat through
+        ``PATCH /api/jobs/heartbeat``. Fields that are not job attributes are
+        stored as job parameters.
 
         :param body: Required.
         :type body: dict[str, ~_generated.models.JobMetaData]
@@ -1823,12 +1825,14 @@ class JobsOperations:
     async def patch_metadata(self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any) -> None:
         """Patch Metadata.
 
-        Update job attributes and parameters.
+        Update job parameters and a restricted set of job attributes.
 
-        The request body maps job IDs to the attributes or parameters to update
-        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
-        except its ID may be set. Fields matching known job attributes are
-        updated on the job record; other fields are stored as job parameters.
+        The request body maps job IDs to the fields to update. Only the ``Site``
+        job attribute may be set here; any other job attribute (such as ``Owner``
+        or ``UserPriority``\\ ) is refused with 400 and nothing is written. Statuses
+        are set through ``PATCH /api/jobs/status`` and the heartbeat through
+        ``PATCH /api/jobs/heartbeat``. Fields that are not job attributes are
+        stored as job parameters.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -1844,12 +1848,14 @@ class JobsOperations:
     async def patch_metadata(self, body: Union[dict[str, _models.JobMetaData], IO[bytes]], **kwargs: Any) -> None:
         """Patch Metadata.
 
-        Update job attributes and parameters.
+        Update job parameters and a restricted set of job attributes.
 
-        The request body maps job IDs to the attributes or parameters to update
-        (such as ``UserPriority`` or ``HeartBeatTime``\\ ); any field of a job
-        except its ID may be set. Fields matching known job attributes are
-        updated on the job record; other fields are stored as job parameters.
+        The request body maps job IDs to the fields to update. Only the ``Site``
+        job attribute may be set here; any other job attribute (such as ``Owner``
+        or ``UserPriority``\\ ) is refused with 400 and nothing is written. Statuses
+        are set through ``PATCH /api/jobs/status`` and the heartbeat through
+        ``PATCH /api/jobs/heartbeat``. Fields that are not job attributes are
+        stored as job parameters.
 
         :param body: Is either a {str: JobMetaData} type or a IO[bytes] type. Required.
         :type body: dict[str, ~_generated.models.JobMetaData] or IO[bytes]

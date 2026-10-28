@@ -4,6 +4,7 @@ import asyncio
 import logging
 import weakref
 from collections.abc import Iterable
+from contextlib import AsyncExitStack
 from datetime import UTC, datetime, timedelta
 from time import time
 from typing import Any, Awaitable, Callable
@@ -15,6 +16,7 @@ from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from redis.asyncio import Redis
 
 from diracx.core.logs import log_context
+from diracx.db.sql import TaskDB
 
 from .._redis_types import CallbackRegistry, LockCoordinator
 from ..base_task import BaseTask
@@ -22,7 +24,6 @@ from ..broker.models import ReceivedMessage, TaskMessage, TaskResult
 from ..broker.redis_streams import RedisStreamBroker
 from ..callbacks import fire_callback, on_child_complete
 from ..exceptions import UnableToAcquireLockError
-from ..persistence.dlq import TaskDB
 from ..scheduler.scheduler import schedule_delayed
 from .di_resolver import solve_task_dependencies
 
@@ -739,7 +740,9 @@ class Worker:
         found_exception: BaseException | None = None
 
         dep_kwargs: dict[str, Any] = {}
-        async_exit_stack = None
+        # async_exit_stack must be initialized here since a task without
+        # "_dependant" would otherwise hit 'async with None' and crash
+        async_exit_stack = AsyncExitStack()
 
         try:
             if hasattr(task_func, "_dependant"):
@@ -748,16 +751,17 @@ class Worker:
                     dependency_overrides=self.broker.dependency_overrides,
                 )
 
-            # Obtain a Redis connection for lock acquisition
-            redis = await self._get_redis()
-            async with redis:
-                all_kwargs = {
-                    **dep_kwargs,
-                    **task_message.task_kwargs,
-                }
-                returned = await task_func(
-                    *task_message.task_args, _redis=redis, **all_kwargs
-                )
+            async with async_exit_stack:
+                # Obtain a Redis connection for lock acquisition
+                redis = await self._get_redis()
+                async with redis:
+                    all_kwargs = {
+                        **dep_kwargs,
+                        **task_message.task_kwargs,
+                    }
+                    returned = await task_func(
+                        *task_message.task_args, _redis=redis, **all_kwargs
+                    )
 
         except UnableToAcquireLockError:
             logger.info(
@@ -784,13 +788,6 @@ class Worker:
                 exc,
                 exc_info=True,
             )
-
-        finally:
-            if async_exit_stack:
-                try:
-                    await async_exit_stack.aclose()
-                except Exception:
-                    logger.debug("Error closing exit stack", exc_info=True)
 
         execution_time = time() - start_time
 

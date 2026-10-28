@@ -87,8 +87,8 @@ async def set_job_statuses(
 
     Each job ID maps to one or more timestamped updates. The update fields are
     ``Status``, ``MinorStatus``, ``ApplicationStatus``, and ``Source``; the
-    source defaults to ``"Unknown"``. Set ``force`` to override normal status
-    transition checks.
+    source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+    machine; only job administrators may do so.
 
     Jobs that cannot be updated are listed under ``failed`` in the response. The
     request fails with 404 only when no job could be updated.
@@ -102,17 +102,20 @@ async def set_job_statuses(
         job_logging_db: Database storing job status history.
         task_queue_db: Database used to update task-queue state when required.
         check_permissions: Access-policy dependency used to authorize job management.
-        force: Whether to bypass normal status transition checks.
+        force: Whether to bypass the job state machine (job administrators only).
 
     Returns:
         Per-job status-update successes and failures.
 
     Raises:
         HTTPException: If an update is invalid (400), no job could be updated
-            (404), or the user cannot manage the requested jobs (403).
+            (404), or the user cannot manage the requested jobs, or requests
+            ``force`` without being a job administrator (403).
     """
     await check_permissions(
-        action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)
+        action=ActionType.FORCE_STATUS if force else ActionType.MANAGE,
+        job_db=job_db,
+        job_ids=list(job_update),
     )
 
     try:
@@ -303,15 +306,11 @@ EXAMPLE_METADATA = {
     "Default": {
         "value": {
             1: {
-                "UserPriority": 2,
-                "HeartBeatTime": str(datetime.now(timezone.utc)),
-                "Status": "Done",
                 "Site": "Meyrin",
             },
             2: {
-                "UserPriority": 1,
-                "HeartBeatTime": str(datetime.now(timezone.utc)),
-                "JobType": "AnotherType",
+                "CPUNormalizationFactor": 10,
+                "HostName": "some-worker-node.example.org",
             },
         }
     }
@@ -325,12 +324,14 @@ async def patch_metadata(
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Update job attributes and parameters.
+    """Update job parameters and a restricted set of job attributes.
 
-    The request body maps job IDs to the attributes or parameters to update
-    (such as ``UserPriority`` or ``HeartBeatTime``); any field of a job
-    except its ID may be set. Fields matching known job attributes are
-    updated on the job record; other fields are stored as job parameters.
+    The request body maps job IDs to the fields to update. Only the ``Site``
+    job attribute may be set here; any other job attribute (such as ``Owner``
+    or ``UserPriority``) is refused with 400 and nothing is written. Statuses
+    are set through ``PATCH /api/jobs/status`` and the heartbeat through
+    ``PATCH /api/jobs/heartbeat``. Fields that are not job attributes are
+    stored as job parameters.
 
     \f
 
@@ -341,8 +342,9 @@ async def patch_metadata(
         check_permissions: Access-policy dependency used to authorize job management.
 
     Raises:
-        HTTPException: If an update is invalid (400), a job is not found (404),
-            or the user cannot manage the requested jobs (403).
+        HTTPException: If an update is invalid or sets an immutable job
+            attribute (400), a job is not found (404), or the user cannot
+            manage the requested jobs (403).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
     try:

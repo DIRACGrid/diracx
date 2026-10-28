@@ -188,14 +188,14 @@ The score is the Unix time at which the scheduler will put the task back in its 
 
 ## 7. Find the task in the dead letter queue
 
-The tasks given up are stored in the `dlq_tasks` table of the `TaskDB`.
+The tasks given up are stored in the `DeadLetterQueue` table of the `TaskDB`.
 Locally, it is a SQLite file, whose path is shown in the `INSERT ... taskdb.db` span above:
 
 ```bash
 pixi run -e default-gubbins python -c "
 import sqlite3
 db = sqlite3.connect('/tmp/tmp.lNn1symIA9/taskdb.db')  # use your path
-for row in db.execute('SELECT id, task_class, status, submitted_at, last_error FROM dlq_tasks'):
+for row in db.execute('SELECT ID, TaskClass, Status, SubmittedAt, LastError FROM DeadLetterQueue'):
     print(row)
 "
 ```
@@ -204,7 +204,7 @@ for row in db.execute('SELECT id, task_class, status, submitted_at, last_error F
 (1, 'lollygag:SyncOwnersTask', 'PENDING', '2026-09-30 20:20:18', 'Traceback (most recent call last):\n ... TypeError: SyncOwnersTask.__init__() missing 1 required positional argument: \'owner_name\'\n')
 ```
 
-`last_error` holds the traceback of the last attempt.
+`LastError` holds the traceback of the last attempt.
 The scheduler also counts the tasks of the dead letter queue every minute; among the metrics:
 
 ```

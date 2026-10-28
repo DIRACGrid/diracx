@@ -147,7 +147,7 @@ The framework lives in `diracx-tasks` under `diracx.tasks.plumbing`. Domain-spec
 | `plumbing/scheduler/scheduler.py`  | `TaskScheduler` — singleton that manages periodic task schedules and promotes delayed tasks             |
 | `plumbing/locks.py`                | Lock primitives: `MutexLock`, `ExclusiveRWLock`, `SharedRWLock`, `RateLimiter`, `ConcurrencyLimiter`    |
 | `plumbing/callbacks.py`            | Fan-out/fan-in: `spawn_with_callback` creates child tasks, fires a callback when all complete           |
-| `plumbing/persistence/dlq.py`      | `TaskDB` — SQL-backed dead-letter queue for tasks marked `dlq_eligible`                                 |
+| `diracx.db.sql.task`               | `TaskDB` — SQL-backed dead-letter queue for tasks marked `dlq_eligible` (lives in `diracx-db`)          |
 | `plumbing/base_task.py`            | `BaseTask`, `PeriodicBaseTask`, `PeriodicVoAwareBaseTask` base classes                                  |
 | `plumbing/lock_registry.py`        | `LockedObjectType` registry and `register_locked_object_type()`                                         |
 | `plumbing/depends.py`              | Auto-detection of DB/Settings dependencies (`auto_inject_depends`) shared between tasks and routers     |

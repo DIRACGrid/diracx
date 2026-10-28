@@ -100,7 +100,7 @@ jobs:
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
         if: steps.check-tag.outputs.create-release == 'true'
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           # Generate and upload PEP 740 attestations (build provenance) for the wheels.
           attestations: true

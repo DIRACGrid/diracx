@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/DIRACGrid/diracx/compare/v0.6.1...v0.7.0) (2026-10-27)
+
+
+### Features
+
+* **db:** add TransformationDB schema (DX-ADR-004) ([#1074](https://github.com/DIRACGrid/diracx/issues/1074)) ([085ded6](https://github.com/DIRACGrid/diracx/commit/085ded6da690837bc420370ff32d5062878ae33d))
+
+
+### Bug Fixes
+
+* **deps:** allow pytest 9.1 ([#1124](https://github.com/DIRACGrid/diracx/issues/1124)) ([db1cab9](https://github.com/DIRACGrid/diracx/commit/db1cab95725739f1cb0bee52c1b035b25f4fb999))
+* **deps:** update fastapi to 0.141 ([#1123](https://github.com/DIRACGrid/diracx/issues/1123)) ([b45afb1](https://github.com/DIRACGrid/diracx/commit/b45afb12cae549cc58d894ed54963244e3a31fef))
+* return all sandboxes assigned to a job ([#1095](https://github.com/DIRACGrid/diracx/issues/1095)) ([5e22114](https://github.com/DIRACGrid/diracx/commit/5e22114e92ecaceb8ced527dcc6afc03c5fc1c4f))
+* **routers:** find dependencies added when including a router ([#1125](https://github.com/DIRACGrid/diracx/issues/1125)) ([3223011](https://github.com/DIRACGrid/diracx/commit/3223011c5b8cc1d0a77636470ac40e76c19e9e36))
+
 ## [0.6.1](https://github.com/DIRACGrid/diracx/compare/v0.6.0...v0.6.1) (2026-10-09)
 
 
