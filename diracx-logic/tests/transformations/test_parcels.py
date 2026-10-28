@@ -103,6 +103,20 @@ async def test_forbidden_transitions_are_refused(
             )
 
 
+async def test_duplicate_parcel_ids_are_refused(transformation_db: TransformationDB):
+    async with transformation_db as db:
+        parcel_id = await add_assigned_parcel(db, n_inputs=1)
+        with pytest.raises(ValueError, match="only once"):
+            await set_parcel_status(
+                [parcel_id, parcel_id],
+                ParcelStatus.ASSIGNED,
+                ParcelStatus.COMPLETING,
+                transformation_db=db,
+            )
+        # Nothing was moved
+        assert await db.conn.scalar(select(Parcels.status)) == ParcelStatus.ASSIGNED
+
+
 async def test_partially_done_is_not_implemented(transformation_db: TransformationDB):
     async with transformation_db as db:
         with pytest.raises(NotImplementedError):
