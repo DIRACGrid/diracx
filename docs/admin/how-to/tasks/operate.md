@@ -47,8 +47,8 @@ redis-cli PTTL "lock:mutex:task:SyncOwnersTask:alice"
 
 ## Handle the dead-letter queue
 
-Tasks marked with `dlq_eligible = True` that exhaust their retries are persisted to the `TaskDB` SQL database in the `dlq_tasks` table. Dead letter queue tasks have a status of `PENDING`, `DISPATCHED`, or `FAILED`.
-The `last_error` column holds the traceback of the last failed attempt.
+Tasks marked with `dlq_eligible = True` that exhaust their retries are persisted to the `TaskDB` SQL database in the `DeadLetterQueue` table. Dead letter queue tasks have a status of `PENDING`, `DISPATCHED`, or `FAILED`.
+The `LastError` column holds the traceback of the last failed attempt.
 
 With OpenTelemetry, the scheduler reports the number of tasks in the dead letter queue per task and status (`dead_letter_queue_tasks`), shown by the *Dead letter queue* panel of the *DiracX Tasks* dashboard.
 

@@ -230,6 +230,15 @@ pinact = "*"
 gha-zizmor = {cmd = "zizmor .", description = "Run Zizmor GHA analysis"}
 gha-pinact = {cmd ="pinact run" , description = "Run Pinact GHA versions update"}
 
+# Feature for summarising changes to pixi.lock
+[feature.lock-diff.dependencies]
+python = "*"
+pixi-diff = "*"
+pixi-diff-to-markdown = "*"
+[feature.lock-diff.tasks.lock-diff]
+cmd = "python scripts/pixi_lock_diff.py"
+description = "Summarise how pixi.lock differs from origin/main, e.g. `pixi run lock-diff --base upstream/main`"
+
 # Settings documentation feature
 [feature.settings-doc.dependencies]
 python = "*"
@@ -292,6 +301,7 @@ pre-commit = {features = ["pre-commit"], no-default-feature = true}
 settings-doc = {features = ["settings-doc"], no-default-feature = true}
 adr-pdf = {features = ["adr-pdf"], no-default-feature = true}
 gha-lint = {features = ["gha-lint"], no-default-feature = true}
+lock-diff = {features = ["lock-diff"], no-default-feature = true}
 
 # Meta-tasks for running many tests at once
 [tasks.pytest-diracx-all-one-by-one]

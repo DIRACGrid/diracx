@@ -32,9 +32,6 @@ testing = ["diracx-testing", "fakeredis"]
 [project.scripts]
 diracx-tasks = "diracx.tasks.task_run:main"
 
-[project.entry-points."diracx.dbs.sql"]
-TaskDB = "diracx.tasks.plumbing.persistence:TaskDB"
-
 [project.entry-points."diracx.tasks.jobs"]
 CleanSandboxStoreTask = "diracx.tasks.jobs:CleanSandboxStoreTask"
 

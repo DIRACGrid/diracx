@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from uuid_utils import uuid7
 
-from diracx.core.properties import JOB_ADMINISTRATOR, NORMAL_USER
+from diracx.core.properties import GENERIC_PILOT, JOB_ADMINISTRATOR, NORMAL_USER
 from diracx.routers.jobs import (
     ActionType,
     SandboxAccessPolicy,
@@ -104,6 +104,29 @@ async def test_wms_access_policy_create(job_db):
     )
 
     ##############
+
+
+async def test_wms_access_policy_force_status(job_db):
+    """Only a JOB_ADMINISTRATOR can bypass the job state machine."""
+    admin_user = AuthorizedUserInfo(properties=[JOB_ADMINISTRATOR], **base_payload)
+    await WMSAccessPolicy.policy(
+        WMS_POLICY_NAME,
+        admin_user,
+        action=ActionType.FORCE_STATUS,
+        job_db=job_db,
+        job_ids=[1, 2, 3],
+    )
+
+    for properties in ([NORMAL_USER], [GENERIC_PILOT], []):
+        user = AuthorizedUserInfo(properties=properties, **base_payload)
+        with pytest.raises(HTTPException, match=f"{HTTPStatus.FORBIDDEN}"):
+            await WMSAccessPolicy.policy(
+                WMS_POLICY_NAME,
+                user,
+                action=ActionType.FORCE_STATUS,
+                job_db=job_db,
+                job_ids=[1, 2, 3],
+            )
 
 
 async def test_wms_access_policy_query(job_db):

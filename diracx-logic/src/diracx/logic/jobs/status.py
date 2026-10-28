@@ -52,6 +52,9 @@ JOB_ATTRIBUTES_ALIASES = {
     if field.alias
 }
 
+# Job attributes that can be set through the metadata endpoint, any other is refused
+MUTABLE_JOB_ATTRIBUTES = frozenset({"Site"})
+
 
 async def remove_jobs(
     job_ids: list[int],
@@ -516,6 +519,10 @@ async def set_job_parameters_or_attributes(
             # (JobParametersDB), never both. Unknown fields are stored as job
             # parameters for now, but should eventually be rejected.
             if pname in JOB_ATTRIBUTES_ALIASES:
+                if pname not in MUTABLE_JOB_ATTRIBUTES:
+                    raise ValueError(
+                        f"Job attribute {pname} cannot be modified through this endpoint"
+                    )
                 attr_updates[job_id][pname] = pvalue
             else:
                 param_updates[job_id][pname] = pvalue
