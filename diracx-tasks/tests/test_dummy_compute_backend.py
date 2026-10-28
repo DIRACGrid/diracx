@@ -33,11 +33,11 @@ from diracx.tasks.plumbing.base_task import BaseTask
 from diracx.tasks.plumbing.broker import RedisStreamBroker, TaskBinding
 from diracx.tasks.plumbing.locks import MutexLock
 from diracx.tasks.plumbing.scheduler.scheduler import DELAYED_ZSET_KEY
-from diracx.tasks.transformation import (
+from diracx.tasks.transformations import (
     DummyComputeBackendMonitorTask,
     DummyComputeBackendTask,
 )
-from diracx.tasks.transformation import (
+from diracx.tasks.transformations import (
     dummy_compute_backend as dummy_compute_backend_module,
 )
 
@@ -51,7 +51,7 @@ from unittest.mock import MagicMock
 from diracx.tasks.plumbing.factory import load_task_registry
 from diracx.tasks.plumbing.scheduler import TaskScheduler
 
-task_name = "transformation:DummyComputeBackendMonitorTask"
+task_name = "transformations:DummyComputeBackendMonitorTask"
 registry = load_task_registry()
 task_cls = registry[task_name]
 scheduler = TaskScheduler(
@@ -310,7 +310,7 @@ async def test_monitor_uses_the_bound_broker(
     token = BaseTask._broker_registry.set(
         {
             DummyComputeBackendTask: TaskBinding(
-                broker=broker, task_name="transformation:DummyComputeBackendTask"
+                broker=broker, task_name="transformations:DummyComputeBackendTask"
             )
         }
     )

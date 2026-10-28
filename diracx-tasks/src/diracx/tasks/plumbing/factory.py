@@ -164,7 +164,7 @@ def load_task_registry(
 ) -> dict[str, type[BaseTask]]:
     """Load task classes from entry points.
 
-    Entry points are in groups like ``diracx.tasks.transformation``,
+    Entry points are in groups like ``diracx.tasks.transformations``,
     ``diracx.tasks.jobs``, etc.
 
     Returns a dict of ``"group:ClassName" -> TaskClass``.
@@ -181,7 +181,7 @@ def load_task_registry(
         ]
 
     for group in groups:
-        key = group.rsplit(".", 1)[-1]  # e.g. "transformation"
+        key = group.rsplit(".", 1)[-1]  # e.g. "transformations"
         for ep in select_from_extension(group=group):
             task_cls: type[BaseTask] = ep.load()
             task_name = f"{key}:{task_cls.__name__}"
