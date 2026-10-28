@@ -26,43 +26,21 @@ The work is split the same way as for the dummy job executor:
 
 Both rely on the transitions being compare-and-set, so running two monitors,
 or retrying a completion task, never moves a parcel twice.
-
-Nothing creates parcels yet (there is no packer), so for a demonstration the
-module can seed some, and list every parcel with its state, in the database
-``DIRACX_DB_URL_TRANSFORMATIONDB`` points at (e.g. in ``pixi run local-shell``)::
-
-    python -m diracx.tasks.transformation.dummy_compute_backend seed [N]
-    python -m diracx.tasks.transformation.dummy_compute_backend list
 """
 
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import logging
-import sys
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from pydantic import NonNegativeInt, PositiveInt
-from sqlalchemy import insert, select
-from uuid_utils import UUID, uuid7
+from uuid_utils import UUID
 
-from diracx.core.models.transformation import (
-    InputStatus,
-    ParcelStatus,
-    TransformationKind,
-)
+from diracx.core.models.transformation import ParcelStatus, TransformationKind
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
-from diracx.db.sql.transformation.schema import (
-    Inputs,
-    Ownership,
-    ParcelInputs,
-    Parcels,
-    Transformations,
-)
-from diracx.db.sql.utils import BaseSQLDB
 from diracx.logic.transformations import set_parcel_status
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
 from diracx.tasks.plumbing.depends import NoTransaction
@@ -214,90 +192,3 @@ class DummyComputeBackendTask(BaseTask):
             transformation_db=transformation_db,
         )
         return True
-
-
-async def seed_demo_parcels(transformation_db: TransformationDB, n: int) -> list[UUID]:
-    """Create a compute transformation with ``n`` parcels for the dummy to run.
-
-    Each parcel is ``Unassigned`` and made of one ``Assigned`` input, as a
-    packer would leave it.
-    """
-    ownership_id, transformation_id = uuid7(), uuid7()
-    await transformation_db.conn.execute(
-        insert(Ownership).values(ownership_id=ownership_id, vo="demo", sub="demo")
-    )
-    await transformation_db.conn.execute(
-        insert(Transformations).values(
-            transformation_id=transformation_id,
-            ownership_id=ownership_id,
-            type="Demo",
-            kind=TransformationKind.COMPUTE,
-            packer="Demo",
-        )
-    )
-    parcel_ids = []
-    for _ in range(n):
-        parcel_id, input_id = uuid7(), uuid7()
-        await transformation_db.conn.execute(
-            insert(Parcels).values(
-                parcel_id=parcel_id,
-                transformation_id=transformation_id,
-                kind=TransformationKind.COMPUTE,
-            )
-        )
-        await transformation_db.conn.execute(
-            insert(Inputs).values(
-                transformation_id=transformation_id,
-                input_id=input_id,
-                input_hash=input_id.bytes,
-                status=InputStatus.ASSIGNED,
-                last_parcel_id=parcel_id,
-            )
-        )
-        await transformation_db.conn.execute(
-            insert(ParcelInputs).values(
-                transformation_id=transformation_id,
-                parcel_id=parcel_id,
-                input_id=input_id,
-            )
-        )
-        parcel_ids.append(parcel_id)
-    return parcel_ids
-
-
-async def list_parcels(
-    transformation_db: TransformationDB,
-) -> list[tuple[UUID, ParcelStatus, str | None, InputStatus | None]]:
-    """Every parcel, oldest first, with its backend and its input's status."""
-    rows = await transformation_db.conn.execute(
-        select(Parcels.parcel_id, Parcels.status, Parcels.backend, Inputs.status)
-        .outerjoin(Inputs, Inputs.last_parcel_id == Parcels.parcel_id)
-        .order_by(Parcels.parcel_id)
-    )
-    return [tuple(row) for row in rows]  # type: ignore[misc]
-
-
-async def _demo(argv: list[str]) -> None:
-    command = argv[0] if argv else "list"
-    db = TransformationDB(BaseSQLDB.available_urls()["TransformationDB"])
-    async with db.engine_context(), db:
-        if command == "seed":
-            for parcel_id in await seed_demo_parcels(
-                db, int(argv[1]) if len(argv) > 1 else 3
-            ):
-                print(f"Created Unassigned parcel {parcel_id}")
-        elif command == "list":
-            for parcel_id, status, backend, input_status in await list_parcels(db):
-                print(
-                    f"{parcel_id}  {status.value:<11} backend={backend}  "
-                    f"input={input_status.value if input_status else None}"
-                )
-        else:
-            sys.exit(
-                "Usage: python -m diracx.tasks.transformation.dummy_compute_backend"
-                " {seed [N] | list}"
-            )
-
-
-if __name__ == "__main__":
-    asyncio.run(_demo(sys.argv[1:]))
