@@ -144,7 +144,7 @@ CLASS_SOURCES = {
     "AuthSettings": "diracx-core/src/diracx/core/settings.py",
     "SandboxStoreSettings": "diracx-core/src/diracx/core/settings.py",
     "FactorySettings": "diracx-core/src/diracx/core/settings.py",
-    "OTELSettings": "diracx-core/src/diracx/core/settings.py",
+    "OTELSettings": "diracx-routers/src/diracx/routers/otel.py",
     "DummyJobExecutorSettings": "diracx-tasks/src/diracx/tasks/jobs/dummy_job_executor.py",
 }
 
