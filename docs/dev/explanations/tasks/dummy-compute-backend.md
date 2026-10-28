@@ -3,8 +3,7 @@
 The dummy compute backend gives every compute parcel of the Transformation
 System a successful outcome without running anything. It lets the parcel
 lifecycle be exercised before the dispatcher and the real compute backends
-exist, and plays for the `TransformationDB` the role the dummy job executor
-plays for the `JobDB`.
+exist.
 
 It walks each parcel through the parcel state machine of
 [DX-ADR-005](../../../adr/DX-ADR-005_state_machines.md), standing in for two
