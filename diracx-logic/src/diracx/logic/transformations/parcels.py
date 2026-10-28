@@ -71,11 +71,15 @@ async def set_parcel_status(
         The identifiers of the parcels that were moved.
 
     Raises:
+        ValueError: If a parcel identifier is given more than once.
         InvalidParcelTransitionError: If the state machine has no edge from
             ``from_status`` to ``to_status``.
         NotImplementedError: For ``PartiallyDone``, whose recovery split
             (DX-ADR-003) is not implemented yet.
     """
+    if len(set(parcel_ids)) != len(parcel_ids):
+        # The number of parcels skipped would be wrong
+        raise ValueError("Each parcel identifier must be given only once")
     if to_status not in PARCEL_TRANSITIONS[from_status]:
         raise InvalidParcelTransitionError(from_status, to_status)
     if to_status == ParcelStatus.PARTIALLY_DONE:
