@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from ._base import BaseModel
 
 
 class ChecksumAlgorithm(StrEnum):
@@ -21,19 +23,16 @@ class SandboxFormat(StrEnum):
 
 
 class SandboxInfo(BaseModel):
-    """Metadata describing a sandbox archive.
-
-    Attributes:
-        checksum_algorithm: Algorithm used to calculate the checksum.
-        checksum: Hexadecimal checksum of the sandbox archive.
-        size: Sandbox size in bytes.
-        format: Archive format of the sandbox.
-    """
+    """Metadata describing a sandbox archive."""
 
     checksum_algorithm: ChecksumAlgorithm
+    """Algorithm used to calculate the checksum."""
     checksum: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    """Hexadecimal checksum of the sandbox archive."""
     size: int = Field(ge=1)
+    """Sandbox size in bytes."""
     format: SandboxFormat
+    """Archive format of the sandbox."""
 
 
 class SandboxType(StrEnum):
@@ -44,26 +43,20 @@ class SandboxType(StrEnum):
 
 
 class SandboxDownloadResponse(BaseModel):
-    """Response containing a URL for downloading a sandbox.
-
-    Attributes:
-        url: URL from which the sandbox can be downloaded.
-        expires_in: Number of seconds until the URL expires.
-    """
+    """Response containing a URL for downloading a sandbox."""
 
     url: str
+    """URL from which the sandbox can be downloaded."""
     expires_in: int
+    """Number of seconds until the URL expires."""
 
 
 class SandboxUploadResponse(BaseModel):
-    """Response containing details for uploading a sandbox.
-
-    Attributes:
-        pfn: Physical file name assigned to the uploaded sandbox.
-        url: Optional upload URL.
-        fields: Form fields required for the upload.
-    """
+    """Response containing details for uploading a sandbox."""
 
     pfn: str
+    """Physical file name assigned to the uploaded sandbox."""
     url: str | None = None
+    """Optional upload URL."""
     fields: dict[str, str] = {}
+    """Form fields required for the upload."""

@@ -26,6 +26,27 @@ env:
   DIRACX_CHARTS_BRANCH: master
 
 jobs:
+  resolve-deps:
+    name: Resolve PR dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      charts-ref: ${{ steps.resolve.outputs.charts-ref }}
+      dirac-ref: ${{ steps.resolve.outputs.dirac-ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Resolve Depends-On pull requests
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .github/scripts/resolve_pr_deps.py resolve --repo "$REPO" --pr "$PR_NUMBER"
+
   shellcheck:
     runs-on: ubuntu-latest
     steps:
@@ -33,11 +54,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: shellcheck
@@ -51,11 +72,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: workgraph-sim
@@ -64,6 +85,7 @@ jobs:
 
   unittest:
     name: Unit test - ${{ matrix.package }}
+    needs: resolve-deps
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -88,7 +110,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
@@ -99,7 +121,18 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - name: Checkout DIRAC dependency
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        env:
+          DIRAC_REF: ${{ needs.resolve-deps.outputs.dirac-ref }}
+        run: |
+          git init -q ../DIRAC
+          git -C ../DIRAC fetch --depth 1 https://github.com/DIRACGrid/DIRAC.git "$DIRAC_REF"
+          git -C ../DIRAC checkout -q FETCH_HEAD
+      - name: Use DIRACCommon from DIRAC dependency
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        run: .github/scripts/use-diraccommon-from-source.sh ../DIRAC
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: ${{ matrix.package }}
@@ -109,6 +142,7 @@ jobs:
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
 
   pytest-integration:
+    needs: resolve-deps
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -141,7 +175,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
@@ -152,7 +186,18 @@ jobs:
           rm pixi.toml.bak
           # Show any changes
           git diff
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - name: Checkout DIRAC dependency
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        env:
+          DIRAC_REF: ${{ needs.resolve-deps.outputs.dirac-ref }}
+        run: |
+          git init -q ../DIRAC
+          git -C ../DIRAC fetch --depth 1 https://github.com/DIRACGrid/DIRAC.git "$DIRAC_REF"
+          git -C ../DIRAC checkout -q FETCH_HEAD
+      - name: Use DIRACCommon from DIRAC dependency
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        run: .github/scripts/use-diraccommon-from-source.sh ../DIRAC
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
@@ -196,8 +241,12 @@ jobs:
           docker builder prune -af || true
           docker image ls -a
       - name: Start demo
+        env:
+          CHARTS_REF: ${{ needs.resolve-deps.outputs.charts-ref }}
         run: |
-          git clone --branch "$DIRACX_CHARTS_BRANCH" --single-branch "$DIRACX_CHARTS_REPOSITORY" ../diracx-charts
+          git init -q ../diracx-charts
+          git -C ../diracx-charts fetch "$DIRACX_CHARTS_REPOSITORY" "${CHARTS_REF:-$DIRACX_CHARTS_BRANCH}"
+          git -C ../diracx-charts checkout -q FETCH_HEAD
 
           declare -a demo_args=()
           demo_args+=("--enable-open-telemetry")
@@ -265,11 +314,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           locked: false
@@ -288,11 +337,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: pre-commit

@@ -860,15 +860,13 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
         assert j["ApplicationStatus"] == "Unknown"
 
     # Act
-    hbt = datetime.now(timezone.utc).isoformat()
     r = normal_user_client.patch(
         "/api/jobs/metadata",
         json={
             valid_job_id: {
-                "UserPriority": 2,
-                "HeartBeatTime": hbt,
+                "Site": "Meyrin",
                 # set a parameter
-                "JobType": "VerySpecialIndeed",
+                "HostName": "some-worker-node.example.org",
             }
         },
     )
@@ -892,13 +890,8 @@ def test_patch_metadata(normal_user_client: TestClient, valid_job_id: int):
     )
     assert r.status_code == 200, r.json()
 
-    hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
-    hbt1 = hbt1.astimezone(tz=timezone.utc)
-
     assert r.json()[0]["JobID"] == valid_job_id
-    assert r.json()[0]["JobType"] == "VerySpecialIndeed"
-    assert hbt1 == datetime.fromisoformat(hbt)
-    assert r.json()[0]["UserPriority"] == 2
+    assert r.json()[0]["Site"] == "Meyrin"
 
 
 @pytest.mark.parametrize(
@@ -959,6 +952,48 @@ def test_patch_metadata_upsert_failure_is_a_server_error(
         "/api/jobs/metadata", json={valid_job_id: {"SomeParameter": "a value"}}
     )
     assert r.status_code == HTTPStatus.INTERNAL_SERVER_ERROR, r.text
+
+
+@pytest.mark.parametrize(
+    "attribute,value",
+    [
+        ("Owner", "attacker"),
+        ("OwnerGroup", "attacker_group"),
+        ("VO", "another_vo"),
+        ("JobType", "VerySpecialIndeed"),
+        ("JobGroup", "another_group"),
+        ("JobName", "another_name"),
+        ("SubmissionTime", "2020-01-01T00:00:00+00:00"),
+        ("UserPriority", 2),
+        ("RescheduleCounter", -1),
+        ("AccountedFlag", True),
+        ("VerifiedFlag", False),
+        ("Status", "Done"),
+        ("MinorStatus", "Some minor status"),
+        ("ApplicationStatus", "Some application status"),
+        ("StartExecTime", "2020-01-01T00:00:00+00:00"),
+        ("EndExecTime", "2020-01-01T00:00:00+00:00"),
+        ("HeartBeatTime", "2020-01-01T00:00:00+00:00"),
+    ],
+)
+def test_patch_metadata_rejects_immutable_attribute(
+    normal_user_client: TestClient, valid_job_id: int, attribute: str, value
+):
+    """A request setting an immutable attribute is refused as a whole."""
+    r = normal_user_client.patch(
+        "/api/jobs/metadata",
+        json={valid_job_id: {attribute: value, "Site": "Meyrin"}},
+    )
+    assert r.status_code == 400, r.json()
+
+    r = normal_user_client.post(
+        "/api/jobs/search",
+        json={
+            "search": [{"parameter": "JobID", "operator": "eq", "value": valid_job_id}]
+        },
+    )
+    assert r.status_code == 200, r.json()
+    assert r.json()[0]["Site"] != "Meyrin"
 
 
 def test_diracx_476(normal_user_client: TestClient, valid_job_id: int):
@@ -1032,11 +1067,8 @@ def test_patch_metadata_doc_example(normal_user_client: TestClient, valid_job_id
     )
     assert r.status_code == 200, r.json()
 
-    hbt1 = datetime.fromisoformat(r.json()[0]["HeartBeatTime"])
-    hbt1 = hbt1.astimezone(tz=timezone.utc)
-
     assert r.json()[0]["JobID"] == valid_job_id
-    assert r.json()[0]["Status"] == payload["Status"]
+    assert r.json()[0]["Status"] == JobStatus.RECEIVED.value
     assert r.json()[0]["Site"] == payload["Site"]
 
     # Act 2
@@ -1048,24 +1080,6 @@ def test_patch_metadata_doc_example(normal_user_client: TestClient, valid_job_id
     assert r.status_code == 204, (
         "PATCH metadata should return 204 No Content on success"
     )
-    r = normal_user_client.post(
-        "/api/jobs/search",
-        json={
-            "search": [
-                {
-                    "parameter": "JobID",
-                    "operator": "eq",
-                    "value": valid_job_id,
-                }
-            ],
-            "parameters": ["LoggingInfo"],
-        },
-    )
-    assert r.status_code == 200, r.json()
-
-    assert r.json()[0]["JobID"] == valid_job_id
-    assert r.json()[0]["UserPriority"] == payload["UserPriority"]
-    assert r.json()[0]["JobType"] == payload["JobType"]
 
 
 def test_patch_heartbeat_doc_example(normal_user_client: TestClient, valid_job_id: int):

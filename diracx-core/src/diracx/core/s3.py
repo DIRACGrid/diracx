@@ -28,15 +28,12 @@ if TYPE_CHECKING:
 
 
 class S3PresignedPostInfo(TypedDict):
-    """Presigned POST information for uploading an object to S3.
-
-    Attributes:
-        url: URL to which the upload should be submitted.
-        fields: Form fields required by the presigned POST.
-    """
+    """Presigned POST information for uploading an object to S3."""
 
     url: str
+    """URL to which the upload should be submitted."""
     fields: dict[str, str]
+    """Form fields required by the presigned POST."""
 
 
 async def s3_bucket_exists(s3_client: AsyncClient, bucket_name: str) -> bool:

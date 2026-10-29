@@ -1,3 +1,9 @@
+"""Expose endpoints for updating job status, heartbeat, and metadata.
+
+The routes allow authorised users and pilots to report job status, send
+heartbeats, reschedule jobs, and update job attributes or parameters.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -77,16 +83,39 @@ async def set_job_statuses(
     check_permissions: CheckWMSPolicyCallable,
     force: bool = False,
 ) -> SetJobStatusReturn:
-    """Set the status of a job or a list of jobs.
+    """Apply status updates to one or more jobs.
 
-    Body parameters:
-    - `Status`: The new status of the job.
-    - `MinorStatus`: The minor status of the job.
-    - `ApplicationStatus`: The application-specific status of the job.
-    - `Source`: The source of the status update (default is "Unknown").
+    Each job ID maps to one or more timestamped updates. The update fields are
+    ``Status``, ``MinorStatus``, ``ApplicationStatus``, and ``Source``; the
+    source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+    machine; only job administrators may do so.
+
+    Jobs that cannot be updated are listed under ``failed`` in the response. The
+    request fails with 404 only when no job could be updated.
+
+    \f
+
+    Args:
+        job_update: Timestamped status changes keyed by job ID.
+        config: DiracX configuration used when applying status transitions.
+        job_db: Database storing current job attributes.
+        job_logging_db: Database storing job status history.
+        task_queue_db: Database used to update task-queue state when required.
+        check_permissions: Access-policy dependency used to authorize job management.
+        force: Whether to bypass the job state machine (job administrators only).
+
+    Returns:
+        Per-job status-update successes and failures.
+
+    Raises:
+        HTTPException: If an update is invalid (400), no job could be updated
+            (404), or the user cannot manage the requested jobs, or requests
+            ``force`` without being a job administrator (403).
     """
     await check_permissions(
-        action=ActionType.MANAGE, job_db=job_db, job_ids=list(job_update)
+        action=ActionType.FORCE_STATUS if force else ActionType.MANAGE,
+        job_db=job_db,
+        job_ids=list(job_update),
     )
 
     try:
@@ -162,13 +191,29 @@ async def add_heartbeat(
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ) -> list[JobCommand]:
-    """Register a heartbeat from the job.
+    """Record heartbeat data from jobs and return pending commands.
 
-    This endpoint is used by the JobAgent to send heartbeats to the WMS and to
-    receive job commands from the WMS. It also results in stalled jobs being
-    restored to the RUNNING status.
+    The JobAgent uses this endpoint to report runtime data and retrieve WMS
+    commands. A heartbeat can restore a matched or stalled job to ``RUNNING``.
+    The request body is a mapping keyed by job ID.
 
-    The `data` parameter and return value are mappings keyed by job ID.
+    \f
+
+    Args:
+        data: Heartbeat fields keyed by job ID.
+        config: DiracX configuration used when restoring job status.
+        job_db: Database used to update job attributes and status.
+        job_logging_db: Database used to record status changes.
+        task_queue_db: Database used when status changes affect task queues.
+        job_parameters_db: Database used to store heartbeat job parameters.
+        check_permissions: Access-policy dependency used to authorize pilot actions.
+
+    Returns:
+        Pending commands for the reported jobs.
+
+    Raises:
+        HTTPException: If any requested job does not exist (404) or the caller
+            is not permitted to perform the pilot action (403).
     """
     await check_permissions(action=ActionType.PILOT, job_db=job_db, job_ids=list(data))
 
@@ -209,12 +254,30 @@ async def reschedule_jobs(
     check_permissions: CheckWMSPolicyCallable,
     reset_jobs: Annotated[bool, Query()] = False,
 ) -> dict[str, Any]:
-    """Reschedule a list of killed or failed jobs.
+    """Reschedule jobs so that they are matched and run again.
 
-    Body parameters:
-    - `job_ids`: List of job IDs to reschedule.
-    - `reset_jobs`: If True, reset the count of reschedules for the jobs.
+    The request body contains ``job_ids``, the list of jobs to reschedule.
+    Set ``reset_jobs`` to reset each job's reschedule counter instead of
+    incrementing it. Jobs that are unverified or exceed their configured
+    reschedule limit are reported as failures.
 
+    \f
+
+    Args:
+        job_ids: Identifiers of the jobs to reschedule.
+        config: DiracX configuration containing per-VO scheduling limits.
+        job_db: Database used to retrieve and update job records.
+        job_logging_db: Database used to record rescheduling status changes.
+        task_queue_db: Database used to update task queues.
+        check_permissions: Access-policy dependency used to authorize job management.
+        reset_jobs: Whether to reset, rather than increment, reschedule counters.
+
+    Returns:
+        Per-job results describing successful and failed rescheduling operations.
+
+    Raises:
+        HTTPException: If no requested job can be rescheduled (400) or the
+            user cannot manage the requested jobs (403).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=job_ids)
 
@@ -243,15 +306,11 @@ EXAMPLE_METADATA = {
     "Default": {
         "value": {
             1: {
-                "UserPriority": 2,
-                "HeartBeatTime": str(datetime.now(timezone.utc)),
-                "Status": "Done",
                 "Site": "Meyrin",
             },
             2: {
-                "UserPriority": 1,
-                "HeartBeatTime": str(datetime.now(timezone.utc)),
-                "JobType": "AnotherType",
+                "CPUNormalizationFactor": 10,
+                "HostName": "some-worker-node.example.org",
             },
         }
     }
@@ -265,9 +324,27 @@ async def patch_metadata(
     job_parameters_db: JobParametersDB,
     check_permissions: CheckWMSPolicyCallable,
 ):
-    """Update job metadata such as UserPriority, HeartBeatTime, JobType, etc.
+    """Update job parameters and a restricted set of job attributes.
 
-    The argument  are all the attributes/parameters of a job (except the ID).
+    The request body maps job IDs to the fields to update. Only the ``Site``
+    job attribute may be set here; any other job attribute (such as ``Owner``
+    or ``UserPriority``) is refused with 400 and nothing is written. Statuses
+    are set through ``PATCH /api/jobs/status`` and the heartbeat through
+    ``PATCH /api/jobs/heartbeat``. Fields that are not job attributes are
+    stored as job parameters.
+
+    \f
+
+    Args:
+        updates: Metadata updates keyed by job ID.
+        job_db: Database used to update job attributes.
+        job_parameters_db: Database used to update job parameters.
+        check_permissions: Access-policy dependency used to authorize job management.
+
+    Raises:
+        HTTPException: If an update is invalid or sets an immutable job
+            attribute (400), a job is not found (404), or the user cannot
+            manage the requested jobs (403).
     """
     await check_permissions(action=ActionType.MANAGE, job_db=job_db, job_ids=updates)
     try:

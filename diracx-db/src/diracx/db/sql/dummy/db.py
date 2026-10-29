@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import insert
+from sqlalchemy.orm import DeclarativeBase
 from uuid_utils import UUID
 
 from diracx.core.models.search import SearchSpec
@@ -25,18 +26,22 @@ class DummyDB(BaseSQLDB):
     metadata = DummyDBBase.metadata
 
     async def summary(
-        self, group_by: list[str], search: list[SearchSpec]
+        self,
+        group_by: list[str],
+        search: list[SearchSpec],
+        table: type[DeclarativeBase] = Cars,
     ) -> list[dict[str, str | int]]:
         """Get a summary of the cars.
 
         Args:
-            group_by: Car fields used to group the summary.
+            group_by: Fields used to group the summary.
             search: Search conditions to apply before summarizing.
+            table: Optional table name to be queried. Default: Cars.
 
         Returns:
             Summary rows containing grouped values and counts.
         """
-        return await self._summary(table=Cars, group_by=group_by, search=search)
+        return await self._summary(table=table, group_by=group_by, search=search)
 
     async def insert_owner(self, name: str) -> int:
         """Insert a car owner.

@@ -1,3 +1,9 @@
+"""Provide endpoints for pilot registration and metadata management.
+
+Pilot management is restricted by the pilot access policy, with optional
+single-pilot operations for legacy pilot identities.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -30,10 +36,23 @@ async def register_pilot(
     registration: PilotRegistrationParams,
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
-    """Register a pilot with its reference.
+    """Register a pilot and its external reference.
 
-    If the stamp already exists, the registration is rejected with a 409.
-    Registering into a VO that is not in the registry is rejected with a 400.
+    Legacy X.509 pilot identities may self-register one pilot per request when
+    permitted by the access policy. Registration is rejected with 409 if the
+    stamp already exists, and with 400 if the VO is not in the registry.
+
+    \f
+
+    Args:
+        config: DiracX configuration used to validate the pilot's VO.
+        pilot_db: Database where the pilot record is registered.
+        registration: Pilot stamp, VO, site details, reference, and initial status.
+        check_permissions: Access-policy dependency used to authorize registration.
+
+    Raises:
+        HTTPException: If the VO is not configured (400), the stamp already
+            exists (409), or the caller is not permitted to register the pilot (403).
     """
     # Legacy (X.509 / GENERIC_PILOT) pilot identities may self-register:
     # pilots started in the vacuum have no SiteDirector to register them.
@@ -86,10 +105,23 @@ async def update_pilot_metadata(
     pilot_db: PilotAgentsDB,
     check_permissions: CheckPilotManagementPolicyCallable,
 ):
-    """Update pilot metadata (status, benchmark, etc.).
+    """Update mutable metadata for one or more pilots.
 
-    Only fields defined in `PilotMetadata` are mutable. The pilot stamp
-    (the mapping key) identifies the pilot and cannot be changed.
+    Each mapping key is a pilot stamp, and each value contains fields defined
+    by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
+    cannot be modified. Legacy pilot identities may update one pilot per call
+    when permitted by the access policy.
+
+    \f
+
+    Args:
+        updates: Pilot metadata keyed by pilot stamp.
+        pilot_db: Database containing pilot records to update.
+        check_permissions: Access-policy dependency used to authorize updates.
+
+    Raises:
+        HTTPException: If a pilot is not found (404) or the caller is not
+            permitted to update the requested pilots (403).
     """
     # Legacy pilot identities may self-update (dirac-admin-add-pilot
     # --status); the policy caps them to a single pilot stamp per call.

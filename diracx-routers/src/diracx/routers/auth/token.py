@@ -1,4 +1,9 @@
-"""Token endpoint."""
+"""FastAPI endpoints for issuing DiracX access and refresh tokens.
+
+The standard token route exchanges authorization-code, device-code, or refresh
+token grants. A separate legacy route supports token exchange from legacy
+DIRAC installations when that integration is enabled.
+"""
 
 from __future__ import annotations
 
@@ -44,7 +49,24 @@ async def mint_token(
     all_access_policies: dict[str, BaseAccessPolicy],
     settings: AuthSettings,
 ) -> TokenResponse:
-    """Enrich the token with policy specific content and mint it."""
+    """Apply access-policy data and create the token response.
+
+    Each configured access policy may add claims to the access or refresh
+    payload before the tokens are signed.
+
+    Args:
+        access_payload: Claims to include in the access token.
+        refresh_payload: Claims to include in a newly created refresh token, if applicable.
+        existing_refresh_token: Existing refresh token to return when no new payload is created.
+        all_access_policies: Policies that can enrich token payloads.
+        settings: Authentication settings used to sign tokens and set access-token expiry.
+
+    Returns:
+        Access token, expiry duration, and refresh token.
+
+    Raises:
+        HTTPException: If neither a refresh payload nor an existing refresh token is provided (500).
+    """
     if not refresh_payload and not existing_refresh_token:
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -120,9 +142,36 @@ async def get_oidc_token(
         Form(description="Refresh token used with OAuth2 refresh token flow"),
     ] = None,
 ) -> TokenResponse:
-    """Token endpoint to retrieve the token at the end of a flow.
+    """Exchange an OAuth grant for DiracX tokens.
 
-    This is the endpoint being pulled by dirac-login when doing the device flow.
+    Supports authorization-code, device-code, and refresh-token grants. A
+    device-code request may return ``authorization_pending`` until the user
+    completes browser authorization; this is the endpoint polled by clients
+    such as ``dirac login`` during the device flow.
+
+    \f
+
+    Args:
+        grant_type: OAuth grant type to exchange.
+        client_id: Identifier of the requesting client.
+        auth_db: Database used to retrieve or update authorization and token records.
+        config: DiracX configuration used to validate users, groups, and scopes.
+        settings: Authentication settings used to validate grants and create tokens.
+        available_properties: Security properties available for the request.
+        all_access_policies: Policies that can enrich the issued token payloads.
+        device_code: Device code for a device-code grant.
+        code: Authorization code for an authorization-code grant.
+        redirect_uri: Redirect URI associated with the authorization-code grant.
+        code_verifier: PKCE verifier for the authorization-code grant.
+        refresh_token: Refresh token for a refresh-token grant.
+
+    Returns:
+        DiracX access and refresh tokens with the access-token expiry duration.
+
+    Raises:
+        HTTPException: If the grant is invalid (400), credentials are invalid
+            (401), the user lacks the requested permissions (403), or token
+            creation fails (500).
     """
     try:
         access_payload, refresh_payload = await get_oidc_token_bl(
@@ -188,10 +237,32 @@ async def perform_legacy_exchange(
     ],
     expires_minutes: int | None = None,
 ) -> TokenResponse:
-    """Endpoint used by legacy DIRAC to mint tokens for proxy -> token exchange.
+    """Exchange a legacy DIRAC proxy credential for DiracX tokens.
 
-    This route is disabled if DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY is not set
-    in the environment.
+    The route is hidden from the OpenAPI schema and is disabled unless
+    ``DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY`` is set in the environment.
+
+    \f
+
+    Args:
+        preferred_username: Username of the user represented by the legacy proxy.
+        scope: Requested VO, group, and security properties.
+        authorization: Encoded legacy credential supplied in the Authorization header.
+        auth_db: Database used to store the issued refresh token.
+        available_properties: Security properties available for the request.
+        settings: Authentication settings used to create tokens.
+        factory_settings: Factory settings containing the optional hashed API key.
+        config: DiracX configuration used to resolve the user and validate the scope.
+        all_access_policies: Policies that can enrich the issued token payloads.
+        expires_minutes: Optional refresh-token lifetime override.
+
+    Returns:
+        DiracX access and refresh tokens with the access-token expiry duration.
+
+    Raises:
+        HTTPException: If the route is disabled (503), the scope or username is
+            invalid (400), credentials are invalid (401), or the user lacks the
+            requested permissions (403).
     """
     if not (expected_api_key := factory_settings.legacy_exchange_hashed_api_key):
         raise HTTPException(

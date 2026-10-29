@@ -65,3 +65,26 @@ The reviewer will be re-notified and can continue the review.
 #### PR review reminders
 
 A daily digest of open (non-draft) PRs is posted to Mattermost on weekday mornings. The digest includes the PR title, author, assigned reviewer, age, and review status for all repositories in the DIRACGrid organisation. This ensures that open PRs don't get forgotten.
+
+#### Changes to `pixi.lock`
+
+When a PR changes `pixi.lock`, a comment summarises which packages were added, removed, upgraded or downgraded, and the "Pixi Lock" check fails if any package is downgraded.
+See [Changing `pixi.lock` in other pull requests](../explanations/dependency-management.md#changing-pixilock-in-other-pull-requests) for how to make minimal lock changes and how to resolve conflicts in `pixi.lock`.
+
+#### Testing against PRs in other repositories
+
+If a `diracx` PR needs a change in `diracx-charts` or `DIRAC`, add a `Depends-On` line to the PR description for each PR it needs:
+
+```
+Depends-On: https://github.com/DIRACGrid/diracx-charts/pull/123
+Depends-On: DIRACGrid/DIRAC#8456
+```
+
+The CI then tests against the result of merging that PR into its target branch, instead of the default branch:
+
+- `diracx-charts`: used to deploy the demo for the integration tests.
+- `DIRAC`: used for the DIRAC integration tests, and `DIRACCommon` from it replaces the PyPI release in the unit tests, integration tests and container images.
+
+The description is read when the workflow starts, so after editing it re-run the workflow or push a new commit.
+
+The "Dependencies merged" check fails until every `Depends-On` PR has been merged, so the dependencies have to be merged first. Re-run that check once they are. Changes to `DIRACCommon` also need a DIRAC release, and the `diraccommon` minimum version in `diracx` bumped, before the `diracx` PR can be merged.

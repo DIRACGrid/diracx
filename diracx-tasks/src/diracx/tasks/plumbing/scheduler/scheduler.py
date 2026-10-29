@@ -20,8 +20,7 @@ from ..broker.redis_streams import ALL_STREAM_NAMES, RedisStreamBroker
 
 if TYPE_CHECKING:
     from diracx.core.config import Config
-
-    from ..persistence.dlq import TaskDB
+    from diracx.db.sql import TaskDB
 
 logger = logging.getLogger(__name__)
 _meter = metrics.get_meter(__name__)
