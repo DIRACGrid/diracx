@@ -84,7 +84,9 @@ required-imports = ["from __future__ import annotations"]
 "diracx-testing/src/diracx/testing/**/*.py" = ["D100", "D101", "D102", "D103"]
 "diracx-client/src/diracx/client/**/*.py" = ["D100", "D101", "D102", "D103"]
 "diracx-client/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
-"diracx-routers/src/diracx/routers/**/*py" = ["D100", "D101", "D102", "D103"]
+# FastAPI truncates the OpenAPI description at a "\f" in route docstrings,
+# which must not be raw strings for it to be a real form feed
+"diracx-routers/src/diracx/routers/**/*.py" = ["D301"]
 "diracx-routers/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
 "extensions/gubbins/gubbins-api/src/gubbins/api/**/*.py" = ["D100", "D101", "D102", "D103"]
 "extensions/gubbins/gubbins-api/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
@@ -220,4 +222,5 @@ addopts = [
 asyncio_mode = "auto"
 markers = [
   "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
+  "os_global_prefix: test for global prefix",
 ]

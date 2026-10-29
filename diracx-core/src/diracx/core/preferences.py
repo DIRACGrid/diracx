@@ -46,25 +46,24 @@ class LogLevels(Enum):
 
 
 class DiracxPreferences(BaseSettings):
-    """Environment-backed preferences used by DiracX clients.
+    """Environment-backed preferences used by DiracX clients."""
 
-    Attributes:
-        url: Base URL of the DiracX service.
-        ca_path: Optional path to the certificate authority bundle.
-        output_format: Format used to render command output.
-        log_level: Logging level for the client.
-        credentials_path: Path to the cached credentials file.
-    """
-
-    model_config = SettingsConfigDict(env_prefix="DIRACX_")
+    model_config = SettingsConfigDict(
+        env_prefix="DIRACX_", use_attribute_docstrings=True
+    )
 
     url: AnyHttpUrl
+    """Base URL of the DiracX service."""
     ca_path: Path | None = None
+    """Optional path to the certificate authority bundle."""
     output_format: OutputFormats = Field(default_factory=OutputFormats.default)
+    """Format used to render command output."""
     log_level: LogLevels = LogLevels.INFO
+    """Logging level for the client."""
     credentials_path: Path = Field(
         default_factory=lambda: Path.home() / ".cache" / "diracx" / "credentials.json"
     )
+    """Path to the cached credentials file."""
 
     @classmethod
     def from_env(cls):

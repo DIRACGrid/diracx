@@ -149,7 +149,7 @@ LocalFileUrl = Annotated[FileUrl, BeforeValidator(_apply_default_scheme)]
 class ServiceSettingsBase(BaseSettings):
     """Base class for service-specific settings."""
 
-    model_config = SettingsConfigDict(frozen=True)
+    model_config = SettingsConfigDict(frozen=True, use_attribute_docstrings=True)
 
     @classmethod
     def create(cls) -> Self:
@@ -174,15 +174,9 @@ class ServiceSettingsBase(BaseSettings):
 
 
 class DevelopmentSettings(ServiceSettingsBase):
-    """Settings for the Development Configuration that can influence run time.
+    """Settings for the Development Configuration that can influence run time."""
 
-    Attributes:
-        crash_on_missed_access_policy: Whether to fail when an access policy is missed.
-    """
-
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_DEV_", use_attribute_docstrings=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_DEV_")
 
     crash_on_missed_access_policy: bool = False
     """When set to true (only for demo/CI), crash if an access policy isn't called.
@@ -202,23 +196,7 @@ class DevelopmentSettings(ServiceSettingsBase):
 
 
 class AuthSettings(ServiceSettingsBase):
-    """Settings for the authentication service.
-
-    Attributes:
-        dirac_client_id: OAuth2 client identifier for DIRAC clients.
-        allowed_redirects: Redirect URLs allowed during authorization.
-        device_flow_expiration_seconds: Device flow expiration time in seconds.
-        authorization_flow_expiration_seconds: Authorization code expiration time in seconds.
-        completed_flow_retention_minutes: Retention time for completed flows in minutes.
-        state_key: Key used to encrypt and decrypt OAuth2 state values.
-        token_issuer: Issuer identifier for JWT tokens.
-        token_keystore: Cryptographic keys used to sign and verify JWTs.
-        token_allowed_algorithms: Algorithms allowed for JWT signing.
-        access_token_expire_minutes: Access token lifetime in minutes.
-        refresh_token_expire_minutes: Refresh token lifetime in minutes.
-        refresh_token_retention_months: Refresh token retention period in months.
-        available_properties: Security properties available in the installation.
-    """
+    """Settings for the authentication service."""
 
     @model_validator(mode="after")
     def check_retention_greater_than_expiration(self) -> Self:
@@ -239,9 +217,7 @@ class AuthSettings(ServiceSettingsBase):
             )
         return self
 
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_SERVICE_AUTH_", use_attribute_docstrings=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SERVICE_AUTH_")
 
     dirac_client_id: str = "myDIRACClientID"
     """OAuth2 client identifier for DIRAC clients (cli, web) to DIRAC services.
@@ -339,23 +315,9 @@ class AuthSettings(ServiceSettingsBase):
 
 
 class SandboxStoreSettings(ServiceSettingsBase):
-    """Settings for the sandbox store.
+    """Settings for the sandbox store."""
 
-    Attributes:
-        bucket_name: S3 bucket used for job sandboxes.
-        s3_client_kwargs: Configuration passed to the S3 client.
-        auto_create_bucket: Whether to create a missing S3 bucket.
-        url_validity_seconds: Validity period for presigned S3 URLs.
-        se_name: Logical Storage Element name for the sandbox store.
-        s3_max_pool_connections: Maximum S3 client connection pool size.
-        clean_batch_size: Number of candidates selected per cleaning batch.
-        clean_delete_chunk_size: Number of database rows deleted per chunk.
-        clean_max_concurrent_db_deletes: Maximum concurrent database delete chunks.
-    """
-
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_SANDBOX_STORE_", use_attribute_docstrings=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_SANDBOX_STORE_")
 
     bucket_name: str
     """Name of the S3 bucket used for storing job sandboxes.
@@ -453,9 +415,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
 class LoggingSettings(ServiceSettingsBase):
     """Settings for the logs written by the DiracX processes."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_LOG_", use_attribute_docstrings=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_LOG_")
 
     level: str = "INFO"
     """
@@ -489,9 +449,7 @@ class LoggingSettings(ServiceSettingsBase):
 class OTELSettings(ServiceSettingsBase):
     """Settings for the Open Telemetry Configuration."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="DIRACX_OTEL_", use_attribute_docstrings=True
-    )
+    model_config = SettingsConfigDict(env_prefix="DIRACX_OTEL_")
 
     enabled: bool = False
     """
@@ -539,35 +497,23 @@ class FactorySettings(ServiceSettingsBase):
 
     Settings which do not fit into dedicated classes,
     or are dynamically generated.
-
-    Attributes:
-        config_backend_url: URL of the configuration backend.
-        legacy_exchange_hashed_api_key: Hashed API key for legacy exchange.
-        tasks_redis_url: URL of the Redis server used for tasks.
-        enabled_services: Map of service names to enabled states.
-        opensearch_dbs: OpenSearch database connection URLs.
-        sql_dbs: SQL database connection URLs.
     """
 
     # We want to be able to read both from specific environment variables
     # but also to create the object directly with the attribute name
     # https://pydantic.dev/docs/validation/latest/concepts/alias#validation
-    model_config = SettingsConfigDict(
-        use_attribute_docstrings=True, validate_by_alias=True, validate_by_name=True
-    )
+    model_config = SettingsConfigDict(validate_by_alias=True, validate_by_name=True)
 
     config_backend_url: ConfigSourceUrl | None = Field(
         default=None,
         validation_alias="DIRACX_CONFIG_BACKEND_URL",
     )
-    """The URL of the configuration backend.
-    """
+    """The URL of the configuration backend."""
 
     legacy_exchange_hashed_api_key: str = Field(
         default="", validation_alias="DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY"
     )
-    """The hashed API key for the legacy exchange endpoint.
-    """
+    """The hashed API key for the legacy exchange endpoint."""
 
     tasks_redis_url: str = Field(
         default="redis://localhost", validation_alias="DIRACX_TASKS_REDIS_URL"

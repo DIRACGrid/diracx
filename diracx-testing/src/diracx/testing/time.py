@@ -19,6 +19,7 @@ from __future__ import annotations
 
 __all__ = [
     "frozen_time",
+    "frozen_uuid7",
     "install_sqlite_time_mock",
     "julian_date",
     "mock_sqlite_time",
@@ -30,6 +31,7 @@ from datetime import UTC, datetime
 import freezegun
 import pytest
 import sqlalchemy
+from uuid_utils import UUID, uuid7
 
 RE_SQLITE_TIME = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}):(\d{2}))?")
 
@@ -41,6 +43,16 @@ def frozen_time():
         datetime.now(tz=UTC).replace(microsecond=0)
     ) as frozen_time:
         yield frozen_time
+
+
+def frozen_uuid7() -> UUID:
+    """Create a UUIDv7 using the current Python time, including frozen time."""
+    current_time = datetime.now(UTC)
+    delta = current_time - datetime(1970, 1, 1, tzinfo=UTC)
+    nanoseconds = (
+        delta.days * 86_400 + delta.seconds
+    ) * 1_000_000_000 + delta.microseconds * 1_000
+    return uuid7(nanoseconds=nanoseconds)
 
 
 def install_sqlite_time_mock(engine) -> None:

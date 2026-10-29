@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import ConfigDict, with_config
 from typing_extensions import TypedDict
+
+from ._base import BaseModel
 
 
 class ScalarSearchOperator(StrEnum):
@@ -27,32 +29,28 @@ class VectorSearchOperator(StrEnum):
     NOT_IN = "not in"
 
 
+@with_config(ConfigDict(use_attribute_docstrings=True))
 class ScalarSearchSpec(TypedDict):
-    """Search condition applied to a scalar parameter.
-
-    Attributes:
-        parameter: Parameter to search.
-        operator: Comparison operator to apply.
-        value: Value to compare with the parameter.
-    """
+    """Search condition applied to a scalar parameter."""
 
     parameter: str
+    """Parameter to search."""
     operator: ScalarSearchOperator
+    """Comparison operator to apply."""
     value: str | int
+    """Value to compare with the parameter."""
 
 
+@with_config(ConfigDict(use_attribute_docstrings=True))
 class VectorSearchSpec(TypedDict):
-    """Search condition applied to a collection of values.
-
-    Attributes:
-        parameter: Parameter to search.
-        operator: Collection comparison operator to apply.
-        values: Values to compare with the parameter.
-    """
+    """Search condition applied to a collection of values."""
 
     parameter: str
+    """Parameter to search."""
     operator: VectorSearchOperator
+    """Collection comparison operator to apply."""
     values: list[str] | list[int]
+    """Values to compare with the parameter."""
 
 
 SearchSpec = ScalarSearchSpec | VectorSearchSpec
@@ -66,43 +64,35 @@ class SortDirection(StrEnum):
 
 
 # TODO: TypedDict vs pydantic?
+@with_config(ConfigDict(use_attribute_docstrings=True))
 class SortSpec(TypedDict):
-    """Sort configuration for a search parameter.
-
-    Attributes:
-        parameter: Parameter by which to sort.
-        direction: Direction in which to sort the parameter.
-    """
+    """Sort configuration for a search parameter."""
 
     parameter: str
+    """Parameter by which to sort."""
     direction: SortDirection
+    """Direction in which to sort the parameter."""
 
 
 class SummaryParams(BaseModel):
-    """Parameters for grouping and summarizing search results.
-
-    Attributes:
-        grouping: Parameters used to group the search results.
-        search: Search conditions to apply before grouping.
-    """
+    """Parameters for grouping and summarizing search results."""
 
     grouping: list[str]
+    """Parameters used to group the search results."""
     search: list[SearchSpec] = []
+    """Search conditions to apply before grouping."""
     # TODO: Add more validation
 
 
 class SearchParams(BaseModel):
-    """Parameters for searching, sorting, and selecting job results.
-
-    Attributes:
-        parameters: Parameters to include in the search results.
-        search: Search conditions to apply.
-        sort: Sort configurations for the results.
-        distinct: Whether duplicate results should be removed.
-    """
+    """Parameters for searching, sorting, and selecting job results."""
 
     parameters: list[str] | None = None
+    """Parameters to include in the search results."""
     search: list[SearchSpec] = []
+    """Search conditions to apply."""
     sort: list[SortSpec] = []
+    """Sort configurations for the results."""
     distinct: bool = False
+    """Whether duplicate results should be removed."""
     # TODO: Add more validation

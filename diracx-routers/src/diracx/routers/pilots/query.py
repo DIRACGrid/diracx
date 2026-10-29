@@ -1,3 +1,9 @@
+"""Expose authenticated pilot search and summary endpoints.
+
+Pilot query results are scoped to the caller's VO, except for service
+administrators, who may query pilots across all VOs.
+"""
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -23,7 +29,14 @@ router = DiracxRouter()
 
 
 def _vo_constraint_for(user_info: AuthorizedUserInfo) -> str | None:
-    """Return the VO filter to apply for this user, or None for admins."""
+    """Return the VO constraint for a user, or ``None`` for administrators.
+
+    Args:
+        user_info: Authenticated identity and security properties.
+
+    Returns:
+        The user's VO, or ``None`` when the user is a service administrator.
+    """
     if SERVICE_ADMINISTRATOR in user_info.properties:
         return None
     return user_info.vo
@@ -106,15 +119,35 @@ async def search(
         SearchParams | None, Body(openapi_examples=EXAMPLE_SEARCHES)  # type: ignore
     ] = None,
 ) -> list[dict[str, Any]]:
-    """Retrieve information about pilots.
+    """Search pilot records with optional filtering, sorting, and pagination.
 
-    Normal users see only their own VO's pilots. Service administrators see
-    pilots from all VOs.
+    Results are restricted to the caller's VO unless they are a service
+    administrator. ``JobID`` is accepted as a pseudo-parameter in filters
+    with ``eq`` or ``in`` operators and is resolved through
+    ``JobToPilotMapping`` to a ``PilotID`` filter, so callers can look up the
+    pilots that ran a given job.
 
-    A `JobID` pseudo-parameter is also accepted in the `search` filter
-    list (operators `eq` / `in` only): it is transparently resolved
-    through `JobToPilotMapping` into a `PilotID` filter, allowing
-    callers to ask "pilots that ran this job" through the same endpoint.
+    If the requested page contains only part of the matching results, the
+    response includes a ``Content-Range`` header and status 206. If the page
+    is beyond the available results, it includes the total in ``Content-Range``
+    and uses status 416.
+
+    \f
+
+    Args:
+        pilot_db: Database used to search pilot records.
+        check_permissions: Access-policy dependency used to authorize metadata reads.
+        response: Response used to set range headers and status codes.
+        user_info: Authenticated identity used to scope results by VO.
+        page: One-based page number to return.
+        per_page: Maximum number of pilots to return on this page.
+        body: Optional search fields, filters, sort order, and distinct setting.
+
+    Returns:
+        Pilot records matching the search and VO constraint.
+
+    Raises:
+        HTTPException: If the caller is not permitted to read pilot metadata (403).
     """
     await check_permissions(action=ActionType.READ_PILOT_METADATA)
 
@@ -224,10 +257,24 @@ async def summary(
         SummaryParams, Body(openapi_examples=EXAMPLE_SUMMARY)  # type: ignore
     ],
 ):
-    """Aggregate pilot counts suitable for plotting.
+    """Group matching pilots and return counts suitable for plotting.
 
-    Normal users see only their own VO's pilots. Service administrators see
-    pilots from all VOs.
+    Results are restricted to the caller's VO unless they are a service
+    administrator.
+
+    \f
+
+    Args:
+        pilot_db: Database used to aggregate pilot records.
+        user_info: Authenticated identity used to scope results by VO.
+        check_permissions: Access-policy dependency used to authorize metadata reads.
+        body: Grouping fields and optional search filters.
+
+    Returns:
+        Aggregated rows containing grouping values and pilot counts.
+
+    Raises:
+        HTTPException: If the caller is not permitted to read pilot metadata (403).
     """
     await check_permissions(action=ActionType.READ_PILOT_METADATA)
 

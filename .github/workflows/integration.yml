@@ -23,9 +23,30 @@ defaults:
     shell: bash -el {0}
 
 jobs:
+  resolve-deps:
+    name: Resolve PR dependencies
+    if: github.repository == 'DIRACGrid/diracx'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      dirac-ref: ${{ steps.resolve.outputs.dirac-ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Resolve Depends-On pull requests
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .github/scripts/resolve_pr_deps.py resolve --repo "$REPO" --pr "$PR_NUMBER"
+
   dirac-integration-tests:
     name: DIRAC Integration tests
-    if: github.repository == 'DIRACGrid/diracx'
+    needs: resolve-deps
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -40,10 +61,23 @@ jobs:
         with:
           python-version: '3.15'
       - name: Clone DIRAC
+        env:
+          DIRAC_REF: ${{ needs.resolve-deps.outputs.dirac-ref || matrix.dirac-branch }}
         run: |
           pip install typer pyyaml gitpython packaging
-          git clone https://github.com/DIRACGrid/DIRAC.git -b "${{ matrix.dirac-branch }}" /tmp/DIRACRepo
+          # Full clone as DIRAC takes its version from the git tags
+          git clone https://github.com/DIRACGrid/DIRAC.git /tmp/DIRACRepo
+          git -C /tmp/DIRACRepo fetch origin "$DIRAC_REF"
+          git -C /tmp/DIRACRepo checkout -q FETCH_HEAD
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        with:
+          run-install: false
+          post-cleanup: false
+      - name: Use DIRACCommon from DIRAC dependency
+        if: needs.resolve-deps.outputs.dirac-ref != ''
+        run: .github/scripts/use-diraccommon-from-source.sh /tmp/DIRACRepo
       - name: Prepare environment
         run: cd /tmp/DIRACRepo && ./integration_tests.py prepare-environment "TEST_DIRACX=Yes" --diracx-src-dir "${GITHUB_WORKSPACE}"
       - name: Install server

@@ -1,3 +1,9 @@
+"""Expose public authentication discovery and installation metadata routes.
+
+These unauthenticated endpoints provide OpenID Connect configuration, public
+signing keys, installation metadata, and the security contact information.
+"""
+
 from __future__ import annotations
 
 from fastapi import Request
@@ -26,7 +32,21 @@ async def get_openid_configuration(
     config: Config,
     settings: AuthSettings,
 ) -> OpenIDConfiguration:
-    """OpenID Connect discovery endpoint."""
+    """Return the OpenID Connect discovery document.
+
+    The document includes route URLs, supported grants and scopes, token
+    authentication methods, and PKCE capabilities.
+
+    \f
+
+    Args:
+        request: Incoming request used to build absolute endpoint URLs.
+        config: DiracX configuration used to list supported VOs and groups.
+        settings: Authentication settings used to populate issuer and supported algorithms.
+
+    Returns:
+        OpenID Connect configuration for this installation.
+    """
     return await get_openid_configuration_bl(
         str(request.url_for("get_oidc_token")),
         str(request.url_for("userinfo")),
@@ -43,7 +63,16 @@ async def get_openid_configuration(
 async def get_jwks(
     settings: AuthSettings,
 ) -> dict:
-    """Get the JWKs (public keys)."""
+    """Return the public JSON Web Keys used to verify DiracX tokens.
+
+    \f
+
+    Args:
+        settings: Authentication settings containing the token signing key store.
+
+    Returns:
+        A JSON Web Key Set containing public keys only.
+    """
     return await get_jwks_bl(settings)
 
 
@@ -51,13 +80,28 @@ async def get_jwks(
 async def get_installation_metadata(
     config: Config,
 ) -> Metadata:
-    """Get metadata about the dirac installation."""
+    """Return authentication metadata for the configured VOs.
+
+    \f
+
+    Args:
+        config: DiracX configuration containing VO, group, and support information.
+
+    Returns:
+        Metadata listing each VO's groups, properties, support contacts, and default group.
+    """
     return await get_installation_metadata_bl(config)
 
 
 @router.get("/security.txt")
 async def get_security_txt() -> str:
-    """Get the security.txt file."""
+    """Return the installation's security contact information.
+
+    \f
+
+    Returns:
+        The ``security.txt`` contents as plain text.
+    """
     return """Contact: https://github.com/DIRACGrid/diracx/security/advisories/new
 Expires: 2026-07-02T23:59:59.000Z
 Preferred-Languages: en

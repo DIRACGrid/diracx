@@ -1,3 +1,9 @@
+"""Define job and sandbox authorization policies for router endpoints.
+
+The policies use authenticated user properties and resource ownership to
+decide whether create, read, manage, query, and pilot actions are permitted.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -15,6 +21,8 @@ from diracx.routers.utils import AuthorizedUserInfo
 
 
 class ActionType(StrEnum):
+    """Actions checked by the workload-management and sandbox policies."""
+
     # Create a job or a sandbox
     CREATE = auto()
     # Check job status, download a sandbox
@@ -26,15 +34,19 @@ class ActionType(StrEnum):
     QUERY = auto()
     # Actions from a pilot (e.g. heartbeat)
     PILOT = auto()
+    # MANAGE, and set a job status bypassing the job state machine
+    FORCE_STATUS = auto()
 
 
 class WMSAccessPolicy(BaseAccessPolicy):
-    """Rules.
+    """Authorize workload-management actions for users and pilots.
 
-    * You need either NORMAL_USER or JOB_ADMINISTRATOR in your properties
-    * An admin cannot create any resource but can read everything and modify everything
-    * A NORMAL_USER can create
-    * a NORMAL_USER can query and read only his own jobs.
+    Creating a job requires the ``NORMAL_USER`` property, whatever other
+    properties the token holds. For other actions, generic pilots may perform
+    manage and pilot actions, job administrators may read, query and manage
+    any job, and normal users may query jobs but read or manage only their own.
+    Forcing a job status (bypassing the job state machine) is restricted to
+    job administrators.
     """
 
     @staticmethod
@@ -47,6 +59,25 @@ class WMSAccessPolicy(BaseAccessPolicy):
         job_db: JobDB | None = None,
         job_ids: list[int] | None = None,
     ):
+        """Check whether the user may perform a workload-management action.
+
+        Pilot actions are currently treated as manage actions. For normal
+        users, job reads and management are allowed only when all requested
+        jobs belong to the authenticated user.
+
+        Args:
+            policy_name: Name of the access policy being evaluated.
+            user_info: Authenticated user identity and security properties.
+            action: Workload-management action to authorize.
+            job_db: Database used to look up job ownership.
+            job_ids: Jobs affected by a read or manage action.
+
+        Raises:
+            HTTPException: If the user's properties or job ownership do not
+                permit the action (403).
+            NotImplementedError: If required policy inputs are missing or
+                supplied for an incompatible action.
+        """
         assert action, "action is a mandatory parameter"
         assert job_db, "job_db is a mandatory parameter"
 
@@ -54,6 +85,11 @@ class WMSAccessPolicy(BaseAccessPolicy):
             # TODO: For now we map this to MANAGE but it should be changed once
             # we have pilot credentials
             action = ActionType.MANAGE
+
+        if action == ActionType.FORCE_STATUS:
+            if JOB_ADMINISTRATOR not in user_info.properties:
+                raise HTTPException(HTTPStatus.FORBIDDEN)
+            return
 
         if action == ActionType.CREATE:
             if job_ids is not None:
@@ -117,9 +153,10 @@ CheckWMSPolicyCallable = Annotated[Callable, Depends(WMSAccessPolicy.check)]
 
 
 class SandboxAccessPolicy(BaseAccessPolicy):
-    """Policy for the sandbox.
+    """Authorize creation, retrieval, and modification of sandboxes.
 
-    They are similar to the WMS access policies.
+    Normal users may create sandboxes and may access or modify only sandboxes
+    they own. Job administrators may access and modify any sandbox.
     """
 
     @staticmethod
@@ -134,6 +171,26 @@ class SandboxAccessPolicy(BaseAccessPolicy):
         required_prefix: str | None = None,
         se_name: str | None = None,
     ):
+        """Check whether the user may perform a sandbox action.
+
+        For sandbox access or modification, each PFN must have the required
+        prefix and belong to the authenticated user unless they are a job
+        administrator.
+
+        Args:
+            policy_name: Name of the access policy being evaluated.
+            user_info: Authenticated user identity and security properties.
+            action: Sandbox action to authorize.
+            sandbox_metadata_db: Database used to check sandbox ownership.
+            pfns: Physical file names of the sandboxes being accessed or modified.
+            required_prefix: Required prefix for each sandbox PFN.
+            se_name: Storage-element name used to look up sandbox ownership.
+
+        Raises:
+            HTTPException: If the user's properties, PFN prefix, or sandbox
+                ownership do not permit the action (403).
+            NotImplementedError: If required policy inputs are missing.
+        """
         assert action, "action is a mandatory parameter"
         assert sandbox_metadata_db, "sandbox_metadata_db is a mandatory parameter"
 
