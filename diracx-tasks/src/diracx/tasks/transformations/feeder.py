@@ -9,6 +9,7 @@ from typing import Annotated
 from pydantic import PositiveInt
 from uuid_utils import UUID
 
+from diracx.core.exceptions import ConfigurationError
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
 from diracx.logic.transformations import load_feeder, materialise_feeder_yields
@@ -109,14 +110,20 @@ class FeedTransformation(BaseTask):
             return
 
         feeder_name = columns["feeder"]
-        feeder = load_feeder(feeder_name)
+        feeder, args_model = load_feeder(feeder_name)
+        try:
+            feeder_args = args_model.model_validate(columns["feeder_args"] or {})
+        except ValueError as e:
+            raise ConfigurationError(
+                f"Invalid arguments for feeder {feeder_name!r}: {e}"
+            ) from e
         logger.info(
             "Running feeder %s for transformation %s",
             feeder_name,
             self.transformation_id,
         )
         yields = feeder(
-            feeder_args=columns["feeder_args"] or {},
+            feeder_args=feeder_args,
             feeder_state=columns["feeder_state"] or {},
             scouting=False,
         )

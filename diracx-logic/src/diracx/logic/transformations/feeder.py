@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, get_type_hints
 
+from pydantic import BaseModel
 from uuid_utils import UUID, uuid7
 
-from diracx.core.exceptions import ResourceNotFoundError
+from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.hashing import compute_input_hash
 from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
@@ -20,22 +22,38 @@ FeederYield = Input | SetFeederState | NoMoreInputs
 DEFAULT_INPUT_BATCH_SIZE = 1000
 
 
-def load_feeder(name: str) -> Callable[..., Any]:
-    """Load the feeder callable registered under ``name``.
+def load_feeder(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
+    """Find a feeder plugin and the model of its arguments.
+
+    The highest priority extension registering ``name`` wins. The arguments
+    model is the annotation of the plugin's ``feeder_args`` parameter.
 
     Args:
         name: Entry-point name stored in ``Transformations.Feeder``.
 
     Returns:
-        The feeder function (typically a sync generator).
+        The plugin function and its arguments model.
 
     Raises:
-        ResourceNotFoundError: If no entry point matches ``name``.
+        ConfigurationError: If no feeder is registered under ``name``, it is
+            not a sync generator function, or its ``feeder_args`` is not
+            annotated with a pydantic model.
     """
     entry_points = select_from_extension(group=DiracEntryPoint.FEEDERS, name=name)
     if not entry_points:
-        raise ResourceNotFoundError(name, detail="feeder plugin")
-    return entry_points[0].load()
+        raise ConfigurationError(
+            f"No feeder named {name!r} is registered under "
+            f"{DiracEntryPoint.FEEDERS.value!r}"
+        )
+    plugin = entry_points[0].load()
+    if not inspect.isgeneratorfunction(plugin):
+        raise ConfigurationError(f"Feeder {name!r} must be a sync generator function")
+    args_model = get_type_hints(plugin).get("feeder_args")
+    if not (isinstance(args_model, type) and issubclass(args_model, BaseModel)):
+        raise ConfigurationError(
+            f"Feeder {name!r} must annotate feeder_args with a pydantic model"
+        )
+    return plugin, args_model
 
 
 def _input_row(proposed: Input) -> dict[str, Any]:
