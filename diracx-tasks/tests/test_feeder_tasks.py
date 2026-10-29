@@ -11,8 +11,8 @@ from uuid_utils import uuid7
 from diracx.core.exceptions import ResourceNotFoundError
 from diracx.core.models.feeder import Input, SetFeederState
 from diracx.tasks.plumbing.locks import MutexLock, SharedRWLock
-from diracx.tasks.transformation import FeedTransformation, PeriodicSweepFeeders
-from diracx.tasks.transformation import feeder as feeder_tasks_module
+from diracx.tasks.transformations import FeedTransformation, PeriodicSweepFeeders
+from diracx.tasks.transformations import feeder as feeder_tasks_module
 
 
 def test_feed_transformation_takes_feeder_mutex_and_shared_status_lock():
@@ -154,7 +154,7 @@ async def test_feed_skips_when_transformation_missing(monkeypatch):
 
 
 async def test_load_feeder_unknown_name():
-    from diracx.logic.transformation import load_feeder
+    from diracx.logic.transformations import load_feeder
 
     with pytest.raises(ResourceNotFoundError, match="feeder plugin"):
         load_feeder("DoesNotExistFeeder")

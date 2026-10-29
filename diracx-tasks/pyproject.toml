@@ -38,8 +38,8 @@ DummyJobExecutorMonitorTask = "diracx.tasks.jobs:DummyJobExecutorMonitorTask"
 DummyJobExecutorTask = "diracx.tasks.jobs:DummyJobExecutorTask"
 
 [project.entry-points."diracx.tasks.transformation"]
-PeriodicSweepFeeders = "diracx.tasks.transformation:PeriodicSweepFeeders"
-FeedTransformation = "diracx.tasks.transformation:FeedTransformation"
+PeriodicSweepFeeders = "diracx.tasks.transformations:PeriodicSweepFeeders"
+FeedTransformation = "diracx.tasks.transformations:FeedTransformation"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

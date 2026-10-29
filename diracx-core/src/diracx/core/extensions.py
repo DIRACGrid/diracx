@@ -34,7 +34,7 @@ class DiracEntryPoint(StrEnum):
     RESOURCES = "diracx.resources"
     SERVICES = "diracx.services"
     LOCK_OBJECT_TYPES = "diracx.lock_object_types"
-    FEEDERS = "diracx.feeders"
+    FEEDERS = "diracx.transformations.feeders"
 
 
 @cached(cache=LRUCache(maxsize=1))

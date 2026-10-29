@@ -11,7 +11,7 @@ from uuid_utils import UUID
 
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
-from diracx.logic.transformation import load_feeder, materialise_feeder_yields
+from diracx.logic.transformations import load_feeder, materialise_feeder_yields
 from diracx.tasks.depends import NoTransaction
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
 from diracx.tasks.plumbing.enums import Priority, Size
