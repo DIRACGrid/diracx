@@ -32,6 +32,7 @@ from diracx.core.models.transformation import (
     TransformationKind,
     TransformationStatus,
 )
+from diracx.core.utils import recursive_merge
 from diracx.db.sql.transformation.db import (
     AnyUUID,
     NewComputeParcel,
@@ -238,7 +239,7 @@ async def pack_transformation(
         match proposal:
             case ComputeParcel():
                 consume(proposal.inputs)
-                requirements = {**template, **(proposal.requirements or {})}
+                requirements = recursive_merge(template, proposal.requirements or {})
                 requirements_id = content_hash(requirements) if requirements else None
                 if requirements_id and requirements_id not in stored_requirements:
                     new_requirements[requirements_id] = requirements

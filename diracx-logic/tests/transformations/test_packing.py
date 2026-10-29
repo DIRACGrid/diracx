@@ -43,7 +43,7 @@ from diracx.logic.transformations.packing import (
 )
 
 PROCESS_ID = b"\x0a" * 32
-TEMPLATE = {"cpu": 1, "platform": "x86_64"}
+TEMPLATE = {"cpu": 1, "platform": "x86_64", "disk": {"scratch_gb": 10, "io": "local"}}
 
 
 @pytest.fixture
@@ -244,7 +244,7 @@ async def test_paging_through_many_inputs(
 async def test_requirements_merged_over_template(
     transformation_db, transformation_id, use_packer
 ):
-    await add_inputs(transformation_db, transformation_id, 3)
+    await add_inputs(transformation_db, transformation_id, 4)
 
     async def plugin(*, packer_args, inputs, **_):
         group = [i.input_id async for i in inputs]
@@ -255,7 +255,11 @@ async def test_requirements_merged_over_template(
             metadata={"note": "big"},
         )
         yield ComputeParcel(inputs=group[1:2], requirements={"cpu": 8})
-        yield ComputeParcel(inputs=group[2:])
+        # A nested override keeps the template's other keys in that mapping
+        yield ComputeParcel(
+            inputs=group[2:3], requirements={"disk": {"scratch_gb": 50}}
+        )
+        yield ComputeParcel(inputs=group[3:])
 
     use_packer(plugin)
     await pack(transformation_db, transformation_id)
@@ -277,14 +281,16 @@ async def test_requirements_merged_over_template(
         n_requirements = len(
             (await db.conn.execute(select(RequirementsTemplates))).all()
         )
-    merged = {"cpu": 8, "platform": "x86_64"}
+    merged = {**TEMPLATE, "cpu": 8}
+    nested = {**TEMPLATE, "disk": {"scratch_gb": 50, "io": "local"}}
     assert rows == [
         (merged, PROCESS_ID, {"seed": 1}, {"note": "big"}),
         (merged, PROCESS_ID, None, None),
+        (nested, PROCESS_ID, None, None),
         (TEMPLATE, PROCESS_ID, None, None),
     ]
-    # The template and one merged set, stored once each
-    assert n_requirements == 2
+    # The template and the two merged sets, stored once each
+    assert n_requirements == 3
 
 
 async def test_bad_and_delayed_inputs(transformation_db, transformation_id, use_packer):

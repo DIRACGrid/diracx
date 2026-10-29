@@ -334,8 +334,9 @@ class ComputeParcel(BaseModel):
     Attributes:
         inputs: Inputs the parcel is made of.
         metadata: Free-form annotations stored on the parcel.
-        requirements: Additions merged over the transformation's
-            requirements template.
+        requirements: Additions merged recursively over the transformation's
+            requirements template: nested mappings are merged key by key, and
+            any other value, lists included, replaces the template's.
         parameters: The CWL input object passed to the runner.
     """
 
