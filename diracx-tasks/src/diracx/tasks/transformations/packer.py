@@ -16,7 +16,7 @@ from diracx.logic.transformations import pack_transformation
 from diracx.tasks.plumbing.base_task import BaseTask, PeriodicBaseTask
 from diracx.tasks.plumbing.enums import Priority, Size
 from diracx.tasks.plumbing.lock_registry import TRANSFORMATION
-from diracx.tasks.plumbing.locks import BaseLock, MutexLock
+from diracx.tasks.plumbing.locks import BaseLock, MutexLock, SharedRWLock
 from diracx.tasks.plumbing.retry_policies import ExponentialBackoff
 from diracx.tasks.plumbing.schedules import IntervalSeconds
 
@@ -86,7 +86,13 @@ class PackTransformationTask(BaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
-        return [MutexLock(TRANSFORMATION, self.transformation_id)]
+        # The mutex keeps two packer runs for one transformation apart while
+        # letting its feeder run alongside; the shared status lock holds off
+        # status changes, which take the exclusive side, until the run ends.
+        return [
+            MutexLock(TRANSFORMATION, self.transformation_id, "packer"),
+            SharedRWLock(TRANSFORMATION, self.transformation_id, "status"),
+        ]
 
     async def execute(self, transformation_db: TransformationDB) -> dict[str, Any]:
         summary = await pack_transformation(
