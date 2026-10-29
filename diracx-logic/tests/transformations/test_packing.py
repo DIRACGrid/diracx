@@ -313,17 +313,6 @@ async def test_bad_and_delayed_inputs(transformation_db, transformation_id, use_
     assert summary.parcels_created == 0
 
 
-async def test_sync_packer(transformation_db, transformation_id, use_packer):
-    await add_inputs(transformation_db, transformation_id, 2)
-
-    def plugin(*, packer_args, inputs, **_):
-        yield ComputeParcel(inputs=[i.input_id for i in inputs])
-
-    use_packer(plugin)
-    summary = await pack(transformation_db, transformation_id)
-    assert summary.inputs_assigned == 2
-
-
 @pytest.mark.parametrize("mistake", ["unoffered", "twice"])
 async def test_invalid_proposals_roll_back(
     transformation_db, transformation_id, use_packer, mistake
@@ -385,10 +374,24 @@ def test_load_packer_unknown():
         load_packer("DoesNotExist")
 
 
+def test_load_packer_rejects_a_sync_packer(monkeypatch):
+    class EntryPoint:
+        def load(self):
+            def plugin(*, packer_args: FixedSizePackerArgs, inputs, **_):
+                yield from ()
+
+            return plugin
+
+    monkeypatch.setattr(packing, "select_from_extension", lambda **_: [EntryPoint()])
+    with pytest.raises(ConfigurationError, match="async generator function"):
+        load_packer("Sync")
+
+
 def test_load_packer_needs_an_args_model(monkeypatch):
     class EntryPoint:
         def load(self):
-            def plugin(*, packer_args: dict, inputs): ...
+            async def plugin(*, packer_args: dict, inputs):
+                yield
 
             return plugin
 

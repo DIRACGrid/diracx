@@ -11,7 +11,7 @@ import hashlib
 import inspect
 import json
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from datetime import datetime, timezone
 from typing import Any, get_type_hints
 
@@ -81,8 +81,9 @@ def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
         The plugin function and its arguments model.
 
     Raises:
-        ConfigurationError: If no packer is registered under ``name``, or its
-            ``packer_args`` is not annotated with a pydantic model.
+        ConfigurationError: If no packer is registered under ``name``, it is
+            not an async generator function, or its ``packer_args`` is not
+            annotated with a pydantic model.
     """
     entry_points = select_from_extension(
         group=DiracEntryPoint.TRANSFORMATION_PACKERS, name=name
@@ -93,6 +94,8 @@ def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
             f"{DiracEntryPoint.TRANSFORMATION_PACKERS.value!r}"
         )
     plugin = entry_points[0].load()
+    if not inspect.isasyncgenfunction(plugin):
+        raise ConfigurationError(f"Packer {name!r} must be an async generator function")
     args_model = get_type_hints(plugin).get("packer_args")
     if not (isinstance(args_model, type) and issubclass(args_model, BaseModel)):
         raise ConfigurationError(
@@ -190,14 +193,7 @@ async def pack_transformation(
         "feeder_active": feeder_active,
         "input_overview": input_overview,
     }
-    proposals: AsyncIterator[PackerProposal]
-    if inspect.isasyncgenfunction(plugin):
-        proposals = plugin(inputs=claim(), **kwargs)
-    else:
-        # A synchronous packer cannot await the claim, so it is offered every
-        # input up front, which max_inputs keeps bounded
-        offered = [packer_input async for packer_input in claim()]
-        proposals = _aiter(plugin(inputs=iter(offered), **kwargs))
+    proposals: AsyncIterator[PackerProposal] = plugin(inputs=claim(), **kwargs)
 
     summary = PackingSummary()
     used: set[AnyUUID] = set()
@@ -274,8 +270,3 @@ async def pack_transformation(
     summary.inputs_left = len(claimed) - len(used)
     logger.info("Packed transformation %s: %s", transformation_id, summary)
     return summary
-
-
-async def _aiter(iterator: Iterator[PackerProposal]) -> AsyncIterator[PackerProposal]:
-    for item in iterator:
-        yield item

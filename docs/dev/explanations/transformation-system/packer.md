@@ -21,7 +21,7 @@ If any check fails, the task fails and the whole transaction rolls back, so a ru
 
 ## The plugin contract
 
-A packer is a generator function, preferably asynchronous, called with keyword arguments only:
+A packer is an asynchronous generator function, called with keyword arguments only:
 
 | Argument         | Type                     | Meaning                                                                               |
 | ---------------- | ------------------------ | ------------------------------------------------------------------------------------- |
@@ -106,7 +106,7 @@ ByRun = "myext.logic.transformations.packers:by_run_packer"
 
 A transformation then uses it with `Packer = "ByRun"` and, for example, `PackerArgs = {"group_size": 20}`. If several installed extensions register the same name, the one with the highest extension priority wins, so an extension can replace a packer shipped by DiracX.
 
-A synchronous generator function also works. Since it cannot wait for the database between pages, it is offered all the claimed inputs at once, which `DIRACX_TASKS_PACKER_MAX_INPUTS_PER_INVOCATION` keeps bounded.
+A synchronous generator function is rejected when the packer is loaded: it could not wait for the database between pages of inputs, so it would have to be offered every claimed input at once, and anything slow it did would block the worker.
 
 DiracX ships one packer, `FixedSize`, which makes parcels of `group_size` inputs in the order they are offered and holds back a smaller last group until the feeder is off or a flush is requested.
 
