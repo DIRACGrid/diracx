@@ -37,8 +37,12 @@ class PackerSettings(ServiceSettingsBase):
     interval_seconds: PositiveInt = 60
     """How often the sweep schedules a packer run for each active transformation."""
 
-    max_inputs_per_invocation: PositiveInt = 10_000
-    """Maximum number of inputs offered to a packer in one run."""
+    max_inputs_per_invocation: PositiveInt = 100_000
+    """Maximum number of inputs offered to a packer in one run.
+
+    Bounds a run's memory: about 200 bytes per input in the core, plus about
+    1 KB for each input the packer keeps.
+    """
 
 
 _settings = PackerSettings()
