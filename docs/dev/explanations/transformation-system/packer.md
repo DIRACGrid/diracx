@@ -9,15 +9,15 @@ One rule applies throughout: **plugins propose, the core writes.**
 
 ## How a packer run works
 
-`PackerSweepTask` runs periodically and schedules one `PackTransformationTask` for each `Active` transformation. Each of those tasks holds a packer mutex on its transformation id, so two runs for one transformation never overlap while different transformations, and the transformation's own feeder, run in parallel. It also holds the shared side of the transformation's `status` reader-writer lock; anything that changes the status takes the exclusive side, so a Pause waits for a run in progress to finish and the next run sees it. A run is one database transaction:
+`PackerSweepTask` runs periodically and schedules one `PackTransformationTask` for each `Active` transformation. Each of those tasks holds a packer mutex on its transformation id, so two runs for one transformation never overlap while different transformations, and the transformation's own feeder, run in parallel. It also holds the shared side of the transformation's `status` reader-writer lock; anything that changes the status takes the exclusive side, so a Pause waits for a run in progress to finish and the next run sees it. A run commits in batches:
 
 1. The core loads the transformation. A transformation that is not `Active` is skipped.
 2. It resolves the plugin from the `diracx.transformations.packers` entry point named by `Packer`, and validates `PackerArgs` against the plugin's arguments model.
 3. It claims `Unassigned` inputs whose `DelayedUntil` has passed, with `SELECT ... FOR UPDATE SKIP LOCKED`, in pages of 1000 and up to `DIRACX_TASKS_PACKER_MAX_INPUTS_PER_INVOCATION`, and streams them to the plugin.
-4. It checks and applies each proposal the plugin yields, writing parcels in batches.
-5. Inputs the plugin did not use stay `Unassigned`; their row locks are released when the transaction commits.
+4. It checks and applies each proposal the plugin yields, writing and committing parcels in batches. Each commit releases the row locks taken so far, so a long run does not hold up the feeder.
+5. Inputs the plugin did not use stay `Unassigned`; their row locks are released at the next commit.
 
-If any check fails, the task fails and the whole transaction rolls back, so a run either applies everything the plugin proposed or nothing.
+If anything fails, whether a check, the plugin or the database, the task fails and only the batch in progress rolls back. Batches already committed stay, and the inputs of the failed batch stay `Unassigned`, so the retry carries on from there.
 
 ## The plugin contract
 

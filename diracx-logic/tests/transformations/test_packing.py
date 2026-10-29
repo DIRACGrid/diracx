@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import event, insert, select, update
+from sqlalchemy import event, func, insert, select, update
 from uuid_utils import UUID, uuid7
 from uuid_utils.compat import uuid7 as std_uuid7
 
@@ -336,8 +336,35 @@ async def test_invalid_proposals_roll_back(
     use_packer(plugin)
     with pytest.raises(ValueError, match=mistake.replace("unoffered", "not offered")):
         await pack(transformation_db, transformation_id)
+    # The valid parcel was still in the failed batch, so it is rolled back too
     statuses = await input_statuses(transformation_db)
     assert set(statuses.values()) == {InputStatus.UNASSIGNED}
+
+
+async def test_a_failure_keeps_the_batches_already_committed(
+    transformation_db, transformation_id, use_packer, monkeypatch
+):
+    monkeypatch.setattr(packing, "PARCEL_BATCH_SIZE", 1)
+    input_ids = await add_inputs(transformation_db, transformation_id, 3)
+
+    async def plugin(*, packer_args, inputs, **_):
+        offered = [i.input_id async for i in inputs]
+        yield ComputeParcel(inputs=offered[:1])
+        yield ComputeParcel(inputs=offered[1:2])
+        yield ComputeParcel(inputs=[std_uuid7()])
+
+    use_packer(plugin)
+    with pytest.raises(ValueError, match="not offered"):
+        await pack(transformation_db, transformation_id)
+
+    statuses = await input_statuses(transformation_db)
+    assert [statuses[i] for i in input_ids] == [
+        InputStatus.ASSIGNED,
+        InputStatus.ASSIGNED,
+        InputStatus.UNASSIGNED,
+    ]
+    async with transformation_db as db:
+        assert await db.conn.scalar(select(func.count()).select_from(Parcels)) == 2
 
 
 async def test_inactive_transformation_is_skipped(

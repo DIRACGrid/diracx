@@ -1,8 +1,9 @@
 """The core side of packing a transformation's inputs into parcels (DX-ADR-006).
 
 The packer plugin only proposes; this module checks every proposal and is the
-only thing that writes. Everything happens inside the caller's transaction, so
-a proposal that fails a check rolls back the whole invocation.
+only thing that writes. It commits each batch of proposals on its own, so a
+failure rolls back only the batch in progress: earlier batches stay, and the
+inputs of the failed one stay ``Unassigned`` for the next run.
 """
 
 from __future__ import annotations
@@ -135,7 +136,8 @@ async def pack_transformation(
     """Run a transformation's packer once and apply what it proposes.
 
     Args:
-        transformation_db: Database, inside the caller's transaction.
+        transformation_db: Database, entered by the caller; each batch is
+            committed as it is written.
         transformation_id: The transformation to pack.
         flush: Ask the packer to also pack groups it would hold back as too
             small.
@@ -207,6 +209,15 @@ async def pack_transformation(
     stored_requirements: set[bytes] = set()
 
     def consume(input_ids: list[AnyUUID]) -> None:
+        """Record the inputs a proposal uses, rejecting any it may not use.
+
+        The plugin should only propose inputs it was offered, and each one at most
+        once. A packer is extension code, so its proposals are not trusted: each
+        input must be one offered in this run, and appear in one proposal only.
+
+        Raises:
+            ValueError: If an input was not offered, or was already used.
+        """
         for input_id in input_ids:
             if input_id not in claimed:
                 raise ValueError(f"Packer proposed input {input_id} it was not offered")
@@ -234,6 +245,9 @@ async def pack_transformation(
             )
             summary.inputs_problematic += len(problematic)
             problematic.clear()
+        # Each batch is its own transaction (DX-ADR-006): it releases the row
+        # locks taken so far, and a later failure does not undo it
+        await transformation_db.conn.commit()
 
     async for proposal in proposals:
         match proposal:
