@@ -104,7 +104,7 @@ Register it in your extension's `pyproject.toml`:
 ByRun = "myext.logic.transformations.packers:by_run_packer"
 ```
 
-A transformation then uses it with `Packer = "ByRun"` and, for example, `PackerArgs = {"group_size": 20}`. If several installed extensions register the same name, the one with the highest extension priority wins, so an extension can replace a packer shipped by DiracX.
+A transformation then uses it with `Packer = "ByRun"` and, for example, `PackerArgs = {"group_size": 20}`. If both DiracX and the installed extension register the same name, the extension's packer is used, so an extension can replace a packer shipped by DiracX.
 
 A synchronous generator function is rejected when the packer is loaded: it could not wait for the database between pages of inputs, so it would have to be offered every claimed input at once, and anything slow it did would block the worker.
 

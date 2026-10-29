@@ -71,8 +71,10 @@ class PackingSummary(BaseModel):
 def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
     """Find a packer plugin and the model of its arguments.
 
-    The highest priority extension registering ``name`` wins. The arguments
-    model is the annotation of the plugin's ``packer_args`` parameter.
+    If both DiracX and the installed extension register a packer under
+    ``name``, the extension's is used, so an extension can replace a packer
+    shipped by DiracX. The arguments model is the annotation of the plugin's
+    ``packer_args`` parameter.
 
     Args:
         name: Entry point name of the packer.
