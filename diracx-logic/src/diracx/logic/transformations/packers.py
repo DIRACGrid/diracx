@@ -41,7 +41,9 @@ async def fixed_size_packer(
         inputs: The claimed ``Unassigned`` inputs.
         flush: Whether to pack the last group even if it is small.
         feeder_active: Whether more inputs may still arrive.
-        input_overview: Number of the transformation's inputs in each status.
+        input_overview: Number of the transformation's inputs in each status;
+            part of the packer contract, unused here as the group size does
+            not depend on how much of the pool is left.
 
     Yields:
         One compute parcel per group.
