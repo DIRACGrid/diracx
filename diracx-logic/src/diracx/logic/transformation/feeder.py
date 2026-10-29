@@ -1,12 +1,14 @@
-"""Materialise feeder plugin proposals into TransformationDB rows."""
+"""Feeder plugin loading and materialisation into TransformationDB rows."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from uuid_utils import UUID, uuid7
 
+from diracx.core.exceptions import ResourceNotFoundError
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.hashing import compute_input_hash
 from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from diracx.db.sql import TransformationDB
@@ -16,6 +18,24 @@ FeederYield = Input | SetFeederState | NoMoreInputs
 # Default insert chunk size when a feeder yields many ``Input``s before a
 # ``SetFeederState``. Hash dedup makes early commits safe on restart.
 DEFAULT_INPUT_BATCH_SIZE = 1000
+
+
+def load_feeder(name: str) -> Callable[..., Any]:
+    """Load the feeder callable registered under ``name``.
+
+    Args:
+        name: Entry-point name stored in ``Transformations.Feeder``.
+
+    Returns:
+        The feeder function (typically a sync generator).
+
+    Raises:
+        ResourceNotFoundError: If no entry point matches ``name``.
+    """
+    entry_points = select_from_extension(group=DiracEntryPoint.FEEDERS, name=name)
+    if not entry_points:
+        raise ResourceNotFoundError(name, detail="feeder plugin")
+    return entry_points[0].load()
 
 
 def _input_row(proposed: Input) -> dict[str, Any]:
