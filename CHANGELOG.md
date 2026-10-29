@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.1](https://github.com/DIRACGrid/diracx/compare/v0.7.0...v0.7.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** update dependency fastapi to &gt;=0.151.0,&lt;0.152.0 ([#1127](https://github.com/DIRACGrid/diracx/issues/1127)) ([b4d2838](https://github.com/DIRACGrid/diracx/commit/b4d283880856cecaf87470515a5df499067cf41d))
+* **deps:** update dependency pymysql to &lt;1.2.4 ([#1094](https://github.com/DIRACGrid/diracx/issues/1094)) ([000b334](https://github.com/DIRACGrid/diracx/commit/000b334938ec01ac53d1b79b1ad1fcc34ee8f013))
+* **tasks:** add async_exit_stack protection to the worker ([#1105](https://github.com/DIRACGrid/diracx/issues/1105)) ([ec7d509](https://github.com/DIRACGrid/diracx/commit/ec7d50970d6af072f9a919ad1313acc25acab29a))
+
 ## [0.7.0](https://github.com/DIRACGrid/diracx/compare/v0.6.1...v0.7.0) (2026-10-27)
 
 
