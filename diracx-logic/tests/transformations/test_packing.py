@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import event, insert, select, update
 from uuid_utils import UUID, uuid7
+from uuid_utils.compat import uuid7 as std_uuid7
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.models.transformation import (
@@ -334,7 +334,7 @@ async def test_invalid_proposals_roll_back(
         offered = [i.input_id async for i in inputs]
         yield ComputeParcel(inputs=offered[:1])
         if mistake == "unoffered":
-            yield ComputeParcel(inputs=[uuid4()])
+            yield ComputeParcel(inputs=[std_uuid7()])
         else:
             yield BadInput(input_id=offered[0])
 

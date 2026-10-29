@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 from pydantic import ValidationError
+from uuid_utils.compat import uuid7
 
 from diracx.core.models.transformation import (
     INPUT_TRANSITIONS,
@@ -82,7 +81,7 @@ def test_packer_proposals_need_inputs():
 
 
 def test_packer_input_is_frozen():
-    packer_input = PackerInput(input_id=uuid4(), lfn="/vo/file")
+    packer_input = PackerInput(input_id=uuid7(), lfn="/vo/file")
     assert packer_input.descriptor == {}
     with pytest.raises(ValidationError):
         packer_input.lfn = "/vo/other"  # type: ignore[misc]

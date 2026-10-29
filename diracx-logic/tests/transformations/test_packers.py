@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
+from uuid_utils.compat import uuid7
 
 from diracx.core.models.transformation import PackerInput
 from diracx.logic.transformations.packers import (
@@ -12,7 +11,7 @@ from diracx.logic.transformations.packers import (
 
 
 async def run(n: int, group_size: int, *, flush=False, feeder_active=True):
-    inputs = [PackerInput(input_id=uuid4()) for _ in range(n)]
+    inputs = [PackerInput(input_id=uuid7()) for _ in range(n)]
 
     async def stream():
         for packer_input in inputs:

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
+from uuid_utils import uuid7
 
 from diracx.core.models.transformation import TransformationStatus
 from diracx.logic.transformations import PackingSummary
@@ -33,12 +34,12 @@ def test_task_metadata():
 
 
 def test_serialize_round_trip():
-    task = PackTransformationTask(transformation_id=str(uuid4()), flush=True)
+    task = PackTransformationTask(transformation_id=str(uuid7()), flush=True)
     assert PackTransformationTask(*task.serialize()) == task
 
 
 def test_pack_task_takes_a_packer_mutex_and_a_shared_status_lock():
-    first, second = str(uuid4()), str(uuid4())
+    first, second = str(uuid7()), str(uuid7())
     mutex, status = PackTransformationTask(transformation_id=first).execution_locks
     assert isinstance(mutex, MutexLock)
     assert mutex.redis_key == f"lock:mutex:transformation:{first}:packer"
@@ -63,7 +64,7 @@ def test_settings_must_be_positive():
 
 
 async def test_sweep_schedules_one_task_per_active_transformation(monkeypatch):
-    active = [uuid4(), uuid4()]
+    active = [uuid7(), uuid7()]
     scheduled = []
 
     async def fake_schedule(self, **kwargs):
@@ -91,7 +92,7 @@ async def test_pack_task_delegates_to_logic(monkeypatch):
     )
     monkeypatch.setattr(packer_module, "pack_transformation", pack_transformation)
     transformation_db = AsyncMock()
-    transformation_id = uuid4()
+    transformation_id = uuid7()
 
     result = await PackTransformationTask(
         transformation_id=str(transformation_id), flush=True
