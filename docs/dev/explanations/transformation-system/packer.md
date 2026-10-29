@@ -51,7 +51,7 @@ The plugin yields proposals, all defined in `diracx.core.models.transformation`:
 
 ### Using `flush` and `feeder_active`
 
-Deciding when to pack a small remainder is the plugin's job, not the core's. While `feeder_active` is true, more inputs may arrive, so a packer that groups inputs can hold back an incomplete group. Once the feeder is off, or when `flush` is set, it should pack what is left, otherwise the transformation never finishes. `input_overview` is there for packers whose thresholds depend on how much of the pool is left.
+Deciding when to pack a small remainder is the plugin's job, not the core's. While `feeder_active` is true, more inputs may arrive, so a packer that groups inputs can hold back an incomplete group. Once the feeder is off, or when `flush` is set, it should pack what is left, otherwise the transformation never finishes. A transformation without a feeder counts as having its feeder off, as it does for the drain condition of DX-ADR-005: its inputs are expected to be in place already, so its remainder is packed straight away. `input_overview` is there for packers whose thresholds depend on how much of the pool is left.
 
 ## Writing and registering a packer
 
