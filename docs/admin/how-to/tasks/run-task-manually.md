@@ -23,33 +23,33 @@ diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]'
 diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 ```
 
-## Run the dummy job executor
+## Run the dummy compute backend
 
-The task package includes two tasks that simulate job execution. The periodic
-`jobs:DummyJobExecutorMonitorTask` moves every `Received` job to `Waiting` and
-schedules a one-shot `jobs:DummyJobExecutorTask` for it, which walks the job
-through `Matched` → `Running` → `Done`.
+The dummy compute backend pretends to run the parcels of the Transformation
+System, which are kept in the `TransformationDB`. The periodic
+`transformations:DummyComputeBackendMonitorTask` claims `Unassigned` compute
+parcels, moves them through `Reserved` to `Assigned` on the `dummy` backend,
+and schedules a one-shot `transformations:DummyComputeBackendTask` for each,
+which walks the parcel through `Completing` to `Done` and moves its inputs to
+`Processed`. Parcels the packer pinned to another backend are left alone. See
+[Dummy compute backend](../../../dev/explanations/tasks/dummy-compute-backend.md)
+for how it works.
 
-Automatic monitoring is disabled by default. `run_local.sh` explicitly enables
-the monitor every 10 seconds with
-`DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED=true` and
-`DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS=10`. Demo deployment
-enablement requires the coordinated `diracx-charts` values change and is not
-part of this commit.
+Automatic monitoring is disabled by default. `run_local.sh` enables it every
+10 seconds with `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_ENABLED=true` and
+`DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_INTERVAL_SECONDS=10`. Both tasks need
+`DIRACX_DB_URL_TRANSFORMATIONDB`.
 
-Both tasks talk to the job databases, so the relevant `DIRACX_DB_URL_*`,
-`DIRACX_OS_DB_*`, and `DIRACX_CONFIG_BACKEND_URL` variables must be set.
-
-Run the monitor once to pick up all `Received` jobs:
+Run the monitor once to submit the waiting parcels:
 
 ```bash
-diracx-tasks call jobs:DummyJobExecutorMonitorTask
+diracx-tasks call transformations:DummyComputeBackendMonitorTask
 ```
 
-Or simulate the execution of a single job by passing its job ID:
+Or complete a single `Assigned` parcel by passing its identifier:
 
 ```bash
-diracx-tasks call jobs:DummyJobExecutorTask --args '[42]'
+diracx-tasks call transformations:DummyComputeBackendTask --args '["0199c5a4-7c1e-7d3f-8a2b-3c4d5e6f7a8b"]'
 ```
 
 ## Debugging
