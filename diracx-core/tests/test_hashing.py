@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 import xxhash
 
-from diracx.core.hashing import canonical_json_bytes, content_hash, input_hash
+from diracx.core.hashing import canonical_json_bytes, hash_json, input_hash
 
 
 def test_canonical_json_bytes_key_order_independent():
@@ -53,14 +53,14 @@ def test_canonical_json_bytes_rejects_non_json_types():
         canonical_json_bytes({True: "a"})
 
 
-def test_content_hash_known_vector():
+def test_hash_json_known_vector():
     # Empty object — SHA-256 of b"{}"
-    assert content_hash({}) == hashlib.sha256(b"{}").digest()
-    assert content_hash({}).hex() == (
+    assert hash_json({}) == hashlib.sha256(b"{}").digest()
+    assert hash_json({}).hex() == (
         "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
     )
     value = {"Priority": 1, "Sites": ["LCG.CERN.ch"]}
-    digest = content_hash(value)
+    digest = hash_json(value)
     assert len(digest) == 32
     assert digest == hashlib.sha256(canonical_json_bytes(value)).digest()
     assert digest.hex() == (
@@ -68,7 +68,7 @@ def test_content_hash_known_vector():
     )
 
 
-def test_content_hash_stable_for_requirements_shape():
+def test_hash_json_stable_for_requirements_shape():
     requirements = {"CPUTime": 86400, "Sites": ["LCG.CERN.ch", "LCG.IN2P3.fr"]}
     hints = {"dirac:Backend": "Pilot"}
     process = {
@@ -77,8 +77,8 @@ def test_content_hash_stable_for_requirements_shape():
         "baseCommand": ["echo"],
     }
     for value in (requirements, hints, process):
-        assert len(content_hash(value)) == 32
-        assert content_hash(value) == content_hash(
+        assert len(hash_json(value)) == 32
+        assert hash_json(value) == hash_json(
             {k: value[k] for k in sorted(value, reverse=True)}
         )
 

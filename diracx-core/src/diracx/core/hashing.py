@@ -1,7 +1,7 @@
 """Canonical JSON bytes and content digests for the Transformation System.
 
 Content-addressed rows (``Processes``, ``Requirements``, ``ResolvedHints``) use
-:func:`content_hash` (SHA-256, 32 raw bytes). ``Inputs.InputHash`` reuses the
+:func:`hash_json` (SHA-256, 32 raw bytes). ``Inputs.InputHash`` reuses the
 same canonicaliser via :func:`input_hash` (XXH3-128, 16 raw bytes). See
 DX-ADR-004 and DX-ADR-007.
 
@@ -18,7 +18,7 @@ Canonical form (stable forever for stored digests):
 
 CWL-specific preparation (``doc``/``label``, ``$import``, nested ``run`` refs)
 is not performed here; compile that into a JSON value, then call
-:func:`content_hash`.
+:func:`hash_json`.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ import xxhash
 
 __all__ = [
     "canonical_json_bytes",
-    "content_hash",
+    "hash_json",
     "input_hash",
 ]
 
@@ -63,11 +63,14 @@ def canonical_json_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def content_hash(value: Any) -> bytes:
+def hash_json(value: Any) -> bytes:
     """Return the SHA-256 digest of the canonical form of ``value``.
 
     Used as the primary key for content-addressed documents
-    (``Processes``, ``Requirements``, ``ResolvedHints``).
+    (``Processes``, ``Requirements``, ``ResolvedHints``). Today this is always
+    SHA-256; an optional algorithm parameter can be added later if another
+    cryptographic digest is required. Non-cryptographic digests (e.g. input
+    dedupe) stay on :func:`input_hash`.
 
     Args:
         value: A JSON-compatible Python value.
