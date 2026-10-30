@@ -7,8 +7,8 @@ DX-ADR-004 and DX-ADR-007.
 
 Canonical form (stable forever for stored digests):
 
-* JSON types only: ``null``, ``bool``, ``int``, finite ``float``, ``str``,
-  ``list``, ``dict`` with string keys.
+* JSON types only: ``null``, ``bool``, signed 64-bit ``int``, finite
+  ``float``, ``str``, ``list``, ``dict`` with string keys.
 * Object keys sorted lexicographically as UTF-8 code units (Python
   ``sort_keys=True``).
 * Compact separators ``(",", ":")``, ``ensure_ascii=False``, UTF-8 encoding.
@@ -36,6 +36,9 @@ __all__ = [
     "input_hash",
 ]
 
+_INT64_MIN = -(1 << 63)
+_INT64_MAX = (1 << 63) - 1
+
 
 def canonical_json_bytes(value: Any) -> bytes:
     """Return stable UTF-8 bytes for a JSON-compatible value.
@@ -48,6 +51,7 @@ def canonical_json_bytes(value: Any) -> bytes:
 
     Raises:
         TypeError: If ``value`` is not JSON-compatible.
+        ValueError: If a number is non-finite or outside signed int64.
     """
     cleaned = _ensure_json_value(value)
     return json.dumps(
@@ -89,14 +93,16 @@ def input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
 
 
 def _ensure_json_value(value: Any) -> Any:
-    """Return ``value`` if JSON-compatible, else raise ``TypeError``."""
+    """Return ``value`` if JSON-compatible, else raise ``TypeError``/``ValueError``."""
     if value is None or isinstance(value, bool):
         return value
     if isinstance(value, int):
+        if not _INT64_MIN <= value <= _INT64_MAX:
+            raise ValueError(f"Integer {value} is outside the signed 64-bit range")
         return value
     if isinstance(value, float):
         if not math.isfinite(value):
-            raise TypeError("Non-finite floats are not JSON-compatible")
+            raise ValueError("Non-finite floats are not JSON-compatible")
         return value
     if isinstance(value, str):
         return value

@@ -24,6 +24,18 @@ def test_canonical_json_bytes_unicode():
 
 def test_canonical_json_bytes_finite_float():
     assert canonical_json_bytes({"x": 1.5}) == b'{"x":1.5}'
+    assert canonical_json_bytes({"x": 1 / 3}) == b'{"x":0.3333333333333333}'
+
+
+def test_canonical_json_bytes_int64_bounds():
+    assert canonical_json_bytes({"x": (1 << 63) - 1}) == (b'{"x":9223372036854775807}')
+    assert canonical_json_bytes({"x": -(1 << 63)}) == (b'{"x":-9223372036854775808}')
+    with pytest.raises(ValueError, match="64-bit"):
+        canonical_json_bytes({"x": 1 << 63})
+    with pytest.raises(ValueError, match="64-bit"):
+        canonical_json_bytes({"x": -(1 << 63) - 1})
+    with pytest.raises(ValueError, match="64-bit"):
+        canonical_json_bytes({"x": 2**100})
 
 
 def test_canonical_json_bytes_rejects_non_json_types():
@@ -33,10 +45,12 @@ def test_canonical_json_bytes_rejects_non_json_types():
         canonical_json_bytes({1, 2})
     with pytest.raises(TypeError, match="Dict keys must be str"):
         canonical_json_bytes({1: "a"})
-    with pytest.raises(TypeError, match="Non-finite"):
+    with pytest.raises(ValueError, match="Non-finite"):
         canonical_json_bytes({"x": float("nan")})
     with pytest.raises(TypeError, match="tuple"):
         canonical_json_bytes(("a", "b"))
+    with pytest.raises(TypeError, match="bool"):
+        canonical_json_bytes({True: "a"})
 
 
 def test_content_hash_known_vector():
