@@ -26203,7 +26203,7 @@ packages:
   - pyyaml
   - sh
   - signurlarity>=0.3.1
-  - xxhash
+  - xxhash>=2.0
   - opentelemetry-exporter-otlp>=1.40.0 ; extra == 'otel'
   - opentelemetry-instrumentation-logging>=0.63b1 ; extra == 'otel'
   - opentelemetry-sdk>=1.40.0 ; extra == 'otel'
