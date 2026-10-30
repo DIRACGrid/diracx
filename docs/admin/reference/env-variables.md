@@ -446,3 +446,28 @@ Whether the monitor is scheduled automatically.
 *Optional*, default value: `10`
 
 How often the enabled monitor searches for received jobs.
+
+## PackerSettings
+
+Settings controlling the transformation packer.
+
+### `DIRACX_TASKS_PACKER_ENABLED`
+
+*Optional*, default value: `False`
+
+Whether the packer sweep is scheduled automatically.
+
+### `DIRACX_TASKS_PACKER_INTERVAL_SECONDS`
+
+*Optional*, default value: `60`
+
+How often the sweep schedules a packer run for each active transformation.
+
+### `DIRACX_TASKS_PACKER_MAX_INPUTS_PER_INVOCATION`
+
+*Optional*, default value: `100000`
+
+Maximum number of inputs offered to a packer in one run.
+
+Bounds a run's memory: about 200 bytes per input in the core, plus about
+1 KB for each input the packer keeps.
