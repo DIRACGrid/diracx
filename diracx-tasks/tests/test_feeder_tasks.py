@@ -197,7 +197,7 @@ async def test_feed_transformation_runs_integer_feeder_end_to_end(
         TransformationKind,
         TransformationStatus,
     )
-    from diracx.db.sql.transformations.schema import (
+    from diracx.db.sql.transformation.schema import (
         Inputs,
         Ownership,
         Transformations,

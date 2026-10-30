@@ -14,7 +14,7 @@ from diracx.core.models.transformation import (
     TransformationStatus,
 )
 from diracx.db.sql import TransformationDB
-from diracx.db.sql.transformations.schema import Inputs, Ownership, Transformations
+from diracx.db.sql.transformation.schema import Inputs, Ownership, Transformations
 from diracx.logic.transformations import (
     IntegerFeederArgs,
     integer_feeder,

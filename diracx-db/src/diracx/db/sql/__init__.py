@@ -22,4 +22,4 @@ from .rss.db import ResourceStatusDB
 from .sandbox_metadata.db import SandboxMetadataDB
 from .task.db import TaskDB
 from .task_queue.db import TaskQueueDB
-from .transformations.db import TransformationDB
+from .transformation.db import TransformationDB
