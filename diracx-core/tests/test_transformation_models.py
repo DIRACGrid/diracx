@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
+from uuid_utils.compat import uuid7
 
 from diracx.core.models.transformation import (
     INPUT_TRANSITIONS,
@@ -9,8 +11,11 @@ from diracx.core.models.transformation import (
     WORKGRAPH_MEMBER_STATUSES,
     WORKGRAPH_TRANSITIONS,
     ActionResult,
+    ComputeParcel,
     CounterEntity,
+    DelayInput,
     InputStatus,
+    PackerInput,
     ParcelStatus,
     TransformationKind,
     TransformationStatus,
@@ -66,3 +71,17 @@ def test_enum_values_are_append_only(enum_type):
 )
 def test_state_tables_cover_every_state(transitions, enum_type):
     assert set(transitions) == set(enum_type)
+
+
+def test_packer_proposals_need_inputs():
+    with pytest.raises(ValidationError):
+        ComputeParcel(inputs=[])
+    with pytest.raises(ValidationError):
+        DelayInput(input_ids=[], delay_until="2026-01-01T00:00:00Z")
+
+
+def test_packer_input_is_frozen():
+    packer_input = PackerInput(input_id=uuid7(), lfn="/vo/file")
+    assert packer_input.descriptor == {}
+    with pytest.raises(ValidationError):
+        packer_input.lfn = "/vo/other"  # type: ignore[misc]
