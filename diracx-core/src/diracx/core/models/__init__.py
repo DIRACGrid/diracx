@@ -20,8 +20,10 @@ __all__ = [
     "GroupInfo",
     "HeartbeatData",
     "InitiateDeviceFlowResponse",
+    "Input",
     "InputStatus",
     "InsertedJob",
+    "JSONSerializable",
     "JobAttributes",
     "JobCommand",
     "JobLoggingRecord",
@@ -32,6 +34,7 @@ __all__ = [
     "JobStatusReturn",
     "JobStatusUpdate",
     "Metadata",
+    "NoMoreInputs",
     "OpenIDConfiguration",
     "ParcelStatus",
     "RefreshTokenPayload",
@@ -45,6 +48,7 @@ __all__ = [
     "ScalarSearchSpec",
     "SearchParams",
     "SearchSpec",
+    "SetFeederState",
     "SetJobStatusReturn",
     "SortDirection",
     "SortSpec",
@@ -72,6 +76,12 @@ from .auth import (
     TokenResponse,
     TokenTypeHint,
     UserInfo,
+)
+from .feeder import (
+    Input,
+    JSONSerializable,
+    NoMoreInputs,
+    SetFeederState,
 )
 from .job import (
     HeartbeatData,
