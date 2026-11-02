@@ -26,7 +26,10 @@ def test_canonical_json_bytes_unicode():
 def test_canonical_json_bytes_floats():
     assert canonical_json_bytes({"x": 1.5}) == b'{"x":1.5}'
     assert canonical_json_bytes({"x": 1 / 3}) == b'{"x":0.3333333333333333}'
+    # Prefer integers over floats
+    assert canonical_json_bytes({"x": 3.0}) == canonical_json_bytes({"x": 3})
     # JCS normalises -0.0
+    assert canonical_json_bytes({"x": 0.0}) == b'{"x":0}'
     assert canonical_json_bytes({"x": -0.0}) == b'{"x":0}'
     assert canonical_json_bytes({"x": -0.0}) == canonical_json_bytes({"x": 0.0})
 
@@ -46,7 +49,7 @@ def test_canonical_json_bytes_safe_integer_bounds():
         canonical_json_bytes({"x": 1 << 53})
     with pytest.raises(rfc8785.IntegerDomainError):
         canonical_json_bytes({"x": -(1 << 53)})
-    with pytest.raises(rfc8785.IntegerDomainError):
+    with pytest.raises(ValueError):
         canonical_json_bytes({"x": 2**100})
 
 

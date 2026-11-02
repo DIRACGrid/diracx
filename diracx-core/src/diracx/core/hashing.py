@@ -15,7 +15,6 @@ JCS rules that matter here (stable forever for stored digests):
 * Integers must lie in the IEEE-754 safe-integer domain (about ±2**53).
 * ``-0.0`` is normalised to ``0``.
 * No silent coercion of Pydantic models — callers dump first.
-* Prefer ``int`` when a value is integral; ``1`` and ``1.0`` hash differently.
 * ``tuple`` is accepted by ``rfc8785`` as a JSON array (same as ``list``);
   pass ``list`` at call sites to avoid accidental equivalence.
 
@@ -49,11 +48,12 @@ def canonical_json_bytes(value: Any) -> bytes:
         Canonical UTF-8 encoding of ``value``.
 
     Raises:
-        rfc8785.CanonicalizationError: Unsupported type or non-string keys.
-        rfc8785.IntegerDomainError: Integer outside the safe-integer domain.
-        rfc8785.FloatDomainError: Non-finite float.
+        ValueError: through rfc8785 specific subclasses (e.g. IntegerDomainError).
     """
-    return rfc8785.dumps(value)
+    try:
+        return rfc8785.dumps(value)
+    except Exception as e:
+        raise ValueError(f"Failed to canonicalize {value}: {e}") from e
 
 
 def hash_json(value: Any) -> bytes:
