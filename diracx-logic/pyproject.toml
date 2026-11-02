@@ -29,6 +29,9 @@ compute_status = "diracx.logic.rss.source:ComputeElementStatusSource"
 fts_status = "diracx.logic.rss.source:FTSStatusSource"
 site_status = "diracx.logic.rss.source:SiteStatusSource"
 
+[project.entry-points."diracx.transformations.feeders"]
+IntegerFeeder = "diracx.logic.transformations.feeders.integer:integer_feeder"
+
 [project.optional-dependencies]
 testing = ["diracx-testing", "freezegun"]
 types = [
