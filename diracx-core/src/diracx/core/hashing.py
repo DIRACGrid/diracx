@@ -1,20 +1,23 @@
 """Canonical JSON bytes and content digests for the Transformation System.
 
-Content-addressed rows (``Processes``, ``Requirements``, ``ResolvedHints``) use
-:func:`hash_json` (SHA-256, 32 raw bytes). ``Inputs.InputHash`` reuses the
-same canonicaliser via :func:`input_hash` (XXH3-128, 16 raw bytes). See
-DX-ADR-004 and DX-ADR-007.
+Canonical form is RFC 8785 JSON Canonicalization Scheme (JCS), via the
+``rfc8785`` package. Digests:
 
-Canonical form (stable forever for stored digests):
+* :func:`hash_json` — SHA-256 (32 raw bytes) for content-addressed documents
+  (``Processes``, ``Requirements``, ``ResolvedHints``); see DX-ADR-007.
+* :func:`input_hash` — XXH3-128 (16 raw bytes) for ``Inputs.InputHash`` over
+  the canonical ``(LFN, Descriptor)`` envelope; see DX-ADR-004.
 
-* JSON types only: ``null``, ``bool``, signed 64-bit ``int``, finite
-  ``float``, ``str``, ``list``, ``dict`` with string keys.
-* Object keys sorted lexicographically as UTF-8 code units (Python
-  ``sort_keys=True``).
-* Compact separators ``(",", ":")``, ``ensure_ascii=False``, UTF-8 encoding.
-* No silent coercion of Pydantic models or other objects — callers dump first.
-* Floats that are exact integers are left as floats if the caller passed a
-  float; prefer ``int`` at the call site when the value is integral.
+JCS rules that matter here (stable forever for stored digests):
+
+* JSON types only; object keys must be strings.
+* Object keys sorted per JCS; compact UTF-8 with no insignificant whitespace.
+* Integers must lie in the IEEE-754 safe-integer domain (about ±2**53).
+* ``-0.0`` is normalised to ``0``.
+* No silent coercion of Pydantic models — callers dump first.
+* Prefer ``int`` when a value is integral; ``1`` and ``1.0`` hash differently.
+* ``tuple`` is accepted by ``rfc8785`` as a JSON array (same as ``list``);
+  pass ``list`` at call sites to avoid accidental equivalence.
 
 CWL-specific preparation (``doc``/``label``, ``$import``, nested ``run`` refs)
 is not performed here; compile that into a JSON value, then call
@@ -24,10 +27,9 @@ is not performed here; compile that into a JSON value, then call
 from __future__ import annotations
 
 import hashlib
-import json
-import math
 from typing import Any
 
+import rfc8785
 import xxhash
 
 __all__ = [
@@ -36,12 +38,9 @@ __all__ = [
     "input_hash",
 ]
 
-_INT64_MIN = -(1 << 63)
-_INT64_MAX = (1 << 63) - 1
-
 
 def canonical_json_bytes(value: Any) -> bytes:
-    """Return stable UTF-8 bytes for a JSON-compatible value.
+    """Return RFC 8785 (JCS) canonical UTF-8 bytes for ``value``.
 
     Args:
         value: A JSON-compatible Python value (see module docstring).
@@ -50,21 +49,15 @@ def canonical_json_bytes(value: Any) -> bytes:
         Canonical UTF-8 encoding of ``value``.
 
     Raises:
-        TypeError: If ``value`` is not JSON-compatible.
-        ValueError: If a number is non-finite or outside signed int64.
+        rfc8785.CanonicalizationError: Unsupported type or non-string keys.
+        rfc8785.IntegerDomainError: Integer outside the safe-integer domain.
+        rfc8785.FloatDomainError: Non-finite float.
     """
-    cleaned = _ensure_json_value(value)
-    return json.dumps(
-        cleaned,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-        allow_nan=False,
-    ).encode("utf-8")
+    return rfc8785.dumps(value)
 
 
 def hash_json(value: Any) -> bytes:
-    """Return the SHA-256 digest of the canonical form of ``value``.
+    """Return the SHA-256 digest of the JCS canonical form of ``value``.
 
     Used as the primary key for content-addressed documents
     (``Processes``, ``Requirements``, ``ResolvedHints``). Today this is always
@@ -84,38 +77,15 @@ def hash_json(value: Any) -> bytes:
 def input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
     """Return the XXH3-128 digest of the canonical ``(LFN, Descriptor)`` pair.
 
+    ``descriptor is None`` is treated as ``{}`` so missing and empty descriptors
+    dedupe together. ``lfn is None`` stays JSON ``null`` (no file).
+
     Args:
         lfn: Logical file name, or ``None`` when the input is not a file.
-        descriptor: Opaque JSON object, or ``None``.
+        descriptor: Opaque JSON object, or ``None`` (normalised to ``{}``).
 
     Returns:
         Raw XXH3-128 digest (length 16).
     """
-    envelope = {"LFN": lfn, "Descriptor": descriptor}
+    envelope = {"LFN": lfn, "Descriptor": {} if descriptor is None else descriptor}
     return xxhash.xxh3_128_digest(canonical_json_bytes(envelope))
-
-
-def _ensure_json_value(value: Any) -> Any:
-    """Return ``value`` if JSON-compatible, else raise ``TypeError``/``ValueError``."""
-    if value is None or isinstance(value, bool):
-        return value
-    if isinstance(value, int):
-        if not _INT64_MIN <= value <= _INT64_MAX:
-            raise ValueError(f"Integer {value} is outside the signed 64-bit range")
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise ValueError("Non-finite floats are not JSON-compatible")
-        return value
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return [_ensure_json_value(item) for item in value]
-    if isinstance(value, dict):
-        cleaned: dict[str, Any] = {}
-        for key, item in value.items():
-            if not isinstance(key, str):
-                raise TypeError(f"Dict keys must be str, got {type(key).__name__}")
-            cleaned[key] = _ensure_json_value(item)
-        return cleaned
-    raise TypeError(f"Value of type {type(value).__name__} is not JSON-compatible")

@@ -6,6 +6,7 @@ import hashlib
 from datetime import datetime, timezone
 
 import pytest
+import rfc8785
 import xxhash
 
 from diracx.core.hashing import canonical_json_bytes, hash_json, input_hash
@@ -22,34 +23,43 @@ def test_canonical_json_bytes_unicode():
     assert canonical_json_bytes({"café": "naïve"}) == '{"café":"naïve"}'.encode()
 
 
-def test_canonical_json_bytes_finite_float():
+def test_canonical_json_bytes_floats():
     assert canonical_json_bytes({"x": 1.5}) == b'{"x":1.5}'
     assert canonical_json_bytes({"x": 1 / 3}) == b'{"x":0.3333333333333333}'
+    # JCS normalises -0.0
+    assert canonical_json_bytes({"x": -0.0}) == b'{"x":0}'
+    assert canonical_json_bytes({"x": -0.0}) == canonical_json_bytes({"x": 0.0})
 
 
-def test_canonical_json_bytes_int64_bounds():
-    assert canonical_json_bytes({"x": (1 << 63) - 1}) == (b'{"x":9223372036854775807}')
-    assert canonical_json_bytes({"x": -(1 << 63)}) == (b'{"x":-9223372036854775808}')
-    with pytest.raises(ValueError, match="64-bit"):
-        canonical_json_bytes({"x": 1 << 63})
-    with pytest.raises(ValueError, match="64-bit"):
-        canonical_json_bytes({"x": -(1 << 63) - 1})
-    with pytest.raises(ValueError, match="64-bit"):
+def test_canonical_json_bytes_none_differs_from_empty_object():
+    # JSON null and {} are distinct; JCS does not conflate them.
+    assert canonical_json_bytes({"x": None}) == b'{"x":null}'
+    assert canonical_json_bytes({"x": {}}) == b'{"x":{}}'
+    assert canonical_json_bytes({"x": None}) != canonical_json_bytes({"x": {}})
+    assert hash_json({"x": None}) != hash_json({"x": {}})
+
+
+def test_canonical_json_bytes_safe_integer_bounds():
+    assert canonical_json_bytes({"x": (1 << 53) - 1}) == (b'{"x":9007199254740991}')
+    assert canonical_json_bytes({"x": -((1 << 53) - 1)}) == (b'{"x":-9007199254740991}')
+    with pytest.raises(rfc8785.IntegerDomainError):
+        canonical_json_bytes({"x": 1 << 53})
+    with pytest.raises(rfc8785.IntegerDomainError):
+        canonical_json_bytes({"x": -(1 << 53)})
+    with pytest.raises(rfc8785.IntegerDomainError):
         canonical_json_bytes({"x": 2**100})
 
 
 def test_canonical_json_bytes_rejects_non_json_types():
-    with pytest.raises(TypeError, match="datetime"):
+    with pytest.raises(rfc8785.CanonicalizationError):
         canonical_json_bytes({"t": datetime.now(tz=timezone.utc)})
-    with pytest.raises(TypeError, match="set"):
+    with pytest.raises(rfc8785.CanonicalizationError):
         canonical_json_bytes({1, 2})
-    with pytest.raises(TypeError, match="Dict keys must be str"):
+    with pytest.raises(rfc8785.CanonicalizationError):
         canonical_json_bytes({1: "a"})
-    with pytest.raises(ValueError, match="Non-finite"):
+    with pytest.raises(rfc8785.FloatDomainError):
         canonical_json_bytes({"x": float("nan")})
-    with pytest.raises(TypeError, match="tuple"):
-        canonical_json_bytes(("a", "b"))
-    with pytest.raises(TypeError, match="bool"):
+    with pytest.raises(rfc8785.CanonicalizationError):
         canonical_json_bytes({True: "a"})
 
 
@@ -94,6 +104,15 @@ def test_input_hash_length_and_stability():
     null_lfn = input_hash(None, {"Seed": 42})
     assert len(null_lfn) == 16
     assert null_lfn != input_hash(None, {"Seed": 43})
+
+    null_mask = input_hash("/cms/file1.root", None)
+    dict_mask = input_hash("/cms/file1.root", {})
+    assert null_mask == dict_mask
+
+
+def test_input_hash_none_descriptor_matches_empty():
+    assert input_hash("/a", None) == input_hash("/a", {})
+    assert input_hash(None, None) == input_hash(None, {})
 
 
 def test_input_hash_matches_xxh3_over_canonical_envelope():
