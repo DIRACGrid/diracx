@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy import delete, event, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import UUID, uuid7
 
+from diracx.core.hashing import compute_input_hash
 from diracx.core.models.transformation import (
     InputStatus,
     ParcelStatus,
@@ -229,3 +232,166 @@ def test_counter_statuses_cover_inputs_and_parcels():
     assert set(COUNTER_STATUSES) == {s.value for s in InputStatus} | {
         s.value for s in ParcelStatus
     }
+
+
+@pytest.fixture
+async def standalone_active_transformation(
+    transformation_db: TransformationDB,
+) -> UUID:
+    """Active standalone transformation with a feeder (no workgraph)."""
+    ownership_id, transformation_id = uuid7(), uuid7()
+    async with transformation_db as db:
+        await db.conn.execute(
+            insert(Ownership).values(
+                ownership_id=ownership_id,
+                vo="cms",
+                sub="feeder-owner",
+                workgraph_id=None,
+            )
+        )
+        await db.conn.execute(
+            insert(Transformations).values(
+                transformation_id=transformation_id,
+                ownership_id=ownership_id,
+                type="MCSimulation",
+                kind=TransformationKind.COMPUTE,
+                status=TransformationStatus.ACTIVE,
+                feeder="IntegerFeeder",
+                feeder_args={"max_count": 3},
+                feeder_state={"next_seed": 0},
+                feeder_enabled=True,
+                packer="Standard",
+            )
+        )
+    return transformation_id
+
+
+async def test_list_feedable_transformation_ids(
+    transformation_db: TransformationDB,
+    standalone_active_transformation: UUID,
+    transformation_id: UUID,
+):
+    # Existing fixture is New with no Feeder; standalone is Active+enabled
+    async with transformation_db as db:
+        feedable = await db.list_feedable_transformation_ids()
+    assert feedable == [standalone_active_transformation]
+
+    async with transformation_db as db:
+        await db.set_feeder_enabled(standalone_active_transformation, False)
+        assert await db.list_feedable_transformation_ids() == []
+
+        await db.set_feeder_enabled(standalone_active_transformation, True)
+        await db.conn.execute(
+            update(Transformations)
+            .where(
+                Transformations.transformation_id == standalone_active_transformation
+            )
+            .values(feeder=None)
+        )
+        assert await db.list_feedable_transformation_ids() == []
+
+        # Non-Active with feeder set is still excluded
+        await db.conn.execute(
+            update(Transformations)
+            .where(Transformations.transformation_id == transformation_id)
+            .values(
+                feeder="IntegerFeeder",
+                feeder_enabled=True,
+                status=TransformationStatus.NEW,
+            )
+        )
+        assert await db.list_feedable_transformation_ids() == []
+
+
+async def test_get_and_set_feeder_columns(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    async with transformation_db as db:
+        columns = await db.get_feeder_columns(standalone_active_transformation)
+        assert columns == {
+            "feeder": "IntegerFeeder",
+            "feeder_args": {"max_count": 3},
+            "feeder_state": {"next_seed": 0},
+            "feeder_enabled": True,
+        }
+
+        await db.set_feeder_state(standalone_active_transformation, {"next_seed": 7})
+        await db.set_feeder_enabled(standalone_active_transformation, False)
+        columns = await db.get_feeder_columns(standalone_active_transformation)
+        assert columns == {
+            "feeder": "IntegerFeeder",
+            "feeder_args": {"max_count": 3},
+            "feeder_state": {"next_seed": 7},
+            "feeder_enabled": False,
+        }
+
+        await db.set_feeder_state(standalone_active_transformation, None)
+        columns = await db.get_feeder_columns(standalone_active_transformation)
+        assert columns is not None
+        assert columns["feeder_state"] is None
+
+        assert await db.get_feeder_columns(uuid7()) is None
+
+
+async def test_insert_unassigned_inputs_deduplicates_on_hash(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    input_id_a, input_id_b, input_id_dup = uuid7(), uuid7(), uuid7()
+    descriptor_a = {"seed": 1}
+    descriptor_b = {"seed": 2}
+    delayed = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    hash_a = compute_input_hash(None, descriptor_a)
+    hash_b = compute_input_hash(None, descriptor_b)
+
+    async with transformation_db as db:
+        await db.insert_unassigned_inputs(standalone_active_transformation, [])
+        await db.insert_unassigned_inputs(
+            standalone_active_transformation,
+            [
+                {
+                    "input_id": input_id_a,
+                    "input_hash": hash_a,
+                    "descriptor": descriptor_a,
+                    "delayed_until": delayed,
+                },
+                {
+                    "input_id": input_id_b,
+                    "input_hash": hash_b,
+                    "descriptor": descriptor_b,
+                },
+            ],
+        )
+        # Same hash again must be ignored, not raise
+        await db.insert_unassigned_inputs(
+            standalone_active_transformation,
+            [
+                {
+                    "input_id": input_id_dup,
+                    "input_hash": hash_a,
+                    "descriptor": descriptor_a,
+                }
+            ],
+        )
+
+        rows = (
+            await db.conn.execute(
+                select(
+                    Inputs.input_id.label("input_id"),
+                    Inputs.input_hash.label("input_hash"),
+                    Inputs.descriptor.label("descriptor"),
+                    Inputs.status.label("status"),
+                    Inputs.delayed_until.label("delayed_until"),
+                    Inputs.lfn.label("lfn"),
+                ).where(Inputs.transformation_id == standalone_active_transformation)
+            )
+        ).all()
+
+    assert len(rows) == 2
+    by_id = {row.input_id: row for row in rows}
+    assert by_id[input_id_a].input_hash == hash_a
+    assert by_id[input_id_a].descriptor == descriptor_a
+    assert by_id[input_id_a].status == InputStatus.UNASSIGNED
+    assert by_id[input_id_a].delayed_until == delayed
+    assert by_id[input_id_a].lfn is None
+    assert by_id[input_id_b].input_hash == hash_b
+    assert input_id_dup not in by_id
