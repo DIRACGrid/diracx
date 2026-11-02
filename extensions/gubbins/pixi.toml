@@ -11,7 +11,7 @@ ipython = ">=9.2.0"
 python-gfal2 = "*"
 m2crypto = "*"
 # opentelemetry-api requires importlib-metadata<8.8.0
-importlib-metadata = "<8.8.0"
+importlib-metadata = "<10.0.1"
 
 # Gubbins features for providing dependencies
 [feature.gubbins.pypi-dependencies]
