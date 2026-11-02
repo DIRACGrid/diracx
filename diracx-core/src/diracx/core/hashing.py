@@ -50,10 +50,7 @@ def canonical_json_bytes(value: Any) -> bytes:
     Raises:
         ValueError: through rfc8785 specific subclasses (e.g. IntegerDomainError).
     """
-    try:
-        return rfc8785.dumps(value)
-    except Exception as e:
-        raise ValueError(f"Failed to canonicalize {value}: {e}") from e
+    return rfc8785.dumps(value)
 
 
 def hash_json(value: Any) -> bytes:
