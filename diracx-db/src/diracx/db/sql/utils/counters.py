@@ -507,22 +507,27 @@ class JournalledCounter:
                     .having(having_clause)
                 )
 
-                correction_rows = (await conn.execute(corrections_q)).all()
+                result = await conn.execute(corrections_q)
+                total = 0
 
-                if not correction_rows:
-                    return 0
+                # 3. Stream corrections in batches via journal()
+                while True:
+                    batch = result.fetchmany(1000)
+                    if not batch:
+                        break
+                    deltas = []
+                    for row in batch:
+                        row_dict = row._mapping
+                        delta = {k: row_dict[k] for k in self.key}
+                        for m in self.measures:
+                            delta[self.delta_column(m)] = row_dict[
+                                self.delta_column(m)
+                            ]
+                        deltas.append(delta)
+                    await self.journal(conn, deltas)
+                    total += len(deltas)
 
-                # 3. Write corrections via journal()
-                deltas = []
-                for row in correction_rows:
-                    row_dict = row._mapping
-                    delta = {k: row_dict[k] for k in self.key}
-                    for m in self.measures:
-                        delta[self.delta_column(m)] = row_dict[self.delta_column(m)]
-                    deltas.append(delta)
-
-                await self.journal(conn, deltas)
-                return len(deltas)
+                return total
 
     async def delete_scope(
         self,
