@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 __all__ = [
     "AuthorizationError",
     "DiracError",
     "DocumentUpsertError",
     "IAMClientError",
     "IAMServerError",
+    "InputStatusConflictError",
     "InvalidCredentialsError",
     "InvalidQueryError",
     "NotReadyError",
@@ -19,6 +22,7 @@ __all__ = [
     "SandboxAlreadyInsertedError",
     "SandboxNotFoundError",
     "TokenNotFoundError",
+    "TransformationNotFoundError",
 ]
 
 
@@ -185,3 +189,33 @@ class PilotAlreadyExistsError(DiracError):
 
 class PilotAlreadyAssociatedWithJobError(DiracError):
     """We can't associate a pilot with the same job twice."""
+
+
+class TransformationNotFoundError(DiracError):
+    """Raised when a transformation cannot be found.
+
+    Attributes:
+        transformation_id: Identifier of the missing transformation.
+    """
+
+    def __init__(self, transformation_id: UUID, detail: str = ""):
+        self.transformation_id = transformation_id
+        super().__init__(
+            f"Transformation {transformation_id} not found"
+            + (f" ({detail})" if detail else "")
+        )
+
+
+class InputStatusConflictError(DiracError):
+    """Raised when transformation inputs are not in the status a change expects.
+
+    Attributes:
+        transformation_id: Transformation the inputs belong to.
+    """
+
+    def __init__(self, transformation_id: UUID, detail: str = ""):
+        self.transformation_id = transformation_id
+        super().__init__(
+            f"Inputs of transformation {transformation_id} changed status"
+            + (f" ({detail})" if detail else "")
+        )
