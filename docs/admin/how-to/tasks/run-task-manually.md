@@ -25,7 +25,7 @@ diracx-tasks call lollygag:SyncOwnersTask --args '["alice"]' --kwargs '{}'
 
 ## Run the dummy compute backend
 
-The dummy compute backend pretends to run the parcels of the Transformation System, which are kept in the `TransformationDB`. The periodic `transformations:DummyComputeBackendMonitorTask` claims `Unassigned` compute parcels, moves them through `Reserved` to `Assigned` on the `dummy` backend, and schedules a one-shot `transformations:DummyComputeBackendTask` for each, which walks the parcel through `Completing` to `Done` and moves its inputs to `Processed`. Parcels the packer pinned to another backend are left alone. See [Dummy compute backend](../../../dev/explanations/tasks/dummy-compute-backend.md) for how it works.
+The dummy compute backend pretends to run the parcels of the Transformation System, which are kept in the `TransformationDB`. The periodic `transformations:DummyComputeBackendMonitorTask` claims `Unassigned` compute parcels, moves them through `Reserved` to `Assigned` on the `dummy` backend, and schedules a one-shot `transformations:DummyComputeBackendTask` for each, which walks the parcel through `Completing` to `Done` and moves its inputs to `Processed`. See [Dummy compute backend](../../../dev/explanations/tasks/dummy-compute-backend.md) for how it works.
 
 Automatic monitoring is disabled by default. `run_local.sh` enables it every 10 seconds with `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_ENABLED=true` and `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_INTERVAL_SECONDS=10`. Both tasks need `DIRACX_DB_URL_TRANSFORMATIONDB`.
 

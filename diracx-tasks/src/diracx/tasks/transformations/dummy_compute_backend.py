@@ -121,8 +121,6 @@ class DummyComputeBackendMonitorTask(PeriodicBaseTask):
                     },
                 ],
                 [{"parameter": "ParcelID", "direction": SortDirection.ASC}],
-                # Leave alone parcels the packer pinned to another backend
-                backends=[None, BACKEND_NAME],
                 per_page=_settings.max_parcels_per_cycle,
                 page=1,
             )

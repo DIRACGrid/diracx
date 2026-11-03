@@ -13,7 +13,7 @@ Reaching `Done` moves the parcel's inputs from `Assigned` to `Processed` in the 
 
 Two tasks in `diracx.tasks.transformations` share the work:
 
-- `DummyComputeBackendMonitorTask` runs periodically. It claims a batch of `Unassigned` compute parcels, oldest first, that have no backend or the `dummy` one, and moves them to `Assigned` with `Backend = "dummy"`. After committing, it schedules one `DummyComputeBackendTask` per parcel, `runtime_seconds` later.
+- `DummyComputeBackendMonitorTask` runs periodically. It claims a batch of `Unassigned` compute parcels, oldest first, and moves them to `Assigned` with `Backend = "dummy"`. After committing, it schedules one `DummyComputeBackendTask` per parcel, `runtime_seconds` later.
 - `DummyComputeBackendTask` moves its parcel from `Assigned` to `Done`, holding a mutex on the parcel.
 
 The transitions go through `diracx.logic.transformations.set_parcel_status`, which checks them against the state machine and applies the outcome to the inputs. In the database they are compare-and-set: only parcels still in the expected status move. Two monitors running at once, or a retried completion task, therefore never move a parcel twice.

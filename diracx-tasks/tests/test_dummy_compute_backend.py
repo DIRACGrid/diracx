@@ -125,7 +125,6 @@ async def add_parcel(
     transformation_id: UUID,
     *,
     kind: TransformationKind = TransformationKind.COMPUTE,
-    backend: str | None = None,
 ) -> UUID:
     """Insert an Unassigned parcel made of one Assigned input, as a packer would."""
     parcel_id, input_id = uuid7(), uuid7()
@@ -134,7 +133,6 @@ async def add_parcel(
             parcel_id=parcel_id,
             transformation_id=transformation_id,
             kind=kind,
-            backend=backend,
         )
     )
     await db.conn.execute(
@@ -248,9 +246,8 @@ async def test_parcel_goes_from_unassigned_to_done(
     async with transformation_db as db:
         first = await add_parcel(db, transformation_id)
         second = await add_parcel(db, transformation_id)
-        # Neither of these is the dummy's to take
+        # Not the dummy's to take
         data = await add_parcel(db, transformation_id, kind=TransformationKind.DATA)
-        pinned = await add_parcel(db, transformation_id, backend="htcondor")
 
     # The monitor claims and submits the compute parcels, oldest first...
     before = datetime.now(UTC)
@@ -262,7 +259,6 @@ async def test_parcel_goes_from_unassigned_to_done(
     async with transformation_db as db:
         assert await parcel_state(db, first) == (ParcelStatus.ASSIGNED, "dummy")
         assert await parcel_state(db, data) == (ParcelStatus.UNASSIGNED, None)
-        assert await parcel_state(db, pinned) == (ParcelStatus.UNASSIGNED, "htcondor")
 
     # Nothing is claimed twice
     assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 0

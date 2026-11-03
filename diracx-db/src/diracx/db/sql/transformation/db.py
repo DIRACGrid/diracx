@@ -13,7 +13,6 @@ from uuid_utils import UUID
 
 from diracx.core.exceptions import (
     InputStatusConflictError,
-    InvalidQueryError,
     TransformationNotFoundError,
 )
 from diracx.core.models.search import SearchSpec, SortSpec
@@ -25,13 +24,7 @@ from diracx.core.models.transformation import (
     TransformationKind,
     TransformationStatus,
 )
-from diracx.db.sql.utils import (
-    BaseSQLDB,
-    _get_columns,
-    apply_search_filters,
-    apply_sort_constraints,
-    utcnow,
-)
+from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
 from .schema import Base as TransformationDBBase
@@ -421,24 +414,16 @@ class TransformationDB(BaseSQLDB):
         search: list[SearchSpec],
         sorts: list[SortSpec],
         *,
-        backends: Collection[str | None] | None = None,
         distinct: bool = False,
         per_page: int = 100,
         page: int | None = None,
     ) -> tuple[int, list[dict[str, Any]]]:
         """Search for parcels in the database.
 
-        This follows the ``search`` of the other databases, with one addition:
-        a parcel's backend can be matched against a set of names that includes
-        "no backend", which the search conditions cannot express.
-
         Args:
             parameters: Optional parcel fields to include in each result.
             search: Search conditions to apply.
             sorts: Sort specifications to apply.
-            backends: If given, only parcels whose backend is one of these;
-                ``None`` in the collection matches parcels with no backend
-                yet, i.e. those the packer did not constrain (DX-ADR-003).
             distinct: Whether to return distinct results.
             per_page: Maximum number of results per page.
             page: Optional one-based page number for pagination.
@@ -447,33 +432,15 @@ class TransformationDB(BaseSQLDB):
             Total matching parcel count and the requested page of parcel
             records.
         """
-        table = Parcels.__table__
-        stmt = select(*_get_columns(table, parameters))
-        stmt = apply_search_filters(table, stmt, search)
-        if backends is not None:
-            names = [name for name in backends if name is not None]
-            condition = Parcels.backend.in_(names)
-            if None in backends:
-                condition = condition | Parcels.backend.is_(None)
-            stmt = stmt.where(condition)
-        stmt = apply_sort_constraints(table, stmt, sorts)
-        if distinct:
-            stmt = stmt.distinct()
-
-        total = (
-            await self.conn.execute(select(func.count()).select_from(stmt.alias()))
-        ).scalar_one()
-
-        if page is not None:
-            if page < 1:
-                raise InvalidQueryError("Page must be a positive integer")
-            if per_page < 1:
-                raise InvalidQueryError("Per page must be a positive integer")
-            stmt = stmt.offset((page - 1) * per_page).limit(per_page)
-
-        return total, [
-            dict(row._mapping) async for row in (await self.conn.stream(stmt))
-        ]
+        return await self._search(
+            table=Parcels,
+            parameters=parameters,
+            search=search,
+            sorts=sorts,
+            distinct=distinct,
+            per_page=per_page,
+            page=page,
+        )
 
     async def set_parcel_status(
         self,
