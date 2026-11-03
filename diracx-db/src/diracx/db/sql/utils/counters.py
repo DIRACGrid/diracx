@@ -63,8 +63,11 @@ Deleting a scope (after counted rows are already unwritable and deleted)::
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import (
     BigInteger,
@@ -399,6 +402,15 @@ class JournalledCounter:
         Opens its own transaction at REPEATABLE READ (snapshot covers the
         lock and all three reads on MySQL; no-op on SQLite).
 
+        .. warning::
+
+           An unscoped rebuild (``where=None``) holds a REPEATABLE READ
+           snapshot for the duration of the full recount.  Every journal
+           row a concurrent fold deletes stays as a delete-marked record
+           until the snapshot closes, degrading reads system-wide.
+           Prefer scoped rebuilds; use unscoped only as a maintenance
+           operation on a quiet system.
+
         Args:
             engine: Database engine.
             counted: Source table declarations.
@@ -407,6 +419,13 @@ class JournalledCounter:
         Returns:
             Number of correction deltas written.
         """
+        if where is None:
+            logger.warning(
+                "Unscoped rebuild of %s: holds a long read snapshot that "
+                "degrades journal reads system-wide",
+                self.name,
+            )
+
         ct = self.counters_table
         jt = self.journal_table
         locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
