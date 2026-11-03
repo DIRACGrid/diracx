@@ -88,6 +88,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import FromClause
 from sqlalchemy.sql.visitors import replacement_traverse
 from sqlalchemy.types import TypeEngine
 
@@ -112,14 +113,15 @@ class CountedTable:
     """Source table declaration for ``rebuild()``.
 
     Attributes:
-        table: The SQLAlchemy ``Table`` being counted.
+        table: The SQLAlchemy ``FromClause`` being counted (a ``Table``,
+            ``Join``, or subquery).
         key_exprs: One column expression per counter key column, in the same
             order as ``JournalledCounter.key``.
         measure_exprs: Mapping from measure name to the aggregate expression
             that recounts it (e.g. ``func.count()``, ``func.sum(col)``).
     """
 
-    table: Table
+    table: FromClause
     key_exprs: Sequence[ColumnElement]
     measure_exprs: dict[str, ColumnElement]
 
