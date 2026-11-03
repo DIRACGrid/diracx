@@ -15,7 +15,7 @@ from diracx.core.models import (
 from diracx.db.os.job_parameters import JobParametersDB
 from diracx.db.sql.job.db import JobDB
 from diracx.db.sql.job_logging.db import JobLoggingDB
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql.pilot.db import PilotAgentsDB
 from diracx.logic.pilots.query import resolve_jobs_for_pilot_stamps
 
 logger = logging.getLogger(__name__)
