@@ -254,6 +254,7 @@ nav:
               - dev/explanations/tasks/index.md
               - Class details: dev/explanations/tasks/class-details.md
               - Broker lifecycle: dev/explanations/tasks/broker-lifecycle.md
+              - Dummy compute backend: dev/explanations/tasks/dummy-compute-backend.md
       - Frontend:
           - CLI:
               - API: dev/explanations/components/api.md

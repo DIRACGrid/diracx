@@ -55,3 +55,4 @@ def validate_registry() -> None:
 TASK = register_locked_object_type("task")
 JOB = register_locked_object_type("job")
 TRANSFORMATION = register_locked_object_type("transformation")
+PARCEL = register_locked_object_type("parcel")

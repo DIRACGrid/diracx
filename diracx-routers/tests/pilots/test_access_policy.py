@@ -13,7 +13,7 @@ import pytest
 from fastapi import HTTPException
 
 from diracx.core.properties import GENERIC_PILOT, NORMAL_USER, SERVICE_ADMINISTRATOR
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql.pilot.db import PilotAgentsDB
 from diracx.routers.pilots.access_policies import (
     ActionType,
     PilotManagementAccessPolicy,

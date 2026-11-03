@@ -431,18 +431,30 @@ A JSON-encoded dictionary of headers to pass to the OpenTelemetry collector, e.g
 
 ## Tasks
 
-## DummyJobExecutorSettings
+## DummyComputeBackendSettings
 
-Settings controlling automatic dummy job execution.
+Settings controlling the dummy compute backend.
 
-### `DIRACX_TASKS_DUMMY_JOB_EXECUTOR_ENABLED`
+### `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_ENABLED`
 
 *Optional*, default value: `False`
 
 Whether the monitor is scheduled automatically.
 
-### `DIRACX_TASKS_DUMMY_JOB_EXECUTOR_INTERVAL_SECONDS`
+### `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_INTERVAL_SECONDS`
 
 *Optional*, default value: `10`
 
-How often the enabled monitor searches for received jobs.
+How often the enabled monitor looks for unassigned compute parcels.
+
+### `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_MAX_PARCELS_PER_CYCLE`
+
+*Optional*, default value: `1000`
+
+Maximum number of parcels the monitor claims in one run.
+
+### `DIRACX_TASKS_DUMMY_COMPUTE_BACKEND_RUNTIME_SECONDS`
+
+*Optional*, default value: `5`
+
+Simulated run time between a parcel's submission and its completion.

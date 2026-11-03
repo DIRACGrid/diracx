@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 
 from diracx.core.properties import GENERIC_PILOT, SERVICE_ADMINISTRATOR
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql.pilot.db import PilotAgentsDB
 from diracx.logic.pilots.query import get_pilots_by_stamp
 from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
