@@ -27,6 +27,7 @@ from diracx.core.models.transformation import (
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
+from .hashing import _input_hash
 from .schema import Base as TransformationDBBase
 from .schema import (
     ComputeParcels,
@@ -644,10 +645,11 @@ class TransformationDB(BaseSQLDB):
     ) -> None:
         """Insert ``Unassigned`` inputs, ignoring ``InputHash`` collisions.
 
-        Each mapping must include ``input_id`` and ``input_hash``. Optional
-        keys: ``lfn``, ``lfn_size``, ``descriptor``, ``delayed_until``. Status
-        is always ``Unassigned``. Duplicate hashes within the transformation
-        are skipped by the database (DX-ADR-004).
+        Each mapping must include ``input_id``. Optional keys: ``lfn``,
+        ``lfn_size``, ``descriptor``, ``delayed_until``. ``InputHash`` is
+        computed here from ``lfn`` / ``descriptor``. Status is always
+        ``Unassigned``. Duplicate hashes within the transformation are skipped
+        by the database (DX-ADR-004).
 
         Args:
             transformation_id: Transformation that owns the inputs.
@@ -661,7 +663,7 @@ class TransformationDB(BaseSQLDB):
             {
                 "transformation_id": transformation_id,
                 "input_id": item["input_id"],
-                "input_hash": item["input_hash"],
+                "input_hash": _input_hash(item.get("lfn"), item.get("descriptor")),
                 "status": InputStatus.UNASSIGNED,
                 "lfn": item.get("lfn"),
                 "lfn_size": item.get("lfn_size"),

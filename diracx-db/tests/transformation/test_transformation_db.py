@@ -20,6 +20,7 @@ from diracx.core.models.transformation import (
 )
 from diracx.db.sql import TransformationDB
 from diracx.db.sql.transformation.db import NewComputeParcel
+from diracx.db.sql.transformation.hashing import _input_hash
 from diracx.db.sql.transformation.schema import (
     COUNTER_STATUSES,
     ComputeParcels,
@@ -675,8 +676,8 @@ async def test_insert_unassigned_inputs_deduplicates_on_hash(
     descriptor_a = {"seed": 1}
     descriptor_b = {"seed": 2}
     delayed = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
-    hash_a = b"\x01" * 16
-    hash_b = b"\x02" * 16
+    hash_a = _input_hash(None, descriptor_a)
+    hash_b = _input_hash(None, descriptor_b)
 
     async with transformation_db as db:
         await db.insert_unassigned_inputs(standalone_active_transformation, [])
@@ -685,24 +686,21 @@ async def test_insert_unassigned_inputs_deduplicates_on_hash(
             [
                 {
                     "input_id": input_id_a,
-                    "input_hash": hash_a,
                     "descriptor": descriptor_a,
                     "delayed_until": delayed,
                 },
                 {
                     "input_id": input_id_b,
-                    "input_hash": hash_b,
                     "descriptor": descriptor_b,
                 },
             ],
         )
-        # Same hash again must be ignored, not raise
+        # Same (lfn, descriptor) again must be ignored, not raise
         await db.insert_unassigned_inputs(
             standalone_active_transformation,
             [
                 {
                     "input_id": input_id_dup,
-                    "input_hash": hash_a,
                     "descriptor": descriptor_a,
                 }
             ],
