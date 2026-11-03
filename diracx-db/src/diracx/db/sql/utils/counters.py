@@ -412,7 +412,7 @@ class JournalledCounter:
                     )
                     if where is not None:
                         recount_where = _translate_predicate_by_position(
-                            where, ct, ct_decl.table, ct_decl.key_exprs, self.key
+                            where, ct, ct_decl.key_exprs, self.key
                         )
                         branch = branch.where(recount_where)
                     branch = branch.group_by(
@@ -558,7 +558,6 @@ def _translate_predicate(
 def _translate_predicate_by_position(
     pred: ColumnElement,
     from_table: Table,
-    to_table: Table,
     to_key_exprs: Sequence[ColumnElement],
     key_names: tuple[str, ...],
 ) -> ColumnElement:
