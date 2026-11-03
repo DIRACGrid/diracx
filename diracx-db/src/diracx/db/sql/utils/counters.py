@@ -353,8 +353,7 @@ class JournalledCounter:
                                 )
                             )
                     else:
-                        # MySQL ON DUPLICATE KEY UPDATE
-                        ins = insert(ct).values(
+                        ins = mysql_insert(ct).values(
                             **key_vals,
                             **measure_vals,
                             UpdatedAt=row_dict["UpdatedAt"],
@@ -365,19 +364,8 @@ class JournalledCounter:
                         on_dup["UpdatedAt"] = func.greatest(
                             ct.c.UpdatedAt, ins.inserted.UpdatedAt
                         )
-                        ins = mysql_insert(ct).values(
-                            **key_vals,
-                            **measure_vals,
-                            UpdatedAt=row_dict["UpdatedAt"],
-                        )
-                        on_dup_mysql = {
-                            m: ct.c[m] + ins.inserted[m] for m in self.measures
-                        }
-                        on_dup_mysql["UpdatedAt"] = func.greatest(
-                            ct.c.UpdatedAt, ins.inserted.UpdatedAt
-                        )
                         await conn.execute(
-                            ins.on_duplicate_key_update(**on_dup_mysql)
+                            ins.on_duplicate_key_update(**on_dup)
                         )
 
                 # 4. Delete folded journal rows
