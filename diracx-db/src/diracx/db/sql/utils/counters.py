@@ -202,6 +202,11 @@ class JournalledCounter:
         The result is exact at any aggregation lag because it combines both
         halves in a single SQL statement.
 
+        Callers should pass a ``where`` predicate that fixes a prefix of
+        the key (e.g. a single ``TransformationID``).  An unscoped read
+        scans both full tables, which is prohibitively expensive for
+        counters spanning many scopes.
+
         Args:
             conn: Connection with an active transaction.
             where: Optional predicate applied to both halves. Column
