@@ -83,9 +83,9 @@ from sqlalchemy import (
     or_,
     select,
     union_all,
-    update,
 )
 from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.visitors import replacement_traverse
@@ -313,60 +313,33 @@ class JournalledCounter:
                     .group_by(*key_cols)
                 )
 
-                agg_rows = (await conn.execute(agg_q)).all()
+                col_names = list(self.key) + list(self.measures) + ["UpdatedAt"]
 
-                for row in agg_rows:
-                    row_dict = row._mapping
-                    key_vals = {k: row_dict[k] for k in self.key}
-                    measure_vals = {m: row_dict[m] for m in self.measures}
-
-                    if sqlite:
-                        existing = await conn.execute(
-                            select(ct.c[self.key[0]])
-                            .where(
-                                and_(*(ct.c[k] == key_vals[k] for k in self.key))
-                            )
-                            .limit(1)
+                if sqlite:
+                    ins = sqlite_insert(ct).from_select(col_names, agg_q)
+                    set_ = {
+                        m: ct.c[m] + ins.excluded[m] for m in self.measures
+                    }
+                    set_["UpdatedAt"] = func.max(
+                        ct.c.UpdatedAt, ins.excluded.UpdatedAt
+                    )
+                    await conn.execute(
+                        ins.on_conflict_do_update(
+                            index_elements=list(self.key),
+                            set_=set_,
                         )
-                        if existing.first() is not None:
-                            update_vals = {
-                                m: ct.c[m] + measure_vals[m] for m in self.measures
-                            }
-                            update_vals["UpdatedAt"] = func.max(
-                                ct.c.UpdatedAt, row_dict["UpdatedAt"]
-                            )
-                            await conn.execute(
-                                update(ct)
-                                .where(
-                                    and_(
-                                        *(ct.c[k] == key_vals[k] for k in self.key)
-                                    )
-                                )
-                                .values(**update_vals)
-                            )
-                        else:
-                            await conn.execute(
-                                insert(ct).values(
-                                    **key_vals,
-                                    **measure_vals,
-                                    UpdatedAt=row_dict["UpdatedAt"],
-                                )
-                            )
-                    else:
-                        ins = mysql_insert(ct).values(
-                            **key_vals,
-                            **measure_vals,
-                            UpdatedAt=row_dict["UpdatedAt"],
-                        )
-                        on_dup = {
-                            m: ct.c[m] + ins.inserted[m] for m in self.measures
-                        }
-                        on_dup["UpdatedAt"] = func.greatest(
-                            ct.c.UpdatedAt, ins.inserted.UpdatedAt
-                        )
-                        await conn.execute(
-                            ins.on_duplicate_key_update(**on_dup)
-                        )
+                    )
+                else:
+                    ins = mysql_insert(ct).from_select(col_names, agg_q)
+                    on_dup = {
+                        m: ct.c[m] + ins.inserted[m] for m in self.measures
+                    }
+                    on_dup["UpdatedAt"] = func.greatest(
+                        ct.c.UpdatedAt, ins.inserted.UpdatedAt
+                    )
+                    await conn.execute(
+                        ins.on_duplicate_key_update(**on_dup)
+                    )
 
                 # 4. Delete folded journal rows
                 await conn.execute(
