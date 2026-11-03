@@ -265,7 +265,7 @@ class JournalledCounter:
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
             if not sqlite:
-                await conn.execution_options(isolation_level="READ COMMITTED")
+                conn = conn.execution_options(isolation_level="READ COMMITTED")
 
             async with conn.begin():
                 # 1. Serialise folds
@@ -413,7 +413,7 @@ class JournalledCounter:
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
             if not sqlite:
-                await conn.execution_options(isolation_level="REPEATABLE READ")
+                conn = conn.execution_options(isolation_level="REPEATABLE READ")
 
             async with conn.begin():
                 # 1. Lock rebuild row
@@ -546,7 +546,7 @@ class JournalledCounter:
         async with engine.connect() as conn:
             sqlite = _is_sqlite(conn)
             if not sqlite:
-                await conn.execution_options(isolation_level="READ COMMITTED")
+                conn = conn.execution_options(isolation_level="READ COMMITTED")
 
             async with conn.begin():
                 # Lock rebuild then fold (order per ADR)
