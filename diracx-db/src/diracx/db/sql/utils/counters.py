@@ -82,6 +82,7 @@ from sqlalchemy import (
     literal_column,
     or_,
     select,
+    text,
     union_all,
 )
 from sqlalchemy.dialects.mysql import insert as mysql_insert
@@ -256,6 +257,10 @@ class JournalledCounter:
         Opens its own transaction at READ COMMITTED (record locks only on
         MySQL/MariaDB, no-op on SQLite).
 
+        Claimed journal IDs are loaded into a ``FoldClaim`` session temporary
+        table so that the aggregation and delete JOIN on it rather than
+        carrying a large IN-list in the SQL text.
+
         Args:
             engine: Database engine.
             batch_size: Maximum journal rows to fold in one transaction.
@@ -272,6 +277,26 @@ class JournalledCounter:
             sqlite = _is_sqlite(conn)
             if not sqlite:
                 conn = conn.execution_options(isolation_level="READ COMMITTED")
+
+            # Create the session temp table once, outside any transaction.
+            # The DDL triggers autobegin, so commit it before the real txn.
+            if sqlite:
+                await conn.execute(text(
+                    "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
+                    "(JournalID INTEGER PRIMARY KEY)"
+                ))
+            else:
+                await conn.execute(text(
+                    "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
+                    "(JournalID BIGINT PRIMARY KEY)"
+                ))
+            await conn.commit()
+
+            fold_claim = Table(
+                "FoldClaim",
+                MetaData(),
+                Column("JournalID", BigInteger, primary_key=True),
+            )
 
             async with conn.begin():
                 # 1. Serialise folds
@@ -301,7 +326,14 @@ class JournalledCounter:
                 if not claimed:
                     return 0
 
-                # 3. Upsert aggregated deltas into counters
+                # Load claimed IDs into the temp table
+                await conn.execute(delete(fold_claim))
+                await conn.execute(
+                    insert(fold_claim),
+                    [{"JournalID": jid} for jid in claimed],
+                )
+
+                # 3. Upsert aggregated deltas into counters (JOIN FoldClaim)
                 key_cols = [jt.c[k] for k in self.key]
                 agg_measures = [
                     func.sum(jt.c[self.delta_column(m)]).label(m)
@@ -311,7 +343,9 @@ class JournalledCounter:
 
                 agg_q = (
                     select(*key_cols, *agg_measures, agg_time)
-                    .where(jt.c.JournalID.in_(claimed))
+                    .select_from(
+                        jt.join(fold_claim, jt.c.JournalID == fold_claim.c.JournalID)
+                    )
                     .group_by(*key_cols)
                 )
 
@@ -345,7 +379,11 @@ class JournalledCounter:
 
                 # 4. Delete folded journal rows
                 await conn.execute(
-                    delete(jt).where(jt.c.JournalID.in_(claimed))
+                    delete(jt).where(
+                        jt.c.JournalID.in_(
+                            select(fold_claim.c.JournalID)
+                        )
+                    )
                 )
 
                 return len(claimed)
