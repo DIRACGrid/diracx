@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from diracx.core.models.rss import (
+from diracx.core.models.resource_status import (
     AllowedStatus,
     BannedStatus,
 )
-from diracx.db.sql.rss.db import ResourceStatusDB
-from diracx.logic.rss.query import (
+from diracx.db.sql.resource_status.db import ResourceStatusDB
+from diracx.logic.resource_status.query import (
     STORAGE_STATUS_TYPES,
     get_compute_statuses,
     get_fts_statuses,
@@ -49,22 +49,22 @@ async def test_map_status_unknown_banned():
 
 
 @pytest.fixture
-async def rss_db():
-    rss_db = ResourceStatusDB("sqlite+aiosqlite:///:memory:")
-    async with rss_db.engine_context():
-        async with rss_db.engine.begin() as conn:
-            await conn.run_sync(rss_db.metadata.create_all)
-        yield rss_db
+async def resource_status_db():
+    resource_status_db = ResourceStatusDB("sqlite+aiosqlite:///:memory:")
+    async with resource_status_db.engine_context():
+        async with resource_status_db.engine.begin() as conn:
+            await conn.run_sync(resource_status_db.metadata.create_all)
+        yield resource_status_db
 
 
 @pytest.fixture
-async def populated_rss_db(rss_db):
+async def populated_resource_status_db(resource_status_db):
     """Seed a compute element and an FTS server, both with status_type "all".
 
     These two share a status type, so only the element_type filter keeps them
     apart. A fully-populated storage element and a site are added too.
     """
-    async with rss_db as db:
+    async with resource_status_db as db:
         await db.insert_resource_status(
             name="TestCompute",
             status="Active",
@@ -96,30 +96,36 @@ async def populated_rss_db(rss_db):
             vo="all",
             date_effective=_NOW,
         )
-    return rss_db
+    return resource_status_db
 
 
-async def test_get_compute_statuses_excludes_other_element_types(populated_rss_db):
+async def test_get_compute_statuses_excludes_other_element_types(
+    populated_resource_status_db,
+):
     """Compute view must not include the FTS server sharing the "all" status type."""
-    async with populated_rss_db as db:
+    async with populated_resource_status_db as db:
         result = await get_compute_statuses(db)
     assert set(result["all"]) == {"TestCompute"}
 
 
-async def test_get_fts_statuses_excludes_other_element_types(populated_rss_db):
+async def test_get_fts_statuses_excludes_other_element_types(
+    populated_resource_status_db,
+):
     """FTS view must not include the compute element sharing the "all" status type."""
-    async with populated_rss_db as db:
+    async with populated_resource_status_db as db:
         result = await get_fts_statuses(db)
     assert set(result["all"]) == {"TestFTS"}
 
 
-async def test_get_storage_statuses_excludes_other_element_types(populated_rss_db):
-    async with populated_rss_db as db:
+async def test_get_storage_statuses_excludes_other_element_types(
+    populated_resource_status_db,
+):
+    async with populated_resource_status_db as db:
         result = await get_storage_statuses(db)
     assert set(result["all"]) == {"TestStorage"}
 
 
-async def test_get_site_statuses(populated_rss_db):
-    async with populated_rss_db as db:
+async def test_get_site_statuses(populated_resource_status_db):
+    async with populated_resource_status_db as db:
         result = await get_site_statuses(db)
     assert set(result["all"]) == {"TestSite"}

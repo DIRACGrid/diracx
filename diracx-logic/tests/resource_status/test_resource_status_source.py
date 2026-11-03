@@ -6,15 +6,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from diracx.core.models.rss import (
+from diracx.core.models.resource_status import (
     ComputeElementStatus,
     FTSStatus,
     ResourceType,
     SiteStatus,
     StorageElementStatus,
 )
-from diracx.db.sql.rss.db import ResourceStatusDB
-from diracx.logic.rss.source import (
+from diracx.db.sql.resource_status.db import ResourceStatusDB
+from diracx.logic.resource_status.source import (
     ComputeElementStatusSource,
     FTSStatusSource,
     SiteStatusSource,

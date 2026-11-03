@@ -11,14 +11,14 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Header, Response
 
-from diracx.core.models.rss import (
+from diracx.core.models.resource_status import (
     ComputeElementStatus,
     FTSStatus,
     SiteStatus,
     StorageElementStatus,
 )
 from diracx.core.sources import Snapshot
-from diracx.logic.rss.source import (
+from diracx.logic.resource_status.source import (
     ComputeElementStatusSource,
     FTSStatusSource,
     SiteStatusSource,
@@ -28,7 +28,7 @@ from diracx.routers.utils.users import AuthorizedUserInfo, verify_dirac_access_t
 
 from ..fastapi_classes import DiracxRouter
 from ..utils.http_cache import apply_cache_headers
-from .access_policies import CheckRSSPolicyCallable
+from .access_policies import CheckResourceStatusPolicyCallable
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def _vo_view(
 async def get_storage_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckRSSPolicyCallable,
+    check_permissions: CheckResourceStatusPolicyCallable,
     snapshot: Annotated[Snapshot, Depends(StorageElementStatusSource.create)],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -90,7 +90,7 @@ async def get_storage_status(
 
     \f
 
-    Arguments, return value and caching behaviour are shared by all RSS
+    Arguments, return value and caching behaviour are shared by all ResourceStatus
     routes; see ``_vo_view``.
     """
     await check_permissions()
@@ -101,7 +101,7 @@ async def get_storage_status(
 async def get_compute_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckRSSPolicyCallable,
+    check_permissions: CheckResourceStatusPolicyCallable,
     snapshot: Annotated[Snapshot, Depends(ComputeElementStatusSource.create)],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -113,7 +113,7 @@ async def get_compute_status(
 
     \f
 
-    Arguments, return value and caching behaviour are shared by all RSS
+    Arguments, return value and caching behaviour are shared by all ResourceStatus
     routes; see ``_vo_view``.
     """
     await check_permissions()
@@ -124,7 +124,7 @@ async def get_compute_status(
 async def get_site_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckRSSPolicyCallable,
+    check_permissions: CheckResourceStatusPolicyCallable,
     snapshot: Annotated[Snapshot, Depends(SiteStatusSource.create)],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -136,7 +136,7 @@ async def get_site_status(
 
     \f
 
-    Arguments, return value and caching behaviour are shared by all RSS
+    Arguments, return value and caching behaviour are shared by all ResourceStatus
     routes; see ``_vo_view``.
     """
     await check_permissions()
@@ -147,7 +147,7 @@ async def get_site_status(
 async def get_fts_status(
     response: Response,
     user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
-    check_permissions: CheckRSSPolicyCallable,
+    check_permissions: CheckResourceStatusPolicyCallable,
     snapshot: Annotated[Snapshot, Depends(FTSStatusSource.create)],
     if_none_match: Annotated[str | None, Header()] = None,
     if_modified_since: Annotated[str | None, Header()] = None,
@@ -159,7 +159,7 @@ async def get_fts_status(
 
     \f
 
-    Arguments, return value and caching behaviour are shared by all RSS
+    Arguments, return value and caching behaviour are shared by all ResourceStatus
     routes; see ``_vo_view``.
     """
     await check_permissions()

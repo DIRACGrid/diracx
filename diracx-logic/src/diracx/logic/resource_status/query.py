@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from diracx.core.models.rss import (
+from diracx.core.models.resource_status import (
     ALLOWED,
     BANNED,
     AllowedStatus,
@@ -13,7 +13,7 @@ from diracx.core.models.rss import (
     ResourceType,
     StorageElementStatus,
 )
-from diracx.core.models.rss import (
+from diracx.core.models.resource_status import (
     SiteStatus as SiteStatusModel,
 )
 from diracx.db.sql import ResourceStatusDB

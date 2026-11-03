@@ -5,26 +5,26 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import insert
 
-from diracx.db.sql.rss.db import ResourceStatusDB
+from diracx.db.sql.resource_status.db import ResourceStatusDB
 
 _NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
 _FAR = datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
 
 @pytest.fixture
-async def rss_db(tmp_path):
-    rss_db = ResourceStatusDB("sqlite+aiosqlite:///:memory:")
-    async with rss_db.engine_context():
-        async with rss_db.engine.begin() as conn:
-            await conn.run_sync(rss_db.metadata.create_all)
-        yield rss_db
+async def resource_status_db(tmp_path):
+    resource_status_db = ResourceStatusDB("sqlite+aiosqlite:///:memory:")
+    async with resource_status_db.engine_context():
+        async with resource_status_db.engine.begin() as conn:
+            await conn.run_sync(resource_status_db.metadata.create_all)
+        yield resource_status_db
 
 
-async def test_site_status(rss_db: ResourceStatusDB):
+async def test_site_status(resource_status_db: ResourceStatusDB):
     # Insert a test Site
-    async with rss_db.engine.begin() as conn:
+    async with resource_status_db.engine.begin() as conn:
         await conn.execute(
-            insert(rss_db.metadata.tables["SiteStatus"]).values(
+            insert(resource_status_db.metadata.tables["SiteStatus"]).values(
                 Name="TestSite",
                 StatusType="all",
                 VO="all",
@@ -39,7 +39,7 @@ async def test_site_status(rss_db: ResourceStatusDB):
         )
 
     # Test with the test Site (should be found)
-    async with rss_db as db:
+    async with resource_status_db as db:
         rows = await db.get_site_statuses()
     assert rows
     name, status, reason, vo = rows[0]
@@ -49,11 +49,11 @@ async def test_site_status(rss_db: ResourceStatusDB):
     assert vo == "all"
 
 
-async def test_resource_status(rss_db: ResourceStatusDB):
-    async with rss_db.engine.begin() as conn:
+async def test_resource_status(resource_status_db: ResourceStatusDB):
+    async with resource_status_db.engine.begin() as conn:
         # Insert a test Compute Element
         await conn.execute(
-            insert(rss_db.metadata.tables["ResourceStatus"]).values(
+            insert(resource_status_db.metadata.tables["ResourceStatus"]).values(
                 Name="TestCompute",
                 StatusType="all",
                 VO="all",
@@ -68,7 +68,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
         )
         # Insert a test FTS
         await conn.execute(
-            insert(rss_db.metadata.tables["ResourceStatus"]).values(
+            insert(resource_status_db.metadata.tables["ResourceStatus"]).values(
                 Name="TestFTS",
                 StatusType="all",
                 VO="all",
@@ -84,7 +84,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
         # Insert a test Storage Element with all StatusType
         for statustype in ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]:
             await conn.execute(
-                insert(rss_db.metadata.tables["ResourceStatus"]).values(
+                insert(resource_status_db.metadata.tables["ResourceStatus"]).values(
                     Name="TestStorage",
                     StatusType=statustype,
                     VO="all",
@@ -99,7 +99,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
             )
 
     # Test with the test Compute Element (should be found)
-    async with rss_db as db:
+    async with resource_status_db as db:
         result = await db.get_resource_statuses()
     assert "TestCompute" in result["all"]
     row = result["all"]["TestCompute"]["all"]
@@ -108,7 +108,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert row.VO == "all"
 
     # Test with the test FTS (should be found)
-    async with rss_db as db:
+    async with resource_status_db as db:
         result = await db.get_resource_statuses()
     assert "TestFTS" in result["all"]
     row = result["all"]["TestFTS"]["all"]
@@ -117,7 +117,7 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert row.VO == "all"
 
     # Test with the test Storage Element (should be found)
-    async with rss_db as db:
+    async with resource_status_db as db:
         result = await db.get_resource_statuses(
             ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
         )
@@ -132,12 +132,12 @@ async def test_resource_status(rss_db: ResourceStatusDB):
         assert row.Reason == "All good"
 
     # The date queries should return the latest date and the row count
-    async with rss_db as db:
+    async with resource_status_db as db:
         max_date, count = await db.get_resource_status_date()
     assert max_date == _NOW
     assert count == 2  # TestCompute + TestFTS "all" rows
 
-    async with rss_db as db:
+    async with resource_status_db as db:
         max_date, count = await db.get_resource_status_date(
             ["ReadAccess", "WriteAccess", "CheckAccess", "RemoveAccess"]
         )
@@ -146,13 +146,13 @@ async def test_resource_status(rss_db: ResourceStatusDB):
 
     # Filtering by element_type must not leak rows of other element types:
     # TestCompute and TestFTS both use status_type "all".
-    async with rss_db as db:
+    async with resource_status_db as db:
         compute = await db.get_resource_statuses(["all"], element_type="ComputeElement")
         fts = await db.get_resource_statuses(["all"], element_type="FTS")
     assert set(compute["all"]) == {"TestCompute"}
     assert set(fts["all"]) == {"TestFTS"}
 
-    async with rss_db as db:
+    async with resource_status_db as db:
         max_date, count = await db.get_resource_status_date(
             ["all"], element_type="ComputeElement"
         )
@@ -160,9 +160,11 @@ async def test_resource_status(rss_db: ResourceStatusDB):
     assert count == 1  # only TestCompute, not TestFTS
 
 
-async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
+async def test_resource_status_same_name_multiple_vos(
+    resource_status_db: ResourceStatusDB,
+):
     """Rows for the same resource in different VOs must not overwrite each other."""
-    async with rss_db as db:
+    async with resource_status_db as db:
         await db.insert_resource_status(
             name="SharedCE",
             status="Active",
@@ -184,17 +186,17 @@ async def test_resource_status_same_name_multiple_vos(rss_db: ResourceStatusDB):
     assert result["atlas"]["SharedCE"]["all"].Status == "Banned"
 
 
-async def test_empty_tables(rss_db: ResourceStatusDB):
+async def test_empty_tables(resource_status_db: ResourceStatusDB):
     """Empty tables yield empty results rather than errors."""
-    async with rss_db as db:
+    async with resource_status_db as db:
         assert await db.get_site_statuses() == []
         assert await db.get_resource_statuses() == {}
         assert await db.get_resource_status_date() == (None, 0)
         assert await db.get_site_status_date() == (None, 0)
 
 
-async def test_site_status_date(rss_db: ResourceStatusDB):
-    async with rss_db as db:
+async def test_site_status_date(resource_status_db: ResourceStatusDB):
+    async with resource_status_db as db:
         await db.insert_site_status(
             name="LCG.CERN.cern",
             status="Active",
@@ -207,9 +209,11 @@ async def test_site_status_date(rss_db: ResourceStatusDB):
     assert count == 1
 
 
-async def test_insert_resource_status_sets_element_type(rss_db: ResourceStatusDB):
+async def test_insert_resource_status_sets_element_type(
+    resource_status_db: ResourceStatusDB,
+):
     """insert_resource_status must persist ElementType so reads can filter on it."""
-    async with rss_db as db:
+    async with resource_status_db as db:
         await db.insert_resource_status(
             name="ComputeOnly",
             status="Active",

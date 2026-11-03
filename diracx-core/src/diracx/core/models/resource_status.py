@@ -1,4 +1,4 @@
-"""Models describing resource status information for the RSS service."""
+"""Models describing resource status information for the ResourceStatus service."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ ResourceStatus = Annotated[
 
 
 class ResourceType(StrEnum):
-    """Types of resources tracked by the RSS service."""
+    """Types of resources tracked by the ResourceStatus service."""
 
     Compute = "ComputeElement"
     Storage = "StorageElement"

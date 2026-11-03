@@ -5,7 +5,7 @@ from http import HTTPStatus
 
 import pytest
 
-from diracx.core.models.rss import ResourceType
+from diracx.core.models.resource_status import ResourceType
 
 pytestmark = pytest.mark.enabled_dependencies(
     [
@@ -15,21 +15,21 @@ pytestmark = pytest.mark.enabled_dependencies(
         "FTSStatusSource",
         "ComputeElementStatusSource",
         "StorageElementStatusSource",
-        "RSSAccessPolicy",
+        "ResourceStatusAccessPolicy",
         "DevelopmentSettings",
     ]
 )
 
 ALL_ENDPOINTS = [
-    "/api/rss/storage",
-    "/api/rss/compute",
-    "/api/rss/site",
-    "/api/rss/fts",
+    "/api/resource-status/storage",
+    "/api/resource-status/compute",
+    "/api/resource-status/site",
+    "/api/resource-status/fts",
 ]
 
 
-def _get_rss_db(client):
-    from diracx.db.sql.rss.db import ResourceStatusDB
+def _get_resource_status_db(client):
+    from diracx.db.sql.resource_status.db import ResourceStatusDB
 
     db_override = client.app.dependency_overrides[ResourceStatusDB.no_transaction]
     # factory.py stores partial(db_no_transaction, db_instance); args[0] is the instance.
@@ -50,11 +50,11 @@ async def _clear_source_caches(client):
             await source.clear_caches()
 
 
-async def _prepare_rss(client):
+async def _prepare_resource_status(client):
     """Reset the source caches and seed the database."""
     await _clear_source_caches(client)
 
-    db = _get_rss_db(client)
+    db = _get_resource_status_db(client)
     now = datetime.now(tz=timezone.utc)
 
     async with db as conn:
@@ -130,7 +130,7 @@ def normal_user_client(client_factory):
     with client_factory.normal_user() as client:
         # Run on the TestClient's portal so async primitives are bound to the
         # same event loop that serves the requests.
-        client.portal.call(_prepare_rss, client)
+        client.portal.call(_prepare_resource_status, client)
         yield client
 
 
@@ -148,7 +148,7 @@ def unauthenticated_client(client_factory):
 
 
 def test_unauthenticated(unauthenticated_client):
-    response = unauthenticated_client.get("/api/rss/storage")
+    response = unauthenticated_client.get("/api/resource-status/storage")
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
@@ -250,13 +250,13 @@ def test_get_resource_status(normal_user_client, endpoint):
 
 def test_vo_filtering(normal_user_client):
     """Users only see "all" entries plus those of their own VO."""
-    r = normal_user_client.get("/api/rss/storage")
+    r = normal_user_client.get("/api/resource-status/storage")
     assert r.status_code == HTTPStatus.OK, r.json()
     assert set(r.json()) == {"SE-CERN"}  # not SE-OTHER (vo=other_vo)
     # SE-CERN is banned for other_vo, but the lhcb view must show lhcb's row
     assert r.json()["SE-CERN"]["read"]["allowed"] is True
 
-    r = normal_user_client.get("/api/rss/site")
+    r = normal_user_client.get("/api/resource-status/site")
     assert r.status_code == HTTPStatus.OK, r.json()
     assert set(r.json()) == {"LCG.CERN.cern", "LCG.Shared.ch"}
 
@@ -276,7 +276,7 @@ def test_empty_db(empty_db_client, endpoint):
 
 def test_served_from_cache(normal_user_client, monkeypatch):
     """Once populated, requests are served from the cache without DB access."""
-    from diracx.db.sql.rss.db import ResourceStatusDB
+    from diracx.db.sql.resource_status.db import ResourceStatusDB
 
     # Populate the cache for every endpoint
     for endpoint in ALL_ENDPOINTS:
