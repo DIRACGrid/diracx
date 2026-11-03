@@ -1,6 +1,7 @@
 """Exception types raised by DiracX core components."""
 
 from __future__ import annotations
+
 from uuid import UUID
 
 __all__ = [
