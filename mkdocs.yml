@@ -254,6 +254,8 @@ nav:
               - dev/explanations/tasks/index.md
               - Class details: dev/explanations/tasks/class-details.md
               - Broker lifecycle: dev/explanations/tasks/broker-lifecycle.md
+          - Transformation System:
+              - Packer: dev/explanations/transformation-system/packer.md
       - Frontend:
           - CLI:
               - API: dev/explanations/components/api.md
