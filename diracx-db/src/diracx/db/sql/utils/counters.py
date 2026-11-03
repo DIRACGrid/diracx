@@ -80,11 +80,15 @@ from sqlalchemy import (
     func,
     insert,
     literal_column,
+    or_,
     select,
     union_all,
+    update,
 )
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.visitors import replacement_traverse
 from sqlalchemy.types import TypeEngine
 
 from .functions import utcnow_us
@@ -331,8 +335,6 @@ class JournalledCounter:
                             update_vals["UpdatedAt"] = func.max(
                                 ct.c.UpdatedAt, row_dict["UpdatedAt"]
                             )
-                            from sqlalchemy import update
-
                             await conn.execute(
                                 update(ct)
                                 .where(
@@ -363,8 +365,6 @@ class JournalledCounter:
                         on_dup["UpdatedAt"] = func.greatest(
                             ct.c.UpdatedAt, ins.inserted.UpdatedAt
                         )
-                        from sqlalchemy.dialects.mysql import insert as mysql_insert
-
                         ins = mysql_insert(ct).values(
                             **key_vals,
                             **measure_vals,
@@ -487,8 +487,6 @@ class JournalledCounter:
 
                 key_refs = [combined.c[k] for k in self.key]
 
-                from sqlalchemy import or_
-
                 having_clause = or_(*(
                     func.sum(combined.c[f"__m_{m}"]) != 0
                     for m in self.measures
@@ -587,8 +585,6 @@ def _translate_predicate(
     Both tables must have columns with the same names for any column
     referenced in the predicate.
     """
-    from sqlalchemy.sql.visitors import replacement_traverse
-
     def replace(element):
         if hasattr(element, "key") and hasattr(element, "table"):
             if element.table is from_table:
@@ -609,8 +605,6 @@ def _translate_predicate_by_position(
     key_map = {}
     for name, expr in zip(key_names, to_key_exprs):
         key_map[name] = expr
-
-    from sqlalchemy.sql.visitors import replacement_traverse
 
     def replace(element):
         if hasattr(element, "key") and hasattr(element, "table"):
