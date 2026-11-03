@@ -37,6 +37,10 @@ CleanSandboxStoreTask = "diracx.tasks.jobs:CleanSandboxStoreTask"
 DummyJobExecutorMonitorTask = "diracx.tasks.jobs:DummyJobExecutorMonitorTask"
 DummyJobExecutorTask = "diracx.tasks.jobs:DummyJobExecutorTask"
 
+[project.entry-points."diracx.tasks.transformation"]
+PeriodicSweepFeeders = "diracx.tasks.transformations:PeriodicSweepFeeders"
+FeedTransformation = "diracx.tasks.transformations:FeedTransformation"
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
