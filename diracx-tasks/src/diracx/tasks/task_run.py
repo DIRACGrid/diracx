@@ -400,9 +400,9 @@ async def call_task(
         broker = RedisStreamBroker(url=_factory_settings.tasks_redis_url)
         task_bindings, _ = create_task_bindings(broker, registry)
         BaseTask.bind_broker(task_bindings)
-        await broker.startup()
 
         try:
+            await broker.startup()
             all_kwargs = {**dep_kwargs, **kwargs}
 
             if debugger == DebugOptions.BEFORE:

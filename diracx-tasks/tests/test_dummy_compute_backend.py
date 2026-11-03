@@ -303,19 +303,17 @@ async def test_monitor_uses_the_bound_broker(
     transformation_db: TransformationDB, transformation_id: UUID, broker
 ):
     """On a worker, the monitor schedules through the worker's broker."""
-    token = BaseTask._broker_registry.set(
+    # Each test runs in its own context, so the binding ends with the test
+    BaseTask.bind_broker(
         {
             DummyComputeBackendTask: TaskBinding(
                 broker=broker, task_name="transformations:DummyComputeBackendTask"
             )
         }
     )
-    try:
-        async with transformation_db as db:
-            await add_parcel(db, transformation_id)
-        assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
-    finally:
-        BaseTask._broker_registry.reset(token)
+    async with transformation_db as db:
+        await add_parcel(db, transformation_id)
+    assert await DummyComputeBackendMonitorTask().execute(transformation_db) == 1
 
     async with Redis(connection_pool=broker.connection_pool) as redis:
         assert await redis.zcard(DELAYED_ZSET_KEY) == 1
