@@ -75,7 +75,7 @@ def test_state_tables_cover_every_state(transitions, enum_type):
 
 def test_packer_proposals_need_inputs():
     with pytest.raises(ValidationError):
-        ComputeParcel(inputs=[])
+        ComputeParcel(input_ids=[])
     with pytest.raises(ValidationError):
         DelayInput(input_ids=[], delay_until="2026-01-01T00:00:00Z")
 

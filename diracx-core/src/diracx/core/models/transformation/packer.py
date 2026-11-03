@@ -41,7 +41,7 @@ class ComputeParcel(BaseModel):
     """A packer's proposal for a parcel that runs as a job.
 
     Attributes:
-        inputs: Inputs the parcel is made of.
+        input_ids: Inputs the parcel is made of.
         metadata: Free-form annotations stored on the parcel.
         requirements: Additions merged recursively over the transformation's
             requirements template: nested mappings are merged key by key, and
@@ -49,7 +49,7 @@ class ComputeParcel(BaseModel):
         parameters: The CWL input object passed to the runner.
     """
 
-    inputs: list[UUID] = Field(min_length=1)
+    input_ids: list[UUID] = Field(min_length=1)
     metadata: dict[str, Any] = {}
     requirements: dict[str, Any] | None = None
     parameters: dict[str, Any] = {}
@@ -73,13 +73,13 @@ class DataParcel(BaseModel):
     """A packer's proposal for a parcel that runs as a request.
 
     Attributes:
-        inputs: Inputs the parcel is made of.
+        input_ids: Inputs the parcel is made of.
         metadata: Free-form annotations stored on the parcel.
         request: DIRAC RMS request body (DX-ADR-003).
         deltas: What the request costs each storage element.
     """
 
-    inputs: list[UUID] = Field(min_length=1)
+    input_ids: list[UUID] = Field(min_length=1)
     metadata: dict[str, Any] = {}
     request: dict[str, Any]
     deltas: list[StorageDelta] = []
