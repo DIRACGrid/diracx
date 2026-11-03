@@ -434,7 +434,7 @@ CREATE TABLE Inputs (
     TransformationID BINARY(16)   NOT NULL,
     InputID          BINARY(16)   NOT NULL,        -- UUIDv7
     ParentInputID    BINARY(16)   NULL,            -- set when created by splitting; same transformation
-    InputHash        BINARY(16)   NOT NULL,        -- SHA-256[:16] over JCS (LFN, Descriptor)
+    InputHash        BINARY(16)   NOT NULL,        -- XXH3-128 over the canonical (LFN, Descriptor)
     LFN              VARCHAR(512) COLLATE utf8mb4_bin NULL, -- promoted out of JSON: indexed, joinable
     LFNSize          BIGINT       NULL,            -- size of the whole file, whatever the mask selects
     Descriptor       JSON         NULL,            -- {"Mask": "11-20", "Run": 1234, "Seed": 42}
@@ -460,9 +460,9 @@ CREATE TABLE Inputs (
 - **`LFNSize` is the size of the whole file**, whatever the mask selects. A feeder that wants the size of the selected fraction puts it under its own key in `Descriptor`. A size-based packer that puts several masks of one LFN into a parcel can still account for the transfer by summing over distinct LFNs (DX-ADR-006).
 - **`LFN` compares case-sensitively** (`utf8mb4_bin`). LFNs are paths, and the `(TransformationID, LFN)` lookups of the reconciliation action and the joining packer must not treat `/lhcb/A.dst` and `/lhcb/a.dst` as one file. `VARCHAR(512)` leaves room for long LFNs while the index stays within InnoDB's 3072-byte key limit. The same applies to `ParcelOutputs.LFN`.
 - **Splitting** sets the parent row to `Split` (terminal) and inserts children pointing at it, in one transaction. Lineage is explicit and queryable without parsing masks, and a child is always in the same transformation as its parent, which is what lets the reference be composite. Deleting a parent cascades to its children, so the range delete that cleans a transformation is not refused by MySQL's row-by-row foreign key checks. InnoDB stops cascading after 15 levels and split depth is not bounded, so cleaning deletes split lineages bottom-up rather than relying on the cascade alone.
-- **`InputHash` is what an input is deduplicated on.** It is the leftmost 16 bytes of a `SHA-256` digest over the RFC 8785 (JCS) form of the pair `(LFN, Descriptor)`, computed by the core rather than by the feeder so that two feeders describing the same thing agree, and unique within the transformation. Hashing the descriptor as well as the LFN is what makes the key survive splitting, which a unique key on `(TransformationID, LFN)` could not: a parent `{"Run": 1234}` and its children `{"Run": 1234, "Mask": "1-10"}` hash differently, while a feeder yielding the same bare LFN twice does not. A feeder pass is therefore an unconditional insert that the database itself resolves, with no per-input lookup, and the bookmark becomes an optimisation rather than the guarantee. The cost is sixteen bytes and a second unique index on the hottest insert path in the system, which an earlier draft of this ADR refused to pay; it is paid because deduplication then holds for every feeder, including one whose bookmark is wrong.
+- **`InputHash` is what an input is deduplicated on.** It is an `XXH3-128` digest over the canonical form of the pair `(LFN, Descriptor)`, computed by the core rather than by the feeder so that two feeders describing the same thing agree, and unique within the transformation. Hashing the descriptor as well as the LFN is what makes the key survive splitting, which a unique key on `(TransformationID, LFN)` could not: a parent `{"Run": 1234}` and its children `{"Run": 1234, "Mask": "1-10"}` hash differently, while a feeder yielding the same bare LFN twice does not. A feeder pass is therefore an unconditional insert that the database itself resolves, with no per-input lookup, and the bookmark becomes an optimisation rather than the guarantee. The cost is sixteen bytes and a second unique index on the hottest insert path in the system, which an earlier draft of this ADR refused to pay; it is paid because deduplication then holds for every feeder, including one whose bookmark is wrong.
 - **A file may legitimately come round again.** Because the hash covers the descriptor and not the LFN alone, a feeder that has to yield the same file more than once distinguishes the occurrences with a field of its own in `Descriptor`, and each becomes a row. A standalone data transformation is where this arises: files staged to disk at users' requests are removed, staged again later, and have to be removed again, and each round is a unit of work in its own right rather than a repeat of one that is already `Processed`. The field is the feeder's and opaque to the core, like the mask, and no schema change is needed to allow it. The cost falls inside that transformation, where `(TransformationID, LFN)` stops identifying at most one row, so anything that reads an input by LFN there has to say which occurrence it means, including the reconciliation action at `Finalizing` (DX-ADR-006).
-- **The digest reuses SHA-256, truncated to 16 bytes.** Content IDs keep the full 32-byte SHA-256; `InputHash` keeps `BINARY(16)` by taking the leftmost half so one hash family and one canonicaliser (`diracx.core.hashing`) cover both. The key is scoped to one transformation; a collision still silently drops a legitimate input, but at 128 bits that stays negligible over a billion inputs. Truncation is weaker than a full SHA-256 content ID and is not interchangeable with one. This hash never leaves the database, so it can be changed by a migration that rewrites one column, while a content hash cannot.
+- **The digest is non-cryptographic on purpose.** Nothing here defends against an adversary choosing an input, and the key is scoped to one transformation, so the fast hash is the right one. The width is not free of consequence: a collision silently drops a legitimate input, so at 128 bits it stays negligible over a billion inputs where a 64-bit variant would not. The algorithm and the canonical byte form are the same question as for the content hashes below (see Open Issues), with one difference: this hash never leaves the database, so it can be changed by a migration that rewrites one column, while a content hash cannot.
 - **`DelayedUntil`** withholds an input from the packer without changing its status. The packer sets it (DX-ADR-006) and the claim query skips rows whose time has not passed.
 - **`ErrorCount`** is the retry budget the failure hook reads (DX-ADR-006), counting the failed parcels the input has been part of since it was last reset. An operator resetting a quarantined input back to `Unassigned` returns the count to zero (DX-ADR-005), so it is not derivable from `ParcelInputs` once that has happened. It is kept on the row so the hook reads it without a join, and the full history is always recoverable from `ParcelInputs`, whose rows are never deleted on failure.
 
@@ -474,7 +474,7 @@ Content-addressed storage for the CWL documents that describe one unit of comput
 
 ```sql
 CREATE TABLE Processes (
-    ProcessID BINARY(32) NOT NULL,   -- SHA-256 of JCS canonical bytes (diracx.core.hashing)
+    ProcessID BINARY(32) NOT NULL,   -- content hash of the canonicalised document; algorithm open
     Process   JSON       NOT NULL,   -- the CWL document
     CreatedAt DATETIME   NOT NULL,   -- when the document was first stored
     PRIMARY KEY (ProcessID)
@@ -524,7 +524,7 @@ Matching criteria (sites, tags, memory, priority) recur endlessly: thousands of 
 
 ```sql
 CREATE TABLE Requirements (
-    RequirementsID BINARY(32) NOT NULL,   -- SHA-256 of JCS canonical bytes
+    RequirementsID BINARY(32) NOT NULL,   -- content hash of the canonicalised requirement set
     Requirements   JSON       NOT NULL,
     CreatedAt      DATETIME   NOT NULL,
     PRIMARY KEY (RequirementsID)
@@ -539,7 +539,7 @@ The effective hint values a parcel ran under, after the configuration service ha
 
 ```sql
 CREATE TABLE ResolvedHints (
-    ResolvedHintsID BINARY(32) NOT NULL,   -- SHA-256 of JCS canonical bytes
+    ResolvedHintsID BINARY(32) NOT NULL,   -- content hash of the canonicalised sidecar
     Hints           JSON       NOT NULL,
     CreatedAt       DATETIME   NOT NULL,
     PRIMARY KEY (ResolvedHintsID)

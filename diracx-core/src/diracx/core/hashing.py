@@ -5,9 +5,10 @@ Canonical form is RFC 8785 JSON Canonicalization Scheme (JCS), via the
 
 * :func:`hash_json` — SHA-256 (32 raw bytes) for content-addressed documents
   (``Processes``, ``Requirements``, ``ResolvedHints``); see DX-ADR-007.
-* :func:`input_hash` — SHA-256 truncated to the leftmost 16 bytes for
-  ``Inputs.InputHash`` over the canonical ``(LFN, Descriptor)`` envelope;
-  see DX-ADR-004.
+
+``Inputs.InputHash`` (truncated SHA-256 over the ``(LFN, Descriptor)``
+envelope) is computed on insert in the Transformation DB, not here; see
+DX-ADR-004.
 
 JCS rules that matter here (stable forever for stored digests):
 
@@ -34,7 +35,6 @@ import rfc8785
 __all__ = [
     "canonical_json_bytes",
     "hash_json",
-    "input_hash",
 ]
 
 
@@ -59,8 +59,7 @@ def hash_json(value: Any) -> bytes:
     Used as the primary key for content-addressed documents
     (``Processes``, ``Requirements``, ``ResolvedHints``). Today this is always
     SHA-256; an optional algorithm parameter can be added later if another
-    cryptographic digest is required. Input dedupe uses :func:`input_hash`
-    (truncated SHA-256) instead.
+    cryptographic digest is required.
 
     Args:
         value: A JSON-compatible Python value.
@@ -69,22 +68,3 @@ def hash_json(value: Any) -> bytes:
         Raw SHA-256 digest (length 32).
     """
     return hashlib.sha256(canonical_json_bytes(value)).digest()
-
-
-def input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
-    """Return a 16-byte digest of the canonical ``(LFN, Descriptor)`` pair.
-
-    Digests with SHA-256 over JCS bytes, then keeps the leftmost 16 bytes so
-    ``Inputs.InputHash`` stays ``BINARY(16)``. ``descriptor is None`` is treated
-    as ``{}`` so missing and empty descriptors dedupe together. ``lfn is None``
-    stays JSON ``null`` (no file).
-
-    Args:
-        lfn: Logical file name, or ``None`` when the input is not a file.
-        descriptor: Opaque JSON object, or ``None`` (normalised to ``{}``).
-
-    Returns:
-        Leftmost 16 bytes of the SHA-256 digest.
-    """
-    envelope = {"LFN": lfn, "Descriptor": {} if descriptor is None else descriptor}
-    return hashlib.sha256(canonical_json_bytes(envelope)).digest()[:16]

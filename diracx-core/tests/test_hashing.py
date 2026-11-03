@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 import rfc8785
 
-from diracx.core.hashing import canonical_json_bytes, hash_json, input_hash
+from diracx.core.hashing import canonical_json_bytes, hash_json
 
 
 def test_canonical_json_bytes_key_order_independent():
@@ -93,34 +93,3 @@ def test_hash_json_stable_for_requirements_shape():
         assert hash_json(value) == hash_json(
             {k: value[k] for k in sorted(value, reverse=True)}
         )
-
-
-def test_input_hash_length_and_stability():
-    digest = input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "1-10"})
-    assert len(digest) == 16
-    assert digest == input_hash("/lhcb/file.dst", {"Mask": "1-10", "Run": 1234})
-
-    other = input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "11-20"})
-    assert digest != other
-
-    null_lfn = input_hash(None, {"Seed": 42})
-    assert len(null_lfn) == 16
-    assert null_lfn != input_hash(None, {"Seed": 43})
-
-    null_mask = input_hash("/cms/file1.root", None)
-    dict_mask = input_hash("/cms/file1.root", {})
-    assert null_mask == dict_mask
-
-
-def test_input_hash_none_descriptor_matches_empty():
-    assert input_hash("/a", None) == input_hash("/a", {})
-    assert input_hash(None, None) == input_hash(None, {})
-
-
-def test_input_hash_matches_truncated_sha256_over_canonical_envelope():
-    lfn = None
-    descriptor = {"Seed": 1}
-    envelope = {"LFN": lfn, "Descriptor": descriptor}
-    expected = hashlib.sha256(canonical_json_bytes(envelope)).digest()[:16]
-    assert input_hash(lfn, descriptor) == expected
-    assert len(expected) == 16

@@ -72,9 +72,9 @@ from diracx.db.sql.utils.types import SmarterDateTime
 
 # OIDC subjects, the identifier the DiracX authentication tables key on
 str256 = Annotated[str, 256]
-# SHA-256[:16] of JCS canonical (LFN, Descriptor); see diracx.core.hashing
+# XXH3-128 digest of an input's canonical (LFN, Descriptor)
 bytes16 = Annotated[bytes, 16]
-# SHA-256 of JCS canonical documents (DX-ADR-007); see diracx.core.hashing
+# Content hashes of canonicalised documents (DX-ADR-007)
 bytes32 = Annotated[bytes, 32]
 
 # LFNs are paths, so they compare case-sensitively
@@ -474,7 +474,7 @@ class Inputs(Base):
         input_id: UUIDv7 identifier of the input.
         parent_input_id: Input this one was split from, in the same
             transformation.
-        input_hash: Leftmost 16 bytes of SHA-256 over JCS ``(LFN, Descriptor)``,
+        input_hash: XXH3-128 digest of the canonical ``(LFN, Descriptor)``,
             unique within the transformation; what inputs are deduplicated on.
         lfn: Logical file name, promoted out of the descriptor to be indexed.
         lfn_size: Size of the whole file, whatever the mask selects.
