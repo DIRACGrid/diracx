@@ -6,10 +6,6 @@ Canonical form is RFC 8785 JSON Canonicalization Scheme (JCS), via the
 * :func:`hash_json` — SHA-256 (32 raw bytes) for content-addressed documents
   (``Processes``, ``Requirements``, ``ResolvedHints``); see DX-ADR-007.
 
-``Inputs.InputHash`` (truncated SHA-256 over the ``(LFN, Descriptor)``
-envelope) is computed on insert in the Transformation DB, not here; see
-DX-ADR-004.
-
 JCS rules that matter here (stable forever for stored digests):
 
 * JSON types only; object keys must be strings.
