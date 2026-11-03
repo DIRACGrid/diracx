@@ -1,0 +1,95 @@
+"""Tests for diracx.core.hashing."""
+
+from __future__ import annotations
+
+import hashlib
+from datetime import datetime, timezone
+
+import pytest
+import rfc8785
+
+from diracx.core.hashing import canonical_json_bytes, hash_json
+
+
+def test_canonical_json_bytes_key_order_independent():
+    left = {"b": 1, "a": {"z": True, "y": None}}
+    right = {"a": {"y": None, "z": True}, "b": 1}
+    assert canonical_json_bytes(left) == canonical_json_bytes(right)
+    assert canonical_json_bytes(left) == b'{"a":{"y":null,"z":true},"b":1}'
+
+
+def test_canonical_json_bytes_unicode():
+    assert canonical_json_bytes({"café": "naïve"}) == '{"café":"naïve"}'.encode()
+
+
+def test_canonical_json_bytes_floats():
+    assert canonical_json_bytes({"x": 1.5}) == b'{"x":1.5}'
+    assert canonical_json_bytes({"x": 1 / 3}) == b'{"x":0.3333333333333333}'
+    # Prefer integers over floats
+    assert canonical_json_bytes({"x": 3.0}) == canonical_json_bytes({"x": 3})
+    # JCS normalises -0.0
+    assert canonical_json_bytes({"x": 0.0}) == b'{"x":0}'
+    assert canonical_json_bytes({"x": -0.0}) == b'{"x":0}'
+    assert canonical_json_bytes({"x": -0.0}) == canonical_json_bytes({"x": 0.0})
+
+
+def test_canonical_json_bytes_none_differs_from_empty_object():
+    # JSON null and {} are distinct; JCS does not conflate them.
+    assert canonical_json_bytes({"x": None}) == b'{"x":null}'
+    assert canonical_json_bytes({"x": {}}) == b'{"x":{}}'
+    assert canonical_json_bytes({"x": None}) != canonical_json_bytes({"x": {}})
+    assert hash_json({"x": None}) != hash_json({"x": {}})
+
+
+def test_canonical_json_bytes_safe_integer_bounds():
+    assert canonical_json_bytes({"x": (1 << 53) - 1}) == (b'{"x":9007199254740991}')
+    assert canonical_json_bytes({"x": -((1 << 53) - 1)}) == (b'{"x":-9007199254740991}')
+    with pytest.raises(rfc8785.IntegerDomainError):
+        canonical_json_bytes({"x": 1 << 53})
+    with pytest.raises(rfc8785.IntegerDomainError):
+        canonical_json_bytes({"x": -(1 << 53)})
+    with pytest.raises(ValueError):
+        canonical_json_bytes({"x": 2**100})
+
+
+def test_canonical_json_bytes_rejects_non_json_types():
+    with pytest.raises(rfc8785.CanonicalizationError):
+        canonical_json_bytes({"t": datetime.now(tz=timezone.utc)})
+    with pytest.raises(rfc8785.CanonicalizationError):
+        canonical_json_bytes({1, 2})
+    with pytest.raises(rfc8785.CanonicalizationError):
+        canonical_json_bytes({1: "a"})
+    with pytest.raises(rfc8785.FloatDomainError):
+        canonical_json_bytes({"x": float("nan")})
+    with pytest.raises(rfc8785.CanonicalizationError):
+        canonical_json_bytes({True: "a"})
+
+
+def test_hash_json_known_vector():
+    # Empty object — SHA-256 of b"{}"
+    assert hash_json({}) == hashlib.sha256(b"{}").digest()
+    assert hash_json({}).hex() == (
+        "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    )
+    value = {"Priority": 1, "Sites": ["LCG.CERN.ch"]}
+    digest = hash_json(value)
+    assert len(digest) == 32
+    assert digest == hashlib.sha256(canonical_json_bytes(value)).digest()
+    assert digest.hex() == (
+        "d150b0d7fd1ff9d4c3436b9280dc743b3d42d4639f3540e34bbabc74035a1d80"
+    )
+
+
+def test_hash_json_stable_for_requirements_shape():
+    requirements = {"CPUTime": 86400, "Sites": ["LCG.CERN.ch", "LCG.IN2P3.fr"]}
+    hints = {"dirac:Backend": "Pilot"}
+    process = {
+        "cwlVersion": "v1.2",
+        "class": "CommandLineTool",
+        "baseCommand": ["echo"],
+    }
+    for value in (requirements, hints, process):
+        assert len(hash_json(value)) == 32
+        assert hash_json(value) == hash_json(
+            {k: value[k] for k in sorted(value, reverse=True)}
+        )
