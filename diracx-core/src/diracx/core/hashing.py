@@ -5,8 +5,9 @@ Canonical form is RFC 8785 JSON Canonicalization Scheme (JCS), via the
 
 * :func:`hash_json` — SHA-256 (32 raw bytes) for content-addressed documents
   (``Processes``, ``Requirements``, ``ResolvedHints``); see DX-ADR-007.
-* :func:`input_hash` — XXH3-128 (16 raw bytes) for ``Inputs.InputHash`` over
-  the canonical ``(LFN, Descriptor)`` envelope; see DX-ADR-004.
+* :func:`input_hash` — SHA-256 truncated to the leftmost 16 bytes for
+  ``Inputs.InputHash`` over the canonical ``(LFN, Descriptor)`` envelope;
+  see DX-ADR-004.
 
 JCS rules that matter here (stable forever for stored digests):
 
@@ -29,7 +30,6 @@ import hashlib
 from typing import Any
 
 import rfc8785
-import xxhash
 
 __all__ = [
     "canonical_json_bytes",
@@ -59,8 +59,8 @@ def hash_json(value: Any) -> bytes:
     Used as the primary key for content-addressed documents
     (``Processes``, ``Requirements``, ``ResolvedHints``). Today this is always
     SHA-256; an optional algorithm parameter can be added later if another
-    cryptographic digest is required. Non-cryptographic digests (e.g. input
-    dedupe) stay on :func:`input_hash`.
+    cryptographic digest is required. Input dedupe uses :func:`input_hash`
+    (truncated SHA-256) instead.
 
     Args:
         value: A JSON-compatible Python value.
@@ -72,17 +72,19 @@ def hash_json(value: Any) -> bytes:
 
 
 def input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
-    """Return the XXH3-128 digest of the canonical ``(LFN, Descriptor)`` pair.
+    """Return a 16-byte digest of the canonical ``(LFN, Descriptor)`` pair.
 
-    ``descriptor is None`` is treated as ``{}`` so missing and empty descriptors
-    dedupe together. ``lfn is None`` stays JSON ``null`` (no file).
+    Digests with SHA-256 over JCS bytes, then keeps the leftmost 16 bytes so
+    ``Inputs.InputHash`` stays ``BINARY(16)``. ``descriptor is None`` is treated
+    as ``{}`` so missing and empty descriptors dedupe together. ``lfn is None``
+    stays JSON ``null`` (no file).
 
     Args:
         lfn: Logical file name, or ``None`` when the input is not a file.
         descriptor: Opaque JSON object, or ``None`` (normalised to ``{}``).
 
     Returns:
-        Raw XXH3-128 digest (length 16).
+        Leftmost 16 bytes of the SHA-256 digest.
     """
     envelope = {"LFN": lfn, "Descriptor": {} if descriptor is None else descriptor}
-    return xxhash.xxh3_128_digest(canonical_json_bytes(envelope))
+    return hashlib.sha256(canonical_json_bytes(envelope)).digest()[:16]

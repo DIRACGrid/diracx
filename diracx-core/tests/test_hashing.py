@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 
 import pytest
 import rfc8785
-import xxhash
 
 from diracx.core.hashing import canonical_json_bytes, hash_json, input_hash
 
@@ -118,9 +117,10 @@ def test_input_hash_none_descriptor_matches_empty():
     assert input_hash(None, None) == input_hash(None, {})
 
 
-def test_input_hash_matches_xxh3_over_canonical_envelope():
+def test_input_hash_matches_truncated_sha256_over_canonical_envelope():
     lfn = None
     descriptor = {"Seed": 1}
     envelope = {"LFN": lfn, "Descriptor": descriptor}
-    expected = xxhash.xxh3_128_digest(canonical_json_bytes(envelope))
+    expected = hashlib.sha256(canonical_json_bytes(envelope)).digest()[:16]
     assert input_hash(lfn, descriptor) == expected
+    assert len(expected) == 16
