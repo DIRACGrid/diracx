@@ -14,7 +14,7 @@ from ..utils import str32, str64, str128, str512
 # Defining the tables
 
 
-class RSSBase(DeclarativeBase):
+class ResourceStatusBase(DeclarativeBase):
     """Declarative base mapping string aliases to SQL column types.
 
     Attributes:
@@ -110,7 +110,7 @@ class ElementStatusBaseWithID(ElementStatusBase):
 # tables with schema defined in ElementStatusBase
 
 
-class SiteStatus(ElementStatusBase, RSSBase):
+class SiteStatus(ElementStatusBase, ResourceStatusBase):
     """Current status of a site.
 
     Attributes:
@@ -120,7 +120,7 @@ class SiteStatus(ElementStatusBase, RSSBase):
     __tablename__ = "SiteStatus"
 
 
-class ResourceStatus(ElementStatusBase, RSSBase):
+class ResourceStatus(ElementStatusBase, ResourceStatusBase):
     """Current status of a resource.
 
     Attributes:
@@ -133,7 +133,7 @@ class ResourceStatus(ElementStatusBase, RSSBase):
 # tables with schema defined in ElementStatusBaseWithID
 
 
-class SiteLog(ElementStatusBaseWithID, RSSBase):
+class SiteLog(ElementStatusBaseWithID, ResourceStatusBase):
     """Historical status log entries for sites.
 
     Attributes:
@@ -143,7 +143,7 @@ class SiteLog(ElementStatusBaseWithID, RSSBase):
     __tablename__ = "SiteLog"
 
 
-class SiteHistory(ElementStatusBaseWithID, RSSBase):
+class SiteHistory(ElementStatusBaseWithID, ResourceStatusBase):
     """Historical status records for sites.
 
     Attributes:
@@ -153,7 +153,7 @@ class SiteHistory(ElementStatusBaseWithID, RSSBase):
     __tablename__ = "SiteHistory"
 
 
-class ResourceLog(ElementStatusBaseWithID, RSSBase):
+class ResourceLog(ElementStatusBaseWithID, ResourceStatusBase):
     """Historical status log entries for resources.
 
     Attributes:
@@ -163,7 +163,7 @@ class ResourceLog(ElementStatusBaseWithID, RSSBase):
     __tablename__ = "ResourceLog"
 
 
-class ResourceHistory(ElementStatusBaseWithID, RSSBase):
+class ResourceHistory(ElementStatusBaseWithID, ResourceStatusBase):
     """Historical status records for resources.
 
     Attributes:

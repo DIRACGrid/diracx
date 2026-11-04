@@ -73,11 +73,11 @@ Enable the JOBS router
 
 Enable the PILOTS router
 
-#### `DIRACX_SERVICE_RSS_ENABLED`
+#### `DIRACX_SERVICE_RESOURCE_STATUS_ENABLED`
 
 *Optional*, default value: `True`
 
-Enable the RSS router
+Enable the RESOURCE_STATUS router
 
 ### `OPENSEARCH_DBS`
 

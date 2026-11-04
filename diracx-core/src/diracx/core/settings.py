@@ -568,7 +568,9 @@ class FactorySettings(ServiceSettingsBase):
         }
 
         for service_name in enabled_services:
-            env_name = f"DIRACX_SERVICE_{service_name.upper()}_ENABLED"
+            env_name = (
+                f"DIRACX_SERVICE_{service_name.upper().replace('-', '_')}_ENABLED"
+            )
             if env_value := os.environ.get(env_name):
                 enabled_services[service_name] = TypeAdapter(bool).validate_python(
                     env_value

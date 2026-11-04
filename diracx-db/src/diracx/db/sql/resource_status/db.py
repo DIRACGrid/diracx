@@ -10,7 +10,7 @@ from sqlalchemy.engine import Row
 from ..utils import BaseSQLDB
 from .schema import (
     ResourceStatus,
-    RSSBase,
+    ResourceStatusBase,
     SiteStatus,
 )
 
@@ -22,7 +22,7 @@ class ResourceStatusDB(BaseSQLDB):
         metadata: SQLAlchemy metadata containing the resource status tables.
     """
 
-    metadata = RSSBase.metadata
+    metadata = ResourceStatusBase.metadata
 
     async def get_site_statuses(self) -> list[tuple[str, str, str, str]]:
         """Return all site statuses across all VOs.

@@ -45,13 +45,13 @@ auth = "diracx.routers.auth:router"
 config = "diracx.routers.configuration:router"
 health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
-rss = "diracx.routers.rss:router"
+resource-status = "diracx.routers.resource_status:router"
 pilots = "diracx.routers.pilots:router"
 
 [project.entry-points."diracx.access_policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
-rss = "diracx.routers.rss.access_policies:RSSAccessPolicy"
+resource-status = "diracx.routers.resource_status.access_policies:ResourceStatusAccessPolicy"
 pilot = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
 
 # Minimum version of the client supported

@@ -60,10 +60,10 @@ from ...operations._operations import (
     build_pilots_search_request,
     build_pilots_summary_request,
     build_pilots_update_pilot_metadata_request,
-    build_rss_get_compute_status_request,
-    build_rss_get_fts_status_request,
-    build_rss_get_site_status_request,
-    build_rss_get_storage_status_request,
+    build_resource_status_get_compute_status_request,
+    build_resource_status_get_fts_status_request,
+    build_resource_status_get_site_status_request,
+    build_resource_status_get_storage_status_request,
     build_well_known_get_installation_metadata_request,
     build_well_known_get_jwks_request,
     build_well_known_get_openid_configuration_request,
@@ -3115,14 +3115,14 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
 
-class RssOperations:
+class ResourceStatusOperations:
     """
     .. warning::
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
         :class:`~_generated.aio.Dirac`'s
-        :attr:`rss` attribute.
+        :attr:`resource_status` attribute.
     """
 
     models = _models
@@ -3180,7 +3180,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.StorageElementStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_storage_status_request(
+        _request = build_resource_status_get_storage_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -3253,7 +3253,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.ComputeElementStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_compute_status_request(
+        _request = build_resource_status_get_compute_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -3326,7 +3326,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.SiteStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_site_status_request(
+        _request = build_resource_status_get_site_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -3399,7 +3399,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.FTSStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_fts_status_request(
+        _request = build_resource_status_get_fts_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,

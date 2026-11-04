@@ -235,8 +235,8 @@ def generate_all_templates(
 
     factory_enabled_services = [
         {
-            "env_name": f"DIRACX_SERVICE_{entry_point.name.upper()}_ENABLED",
-            "description": f"Enable the {entry_point.name.upper()} router",
+            "env_name": f"DIRACX_SERVICE_{entry_point.name.upper().replace('-', '_')}_ENABLED",
+            "description": f"Enable the {entry_point.name.upper().replace('-', '_')} router",
             "default": "True",
         }
         for entry_point in sorted(

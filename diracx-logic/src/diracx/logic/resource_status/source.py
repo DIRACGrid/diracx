@@ -13,9 +13,9 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from typing import ClassVar
 
-from diracx.core.models.rss import ResourceType
+from diracx.core.models.resource_status import ResourceType
 from diracx.core.sources import AsyncCacheableSource, Snapshot
-from diracx.db.sql.rss.db import ResourceStatusDB
+from diracx.db.sql.resource_status.db import ResourceStatusDB
 
 from .query import (
     STORAGE_STATUS_TYPES,

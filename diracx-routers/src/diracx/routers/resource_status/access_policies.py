@@ -1,4 +1,4 @@
-"""Define the access policy for RSS resource-status endpoints.
+"""Define the access policy for ResourceStatus resource-status endpoints.
 
 The policy permits any authenticated user to access status resources; endpoint
 handlers remain responsible for scoping results to the user's VO.
@@ -15,11 +15,11 @@ from diracx.routers.access_policies import BaseAccessPolicy
 from diracx.routers.utils.users import AuthorizedUserInfo
 
 
-class RSSAccessPolicy(BaseAccessPolicy):
-    """Allow authenticated users to access RSS resources.
+class ResourceStatusAccessPolicy(BaseAccessPolicy):
+    """Allow authenticated users to access ResourceStatus resources.
 
     Authentication is provided by ``verify_dirac_access_token``. VO scoping is
-    applied by the RSS route handlers rather than by this policy.
+    applied by the ResourceStatus route handlers rather than by this policy.
     """
 
     @staticmethod
@@ -28,7 +28,7 @@ class RSSAccessPolicy(BaseAccessPolicy):
         user_info: AuthorizedUserInfo,
         /,
     ):
-        """Allow the authenticated user to proceed with an RSS request.
+        """Allow the authenticated user to proceed with an ResourceStatus request.
 
         Args:
             policy_name: Name of the access policy being evaluated.
@@ -40,4 +40,6 @@ class RSSAccessPolicy(BaseAccessPolicy):
         return
 
 
-CheckRSSPolicyCallable = Annotated[Callable, Depends(RSSAccessPolicy.check)]
+CheckResourceStatusPolicyCallable = Annotated[
+    Callable, Depends(ResourceStatusAccessPolicy.check)
+]
