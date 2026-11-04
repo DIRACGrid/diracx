@@ -67,8 +67,6 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -79,6 +77,7 @@ from sqlalchemy import (
     String,
     Table,
     and_,
+    cast,
     delete,
     func,
     insert,
@@ -98,6 +97,8 @@ from sqlalchemy.types import TypeEngine
 
 from .functions import utcnow_us
 from .types import MicrosecondDateTime
+
+logger = logging.getLogger(__name__)
 
 COUNTER_LOCKS_TABLE = "CounterLocks"
 COUNTER_LOCK_OPERATIONS = ("rebuild", "fold")
@@ -248,7 +249,8 @@ class JournalledCounter:
 
         key_refs = [combined.c[k] for k in self.key]
         aggs = [
-            func.sum(combined.c[m_label.format(m)]).label(m) for m in self.measures
+            cast(func.sum(combined.c[m_label.format(m)]), BigInteger).label(m)
+            for m in self.measures
         ]
         aggs.append(func.max(combined.c[t_label]).label("UpdatedAt"))
 
