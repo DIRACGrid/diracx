@@ -85,12 +85,12 @@ from sqlalchemy import (
     literal_column,
     or_,
     select,
-    text,
     union_all,
 )
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import FromClause
 from sqlalchemy.types import TypeEngine
@@ -111,6 +111,14 @@ class CounterLockOperation(StrEnum):
 
 # SQLite only auto-increments a column declared exactly as INTEGER PRIMARY KEY
 BIGINT_AUTOINCREMENT = BigInteger().with_variant(Integer(), "sqlite")
+
+# Session temporary table used by fold() to hold claimed journal IDs
+_FOLD_CLAIM = Table(
+    "FoldClaim",
+    MetaData(),
+    Column("JournalID", BIGINT_AUTOINCREMENT, primary_key=True),
+    prefixes=["TEMPORARY"],
+)
 
 
 def _is_sqlite(conn_or_engine: AsyncConnection | AsyncEngine) -> bool:
@@ -312,8 +320,8 @@ class JournalledCounter:
         MySQL/MariaDB, no-op on SQLite).
 
         Claimed journal IDs are loaded into a ``FoldClaim`` session temporary
-        table so that the aggregation and delete JOIN on it rather than
-        carrying a large IN-list in the SQL text.
+        table via ``INSERT … SELECT … FOR UPDATE SKIP LOCKED`` so that the
+        aggregation and delete JOIN on it.
 
         Args:
             engine: Database engine.
@@ -331,43 +339,29 @@ class JournalledCounter:
         ) as conn:
             sqlite = _is_sqlite(conn)
 
-            # Create the session temp table (DDL inside the transaction)
-            if sqlite:
-                await conn.execute(text(
-                    "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
-                    "(JournalID INTEGER PRIMARY KEY)"
-                ))
-            else:
-                await conn.execute(text(
-                    "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
-                    "(JournalID BIGINT PRIMARY KEY)"
-                ))
+            # Create/clear the session temp table
+            await conn.execute(CreateTable(_FOLD_CLAIM, if_not_exists=True))
+            await conn.execute(delete(_FOLD_CLAIM))
 
-            fold_claim = Table(
-                "FoldClaim",
-                MetaData(),
-                Column("JournalID", BigInteger, primary_key=True),
-            )
-
-            # Claim committed rows (SKIP LOCKED on MySQL)
-            claim_stmt = (
+            # Claim committed rows directly into FoldClaim
+            claim_q = (
                 select(jt.c.JournalID)
                 .order_by(jt.c.JournalID)
                 .limit(batch_size)
             )
             if not sqlite:
-                claim_stmt = claim_stmt.with_for_update(skip_locked=True)
-
-            claimed = (await conn.execute(claim_stmt)).scalars().all()
-            if not claimed:
-                return 0
-
-            # Load claimed IDs into the temp table
-            await conn.execute(delete(fold_claim))
+                claim_q = claim_q.with_for_update(skip_locked=True)
             await conn.execute(
-                insert(fold_claim),
-                [{"JournalID": jid} for jid in claimed],
+                insert(_FOLD_CLAIM).from_select(["JournalID"], claim_q)
             )
+
+            n_claimed = (
+                await conn.execute(
+                    select(func.count()).select_from(_FOLD_CLAIM)
+                )
+            ).scalar()
+            if not n_claimed:
+                return 0
 
             # Upsert aggregated deltas into counters (JOIN FoldClaim)
             key_cols = [jt.c[k] for k in self.key]
@@ -380,7 +374,10 @@ class JournalledCounter:
             agg_q = (
                 select(*key_cols, *agg_measures, agg_time)
                 .select_from(
-                    jt.join(fold_claim, jt.c.JournalID == fold_claim.c.JournalID)
+                    jt.join(
+                        _FOLD_CLAIM,
+                        jt.c.JournalID == _FOLD_CLAIM.c.JournalID,
+                    )
                 )
                 .group_by(*key_cols)
             )
@@ -416,13 +413,11 @@ class JournalledCounter:
             # Delete folded journal rows
             await conn.execute(
                 delete(jt).where(
-                    jt.c.JournalID.in_(
-                        select(fold_claim.c.JournalID)
-                    )
+                    jt.c.JournalID.in_(select(_FOLD_CLAIM.c.JournalID))
                 )
             )
 
-            return len(claimed)
+            return n_claimed
 
     async def rebuild(
         self,
@@ -552,26 +547,14 @@ class JournalledCounter:
                 .having(having_clause)
             )
 
-            result = await conn.execute(corrections_q)
-            total = 0
-
-            while True:
-                batch = result.fetchmany(1000)
-                if not batch:
-                    break
-                deltas = []
-                for row in batch:
-                    row_dict = row._mapping
-                    delta = {k: row_dict[k] for k in self.key}
-                    for m in self.measures:
-                        delta[self.delta_column(m)] = row_dict[
-                            self.delta_column(m)
-                        ]
-                    deltas.append(delta)
-                await self.journal(conn, deltas)
-                total += len(deltas)
-
-            return total
+            # Write corrections directly into the journal
+            col_names = list(self.key) + [
+                self.delta_column(m) for m in self.measures
+            ]
+            result = await conn.execute(
+                insert(jt).from_select(col_names, corrections_q)
+            )
+            return result.rowcount
 
     async def delete_scope(
         self,
