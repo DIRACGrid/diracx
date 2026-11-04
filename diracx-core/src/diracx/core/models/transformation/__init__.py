@@ -14,11 +14,10 @@ __all__ = [
     "CounterEntity",
     "DataParcel",
     "DelayInput",
+    "FeederInput",
     "FeederProposal",
-    "Input",
     "InputStatus",
-    "JSONSerializable",
-    "NoMoreInputs",
+    "NoMoreFeederInputs",
     "PackerInput",
     "PackerProposal",
     "ParcelStatus",
@@ -44,10 +43,9 @@ from .enums import (
     WorkgraphStatus,
 )
 from .feeder import (
+    FeederInput,
     FeederProposal,
-    Input,
-    JSONSerializable,
-    NoMoreInputs,
+    NoMoreFeederInputs,
     SetFeederState,
 )
 from .packer import (
