@@ -31,7 +31,27 @@ async def initiate_authorization_flow(
     settings: AuthSettings,
     available_properties: set[SecurityProperty],
 ) -> str:
-    """Initiate the authorization flow."""
+    """Initiate an authorization flow and return the IAM redirect URL.
+
+    Args:
+        request_url: Base URL of the DiracX request handling the flow.
+        code_challenge: PKCE challenge supplied by the client.
+        code_challenge_method: PKCE method; only ``S256`` is supported.
+        client_id: OAuth client identifier.
+        redirect_uri: Client redirect URI registered in settings.
+        scope: Requested VO, group, and property scopes.
+        state: Client state value to return after authorization.
+        auth_db: Authentication database dependency.
+        config: Installation configuration used to validate scope.
+        settings: Authentication service settings.
+        available_properties: Security properties supported by the installation.
+
+    Returns:
+        URL to which the client should be redirected at the IAM.
+
+    Raises:
+        ValueError: If the client ID or redirect URI is not allowed.
+    """
     if settings.dirac_client_id != client_id:
         raise ValueError("Unrecognised client_id")
     if redirect_uri not in settings.allowed_redirects:
@@ -75,7 +95,19 @@ async def complete_authorization_flow(
     config: Config,
     settings: AuthSettings,
 ) -> str:
-    """Complete the authorization flow."""
+    """Complete an authorization-code flow and build the client redirect URL.
+
+    Args:
+        code: Authorization code returned by the IAM.
+        state: Encrypted flow state returned by the IAM.
+        request_url: Base URL of the callback request.
+        auth_db: Authentication database dependency.
+        config: Installation configuration used to validate the flow.
+        settings: Authentication service settings.
+
+    Returns:
+        Client redirect URL containing the issued code and original state.
+    """
     # Decrypt the state to access user details
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.authorization_code

@@ -1,3 +1,5 @@
+"""Pilot search, summary, and related-job query logic."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -30,6 +32,10 @@ def _add_vo_constraint(
 
     Admin callers pass `vo_constraint=None` to bypass the filter and query
     across all VOs. Mirrors the intra-VO pattern of `logic/jobs/query.py`.
+
+    Args:
+        body: Search or summary parameters to update.
+        vo_constraint: VO to restrict results to, or ``None`` for no restriction.
     """
     if vo_constraint is None:
         return
@@ -49,6 +55,13 @@ async def resolve_jobs_for_pilot_stamps(
 
     Used by `logic/jobs/query.py:search` to rewrite the `PilotStamp`
     pseudo-parameter into a concrete `JobID` vector filter.
+
+    Args:
+        pilot_db: Pilot database dependency.
+        pilot_stamps: Pilot stamps to resolve.
+
+    Returns:
+        Job identifiers associated with the supplied pilot stamps.
     """
     return await pilot_db.get_job_ids_for_stamps(pilot_stamps)
 
@@ -56,7 +69,15 @@ async def resolve_jobs_for_pilot_stamps(
 async def _resolve_pilots_for_job_ids(
     pilot_db: PilotAgentsDB, job_ids: list[int]
 ) -> list[int]:
-    """Resolve a batch of job IDs to the pilot IDs that have run them."""
+    """Resolve job identifiers to pilot identifiers.
+
+    Args:
+        pilot_db: Pilot database dependency.
+        job_ids: Job identifiers to resolve.
+
+    Returns:
+        Pilot identifiers associated with the supplied jobs.
+    """
     return await pilot_db.get_pilot_ids_for_job_ids(job_ids)
 
 
@@ -75,6 +96,18 @@ async def _rewrite_job_id_pseudo_param(
     `InvalidQueryError` because the join semantics are ambiguous.
     Combining a `JobID` pseudo-filter with a real `PilotID` filter in
     the same body is also refused.
+
+    Args:
+        pilot_db: Pilot database dependency used to resolve job associations.
+        body: Search parameters whose `JobID` pseudo-filters may be rewritten.
+
+    Returns:
+        ``True`` if resolution yielded no pilots and the caller should return
+        an empty result; otherwise ``False``.
+
+    Raises:
+        InvalidQueryError: If pseudo-filters use unsupported operators or
+            conflict with a real `PilotID` filter.
     """
     matches = [
         spec for spec in body.search if spec.get("parameter") == JOB_ID_PSEUDO_PARAM
@@ -129,15 +162,27 @@ async def search(
     per_page: int = 100,
     body: SearchParams | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
-    """Retrieve information about pilots.
+    """Search pilot records with optional filtering, sorting, and pagination.
 
-    `vo_constraint` restricts results to a single VO; pass `None` to
-    query across VOs (reserved for service administrators).
+    Results are restricted to the caller's VO unless the caller is a service
+    administrator, in which case the router passes no VO constraint.
 
-    Accepts a `JobID` pseudo-parameter in `body.search` (`eq`/`in`
-    only): it is resolved through `JobToPilotMapping` into a concrete
-    `PilotID` vector filter before the main query runs. Mirrors the
-    `PilotStamp` pseudo-parameter on `POST /api/jobs/search`.
+    ``JobID`` is accepted as a pseudo-parameter in filters with ``eq`` or
+    ``in`` operators and is resolved through ``JobToPilotMapping`` into a
+    ``PilotID`` filter, so callers can look up the pilots that ran a given job.
+
+    Args:
+        pilot_db: Database used to search pilot records.
+        vo_constraint: VO to restrict results to, or ``None`` for all VOs.
+        page: One-based page number to return.
+        per_page: Maximum number of pilots to return on this page.
+        body: Optional search fields, filters, sort order, and distinct setting.
+
+    Returns:
+        Total number of matching pilots and the requested page of pilot records.
+
+    Raises:
+        InvalidQueryError: If search filters are invalid or cannot be rewritten.
     """
     if per_page > MAX_PER_PAGE:
         per_page = MAX_PER_PAGE
@@ -166,7 +211,19 @@ async def summary(
     body: SummaryParams,
     vo_constraint: str | None,
 ):
-    """Aggregate pilot counts suitable for plotting."""
+    """Group matching pilots and return counts suitable for plotting.
+
+    Results are restricted to the caller's VO unless the caller is a service
+    administrator, in which case the router passes no VO constraint.
+
+    Args:
+        pilot_db: Database used to aggregate pilot records.
+        body: Grouping fields and optional search filters.
+        vo_constraint: VO to restrict results to, or ``None`` for all VOs.
+
+    Returns:
+        Aggregated rows containing grouping values and pilot counts.
+    """
     _add_vo_constraint(body, vo_constraint)
     return await pilot_db.summary(body.grouping, body.search)
 
@@ -182,6 +239,14 @@ async def get_pilots_by_stamp(
     about completeness must compare the returned length to the input.
     `PilotStamp` is always included in the returned parameters so callers
     can identify which stamps were found.
+
+    Args:
+        pilot_db: Pilot database dependency.
+        pilot_stamps: Pilot stamps to look up.
+        parameters: Optional pilot fields to include in each result.
+
+    Returns:
+        Matching pilot records; stamps not found are omitted.
     """
     if parameters is None:
         query_parameters: list[str] | None = None

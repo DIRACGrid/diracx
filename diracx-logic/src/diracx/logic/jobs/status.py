@@ -1,3 +1,5 @@
+"""Job status, heartbeat, metadata, and command operations."""
+
 from __future__ import annotations
 
 import logging
@@ -64,7 +66,19 @@ async def remove_jobs(
     sandbox_metadata_db: SandboxMetadataDB,
     task_queue_db: TaskQueueDB,
 ):
-    """Fully remove a list of jobs from the WMS databases."""
+    """Remove jobs and their associated WMS database records.
+
+    This also removes sandbox mappings, task-queue entries, and job logging
+    records before deleting the jobs themselves.
+
+    Args:
+        job_ids: Job identifiers to remove.
+        config: Installation configuration used when updating task-queue shares.
+        job_db: Job database dependency.
+        job_logging_db: Job logging database dependency.
+        sandbox_metadata_db: Sandbox metadata database dependency.
+        task_queue_db: Task queue database dependency.
+    """
     # Remove the staging task from the StorageManager
     # TODO: this was not done in the JobManagerHandler, but it was done in the kill method
     # I think it should be done here too
@@ -94,14 +108,31 @@ async def set_job_statuses(
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
-    """Set various status fields for job specified by its jobId.
+    """Apply status updates to one or more jobs.
 
-    Set only the last status in the JobDB, updating all the status
-    logging information in the JobLoggingDB. The status dict has datetime
-    as a key and status information dictionary as values.
+    Each job ID maps to one or more timestamped updates. The update fields are
+    ``Status``, ``MinorStatus``, ``ApplicationStatus``, and ``Source``; the
+    source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
+    machine; the router restricts this option to job administrators.
+
+    Jobs that cannot be updated are listed under ``failed``. This function
+    updates the current status in JobDB and records all submitted updates in
+    JobLoggingDB.
+
+    Args:
+        status_changes: Timestamped status changes keyed by job ID.
+        config: DiracX configuration used when applying status transitions.
+        job_db: Job database dependency.
+        job_logging_db: Job logging database dependency.
+        task_queue_db: Task queue database dependency.
+        force: Whether to bypass the job state machine.
+        additional_attributes: Extra job attributes to persist with status changes.
+
+    Returns:
+        Per-job status-update successes and failures.
 
     Raises:
-        JobNotFound: if the job is not found in one of the DBs
+        ValueError: If any update timestamp is not timezone-aware.
     """
     # check that the datetime contains timezone info
     for job_id, status in status_changes.items():
@@ -286,7 +317,24 @@ async def reschedule_jobs(
     task_queue_db: TaskQueueDB,
     reset_jobs: bool = False,
 ):
-    """Reschedule given job."""
+    """Reschedule jobs so that they are matched and run again.
+
+    The ``job_ids`` argument lists the jobs to reschedule. Set ``reset_jobs``
+    to reset each job's reschedule counter instead of incrementing it. Jobs
+    that are unverified, exceed their configured reschedule limit, or fail
+    preparation are reported as failures.
+
+    Args:
+        job_ids: Identifiers of the jobs to reschedule.
+        config: DiracX configuration containing per-VO scheduling limits.
+        job_db: Database used to retrieve and update job records.
+        job_logging_db: Database used to record rescheduling status changes.
+        task_queue_db: Database used to update task queues.
+        reset_jobs: Whether to reset, rather than increment, reschedule counters.
+
+    Returns:
+        Per-job results describing successful and failed rescheduling operations.
+    """
     failed = {}
     status_changes = {}
     attribute_changes: defaultdict[int, dict[str, str]] = defaultdict(dict)
@@ -480,7 +528,15 @@ async def remove_jobs_from_task_queue(
     config: Config,
     task_queue_db: TaskQueueDB,
 ):
-    """Remove the job from TaskQueueDB."""
+    """Remove jobs from task queues and clean up empty queues.
+
+    Shares are recalculated for each task queue deleted by this operation.
+
+    Args:
+        job_ids: Job identifiers to remove from task queues.
+        config: Installation configuration used to recalculate shares.
+        task_queue_db: Task queue database dependency.
+    """
     await task_queue_db.remove_jobs(job_ids)
 
     tq_infos = await task_queue_db.get_tq_infos_for_jobs(job_ids)
@@ -504,7 +560,23 @@ async def set_job_parameters_or_attributes(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
 ):
-    """Set job parameters or attributes for a list of jobs."""
+    """Update job parameters and a restricted set of job attributes.
+
+    Only the ``Site`` job attribute may be updated; other known job attributes
+    are rejected. Fields that are not job attributes are stored as job
+    parameters. Job status and heartbeat fields are updated through their
+    dedicated operations.
+
+    Args:
+        updates: Metadata updates keyed by job ID.
+        job_db: Job database dependency.
+        job_parameters_db: OpenSearch job-parameter database dependency.
+
+    Raises:
+        ValueError: If an immutable known job attribute is requested.
+        JobNotFoundError: If any job to update no longer exists.
+        DocumentUpsertError: If parameter documents cannot be stored.
+    """
     # Those dicts create a mapping of job_id -> {attribute_name: value}
     attr_updates: dict[int, dict[str, Any]] = {}
     param_updates: dict[int, dict[str, Any]] = {}
@@ -544,7 +616,25 @@ async def add_heartbeat(
     task_queue_db: TaskQueueDB,
     job_parameters_db: JobParametersDB,
 ) -> None:
-    """Send a heart beat sign of life for a job jobID."""
+    """Record heartbeat data reported by jobs.
+
+    The JobAgent uses heartbeat updates to report runtime data. A heartbeat
+    can restore a matched or stalled job to ``RUNNING``. Heartbeat fields are
+    stored as job attributes and other supplied fields are stored as job
+    parameters. Pending WMS commands are fetched separately by
+    :func:`get_job_commands`.
+
+    Args:
+        data: Heartbeat fields keyed by job ID.
+        config: DiracX configuration used when restoring job status.
+        job_db: Job database dependency.
+        job_logging_db: Job logging database dependency.
+        task_queue_db: Task queue database dependency.
+        job_parameters_db: OpenSearch job-parameter database dependency.
+
+    Raises:
+        JobNotFoundError: If any submitted job identifier does not exist.
+    """
     # Find the current status of the jobs
     search_query: VectorSearchSpec = {
         "parameter": "JobID",
@@ -608,7 +698,14 @@ async def add_heartbeat(
 
 
 def _leaves(eg: BaseExceptionGroup) -> list[BaseException]:
-    """Return the non-group exceptions contained in an exception group."""
+    """Flatten an exception group into its leaf exceptions.
+
+    Args:
+        eg: Exception group to flatten.
+
+    Returns:
+        Exceptions nested in the group that are not themselves groups.
+    """
     leaves: list[BaseException] = []
     for exc in eg.exceptions:
         if isinstance(exc, BaseExceptionGroup):
@@ -624,6 +721,12 @@ def _collapse_exception_group(eg: BaseExceptionGroup) -> BaseException:
     A ``TaskGroup`` wraps the failures of its tasks in an ``ExceptionGroup``,
     which callers cannot catch by exception type. A ``DiracError`` is preferred
     as the routers know how to translate it; the others are logged.
+
+    Args:
+        eg: Exception group raised while processing concurrent job updates.
+
+    Returns:
+        Preferred leaf exception to raise in place of the group.
     """
     leaves = _leaves(eg)
     chosen = next((exc for exc in leaves if isinstance(exc, DiracError)), leaves[0])
@@ -642,6 +745,15 @@ async def _insert_parameters(
 
     This function takes a mapping of job_id -> parameters. If the parameters
     dict is empty this is a no-op.
+
+    Args:
+        updates: Parameter values keyed by job identifier.
+        job_parameters_db: OpenSearch job-parameter database dependency.
+        job_db: Job database used to resolve each job's VO.
+
+    Raises:
+        JobNotFoundError: If any job to update no longer exists.
+        DocumentUpsertError: If parameter documents cannot be stored.
     """
     updates = {job_id: params for job_id, params in updates.items() if params}
     if not updates:
@@ -679,5 +791,12 @@ async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCom
     """Get the pending job commands for a list of job IDs.
 
     This function automatically marks the commands as "Sent" in the database.
+
+    Args:
+        job_ids: Job identifiers whose pending commands should be retrieved.
+        job_db: Job database dependency.
+
+    Returns:
+        Pending commands, which are marked as sent as part of retrieval.
     """
     return await job_db.get_job_commands(job_ids)

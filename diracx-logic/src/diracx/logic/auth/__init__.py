@@ -1,3 +1,5 @@
+"""Public authentication flows, token operations, and discovery endpoints."""
+
 from __future__ import annotations
 
 __all__ = [

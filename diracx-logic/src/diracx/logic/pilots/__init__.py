@@ -1,3 +1,5 @@
+"""Public pilot query and management operations."""
+
 from __future__ import annotations
 
 __all__ = [

@@ -1,3 +1,5 @@
+"""Sandbox upload, download, assignment, and cleanup operations."""
+
 from __future__ import annotations
 
 import asyncio
@@ -42,13 +44,23 @@ async def initiate_sandbox_upload(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> SandboxUploadResponse:
-    """Get the PFN for the given sandbox, initiate an upload as required.
+    """Return a sandbox PFN and initiate an upload when needed.
 
-    If the sandbox already exists in the database then the PFN is returned
-    and there is no "url" field in the response.
+    If the sandbox already exists, the response contains its PFN and has no
+    ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
+    be used to upload the sandbox to the storage backend.
 
-    If the sandbox does not exist in the database then the "url" and "fields"
-    should be used to upload the sandbox to the storage backend.
+    Args:
+        user_info: Authenticated user who owns the sandbox.
+        sandbox_info: Archive format, size, and checksum metadata.
+        sandbox_metadata_db: Database used to register and look up the sandbox.
+        settings: Storage configuration used to prepare the upload.
+
+    Returns:
+        Sandbox PFN and, when needed, presigned upload details.
+
+    Raises:
+        ValueError: If the sandbox exceeds the maximum permitted size.
     """
     pfn = sandbox_metadata_db.get_pfn(settings.bucket_name, user_info, sandbox_info)
 
@@ -104,7 +116,24 @@ async def get_sandbox_file(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ) -> SandboxDownloadResponse:
-    """Get a presigned URL to download a sandbox file."""
+    """Return a presigned URL for downloading a sandbox file.
+
+    The URL is returned directly rather than redirected to. Redirects can cause
+    clients to resend their authorization header to the storage backend, leaking
+    the token; storage backends may also reject presigned requests with that
+    header.
+
+    Args:
+        pfn: Sandbox physical file name to download.
+        sandbox_metadata_db: Database used to update sandbox access.
+        settings: Storage configuration used to generate the presigned URL.
+
+    Returns:
+        Presigned download URL and its expiry duration.
+
+    Raises:
+        SandboxNotFoundError: If the sandbox is absent from metadata.
+    """
     short_pfn = pfn.split("|", 1)[-1]
 
     await sandbox_metadata_db.update_sandbox_last_access_time(
@@ -126,7 +155,15 @@ async def get_job_sandboxes(
     job_id: int,
     sandbox_metadata_db: SandboxMetadataDB,
 ) -> dict[str, list[Any]]:
-    """Get input and output sandboxes of given job."""
+    """Return the input and output sandbox records assigned to a job.
+
+    Args:
+        job_id: Identifier of the job whose sandboxes are requested.
+        sandbox_metadata_db: Database containing job-to-sandbox mappings.
+
+    Returns:
+        Mapping from input and output sandbox types to their sandbox records.
+    """
     input_sb = await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType.Input
     )
@@ -141,7 +178,16 @@ async def get_job_sandbox(
     sandbox_metadata_db: SandboxMetadataDB,
     sandbox_type: Literal["input", "output"],
 ) -> list[Any]:
-    """Get input or output sandbox of given job."""
+    """Return one type of sandbox assigned to a job.
+
+    Args:
+        job_id: Identifier of the job whose sandbox is requested.
+        sandbox_metadata_db: Database containing job-to-sandbox mappings.
+        sandbox_type: Whether to retrieve the input or output sandbox.
+
+    Returns:
+        Sandbox records of the requested type assigned to the job.
+    """
     return await sandbox_metadata_db.get_sandbox_assigned_to_job(
         job_id, SandboxType(sandbox_type.capitalize())
     )
@@ -153,7 +199,18 @@ async def assign_sandbox_to_job(
     sandbox_metadata_db: SandboxMetadataDB,
     settings: SandboxStoreSettings,
 ):
-    """Map the pfn as output sandbox to job."""
+    """Assign a sandbox as the output sandbox for a job.
+
+    Args:
+        job_id: Identifier of the job to receive the sandbox.
+        pfn: Physical file name of the sandbox to assign.
+        sandbox_metadata_db: Database containing sandbox and job mappings.
+        settings: Storage settings used to identify the storage element.
+
+    Raises:
+        SandboxNotFoundError: If the sandbox does not exist.
+        SandboxAlreadyAssignedError: If the sandbox is already assigned.
+    """
     short_pfn = pfn.split("|", 1)[-1]
     await sandbox_metadata_db.assign_sandbox_to_jobs(
         jobs_ids=[job_id],
@@ -167,7 +224,12 @@ async def unassign_jobs_sandboxes(
     jobs_ids: list[int],
     sandbox_metadata_db: SandboxMetadataDB,
 ):
-    """Delete bulk jobs sandbox mapping."""
+    """Remove sandbox-to-job mappings for multiple jobs.
+
+    Args:
+        jobs_ids: Job identifiers whose sandbox mappings should be removed.
+        sandbox_metadata_db: Sandbox metadata database dependency.
+    """
     await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)
 
 
@@ -175,6 +237,12 @@ def pfn_to_key(pfn: str) -> str:
     """Convert a PFN to a key for S3.
 
     This removes the leading "/S3/<bucket_name>" from the PFN.
+
+    Args:
+        pfn: Sandbox physical file name.
+
+    Returns:
+        Object key relative to the S3 bucket.
     """
     return "/".join(pfn.split("/")[3:])
 
@@ -186,7 +254,15 @@ async def insert_sandbox(
     pfn: str,
     size: int,
 ) -> None:
-    """Add a new sandbox in SandboxMetadataDB."""
+    """Insert a new sandbox in SandboxMetadataDB.
+
+    Args:
+        sandbox_metadata_db: Sandbox metadata database dependency.
+        se_name: Storage element containing the sandbox.
+        user: Owner of the sandbox.
+        pfn: Sandbox physical file name.
+        size: Sandbox size in bytes.
+    """
     # TODO: Follow https://github.com/DIRACGrid/diracx/issues/49
     owner_id = await sandbox_metadata_db.get_owner_id(user)
     if owner_id is None:

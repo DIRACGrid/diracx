@@ -1,3 +1,5 @@
+"""Pilot registration, metadata updates, and job associations."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -16,16 +18,27 @@ async def register_new_pilot(
     pilot_db: PilotAgentsDB,
     registration: PilotRegistrationParams,
 ):
-    """Register a new pilot.
+    """Register a pilot and its external reference.
 
-    Raises `ValueError` if the VO is not in the registry, and
-    `PilotAlreadyExistsError` if the stamp already exists.
+    Legacy X.509 pilot identities may self-register one pilot per call when
+    permitted by the access policy; that policy is enforced by the router.
+    Registration fails if the VO is not configured or the stamp already exists.
 
     Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
     constraint on `PilotStamp`, so a concurrent registration of the same
     stamp from two processes could race past this check. In practice pilot
     stamps are cryptographically random UUIDs, making the collision window
     negligible.
+
+    Args:
+        config: Installation configuration used to validate the VO.
+        pilot_db: Pilot database dependency.
+        registration: Pilot stamp, VO, site details, external reference, and
+            initial status.
+
+    Raises:
+        ValueError: If the requested VO is not registered.
+        PilotAlreadyExistsError: If a pilot with the stamp already exists.
     """
     # TODO: https://github.com/DIRACGrid/diracx/issues/1005
     # Also validate grid_type, grid_site and destination_site once the
@@ -56,10 +69,17 @@ async def update_pilots_metadata(
     pilot_db: PilotAgentsDB,
     updates: dict[str, PilotMetadata],
 ):
-    """Bulk-update pilot metadata, keyed by pilot stamp.
+    """Update mutable metadata for one or more pilots.
 
-    Unset fields (None) are preserved. `LastUpdateTime` is refreshed on
-    every updated pilot.
+    Each mapping key is a pilot stamp, and each value contains fields defined
+    by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
+    cannot be modified. ``LastUpdateTime`` is refreshed on every updated pilot.
+    The router applies the access policy, including the single-pilot limit for
+    legacy pilot identities.
+
+    Args:
+        pilot_db: Pilot database dependency.
+        updates: Pilot metadata keyed by pilot stamp.
     """
     fields_by_stamp = {
         stamp: metadata.model_dump(by_alias=True, exclude_none=True)
@@ -79,7 +99,16 @@ async def update_pilots_metadata(
 async def assign_jobs_to_pilot(
     pilot_db: PilotAgentsDB, pilot_stamp: str, job_ids: list[int]
 ):
-    """Associate jobs with a pilot identified by its stamp."""
+    """Associate jobs with a pilot identified by its stamp.
+
+    Args:
+        pilot_db: Pilot database dependency.
+        pilot_stamp: Stamp identifying the pilot.
+        job_ids: Job identifiers to associate with the pilot.
+
+    Raises:
+        PilotNotFoundError: If no pilot has the given stamp.
+    """
     pilots = await get_pilots_by_stamp(
         pilot_db=pilot_db,
         pilot_stamps=[pilot_stamp],
