@@ -28,10 +28,13 @@ Declaring a counter (in a schema module)::
 
 Writing deltas (inside the caller's transaction)::
 
-    await MY_COUNTER.journal(conn, [
-        {"DatasetID": 7, "Status": "New",    "CountDelta": -2, "BytesDelta": -30},
-        {"DatasetID": 7, "Status": "Copied", "CountDelta": +2, "BytesDelta": +30},
-    ])
+    await MY_COUNTER.journal(
+        conn,
+        [
+            {"DatasetID": 7, "Status": "New", "CountDelta": -2, "BytesDelta": -30},
+            {"DatasetID": 7, "Status": "Copied", "CountDelta": +2, "BytesDelta": +30},
+        ],
+    )
 
 Reading (inside the caller's transaction)::
 
@@ -47,11 +50,13 @@ Folding (from a periodic task, opens its own transaction)::
 
 Rebuilding (from a maintenance task, opens its own transaction)::
 
-    counted = [CountedTable(
-        Files,
-        key_exprs={"DatasetID": Files.c.DatasetID, "Status": Files.c.Status},
-        measure_exprs={"Count": func.count(), "Bytes": func.sum(Files.c.Size)},
-    )]
+    counted = [
+        CountedTable(
+            Files,
+            key_exprs={"DatasetID": Files.c.DatasetID, "Status": Files.c.Status},
+            measure_exprs={"Count": func.count(), "Bytes": func.sum(Files.c.Size)},
+        )
+    ]
     await MY_COUNTER.rebuild(engine, counted)
 
 Deleting a scope (after counted rows are already unwritable and deleted)::
@@ -105,6 +110,8 @@ COUNTERS_INFO_KEY = "journalled_counters"
 
 
 class CounterLockOperation(StrEnum):
+    """Operations serialised by the ``CounterLocks`` table."""
+
     FOLD = "fold"
     REBUILD = "rebuild"
 
@@ -197,9 +204,7 @@ class JournalledCounter:
                 f"the counter key {list(self.key)}"
             )
 
-    def _scope_where(
-        self, table: Table, scope: Mapping[str, Any]
-    ) -> ColumnElement:
+    def _scope_where(self, table: Table, scope: Mapping[str, Any]) -> ColumnElement:
         return and_(*(table.c[k] == v for k, v in scope.items()))
 
     @asynccontextmanager
@@ -236,9 +241,7 @@ class JournalledCounter:
     # Operations (DX-ADR-009)
     # ------------------------------------------------------------------
 
-    async def journal(
-        self, conn: AsyncConnection, deltas: Sequence[dict]
-    ) -> None:
+    async def journal(self, conn: AsyncConnection, deltas: Sequence[dict]) -> None:
         """Append pre-aggregated delta rows to the journal.
 
         Must be called inside the same transaction that mutates the counted
@@ -301,8 +304,7 @@ class JournalledCounter:
 
         key_refs = [combined.c[k] for k in self.key]
         aggs = [
-            cast(func.sum(combined.c[m]), BigInteger).label(m)
-            for m in self.measures
+            cast(func.sum(combined.c[m]), BigInteger).label(m) for m in self.measures
         ]
         aggs.append(func.max(combined.c.UpdatedAt).label("UpdatedAt"))
 
@@ -311,9 +313,7 @@ class JournalledCounter:
         result = await conn.execute(stmt)
         return result.all()
 
-    async def fold(
-        self, engine: AsyncEngine, batch_size: int = 5000
-    ) -> int:
+    async def fold(self, engine: AsyncEngine, batch_size: int = 5000) -> int:
         """Claim committed journal rows, fold them into counters, and delete.
 
         Opens its own transaction at READ COMMITTED (record locks only on
@@ -344,21 +344,13 @@ class JournalledCounter:
             await conn.execute(delete(_FOLD_CLAIM))
 
             # Claim committed rows directly into FoldClaim
-            claim_q = (
-                select(jt.c.JournalID)
-                .order_by(jt.c.JournalID)
-                .limit(batch_size)
-            )
+            claim_q = select(jt.c.JournalID).order_by(jt.c.JournalID).limit(batch_size)
             if not sqlite:
                 claim_q = claim_q.with_for_update(skip_locked=True)
-            await conn.execute(
-                insert(_FOLD_CLAIM).from_select(["JournalID"], claim_q)
-            )
+            await conn.execute(insert(_FOLD_CLAIM).from_select(["JournalID"], claim_q))
 
             n_claimed = (
-                await conn.execute(
-                    select(func.count()).select_from(_FOLD_CLAIM)
-                )
+                await conn.execute(select(func.count()).select_from(_FOLD_CLAIM))
             ).scalar()
             if not n_claimed:
                 return 0
@@ -366,8 +358,7 @@ class JournalledCounter:
             # Upsert aggregated deltas into counters (JOIN FoldClaim)
             key_cols = [jt.c[k] for k in self.key]
             agg_measures = [
-                func.sum(jt.c[self.delta_column(m)]).label(m)
-                for m in self.measures
+                func.sum(jt.c[self.delta_column(m)]).label(m) for m in self.measures
             ]
             agg_time = func.max(jt.c.InsertedAt).label("UpdatedAt")
 
@@ -386,12 +377,8 @@ class JournalledCounter:
 
             if sqlite:
                 ins = sqlite_insert(ct).from_select(col_names, agg_q)
-                set_ = {
-                    m: ct.c[m] + ins.excluded[m] for m in self.measures
-                }
-                set_["UpdatedAt"] = func.max(
-                    ct.c.UpdatedAt, ins.excluded.UpdatedAt
-                )
+                set_ = {m: ct.c[m] + ins.excluded[m] for m in self.measures}
+                set_["UpdatedAt"] = func.max(ct.c.UpdatedAt, ins.excluded.UpdatedAt)
                 await conn.execute(
                     ins.on_conflict_do_update(
                         index_elements=list(self.key),
@@ -400,21 +387,15 @@ class JournalledCounter:
                 )
             else:
                 ins = mysql_insert(ct).from_select(col_names, agg_q)
-                on_dup = {
-                    m: ct.c[m] + ins.inserted[m] for m in self.measures
-                }
+                on_dup = {m: ct.c[m] + ins.inserted[m] for m in self.measures}
                 on_dup["UpdatedAt"] = func.greatest(
                     ct.c.UpdatedAt, ins.inserted.UpdatedAt
                 )
-                await conn.execute(
-                    ins.on_duplicate_key_update(**on_dup)
-                )
+                await conn.execute(ins.on_duplicate_key_update(**on_dup))
 
             # Delete folded journal rows
             await conn.execute(
-                delete(jt).where(
-                    jt.c.JournalID.in_(select(_FOLD_CLAIM.c.JournalID))
-                )
+                delete(jt).where(jt.c.JournalID.in_(select(_FOLD_CLAIM.c.JournalID)))
             )
 
             return n_claimed
@@ -471,34 +452,23 @@ class JournalledCounter:
                     raise ValueError(
                         f"CountedTable key_exprs has unknown keys: {unknown}"
                     )
-                key_selects = [
-                    ct_decl.key_exprs[k].label(k) for k in self.key
-                ]
+                key_selects = [ct_decl.key_exprs[k].label(k) for k in self.key]
                 measure_selects = []
                 for m in self.measures:
                     expr = ct_decl.measure_exprs.get(m)
                     if expr is not None:
                         measure_selects.append(expr.label(m))
                     else:
-                        measure_selects.append(
-                            literal_column("0").label(m)
-                        )
+                        measure_selects.append(literal_column("0").label(m))
 
                 branch = select(*key_selects, *measure_selects).select_from(
                     ct_decl.table
                 )
                 if scope:
                     branch = branch.where(
-                        and_(
-                            *(
-                                ct_decl.key_exprs[k] == v
-                                for k, v in scope.items()
-                            )
-                        )
+                        and_(*(ct_decl.key_exprs[k] == v for k, v in scope.items()))
                     )
-                branch = branch.group_by(
-                    *[ct_decl.key_exprs[k] for k in self.key]
-                )
+                branch = branch.group_by(*[ct_decl.key_exprs[k] for k in self.key])
                 branches.append(branch)
 
             # Negate counters
@@ -507,39 +477,30 @@ class JournalledCounter:
                 *[(-ct.c[m]).label(m) for m in self.measures],
             )
             if scope:
-                counter_branch = counter_branch.where(
-                    self._scope_where(ct, scope)
-                )
+                counter_branch = counter_branch.where(self._scope_where(ct, scope))
             branches.append(counter_branch)
 
             # Negate journal
             journal_branch = select(
                 *[jt.c[k] for k in self.key],
-                *[
-                    (-jt.c[self.delta_column(m)]).label(m)
-                    for m in self.measures
-                ],
+                *[(-jt.c[self.delta_column(m)]).label(m) for m in self.measures],
             )
             if scope:
-                journal_branch = journal_branch.where(
-                    self._scope_where(jt, scope)
-                )
+                journal_branch = journal_branch.where(self._scope_where(jt, scope))
             branches.append(journal_branch)
 
             combined = union_all(*branches).subquery("t")
             key_refs = [combined.c[k] for k in self.key]
 
-            having_clause = or_(
-                *(func.sum(combined.c[m]) != 0 for m in self.measures)
-            )
+            having_clause = or_(*(func.sum(combined.c[m]) != 0 for m in self.measures))
 
             corrections_q = (
                 select(
                     *key_refs,
                     *[
-                        cast(
-                            func.sum(combined.c[m]), BigInteger
-                        ).label(self.delta_column(m))
+                        cast(func.sum(combined.c[m]), BigInteger).label(
+                            self.delta_column(m)
+                        )
                         for m in self.measures
                     ],
                 )
@@ -548,9 +509,7 @@ class JournalledCounter:
             )
 
             # Write corrections directly into the journal
-            col_names = list(self.key) + [
-                self.delta_column(m) for m in self.measures
-            ]
+            col_names = list(self.key) + [self.delta_column(m) for m in self.measures]
             result = await conn.execute(
                 insert(jt).from_select(col_names, corrections_q)
             )
@@ -582,12 +541,8 @@ class JournalledCounter:
             [CounterLockOperation.REBUILD, CounterLockOperation.FOLD],
             "READ COMMITTED",
         ) as conn:
-            await conn.execute(
-                delete(ct).where(self._scope_where(ct, scope))
-            )
-            await conn.execute(
-                delete(jt).where(self._scope_where(jt, scope))
-            )
+            await conn.execute(delete(ct).where(self._scope_where(ct, scope)))
+            await conn.execute(delete(jt).where(self._scope_where(jt, scope)))
 
 
 def counter_locks_table(metadata: MetaData) -> Table:
