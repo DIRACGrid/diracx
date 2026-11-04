@@ -269,7 +269,7 @@ async def test_rebuild_corrects_drift(engine, counter, items_table):
 
     counted = [CountedTable(
         table=items_table,
-        key_exprs=[items_table.c.GroupID, items_table.c.Status],
+        key_exprs={"GroupID": items_table.c.GroupID, "Status": items_table.c.Status},
         measure_exprs={"Count": func.count(), "Bytes": func.sum(items_table.c.Size)},
     )]
 
@@ -304,7 +304,7 @@ async def test_rebuild_no_correction_when_accurate(engine, counter, items_table)
 
     counted = [CountedTable(
         table=items_table,
-        key_exprs=[items_table.c.GroupID, items_table.c.Status],
+        key_exprs={"GroupID": items_table.c.GroupID, "Status": items_table.c.Status},
         measure_exprs={"Count": func.count(), "Bytes": func.sum(items_table.c.Size)},
     )]
 
@@ -332,7 +332,7 @@ async def test_delete_scope(engine, counter):
                 {"GroupID": 1, "Status": "Done", "CountDelta": 2, "BytesDelta": 40},
             ])
 
-    await counter.delete_scope(engine, ct.c.GroupID == 1)
+    await counter.delete_scope(engine, {"GroupID": 1})
 
     async with engine.connect() as conn:
         async with conn.begin():
@@ -373,9 +373,7 @@ async def test_negative_deltas(engine, counter):
     }
 
 
-async def test_read_with_where(engine, counter):
-    ct = counter.counters_table
-
+async def test_read_with_scope(engine, counter):
     async with engine.connect() as conn:
         async with conn.begin():
             await counter.journal(conn, [
@@ -386,7 +384,7 @@ async def test_read_with_where(engine, counter):
 
     async with engine.connect() as conn:
         async with conn.begin():
-            rows = await counter.read(conn, where=ct.c.GroupID == 1)
+            rows = await counter.read(conn, scope={"GroupID": 1})
     result = {(r.GroupID, r.Status): (r.Count, r.Bytes) for r in rows}
     assert result == {
         (1, "New"): (5, 100),
@@ -414,11 +412,11 @@ async def test_rebuild_scoped(engine, counter, items_table):
 
     counted = [CountedTable(
         table=items_table,
-        key_exprs=[items_table.c.GroupID, items_table.c.Status],
+        key_exprs={"GroupID": items_table.c.GroupID, "Status": items_table.c.Status},
         measure_exprs={"Count": func.count(), "Bytes": func.sum(items_table.c.Size)},
     )]
 
-    n = await counter.rebuild(engine, counted, where=ct.c.GroupID == 1)
+    n = await counter.rebuild(engine, counted, scope={"GroupID": 1})
     assert n > 0
 
     await counter.fold(engine)

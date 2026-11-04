@@ -49,23 +49,24 @@ Rebuilding (from a maintenance task, opens its own transaction)::
 
     counted = [CountedTable(
         Files,
-        key_exprs=[Files.c.DatasetID, Files.c.Status],
+        key_exprs={"DatasetID": Files.c.DatasetID, "Status": Files.c.Status},
         measure_exprs={"Count": func.count(), "Bytes": func.sum(Files.c.Size)},
     )]
     await MY_COUNTER.rebuild(engine, counted)
 
 Deleting a scope (after counted rows are already unwritable and deleted)::
 
-    await MY_COUNTER.delete_scope(
-        engine, MY_COUNTER.counters_table.c.DatasetID == 7
-    )
+    await MY_COUNTER.delete_scope(engine, {"DatasetID": 7})
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -92,7 +93,6 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import FromClause
-from sqlalchemy.sql.visitors import replacement_traverse
 from sqlalchemy.types import TypeEngine
 
 from .functions import utcnow_us
@@ -101,16 +101,20 @@ from .types import MicrosecondDateTime
 logger = logging.getLogger(__name__)
 
 COUNTER_LOCKS_TABLE = "CounterLocks"
-COUNTER_LOCK_OPERATIONS = ("rebuild", "fold")
-# Key of MetaData.info under which journalled_counter() registers each counter
 COUNTERS_INFO_KEY = "journalled_counters"
+
+
+class CounterLockOperation(StrEnum):
+    FOLD = "fold"
+    REBUILD = "rebuild"
+
 
 # SQLite only auto-increments a column declared exactly as INTEGER PRIMARY KEY
 BIGINT_AUTOINCREMENT = BigInteger().with_variant(Integer(), "sqlite")
 
 
-def _is_sqlite(conn: AsyncConnection) -> bool:
-    return conn.dialect.name == "sqlite"
+def _is_sqlite(conn_or_engine: AsyncConnection | AsyncEngine) -> bool:
+    return conn_or_engine.dialect.name == "sqlite"
 
 
 @dataclass(frozen=True)
@@ -120,14 +124,14 @@ class CountedTable:
     Attributes:
         table: The SQLAlchemy ``FromClause`` being counted (a ``Table``,
             ``Join``, or subquery).
-        key_exprs: One column expression per counter key column, in the same
-            order as ``JournalledCounter.key``.
+        key_exprs: Mapping from counter key name to the column expression
+            that recounts it on this table.
         measure_exprs: Mapping from measure name to the aggregate expression
             that recounts it (e.g. ``func.count()``, ``func.sum(col)``).
     """
 
     table: FromClause
-    key_exprs: Sequence[ColumnElement]
+    key_exprs: dict[str, ColumnElement]
     measure_exprs: dict[str, ColumnElement]
 
 
@@ -168,9 +172,57 @@ class JournalledCounter:
             One row per serialised operation of the counter.
         """
         return [
-            {"CounterName": self.name, "Operation": operation}
-            for operation in COUNTER_LOCK_OPERATIONS
+            {"CounterName": self.name, "Operation": op.value}
+            for op in CounterLockOperation
         ]
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _validate_scope(self, scope: Mapping[str, Any]) -> None:
+        scope_keys = list(scope.keys())
+        prefix = list(self.key[: len(scope_keys)])
+        if scope_keys != prefix:
+            raise ValueError(
+                f"Scope keys {scope_keys} must be a prefix of "
+                f"the counter key {list(self.key)}"
+            )
+
+    def _scope_where(
+        self, table: Table, scope: Mapping[str, Any]
+    ) -> ColumnElement:
+        return and_(*(table.c[k] == v for k, v in scope.items()))
+
+    @asynccontextmanager
+    async def _locked_txn(
+        self,
+        engine: AsyncEngine,
+        operations: Sequence[CounterLockOperation],
+        isolation_level: str,
+    ) -> AsyncIterator[AsyncConnection]:
+        """Open a transaction, set isolation, and acquire counter locks.
+
+        On SQLite the isolation level and locks are skipped (single-writer
+        serialisation is sufficient for testing).
+        """
+        sqlite = _is_sqlite(engine)
+        if not sqlite:
+            engine = engine.execution_options(isolation_level=isolation_level)
+        async with engine.begin() as conn:
+            if not sqlite:
+                locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
+                for operation in operations:
+                    await conn.execute(
+                        select(literal_column("1"))
+                        .select_from(locks)
+                        .where(
+                            locks.c.CounterName == self.name,
+                            locks.c.Operation == operation,
+                        )
+                        .with_for_update()
+                    )
+            yield conn
 
     # ------------------------------------------------------------------
     # Operations (DX-ADR-009)
@@ -196,63 +248,55 @@ class JournalledCounter:
     async def read(
         self,
         conn: AsyncConnection,
-        where: ColumnElement | None = None,
+        scope: Mapping[str, Any] | None = None,
     ) -> Sequence:
         """Return exact counts by summing folded counters and the journal.
 
         The result is exact at any aggregation lag because it combines both
         halves in a single SQL statement.
 
-        Callers should pass a ``where`` predicate that fixes a prefix of
-        the key (e.g. a single ``TransformationID``).  An unscoped read
-        scans both full tables, which is prohibitively expensive for
-        counters spanning many scopes.
+        Callers should pass a ``scope`` that fixes a prefix of the key
+        (e.g. a single ``TransformationID``).  An unscoped read scans
+        both full tables, which is prohibitively expensive for counters
+        spanning many scopes.
 
         Args:
             conn: Connection with an active transaction.
-            where: Optional predicate applied to both halves. Column
-                references must use the counter table's columns (the same
-                names exist on the journal).
+            scope: Optional key-prefix dict applied to both halves.
 
         Returns:
             Rows of ``(key…, measure…, UpdatedAt)``. A key with no counter
             row and no journal rows is absent; callers treat absence as zero.
         """
+        if scope:
+            self._validate_scope(scope)
+
         ct = self.counters_table
         jt = self.journal_table
 
-        key_cols_ct = [ct.c[k] for k in self.key]
-        key_cols_jt = [jt.c[k] for k in self.key]
+        counter_q = select(
+            *[ct.c[k] for k in self.key],
+            *[ct.c[m].label(m) for m in self.measures],
+            ct.c.UpdatedAt,
+        )
+        journal_q = select(
+            *[jt.c[k] for k in self.key],
+            *[jt.c[self.delta_column(m)].label(m) for m in self.measures],
+            jt.c.InsertedAt.label("UpdatedAt"),
+        )
 
-        m_label = "__m_{}"
-        t_label = "__t"
-
-        counter_selects = []
-        journal_selects = []
-        for m in self.measures:
-            lbl = m_label.format(m)
-            counter_selects.append(ct.c[m].label(lbl))
-            journal_selects.append(jt.c[self.delta_column(m)].label(lbl))
-
-        counter_selects.append(ct.c["UpdatedAt"].label(t_label))
-        journal_selects.append(jt.c["InsertedAt"].label(t_label))
-
-        counter_q = select(*key_cols_ct, *counter_selects)
-        journal_q = select(*key_cols_jt, *journal_selects)
-
-        if where is not None:
-            journal_where = _translate_predicate(where, ct, jt)
-            counter_q = counter_q.where(where)
-            journal_q = journal_q.where(journal_where)
+        if scope:
+            counter_q = counter_q.where(self._scope_where(ct, scope))
+            journal_q = journal_q.where(self._scope_where(jt, scope))
 
         combined = union_all(counter_q, journal_q).subquery("t")
 
         key_refs = [combined.c[k] for k in self.key]
         aggs = [
-            cast(func.sum(combined.c[m_label.format(m)]), BigInteger).label(m)
+            cast(func.sum(combined.c[m]), BigInteger).label(m)
             for m in self.measures
         ]
-        aggs.append(func.max(combined.c[t_label]).label("UpdatedAt"))
+        aggs.append(func.max(combined.c.UpdatedAt).label("UpdatedAt"))
 
         stmt = select(*key_refs, *aggs).group_by(*key_refs)
 
@@ -281,15 +325,13 @@ class JournalledCounter:
         """
         jt = self.journal_table
         ct = self.counters_table
-        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
-        async with engine.connect() as conn:
+        async with self._locked_txn(
+            engine, [CounterLockOperation.FOLD], "READ COMMITTED"
+        ) as conn:
             sqlite = _is_sqlite(conn)
-            if not sqlite:
-                conn = conn.execution_options(isolation_level="READ COMMITTED")
 
-            # Create the session temp table once, outside any transaction.
-            # The DDL triggers autobegin, so commit it before the real txn.
+            # Create the session temp table (DDL inside the transaction)
             if sqlite:
                 await conn.execute(text(
                     "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
@@ -300,7 +342,6 @@ class JournalledCounter:
                     "CREATE TEMPORARY TABLE IF NOT EXISTS FoldClaim "
                     "(JournalID BIGINT PRIMARY KEY)"
                 ))
-            await conn.commit()
 
             fold_claim = Table(
                 "FoldClaim",
@@ -308,101 +349,86 @@ class JournalledCounter:
                 Column("JournalID", BigInteger, primary_key=True),
             )
 
-            async with conn.begin():
-                # 1. Serialise folds
-                if not sqlite:
-                    await conn.execute(
-                        select(literal_column("1"))
-                        .select_from(locks)
-                        .where(
-                            and_(
-                                locks.c.CounterName == self.name,
-                                locks.c.Operation == "fold",
-                            )
-                        )
-                        .with_for_update()
-                    )
+            # Claim committed rows (SKIP LOCKED on MySQL)
+            claim_stmt = (
+                select(jt.c.JournalID)
+                .order_by(jt.c.JournalID)
+                .limit(batch_size)
+            )
+            if not sqlite:
+                claim_stmt = claim_stmt.with_for_update(skip_locked=True)
 
-                # 2. Claim committed rows (SKIP LOCKED on MySQL)
-                claim_stmt = (
-                    select(jt.c.JournalID)
-                    .order_by(jt.c.JournalID)
-                    .limit(batch_size)
+            claimed = (await conn.execute(claim_stmt)).scalars().all()
+            if not claimed:
+                return 0
+
+            # Load claimed IDs into the temp table
+            await conn.execute(delete(fold_claim))
+            await conn.execute(
+                insert(fold_claim),
+                [{"JournalID": jid} for jid in claimed],
+            )
+
+            # Upsert aggregated deltas into counters (JOIN FoldClaim)
+            key_cols = [jt.c[k] for k in self.key]
+            agg_measures = [
+                func.sum(jt.c[self.delta_column(m)]).label(m)
+                for m in self.measures
+            ]
+            agg_time = func.max(jt.c.InsertedAt).label("UpdatedAt")
+
+            agg_q = (
+                select(*key_cols, *agg_measures, agg_time)
+                .select_from(
+                    jt.join(fold_claim, jt.c.JournalID == fold_claim.c.JournalID)
                 )
-                if not sqlite:
-                    claim_stmt = claim_stmt.with_for_update(skip_locked=True)
+                .group_by(*key_cols)
+            )
 
-                claimed = (await conn.execute(claim_stmt)).scalars().all()
-                if not claimed:
-                    return 0
+            col_names = list(self.key) + list(self.measures) + ["UpdatedAt"]
 
-                # Load claimed IDs into the temp table
-                await conn.execute(delete(fold_claim))
+            if sqlite:
+                ins = sqlite_insert(ct).from_select(col_names, agg_q)
+                set_ = {
+                    m: ct.c[m] + ins.excluded[m] for m in self.measures
+                }
+                set_["UpdatedAt"] = func.max(
+                    ct.c.UpdatedAt, ins.excluded.UpdatedAt
+                )
                 await conn.execute(
-                    insert(fold_claim),
-                    [{"JournalID": jid} for jid in claimed],
+                    ins.on_conflict_do_update(
+                        index_elements=list(self.key),
+                        set_=set_,
+                    )
                 )
-
-                # 3. Upsert aggregated deltas into counters (JOIN FoldClaim)
-                key_cols = [jt.c[k] for k in self.key]
-                agg_measures = [
-                    func.sum(jt.c[self.delta_column(m)]).label(m)
-                    for m in self.measures
-                ]
-                agg_time = func.max(jt.c.InsertedAt).label("UpdatedAt")
-
-                agg_q = (
-                    select(*key_cols, *agg_measures, agg_time)
-                    .select_from(
-                        jt.join(fold_claim, jt.c.JournalID == fold_claim.c.JournalID)
-                    )
-                    .group_by(*key_cols)
+            else:
+                ins = mysql_insert(ct).from_select(col_names, agg_q)
+                on_dup = {
+                    m: ct.c[m] + ins.inserted[m] for m in self.measures
+                }
+                on_dup["UpdatedAt"] = func.greatest(
+                    ct.c.UpdatedAt, ins.inserted.UpdatedAt
                 )
-
-                col_names = list(self.key) + list(self.measures) + ["UpdatedAt"]
-
-                if sqlite:
-                    ins = sqlite_insert(ct).from_select(col_names, agg_q)
-                    set_ = {
-                        m: ct.c[m] + ins.excluded[m] for m in self.measures
-                    }
-                    set_["UpdatedAt"] = func.max(
-                        ct.c.UpdatedAt, ins.excluded.UpdatedAt
-                    )
-                    await conn.execute(
-                        ins.on_conflict_do_update(
-                            index_elements=list(self.key),
-                            set_=set_,
-                        )
-                    )
-                else:
-                    ins = mysql_insert(ct).from_select(col_names, agg_q)
-                    on_dup = {
-                        m: ct.c[m] + ins.inserted[m] for m in self.measures
-                    }
-                    on_dup["UpdatedAt"] = func.greatest(
-                        ct.c.UpdatedAt, ins.inserted.UpdatedAt
-                    )
-                    await conn.execute(
-                        ins.on_duplicate_key_update(**on_dup)
-                    )
-
-                # 4. Delete folded journal rows
                 await conn.execute(
-                    delete(jt).where(
-                        jt.c.JournalID.in_(
-                            select(fold_claim.c.JournalID)
-                        )
-                    )
+                    ins.on_duplicate_key_update(**on_dup)
                 )
 
-                return len(claimed)
+            # Delete folded journal rows
+            await conn.execute(
+                delete(jt).where(
+                    jt.c.JournalID.in_(
+                        select(fold_claim.c.JournalID)
+                    )
+                )
+            )
+
+            return len(claimed)
 
     async def rebuild(
         self,
         engine: AsyncEngine,
         counted: Sequence[CountedTable],
-        where: ColumnElement | None = None,
+        scope: Mapping[str, Any] | None = None,
     ) -> int:
         """Recount from source tables and write correction deltas.
 
@@ -411,7 +437,7 @@ class JournalledCounter:
 
         .. warning::
 
-           An unscoped rebuild (``where=None``) holds a REPEATABLE READ
+           An unscoped rebuild (``scope=None``) holds a REPEATABLE READ
            snapshot for the duration of the full recount.  Every journal
            row a concurrent fold deletes stays as a delete-marked record
            until the snapshot closes, degrading reads system-wide.
@@ -421,12 +447,14 @@ class JournalledCounter:
         Args:
             engine: Database engine.
             counted: Source table declarations.
-            where: Optional scope predicate (prefix of the key).
+            scope: Optional key-prefix dict.
 
         Returns:
             Number of correction deltas written.
         """
-        if where is None:
+        if scope:
+            self._validate_scope(scope)
+        else:
             logger.warning(
                 "Unscoped rebuild of %s: holds a long read snapshot that "
                 "degrades journal reads system-wide",
@@ -435,130 +463,120 @@ class JournalledCounter:
 
         ct = self.counters_table
         jt = self.journal_table
-        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
-        async with engine.connect() as conn:
-            sqlite = _is_sqlite(conn)
-            if not sqlite:
-                conn = conn.execution_options(isolation_level="REPEATABLE READ")
+        async with self._locked_txn(
+            engine, [CounterLockOperation.REBUILD], "REPEATABLE READ"
+        ) as conn:
+            branches: list = []
 
-            async with conn.begin():
-                # 1. Lock rebuild row
-                if not sqlite:
-                    await conn.execute(
-                        select(literal_column("1"))
-                        .select_from(locks)
-                        .where(
-                            and_(
-                                locks.c.CounterName == self.name,
-                                locks.c.Operation == "rebuild",
+            # Recount branches (one per counted table)
+            for ct_decl in counted:
+                unknown = set(ct_decl.key_exprs) - set(self.key)
+                if unknown:
+                    raise ValueError(
+                        f"CountedTable key_exprs has unknown keys: {unknown}"
+                    )
+                key_selects = [
+                    ct_decl.key_exprs[k].label(k) for k in self.key
+                ]
+                measure_selects = []
+                for m in self.measures:
+                    expr = ct_decl.measure_exprs.get(m)
+                    if expr is not None:
+                        measure_selects.append(expr.label(m))
+                    else:
+                        measure_selects.append(
+                            literal_column("0").label(m)
+                        )
+
+                branch = select(*key_selects, *measure_selects).select_from(
+                    ct_decl.table
+                )
+                if scope:
+                    branch = branch.where(
+                        and_(
+                            *(
+                                ct_decl.key_exprs[k] == v
+                                for k, v in scope.items()
                             )
                         )
-                        .with_for_update()
                     )
+                branch = branch.group_by(
+                    *[ct_decl.key_exprs[k] for k in self.key]
+                )
+                branches.append(branch)
 
-                # 2. Build the recount - counters - journal correction query
-                branches = []
+            # Negate counters
+            counter_branch = select(
+                *[ct.c[k] for k in self.key],
+                *[(-ct.c[m]).label(m) for m in self.measures],
+            )
+            if scope:
+                counter_branch = counter_branch.where(
+                    self._scope_where(ct, scope)
+                )
+            branches.append(counter_branch)
 
-                # Recount branches (one per counted table)
-                for ct_decl in counted:
-                    key_exprs = [
-                        expr.label(k) for expr, k in zip(ct_decl.key_exprs, self.key)
-                    ]
-                    measure_selects = []
+            # Negate journal
+            journal_branch = select(
+                *[jt.c[k] for k in self.key],
+                *[
+                    (-jt.c[self.delta_column(m)]).label(m)
+                    for m in self.measures
+                ],
+            )
+            if scope:
+                journal_branch = journal_branch.where(
+                    self._scope_where(jt, scope)
+                )
+            branches.append(journal_branch)
+
+            combined = union_all(*branches).subquery("t")
+            key_refs = [combined.c[k] for k in self.key]
+
+            having_clause = or_(
+                *(func.sum(combined.c[m]) != 0 for m in self.measures)
+            )
+
+            corrections_q = (
+                select(
+                    *key_refs,
+                    *[
+                        cast(
+                            func.sum(combined.c[m]), BigInteger
+                        ).label(self.delta_column(m))
+                        for m in self.measures
+                    ],
+                )
+                .group_by(*key_refs)
+                .having(having_clause)
+            )
+
+            result = await conn.execute(corrections_q)
+            total = 0
+
+            while True:
+                batch = result.fetchmany(1000)
+                if not batch:
+                    break
+                deltas = []
+                for row in batch:
+                    row_dict = row._mapping
+                    delta = {k: row_dict[k] for k in self.key}
                     for m in self.measures:
-                        expr = ct_decl.measure_exprs.get(m)
-                        if expr is not None:
-                            measure_selects.append(expr.label(f"__m_{m}"))
-                        else:
-                            measure_selects.append(literal_column("0").label(f"__m_{m}"))
+                        delta[self.delta_column(m)] = row_dict[
+                            self.delta_column(m)
+                        ]
+                    deltas.append(delta)
+                await self.journal(conn, deltas)
+                total += len(deltas)
 
-                    branch = select(*key_exprs, *measure_selects).select_from(
-                        ct_decl.table
-                    )
-                    if where is not None:
-                        recount_where = _translate_predicate_by_position(
-                            where, ct, ct_decl.key_exprs, self.key
-                        )
-                        branch = branch.where(recount_where)
-                    branch = branch.group_by(
-                        *[expr for expr, _ in zip(ct_decl.key_exprs, self.key)]
-                    )
-                    branches.append(branch)
-
-                # Negate counters
-                counter_measures = [
-                    (-ct.c[m]).label(f"__m_{m}") for m in self.measures
-                ]
-                counter_branch = select(
-                    *[ct.c[k] for k in self.key], *counter_measures
-                )
-                if where is not None:
-                    counter_branch = counter_branch.where(where)
-                branches.append(counter_branch)
-
-                # Negate journal
-                journal_measures = [
-                    (-jt.c[self.delta_column(m)]).label(f"__m_{m}")
-                    for m in self.measures
-                ]
-                journal_branch = select(
-                    *[jt.c[k] for k in self.key], *journal_measures
-                )
-                if where is not None:
-                    journal_where = _translate_predicate(where, ct, jt)
-                    journal_branch = journal_branch.where(journal_where)
-                branches.append(journal_branch)
-
-                combined = union_all(*branches).subquery("t")
-
-                key_refs = [combined.c[k] for k in self.key]
-
-                having_clause = or_(*(
-                    func.sum(combined.c[f"__m_{m}"]) != 0
-                    for m in self.measures
-                ))
-
-                corrections_q = (
-                    select(
-                        *key_refs,
-                        *[
-                            func.sum(combined.c[f"__m_{m}"]).label(
-                                self.delta_column(m)
-                            )
-                            for m in self.measures
-                        ],
-                    )
-                    .group_by(*key_refs)
-                    .having(having_clause)
-                )
-
-                result = await conn.execute(corrections_q)
-                total = 0
-
-                # 3. Stream corrections in batches via journal()
-                while True:
-                    batch = result.fetchmany(1000)
-                    if not batch:
-                        break
-                    deltas = []
-                    for row in batch:
-                        row_dict = row._mapping
-                        delta = {k: row_dict[k] for k in self.key}
-                        for m in self.measures:
-                            delta[self.delta_column(m)] = row_dict[
-                                self.delta_column(m)
-                            ]
-                        deltas.append(delta)
-                    await self.journal(conn, deltas)
-                    total += len(deltas)
-
-                return total
+            return total
 
     async def delete_scope(
         self,
         engine: AsyncEngine,
-        where: ColumnElement,
+        scope: Mapping[str, Any],
     ) -> None:
         """Remove all counter and journal rows matching a scope.
 
@@ -567,83 +585,26 @@ class JournalledCounter:
 
         Args:
             engine: Database engine.
-            where: Scope predicate (e.g. ``counters.c.DatasetID == 7``).
+            scope: Key-prefix dict (e.g. ``{"DatasetID": 7}``).
         """
+        if not scope:
+            raise ValueError("delete_scope requires a non-empty scope")
+        self._validate_scope(scope)
+
         ct = self.counters_table
         jt = self.journal_table
-        locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
 
-        async with engine.connect() as conn:
-            sqlite = _is_sqlite(conn)
-            if not sqlite:
-                conn = conn.execution_options(isolation_level="READ COMMITTED")
-
-            async with conn.begin():
-                # Lock rebuild then fold (order per ADR)
-                if not sqlite:
-                    await conn.execute(
-                        select(literal_column("1"))
-                        .select_from(locks)
-                        .where(
-                            and_(
-                                locks.c.CounterName == self.name,
-                                locks.c.Operation == "rebuild",
-                            )
-                        )
-                        .with_for_update()
-                    )
-                    await conn.execute(
-                        select(literal_column("1"))
-                        .select_from(locks)
-                        .where(
-                            and_(
-                                locks.c.CounterName == self.name,
-                                locks.c.Operation == "fold",
-                            )
-                        )
-                        .with_for_update()
-                    )
-
-                await conn.execute(delete(ct).where(where))
-                journal_where = _translate_predicate(where, ct, jt)
-                await conn.execute(delete(jt).where(journal_where))
-
-
-def _translate_predicate(
-    pred: ColumnElement, from_table: Table, to_table: Table
-) -> ColumnElement:
-    """Rewrite a predicate's column references from one table to another.
-
-    Both tables must have columns with the same names for any column
-    referenced in the predicate.
-    """
-    def replace(element):
-        if hasattr(element, "key") and hasattr(element, "table"):
-            if element.table is from_table:
-                return to_table.c[element.key]
-        return None
-
-    return replacement_traverse(pred, {}, replace)
-
-
-def _translate_predicate_by_position(
-    pred: ColumnElement,
-    from_table: Table,
-    to_key_exprs: Sequence[ColumnElement],
-    key_names: tuple[str, ...],
-) -> ColumnElement:
-    """Rewrite a scope predicate for a counted table whose columns differ."""
-    key_map = {}
-    for name, expr in zip(key_names, to_key_exprs):
-        key_map[name] = expr
-
-    def replace(element):
-        if hasattr(element, "key") and hasattr(element, "table"):
-            if element.table is from_table and element.key in key_map:
-                return key_map[element.key]
-        return None
-
-    return replacement_traverse(pred, {}, replace)
+        async with self._locked_txn(
+            engine,
+            [CounterLockOperation.REBUILD, CounterLockOperation.FOLD],
+            "READ COMMITTED",
+        ) as conn:
+            await conn.execute(
+                delete(ct).where(self._scope_where(ct, scope))
+            )
+            await conn.execute(
+                delete(jt).where(self._scope_where(jt, scope))
+            )
 
 
 def counter_locks_table(metadata: MetaData) -> Table:
@@ -663,7 +624,7 @@ def counter_locks_table(metadata: MetaData) -> Table:
         Column("CounterName", String(64), primary_key=True),
         Column(
             "Operation",
-            Enum(*COUNTER_LOCK_OPERATIONS, name="counter_lock_operation"),
+            Enum(CounterLockOperation, name="counter_lock_operation"),
             primary_key=True,
         ),
     )
@@ -708,20 +669,27 @@ def journalled_counter(
             for column_name, type_ in key
         ),
         *(Column(measure, BigInteger, nullable=False) for measure in measures),
-        # The newest InsertedAt folded into the row
         Column("UpdatedAt", MicrosecondDateTime(), nullable=False),
     )
 
     journal = Table(
         f"{name}CounterJournal",
         metadata,
-        Column("JournalID", BIGINT_AUTOINCREMENT, primary_key=True, autoincrement=True),
+        Column(
+            "JournalID",
+            BIGINT_AUTOINCREMENT,
+            primary_key=True,
+            autoincrement=True,
+        ),
         *(Column(column_name, type_, nullable=False) for column_name, type_ in key),
         *(
-            Column(JournalledCounter.delta_column(measure), BigInteger, nullable=False)
+            Column(
+                JournalledCounter.delta_column(measure),
+                BigInteger,
+                nullable=False,
+            )
             for measure in measures
         ),
-        # Set by the database so that writers' clock skew cannot distort it
         Column(
             "InsertedAt",
             MicrosecondDateTime(),
