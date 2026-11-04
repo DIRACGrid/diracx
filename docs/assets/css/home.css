@@ -1,0 +1,615 @@
+/*
+  The landing page, which is all hero: drawn by overrides/home.html and assets/js/home.js. Everything is scoped to .dxh,
+  so the stylesheet can be loaded on every page: instant loading swaps a page's content without the head, so a reader
+  arriving from another page would otherwise get the landing page without its styles.
+
+  The hero follows the theme's colour scheme: a night sky in slate, a pale one in the default scheme. Its colours are
+  the variables below, and home.js draws the pictures in the matching palette. Wide screens lay the copy over the left
+  of the picture, behind a scrim, with what DiracX offers and where to start in bands beneath; below 60em it all stacks.
+*/
+
+.dxh {
+  --dxh-ground: #060a0f;
+  --dxh-glow: #0f2a33;
+  --dxh-scrim: 6, 10, 15;
+  --dxh-ink: #e8eef4;
+  --dxh-tagline: #b8cad3;
+  --dxh-dim: #9db2bd;
+  --dxh-faint: #6f8c99;
+  --dxh-line: #1c3340;
+  --dxh-outline: #2a4a57;
+  --dxh-accent: #7fdcf0;
+  --dxh-primary: #7fdcf0;
+  --dxh-primary-hover: #bdf0fb;
+  --dxh-primary-ink: #06202a;
+  --dxh-green: #77b52c;
+  --dxh-link: #9ed35a;
+  --dxh-link-hover: #d7f0b8;
+  --dxh-chip: rgba(13, 26, 34, .85);
+  --dxh-chip-lead: rgba(31, 58, 18, .55);
+  --dxh-band: rgba(8, 17, 26, .7);
+  /* The time every animation is scaled by; one act stays on screen for nine of it. */
+  --dxh-t: 1s;
+  /* The left edge of the theme's content column, so the copy lines up with the page beneath it. */
+  --dxh-gutter: max(1.2rem, calc((100% - 61rem) / 2 + 1.2rem));
+
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /*
+    The picture's row has a height of its own rather than the copy's: the copy's padding is measured from the picture
+    (home.js, align()), so a row sized by the copy would rescale the picture it was measured from, and never settle.
+  */
+  grid-template-rows: clamp(26rem, 38vw, 32rem) auto auto;
+  overflow: hidden;
+  color: var(--dxh-ink);
+  background: radial-gradient(110% 80% at 70% 100%, var(--dxh-glow) 0%, var(--dxh-ground) 70%);
+  font-family: var(--md-text-font-family);
+}
+
+[data-md-color-scheme="default"] .dxh {
+  --dxh-ground: #f3f7f9;
+  --dxh-glow: #d6eaf0;
+  --dxh-scrim: 243, 247, 249;
+  --dxh-ink: #14222b;
+  --dxh-tagline: #2c3e48;
+  --dxh-dim: #4b616c;
+  --dxh-faint: #6c818c;
+  --dxh-line: #c7d6de;
+  --dxh-outline: #a9bec8;
+  --dxh-accent: #007a8f;
+  --dxh-primary: #0a6f80;
+  --dxh-primary-hover: #085a68;
+  --dxh-primary-ink: #ffffff;
+  --dxh-green: #5f9e1f;
+  --dxh-link: #3f7d12;
+  --dxh-link-hover: #2b5a0b;
+  --dxh-chip: rgba(255, 255, 255, .9);
+  --dxh-chip-lead: #eaf5dc;
+  --dxh-band: rgba(255, 255, 255, .6);
+}
+
+/* The picture fills the hero's first row; the acts are stacked in it and cross-fade. */
+.dxh__stage {
+  grid-area: 1 / 1 / 2 / 2;
+  position: relative;
+  min-height: 0;
+}
+
+.dxh__sky,
+.dxh__act {
+  position: absolute;
+  inset: 0;
+}
+
+.dxh__act {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .8s ease, visibility 0s linear .8s;
+}
+
+.dxh__act.is-active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .8s ease, visibility 0s;
+}
+
+.dxh svg.dxh__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The copy sits over the left of the picture, so the picture fades into the ground under it. */
+.dxh__stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(var(--dxh-scrim), .94) 0%, rgba(var(--dxh-scrim), .8) 28%,
+    rgba(var(--dxh-scrim), 0) 46%);
+}
+
+/*
+  The copy runs down the hero's left side from the line of the workgraph's first step, which home.js measures as
+  --dxh-head.
+*/
+.dxh__copy {
+  grid-area: 1 / 1 / 2 / 2;
+  align-self: start;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  max-width: calc(var(--dxh-gutter) + 26rem);
+  padding: var(--dxh-head, 3.2rem) 1.2rem 0 var(--dxh-gutter);
+}
+
+.dxh__title {
+  margin: 0;
+  line-height: 0;
+}
+
+/*
+  The logo is drawn 578 by 170; its height sets its size, and on a narrow screen its width caps it. There are two:
+  the brand's own for a light ground, and a copy with its greys lightened for a dark one.
+*/
+.dxh__logo {
+  display: block;
+  width: auto;
+  height: 5rem;
+  max-width: 100%;
+}
+
+.dxh__logo--on-light,
+[data-md-color-scheme="default"] .dxh__logo--on-dark { display: none; }
+[data-md-color-scheme="default"] .dxh__logo--on-light { display: block; }
+
+.dxh__tagline {
+  margin: 1.1rem 0 0;
+  max-width: 24em;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--dxh-tagline);
+}
+
+.dxh__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: 1.6rem;
+}
+
+.dxh__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0 1.1rem;
+  border: 1px solid var(--dxh-outline);
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--dxh-ink);
+  text-decoration: none;
+  transition: border-color .15s, background-color .15s, color .15s;
+}
+
+.dxh .dxh__button:hover,
+.dxh .dxh__button:focus-visible {
+  border-color: var(--dxh-accent);
+  color: var(--dxh-ink);
+}
+
+.dxh .dxh__button--primary {
+  border-color: var(--dxh-primary);
+  background: var(--dxh-primary);
+  color: var(--dxh-primary-ink);
+  font-weight: 600;
+}
+
+.dxh .dxh__button--primary:hover,
+.dxh .dxh__button--primary:focus-visible {
+  border-color: var(--dxh-primary-hover);
+  background: var(--dxh-primary-hover);
+  color: var(--dxh-primary-ink);
+}
+
+.dxh a:focus-visible,
+.dxh button:focus-visible {
+  outline: 2px solid var(--dxh-accent);
+  outline-offset: 2px;
+}
+
+/* The buttons that pick an animation, along the foot of the picture under the copy, over the picture like the copy. */
+.dxh__tabs {
+  grid-area: 1 / 1 / 2 / 2;
+  align-self: end;
+  justify-self: start;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .4rem;
+  box-sizing: border-box;
+  width: min(100%, calc(var(--dxh-gutter) + 26rem));
+  padding: 0 1.2rem .9rem var(--dxh-gutter);
+}
+
+.dxh__tabs[hidden] { display: none; }
+
+.dxh__tab {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 2.2rem;
+  padding: .3rem 0 0;
+  border: 0;
+  background: none;
+  color: var(--dxh-faint);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dxh__tab[aria-pressed="true"],
+.dxh__tab:hover { color: var(--dxh-ink); }
+
+/* Set like the copy above them: the theme's text face, at the size of the features' text. */
+.dxh__tab-label {
+  font-family: var(--md-text-font-family);
+  font-size: .7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dxh__progress {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--dxh-line);
+  overflow: hidden;
+}
+
+.dxh__progress > span {
+  display: block;
+  height: 100%;
+  background: var(--dxh-accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.dxh__tab[aria-pressed="true"] .dxh__progress > span {
+  animation: dxh-progress calc(9 * var(--dxh-t)) linear forwards;
+}
+
+.dxh.is-still .dxh__tab[aria-pressed="true"] .dxh__progress > span {
+  animation: none;
+  transform: scaleX(1);
+}
+
+/* While a reader points at the buttons or has keyboard focus in the hero, the act stays: its bar stops with it. */
+.dxh.is-holding .dxh__progress > span {
+  animation-play-state: paused;
+}
+
+/* Out of view, in a background tab or not the act on screen: every animation in it holds still. */
+.dxh.is-paused *,
+.dxh.is-paused *::before,
+.dxh__act:not(.is-active) * {
+  animation-play-state: paused !important;
+}
+
+/* What DiracX offers: a band across the foot of the hero, four points in a row, two on a tablet, one on a phone. */
+.dxh__features {
+  grid-area: 2 / 1 / 3 / 2;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.6rem;
+  margin: 0;
+  padding: 1.6rem var(--dxh-gutter) 1.8rem;
+  border-top: 1px solid var(--dxh-line);
+  background: var(--dxh-band);
+  list-style: none;
+}
+
+.dxh__feature {
+  margin: 0;
+}
+
+.dxh__feature-title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 .4rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--dxh-ink);
+}
+
+.dxh__feature-title svg {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: var(--dxh-green);
+}
+
+.dxh__feature-text {
+  margin: 0;
+  font-size: .7rem;
+  line-height: 1.55;
+  color: var(--dxh-dim);
+}
+
+/* Where to start: the last band, continuing the features' ground. Each card is one link over its whole area. */
+.dxh__start {
+  grid-area: 3 / 1 / 4 / 2;
+  position: relative;
+  z-index: 1;
+  padding: .4rem var(--dxh-gutter) 2.4rem;
+  background: var(--dxh-band);
+}
+
+.dxh .dxh__start-title {
+  margin: 0 0 .9rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--dxh-ink);
+}
+
+.dxh__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dxh__cards > li { margin: 0; }
+
+.dxh .dxh__card {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--dxh-line);
+  border-radius: .4rem;
+  background: var(--dxh-chip);
+  color: var(--dxh-ink);
+  text-decoration: none;
+  transition: border-color .15s, transform .15s;
+}
+
+.dxh .dxh__card:hover,
+.dxh .dxh__card:focus-visible {
+  border-color: var(--dxh-accent);
+  color: var(--dxh-ink);
+  transform: translateY(-1px);
+}
+
+.dxh__card-title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.dxh__card-title svg {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: var(--dxh-accent);
+}
+
+.dxh__card-text {
+  font-size: .7rem;
+  line-height: 1.55;
+  color: var(--dxh-dim);
+}
+
+/* The communities: an act of HTML rather than a picture, laid over the right of the hero like the others. */
+.dxh__act--communities {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  padding: 2.4rem var(--dxh-gutter) 2.4rem 1.2rem;
+}
+
+.dxh__communities {
+  width: min(100%, 30rem);
+}
+
+.dxh__kicker {
+  margin: 1.1rem 0 .5rem;
+  font-family: var(--md-code-font-family);
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dxh-accent);
+}
+
+.dxh__kicker:first-child { margin-top: 0; }
+
+.dxh__chips,
+.dxh__services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dxh__chip {
+  padding: .45rem .8rem;
+  border: 1px solid var(--dxh-line);
+  border-radius: .4rem;
+  background: var(--dxh-chip);
+  font-size: .8rem;
+  font-weight: 500;
+}
+
+.dxh__chip--lead {
+  padding: .6rem 1.1rem;
+  border-color: var(--dxh-green);
+  background: var(--dxh-chip-lead);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.dxh__services {
+  flex-direction: column;
+  gap: .3rem;
+  font-size: .65rem;
+  color: var(--dxh-dim);
+}
+
+.dxh__services strong {
+  margin-right: .4rem;
+  color: var(--dxh-ink);
+  font-weight: 600;
+}
+
+.dxh .dxh__add {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  margin-top: .8rem;
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--dxh-link);
+  text-decoration: none;
+}
+
+.dxh .dxh__add:hover,
+.dxh .dxh__add:focus-visible { color: var(--dxh-link-hover); }
+
+/* Each chip and line of the communities comes in after the one before it when the act opens. */
+.dxh__act--communities.is-active .dxh__chip,
+.dxh__act--communities.is-active .dxh__services li,
+.dxh__act--communities.is-active .dxh__add {
+  animation: dxh-rise .5s ease-out both;
+}
+
+.dxh__act--communities.is-active li:nth-child(2) { animation-delay: .06s; }
+.dxh__act--communities.is-active li:nth-child(3) { animation-delay: .12s; }
+.dxh__act--communities.is-active li:nth-child(4) { animation-delay: .18s; }
+.dxh__act--communities.is-active li:nth-child(5) { animation-delay: .24s; }
+.dxh__act--communities.is-active li:nth-child(6) { animation-delay: .3s; }
+.dxh__act--communities.is-active li:nth-child(7) { animation-delay: .36s; }
+
+/* The pictures. Classes below are the ones home.js writes into its SVG. */
+.dxh-twinkle { animation: dxh-twinkle 4.5s ease-in-out infinite; }
+
+.dxh-slot {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: dxh-slot calc(4.4 * var(--dxh-t)) linear infinite;
+}
+
+.dxh-flow {
+  offset-rotate: 0deg;
+  opacity: 0;
+  animation: dxh-flow calc(3.4 * var(--dxh-t)) linear infinite;
+}
+
+.dxh-hop {
+  offset-rotate: 0deg;
+  opacity: 0;
+  animation: dxh-flow calc(3.8 * var(--dxh-t)) cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+.dxh-feed {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  animation: dxh-feed calc(18 * var(--dxh-t)) ease-in-out infinite alternate;
+}
+
+.dxh-pool { animation: dxh-blink calc(2.6 * var(--dxh-t)) ease-in-out infinite; }
+
+.dxh-ping {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: dxh-ping calc(2.8 * var(--dxh-t)) ease-out infinite;
+}
+
+@keyframes dxh-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes dxh-twinkle { 0%, 100% { opacity: .15; } 50% { opacity: .75; } }
+@keyframes dxh-flow {
+  0% { offset-distance: 0%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+@keyframes dxh-slot {
+  0% { transform: scaleY(0); fill: #00afca; opacity: 1; }
+  62% { transform: scaleY(1); fill: #00afca; opacity: 1; }
+  70% { transform: scaleY(1); fill: #77b52c; opacity: 1; }
+  92% { transform: scaleY(1); fill: #77b52c; opacity: 1; }
+  100% { transform: scaleY(1); fill: #77b52c; opacity: 0; }
+}
+@keyframes dxh-feed { from { transform: scaleX(.08); } to { transform: scaleX(1); } }
+@keyframes dxh-ping { from { transform: scale(1); opacity: .9; } to { transform: scale(5); opacity: 0; } }
+@keyframes dxh-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dxh-rise { from { opacity: 0; transform: translateY(.4rem); } to { opacity: 1; transform: none; } }
+
+/*
+  Below 60em the hero stacks: the copy, then the picture with the buttons that pick an animation under it, then what
+  DiracX offers. The picture is a box of its own here, as tall as the script's tall drawing needs on a phone and a wide band
+  on a tablet, and the scrim goes, since nothing is laid over it any more.
+*/
+@media screen and (max-width: 59.984375em) {
+  .dxh {
+    grid-template-rows: auto auto auto auto auto;
+  }
+
+  .dxh__copy {
+    grid-area: 1 / 1 / 2 / 2;
+    max-width: none;
+    padding: 2rem var(--dxh-gutter) .4rem;
+  }
+
+  .dxh__logo { height: 4rem; }
+  .dxh__tagline { font-size: .9rem; }
+
+  .dxh__stage {
+    grid-area: 2 / 1 / 3 / 2;
+    height: clamp(17rem, 50vw, 26rem);
+  }
+
+  .dxh__stage::after { display: none; }
+
+  .dxh__tabs {
+    grid-area: 3 / 1 / 4 / 2;
+    justify-self: stretch;
+    width: auto;
+    padding: 0 var(--dxh-gutter) .9rem;
+  }
+
+  .dxh__features {
+    grid-area: 4 / 1 / 5 / 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dxh__start { grid-area: 5 / 1 / 6 / 2; }
+  .dxh__cards { grid-template-columns: minmax(0, 1fr); }
+
+  .dxh__act--communities {
+    justify-content: center;
+    padding: 1rem var(--dxh-gutter);
+  }
+}
+
+/* A phone: the picture is drawn tall. */
+@media screen and (max-width: 37.484375em) {
+  .dxh__stage { height: auto; aspect-ratio: 600 / 680; max-height: 32rem; }
+  .dxh__logo { height: 3.2rem; }
+  .dxh__features { grid-template-columns: minmax(0, 1fr); gap: 1.2rem; }
+  .dxh__chip { padding: .35rem .6rem; font-size: .7rem; }
+  .dxh__chip--lead { font-size: .9rem; }
+  .dxh__services strong { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dxh *,
+  .dxh *::before { animation: none !important; transition: none !important; }
+  .dxh-flow,
+  .dxh-hop { display: none; }
+  .dxh-slot { transform: none; fill: #77b52c; }
+  .dxh__progress > span { transform: scaleX(1); }
+}
+
+/*
+  Everything on the landing page is in the hero, so the theme's content column (the hero's sibling) has nothing to
+  show; it goes, and the footer follows the hero.
+*/
+.dxh ~ .md-main { display: none; }
