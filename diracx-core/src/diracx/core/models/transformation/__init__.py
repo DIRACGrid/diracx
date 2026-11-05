@@ -14,10 +14,14 @@ __all__ = [
     "CounterEntity",
     "DataParcel",
     "DelayInput",
+    "FeederInput",
+    "FeederProposal",
     "InputStatus",
+    "NoMoreFeederInputs",
     "PackerInput",
     "PackerProposal",
     "ParcelStatus",
+    "SetFeederState",
     "StorageDelta",
     "TransformationKind",
     "TransformationStatus",
@@ -37,6 +41,12 @@ from .enums import (
     TransformationKind,
     TransformationStatus,
     WorkgraphStatus,
+)
+from .feeder import (
+    FeederInput,
+    FeederProposal,
+    NoMoreFeederInputs,
+    SetFeederState,
 )
 from .packer import (
     BadInput,
