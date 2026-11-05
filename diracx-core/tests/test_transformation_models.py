@@ -85,3 +85,18 @@ def test_packer_input_is_frozen():
     assert packer_input.descriptor == {}
     with pytest.raises(ValidationError):
         packer_input.lfn = "/vo/other"  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"lfn": "", "lfn_size": 1024},
+        {"lfn": "/" + "x" * 512, "lfn_size": 1024},
+        {"lfn": "/vo/file", "lfn_size": -1},
+        {"error_count": -1},
+        {"descriptor": {"not_json": object()}},
+    ],
+)
+def test_packer_input_rejects_invalid_fields(fields):
+    with pytest.raises(ValidationError):
+        PackerInput(input_id=uuid7(), **fields)
