@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
-
-from diracx.core.hashing import canonical_json_bytes
+from diracx.core.hashing import hash_json
 from diracx.db.sql.transformation.hashing import _input_hash
 
 
@@ -30,10 +28,10 @@ def test_input_hash_none_descriptor_matches_empty():
     assert _input_hash(None, None) == _input_hash(None, {})
 
 
-def test_input_hash_matches_truncated_sha256_over_canonical_envelope():
+def test_input_hash_matches_truncated_hash_json_over_envelope():
     lfn = None
     descriptor = {"Seed": 1}
     envelope = {"LFN": lfn, "Descriptor": descriptor}
-    expected = hashlib.sha256(canonical_json_bytes(envelope)).digest()[:16]
+    expected = hash_json(envelope)[:16]
     assert _input_hash(lfn, descriptor) == expected
     assert len(expected) == 16

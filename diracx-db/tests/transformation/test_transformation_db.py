@@ -14,6 +14,7 @@ from diracx.core.exceptions import (
     TransformationNotFoundError,
 )
 from diracx.core.models.transformation import (
+    FeederInput,
     InputStatus,
     ParcelStatus,
     TransformationKind,
@@ -673,38 +674,30 @@ async def test_get_and_set_feeder_columns(
 async def test_insert_unassigned_inputs_deduplicates_on_hash(
     transformation_db: TransformationDB, standalone_active_transformation: UUID
 ):
-    input_id_a, input_id_b, input_id_dup = uuid7(), uuid7(), uuid7()
     descriptor_a = {"seed": 1}
     descriptor_b = {"seed": 2}
     delayed = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     hash_a = _input_hash(None, descriptor_a)
     hash_b = _input_hash(None, descriptor_b)
+    proposal_a = FeederInput(descriptor=descriptor_a, delayed_until=delayed)
+    proposal_b = FeederInput(descriptor=descriptor_b)
 
     async with transformation_db as db:
-        await db.insert_unassigned_inputs(standalone_active_transformation, [])
-        await db.insert_unassigned_inputs(
-            standalone_active_transformation,
-            [
-                {
-                    "input_id": input_id_a,
-                    "descriptor": descriptor_a,
-                    "delayed_until": delayed,
-                },
-                {
-                    "input_id": input_id_b,
-                    "descriptor": descriptor_b,
-                },
-            ],
+        assert (
+            await db.insert_unassigned_inputs(standalone_active_transformation, [])
+            == []
         )
-        # Same (lfn, descriptor) again must be ignored, not raise
-        await db.insert_unassigned_inputs(
+        inserted = await db.insert_unassigned_inputs(
             standalone_active_transformation,
-            [
-                {
-                    "input_id": input_id_dup,
-                    "descriptor": descriptor_a,
-                }
-            ],
+            [proposal_a, proposal_b, proposal_a],
+        )
+        assert len(inserted) == 2
+        # Same (lfn, descriptor) again must insert nothing
+        assert (
+            await db.insert_unassigned_inputs(
+                standalone_active_transformation, [proposal_a]
+            )
+            == []
         )
 
         rows = (
@@ -721,33 +714,32 @@ async def test_insert_unassigned_inputs_deduplicates_on_hash(
         ).all()
 
     assert len(rows) == 2
-    by_id = {row.input_id: row for row in rows}
-    assert by_id[input_id_a].input_hash == hash_a
-    assert by_id[input_id_a].descriptor == descriptor_a
-    assert by_id[input_id_a].status == InputStatus.UNASSIGNED
-    assert by_id[input_id_a].delayed_until == delayed
-    assert by_id[input_id_a].lfn is None
-    assert by_id[input_id_b].input_hash == hash_b
-    assert input_id_dup not in by_id
+    by_hash = {row.input_hash: row for row in rows}
+    assert set(by_hash) == {hash_a, hash_b}
+    assert {row.input_id for row in rows} == set(inserted)
+    assert by_hash[hash_a].descriptor == descriptor_a
+    assert by_hash[hash_a].status == InputStatus.UNASSIGNED
+    assert by_hash[hash_a].delayed_until == delayed
+    assert by_hash[hash_a].lfn is None
+    assert by_hash[hash_b].descriptor == descriptor_b
 
 
-async def test_insert_unassigned_inputs_follows_feeder_input(
+async def test_insert_unassigned_inputs_rejects_invalid_feeder_input(
     transformation_db: TransformationDB, standalone_active_transformation: UUID
 ):
+    with pytest.raises(ValidationError):
+        FeederInput(lfn="/lhcb/a.dst")
+
     async with transformation_db as db:
-        with pytest.raises(ValidationError):
-            await db.insert_unassigned_inputs(
-                standalone_active_transformation,
-                [{"input_id": uuid7(), "lfn": "/lhcb/a.dst"}],
-            )
-        await db.insert_unassigned_inputs(
-            standalone_active_transformation,
-            [{"input_id": uuid7()}],
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, [FeederInput()]
         )
+        assert len(inserted) == 1
         descriptor = (
             await db.conn.execute(
                 select(Inputs.descriptor).where(
-                    Inputs.transformation_id == standalone_active_transformation
+                    Inputs.transformation_id == standalone_active_transformation,
+                    Inputs.input_id == inserted[0],
                 )
             )
         ).scalar_one()

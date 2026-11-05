@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from datetime import datetime
 from typing import Any, NamedTuple, TypeAlias
 
 from sqlalchemy import bindparam, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from uuid_utils import UUID
+from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import (
     InputStatusConflictError,
@@ -641,54 +641,56 @@ class TransformationDB(BaseSQLDB):
 
     async def insert_unassigned_inputs(
         self,
-        transformation_id: UUID,
-        inputs: Sequence[Mapping[str, Any]],
-    ) -> None:
-        """Insert ``Unassigned`` inputs, ignoring ``InputHash`` collisions.
+        transformation_id: AnyUUID,
+        inputs: Sequence[FeederInput],
+    ) -> list[UUID]:
+        """Insert ``Unassigned`` inputs that are not already present by hash.
 
-        Each mapping must include ``input_id``. Feeder fields are validated as
-        a ``FeederInput``: ``descriptor`` defaults to ``{}``, and ``lfn`` /
-        ``lfn_size`` must both be set or both omitted. ``InputHash`` is computed
-        here from that pair. Status is always ``Unassigned``. Duplicate hashes
-        within the transformation are skipped by the database (DX-ADR-004).
+        Deduplicates within the batch by ``InputHash`` (first proposal wins),
+        skips hashes that already exist for the transformation, and mints a
+        UUIDv7 for each new row. Status is always ``Unassigned``.
 
         Args:
             transformation_id: Transformation that owns the inputs.
-            inputs: Rows to insert; empty sequences are a no-op.
+            inputs: Feeder proposals to insert; empty sequences are a no-op.
+
+        Returns:
+            ``input_id`` values of the rows that were inserted.
         """
-        if not inputs:
-            return
-
-        # Multiparam INSERT needs the same keys on every row.
-        rows = []
+        by_hash: dict[bytes, FeederInput] = {}
         for item in inputs:
-            proposal = FeederInput.model_validate(
-                {
-                    "lfn": item.get("lfn"),
-                    "lfn_size": item.get("lfn_size"),
-                    "descriptor": item.get("descriptor", {}),
-                    "delayed_until": item.get("delayed_until"),
-                }
-            )
-            rows.append(
-                {
-                    "transformation_id": transformation_id,
-                    "input_id": item["input_id"],
-                    "input_hash": _input_hash(proposal.lfn, proposal.descriptor),
-                    "status": InputStatus.UNASSIGNED,
-                    "lfn": proposal.lfn,
-                    "lfn_size": proposal.lfn_size,
-                    "descriptor": proposal.descriptor,
-                    "delayed_until": proposal.delayed_until,
-                }
-            )
+            by_hash.setdefault(_input_hash(item.lfn, item.descriptor), item)
+        if not by_hash:
+            return []
 
-        await self.conn.execute(
-            insert(Inputs)
-            .prefix_with("IGNORE", dialect="mysql")
-            .prefix_with("OR IGNORE", dialect="sqlite")
-            .values(rows)
+        existing = set(
+            (
+                await self.conn.execute(
+                    select(Inputs.input_hash).where(
+                        Inputs.transformation_id == transformation_id,
+                        Inputs.input_hash.in_(by_hash),
+                    )
+                )
+            ).scalars()
         )
+        rows = [
+            {
+                "transformation_id": transformation_id,
+                "input_id": uuid7(),
+                "input_hash": input_hash,
+                "status": InputStatus.UNASSIGNED,
+                "lfn": item.lfn,
+                "lfn_size": item.lfn_size,
+                "descriptor": item.descriptor,
+                "delayed_until": item.delayed_until,
+            }
+            for input_hash, item in by_hash.items()
+            if input_hash not in existing
+        ]
+        if rows:
+            await self.conn.execute(insert(Inputs).values(rows))
+            # TODO(#1085): journal +len(rows) Unassigned
+        return [row["input_id"] for row in rows]
 
     async def set_feeder_state(
         self, transformation_id: UUID, state: dict[str, Any] | None
