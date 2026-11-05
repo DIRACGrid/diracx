@@ -1,5 +1,3 @@
-"""Public job query, submission, status, and sandbox operations."""
-
 from __future__ import annotations
 
 __all__ = [
