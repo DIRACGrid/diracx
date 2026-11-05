@@ -109,6 +109,7 @@ async def cleanup_authdb(args):
 
 
 def parse_args():
+    """Parse command-line options and run the selected maintenance command."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
 

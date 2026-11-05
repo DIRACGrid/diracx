@@ -52,8 +52,8 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
     Subclasses declare the status types their data lives in and how to fetch
     it from the database.
 
-    One source instance per resource type covers all VOs. VO filtering is done
-    in the route after the snapshot is fetched from the cache.
+    One source instance per resource type caches a snapshot covering all VOs.
+    VO filtering is done by the caller after the snapshot is fetched.
     """
 
     db_class = ResourceStatusDB
@@ -69,10 +69,20 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
     element_type: ClassVar[ResourceType]
 
     def __init__(self, *, db: ResourceStatusDB) -> None:
+        """Initialize the source with its resource status database.
+
+        Args:
+            db: Database used to read status rows and revisions.
+        """
         super().__init__()
         self._db = db
 
     async def latest_revision(self) -> tuple[str, datetime]:
+        """Return the revision representing the current status rows.
+
+        Returns:
+            Revision token and modification time for this resource type.
+        """
         async with self._db as db:
             max_date, count = await db.get_resource_status_date(
                 self.status_types, element_type=self.element_type
@@ -80,6 +90,15 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
         return _make_revision(max_date, count)
 
     async def read_raw(self, hexsha: str, modified: datetime) -> Snapshot:
+        """Read a cache snapshot for the current resource statuses.
+
+        Args:
+            hexsha: Revision token associated with the read.
+            modified: Modification time associated with the revision.
+
+        Returns:
+            Snapshot containing statuses keyed by VO and resource name.
+        """
         async with self._db as db:
             data = await self._fetch(db)
         return Snapshot(data=data, hexsha=hexsha, modified=modified)
@@ -90,26 +109,35 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
 
 
 class StorageElementStatusSource(ResourceStatusSource):
+    """Cache source for storage-element status data."""
+
     status_types = STORAGE_STATUS_TYPES
     element_type = ResourceType.Storage
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
+        """Fetch storage-element statuses."""
         return await get_storage_statuses(db)
 
 
 class ComputeElementStatusSource(ResourceStatusSource):
+    """Cache source for compute-element status data."""
+
     status_types = ["all"]
     element_type = ResourceType.Compute
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
+        """Fetch compute-element statuses."""
         return await get_compute_statuses(db)
 
 
 class FTSStatusSource(ResourceStatusSource):
+    """Cache source for file-transfer service status data."""
+
     status_types = ["all"]
     element_type = ResourceType.FTS
 
     async def _fetch(self, db: ResourceStatusDB) -> dict:
+        """Fetch FTS statuses."""
         return await get_fts_statuses(db)
 
 
@@ -123,15 +151,34 @@ class SiteStatusSource(AsyncCacheableSource[Snapshot]):
     db_class = ResourceStatusDB
 
     def __init__(self, *, db: ResourceStatusDB) -> None:
+        """Initialize the source with its resource status database.
+
+        Args:
+            db: Database used to read site status rows and revisions.
+        """
         super().__init__()
         self._db = db
 
     async def latest_revision(self) -> tuple[str, datetime]:
+        """Return the revision representing the current site status rows.
+
+        Returns:
+            Revision token and modification time for site statuses.
+        """
         async with self._db as db:
             max_date, count = await db.get_site_status_date()
         return _make_revision(max_date, count)
 
     async def read_raw(self, hexsha: str, modified: datetime) -> Snapshot:
+        """Read a cache snapshot of site statuses.
+
+        Args:
+            hexsha: Revision token associated with the read.
+            modified: Modification time associated with the revision.
+
+        Returns:
+            Snapshot containing site statuses keyed by VO and site name.
+        """
         async with self._db as db:
             data = await get_site_statuses(db)
         return Snapshot(data=data, hexsha=hexsha, modified=modified)

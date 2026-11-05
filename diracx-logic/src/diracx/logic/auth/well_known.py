@@ -1,3 +1,5 @@
+"""OpenID Connect discovery documents, JWKS, and installation metadata."""
+
 from __future__ import annotations
 
 from diracx.core.config import Config
@@ -15,7 +17,21 @@ async def get_openid_configuration(
     config: Config,
     settings: AuthSettings,
 ) -> OpenIDConfiguration:
-    """OpenID Connect discovery endpoint."""
+    """Build OpenID Connect discovery metadata for the installation.
+
+    Args:
+        token_endpoint: URL of the token endpoint.
+        userinfo_endpoint: URL of the user information endpoint.
+        authorization_endpoint: URL of the authorization endpoint.
+        device_authorization_endpoint: URL of the device authorization endpoint.
+        revoke_refresh_token_endpoint: URL of the token revocation endpoint.
+        jwks_endpoint: URL of the JSON Web Key Set endpoint.
+        config: Installation configuration used to enumerate VO and group scopes.
+        settings: Authentication settings for issuer and supported algorithms.
+
+    Returns:
+        OpenID Connect provider metadata, including endpoints and supported scopes.
+    """
     scopes_supported = []
     for vo in config.registry:
         scopes_supported.append(f"vo:{vo}")
@@ -43,7 +59,14 @@ async def get_openid_configuration(
 
 
 async def get_jwks(settings: AuthSettings) -> dict:
-    """Get the JWKs (public keys)."""
+    """Return the public JSON Web Keys used to verify tokens.
+
+    Args:
+        settings: Authentication settings containing the signing key set.
+
+    Returns:
+        JWK Set dictionary containing public keys only.
+    """
     return settings.token_keystore.jwks.as_dict(  # type: ignore[return-value]
         private=False,
     )
@@ -52,7 +75,14 @@ async def get_jwks(settings: AuthSettings) -> dict:
 async def get_installation_metadata(
     config: Config,
 ) -> Metadata:
-    """Get metadata about the dirac installation."""
+    """Build public metadata describing the DiracX installation.
+
+    Args:
+        config: Installation configuration containing VO, group, and support data.
+
+    Returns:
+        Metadata describing each virtual organization and its groups.
+    """
     metadata: Metadata = {
         "virtual_organizations": {},
     }

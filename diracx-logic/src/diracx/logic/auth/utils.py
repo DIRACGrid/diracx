@@ -1,3 +1,5 @@
+"""Helpers for IAM communication, token validation, and OAuth scopes."""
+
 from __future__ import annotations
 
 import base64
@@ -22,6 +24,14 @@ from diracx.core.settings import AuthSettings
 
 
 class ScopeInfoDict(TypedDict):
+    """Validated authorization scope components.
+
+    Attributes:
+        group: Selected DIRAC group.
+        properties: Requested properties plus those of the group.
+        vo: Selected virtual organization.
+    """
+
     group: str
     properties: set[str]
     vo: str
@@ -31,7 +41,17 @@ _server_metadata_cache: TTLCache = TTLCache(maxsize=1024, ttl=3600)
 
 
 async def get_server_metadata(url: str):
-    """Get the server metadata from the IAM."""
+    """Get cached OpenID Connect server metadata from the IAM.
+
+    Args:
+        url: Discovery metadata URL for the identity provider.
+
+    Returns:
+        Parsed server metadata document.
+
+    Raises:
+        IAMServerError: If the IAM does not return a successful response.
+    """
     server_metadata = _server_metadata_cache.get(url)
     if server_metadata is None:
         async with httpx2.AsyncClient() as c:
@@ -44,14 +64,33 @@ async def get_server_metadata(url: str):
 
 
 def encrypt_state(state_dict: dict[str, str], cipher_suite: Fernet) -> str:
-    """Encrypt the state dict and return it as a string."""
+    """Encrypt a state dictionary for an OAuth redirect.
+
+    Args:
+        state_dict: State values to encode and encrypt.
+        cipher_suite: Fernet cipher used to encrypt the state.
+
+    Returns:
+        URL-safe encrypted state string.
+    """
     return cipher_suite.encrypt(
         base64.urlsafe_b64encode(json.dumps(state_dict).encode())
     ).decode()
 
 
 def decrypt_state(state: str, cipher_suite: Fernet) -> dict[str, str]:
-    """Decrypt the state string and return it as a dict."""
+    """Decrypt an OAuth state string.
+
+    Args:
+        state: Encrypted state string.
+        cipher_suite: Fernet cipher used to decrypt the state.
+
+    Returns:
+        Decoded state values.
+
+    Raises:
+        AuthorizationError: If the state cannot be decrypted or decoded.
+    """
     try:
         return json.loads(
             base64.urlsafe_b64decode(cipher_suite.decrypt(state.encode())).decode()
@@ -61,7 +100,20 @@ def decrypt_state(state: str, cipher_suite: Fernet) -> dict[str, str]:
 
 
 async def fetch_jwk_set(url: str):
-    """Fetch the JWK set from the IAM."""
+    """Fetch the IAM's JSON Web Key Set.
+
+    Args:
+        url: Discovery metadata URL for the identity provider.
+
+    Returns:
+        Imported key set referenced by the discovery document.
+
+    Raises:
+        IAMServerError: If the discovery metadata cannot be fetched.
+        RuntimeError: If discovery metadata does not contain a JWKS URI.
+        NotImplementedError: If the JWKS endpoint does not return 200
+            (placeholder until proper error handling is added).
+    """
     server_metadata = await get_server_metadata(url)
 
     jwks_uri = server_metadata.get("jwks_uri")
@@ -79,7 +131,19 @@ async def fetch_jwk_set(url: str):
 
 
 async def parse_id_token(config, vo, raw_id_token: str):
-    """Parse and validate the ID token from IAM."""
+    """Decode and validate an IAM ID token for a virtual organization.
+
+    Args:
+        config: DiracX configuration containing the VO's identity provider.
+        vo: Virtual organization whose provider should validate the token.
+        raw_id_token: Encoded ID token received from the IAM.
+
+    Returns:
+        Validated ID token claims.
+
+    Raises:
+        JoseError: If the signature or the issuer/audience claims are invalid.
+    """
     server_metadata = await get_server_metadata(
         config.registry[vo].idp.server_metadata_url
     )
@@ -110,6 +174,16 @@ async def initiate_authorization_flow_with_iam(
 
     The state dict is encrypted and passed to the IAM.
     It is then decrypted when the user is redirected back to the redirect_uri.
+
+    Args:
+        config: DiracX configuration containing the VO's identity provider.
+        vo: Virtual organization for the authorization request.
+        redirect_uri: URI to which the IAM should redirect after authorization.
+        state: State values to encrypt and return through the IAM.
+        cipher_suite: Fernet cipher used to encrypt the state.
+
+    Returns:
+        IAM authorization URL containing the required OAuth and PKCE parameters.
     """
     # code_verifier: https://www.rfc-editor.org/rfc/rfc7636#section-4.1
     code_verifier = secrets.token_hex()
@@ -150,7 +224,23 @@ async def initiate_authorization_flow_with_iam(
 async def get_token_from_iam(
     config, vo: str, code: str, state: dict[str, str], redirect_uri: str
 ) -> dict[str, str]:
-    """Get the token from the IAM using the code and state. Return the ID token."""
+    """Exchange an authorization code with the IAM and validate its ID token.
+
+    Args:
+        config: DiracX configuration containing the VO's identity provider.
+        vo: Virtual organization associated with the flow.
+        code: Authorization code returned by the IAM.
+        state: Decrypted state containing the PKCE verifier.
+        redirect_uri: Redirect URI used for the authorization flow.
+
+    Returns:
+        Validated ID token claims.
+
+    Raises:
+        IAMServerError: If the IAM returns a server error.
+        IAMClientError: If the IAM rejects the token request.
+        JoseError: If the returned ID token fails validation.
+    """
     server_metadata = await get_server_metadata(
         config.registry[vo].idp.server_metadata_url
     )
@@ -196,6 +286,20 @@ def read_token(
     allowed_algorithms: list[str],
     claims_requests: JWTClaimsRegistry | None = None,
 ) -> Claims:
+    """Decode a signed JWT and validate its requested claims.
+
+    Args:
+        payload: Encoded JWT string.
+        jwks: Keys used to verify the JWT signature.
+        allowed_algorithms: Accepted signing algorithms.
+        claims_requests: Optional registry of claim requirements.
+
+    Returns:
+        Validated JWT claims.
+
+    Raises:
+        JoseError: If the signature or a requested claim is invalid.
+    """
     if not claims_requests:
         claims_requests = JWTClaimsRegistry()
 
@@ -208,9 +312,17 @@ async def verify_dirac_refresh_token(
     refresh_token: str,
     settings: AuthSettings,
 ) -> tuple[UUID, float, bool]:
-    """Verify dirac user token and return a UserInfo class.
+    """Verify a DiracX refresh token and extract its identifying claims.
 
-    Used for each API endpoint.
+    Args:
+        refresh_token: Encoded refresh token to verify.
+        settings: Authentication settings containing verification keys.
+
+    Returns:
+        JWT ID, expiration timestamp, and legacy-exchange flag.
+
+    Raises:
+        JoseError: If the token signature or claims are invalid.
     """
     claims = read_token(
         refresh_token, settings.token_keystore.jwks, settings.token_allowed_algorithms
@@ -224,7 +336,16 @@ async def verify_dirac_refresh_token(
 
 
 def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityProperty]:
-    """Retrieve all properties of groups a user is registered in."""
+    """Collect security properties from groups containing a user.
+
+    Args:
+        config: Configuration containing VO users and groups.
+        sub: User subject identifier.
+        vo: Virtual organization to search.
+
+    Returns:
+        Union of properties assigned to groups containing the user.
+    """
     allowed_user_properties = set()
     for group in config.registry[vo].groups:
         if sub in config.registry[vo].groups[group].users:
@@ -235,16 +356,22 @@ def get_allowed_user_properties(config: Config, sub, vo: str) -> set[SecurityPro
 def parse_and_validate_scope(
     scope: str, config: Config, available_properties: set[SecurityProperty]
 ) -> ScopeInfoDict:
-    """Check.
+    """Parse and validate a requested VO, group, and property scope.
 
-        * At most one VO
-        * At most one group
-        * group belongs to VO
-        * properties are known
-    return dict with group and properties.
+    Exactly one VO must be requested. At most one group may be requested; if
+    none is, the VO's default group is used. The group's properties are added
+    to the requested ones, and all of them must be available.
+
+    Args:
+        scope: Space-separated OAuth scope string.
+        config: Installation configuration used to validate VOs and groups.
+        available_properties: Security properties supported by the installation.
+
+    Returns:
+        Validated VO, group, and property components.
 
     Raises:
-        ValueError: in case the scope isn't valid
+        ValueError: If the scope is malformed or references unknown values.
     """
     scopes = set(scope.split(" "))
 

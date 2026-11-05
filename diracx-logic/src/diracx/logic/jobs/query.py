@@ -1,3 +1,5 @@
+"""Job search and summary query logic."""
+
 from __future__ import annotations
 
 import logging
@@ -46,6 +48,18 @@ async def _rewrite_pilot_stamp_pseudo_param(
     `InvalidQueryError` because the join semantics are ambiguous.
     Combining a `PilotStamp` pseudo-filter with a real `JobID` filter
     in the same body is also refused.
+
+    Args:
+        pilot_db: Pilot database used to resolve stamp associations.
+        body: Search parameters whose `PilotStamp` filters may be rewritten.
+
+    Returns:
+        `True` if no jobs resolve and the caller should return an empty result;
+        otherwise `False`.
+
+    Raises:
+        InvalidQueryError: If operators are unsupported or the pseudo-filter
+            conflicts with a real `JobID` filter.
     """
     matches = [
         spec
@@ -105,12 +119,31 @@ async def search(
     per_page: int = 100,
     body: SearchParams | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
-    """Retrieve information about jobs.
+    """Search jobs using filters, selected fields, and pagination.
 
-    Accepts a `PilotStamp` pseudo-parameter in `body.search`
-    (`eq`/`in` only): it is resolved through `JobToPilotMapping` into
-    a concrete `JobID` vector filter before the main query runs. Mirrors
-    the `JobID` pseudo-parameter on `POST /api/pilots/search`.
+    ``per_page`` is capped at ``MAX_PER_PAGE``. A ``PilotStamp`` pseudo-filter
+    is first resolved into a ``JobID`` filter; if it matches no job, an empty
+    result is returned without querying JobDB. Results are restricted to the
+    VO and, when its ``global_jobs_info`` is disabled and ``preferred_username``
+    is given, to that user's jobs.
+
+    Args:
+        config: DiracX configuration used to determine the VO's job visibility rules.
+        job_db: Database used to search job records.
+        job_parameters_db: Database used to retrieve job parameters.
+        job_logging_db: Database used to retrieve requested job logging information.
+        pilot_db: Database used to resolve ``PilotStamp`` filters.
+        preferred_username: Optional owner filter when global job visibility is off.
+        vo: Virtual organization whose monitoring settings govern job visibility.
+        page: One-based page number to return.
+        per_page: Maximum number of jobs to return on this page.
+        body: Optional filters, selected fields, sorting, and distinct-result settings.
+
+    Returns:
+        Total number of matching jobs and the requested page of job records.
+
+    Raises:
+        InvalidQueryError: If search filters are invalid or cannot be rewritten.
     """
     # Apply a limit to per_page to prevent abuse of the API
     if per_page > MAX_PER_PAGE:
@@ -172,7 +205,21 @@ async def summary(
     vo: str,
     body: SummaryParams,
 ):
-    """Show information suitable for plotting."""
+    """Group matching jobs and return counts for each group.
+
+    Results are restricted to the VO and, when its ``global_jobs_info`` is
+    disabled and ``preferred_username`` is given, to that user's jobs.
+
+    Args:
+        config: DiracX configuration used to determine the VO's job visibility rules.
+        job_db: Database used to aggregate job records.
+        preferred_username: Optional owner filter when global job visibility is off.
+        vo: Virtual organization whose monitoring settings govern job visibility.
+        body: Grouping fields and optional search filters.
+
+    Returns:
+        Rows containing each grouping-field combination and its matching job count.
+    """
     global_jobs_info = config.operations[vo].services.job_monitoring.global_jobs_info
     if not global_jobs_info and preferred_username:
         body.search.append(

@@ -1,3 +1,5 @@
+"""Read Resource Status System rows and convert them to status models."""
+
 from __future__ import annotations
 
 import logging
@@ -22,6 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 def map_status(db_status: str, reason: str | None = None) -> ResourceStatus:
+    """Convert a database status string into an RSS status model.
+
+    Args:
+        db_status: Status value read from the database.
+        reason: Optional human-readable explanation for the status.
+
+    Returns:
+        Allowed or banned status model corresponding to the database value.
+    """
     if db_status in ALLOWED:
         return AllowedStatus(
             allowed=True,
@@ -47,6 +58,12 @@ async def get_site_statuses(
 
     The returned models carry the vo field so the router can filter to the
     caller's VO from the cached all-VO snapshot.
+
+    Args:
+        resource_status_db: Resource status database.
+
+    Returns:
+        Site status models keyed by VO and site name.
     """
     rows = await resource_status_db.get_site_statuses()
 
@@ -64,7 +81,14 @@ async def get_site_statuses(
 async def get_compute_statuses(
     resource_status_db: ResourceStatusDB,
 ) -> dict[str, dict[str, ComputeElementStatus]]:
-    """Fetch all compute element statuses across all VOs."""
+    """Fetch compute-element statuses across all VOs.
+
+    Args:
+        resource_status_db: Resource status database.
+
+    Returns:
+        Compute statuses keyed by VO and resource name.
+    """
     all_rows = await resource_status_db.get_resource_statuses(
         ["all"], element_type=ResourceType.Compute
     )
@@ -84,7 +108,14 @@ async def get_compute_statuses(
 async def get_fts_statuses(
     resource_status_db: ResourceStatusDB,
 ) -> dict[str, dict[str, FTSStatus]]:
-    """Fetch all FTS server statuses across all VOs."""
+    """Fetch FTS server statuses across all VOs.
+
+    Args:
+        resource_status_db: Resource status database.
+
+    Returns:
+        FTS statuses keyed by VO and resource name.
+    """
     all_rows = await resource_status_db.get_resource_statuses(
         ["all"], element_type=ResourceType.FTS
     )
@@ -109,6 +140,12 @@ async def get_storage_statuses(
 
     Storage elements missing one or more of the four access rows are skipped:
     their status is undefined and guessing could grant unintended access.
+
+    Args:
+        resource_status_db: Resource status database.
+
+    Returns:
+        Storage element statuses keyed by VO and resource name.
     """
     all_rows = await resource_status_db.get_resource_statuses(
         STORAGE_STATUS_TYPES, element_type=ResourceType.Storage

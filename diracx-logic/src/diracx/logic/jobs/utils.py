@@ -1,3 +1,5 @@
+"""Helpers for configuring, validating, and preparing submitted jobs."""
+
 from __future__ import annotations
 
 from functools import partial
@@ -13,7 +15,15 @@ from diracx.db.sql.job.db import JobDB
 
 
 def make_job_manifest_config(config: Config, vo: str):
-    """Create job manifest configuration for DIRACCommon functions from diracx config."""
+    """Build DIRACCommon manifest settings from the VO configuration.
+
+    Args:
+        config: Installation configuration.
+        vo: Virtual organization whose job-description settings to use.
+
+    Returns:
+        Configuration mapping consumed by DIRACCommon JDL utilities.
+    """
     job_desc = config.operations[vo].job_description
 
     return {
@@ -35,7 +45,15 @@ def make_job_manifest_config(config: Config, vo: str):
 
 
 def make_check_and_prepare_job_config(config: Config, vo: str):
-    """Create checkAndPrepareJob configuration for DIRACCommon functions from diracx config."""
+    """Build check-and-prepare settings from the VO configuration.
+
+    Args:
+        config: Installation configuration.
+        vo: Virtual organization whose job settings to use.
+
+    Returns:
+        Configuration mapping consumed by DIRACCommon job preparation.
+    """
     ops = config.operations[vo]
     return {
         "inputDataPolicyForVO": ops.input_data_policy.input_data_module,
@@ -59,6 +77,20 @@ async def check_and_prepare_job(
     """Check Consistency of Submitted JDL and set some defaults.
 
     Prepare subJDL with Job Requirements.
+
+    Args:
+        job_id: Identifier assigned to the job.
+        class_ad_job: Parsed job JDL to validate and update.
+        class_ad_req: ClassAd populated with computed job requirements.
+        owner: Username submitting the job.
+        owner_group: DIRAC group submitting the job.
+        job_attrs: Job attributes to update during preparation.
+        vo: Virtual organization that owns the job.
+        job_db: Job database used for special submission-error updates.
+        config: Installation configuration used to build preparation settings.
+
+    Raises:
+        SErrorException: If DIRACCommon rejects the job description.
     """
     # Create configuration dict for DIRACCommon function from diracx config
     dirac_config = make_check_and_prepare_job_config(config, vo)

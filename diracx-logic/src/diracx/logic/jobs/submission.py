@@ -1,3 +1,5 @@
+"""Job submission and JDL preparation logic."""
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +36,17 @@ logger = logging.getLogger(__name__)
 
 
 class JobSubmissionSpec(BaseModel):
+    """Validated input used to create one job from a JDL.
+
+    Attributes:
+        jdl: Job description language document.
+        owner: Username that owns the job.
+        owner_group: DIRAC group that owns the job.
+        initial_status: Initial major status for the job.
+        initial_minor_status: Initial minor status for the job.
+        vo: Virtual organization that owns the job.
+    """
+
     jdl: str
     owner: str
     owner_group: str
@@ -52,7 +65,23 @@ async def submit_jdl_jobs(
     user_info: UserInfo,
     config: Config,
 ) -> list[InsertedJob]:
-    """Submit a list of JDLs to the JobDB."""
+    """Validate JDL job definitions, expand parametric jobs, and insert them.
+
+    Args:
+        job_definitions: JDL descriptions for the jobs to submit.
+        job_db: Database used to create job records.
+        job_logging_db: Database used to record each job's initial status.
+        user_info: Authenticated user, VO, and group used as the job owner.
+        config: DiracX configuration used to validate and prepare the JDLs.
+
+    Returns:
+        Details of the inserted jobs, including IDs and initial statuses.
+
+    Raises:
+        ValueError: If the JDL is invalid, bulk submission is parametric, or
+            the submission would create more than ``MAX_PARAMETRIC_JOBS`` jobs.
+        SErrorException: If DIRACCommon rejects a job during preparation.
+    """
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
         job_definition = job_definitions[i].strip()
@@ -165,7 +194,21 @@ async def submit_jdl_jobs(
 
 
 async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: Config):
-    """Create jobs from JDLs and insert them into the DB."""
+    """Prepare JDLs and insert their job records.
+
+    Args:
+        jobs: Submission specifications for the jobs to create.
+        job_db: Job database.
+        config: Installation configuration used to prepare each job.
+
+    Returns:
+        Identifiers of the jobs created.
+
+    Raises:
+        ValueError: If a JDL is syntactically invalid.
+        NotImplementedError: If a JDL uses unsupported ``Parameters``.
+        SErrorException: If DIRACCommon rejects a job during preparation.
+    """
     jobs_to_insert = {}
     jdls_to_update = {}
     inputdata_to_insert = {}
