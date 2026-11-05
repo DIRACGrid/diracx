@@ -65,11 +65,7 @@ async def submit_jdl_jobs(
     user_info: UserInfo,
     config: Config,
 ) -> list[InsertedJob]:
-    """Validate and submit JDL job definitions.
-
-    A single parametric JDL may expand into multiple jobs. Bulk submissions
-    cannot contain parametric jobs, and a submission may not create more jobs
-    than the server's per-submission limit, ``MAX_PARAMETRIC_JOBS``.
+    """Validate JDL job definitions, expand parametric jobs, and insert them.
 
     Args:
         job_definitions: JDL descriptions for the jobs to submit.
@@ -83,7 +79,8 @@ async def submit_jdl_jobs(
 
     Raises:
         ValueError: If the JDL is invalid, bulk submission is parametric, or
-            the submission exceeds the maximum job count.
+            the submission would create more than ``MAX_PARAMETRIC_JOBS`` jobs.
+        SErrorException: If DIRACCommon rejects a job during preparation.
     """
     # TODO: that needs to go in the legacy adapter (Does it ? Because bulk submission is not supported there)
     for i in range(len(job_definitions)):
@@ -201,7 +198,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: 
 
     Args:
         jobs: Submission specifications for the jobs to create.
-        job_db: Job database dependency.
+        job_db: Job database.
         config: Installation configuration used to prepare each job.
 
     Returns:
@@ -210,6 +207,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: 
     Raises:
         ValueError: If a JDL is syntactically invalid.
         NotImplementedError: If a JDL uses unsupported ``Parameters``.
+        SErrorException: If DIRACCommon rejects a job during preparation.
     """
     jobs_to_insert = {}
     jdls_to_update = {}

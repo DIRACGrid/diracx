@@ -25,7 +25,7 @@ async def get_refresh_tokens(
     If there is no subject, then all the refresh tokens are retrieved.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         subject: Optional subject identifier to filter by.
 
     Returns:
@@ -42,7 +42,7 @@ async def revoke_refresh_token_by_jti(
     """Revoke a refresh token by JWT ID, optionally verifying its owner.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         subject: Optional subject that must own the token.
         jti: JWT ID of the refresh token to revoke.
 
@@ -73,7 +73,7 @@ async def revoke_refresh_token_by_refresh_token(
     """Revoke a refresh token using the OAuth 2.0 Token Revocation standard (RFC 7009).
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         subject: Optional subject that must own the token.
         token: Refresh token to revoke.
         token_type_hint: Optional OAuth token type hint.
@@ -108,7 +108,7 @@ async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
     The flow tables are not partitioned, so their expired rows are deleted.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         settings: Authentication settings that define retention periods.
     """
     await auth_db.maintain_refresh_token_partitions(

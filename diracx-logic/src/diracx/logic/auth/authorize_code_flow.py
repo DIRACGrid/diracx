@@ -41,7 +41,7 @@ async def initiate_authorization_flow(
         redirect_uri: Client redirect URI registered in settings.
         scope: Requested VO, group, and property scopes.
         state: Client state value to return after authorization.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         config: Installation configuration used to validate scope.
         settings: Authentication service settings.
         available_properties: Security properties supported by the installation.
@@ -101,12 +101,19 @@ async def complete_authorization_flow(
         code: Authorization code returned by the IAM.
         state: Encrypted flow state returned by the IAM.
         request_url: Base URL of the callback request.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         config: Installation configuration used to validate the flow.
         settings: Authentication service settings.
 
     Returns:
         Client redirect URL containing the issued code and original state.
+
+    Raises:
+        AuthorizationError: If the state cannot be decrypted.
+        AssertionError: If the state does not belong to an authorization-code flow.
+        IAMServerError: If the IAM returns a server error.
+        IAMClientError: If the IAM rejects the token request.
+        JoseError: If the IAM ID token fails validation.
     """
     # Decrypt the state to access user details
     decrypted_state = decrypt_state(state, settings.state_key.fernet)

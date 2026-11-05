@@ -1,4 +1,4 @@
-"""Read and normalize Resource Status System data for API responses."""
+"""Read Resource Status System rows and convert them to status models."""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ async def get_site_statuses(
     caller's VO from the cached all-VO snapshot.
 
     Args:
-        resource_status_db: Resource status database dependency.
+        resource_status_db: Resource status database.
 
     Returns:
         Site status models keyed by VO and site name.
@@ -84,7 +84,7 @@ async def get_compute_statuses(
     """Fetch compute-element statuses across all VOs.
 
     Args:
-        resource_status_db: Resource status database dependency.
+        resource_status_db: Resource status database.
 
     Returns:
         Compute statuses keyed by VO and resource name.
@@ -111,7 +111,7 @@ async def get_fts_statuses(
     """Fetch FTS server statuses across all VOs.
 
     Args:
-        resource_status_db: Resource status database dependency.
+        resource_status_db: Resource status database.
 
     Returns:
         FTS statuses keyed by VO and resource name.
@@ -142,7 +142,7 @@ async def get_storage_statuses(
     their status is undefined and guessing could grant unintended access.
 
     Args:
-        resource_status_db: Resource status database dependency.
+        resource_status_db: Resource status database.
 
     Returns:
         Storage element statuses keyed by VO and resource name.

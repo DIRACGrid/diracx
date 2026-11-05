@@ -22,15 +22,16 @@ async def recalculate_tq_shares_for_entity(
 ):
     """Recalculate task-queue shares for an owner and group in a VO.
 
-    For groups with job sharing enabled, the configured share is applied at
-    group level. Otherwise it is distributed across owners with task queues.
+    For groups with the ``JobSharing`` property, the group share is applied to
+    the group's task queues as a whole. Otherwise it is split evenly between
+    the owners that have task queues in the group.
 
     Args:
         owner: Username whose task-queue share may need recalculation.
         owner_group: DIRAC group owning the task queues.
         vo: Virtual organization providing group share settings.
         config: Installation configuration.
-        task_queue_db: Task queue database dependency.
+        task_queue_db: Task queue database.
     """
     group_properties = config.registry[vo].groups[owner_group].properties
     job_share = config.registry[vo].groups[owner_group].job_share
@@ -99,7 +100,7 @@ async def set_priorities_for_entity(
         owner_group: DIRAC group whose task queues receive the priorities.
         job_share: Share allocated to this owner or group.
         allow_background_tqs: Whether background queues are permitted.
-        task_queue_db: Task queue database dependency.
+        task_queue_db: Task queue database.
         owner: Optional username; ``None`` applies priorities at group level.
     """
     tq_dict = await task_queue_db.get_task_queue_priorities(owner_group, owner)
@@ -122,7 +123,9 @@ async def calculate_priority(
 
     Args:
         tq_dict: Current priority keyed by task-queue identifier; updated in place.
-        all_tqs_data: Task-queue metadata keyed by task-queue identifier.
+        all_tqs_data: Task-queue metadata keyed by task-queue identifier;
+            ``Jobs``, ``Priority`` and ``PRIORITY_IGNORED_FIELDS`` are removed
+            from each entry in place.
         share: Share to distribute among task queues.
         allow_bg_tqs: Whether low-priority background queues are allowed.
 

@@ -20,10 +20,6 @@ async def register_new_pilot(
 ):
     """Register a pilot and its external reference.
 
-    Legacy X.509 pilot identities may self-register one pilot per call when
-    permitted by the access policy; that policy is enforced by the router.
-    Registration fails if the VO is not configured or the stamp already exists.
-
     Uniqueness is best-effort: the DIRAC `PilotAgents` schema has no unique
     constraint on `PilotStamp`, so a concurrent registration of the same
     stamp from two processes could race past this check. In practice pilot
@@ -32,7 +28,7 @@ async def register_new_pilot(
 
     Args:
         config: Installation configuration used to validate the VO.
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         registration: Pilot stamp, VO, site details, external reference, and
             initial status.
 
@@ -69,16 +65,13 @@ async def update_pilots_metadata(
     pilot_db: PilotAgentsDB,
     updates: dict[str, PilotMetadata],
 ):
-    """Update mutable metadata for one or more pilots.
+    """Bulk-update pilot metadata, keyed by pilot stamp.
 
-    Each mapping key is a pilot stamp, and each value contains fields defined
-    by ``PilotMetadata``. Omitted fields are left unchanged; the stamp itself
-    cannot be modified. ``LastUpdateTime`` is refreshed on every updated pilot.
-    The router applies the access policy, including the single-pilot limit for
-    legacy pilot identities.
+    Unset fields (``None``) are preserved. ``LastUpdateTime`` is refreshed on
+    every updated pilot.
 
     Args:
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         updates: Pilot metadata keyed by pilot stamp.
     """
     fields_by_stamp = {
@@ -102,7 +95,7 @@ async def assign_jobs_to_pilot(
     """Associate jobs with a pilot identified by its stamp.
 
     Args:
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         pilot_stamp: Stamp identifying the pilot.
         job_ids: Job identifiers to associate with the pilot.
 

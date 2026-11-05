@@ -31,7 +31,7 @@ async def initiate_device_flow(
         client_id: OAuth client identifier.
         scope: Requested VO, group, and property scopes.
         verification_uri: URI where the user completes authorization.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         config: Installation configuration used to validate the scope.
         available_properties: Security properties supported by the installation.
         settings: Authentication service settings.
@@ -70,7 +70,7 @@ async def do_device_flow(
 
     Args:
         request_url: Base URL of the request handling device authorization.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         user_code: User code entered to approve the device flow.
         config: Installation configuration used to validate the stored scope.
         available_properties: Security properties supported by the installation.
@@ -116,12 +116,16 @@ async def finish_device_flow(
         request_url: Base URL of the callback request.
         code: Authorization code returned by the IAM.
         state: Encrypted state returned by the IAM.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         config: Installation configuration used to retrieve IAM metadata.
         settings: Authentication service settings.
 
     Raises:
-        AuthorizationError: If the callback state is invalid.
+        AuthorizationError: If the state cannot be decrypted.
+        AssertionError: If the state does not belong to a device flow.
+        IAMServerError: If the IAM returns a server error.
+        IAMClientError: If the IAM rejects the token request.
+        JoseError: If the IAM ID token fails validation.
     """
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code

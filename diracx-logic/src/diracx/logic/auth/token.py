@@ -56,7 +56,7 @@ async def get_oidc_token(
     Args:
         grant_type: OAuth grant used to obtain the token.
         client_id: OAuth client identifier.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         config: Installation configuration used to validate scope and membership.
         settings: Authentication service settings.
         available_properties: Security properties supported by the installation.
@@ -70,6 +70,15 @@ async def get_oidc_token(
         Access token payload and an optional refresh token payload.
 
     Raises:
+        ValueError: If the client, redirect URI, PKCE verifier, or scope is invalid.
+        PendingAuthorizationError: If the device flow is still awaiting the user.
+        InvalidCredentialsError: If the device code has expired or a revoked
+            refresh token is reused.
+        AuthorizationError: If the code was already used or the flow is in a
+            bad state.
+        TokenNotFoundError: If the refresh token is not in the database.
+        PermissionError: If the user is not allowed the requested group or
+            properties.
         NotImplementedError: If the grant type is not supported.
     """
     legacy_exchange = False
@@ -125,7 +134,7 @@ async def get_oidc_token_info_from_device_flow(
     Args:
         device_code: Device code identifying the flow.
         client_id: OAuth client identifier to verify against the flow.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         settings: Authentication service settings.
 
     Returns:
@@ -133,7 +142,6 @@ async def get_oidc_token_info_from_device_flow(
 
     Raises:
         ValueError: If the client ID does not match the flow.
-        NotImplementedError: If the flow has an unexpected status.
     """
     info = await get_device_flow(
         auth_db, device_code, settings.device_flow_expiration_seconds
@@ -168,7 +176,7 @@ async def get_oidc_token_info_from_authorization_flow(
         client_id: OAuth client identifier to verify against the flow.
         redirect_uri: Redirect URI to verify against the flow.
         code_verifier: PKCE verifier used to validate the stored challenge.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         settings: Authentication service settings.
 
     Returns:
@@ -176,7 +184,6 @@ async def get_oidc_token_info_from_authorization_flow(
 
     Raises:
         ValueError: If the redirect URI, client ID, or PKCE verifier is invalid.
-        NotImplementedError: If the flow has an unexpected status.
     """
     info = await get_authorization_flow(
         auth_db, code, settings.authorization_flow_expiration_seconds
@@ -218,7 +225,7 @@ async def get_oidc_token_info_from_refresh_flow(
 
     Args:
         refresh_token: Encoded refresh token to verify.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         settings: Authentication service settings.
 
     Returns:
@@ -226,7 +233,9 @@ async def get_oidc_token_info_from_refresh_flow(
         lifetime in minutes, and whether to issue a replacement refresh token.
 
     Raises:
-        InvalidCredentialsError: If a revoked refresh token is reused.
+        InvalidCredentialsError: If a revoked refresh token is reused; all of
+            the subject's refresh tokens are revoked first.
+        TokenNotFoundError: If the refresh token is not in the database.
     """
     # Decode the refresh token to get the JWT ID
     jti, exp, legacy_exchange = await verify_dirac_refresh_token(
@@ -312,7 +321,7 @@ async def perform_legacy_exchange(
         preferred_username: Username associated with the proxy.
         scope: Requested authorization scope.
         authorization: Authorization header containing the legacy token.
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         available_properties: Security properties supported by the installation.
         settings: Authentication service settings.
         config: Installation configuration.
@@ -367,7 +376,7 @@ async def exchange_token(
     """Exchange validated OIDC token data and scope for DiracX token payloads.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         scope: Requested authorization scope.
         oidc_token_info: Validated token data from the identity provider.
         config: Installation configuration.
@@ -381,6 +390,7 @@ async def exchange_token(
         Access token payload and an optional refresh token payload.
 
     Raises:
+        ValueError: If the scope is invalid.
         PermissionError: If the user is not in the requested group or lacks
             requested properties.
         NotImplementedError: If dynamic user registration would be required.
@@ -468,15 +478,15 @@ async def exchange_token(
 def create_token(payload: TokenPayload, settings: AuthSettings) -> str:
     """Create and sign a JWT from a token payload.
 
-    The token route enriches the payload with configured access-policy data
-    before calling this function.
-
     Args:
         payload: Claims to encode in the token.
         settings: Authentication settings containing signing keys and algorithms.
 
     Returns:
         Encoded signed JWT string.
+
+    Raises:
+        ValueError: If the configured JWK set has no signing key.
     """
     return _sign_token_payload(payload.model_dump(), settings)
 
@@ -545,7 +555,7 @@ async def get_device_flow(auth_db: AuthDB, device_code: str, max_validity: int):
     """Retrieve a valid device flow and mark it complete for token exchange.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         device_code: Device code identifying the flow.
         max_validity: Maximum age of the device code in seconds.
 
@@ -581,12 +591,13 @@ async def get_authorization_flow(auth_db: AuthDB, code: str, max_validity: int):
     """Retrieve and validate an authorization-code flow.
 
     Args:
-        auth_db: Authentication database dependency.
+        auth_db: Authentication database.
         code: Authorization code identifying the flow.
         max_validity: Maximum age of the flow in seconds.
 
     Returns:
-        Authorization flow record after marking it complete.
+        Ready authorization flow record, after its database status is changed
+        to ``DONE``.
 
     Raises:
         AuthorizationError: If the code was used or the flow state is invalid.

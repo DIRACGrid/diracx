@@ -46,9 +46,9 @@ async def initiate_sandbox_upload(
 ) -> SandboxUploadResponse:
     """Return a sandbox PFN and initiate an upload when needed.
 
-    If the sandbox already exists, the response contains its PFN and has no
-    ``url`` field. Otherwise, the ``url`` and ``fields`` in the response must
-    be used to upload the sandbox to the storage backend.
+    If the sandbox is already assigned to a job or present in storage, only its
+    PFN is returned. Otherwise it is registered in SandboxMetadataDB and a
+    presigned upload URL and form fields are generated.
 
     Args:
         user_info: Authenticated user who owns the sandbox.
@@ -118,10 +118,7 @@ async def get_sandbox_file(
 ) -> SandboxDownloadResponse:
     """Return a presigned URL for downloading a sandbox file.
 
-    The URL is returned directly rather than redirected to. Redirects can cause
-    clients to resend their authorization header to the storage backend, leaking
-    the token; storage backends may also reject presigned requests with that
-    header.
+    Also updates the sandbox's last access time.
 
     Args:
         pfn: Sandbox physical file name to download.
@@ -228,7 +225,7 @@ async def unassign_jobs_sandboxes(
 
     Args:
         jobs_ids: Job identifiers whose sandbox mappings should be removed.
-        sandbox_metadata_db: Sandbox metadata database dependency.
+        sandbox_metadata_db: Sandbox metadata database.
     """
     await sandbox_metadata_db.unassign_sandboxes_to_jobs(jobs_ids)
 
@@ -257,7 +254,7 @@ async def insert_sandbox(
     """Insert a new sandbox in SandboxMetadataDB.
 
     Args:
-        sandbox_metadata_db: Sandbox metadata database dependency.
+        sandbox_metadata_db: Sandbox metadata database.
         se_name: Storage element containing the sandbox.
         user: Owner of the sandbox.
         pfn: Sandbox physical file name.

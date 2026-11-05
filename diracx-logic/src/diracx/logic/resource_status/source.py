@@ -53,9 +53,7 @@ class ResourceStatusSource(AsyncCacheableSource[Snapshot]):
     it from the database.
 
     One source instance per resource type caches a snapshot covering all VOs.
-    The route overlays the caller's VO-specific entries on the shared ``all``
-    entries. It uses an ETag formed from the snapshot revision and VO, and
-    varies the response by ``Authorization`` for conditional HTTP caching.
+    VO filtering is done by the caller after the snapshot is fetched.
     """
 
     db_class = ResourceStatusDB
@@ -148,8 +146,6 @@ class SiteStatusSource(AsyncCacheableSource[Snapshot]):
 
     Uses its own DB table (SiteStatus) and a dedicated date query, so it is a
     direct subclass of AsyncCacheableSource rather than ResourceStatusSource.
-    The cached snapshot covers all VOs; the route overlays the caller's
-    VO-specific entries on shared ``all`` entries for the response.
     """
 
     db_class = ResourceStatusDB

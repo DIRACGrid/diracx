@@ -1,4 +1,4 @@
-"""OpenID Connect discovery and installation metadata endpoints."""
+"""OpenID Connect discovery documents, JWKS, and installation metadata."""
 
 from __future__ import annotations
 

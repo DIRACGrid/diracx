@@ -57,7 +57,7 @@ async def resolve_jobs_for_pilot_stamps(
     pseudo-parameter into a concrete `JobID` vector filter.
 
     Args:
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         pilot_stamps: Pilot stamps to resolve.
 
     Returns:
@@ -72,7 +72,7 @@ async def _resolve_pilots_for_job_ids(
     """Resolve job identifiers to pilot identifiers.
 
     Args:
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         job_ids: Job identifiers to resolve.
 
     Returns:
@@ -98,7 +98,7 @@ async def _rewrite_job_id_pseudo_param(
     the same body is also refused.
 
     Args:
-        pilot_db: Pilot database dependency used to resolve job associations.
+        pilot_db: Pilot database used to resolve job associations.
         body: Search parameters whose `JobID` pseudo-filters may be rewritten.
 
     Returns:
@@ -164,12 +164,9 @@ async def search(
 ) -> tuple[int, list[dict[str, Any]]]:
     """Search pilot records with optional filtering, sorting, and pagination.
 
-    Results are restricted to the caller's VO unless the caller is a service
-    administrator, in which case the router passes no VO constraint.
-
-    ``JobID`` is accepted as a pseudo-parameter in filters with ``eq`` or
-    ``in`` operators and is resolved through ``JobToPilotMapping`` into a
-    ``PilotID`` filter, so callers can look up the pilots that ran a given job.
+    ``per_page`` is capped at ``MAX_PER_PAGE``. A ``JobID`` pseudo-filter is
+    first resolved into a ``PilotID`` filter; if it matches no pilot, an empty
+    result is returned without querying the pilot table.
 
     Args:
         pilot_db: Database used to search pilot records.
@@ -213,9 +210,6 @@ async def summary(
 ):
     """Group matching pilots and return counts suitable for plotting.
 
-    Results are restricted to the caller's VO unless the caller is a service
-    administrator, in which case the router passes no VO constraint.
-
     Args:
         pilot_db: Database used to aggregate pilot records.
         body: Grouping fields and optional search filters.
@@ -241,7 +235,7 @@ async def get_pilots_by_stamp(
     can identify which stamps were found.
 
     Args:
-        pilot_db: Pilot database dependency.
+        pilot_db: Pilot database.
         pilot_stamps: Pilot stamps to look up.
         parameters: Optional pilot fields to include in each result.
 

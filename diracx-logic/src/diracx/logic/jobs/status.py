@@ -74,10 +74,10 @@ async def remove_jobs(
     Args:
         job_ids: Job identifiers to remove.
         config: Installation configuration used when updating task-queue shares.
-        job_db: Job database dependency.
-        job_logging_db: Job logging database dependency.
-        sandbox_metadata_db: Sandbox metadata database dependency.
-        task_queue_db: Task queue database dependency.
+        job_db: Job database.
+        job_logging_db: Job logging database.
+        sandbox_metadata_db: Sandbox metadata database.
+        task_queue_db: Task queue database.
     """
     # Remove the staging task from the StorageManager
     # TODO: this was not done in the JobManagerHandler, but it was done in the kill method
@@ -108,23 +108,19 @@ async def set_job_statuses(
     force: bool = False,
     additional_attributes: dict[int, dict[str, str]] = {},
 ) -> SetJobStatusReturn:
-    """Apply status updates to one or more jobs.
+    """Apply timestamped status updates to one or more jobs.
 
-    Each job ID maps to one or more timestamped updates. The update fields are
-    ``Status``, ``MinorStatus``, ``ApplicationStatus``, and ``Source``; the
-    source defaults to ``"Unknown"``. Set ``force`` to bypass the job state
-    machine; the router restricts this option to job administrators.
-
-    Jobs that cannot be updated are listed under ``failed``. This function
-    updates the current status in JobDB and records all submitted updates in
-    JobLoggingDB.
+    Only the latest status is written to JobDB; every submitted update is
+    recorded in JobLoggingDB. Unless ``force`` is set, transitions must be
+    allowed by the job state machine. Jobs that cannot be updated are listed
+    under ``failed`` rather than raising.
 
     Args:
         status_changes: Timestamped status changes keyed by job ID.
         config: DiracX configuration used when applying status transitions.
-        job_db: Job database dependency.
-        job_logging_db: Job logging database dependency.
-        task_queue_db: Task queue database dependency.
+        job_db: Job database.
+        job_logging_db: Job logging database.
+        task_queue_db: Task queue database.
         force: Whether to bypass the job state machine.
         additional_attributes: Extra job attributes to persist with status changes.
 
@@ -319,10 +315,8 @@ async def reschedule_jobs(
 ):
     """Reschedule jobs so that they are matched and run again.
 
-    The ``job_ids`` argument lists the jobs to reschedule. Set ``reset_jobs``
-    to reset each job's reschedule counter instead of incrementing it. Jobs
-    that are unverified, exceed their configured reschedule limit, or fail
-    preparation are reported as failures.
+    Jobs that are not found, unverified, over their reschedule limit, or
+    rejected by job preparation are reported as failures rather than raising.
 
     Args:
         job_ids: Identifiers of the jobs to reschedule.
@@ -535,7 +529,7 @@ async def remove_jobs_from_task_queue(
     Args:
         job_ids: Job identifiers to remove from task queues.
         config: Installation configuration used to recalculate shares.
-        task_queue_db: Task queue database dependency.
+        task_queue_db: Task queue database.
     """
     await task_queue_db.remove_jobs(job_ids)
 
@@ -560,17 +554,15 @@ async def set_job_parameters_or_attributes(
     job_db: JobDB,
     job_parameters_db: JobParametersDB,
 ):
-    """Update job parameters and a restricted set of job attributes.
+    """Update job parameters and the mutable job attributes.
 
-    Only the ``Site`` job attribute may be updated; other known job attributes
-    are rejected. Fields that are not job attributes are stored as job
-    parameters. Job status and heartbeat fields are updated through their
-    dedicated operations.
+    Fields that are job attributes are written to JobDB and must be in
+    ``MUTABLE_JOB_ATTRIBUTES``; all other fields are stored as job parameters.
 
     Args:
         updates: Metadata updates keyed by job ID.
-        job_db: Job database dependency.
-        job_parameters_db: OpenSearch job-parameter database dependency.
+        job_db: Job database.
+        job_parameters_db: OpenSearch job-parameter database.
 
     Raises:
         ValueError: If an immutable known job attribute is requested.
@@ -618,22 +610,23 @@ async def add_heartbeat(
 ) -> None:
     """Record heartbeat data reported by jobs.
 
-    The JobAgent uses heartbeat updates to report runtime data. A heartbeat
-    can restore a matched or stalled job to ``RUNNING``. Heartbeat fields are
-    stored as job attributes and other supplied fields are stored as job
-    parameters. Pending WMS commands are fetched separately by
-    :func:`get_job_commands`.
+    ``MATCHED`` and ``STALLED`` jobs are set back to ``RUNNING``; the other
+    jobs get their ``HeartBeatTime`` refreshed. Fields in
+    ``JobDB.heartbeat_fields`` go to the ``HeartBeatLoggingInfo`` table and
+    the rest are stored as job parameters. Pending commands are fetched
+    separately by :func:`get_job_commands`.
 
     Args:
         data: Heartbeat fields keyed by job ID.
         config: DiracX configuration used when restoring job status.
-        job_db: Job database dependency.
-        job_logging_db: Job logging database dependency.
-        task_queue_db: Task queue database dependency.
-        job_parameters_db: OpenSearch job-parameter database dependency.
+        job_db: Job database.
+        job_logging_db: Job logging database.
+        task_queue_db: Task queue database.
+        job_parameters_db: OpenSearch job-parameter database.
 
     Raises:
         JobNotFoundError: If any submitted job identifier does not exist.
+        DocumentUpsertError: If parameter documents cannot be stored.
     """
     # Find the current status of the jobs
     search_query: VectorSearchSpec = {
@@ -748,7 +741,7 @@ async def _insert_parameters(
 
     Args:
         updates: Parameter values keyed by job identifier.
-        job_parameters_db: OpenSearch job-parameter database dependency.
+        job_parameters_db: OpenSearch job-parameter database.
         job_db: Job database used to resolve each job's VO.
 
     Raises:
@@ -794,7 +787,7 @@ async def get_job_commands(job_ids: Iterable[int], job_db: JobDB) -> list[JobCom
 
     Args:
         job_ids: Job identifiers whose pending commands should be retrieved.
-        job_db: Job database dependency.
+        job_db: Job database.
 
     Returns:
         Pending commands, which are marked as sent as part of retrieval.

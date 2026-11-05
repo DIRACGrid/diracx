@@ -121,12 +121,11 @@ async def search(
 ) -> tuple[int, list[dict[str, Any]]]:
     """Search jobs using filters, selected fields, and pagination.
 
-    The request body can filter jobs, select returned parameters, sort results,
-    and request distinct records. ``PilotStamp`` is accepted as a pseudo-
-    parameter in search filters with ``eq`` or ``in`` operators, and is resolved
-    through ``JobToPilotMapping`` into a ``JobID`` filter. Results are scoped
-    by the VO's visibility settings and, when global job visibility is disabled,
-    by the supplied preferred username.
+    ``per_page`` is capped at ``MAX_PER_PAGE``. A ``PilotStamp`` pseudo-filter
+    is first resolved into a ``JobID`` filter; if it matches no job, an empty
+    result is returned without querying JobDB. Results are restricted to the
+    VO and, when its ``global_jobs_info`` is disabled and ``preferred_username``
+    is given, to that user's jobs.
 
     Args:
         config: DiracX configuration used to determine the VO's job visibility rules.
@@ -208,10 +207,8 @@ async def summary(
 ):
     """Group matching jobs and return counts for each group.
 
-    The request body specifies the grouping fields and optional filters. Results
-    are scoped to the VO and, when global job visibility is disabled, to the
-    supplied preferred username. The router omits that owner restriction for
-    job administrators.
+    Results are restricted to the VO and, when its ``global_jobs_info`` is
+    disabled and ``preferred_username`` is given, to that user's jobs.
 
     Args:
         config: DiracX configuration used to determine the VO's job visibility rules.

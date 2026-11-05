@@ -28,7 +28,7 @@ class ScopeInfoDict(TypedDict):
 
     Attributes:
         group: Selected DIRAC group.
-        properties: Security properties requested by the scope.
+        properties: Requested properties plus those of the group.
         vo: Selected virtual organization.
     """
 
@@ -109,8 +109,10 @@ async def fetch_jwk_set(url: str):
         Imported key set referenced by the discovery document.
 
     Raises:
+        IAMServerError: If the discovery metadata cannot be fetched.
         RuntimeError: If discovery metadata does not contain a JWKS URI.
-        NotImplementedError: If the JWKS endpoint returns an error response.
+        NotImplementedError: If the JWKS endpoint does not return 200
+            (placeholder until proper error handling is added).
     """
     server_metadata = await get_server_metadata(url)
 
@@ -138,6 +140,9 @@ async def parse_id_token(config, vo, raw_id_token: str):
 
     Returns:
         Validated ID token claims.
+
+    Raises:
+        JoseError: If the signature or the issuer/audience claims are invalid.
     """
     server_metadata = await get_server_metadata(
         config.registry[vo].idp.server_metadata_url
@@ -234,6 +239,7 @@ async def get_token_from_iam(
     Raises:
         IAMServerError: If the IAM returns a server error.
         IAMClientError: If the IAM rejects the token request.
+        JoseError: If the returned ID token fails validation.
     """
     server_metadata = await get_server_metadata(
         config.registry[vo].idp.server_metadata_url
@@ -290,6 +296,9 @@ def read_token(
 
     Returns:
         Validated JWT claims.
+
+    Raises:
+        JoseError: If the signature or a requested claim is invalid.
     """
     if not claims_requests:
         claims_requests = JWTClaimsRegistry()
@@ -311,6 +320,9 @@ async def verify_dirac_refresh_token(
 
     Returns:
         JWT ID, expiration timestamp, and legacy-exchange flag.
+
+    Raises:
+        JoseError: If the token signature or claims are invalid.
     """
     claims = read_token(
         refresh_token, settings.token_keystore.jwks, settings.token_allowed_algorithms
@@ -346,8 +358,9 @@ def parse_and_validate_scope(
 ) -> ScopeInfoDict:
     """Parse and validate a requested VO, group, and property scope.
 
-    At most one VO and group may be specified. The group must belong to the
-    selected VO, and every requested property must be available.
+    Exactly one VO must be requested. At most one group may be requested; if
+    none is, the VO's default group is used. The group's properties are added
+    to the requested ones, and all of them must be available.
 
     Args:
         scope: Space-separated OAuth scope string.
