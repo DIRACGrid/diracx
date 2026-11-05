@@ -18,6 +18,7 @@ from diracx.core.exceptions import (
 from diracx.core.models.search import SearchSpec, SortSpec
 from diracx.core.models.transformation import (
     PARCEL_TRANSITIONS,
+    FeederInput,
     InputStatus,
     PackerInput,
     ParcelStatus,
@@ -645,11 +646,11 @@ class TransformationDB(BaseSQLDB):
     ) -> None:
         """Insert ``Unassigned`` inputs, ignoring ``InputHash`` collisions.
 
-        Each mapping must include ``input_id``. Optional keys: ``lfn``,
-        ``lfn_size``, ``descriptor``, ``delayed_until``. ``InputHash`` is
-        computed here from ``lfn`` / ``descriptor``. Status is always
-        ``Unassigned``. Duplicate hashes within the transformation are skipped
-        by the database (DX-ADR-004).
+        Each mapping must include ``input_id``. Feeder fields are validated as
+        a ``FeederInput``: ``descriptor`` defaults to ``{}``, and ``lfn`` /
+        ``lfn_size`` must both be set or both omitted. ``InputHash`` is computed
+        here from that pair. Status is always ``Unassigned``. Duplicate hashes
+        within the transformation are skipped by the database (DX-ADR-004).
 
         Args:
             transformation_id: Transformation that owns the inputs.
@@ -659,19 +660,28 @@ class TransformationDB(BaseSQLDB):
             return
 
         # Multiparam INSERT needs the same keys on every row.
-        rows = [
-            {
-                "transformation_id": transformation_id,
-                "input_id": item["input_id"],
-                "input_hash": _input_hash(item.get("lfn"), item.get("descriptor")),
-                "status": InputStatus.UNASSIGNED,
-                "lfn": item.get("lfn"),
-                "lfn_size": item.get("lfn_size"),
-                "descriptor": item.get("descriptor"),
-                "delayed_until": item.get("delayed_until"),
-            }
-            for item in inputs
-        ]
+        rows = []
+        for item in inputs:
+            proposal = FeederInput.model_validate(
+                {
+                    "lfn": item.get("lfn"),
+                    "lfn_size": item.get("lfn_size"),
+                    "descriptor": item.get("descriptor", {}),
+                    "delayed_until": item.get("delayed_until"),
+                }
+            )
+            rows.append(
+                {
+                    "transformation_id": transformation_id,
+                    "input_id": item["input_id"],
+                    "input_hash": _input_hash(proposal.lfn, proposal.descriptor),
+                    "status": InputStatus.UNASSIGNED,
+                    "lfn": proposal.lfn,
+                    "lfn_size": proposal.lfn_size,
+                    "descriptor": proposal.descriptor,
+                    "delayed_until": proposal.delayed_until,
+                }
+            )
 
         await self.conn.execute(
             insert(Inputs)

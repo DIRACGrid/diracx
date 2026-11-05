@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import delete, event, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import UUID, uuid7
@@ -728,3 +729,26 @@ async def test_insert_unassigned_inputs_deduplicates_on_hash(
     assert by_id[input_id_a].lfn is None
     assert by_id[input_id_b].input_hash == hash_b
     assert input_id_dup not in by_id
+
+
+async def test_insert_unassigned_inputs_follows_feeder_input(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    async with transformation_db as db:
+        with pytest.raises(ValidationError):
+            await db.insert_unassigned_inputs(
+                standalone_active_transformation,
+                [{"input_id": uuid7(), "lfn": "/lhcb/a.dst"}],
+            )
+        await db.insert_unassigned_inputs(
+            standalone_active_transformation,
+            [{"input_id": uuid7()}],
+        )
+        descriptor = (
+            await db.conn.execute(
+                select(Inputs.descriptor).where(
+                    Inputs.transformation_id == standalone_active_transformation
+                )
+            )
+        ).scalar_one()
+    assert descriptor == {}
