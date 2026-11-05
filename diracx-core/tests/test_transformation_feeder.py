@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
 
-from diracx.core.models.transformation import (
-    FeederInput,
-    NoMoreFeederInputs,
-    SetFeederState,
-)
+from diracx.core.models.transformation import FeederInput, SetFeederState
 
 
 def test_descriptor_defaults_to_empty_dict():
@@ -35,32 +31,64 @@ def test_input_seed_and_file_shapes():
     assert file_input.delayed_until == delayed
 
 
-def test_lfn_and_lfn_size_must_both_be_set_or_both_omitted():
-    with pytest.raises(ValueError, match="both be set or both be omitted"):
-        FeederInput(lfn_size=1024)
-    with pytest.raises(ValueError, match="both be set or both be omitted"):
-        FeederInput(lfn="/lhcb/a.dst")
-    both_omitted = FeederInput(descriptor={"seed": 1})
-    assert both_omitted.lfn is None and both_omitted.lfn_size is None
-    both_set = FeederInput(lfn="/lhcb/a.dst", lfn_size=1024)
-    assert both_set.lfn == "/lhcb/a.dst" and both_set.lfn_size == 1024
+@pytest.mark.parametrize("kwargs", [{"lfn": "/a"}, {"lfn_size": 1}])
+def test_lfn_and_lfn_size_must_be_paired(kwargs):
+    with pytest.raises(ValidationError, match="both be set or both be omitted"):
+        FeederInput(**kwargs)
 
 
-def test_lfn_constraints():
+@pytest.mark.parametrize(
+    "lfn, ok", [("", False), ("/a", True), ("x" * 512, True), ("x" * 513, False)]
+)
+def test_lfn_length_bounds(lfn, ok):
+    if ok:
+        assert FeederInput(lfn=lfn, lfn_size=0).lfn == lfn
+    else:
+        with pytest.raises(ValidationError):
+            FeederInput(lfn=lfn, lfn_size=0)
+
+
+@pytest.mark.parametrize("lfn_size, ok", [(-1, False), (0, True), (2**40, True)])
+def test_lfn_size_non_negative(lfn_size, ok):
+    if ok:
+        assert FeederInput(lfn="/a", lfn_size=lfn_size).lfn_size == lfn_size
+    else:
+        with pytest.raises(ValidationError):
+            FeederInput(lfn="/a", lfn_size=lfn_size)
+
+
+@pytest.mark.parametrize("bad", [datetime.now(UTC), {1, 2}, object()])
+def test_descriptor_rejects_non_json_values(bad):
     with pytest.raises(ValidationError):
-        FeederInput(lfn="", lfn_size=0)
+        FeederInput(descriptor={"x": bad})
+
+
+@pytest.mark.parametrize(
+    "delayed_until",
+    [
+        datetime(2026, 1, 1),  # noqa: DTZ001
+        datetime(2026, 1, 1, tzinfo=timezone(timedelta(hours=1))),
+    ],
+    ids=["naive", "non-utc"],
+)
+def test_delayed_until_must_be_aware_utc(delayed_until):
     with pytest.raises(ValidationError):
-        FeederInput(lfn="x" * 513, lfn_size=0)
-    assert FeederInput(lfn="/a", lfn_size=1).lfn == "/a"
-    assert FeederInput(lfn="x" * 512, lfn_size=0).lfn == "x" * 512
+        FeederInput(delayed_until=delayed_until)
 
 
-def test_lfn_size_non_negative():
-    with pytest.raises(ValidationError):
-        FeederInput(lfn="/a", lfn_size=-1)
-    assert FeederInput(lfn="/a", lfn_size=0).lfn_size == 0
+def test_feeder_input_json_round_trip():
+    original = FeederInput(
+        lfn="/lhcb/a.dst",
+        lfn_size=1024,
+        descriptor={"Mask": [1, 2], "nested": {"k": None}},
+        delayed_until=datetime(2026, 1, 2, tzinfo=UTC),
+    )
+    assert FeederInput.model_validate_json(original.model_dump_json()) == original
 
 
-def test_feeder_control_proposals_construct():
+def test_set_feeder_state_requires_a_dict():
     assert SetFeederState(state={"next_seed": 7}).state == {"next_seed": 7}
-    assert NoMoreFeederInputs() is not None
+    with pytest.raises(ValidationError):
+        SetFeederState()
+    with pytest.raises(ValidationError):
+        SetFeederState(state=[1, 2])
