@@ -12,7 +12,7 @@ One rule applies throughout: **plugins propose, the core writes.**
 `pack_transformation` runs a transformation's packer once. A run commits in batches:
 
 1. The core loads the transformation. A transformation that is not `Active` is skipped.
-2. It resolves the plugin from the `diracx.transformations.packers` entry point named by `Packer`, and validates `PackerArgs` against the plugin's arguments model.
+2. It resolves the plugin from the `diracx.transformation.packers` entry point named by `Packer`, and validates `PackerArgs` against the plugin's arguments model.
 3. It claims `Unassigned` inputs whose `DelayedUntil` has passed, with `SELECT ... FOR UPDATE SKIP LOCKED`, in pages of 1000 and up to its `max_inputs` argument, and streams them to the plugin.
 4. It checks and applies each proposal the plugin yields, writing and committing parcels in batches. Each commit releases the row locks taken so far, so a long run does not hold up the feeder.
 5. Inputs the plugin did not use stay `Unassigned`; their row locks are released at the next commit.
@@ -100,7 +100,7 @@ async def by_run_packer(
 Register it in your extension's `pyproject.toml`:
 
 ```toml
-[project.entry-points."diracx.transformations.packers"]
+[project.entry-points."diracx.transformation.packers"]
 ByRun = "myext.logic.transformations.packers:by_run_packer"
 ```
 

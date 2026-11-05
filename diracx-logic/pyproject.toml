@@ -29,7 +29,7 @@ compute_status = "diracx.logic.rss.source:ComputeElementStatusSource"
 fts_status = "diracx.logic.rss.source:FTSStatusSource"
 site_status = "diracx.logic.rss.source:SiteStatusSource"
 
-[project.entry-points."diracx.transformations.packers"]
+[project.entry-points."diracx.transformation.packers"]
 FixedSize = "diracx.logic.transformations.packers:fixed_size_packer"
 
 [project.optional-dependencies]
