@@ -35,6 +35,7 @@ The class-level attributes control how the task is queued and retried:
 - `size` — `SMALL`, `MEDIUM`, or `LARGE`
 - `retry_policy` — `NoRetry()` (default) or `ExponentialBackoff()`
 - `dlq_eligible` — if `True`, the task is persisted to a dead-letter queue after exhausting retries
+- `result_ttl_seconds` — how long (in seconds) the task's result is kept in the result backend; `None` (default) uses the backend's own TTL
 
 ### Register via entry point
 
