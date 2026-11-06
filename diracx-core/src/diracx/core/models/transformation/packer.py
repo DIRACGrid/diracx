@@ -7,10 +7,9 @@ proposal and is the only thing that writes.
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from ..types import UTCDatetime
 
@@ -31,10 +30,10 @@ class PackerInput(BaseModel):
 
     input_id: UUID
     parent_input_id: UUID | None = None
-    lfn: str | None = None
-    lfn_size: int | None = None
-    descriptor: dict[str, Any] = {}
-    error_count: int = 0
+    lfn: str | None = Field(default=None, min_length=1, max_length=512)
+    lfn_size: int | None = Field(default=None, ge=0)
+    descriptor: dict[str, JsonValue] = {}
+    error_count: int = Field(default=0, ge=0)
 
 
 class ComputeParcel(BaseModel):
@@ -50,9 +49,9 @@ class ComputeParcel(BaseModel):
     """
 
     input_ids: list[UUID] = Field(min_length=1)
-    metadata: dict[str, Any] = {}
-    requirements: dict[str, Any] | None = None
-    parameters: dict[str, Any] = {}
+    metadata: dict[str, JsonValue] = {}
+    requirements: dict[str, JsonValue] | None = None
+    parameters: dict[str, JsonValue] = {}
 
 
 class StorageDelta(BaseModel):
@@ -80,8 +79,8 @@ class DataParcel(BaseModel):
     """
 
     input_ids: list[UUID] = Field(min_length=1)
-    metadata: dict[str, Any] = {}
-    request: dict[str, Any]
+    metadata: dict[str, JsonValue] = {}
+    request: dict[str, JsonValue]
     deltas: list[StorageDelta] = []
 
 
