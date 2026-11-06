@@ -15,6 +15,7 @@ from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
 )
+from diracx.core.hashing import hash_json
 from diracx.core.models.search import SearchSpec, SortSpec
 from diracx.core.models.transformation import (
     PARCEL_TRANSITIONS,
@@ -28,7 +29,6 @@ from diracx.core.models.transformation import (
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
-from .hashing import _input_hash
 from .schema import Base as TransformationDBBase
 from .schema import (
     ComputeParcels,
@@ -43,6 +43,25 @@ from .schema import (
 
 # BinaryUUID binds either kind; rows come back as uuid_utils.UUID
 AnyUUID: TypeAlias = UUID | uuid.UUID
+
+
+def _input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
+    """Return a 16-byte digest of the canonical ``(LFN, Descriptor)`` pair.
+
+    Digests with :func:`~diracx.core.hashing.hash_json`, then keeps the
+    leftmost 16 bytes so ``Inputs.InputHash`` stays ``BINARY(16)``.
+    ``descriptor is None`` is treated as ``{}`` so missing and empty
+    descriptors dedupe together. ``lfn is None`` stays JSON ``null`` (no file).
+
+    Args:
+        lfn: Logical file name, or ``None`` when the input is not a file.
+        descriptor: Opaque JSON object, or ``None`` (normalised to ``{}``).
+
+    Returns:
+        Leftmost 16 bytes of the SHA-256 digest.
+    """
+    envelope = {"LFN": lfn, "Descriptor": {} if descriptor is None else descriptor}
+    return hash_json(envelope)[:16]
 
 
 class NewComputeParcel(NamedTuple):
@@ -604,7 +623,7 @@ class TransformationDB(BaseSQLDB):
                 "were not Unassigned",
             )
 
-    async def list_feedable_transformation_ids(self) -> list[UUID]:
+    async def list_feedable_transformation_ids(self) -> list[AnyUUID]:
         """Return IDs of transformations whose feeder may run.
 
         A transformation is feedable when it is ``Active``, ``FeederEnabled`` is
@@ -619,7 +638,7 @@ class TransformationDB(BaseSQLDB):
         return list(result.scalars().all())
 
     async def get_feeder_columns(
-        self, transformation_id: UUID
+        self, transformation_id: AnyUUID
     ) -> dict[str, Any] | None:
         """Load feeder columns for one transformation.
 
@@ -643,7 +662,7 @@ class TransformationDB(BaseSQLDB):
         self,
         transformation_id: AnyUUID,
         inputs: Sequence[FeederInput],
-    ) -> list[UUID]:
+    ) -> list[AnyUUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
         Deduplicates within the batch by ``InputHash`` (first proposal wins),
@@ -693,7 +712,7 @@ class TransformationDB(BaseSQLDB):
         return [row["input_id"] for row in rows]
 
     async def set_feeder_state(
-        self, transformation_id: UUID, state: dict[str, Any] | None
+        self, transformation_id: AnyUUID, state: dict[str, Any] | None
     ) -> None:
         """Replace ``FeederState`` for a transformation.
 
@@ -707,7 +726,9 @@ class TransformationDB(BaseSQLDB):
             .values(feeder_state=state)
         )
 
-    async def set_feeder_enabled(self, transformation_id: UUID, enabled: bool) -> None:
+    async def set_feeder_enabled(
+        self, transformation_id: AnyUUID, enabled: bool
+    ) -> None:
         """Set whether the transformation's feeder may run.
 
         Args:

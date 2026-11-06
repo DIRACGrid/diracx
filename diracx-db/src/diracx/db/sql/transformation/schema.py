@@ -72,7 +72,7 @@ from diracx.db.sql.utils.types import SmarterDateTime
 
 # OIDC subjects, the identifier the DiracX authentication tables key on
 str256 = Annotated[str, 256]
-# SHA-256[:16] of JCS canonical (LFN, Descriptor); see .hashing
+# SHA-256[:16] of JCS canonical (LFN, Descriptor); see db._input_hash
 bytes16 = Annotated[bytes, 16]
 # Content hashes of canonicalised documents (DX-ADR-007)
 bytes32 = Annotated[bytes, 32]

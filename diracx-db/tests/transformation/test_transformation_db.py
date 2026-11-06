@@ -13,6 +13,7 @@ from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
 )
+from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
     FeederInput,
     InputStatus,
@@ -21,8 +22,7 @@ from diracx.core.models.transformation import (
     TransformationStatus,
 )
 from diracx.db.sql import TransformationDB
-from diracx.db.sql.transformation.db import NewComputeParcel
-from diracx.db.sql.transformation.hashing import _input_hash
+from diracx.db.sql.transformation.db import NewComputeParcel, _input_hash
 from diracx.db.sql.transformation.schema import (
     COUNTER_STATUSES,
     ComputeParcels,
@@ -669,6 +669,37 @@ async def test_get_and_set_feeder_columns(
         assert columns["feeder_state"] is None
 
         assert await db.get_feeder_columns(uuid7()) is None
+
+
+def test_input_hash_length_and_stability():
+    digest = _input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "1-10"})
+    assert len(digest) == 16
+    assert digest == _input_hash("/lhcb/file.dst", {"Mask": "1-10", "Run": 1234})
+
+    other = _input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "11-20"})
+    assert digest != other
+
+    null_lfn = _input_hash(None, {"Seed": 42})
+    assert len(null_lfn) == 16
+    assert null_lfn != _input_hash(None, {"Seed": 43})
+
+    null_mask = _input_hash("/cms/file1.root", None)
+    dict_mask = _input_hash("/cms/file1.root", {})
+    assert null_mask == dict_mask
+
+
+def test_input_hash_none_descriptor_matches_empty():
+    assert _input_hash("/a", None) == _input_hash("/a", {})
+    assert _input_hash(None, None) == _input_hash(None, {})
+
+
+def test_input_hash_matches_truncated_hash_json_over_envelope():
+    lfn = None
+    descriptor = {"Seed": 1}
+    envelope = {"LFN": lfn, "Descriptor": descriptor}
+    expected = hash_json(envelope)[:16]
+    assert _input_hash(lfn, descriptor) == expected
+    assert len(expected) == 16
 
 
 async def test_insert_unassigned_inputs_deduplicates_on_hash(
