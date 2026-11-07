@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, select, update
 if TYPE_CHECKING:
     pass
 
-from ..utils import BaseSQLDB
+from ..utils import BaseSQLDB, execute_in_chunks, fetch_in_chunks
 from .schema import (
     BannedSitesQueue,
     GridCEsQueue,
@@ -43,17 +43,21 @@ class TaskQueueDB(BaseSQLDB):
         Returns:
             Unique tuples of task queue ID, owner, owner group, and VO.
         """
-        stmt = (
-            select(
-                TaskQueues.TQId, TaskQueues.Owner, TaskQueues.OwnerGroup, TaskQueues.VO
-            )
-            .join(JobsQueue, TaskQueues.TQId == JobsQueue.TQId)
-            .where(JobsQueue.JobId.in_(job_ids))
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(
+                    TaskQueues.TQId,
+                    TaskQueues.Owner,
+                    TaskQueues.OwnerGroup,
+                    TaskQueues.VO,
+                )
+                .join(JobsQueue, TaskQueues.TQId == JobsQueue.TQId)
+                .where(JobsQueue.JobId.in_(chunk))
+            ),
+            job_ids,
         )
-        return set(
-            (int(row[0]), str(row[1]), str(row[2]), str(row[3]))
-            for row in (await self.conn.execute(stmt)).all()
-        )
+        return set((int(row[0]), str(row[1]), str(row[2]), str(row[3])) for row in rows)
 
     async def get_owner_for_task_queue(self, tq_id: int) -> dict[str, str]:
         """Get the owner, owner group, and VO for a task queue.
@@ -121,8 +125,11 @@ class TaskQueueDB(BaseSQLDB):
         Args:
             job_ids: Job identifiers to remove from task queues.
         """
-        stmt = delete(JobsQueue).where(JobsQueue.JobId.in_(job_ids))
-        await self.conn.execute(stmt)
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: delete(JobsQueue).where(JobsQueue.JobId.in_(chunk)),
+            job_ids,
+        )
 
     async def is_task_queue_empty(self, tq_id: int) -> bool:
         """Check whether an enabled task queue has no associated jobs.
@@ -166,12 +173,15 @@ class TaskQueueDB(BaseSQLDB):
             tq_ids: Task queue identifiers to update.
             priority: Priority value to assign.
         """
-        update_stmt = (
-            update(TaskQueues)
-            .where(TaskQueues.TQId.in_(tq_ids))
-            .values(Priority=priority)
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: (
+                update(TaskQueues)
+                .where(TaskQueues.TQId.in_(chunk))
+                .values(Priority=priority)
+            ),
+            tq_ids,
         )
-        await self.conn.execute(update_stmt)
 
     async def retrieve_task_queues(self, tq_id_list=None):
         """Retrieve task queue details and their associated values.
@@ -210,11 +220,18 @@ class TaskQueueDB(BaseSQLDB):
                 TaskQueues.CPUTime,
             )
         )
-        if tq_id_list is not None:
-            stmt = stmt.where(TaskQueues.TQId.in_(tq_id_list))
+        if tq_id_list is None:
+            rows = (await self.conn.execute(stmt)).all()
+        else:
+            # Grouped by TQId, so each group is in a single chunk
+            rows = await fetch_in_chunks(
+                self.conn,
+                lambda chunk: stmt.where(TaskQueues.TQId.in_(chunk)),
+                tq_id_list,
+            )
 
         tq_data: dict[int, dict[str, list[str]]] = dict(
-            dict(row._mapping) for row in await self.conn.execute(stmt)
+            dict(row._mapping) for row in rows
         )
         # TODO: the line above should be equivalent to the following commented code, check this is the case
         # for record in rows:
