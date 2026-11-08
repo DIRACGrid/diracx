@@ -70,7 +70,7 @@ jobs:
           git -C /tmp/DIRACRepo fetch origin "$DIRAC_REF"
           git -C /tmp/DIRACRepo checkout -q FETCH_HEAD
           echo "Current revision: $(git -C /tmp/DIRACRepo rev-parse HEAD)"
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         if: needs.resolve-deps.outputs.dirac-ref != ''
         with:
           run-install: false
