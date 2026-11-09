@@ -693,6 +693,15 @@ def test_input_hash_none_descriptor_matches_empty():
     assert _input_hash(None, None) == _input_hash(None, {})
 
 
+def test_input_hash_rejects_integer_outside_jcs_domain():
+    # JCS only accepts IEEE-754 safe integers (about ±2**53);
+    # rfc8785.IntegerDomainError is a ValueError.
+    with pytest.raises(ValueError):
+        _input_hash(None, {"Seed": 2**63 - 1})
+    with pytest.raises(ValueError):
+        _input_hash(None, {"Seed": -(2**63)})
+
+
 def test_input_hash_matches_truncated_hash_json_over_envelope():
     lfn = None
     descriptor = {"Seed": 1}
@@ -753,6 +762,42 @@ async def test_insert_unassigned_inputs_deduplicates_on_hash(
     assert by_hash[hash_a].delayed_until == delayed
     assert by_hash[hash_a].lfn is None
     assert by_hash[hash_b].descriptor == descriptor_b
+
+
+async def test_insert_unassigned_inputs_dedupes_across_chunks(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    proposals = [
+        FeederInput(descriptor={"seed": 1}),
+        FeederInput(descriptor={"seed": 2}),
+        FeederInput(descriptor={"seed": 1}),
+        FeederInput(descriptor={"seed": 3}),
+    ]
+
+    async with transformation_db as db:
+        with pytest.raises(ValueError):
+            await db.insert_unassigned_inputs(
+                standalone_active_transformation, proposals, chunk_size=0
+            )
+        # insert 3 out of 4 files (one is duplicated)
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=1
+        )
+        assert len(inserted) == 3
+        # insert 0 out of 4 files (all are duplicated)
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=2
+        )
+        assert len(inserted) == 0
+        # check that 3 files are in the Inputs table
+        count = (
+            await db.conn.execute(
+                select(func.count())
+                .select_from(Inputs)
+                .where(Inputs.transformation_id == standalone_active_transformation)
+            )
+        ).scalar_one()
+    assert count == 3
 
 
 async def test_insert_unassigned_inputs_rejects_invalid_feeder_input(

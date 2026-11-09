@@ -662,54 +662,77 @@ class TransformationDB(BaseSQLDB):
         self,
         transformation_id: AnyUUID,
         inputs: Sequence[FeederInput],
+        chunk_size: int = 1000,
     ) -> list[AnyUUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
-        Deduplicates within the batch by ``InputHash`` (first proposal wins),
-        skips hashes that already exist for the transformation, and mints a
-        UUIDv7 for each new row. Status is always ``Unassigned``.
+        Deduplicates by ``InputHash`` (first proposal wins), including across
+        chunks of this call. Hashes already stored for the transformation are
+        skipped. Each chunk is at most ``chunk_size`` proposals: one
+        ``SELECT`` of existing hashes, then one ``INSERT`` of the new rows.
+        A UUIDv7 is minted for each new row. Status is always ``Unassigned``.
 
         Args:
             transformation_id: Transformation that owns the inputs.
             inputs: Feeder proposals to insert; empty sequences are a no-op.
+            chunk_size: Maximum proposals read, and rows selected or inserted,
+                per statement.
 
         Returns:
-            ``input_id`` values of the rows that were inserted.
-        """
-        by_hash: dict[bytes, FeederInput] = {}
-        for item in inputs:
-            by_hash.setdefault(_input_hash(item.lfn, item.descriptor), item)
-        if not by_hash:
-            return []
+            ``input_id`` values of the rows that were inserted, in first-seen
+            order.
 
-        existing = set(
-            (
-                await self.conn.execute(
-                    select(Inputs.input_hash).where(
-                        Inputs.transformation_id == transformation_id,
-                        Inputs.input_hash.in_(by_hash),
+        Raises:
+            ValueError: If ``chunk_size`` is less than 1.
+        """
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be at least 1")
+
+        inserted: list[AnyUUID] = []
+        # Hashes already accepted in this call, so a later chunk does not
+        # insert or re-select a duplicate of an earlier proposal.
+        seen: set[bytes] = set()
+        for start in range(0, len(inputs), chunk_size):
+            by_hash: dict[bytes, FeederInput] = {}
+            for item in inputs[start : start + chunk_size]:
+                digest = _input_hash(item.lfn, item.descriptor)
+                if digest in seen:
+                    continue
+                by_hash.setdefault(digest, item)
+            if not by_hash:
+                continue
+
+            existing = set(
+                (
+                    await self.conn.execute(
+                        select(Inputs.input_hash).where(
+                            Inputs.transformation_id == transformation_id,
+                            Inputs.input_hash.in_(by_hash),
+                        )
                     )
-                )
-            ).scalars()
-        )
-        rows = [
-            {
-                "transformation_id": transformation_id,
-                "input_id": uuid7(),
-                "input_hash": input_hash,
-                "status": InputStatus.UNASSIGNED,
-                "lfn": item.lfn,
-                "lfn_size": item.lfn_size,
-                "descriptor": item.descriptor,
-                "delayed_until": item.delayed_until,
-            }
-            for input_hash, item in by_hash.items()
-            if input_hash not in existing
-        ]
-        if rows:
+                ).scalars()
+            )
+            seen.update(by_hash)
+            rows = [
+                {
+                    "transformation_id": transformation_id,
+                    "input_id": uuid7(),
+                    "input_hash": input_hash,
+                    "status": InputStatus.UNASSIGNED,
+                    "lfn": item.lfn,
+                    "lfn_size": item.lfn_size,
+                    "descriptor": item.descriptor,
+                    "delayed_until": item.delayed_until,
+                }
+                for input_hash, item in by_hash.items()
+                if input_hash not in existing
+            ]
+            if not rows:
+                continue
             await self.conn.execute(insert(Inputs).values(rows))
             # TODO(#1085): journal +len(rows) Unassigned
-        return [row["input_id"] for row in rows]
+            inserted.extend(row["input_id"] for row in rows)
+        return inserted
 
     async def set_feeder_state(
         self, transformation_id: AnyUUID, state: dict[str, Any] | None
