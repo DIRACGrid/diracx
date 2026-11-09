@@ -1,7 +1,9 @@
 """Tests for the journalled counter operations (DX-ADR-009).
 
-All tests run against SQLite, which verifies correctness but not concurrency
-(SQLite serialises writes natively and has no FOR UPDATE SKIP LOCKED).
+Tests run against MySQL when testcontainers is installed and Docker is
+available, exercising the MySQL-specific branches (isolation levels,
+FOR UPDATE SKIP LOCKED, ON DUPLICATE KEY UPDATE, BIGINT cast, TEMPORARY
+tables).  Falls back to SQLite when MySQL is unavailable.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from sqlalchemy import (
     insert,
     select,
 )
+from sqlalchemy import insert as sa_insert
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from diracx.db.sql.utils.counters import (
@@ -27,7 +30,41 @@ from diracx.db.sql.utils.counters import (
     JournalledCounter,
     counter_locks_table,
     journalled_counter,
+    journalled_counters,
 )
+
+try:
+    from testcontainers.community.mysql import MySqlContainer
+
+    HAS_TESTCONTAINERS = True
+except ImportError:
+    MySqlContainer = None
+    HAS_TESTCONTAINERS = False
+
+_MYSQL_SKIP_REASON: str | None = None
+if not HAS_TESTCONTAINERS:
+    _MYSQL_SKIP_REASON = "testcontainers not installed"
+
+
+@pytest.fixture(scope="session")
+def mysql_url():
+    """Start a MySQL container for the test session."""
+    global _MYSQL_SKIP_REASON  # noqa: PLW0603
+
+    if _MYSQL_SKIP_REASON:
+        yield None
+        return
+
+    try:
+        with MySqlContainer("mysql:8.0") as mysql:
+            url = mysql.get_connection_url()
+            # testcontainers returns mysql:// or mysql+pymysql://; we need aiomysql
+            url = url.replace("mysql://", "mysql+aiomysql://", 1)
+            url = url.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
+            yield url
+    except Exception as e:
+        _MYSQL_SKIP_REASON = f"Docker unavailable: {e}"
+        yield None
 
 
 @pytest.fixture
@@ -52,33 +89,36 @@ def simple_metadata():
 
 
 @pytest.fixture
-async def engine(simple_metadata):
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-    event.listen(
-        eng.sync_engine,
-        "connect",
-        lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-    )
+async def engine(simple_metadata, mysql_url):
+    if mysql_url is not None:
+        eng = create_async_engine(mysql_url)
+    else:
+        eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+        event.listen(
+            eng.sync_engine,
+            "connect",
+            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
+        )
+
     async with eng.begin() as conn:
         await conn.run_sync(simple_metadata.create_all)
         locks = counter_locks_table(simple_metadata)
-        from diracx.db.sql.utils.counters import journalled_counters
-
         for counter in journalled_counters(simple_metadata):
-            from sqlalchemy import insert as sa_insert
-
             await conn.execute(
                 sa_insert(locks).prefix_with("OR IGNORE", dialect="sqlite"),
                 counter.lock_rows(),
             )
+
     yield eng
+
+    if mysql_url is not None:
+        async with eng.begin() as conn:
+            await conn.run_sync(simple_metadata.drop_all)
     await eng.dispose()
 
 
 @pytest.fixture
 def counter(simple_metadata) -> JournalledCounter:
-    from diracx.db.sql.utils.counters import journalled_counters
-
     return journalled_counters(simple_metadata)[0]
 
 
