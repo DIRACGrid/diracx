@@ -14,7 +14,7 @@ from diracx.core.models.search import (
     VectorSearchOperator,
     VectorSearchSpec,
 )
-from diracx.db.sql.pilots.db import PilotAgentsDB
+from diracx.db.sql.pilot.db import PilotAgentsDB
 
 
 @pytest.fixture

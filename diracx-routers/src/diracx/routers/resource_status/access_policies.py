@@ -1,0 +1,45 @@
+"""Define the access policy for ResourceStatus resource-status endpoints.
+
+The policy permits any authenticated user to access status resources; endpoint
+handlers remain responsible for scoping results to the user's VO.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Annotated
+
+from fastapi import Depends
+
+from diracx.routers.access_policies import BaseAccessPolicy
+from diracx.routers.utils.users import AuthorizedUserInfo
+
+
+class ResourceStatusAccessPolicy(BaseAccessPolicy):
+    """Allow authenticated users to access ResourceStatus resources.
+
+    Authentication is provided by ``verify_dirac_access_token``. VO scoping is
+    applied by the ResourceStatus route handlers rather than by this policy.
+    """
+
+    @staticmethod
+    async def policy(
+        policy_name: str,
+        user_info: AuthorizedUserInfo,
+        /,
+    ):
+        """Allow the authenticated user to proceed with an ResourceStatus request.
+
+        Args:
+            policy_name: Name of the access policy being evaluated.
+            user_info: Authenticated user identity and security properties.
+        """
+        # Authentication is already guaranteed by verify_dirac_access_token;
+        # any authenticated user may read resource statuses. VO scoping is
+        # applied in the routes themselves.
+        return
+
+
+CheckResourceStatusPolicyCallable = Annotated[
+    Callable, Depends(ResourceStatusAccessPolicy.check)
+]

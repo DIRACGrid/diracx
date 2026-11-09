@@ -49,17 +49,16 @@ Keep this terminal open: the logs of all the services appear there, and you will
 
 ## 2. Watch a periodic task
 
-The local instance runs `jobs:DummyJobExecutorMonitorTask` every 10 seconds.
+The local instance runs `transformations:DummyComputeBackendMonitorTask` every 10 seconds.
 After a few seconds, two traces like these ones are printed:
 
 ```
 [otel      ] ━━ trace dd8b0f331030ee3fd543cf9d076051cd 20:11:21Z (1 span: tasks-scheduler)
-[otel      ] task.submit jobs:DummyJobExecutorMonitorTask  [tasks-scheduler, producer] 2.4ms
-[otel      ] ━━ trace 5b1e0c7a9f2d4e8b8c3a6f1d2e4b7a90 20:11:21Z (4 spans: tasks-worker)
-[otel      ] task.process jobs:DummyJobExecutorMonitorTask  [tasks-worker, consumer] 110.8ms  queue_wait=0.00375 link=dd8b0f331030ee3fd543cf9d076051cd
-[otel      ] └─ task.execute jobs:DummyJobExecutorMonitorTask  [tasks-worker, internal] 109.1ms  task=ok
-[otel      ]    ├─ SELECT /tmp/tmp.NLsk31WKwQ/jobdb.db  [tasks-worker, client] 0.8ms
-[otel      ]    └─ SELECT /tmp/tmp.NLsk31WKwQ/jobdb.db  [tasks-worker, client] 0.2ms
+[otel      ] task.submit transformations:DummyComputeBackendMonitorTask  [tasks-scheduler, producer] 2.4ms
+[otel      ] ━━ trace 5b1e0c7a9f2d4e8b8c3a6f1d2e4b7a90 20:11:21Z (3 spans: tasks-worker)
+[otel      ] task.process transformations:DummyComputeBackendMonitorTask  [tasks-worker, consumer] 110.8ms  queue_wait=0.00375 link=dd8b0f331030ee3fd543cf9d076051cd
+[otel      ] └─ task.execute transformations:DummyComputeBackendMonitorTask  [tasks-worker, internal] 109.1ms  task=ok
+[otel      ]    └─ SELECT /tmp/tmp.NLsk31WKwQ/transformationdb.db  [tasks-worker, client] 0.8ms
 ```
 
 Read them from the top:
@@ -67,7 +66,7 @@ Read them from the top:
 1. The **scheduler** submitted the task (`task.submit`, a *producer* span).
 2. A **worker** picked it up 3.75 ms later (`queue_wait`), and processed the message (`task.process`, a *consumer* span).
 3. The task itself ran for 109 ms (`task.execute`) and succeeded (`task=ok`).
-4. While running, it made two SQL queries to the job database.
+4. While running, it queried the transformation database for parcels to claim.
 
 The execution is a separate trace, whose `link` is the trace of the submission: the scheduler stored its trace context in the task message, and the worker linked its trace to it.
 This is how DiracX follows a piece of work across processes, without making a trace last as long as the task waits in the queue.

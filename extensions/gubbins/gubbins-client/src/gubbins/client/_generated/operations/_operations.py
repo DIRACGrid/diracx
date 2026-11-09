@@ -719,7 +719,7 @@ def build_pilots_summary_request(**kwargs: Any) -> HttpRequest:
     return HttpRequest(method="POST", url=_url, headers=_headers, **kwargs)
 
 
-def build_rss_get_storage_status_request(
+def build_resource_status_get_storage_status_request(  # pylint: disable=name-too-long
     *,
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
@@ -731,7 +731,7 @@ def build_rss_get_storage_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/rss/storage"
+    _url = "/api/resource-status/storage"
 
     # Construct headers
     if if_modified_since is not None:
@@ -747,7 +747,7 @@ def build_rss_get_storage_status_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_rss_get_compute_status_request(
+def build_resource_status_get_compute_status_request(  # pylint: disable=name-too-long
     *,
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
@@ -759,7 +759,7 @@ def build_rss_get_compute_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/rss/compute"
+    _url = "/api/resource-status/compute"
 
     # Construct headers
     if if_modified_since is not None:
@@ -775,7 +775,7 @@ def build_rss_get_compute_status_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_rss_get_site_status_request(
+def build_resource_status_get_site_status_request(  # pylint: disable=name-too-long
     *,
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
@@ -787,7 +787,7 @@ def build_rss_get_site_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/rss/site"
+    _url = "/api/resource-status/site"
 
     # Construct headers
     if if_modified_since is not None:
@@ -803,7 +803,7 @@ def build_rss_get_site_status_request(
     return HttpRequest(method="GET", url=_url, headers=_headers, **kwargs)
 
 
-def build_rss_get_fts_status_request(
+def build_resource_status_get_fts_status_request(  # pylint: disable=name-too-long
     *,
     if_modified_since: Optional[str] = None,
     etag: Optional[str] = None,
@@ -815,7 +815,7 @@ def build_rss_get_fts_status_request(
     accept = _headers.pop("Accept", "application/json")
 
     # Construct URL
-    _url = "/api/rss/fts"
+    _url = "/api/resource-status/fts"
 
     # Construct headers
     if if_modified_since is not None:
@@ -3863,14 +3863,14 @@ class PilotsOperations:
         return deserialized  # type: ignore
 
 
-class RssOperations:
+class ResourceStatusOperations:
     """
     .. warning::
         **DO NOT** instantiate this class directly.
 
         Instead, you should access the following operations through
         :class:`~_generated.Dirac`'s
-        :attr:`rss` attribute.
+        :attr:`resource_status` attribute.
     """
 
     models = _models
@@ -3928,7 +3928,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.StorageElementStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_storage_status_request(
+        _request = build_resource_status_get_storage_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -4001,7 +4001,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.ComputeElementStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_compute_status_request(
+        _request = build_resource_status_get_compute_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -4074,7 +4074,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.SiteStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_site_status_request(
+        _request = build_resource_status_get_site_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,
@@ -4147,7 +4147,7 @@ class RssOperations:
 
         cls: ClsType[dict[str, _models.FTSStatus]] = kwargs.pop("cls", None)
 
-        _request = build_rss_get_fts_status_request(
+        _request = build_resource_status_get_fts_status_request(
             if_modified_since=if_modified_since,
             etag=etag,
             match_condition=match_condition,

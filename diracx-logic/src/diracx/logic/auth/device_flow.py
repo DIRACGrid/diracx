@@ -25,7 +25,23 @@ async def initiate_device_flow(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
 ) -> InitiateDeviceFlowResponse:
-    """Initiate the device flow against DIRAC authorization Server."""
+    """Initiate a device flow against the DIRAC authorization server.
+
+    Args:
+        client_id: OAuth client identifier.
+        scope: Requested VO, group, and property scopes.
+        verification_uri: URI where the user completes authorization.
+        auth_db: Authentication database.
+        config: Installation configuration used to validate the scope.
+        available_properties: Security properties supported by the installation.
+        settings: Authentication service settings.
+
+    Returns:
+        Device and user codes, verification URIs, and the code lifetime.
+
+    Raises:
+        ValueError: If the client ID or requested scope is invalid.
+    """
     if settings.dirac_client_id != client_id:
         raise ValueError("Unrecognised client ID")
 
@@ -50,7 +66,19 @@ async def do_device_flow(
     available_properties: set[SecurityProperty],
     settings: AuthSettings,
 ) -> str:
-    """Verify URI for the device flow."""
+    """Start IAM authorization for a previously issued device user code.
+
+    Args:
+        request_url: Base URL of the request handling device authorization.
+        auth_db: Authentication database.
+        user_code: User code entered to approve the device flow.
+        config: Installation configuration used to validate the stored scope.
+        available_properties: Security properties supported by the installation.
+        settings: Authentication service settings.
+
+    Returns:
+        URL to which the user should be redirected at the IAM.
+    """
     # Here we make sure the user_code actually exists
     scope = await auth_db.device_flow_validate_user_code(
         user_code, settings.device_flow_expiration_seconds
@@ -82,7 +110,23 @@ async def finish_device_flow(
     config: Config,
     settings: AuthSettings,
 ):
-    """Check that the url callbacked by IAM/CheckIn after the authorization flow was granted."""
+    """Validate the IAM callback and store the device flow's ID token.
+
+    Args:
+        request_url: Base URL of the callback request.
+        code: Authorization code returned by the IAM.
+        state: Encrypted state returned by the IAM.
+        auth_db: Authentication database.
+        config: Installation configuration used to retrieve IAM metadata.
+        settings: Authentication service settings.
+
+    Raises:
+        AuthorizationError: If the state cannot be decrypted.
+        AssertionError: If the state does not belong to a device flow.
+        IAMServerError: If the IAM returns a server error.
+        IAMClientError: If the IAM rejects the token request.
+        JoseError: If the IAM ID token fails validation.
+    """
     decrypted_state = decrypt_state(state, settings.state_key.fernet)
     assert decrypted_state["grant_type"] == GrantType.device_code
 

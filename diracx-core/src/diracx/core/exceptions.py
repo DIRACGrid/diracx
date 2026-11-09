@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 __all__ = [
     "AuthorizationError",
     "DiracError",
     "DocumentUpsertError",
     "IAMClientError",
     "IAMServerError",
+    "InputStatusConflictError",
     "InvalidCredentialsError",
+    "InvalidParcelTransitionError",
     "InvalidQueryError",
     "NotReadyError",
     "PendingAuthorizationError",
@@ -19,6 +23,7 @@ __all__ = [
     "SandboxAlreadyInsertedError",
     "SandboxNotFoundError",
     "TokenNotFoundError",
+    "TransformationNotFoundError",
 ]
 
 
@@ -185,3 +190,50 @@ class PilotAlreadyExistsError(DiracError):
 
 class PilotAlreadyAssociatedWithJobError(DiracError):
     """We can't associate a pilot with the same job twice."""
+
+
+class TransformationNotFoundError(DiracError):
+    """Raised when a transformation cannot be found.
+
+    Attributes:
+        transformation_id: Identifier of the missing transformation.
+    """
+
+    def __init__(self, transformation_id: UUID, detail: str = ""):
+        self.transformation_id = transformation_id
+        super().__init__(
+            f"Transformation {transformation_id} not found"
+            + (f" ({detail})" if detail else "")
+        )
+
+
+class InputStatusConflictError(DiracError):
+    """Raised when transformation inputs are not in the status a change expects.
+
+    Attributes:
+        transformation_id: Transformation the inputs belong to.
+    """
+
+    def __init__(self, transformation_id: UUID, detail: str = ""):
+        self.transformation_id = transformation_id
+        super().__init__(
+            f"Inputs of transformation {transformation_id} changed status"
+            + (f" ({detail})" if detail else "")
+        )
+
+
+class InvalidParcelTransitionError(DiracError):
+    """A parcel status change that the state machine of DX-ADR-005 forbids.
+
+    Attributes:
+        from_status: Status the parcels were to leave.
+        to_status: Status the parcels were to enter.
+    """
+
+    def __init__(self, from_status: str, to_status: str, detail: str = ""):
+        self.from_status = from_status
+        self.to_status = to_status
+        super().__init__(
+            f"Parcels cannot move from {from_status} to {to_status}"
+            + (f" ({detail})" if detail else "")
+        )

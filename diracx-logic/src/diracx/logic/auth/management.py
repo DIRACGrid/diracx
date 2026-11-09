@@ -23,6 +23,13 @@ async def get_refresh_tokens(
     """Get all refresh tokens bound to a given subject.
 
     If there is no subject, then all the refresh tokens are retrieved.
+
+    Args:
+        auth_db: Authentication database.
+        subject: Optional subject identifier to filter by.
+
+    Returns:
+        Refresh token records matching the subject, or all records if omitted.
     """
     return await auth_db.get_user_refresh_tokens(subject)
 
@@ -32,7 +39,20 @@ async def revoke_refresh_token_by_jti(
     subject: str | None,
     jti: UUID,
 ) -> str:
-    """Revoke a refresh token. If a subject is provided, then the refresh token must be owned by that subject."""
+    """Revoke a refresh token by JWT ID, optionally verifying its owner.
+
+    Args:
+        auth_db: Authentication database.
+        subject: Optional subject that must own the token.
+        jti: JWT ID of the refresh token to revoke.
+
+    Returns:
+        Confirmation message for the revoked token.
+
+    Raises:
+        PermissionError: If the token belongs to a different subject.
+        TokenNotFoundError: If the JWT ID is not in the database.
+    """
     res = await auth_db.get_refresh_token(jti)
 
     if subject and subject != res["Sub"]:
@@ -50,7 +70,23 @@ async def revoke_refresh_token_by_refresh_token(
     client_id: str,
     settings: AuthSettings,
 ) -> str:
-    """Revoke a refresh token following RFC7009."""
+    """Revoke a refresh token using the OAuth 2.0 Token Revocation standard (RFC 7009).
+
+    Args:
+        auth_db: Authentication database.
+        subject: Optional subject that must own the token.
+        token: Refresh token to revoke.
+        token_type_hint: Optional OAuth token type hint.
+        client_id: OAuth client identifier.
+        settings: Authentication service settings.
+
+    Returns:
+        Confirmation message for the revoked token.
+
+    Raises:
+        ValueError: If the token type hint is unsupported.
+        InvalidCredentialsError: If the client ID is invalid.
+    """
     # Test the token type hint
     if token_type_hint and token_type_hint == TokenTypeHint.access_token:
         raise ValueError("unsupported_token_type")
@@ -70,6 +106,10 @@ async def cleanup_expired_data(auth_db: AuthDB, settings: AuthSettings) -> None:
     Expired refresh tokens are removed by dropping whole monthly partitions of
     the RefreshTokens table (see ``AuthDB.maintain_refresh_token_partitions``).
     The flow tables are not partitioned, so their expired rows are deleted.
+
+    Args:
+        auth_db: Authentication database.
+        settings: Authentication settings that define retention periods.
     """
     await auth_db.maintain_refresh_token_partitions(
         retention_months=settings.refresh_token_retention_months,

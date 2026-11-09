@@ -22,7 +22,7 @@ from .operations import (
     LollygagOperations,
     MyOperations,
     PilotsOperations,
-    RssOperations,
+    ResourceStatusOperations,
     WellKnownOperations,
 )
 
@@ -44,8 +44,8 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword,too-many-inst
     :vartype my: _generated.aio.operations.MyOperations
     :ivar pilots: PilotsOperations operations
     :vartype pilots: _generated.aio.operations.PilotsOperations
-    :ivar rss: RssOperations operations
-    :vartype rss: _generated.aio.operations.RssOperations
+    :ivar resource_status: ResourceStatusOperations operations
+    :vartype resource_status: _generated.aio.operations.ResourceStatusOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -85,7 +85,7 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword,too-many-inst
         self.lollygag = LollygagOperations(self._client, self._config, self._serialize, self._deserialize)
         self.my = MyOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.rss = RssOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.resource_status = ResourceStatusOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(
         self, request: HttpRequest, *, stream: bool = False, **kwargs: Any
