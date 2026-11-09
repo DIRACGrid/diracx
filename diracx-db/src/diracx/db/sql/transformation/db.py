@@ -123,8 +123,9 @@ class TransformationDB(BaseSQLDB):
             transformation_id: The transformation.
 
         Returns:
-            Its ``status``, ``kind``, ``feeder``, ``feeder_enabled``,
-            ``packer`` and ``packer_args``.
+            Its ``status``, ``kind``, ``feeder``, ``feeder_args``,
+            ``feeder_state``, ``feeder_enabled``, ``packer`` and
+            ``packer_args``.
 
         Raises:
             TransformationNotFoundError: If the transformation does not exist.
@@ -133,6 +134,8 @@ class TransformationDB(BaseSQLDB):
             Transformations.status.label("status"),
             Transformations.kind.label("kind"),
             Transformations.feeder.label("feeder"),
+            Transformations.feeder_args.label("feeder_args"),
+            Transformations.feeder_state.label("feeder_state"),
             Transformations.feeder_enabled.label("feeder_enabled"),
             Transformations.packer.label("packer"),
             Transformations.packer_args.label("packer_args"),
@@ -623,7 +626,7 @@ class TransformationDB(BaseSQLDB):
                 "were not Unassigned",
             )
 
-    async def list_feedable_transformation_ids(self) -> list[AnyUUID]:
+    async def list_feedable_transformation_ids(self) -> list[UUID]:
         """Return IDs of transformations whose feeder may run.
 
         A transformation is feedable when it is ``Active``, ``FeederEnabled`` is
@@ -637,33 +640,12 @@ class TransformationDB(BaseSQLDB):
         result = await self.conn.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_feeder_columns(
-        self, transformation_id: AnyUUID
-    ) -> dict[str, Any] | None:
-        """Load feeder columns for one transformation.
-
-        Args:
-            transformation_id: Transformation whose feeder columns to load.
-
-        Returns:
-            Mapping with ``feeder``, ``feeder_args``, ``feeder_state``, and
-            ``feeder_enabled``, or ``None`` if the transformation does not exist.
-        """
-        stmt = select(
-            Transformations.feeder.label("feeder"),
-            Transformations.feeder_args.label("feeder_args"),
-            Transformations.feeder_state.label("feeder_state"),
-            Transformations.feeder_enabled.label("feeder_enabled"),
-        ).where(Transformations.transformation_id == transformation_id)
-        row = (await self.conn.execute(stmt)).one_or_none()
-        return dict(row._mapping) if row is not None else None
-
     async def insert_unassigned_inputs(
         self,
         transformation_id: AnyUUID,
         inputs: Sequence[FeederInput],
         chunk_size: int = 1000,
-    ) -> list[AnyUUID]:
+    ) -> list[UUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
         Deduplicates by ``InputHash`` (first proposal wins), including across
@@ -688,7 +670,7 @@ class TransformationDB(BaseSQLDB):
         if chunk_size < 1:
             raise ValueError("chunk_size must be at least 1")
 
-        inserted: list[AnyUUID] = []
+        inserted: list[UUID] = []
         # Hashes already accepted in this call, so a later chunk does not
         # insert or re-select a duplicate of an earlier proposal.
         seen: set[bytes] = set()

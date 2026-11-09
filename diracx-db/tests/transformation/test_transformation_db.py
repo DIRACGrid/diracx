@@ -311,6 +311,8 @@ async def test_get_transformation(
             "status": TransformationStatus.NEW,
             "kind": TransformationKind.COMPUTE,
             "feeder": None,
+            "feeder_args": None,
+            "feeder_state": None,
             "feeder_enabled": True,
             "packer": "Standard",
             "packer_args": None,
@@ -641,34 +643,26 @@ async def test_list_feedable_transformation_ids(
         assert await db.list_feedable_transformation_ids() == []
 
 
-async def test_get_and_set_feeder_columns(
+async def test_set_feeder_state_and_enabled(
     transformation_db: TransformationDB, standalone_active_transformation: UUID
 ):
     async with transformation_db as db:
-        columns = await db.get_feeder_columns(standalone_active_transformation)
-        assert columns == {
-            "feeder": "IntegerFeeder",
-            "feeder_args": {"max_count": 3},
-            "feeder_state": {"next_seed": 0},
-            "feeder_enabled": True,
-        }
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder"] == "IntegerFeeder"
+        assert row["feeder_args"] == {"max_count": 3}
+        assert row["feeder_state"] == {"next_seed": 0}
+        assert row["feeder_enabled"] is True
 
         await db.set_feeder_state(standalone_active_transformation, {"next_seed": 7})
         await db.set_feeder_enabled(standalone_active_transformation, False)
-        columns = await db.get_feeder_columns(standalone_active_transformation)
-        assert columns == {
-            "feeder": "IntegerFeeder",
-            "feeder_args": {"max_count": 3},
-            "feeder_state": {"next_seed": 7},
-            "feeder_enabled": False,
-        }
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder_args"] == {"max_count": 3}
+        assert row["feeder_state"] == {"next_seed": 7}
+        assert row["feeder_enabled"] is False
 
         await db.set_feeder_state(standalone_active_transformation, None)
-        columns = await db.get_feeder_columns(standalone_active_transformation)
-        assert columns is not None
-        assert columns["feeder_state"] is None
-
-        assert await db.get_feeder_columns(uuid7()) is None
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder_state"] is None
 
 
 def test_input_hash_length_and_stability():
