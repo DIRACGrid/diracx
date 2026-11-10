@@ -454,10 +454,16 @@ class JournalledCounter:
 
             # Recount branches (one per counted table)
             for ct_decl in counted:
-                unknown = set(ct_decl.key_exprs) - set(self.key)
-                if unknown:
+                if set(ct_decl.key_exprs) != set(self.key):
                     raise ValueError(
-                        f"CountedTable key_exprs has unknown keys: {unknown}"
+                        f"CountedTable key_exprs {set(ct_decl.key_exprs)} "
+                        f"must match counter key {set(self.key)}"
+                    )
+                unknown_measures = set(ct_decl.measure_exprs) - set(self.measures)
+                if unknown_measures:
+                    raise ValueError(
+                        f"CountedTable measure_exprs has unknown measures: "
+                        f"{unknown_measures}"
                     )
                 key_selects = [ct_decl.key_exprs[k].label(k) for k in self.key]
                 measure_selects = []
