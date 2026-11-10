@@ -5,9 +5,8 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Any
 
-from pydantic import BaseModel, NonNegativeInt
-
 from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
+from pydantic import BaseModel, NonNegativeInt
 
 
 class IntegerFeederArgs(BaseModel):

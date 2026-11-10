@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from sqlalchemy import event, func, insert, select
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import ConfigurationError
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from diracx.core.models.transformation import (
     InputStatus,
     TransformationKind,

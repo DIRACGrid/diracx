@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from sqlalchemy import event, func, insert, select
 from uuid_utils import UUID, uuid7
 
 from diracx.core.hashing import compute_input_hash
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from diracx.core.models.transformation import (
     InputStatus,
     TransformationKind,

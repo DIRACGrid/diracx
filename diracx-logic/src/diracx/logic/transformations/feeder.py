@@ -6,13 +6,13 @@ import inspect
 from collections.abc import Callable, Iterable
 from typing import Any, get_type_hints
 
+from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from pydantic import BaseModel
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.hashing import compute_input_hash
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from diracx.db.sql import TransformationDB
 
 FeederYield = Input | SetFeederState | NoMoreInputs
