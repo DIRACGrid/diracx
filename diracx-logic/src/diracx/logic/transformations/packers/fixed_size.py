@@ -25,14 +25,14 @@ async def fixed_size_packer(
     *,
     packer_args: FixedSizePackerArgs,
     inputs: AsyncIterator[PackerInput],
-    flush: bool = False,
+    flush: bool,
     feeder_active: bool,
     input_overview: dict[InputStatus, int],
 ) -> AsyncGenerator[ComputeParcel, None]:
     """Pack inputs into parcels of ``group_size``, in the order offered.
 
-    A last, smaller group is held back while more input may arrive, and packed
-    once the feeder is off or on a flush.
+    A last, smaller group is held back while more inputs may arrive. It is
+    packed only on a flush, or once the feeder has stopped.
 
     Args:
         packer_args: The packer's arguments.
