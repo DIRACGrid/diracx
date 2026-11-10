@@ -54,11 +54,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: shellcheck
@@ -72,11 +72,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: workgraph-sim
@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
@@ -132,7 +132,7 @@ jobs:
       - name: Use DIRACCommon from DIRAC dependency
         if: needs.resolve-deps.outputs.dirac-ref != ''
         run: .github/scripts/use-diraccommon-from-source.sh ../DIRAC
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: ${{ matrix.package }}
@@ -175,7 +175,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
@@ -197,7 +197,7 @@ jobs:
       - name: Use DIRACCommon from DIRAC dependency
         if: needs.resolve-deps.outputs.dirac-ref != ''
         run: .github/scripts/use-diraccommon-from-source.sh ../DIRAC
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }}
@@ -314,11 +314,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           locked: false
@@ -337,11 +337,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           cache: false
           environments: pre-commit

@@ -64,12 +64,12 @@ jobs:
             echo "lock-only-change=$lock_only_change"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         if: steps.changes.outputs.pixi-lock-changed == 'true'
         with:
           run-install: false
           post-cleanup: false
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+      - uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         if: steps.changes.outputs.pixi-lock-changed == 'true'
         with:
           cache: false

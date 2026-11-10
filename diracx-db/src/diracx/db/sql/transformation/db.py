@@ -5,19 +5,22 @@ from __future__ import annotations
 import uuid
 from collections.abc import Collection, Iterable
 from datetime import datetime
+from itertools import islice
 from typing import Any, NamedTuple, TypeAlias
 
 from sqlalchemy import bindparam, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
-from uuid_utils import UUID
+from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
 )
+from diracx.core.hashing import hash_json
 from diracx.core.models.search import SearchSpec, SortSpec
 from diracx.core.models.transformation import (
     PARCEL_TRANSITIONS,
+    FeederInput,
     InputStatus,
     PackerInput,
     ParcelStatus,
@@ -41,6 +44,25 @@ from .schema import (
 
 # BinaryUUID binds either kind; rows come back as uuid_utils.UUID
 AnyUUID: TypeAlias = UUID | uuid.UUID
+
+
+def _input_hash(lfn: str | None, descriptor: dict[str, Any] | None) -> bytes:
+    """Return a 16-byte digest of the canonical ``(LFN, Descriptor)`` pair.
+
+    Digests with :func:`~diracx.core.hashing.hash_json`, then keeps the
+    leftmost 16 bytes so ``Inputs.InputHash`` stays ``BINARY(16)``.
+    ``descriptor is None`` is treated as ``{}`` so missing and empty
+    descriptors dedupe together. ``lfn is None`` stays JSON ``null`` (no file).
+
+    Args:
+        lfn: Logical file name, or ``None`` when the input is not a file.
+        descriptor: Opaque JSON object, or ``None`` (normalised to ``{}``).
+
+    Returns:
+        Leftmost 16 bytes of the SHA-256 digest.
+    """
+    envelope = {"LFN": lfn, "Descriptor": {} if descriptor is None else descriptor}
+    return hash_json(envelope)[:16]
 
 
 class NewComputeParcel(NamedTuple):
@@ -102,8 +124,9 @@ class TransformationDB(BaseSQLDB):
             transformation_id: The transformation.
 
         Returns:
-            Its ``status``, ``kind``, ``feeder``, ``feeder_enabled``,
-            ``packer`` and ``packer_args``.
+            Its ``status``, ``kind``, ``feeder``, ``feeder_args``,
+            ``feeder_state``, ``feeder_enabled``, ``packer`` and
+            ``packer_args``.
 
         Raises:
             TransformationNotFoundError: If the transformation does not exist.
@@ -112,6 +135,8 @@ class TransformationDB(BaseSQLDB):
             Transformations.status.label("status"),
             Transformations.kind.label("kind"),
             Transformations.feeder.label("feeder"),
+            Transformations.feeder_args.label("feeder_args"),
+            Transformations.feeder_state.label("feeder_state"),
             Transformations.feeder_enabled.label("feeder_enabled"),
             Transformations.packer.label("packer"),
             Transformations.packer_args.label("packer_args"),
@@ -601,3 +626,125 @@ class TransformationDB(BaseSQLDB):
                 f"{len(input_ids) - result.rowcount} of {len(input_ids)} inputs "
                 "were not Unassigned",
             )
+
+    async def list_feedable_transformation_ids(self) -> list[UUID]:
+        """Return IDs of transformations whose feeder may run.
+
+        A transformation is feedable when it is ``Active``, ``FeederEnabled`` is
+        true, and ``Feeder`` is set.
+        """
+        stmt = select(Transformations.transformation_id).where(
+            Transformations.status == TransformationStatus.ACTIVE,
+            Transformations.feeder_enabled.is_(True),
+            Transformations.feeder.is_not(None),
+        )
+        result = await self.conn.execute(stmt)
+        return list(result.scalars().all())
+
+    async def insert_unassigned_inputs(
+        self,
+        transformation_id: AnyUUID,
+        inputs: Iterable[FeederInput],
+        chunk_size: int = 1000,
+    ) -> list[UUID]:
+        """Insert ``Unassigned`` inputs that are not already present by hash.
+
+        Deduplicates by ``InputHash`` (first proposal wins), including across
+        chunks of this call. Hashes already stored for the transformation are
+        skipped. Each chunk is at most ``chunk_size`` proposals: one
+        ``SELECT`` of existing hashes, then one ``INSERT`` of the new rows.
+        A UUIDv7 is minted for each new row. Status is always ``Unassigned``.
+
+        Args:
+            transformation_id: Transformation that owns the inputs.
+            inputs: Feeder proposals to insert, in priority order (consumed
+                once, so a generator is accepted); empty input is a no-op.
+            chunk_size: Maximum proposals read, and rows selected or inserted,
+                per statement.
+
+        Returns:
+            ``input_id`` values of the rows that were inserted, in first-seen
+            order.
+
+        Raises:
+            ValueError: If ``chunk_size`` is less than 1.
+        """
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be at least 1")
+
+        inserted: list[UUID] = []
+        # Hashes already accepted in this call, so a later chunk does not
+        # insert or re-select a duplicate of an earlier proposal.
+        seen: set[bytes] = set()
+        proposals = iter(inputs)
+        while chunk := list(islice(proposals, chunk_size)):
+            by_hash: dict[bytes, FeederInput] = {}
+            for item in chunk:
+                digest = _input_hash(item.lfn, item.descriptor)
+                if digest in seen:
+                    continue
+                by_hash.setdefault(digest, item)
+            if not by_hash:
+                continue
+
+            existing = set(
+                (
+                    await self.conn.execute(
+                        select(Inputs.input_hash).where(
+                            Inputs.transformation_id == transformation_id,
+                            Inputs.input_hash.in_(by_hash),
+                        )
+                    )
+                ).scalars()
+            )
+            seen.update(by_hash)
+            rows = [
+                {
+                    "transformation_id": transformation_id,
+                    "input_id": uuid7(),
+                    "input_hash": input_hash,
+                    "status": InputStatus.UNASSIGNED,
+                    "lfn": item.lfn,
+                    "lfn_size": item.lfn_size,
+                    "descriptor": item.descriptor,
+                    "delayed_until": item.delayed_until,
+                }
+                for input_hash, item in by_hash.items()
+                if input_hash not in existing
+            ]
+            if not rows:
+                continue
+            await self.conn.execute(insert(Inputs).values(rows))
+            # TODO(#1085): journal +len(rows) Unassigned
+            inserted.extend(row["input_id"] for row in rows)
+        return inserted
+
+    async def set_feeder_state(
+        self, transformation_id: AnyUUID, state: dict[str, Any] | None
+    ) -> None:
+        """Replace ``FeederState`` for a transformation.
+
+        Args:
+            transformation_id: Transformation whose bookmark to update.
+            state: Opaque bookmark JSON, or ``None`` to clear the column.
+        """
+        await self.conn.execute(
+            update(Transformations)
+            .where(Transformations.transformation_id == transformation_id)
+            .values(feeder_state=state)
+        )
+
+    async def set_feeder_enabled(
+        self, transformation_id: AnyUUID, enabled: bool
+    ) -> None:
+        """Set whether the transformation's feeder may run.
+
+        Args:
+            transformation_id: Transformation to update.
+            enabled: New ``FeederEnabled`` value.
+        """
+        await self.conn.execute(
+            update(Transformations)
+            .where(Transformations.transformation_id == transformation_id)
+            .values(feeder_enabled=enabled)
+        )
