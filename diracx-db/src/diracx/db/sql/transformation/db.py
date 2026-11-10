@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Collection, Iterable
 from datetime import datetime
+from itertools import islice
 from typing import Any, NamedTuple, TypeAlias
 
 from sqlalchemy import bindparam, func, insert, select, update
@@ -643,7 +644,7 @@ class TransformationDB(BaseSQLDB):
     async def insert_unassigned_inputs(
         self,
         transformation_id: AnyUUID,
-        inputs: Sequence[FeederInput],
+        inputs: Iterable[FeederInput],
         chunk_size: int = 1000,
     ) -> list[UUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
@@ -656,7 +657,8 @@ class TransformationDB(BaseSQLDB):
 
         Args:
             transformation_id: Transformation that owns the inputs.
-            inputs: Feeder proposals to insert; empty sequences are a no-op.
+            inputs: Feeder proposals to insert, in priority order (consumed
+                once, so a generator is accepted); empty input is a no-op.
             chunk_size: Maximum proposals read, and rows selected or inserted,
                 per statement.
 
@@ -674,9 +676,10 @@ class TransformationDB(BaseSQLDB):
         # Hashes already accepted in this call, so a later chunk does not
         # insert or re-select a duplicate of an earlier proposal.
         seen: set[bytes] = set()
-        for start in range(0, len(inputs), chunk_size):
+        proposals = iter(inputs)
+        while chunk := list(islice(proposals, chunk_size)):
             by_hash: dict[bytes, FeederInput] = {}
-            for item in inputs[start : start + chunk_size]:
+            for item in chunk:
                 digest = _input_hash(item.lfn, item.descriptor)
                 if digest in seen:
                     continue

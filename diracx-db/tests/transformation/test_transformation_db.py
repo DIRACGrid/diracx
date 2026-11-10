@@ -794,6 +794,28 @@ async def test_insert_unassigned_inputs_dedupes_across_chunks(
     assert count == 3
 
 
+async def test_insert_unassigned_inputs_accepts_generator(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    # A one-shot iterator is consumed chunk by chunk, keeping first-seen order
+    proposals = (FeederInput(descriptor={"seed": seed}) for seed in [1, 2, 1, 3, 4])
+
+    async with transformation_db as db:
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=2
+        )
+        assert len(inserted) == 4
+        rows = (
+            await db.conn.execute(
+                select(Inputs.input_id, Inputs.descriptor).where(
+                    Inputs.input_id.in_(inserted)
+                )
+            )
+        ).all()
+    descriptor_by_id = {input_id: descriptor for input_id, descriptor in rows}
+    assert [descriptor_by_id[i]["seed"] for i in inserted] == [1, 2, 3, 4]
+
+
 async def test_insert_unassigned_inputs_rejects_invalid_feeder_input(
     transformation_db: TransformationDB, standalone_active_transformation: UUID
 ):
