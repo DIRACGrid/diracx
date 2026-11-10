@@ -6,7 +6,6 @@ import uuid
 from collections.abc import Collection, Iterable
 from datetime import datetime
 from functools import partial
-from itertools import islice
 from typing import Any, NamedTuple, TypeAlias
 
 from sqlalchemy import Update, bindparam, func, insert, select, update
@@ -28,7 +27,14 @@ from diracx.core.models.transformation import (
     TransformationKind,
     TransformationStatus,
 )
-from diracx.db.sql.utils import BaseSQLDB, execute_in_chunks, fetch_in_chunks, utcnow
+from diracx.core.utils import batched
+from diracx.db.sql.utils import (
+    IN_CHUNK_SIZE,
+    BaseSQLDB,
+    execute_in_chunks,
+    fetch_in_chunks,
+    utcnow,
+)
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
 from .schema import Base as TransformationDBBase
@@ -670,22 +676,23 @@ class TransformationDB(BaseSQLDB):
         self,
         transformation_id: AnyUUID,
         inputs: Iterable[FeederInput],
-        chunk_size: int = 1000,
+        chunk_size: int = IN_CHUNK_SIZE,
     ) -> list[UUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
         Deduplicates by ``InputHash`` (first proposal wins), including across
         chunks of this call. Hashes already stored for the transformation are
-        skipped. Each chunk is at most ``chunk_size`` proposals: one
-        ``SELECT`` of existing hashes, then one ``INSERT`` of the new rows.
+        skipped. Each chunk is at most ``chunk_size`` proposals: a ``SELECT``
+        of existing hashes (split by ``fetch_in_chunks`` if ``chunk_size`` is
+        above ``IN_CHUNK_SIZE``), then one ``INSERT`` of the new rows.
         A UUIDv7 is minted for each new row. Status is always ``Unassigned``.
 
         Args:
             transformation_id: Transformation that owns the inputs.
             inputs: Feeder proposals to insert, in priority order (consumed
                 once, so a generator is accepted); empty input is a no-op.
-            chunk_size: Maximum proposals read, and rows selected or inserted,
-                per statement.
+            chunk_size: Maximum proposals read, and rows inserted, per
+                ``INSERT``.
 
         Returns:
             ``input_id`` values of the rows that were inserted, in first-seen
@@ -701,8 +708,7 @@ class TransformationDB(BaseSQLDB):
         # Hashes already accepted in this call, so a later chunk does not
         # insert or re-select a duplicate of an earlier proposal.
         seen: set[bytes] = set()
-        proposals = iter(inputs)
-        while chunk := list(islice(proposals, chunk_size)):
+        for chunk in batched(inputs, chunk_size):
             by_hash: dict[bytes, FeederInput] = {}
             for item in chunk:
                 digest = _input_hash(item.lfn, item.descriptor)
@@ -712,16 +718,17 @@ class TransformationDB(BaseSQLDB):
             if not by_hash:
                 continue
 
-            existing = set(
-                (
-                    await self.conn.execute(
-                        select(Inputs.input_hash).where(
-                            Inputs.transformation_id == transformation_id,
-                            Inputs.input_hash.in_(by_hash),
-                        )
-                    )
-                ).scalars()
-            )
+            existing = {
+                row[0]
+                for row in await fetch_in_chunks(
+                    self.conn,
+                    lambda hashes: select(Inputs.input_hash).where(
+                        Inputs.transformation_id == transformation_id,
+                        Inputs.input_hash.in_(hashes),
+                    ),
+                    by_hash,
+                )
+            }
             seen.update(by_hash)
             rows = [
                 {
