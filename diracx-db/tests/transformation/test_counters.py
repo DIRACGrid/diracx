@@ -34,7 +34,13 @@ from sqlalchemy import (
 )
 from sqlalchemy import insert as sa_insert
 from sqlalchemy.ext.asyncio import create_async_engine
+from uuid_utils import uuid7
 
+from diracx.db.sql.transformation.schema import (
+    DATA_PARCELS_COUNTER,
+    TRANSFORMATION_COUNTER,
+    Base,
+)
 from diracx.db.sql.utils.counters import (
     CountedTable,
     JournalledCounter,
@@ -152,6 +158,29 @@ async def engine(request, simple_metadata, mysql_url, mariadb_url):
     if backend != "sqlite":
         async with eng.begin() as conn:
             await conn.run_sync(simple_metadata.drop_all)
+    await eng.dispose()
+
+
+@pytest.fixture
+async def sqlite_engine(simple_metadata):
+    """SQLite-only engine for backend-independent tests."""
+    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    event.listen(
+        eng.sync_engine,
+        "connect",
+        lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
+    )
+
+    async with eng.begin() as conn:
+        await conn.run_sync(simple_metadata.create_all)
+        locks = counter_locks_table(simple_metadata)
+        for counter in journalled_counters(simple_metadata):
+            await conn.execute(
+                sa_insert(locks).prefix_with("OR IGNORE", dialect="sqlite"),
+                counter.lock_rows(),
+            )
+
+    yield eng
     await eng.dispose()
 
 
@@ -620,3 +649,273 @@ async def test_rebuild_scoped(engine, counter, items_table):
     assert result[(1, "New")] == (1, 10)
     # Group 2 untouched
     assert result[(2, "New")] == (1, 20)
+
+
+# -----------------------------------------------------------------------
+# (2) Error-path tests
+# -----------------------------------------------------------------------
+
+
+async def test_scope_rejects_non_prefix(sqlite_engine, counter):
+    """Scope keys that aren't a prefix of the counter key raise ValueError."""
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            with pytest.raises(ValueError, match="prefix"):
+                await counter.read(conn, scope={"Status": "New"})
+
+
+async def test_scope_rejects_unknown_key(sqlite_engine, counter):
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            with pytest.raises(ValueError, match="prefix"):
+                await counter.read(conn, scope={"Nonexistent": 1})
+
+
+async def test_delete_scope_rejects_empty(sqlite_engine, counter):
+    with pytest.raises(ValueError, match="non-empty"):
+        await counter.delete_scope(sqlite_engine, {})
+
+
+async def test_rebuild_rejects_unknown_key_exprs(sqlite_engine, counter, items_table):
+    counted = [
+        CountedTable(
+            table=items_table,
+            key_exprs={
+                "GroupID": items_table.c.GroupID,
+                "Nonexistent": items_table.c.Status,
+            },
+            measure_exprs={"Count": func.count()},
+        )
+    ]
+    with pytest.raises(ValueError, match="must match counter key"):
+        await counter.rebuild(sqlite_engine, counted)
+
+
+async def test_rebuild_rejects_missing_key_exprs(sqlite_engine, counter, items_table):
+    counted = [
+        CountedTable(
+            table=items_table,
+            key_exprs={"GroupID": items_table.c.GroupID},
+            measure_exprs={"Count": func.count()},
+        )
+    ]
+    with pytest.raises(ValueError, match="must match counter key"):
+        await counter.rebuild(sqlite_engine, counted)
+
+
+async def test_rebuild_rejects_unknown_measure_exprs(
+    sqlite_engine, counter, items_table
+):
+    counted = [
+        CountedTable(
+            table=items_table,
+            key_exprs={
+                "GroupID": items_table.c.GroupID,
+                "Status": items_table.c.Status,
+            },
+            measure_exprs={
+                "Count": func.count(),
+                "Nonsense": func.sum(items_table.c.Size),
+            },
+        )
+    ]
+    with pytest.raises(ValueError, match="unknown measures"):
+        await counter.rebuild(sqlite_engine, counted)
+
+
+# -----------------------------------------------------------------------
+# (5) UpdatedAt propagation through fold
+# -----------------------------------------------------------------------
+
+
+async def test_fold_carries_max_inserted_at(sqlite_engine, counter):
+    """Fold sets UpdatedAt to MAX(InsertedAt) of the folded journal rows."""
+    jt = counter.journal_table
+    ct = counter.counters_table
+
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            await counter.journal(
+                conn,
+                [
+                    {"GroupID": 1, "Status": "New", "CountDelta": 1, "BytesDelta": 10},
+                ],
+            )
+
+    # Record the journal's InsertedAt
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            journal_ts = (
+                await conn.execute(select(func.max(jt.c.InsertedAt)))
+            ).scalar()
+
+    await counter.fold(sqlite_engine)
+
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            counter_row = (await conn.execute(select(ct))).one()
+
+    assert counter_row.UpdatedAt == journal_ts
+
+
+async def test_fold_upsert_keeps_newer_updated_at(sqlite_engine, counter):
+    """When upserting, fold keeps the newer of the two timestamps."""
+    ct = counter.counters_table
+    jt = counter.journal_table
+
+    # Seed a counter row with a known timestamp
+    early = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            await conn.execute(
+                insert(ct).values(
+                    GroupID=1, Status="New", Count=10, Bytes=100, UpdatedAt=early
+                )
+            )
+
+    # Journal a delta (InsertedAt will be now, much later than 2020)
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            await counter.journal(
+                conn,
+                [{"GroupID": 1, "Status": "New", "CountDelta": 1, "BytesDelta": 10}],
+            )
+
+    journal_ts = None
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            journal_ts = (
+                await conn.execute(select(func.max(jt.c.InsertedAt)))
+            ).scalar()
+
+    await counter.fold(sqlite_engine)
+
+    async with sqlite_engine.connect() as conn:
+        async with conn.begin():
+            row = (await conn.execute(select(ct))).one()
+
+    assert row.UpdatedAt == journal_ts
+    assert row.UpdatedAt > early
+
+
+# -----------------------------------------------------------------------
+# (3)+(4) Real declaration smoke tests — BinaryUUID, native enum keys
+# -----------------------------------------------------------------------
+
+
+@pytest.fixture(params=["sqlite", "mysql", "mariadb"])
+async def real_engine(request, mysql_url, mariadb_url):
+    """Engine with the full transformation schema, parametrised over backends."""
+    meta = Base.metadata
+    backend = request.param
+
+    if backend == "sqlite":
+        eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+        event.listen(
+            eng.sync_engine,
+            "connect",
+            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
+        )
+    elif backend == "mysql":
+        eng = create_async_engine(mysql_url)
+    elif backend == "mariadb":
+        eng = create_async_engine(mariadb_url)
+    else:
+        raise ValueError(f"Unknown backend: {backend}")
+
+    async with eng.begin() as conn:
+        await conn.run_sync(meta.create_all)
+        locks = counter_locks_table(meta)
+        for ctr in journalled_counters(meta):
+            await conn.execute(
+                sa_insert(locks).prefix_with("OR IGNORE", dialect="sqlite"),
+                ctr.lock_rows(),
+            )
+
+    yield eng
+
+    if backend != "sqlite":
+        async with eng.begin() as conn:
+            await conn.run_sync(meta.drop_all)
+    await eng.dispose()
+
+
+async def test_transformation_counter_smoke(real_engine):
+    """Journal, read, fold cycle against the real TRANSFORMATION_COUNTER."""
+    ctr = TRANSFORMATION_COUNTER
+    tid = uuid7()
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            await ctr.journal(
+                conn,
+                [
+                    {
+                        "TransformationID": tid,
+                        "Entity": "Input",
+                        "Status": "Unassigned",
+                        "CountDelta": 10,
+                    },
+                    {
+                        "TransformationID": tid,
+                        "Entity": "Parcel",
+                        "Status": "Assigned",
+                        "CountDelta": 3,
+                    },
+                ],
+            )
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            rows = await ctr.read(conn, scope={"TransformationID": tid})
+    assert len(rows) == 2
+    result = {(r.Entity, r.Status): r.Count for r in rows}
+    assert result[("Input", "Unassigned")] == 10
+    assert result[("Parcel", "Assigned")] == 3
+
+    n = await ctr.fold(real_engine)
+    assert n == 2
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            rows = await ctr.read(conn, scope={"TransformationID": tid})
+    result2 = {(r.Entity, r.Status): r.Count for r in rows}
+    assert result2 == result
+
+
+async def test_data_parcels_counter_smoke(real_engine):
+    """Journal, read, fold cycle against the real DATA_PARCELS_COUNTER."""
+    ctr = DATA_PARCELS_COUNTER
+    tid = uuid7()
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            await ctr.journal(
+                conn,
+                [
+                    {
+                        "TransformationID": tid,
+                        "Status": "Unassigned",
+                        "StorageElement": "SE1",
+                        "LFNCountAddedDelta": 5,
+                        "LFNSizeAddedDelta": 1000,
+                        "LFNCountFreedDelta": 0,
+                        "LFNSizeFreedDelta": 0,
+                    },
+                ],
+            )
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            rows = await ctr.read(conn, scope={"TransformationID": tid})
+    assert len(rows) == 1
+    assert rows[0].LFNCountAdded == 5
+    assert rows[0].LFNSizeAdded == 1000
+
+    n = await ctr.fold(real_engine)
+    assert n == 1
+
+    async with real_engine.connect() as conn:
+        async with conn.begin():
+            rows = await ctr.read(conn, scope={"TransformationID": tid})
+    assert rows[0].LFNCountAdded == 5
