@@ -6,7 +6,6 @@ import inspect
 from collections.abc import Callable, Iterable
 from typing import Any, get_type_hints
 
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from pydantic import BaseModel
 from uuid_utils import UUID
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from sqlalchemy import event, func, insert, select
 from uuid_utils import UUID, uuid7
 
