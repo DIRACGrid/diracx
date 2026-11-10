@@ -112,8 +112,8 @@ COUNTERS_INFO_KEY = "journalled_counters"
 class CounterLockOperation(StrEnum):
     """Operations serialised by the ``CounterLocks`` table."""
 
-    FOLD = "fold"
     REBUILD = "rebuild"
+    FOLD = "fold"
 
 
 # SQLite only auto-increments a column declared exactly as INTEGER PRIMARY KEY
@@ -226,7 +226,7 @@ class JournalledCounter:
             if not sqlite:
                 locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
                 for operation in operations:
-                    row = (
+                    if (
                         await conn.execute(
                             select(literal_column("1"))
                             .select_from(locks)
@@ -236,8 +236,7 @@ class JournalledCounter:
                             )
                             .with_for_update()
                         )
-                    ).one_or_none()
-                    if row is None:
+                    ).one_or_none() is None:
                         raise RuntimeError(
                             f"CounterLocks row missing for "
                             f"{self.name!r} / {operation!r}; "
@@ -570,7 +569,11 @@ def counter_locks_table(metadata: MetaData) -> Table:
         Column("CounterName", String(64), primary_key=True),
         Column(
             "Operation",
-            Enum(CounterLockOperation, name="counter_lock_operation"),
+            Enum(
+                CounterLockOperation,
+                name="counter_lock_operation",
+                values_callable=lambda e: [m.value for m in e],
+            ),
             primary_key=True,
         ),
     )
