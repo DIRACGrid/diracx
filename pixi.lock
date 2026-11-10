@@ -26273,7 +26273,7 @@ packages:
   - uuid-utils>=1.0.0
   - diracx-testing ; extra == 'testing'
   - freezegun ; extra == 'testing'
-  - testcontainers[mysql]>=4 ; extra == 'testing'
+  - testcontainers[mysql]>=4.15 ; extra == 'testing'
   - types-python-dateutil ; extra == 'types'
   requires_python: '>=3.11'
 - pypi: ./diracx-logic

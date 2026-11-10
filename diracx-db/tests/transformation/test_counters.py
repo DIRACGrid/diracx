@@ -1,13 +1,23 @@
 """Tests for the journalled counter operations (DX-ADR-009).
 
-Tests run against MySQL when testcontainers is installed and Docker is
-available, exercising the MySQL-specific branches (isolation levels,
-FOR UPDATE SKIP LOCKED, ON DUPLICATE KEY UPDATE, BIGINT cast, TEMPORARY
-tables).  Falls back to SQLite when MySQL is unavailable.
+Tests are parametrised over database backends:
+
+* **SQLite** — always runs (no external dependency).
+* **MySQL 8.0** — runs when testcontainers + Docker are available, exercising
+  the MySQL-specific branches (isolation levels, ``FOR UPDATE SKIP LOCKED``,
+  ``ON DUPLICATE KEY UPDATE``, ``BIGINT`` cast, ``TEMPORARY`` tables,
+  ``CounterLocks`` row locks).
+* **MariaDB 11.4** — same as MySQL but covers MariaDB-specific behaviour
+  (consecutive ``AUTO_INCREMENT`` lock mode, ``VALUES()`` in ``ODKU``).
+
+When Docker is unavailable on a developer laptop the MySQL and MariaDB
+tests are *skipped* (visible in ``pytest -v`` output).  In CI, set
+``DIRACX_REQUIRE_MYSQL_TESTS=1`` to turn those skips into hard failures.
 """
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 import pytest
@@ -41,30 +51,52 @@ except ImportError:
     MySqlContainer = None
     HAS_TESTCONTAINERS = False
 
-_MYSQL_SKIP_REASON: str | None = None
-if not HAS_TESTCONTAINERS:
-    _MYSQL_SKIP_REASON = "testcontainers not installed"
+REQUIRE_MYSQL = os.environ.get("DIRACX_REQUIRE_MYSQL_TESTS", "") == "1"
+
+
+def _make_async_url(raw_url: str) -> str:
+    """Rewrite a testcontainers DBAPI URL to use aiomysql."""
+    url = raw_url.replace("mysql://", "mysql+aiomysql://", 1)
+    url = url.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
+    return url
+
+
+def _skip_or_fail(reason: str) -> None:
+    """Skip, or fail if CI requires MySQL tests."""
+    if REQUIRE_MYSQL:
+        pytest.fail(f"DIRACX_REQUIRE_MYSQL_TESTS=1 but: {reason}")
+    pytest.skip(reason)
 
 
 @pytest.fixture(scope="session")
 def mysql_url():
-    """Start a MySQL container for the test session."""
-    global _MYSQL_SKIP_REASON  # noqa: PLW0603
-
-    if _MYSQL_SKIP_REASON:
-        yield None
-        return
+    """Start a MySQL 8.0.40 container for the test session."""
+    if not HAS_TESTCONTAINERS:
+        _skip_or_fail("testcontainers not installed")
 
     try:
-        with MySqlContainer("mysql:8.0") as mysql:
-            url = mysql.get_connection_url()
-            # testcontainers returns mysql:// or mysql+pymysql://; we need aiomysql
-            url = url.replace("mysql://", "mysql+aiomysql://", 1)
-            url = url.replace("mysql+pymysql://", "mysql+aiomysql://", 1)
-            yield url
+        with MySqlContainer("mysql:8.0.40") as mysql:
+            yield _make_async_url(mysql.get_connection_url())
     except Exception as e:
-        _MYSQL_SKIP_REASON = f"Docker unavailable: {e}"
-        yield None
+        _skip_or_fail(f"Docker unavailable: {e}")
+
+
+@pytest.fixture(scope="session")
+def mariadb_url():
+    """Start a MariaDB 11.4.4 container for the test session."""
+    if not HAS_TESTCONTAINERS:
+        _skip_or_fail("testcontainers not installed")
+
+    try:
+        with MySqlContainer(
+            "mariadb:11.4.4",
+            wait_strategy_check_string=(
+                ".*: ready for connections.*: ready for connections.*"
+            ),
+        ) as maria:
+            yield _make_async_url(maria.get_connection_url())
+    except Exception as e:
+        _skip_or_fail(f"Docker unavailable: {e}")
 
 
 @pytest.fixture
@@ -88,17 +120,23 @@ def simple_metadata():
     return meta
 
 
-@pytest.fixture
-async def engine(simple_metadata, mysql_url):
-    if mysql_url is not None:
-        eng = create_async_engine(mysql_url)
-    else:
+@pytest.fixture(params=["sqlite", "mysql", "mariadb"])
+async def engine(request, simple_metadata, mysql_url, mariadb_url):
+    backend = request.param
+
+    if backend == "sqlite":
         eng = create_async_engine("sqlite+aiosqlite:///:memory:")
         event.listen(
             eng.sync_engine,
             "connect",
             lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
         )
+    elif backend == "mysql":
+        eng = create_async_engine(mysql_url)
+    elif backend == "mariadb":
+        eng = create_async_engine(mariadb_url)
+    else:
+        raise ValueError(f"Unknown backend: {backend}")
 
     async with eng.begin() as conn:
         await conn.run_sync(simple_metadata.create_all)
@@ -111,7 +149,7 @@ async def engine(simple_metadata, mysql_url):
 
     yield eng
 
-    if mysql_url is not None:
+    if backend != "sqlite":
         async with eng.begin() as conn:
             await conn.run_sync(simple_metadata.drop_all)
     await eng.dispose()
