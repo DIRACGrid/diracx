@@ -1,4 +1,4 @@
-"""Packer plugins shipped with DiracX (DX-ADR-006)."""
+"""Packer that groups inputs into parcels of a fixed size (DX-ADR-006)."""
 
 from __future__ import annotations
 
