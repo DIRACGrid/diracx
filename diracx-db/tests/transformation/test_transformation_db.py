@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import delete, event, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import UUID, uuid7
@@ -12,14 +13,16 @@ from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
 )
+from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
+    FeederInput,
     InputStatus,
     ParcelStatus,
     TransformationKind,
     TransformationStatus,
 )
 from diracx.db.sql import TransformationDB
-from diracx.db.sql.transformation.db import NewComputeParcel
+from diracx.db.sql.transformation.db import NewComputeParcel, _input_hash
 from diracx.db.sql.transformation.schema import (
     COUNTER_STATUSES,
     ComputeParcels,
@@ -308,6 +311,8 @@ async def test_get_transformation(
             "status": TransformationStatus.NEW,
             "kind": TransformationKind.COMPUTE,
             "feeder": None,
+            "feeder_args": None,
+            "feeder_state": None,
             "feeder_enabled": True,
             "packer": "Standard",
             "packer_args": None,
@@ -562,3 +567,272 @@ async def test_delay_inputs(
         statuses = await input_statuses(db)
     assert [i.input_id for i in claimed] == [uuid.UUID(bytes=input_ids[1].bytes)]
     assert set(statuses.values()) == {InputStatus.UNASSIGNED}
+
+
+# --------------------------------------------------------------------------
+# Feeder (#1082)
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def standalone_active_transformation(
+    transformation_db: TransformationDB,
+) -> UUID:
+    """Active standalone transformation with a feeder (no workgraph)."""
+    ownership_id, transformation_id = uuid7(), uuid7()
+    async with transformation_db as db:
+        await db.conn.execute(
+            insert(Ownership).values(
+                ownership_id=ownership_id,
+                vo="cms",
+                sub="feeder-owner",
+                workgraph_id=None,
+            )
+        )
+        await db.conn.execute(
+            insert(Transformations).values(
+                transformation_id=transformation_id,
+                ownership_id=ownership_id,
+                type="MCSimulation",
+                kind=TransformationKind.COMPUTE,
+                status=TransformationStatus.ACTIVE,
+                feeder="IntegerFeeder",
+                feeder_args={"max_count": 3},
+                feeder_state={"next_seed": 0},
+                feeder_enabled=True,
+                packer="Standard",
+            )
+        )
+    return transformation_id
+
+
+async def test_list_feedable_transformation_ids(
+    transformation_db: TransformationDB,
+    standalone_active_transformation: UUID,
+    transformation_id: UUID,
+):
+    # Existing fixture is New with no Feeder; standalone is Active+enabled
+    async with transformation_db as db:
+        feedable = await db.list_feedable_transformation_ids()
+    assert feedable == [standalone_active_transformation]
+
+    async with transformation_db as db:
+        await db.set_feeder_enabled(standalone_active_transformation, False)
+        assert await db.list_feedable_transformation_ids() == []
+
+        await db.set_feeder_enabled(standalone_active_transformation, True)
+        await db.conn.execute(
+            update(Transformations)
+            .where(
+                Transformations.transformation_id == standalone_active_transformation
+            )
+            .values(feeder=None)
+        )
+        assert await db.list_feedable_transformation_ids() == []
+
+        # Non-Active with feeder set is still excluded
+        await db.conn.execute(
+            update(Transformations)
+            .where(Transformations.transformation_id == transformation_id)
+            .values(
+                feeder="IntegerFeeder",
+                feeder_enabled=True,
+                status=TransformationStatus.NEW,
+            )
+        )
+        assert await db.list_feedable_transformation_ids() == []
+
+
+async def test_set_feeder_state_and_enabled(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    async with transformation_db as db:
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder"] == "IntegerFeeder"
+        assert row["feeder_args"] == {"max_count": 3}
+        assert row["feeder_state"] == {"next_seed": 0}
+        assert row["feeder_enabled"] is True
+
+        await db.set_feeder_state(standalone_active_transformation, {"next_seed": 7})
+        await db.set_feeder_enabled(standalone_active_transformation, False)
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder_args"] == {"max_count": 3}
+        assert row["feeder_state"] == {"next_seed": 7}
+        assert row["feeder_enabled"] is False
+
+        await db.set_feeder_state(standalone_active_transformation, None)
+        row = await db.get_transformation(standalone_active_transformation)
+        assert row["feeder_state"] is None
+
+
+def test_input_hash_length_and_stability():
+    digest = _input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "1-10"})
+    assert len(digest) == 16
+    assert digest == _input_hash("/lhcb/file.dst", {"Mask": "1-10", "Run": 1234})
+
+    other = _input_hash("/lhcb/file.dst", {"Run": 1234, "Mask": "11-20"})
+    assert digest != other
+
+    null_lfn = _input_hash(None, {"Seed": 42})
+    assert len(null_lfn) == 16
+    assert null_lfn != _input_hash(None, {"Seed": 43})
+
+    null_mask = _input_hash("/cms/file1.root", None)
+    dict_mask = _input_hash("/cms/file1.root", {})
+    assert null_mask == dict_mask
+
+
+def test_input_hash_none_descriptor_matches_empty():
+    assert _input_hash("/a", None) == _input_hash("/a", {})
+    assert _input_hash(None, None) == _input_hash(None, {})
+
+
+def test_input_hash_rejects_integer_outside_jcs_domain():
+    # JCS only accepts IEEE-754 safe integers (about ±2**53);
+    # rfc8785.IntegerDomainError is a ValueError.
+    with pytest.raises(ValueError):
+        _input_hash(None, {"Seed": 2**63 - 1})
+    with pytest.raises(ValueError):
+        _input_hash(None, {"Seed": -(2**63)})
+
+
+def test_input_hash_matches_truncated_hash_json_over_envelope():
+    lfn = None
+    descriptor = {"Seed": 1}
+    envelope = {"LFN": lfn, "Descriptor": descriptor}
+    expected = hash_json(envelope)[:16]
+    assert _input_hash(lfn, descriptor) == expected
+    assert len(expected) == 16
+
+
+async def test_insert_unassigned_inputs_deduplicates_on_hash(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    descriptor_a = {"seed": 1}
+    descriptor_b = {"seed": 2}
+    delayed = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    hash_a = _input_hash(None, descriptor_a)
+    hash_b = _input_hash(None, descriptor_b)
+    proposal_a = FeederInput(descriptor=descriptor_a, delayed_until=delayed)
+    proposal_b = FeederInput(descriptor=descriptor_b)
+
+    async with transformation_db as db:
+        assert (
+            await db.insert_unassigned_inputs(standalone_active_transformation, [])
+            == []
+        )
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation,
+            [proposal_a, proposal_b, proposal_a],
+        )
+        assert len(inserted) == 2
+        # Same (lfn, descriptor) again must insert nothing
+        assert (
+            await db.insert_unassigned_inputs(
+                standalone_active_transformation, [proposal_a]
+            )
+            == []
+        )
+
+        rows = (
+            await db.conn.execute(
+                select(
+                    Inputs.input_id.label("input_id"),
+                    Inputs.input_hash.label("input_hash"),
+                    Inputs.descriptor.label("descriptor"),
+                    Inputs.status.label("status"),
+                    Inputs.delayed_until.label("delayed_until"),
+                    Inputs.lfn.label("lfn"),
+                ).where(Inputs.transformation_id == standalone_active_transformation)
+            )
+        ).all()
+
+    assert len(rows) == 2
+    by_hash = {row.input_hash: row for row in rows}
+    assert set(by_hash) == {hash_a, hash_b}
+    assert {row.input_id for row in rows} == set(inserted)
+    assert by_hash[hash_a].descriptor == descriptor_a
+    assert by_hash[hash_a].status == InputStatus.UNASSIGNED
+    assert by_hash[hash_a].delayed_until == delayed
+    assert by_hash[hash_a].lfn is None
+    assert by_hash[hash_b].descriptor == descriptor_b
+
+
+async def test_insert_unassigned_inputs_dedupes_across_chunks(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    proposals = [
+        FeederInput(descriptor={"seed": 1}),
+        FeederInput(descriptor={"seed": 2}),
+        FeederInput(descriptor={"seed": 1}),
+        FeederInput(descriptor={"seed": 3}),
+    ]
+
+    async with transformation_db as db:
+        with pytest.raises(ValueError):
+            await db.insert_unassigned_inputs(
+                standalone_active_transformation, proposals, chunk_size=0
+            )
+        # insert 3 out of 4 files (one is duplicated)
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=1
+        )
+        assert len(inserted) == 3
+        # insert 0 out of 4 files (all are duplicated)
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=2
+        )
+        assert len(inserted) == 0
+        # check that 3 files are in the Inputs table
+        count = (
+            await db.conn.execute(
+                select(func.count())
+                .select_from(Inputs)
+                .where(Inputs.transformation_id == standalone_active_transformation)
+            )
+        ).scalar_one()
+    assert count == 3
+
+
+async def test_insert_unassigned_inputs_accepts_generator(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    # A one-shot iterator is consumed chunk by chunk, keeping first-seen order
+    proposals = (FeederInput(descriptor={"seed": seed}) for seed in [1, 2, 1, 3, 4])
+
+    async with transformation_db as db:
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, proposals, chunk_size=2
+        )
+        assert len(inserted) == 4
+        rows = (
+            await db.conn.execute(
+                select(Inputs.input_id, Inputs.descriptor).where(
+                    Inputs.input_id.in_(inserted)
+                )
+            )
+        ).all()
+    descriptor_by_id = {input_id: descriptor for input_id, descriptor in rows}
+    assert [descriptor_by_id[i]["seed"] for i in inserted] == [1, 2, 3, 4]
+
+
+async def test_insert_unassigned_inputs_rejects_invalid_feeder_input(
+    transformation_db: TransformationDB, standalone_active_transformation: UUID
+):
+    with pytest.raises(ValidationError):
+        FeederInput(lfn="/lhcb/a.dst")
+
+    async with transformation_db as db:
+        inserted = await db.insert_unassigned_inputs(
+            standalone_active_transformation, [FeederInput()]
+        )
+        assert len(inserted) == 1
+        descriptor = (
+            await db.conn.execute(
+                select(Inputs.descriptor).where(
+                    Inputs.transformation_id == standalone_active_transformation,
+                    Inputs.input_id == inserted[0],
+                )
+            )
+        ).scalar_one()
+    assert descriptor == {}
