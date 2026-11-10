@@ -9,7 +9,10 @@ from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.models.transformation import (
+    FeederInput,
     InputStatus,
+    NoMoreFeederInputs,
+    SetFeederState,
     TransformationKind,
     TransformationStatus,
 )
@@ -81,11 +84,11 @@ def test_integer_feeder_yields_seeds_then_exhausts():
         )
     )
     assert [type(item) for item in yields] == [
-        Input,
-        Input,
-        Input,
+        FeederInput,
+        FeederInput,
+        FeederInput,
         SetFeederState,
-        NoMoreInputs,
+        NoMoreFeederInputs,
     ]
     assert [item.descriptor for item in yields[:3]] == [
         {"seed": 0},
@@ -103,12 +106,14 @@ def test_integer_feeder_resumes_from_bookmark():
             scouting=False,
         )
     )
-    assert [item.descriptor["seed"] for item in yields if isinstance(item, Input)] == [
+    assert [
+        item.descriptor["seed"] for item in yields if isinstance(item, FeederInput)
+    ] == [
         2,
         3,
     ]
     assert yields[-2].state == {"next_seed": 4}
-    assert isinstance(yields[-1], NoMoreInputs)
+    assert isinstance(yields[-1], NoMoreFeederInputs)
 
 
 def test_integer_feeder_already_exhausted():
@@ -119,7 +124,7 @@ def test_integer_feeder_already_exhausted():
             scouting=False,
         )
     )
-    assert yields == [NoMoreInputs()]
+    assert yields == [NoMoreFeederInputs()]
 
 
 def test_load_feeder_resolves_integer_feeder_entry_point():
@@ -141,8 +146,7 @@ async def test_integer_feeder_materialises_and_disables(
     )
     plugin, args_model = load_feeder("IntegerFeeder")
     async with transformation_db as db:
-        columns = await db.get_feeder_columns(transformation_id)
-    assert columns is not None
+        columns = await db.get_transformation(transformation_id)
     yields = plugin(
         feeder_args=args_model.model_validate(columns["feeder_args"]),
         feeder_state=columns["feeder_state"] or {},
@@ -157,10 +161,9 @@ async def test_integer_feeder_materialises_and_disables(
         status = await db.conn.scalar(
             select(Inputs.status).where(Inputs.transformation_id == transformation_id)
         )
-        columns = await db.get_feeder_columns(transformation_id)
+        columns = await db.get_transformation(transformation_id)
 
     assert count == 5
     assert status == InputStatus.UNASSIGNED
-    assert columns is not None
     assert columns["feeder_state"] == {"next_seed": 5}
     assert columns["feeder_enabled"] is False

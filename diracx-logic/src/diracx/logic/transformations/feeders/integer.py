@@ -5,8 +5,13 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Any
 
-from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from pydantic import BaseModel, NonNegativeInt
+
+from diracx.core.models.transformation import (
+    FeederInput,
+    NoMoreFeederInputs,
+    SetFeederState,
+)
 
 
 class IntegerFeederArgs(BaseModel):
@@ -25,7 +30,7 @@ def integer_feeder(
     feeder_args: IntegerFeederArgs,
     feeder_state: dict[str, Any],
     scouting: bool,
-) -> Generator[Input | SetFeederState | NoMoreInputs, None, None]:
+) -> Generator[FeederInput | SetFeederState | NoMoreFeederInputs, None, None]:
     """Yield consecutive integer seeds until ``max_count`` is reached.
 
     The bookmark is ``next_seed``: the next integer to issue. ``scouting`` is
@@ -37,16 +42,17 @@ def integer_feeder(
         scouting: Whether the workgraph is in scouting (unused).
 
     Yields:
-        ``Input`` proposals, a final ``SetFeederState``, then ``NoMoreInputs``
-        once the range is covered. If already exhausted, only ``NoMoreInputs``.
+        ``FeederInput`` proposals, a final ``SetFeederState``, then
+        ``NoMoreFeederInputs`` once the range is covered. If already exhausted,
+        only ``NoMoreFeederInputs``.
     """
     # NOTE: "contract kwarg"; no scouting behaviour in the MVP feeder
     next_seed = int(feeder_state.get("next_seed", 0))
     if next_seed >= feeder_args.max_count:
-        yield NoMoreInputs()
+        yield NoMoreFeederInputs()
         return
 
     for seed in range(next_seed, feeder_args.max_count):
-        yield Input(descriptor={"seed": seed})
+        yield FeederInput(descriptor={"seed": seed})
     yield SetFeederState(state={"next_seed": feeder_args.max_count})
-    yield NoMoreInputs()
+    yield NoMoreFeederInputs()

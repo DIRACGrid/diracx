@@ -8,16 +8,19 @@ from typing import Any, get_type_hints
 
 from diracx.core.models.feeder import Input, NoMoreInputs, SetFeederState
 from pydantic import BaseModel
-from uuid_utils import UUID, uuid7
+from uuid_utils import UUID
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.hashing import compute_input_hash
+from diracx.core.models.transformation import (
+    FeederInput,
+    FeederProposal,
+    NoMoreFeederInputs,
+    SetFeederState,
+)
 from diracx.db.sql import TransformationDB
 
-FeederYield = Input | SetFeederState | NoMoreInputs
-
-# Default insert chunk size when a feeder yields many ``Input``s before a
+# Default insert chunk size when a feeder yields many ``FeederInput``s before a
 # ``SetFeederState``. Hash dedup makes early commits safe on restart.
 DEFAULT_INPUT_BATCH_SIZE = 1000
 
@@ -56,22 +59,10 @@ def load_feeder(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
     return plugin, args_model
 
 
-def _input_row(proposed: Input) -> dict[str, Any]:
-    """Build an ``insert_unassigned_inputs`` row from a proposal."""
-    return {
-        "input_id": uuid7(),
-        "input_hash": compute_input_hash(proposed.lfn, proposed.descriptor),
-        "lfn": proposed.lfn,
-        "lfn_size": proposed.lfn_size,
-        "descriptor": proposed.descriptor,
-        "delayed_until": proposed.delayed_until,
-    }
-
-
 async def _commit_batch(
     transformation_db: TransformationDB,
     transformation_id: UUID,
-    pending: list[dict[str, Any]],
+    pending: list[FeederInput],
     *,
     feeder_state: dict[str, Any] | None = None,
     update_feeder_state: bool = False,
@@ -91,19 +82,20 @@ async def _commit_batch(
 
 async def materialise_feeder_yields(
     transformation_id: UUID,
-    yields: Iterable[FeederYield],
+    yields: Iterable[FeederProposal],
     transformation_db: TransformationDB,
     *,
     input_batch_size: int = DEFAULT_INPUT_BATCH_SIZE,
 ) -> None:
     """Consume feeder proposals and write them through ``TransformationDB``.
 
-    Owns transaction boundaries. ``Input`` proposals are inserted in chunks of
-    ``input_batch_size`` so a long run does not hold every row in memory or in
-    one transaction. ``SetFeederState`` flushes any remainder and updates the
-    bookmark in the same transaction. ``NoMoreInputs`` flushes any remainder,
-    clears ``FeederEnabled``, then stops. A trailing remainder when the
-    iterable ends is flushed as an insert-only commit (bookmark unchanged).
+    Owns transaction boundaries. ``FeederInput`` proposals are inserted in
+    chunks of ``input_batch_size`` so a long run does not hold every row in
+    memory or in one transaction. ``SetFeederState`` flushes any remainder and
+    updates the bookmark in the same transaction. ``NoMoreFeederInputs``
+    flushes any remainder, clears ``FeederEnabled``, then stops. A trailing
+    remainder when the iterable ends is flushed as an insert-only commit
+    (bookmark unchanged).
 
     Inserting ahead of the bookmark is safe: ``InputHash`` deduplication drops
     repeats if the feeder is restarted before the next ``SetFeederState``.
@@ -113,7 +105,7 @@ async def materialise_feeder_yields(
         yields: Sync iterable of proposal objects from a feeder plugin.
         transformation_db: DB instance; must not already be in a transaction
             (this function opens one per batch).
-        input_batch_size: Max ``Input`` rows buffered before an insert-only
+        input_batch_size: Max ``FeederInput`` rows buffered before an insert-only
             commit. Must be >= 1.
 
     Raises:
@@ -123,11 +115,11 @@ async def materialise_feeder_yields(
     if input_batch_size < 1:
         raise ValueError("input_batch_size must be >= 1")
 
-    pending: list[dict[str, Any]] = []
+    pending: list[FeederInput] = []
 
     for item in yields:
-        if isinstance(item, Input):
-            pending.append(_input_row(item))
+        if isinstance(item, FeederInput):
+            pending.append(item)
             if len(pending) >= input_batch_size:
                 await _commit_batch(transformation_db, transformation_id, pending)
                 pending = []
@@ -144,7 +136,7 @@ async def materialise_feeder_yields(
             pending = []
             continue
 
-        if isinstance(item, NoMoreInputs):
+        if isinstance(item, NoMoreFeederInputs):
             await _commit_batch(
                 transformation_db,
                 transformation_id,
@@ -155,7 +147,7 @@ async def materialise_feeder_yields(
 
         raise TypeError(f"unsupported feeder yield type: {type(item).__name__}")
 
-    # Remainder without a trailing SetFeederState / NoMoreInputs: still persist.
+    # Remainder without a trailing SetFeederState / NoMoreFeederInputs: persist.
     # Bookmark may lag; InputHash dedup covers a later re-yield.
     if pending:
         await _commit_batch(transformation_db, transformation_id, pending)
