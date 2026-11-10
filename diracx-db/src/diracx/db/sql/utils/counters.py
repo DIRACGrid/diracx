@@ -226,15 +226,23 @@ class JournalledCounter:
             if not sqlite:
                 locks = self.counters_table.metadata.tables[COUNTER_LOCKS_TABLE]
                 for operation in operations:
-                    await conn.execute(
-                        select(literal_column("1"))
-                        .select_from(locks)
-                        .where(
-                            locks.c.CounterName == self.name,
-                            locks.c.Operation == operation,
+                    row = (
+                        await conn.execute(
+                            select(literal_column("1"))
+                            .select_from(locks)
+                            .where(
+                                locks.c.CounterName == self.name,
+                                locks.c.Operation == operation,
+                            )
+                            .with_for_update()
                         )
-                        .with_for_update()
-                    )
+                    ).one_or_none()
+                    if row is None:
+                        raise RuntimeError(
+                            f"CounterLocks row missing for "
+                            f"{self.name!r} / {operation!r}; "
+                            f"run the DB initialisation to seed lock rows"
+                        )
             yield conn
 
     # ------------------------------------------------------------------
