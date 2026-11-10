@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator
 
-from pydantic import BaseModel, PositiveInt
+from pydantic import PositiveInt
 
+from diracx.core.models._base import BaseModel
 from diracx.core.models.transformation import (
     ComputeParcel,
     InputStatus,
@@ -14,13 +15,10 @@ from diracx.core.models.transformation import (
 
 
 class FixedSizePackerArgs(BaseModel):
-    """Arguments of the fixed-size packer.
-
-    Attributes:
-        group_size: Number of inputs in each parcel.
-    """
+    """Arguments of the fixed-size packer."""
 
     group_size: PositiveInt = 1
+    """Number of inputs in each parcel."""
 
 
 async def fixed_size_packer(
