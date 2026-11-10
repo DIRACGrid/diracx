@@ -57,7 +57,7 @@ Rebuilding (from a maintenance task, opens its own transaction)::
             measure_exprs={"Count": func.count(), "Bytes": func.sum(Files.c.Size)},
         )
     ]
-    await MY_COUNTER.rebuild(engine, counted)
+    await MY_COUNTER.rebuild(engine, counted, scope={"DatasetID": 7})
 
 Deleting a scope (after counted rows are already unwritable and deleted)::
 
@@ -123,7 +123,7 @@ BIGINT_AUTOINCREMENT = BigInteger().with_variant(Integer(), "sqlite")
 _FOLD_CLAIM = Table(
     "FoldClaim",
     MetaData(),
-    Column("JournalID", BIGINT_AUTOINCREMENT, primary_key=True),
+    Column("JournalID", BIGINT_AUTOINCREMENT, primary_key=True, autoincrement=False),
     prefixes=["TEMPORARY"],
 )
 
@@ -146,8 +146,8 @@ class CountedTable:
     """
 
     table: FromClause
-    key_exprs: dict[str, ColumnElement]
-    measure_exprs: dict[str, ColumnElement]
+    key_exprs: dict[str, ColumnElement[Any]]
+    measure_exprs: dict[str, ColumnElement[Any]]
 
 
 @dataclass(frozen=True)
@@ -267,7 +267,7 @@ class JournalledCounter:
         self,
         conn: AsyncConnection,
         scope: Mapping[str, Any] | None = None,
-    ) -> Sequence:
+    ) -> Sequence[Any]:
         """Return exact counts by summing folded counters and the journal.
 
         The result is exact at any aggregation lag because it combines both
@@ -288,6 +288,12 @@ class JournalledCounter:
         """
         if scope:
             self._validate_scope(scope)
+        else:
+            logger.warning(
+                "Unscoped read of %s: scans both full tables; "
+                "prefer passing a key-prefix scope",
+                self.name,
+            )
 
         ct = self.counters_table
         jt = self.journal_table
@@ -338,6 +344,9 @@ class JournalledCounter:
             Number of journal rows folded. If equal to ``batch_size``, the
             caller should schedule another fold immediately.
         """
+        if batch_size < 1:
+            raise ValueError("batch_size must be >= 1")
+
         jt = self.journal_table
         ct = self.counters_table
 
@@ -346,7 +355,13 @@ class JournalledCounter:
         ) as conn:
             sqlite = _is_sqlite(conn)
 
-            # Create/clear the session temp table
+            # Create/clear the session temp table.
+            # The ADR specifies creating the temp table once at session start
+            # (pool-checkout event), outside any transaction.  We create it
+            # lazily here with IF NOT EXISTS instead, which is safe because
+            # binlog_format=ROW is already required (GTID restrictions only
+            # apply to STATEMENT/MIXED mode).  The DB user needs the
+            # CREATE TEMPORARY TABLES privilege.
             await conn.execute(CreateTable(_FOLD_CLAIM, if_not_exists=True))
             await conn.execute(delete(_FOLD_CLAIM))
 
@@ -356,9 +371,9 @@ class JournalledCounter:
                 claim_q = claim_q.with_for_update(skip_locked=True)
             await conn.execute(insert(_FOLD_CLAIM).from_select(["JournalID"], claim_q))
 
-            n_claimed = (
+            n_claimed: int = (
                 await conn.execute(select(func.count()).select_from(_FOLD_CLAIM))
-            ).scalar()
+            ).scalar() or 0
             if not n_claimed:
                 return 0
 
@@ -400,10 +415,23 @@ class JournalledCounter:
                 )
                 await conn.execute(ins.on_duplicate_key_update(**on_dup))
 
-            # Delete folded journal rows
-            await conn.execute(
-                delete(jt).where(jt.c.JournalID.in_(select(_FOLD_CLAIM.c.JournalID)))
-            )
+            # Delete folded journal rows.
+            # Use a JOIN rather than IN (subquery): MySQL's plan for an
+            # IN-subquery over a statistics-free temp table is not reliably
+            # a semi-join.  SQLite lacks multi-table DELETE so falls back
+            # to IN there.
+            if sqlite:
+                await conn.execute(
+                    delete(jt).where(
+                        jt.c.JournalID.in_(select(_FOLD_CLAIM.c.JournalID))
+                    )
+                )
+            else:
+                await conn.execute(
+                    jt.delete().where(
+                        jt.c.JournalID == _FOLD_CLAIM.c.JournalID,
+                    )
+                )
 
             return n_claimed
 
@@ -532,7 +560,7 @@ class JournalledCounter:
         self,
         engine: AsyncEngine,
         scope: Mapping[str, Any],
-    ) -> None:
+    ) -> tuple[int, int]:
         """Remove all counter and journal rows matching a scope.
 
         The scope's counted rows must already be unwritable and deleted by the
@@ -541,6 +569,9 @@ class JournalledCounter:
         Args:
             engine: Database engine.
             scope: Key-prefix dict (e.g. ``{"DatasetID": 7}``).
+
+        Returns:
+            ``(counter_rows_deleted, journal_rows_deleted)``
         """
         if not scope:
             raise ValueError("delete_scope requires a non-empty scope")
@@ -554,8 +585,9 @@ class JournalledCounter:
             [CounterLockOperation.REBUILD, CounterLockOperation.FOLD],
             "READ COMMITTED",
         ) as conn:
-            await conn.execute(delete(ct).where(self._scope_where(ct, scope)))
-            await conn.execute(delete(jt).where(self._scope_where(jt, scope)))
+            r_ct = await conn.execute(delete(ct).where(self._scope_where(ct, scope)))
+            r_jt = await conn.execute(delete(jt).where(self._scope_where(jt, scope)))
+            return r_ct.rowcount, r_jt.rowcount
 
 
 def counter_locks_table(metadata: MetaData) -> Table:

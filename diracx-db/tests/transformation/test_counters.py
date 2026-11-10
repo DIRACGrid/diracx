@@ -27,7 +27,6 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
-    event,
     func,
     insert,
     select,
@@ -132,11 +131,6 @@ async def engine(request, simple_metadata, mysql_url, mariadb_url):
 
     if backend == "sqlite":
         eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-        event.listen(
-            eng.sync_engine,
-            "connect",
-            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-        )
     elif backend == "mysql":
         eng = create_async_engine(mysql_url)
     elif backend == "mariadb":
@@ -165,11 +159,6 @@ async def engine(request, simple_metadata, mysql_url, mariadb_url):
 async def sqlite_engine(simple_metadata):
     """SQLite-only engine for backend-independent tests."""
     eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-    event.listen(
-        eng.sync_engine,
-        "connect",
-        lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-    )
 
     async with eng.begin() as conn:
         await conn.run_sync(simple_metadata.create_all)
@@ -523,7 +512,9 @@ async def test_delete_scope(engine, counter):
                 ],
             )
 
-    await counter.delete_scope(engine, {"GroupID": 1})
+    ct_deleted, jt_deleted = await counter.delete_scope(engine, {"GroupID": 1})
+    assert ct_deleted == 1  # one folded counter row for group 1
+    assert jt_deleted == 1  # one unfolded journal row for group 1
 
     async with engine.connect() as conn:
         async with conn.begin():
@@ -811,11 +802,6 @@ async def real_engine(request, mysql_url, mariadb_url):
 
     if backend == "sqlite":
         eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-        event.listen(
-            eng.sync_engine,
-            "connect",
-            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-        )
     elif backend == "mysql":
         eng = create_async_engine(mysql_url)
     elif backend == "mariadb":
