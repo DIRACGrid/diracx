@@ -66,7 +66,13 @@ async def transformation_id(transformation_db: TransformationDB) -> UUID:
     return transformation_id
 
 
-def _fake_seed_feeder(*, start: int, stop: int, exhausted: bool = False):
+async def _aiter(items):
+    """Wrap a list as an async iterable, as feeders are async generators."""
+    for item in items:
+        yield item
+
+
+async def _fake_seed_feeder(*, start: int, stop: int, exhausted: bool = False):
     """Yield seeds in one batch, then optionally signal exhaustion."""
     for seed in range(start, stop):
         yield FeederInput(descriptor={"seed": seed})
@@ -136,7 +142,7 @@ async def test_materialise_no_more_inputs_flushes_pending_without_state(
 ):
     delayed = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    def _pending_then_done():
+    async def _pending_then_done():
         yield FeederInput(
             lfn="/lhcb/a.dst",
             lfn_size=10,
@@ -198,7 +204,7 @@ async def test_materialise_flushes_remainder_without_feeder_state(
 ):
     await materialise_feeder_yields(
         transformation_id,
-        [FeederInput(descriptor={"seed": 1})],
+        _aiter([FeederInput(descriptor={"seed": 1})]),
         transformation_db,
     )
 
@@ -216,7 +222,7 @@ async def test_materialise_flushes_remainder_without_feeder_state(
 async def test_materialise_flushes_full_input_batches_before_state(
     transformation_db: TransformationDB, transformation_id: UUID
 ):
-    def _gen():
+    async def _gen():
         for seed in range(5):
             yield FeederInput(descriptor={"seed": seed})
         raise RuntimeError("stop before SetFeederState")
@@ -246,7 +252,7 @@ async def test_materialise_rejects_invalid_batch_size(
     with pytest.raises(ValueError, match="input_batch_size"):
         await materialise_feeder_yields(
             transformation_id,
-            [],
+            _aiter([]),
             transformation_db,
             input_batch_size=0,
         )
@@ -258,6 +264,6 @@ async def test_materialise_rejects_unknown_yield_type(
     with pytest.raises(TypeError, match="unsupported feeder yield type"):
         await materialise_feeder_yields(
             transformation_id,
-            ["not-a-proposal"],  # type: ignore[list-item]
+            _aiter(["not-a-proposal"]),
             transformation_db,
         )

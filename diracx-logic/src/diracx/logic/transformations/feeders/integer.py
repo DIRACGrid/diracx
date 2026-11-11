@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from pydantic import BaseModel, NonNegativeInt
@@ -25,12 +25,12 @@ class IntegerFeederArgs(BaseModel):
     max_count: NonNegativeInt = 0
 
 
-def integer_feeder(
+async def integer_feeder(
     *,
     feeder_args: IntegerFeederArgs,
     feeder_state: dict[str, Any],
     scouting: bool,
-) -> Generator[FeederInput | SetFeederState | NoMoreFeederInputs, None, None]:
+) -> AsyncGenerator[FeederInput | SetFeederState | NoMoreFeederInputs, None]:
     """Yield consecutive integer seeds until ``max_count`` is reached.
 
     The bookmark is ``next_seed``: the next integer to issue. ``scouting`` is

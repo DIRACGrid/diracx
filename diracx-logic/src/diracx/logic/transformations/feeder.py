@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Iterable
+from collections.abc import AsyncIterable, Callable
 from typing import Any, get_type_hints
 
 from pydantic import BaseModel
@@ -38,7 +38,7 @@ def load_feeder(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
 
     Raises:
         ConfigurationError: If no feeder is registered under ``name``, it is
-            not a sync generator function, or its ``feeder_args`` is not
+            not an async generator function, or its ``feeder_args`` is not
             annotated with a pydantic model.
     """
     entry_points = select_from_extension(group=DiracEntryPoint.FEEDERS, name=name)
@@ -48,8 +48,8 @@ def load_feeder(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
             f"{DiracEntryPoint.FEEDERS.value!r}"
         )
     plugin = entry_points[0].load()
-    if not inspect.isgeneratorfunction(plugin):
-        raise ConfigurationError(f"Feeder {name!r} must be a sync generator function")
+    if not inspect.isasyncgenfunction(plugin):
+        raise ConfigurationError(f"Feeder {name!r} must be an async generator function")
     args_model = get_type_hints(plugin).get("feeder_args")
     if not (isinstance(args_model, type) and issubclass(args_model, BaseModel)):
         raise ConfigurationError(
@@ -81,7 +81,7 @@ async def _commit_batch(
 
 async def materialise_feeder_yields(
     transformation_id: UUID,
-    yields: Iterable[FeederProposal],
+    yields: AsyncIterable[FeederProposal],
     transformation_db: TransformationDB,
     *,
     input_batch_size: int = DEFAULT_INPUT_BATCH_SIZE,
@@ -101,7 +101,7 @@ async def materialise_feeder_yields(
 
     Args:
         transformation_id: Transformation being fed.
-        yields: Sync iterable of proposal objects from a feeder plugin.
+        yields: Async iterable of proposal objects from a feeder plugin.
         transformation_db: DB instance; must not already be in a transaction
             (this function opens one per batch).
         input_batch_size: Max ``FeederInput`` rows buffered before an insert-only
@@ -116,7 +116,7 @@ async def materialise_feeder_yields(
 
     pending: list[FeederInput] = []
 
-    for item in yields:
+    async for item in yields:
         if isinstance(item, FeederInput):
             pending.append(item)
             if len(pending) >= input_batch_size:

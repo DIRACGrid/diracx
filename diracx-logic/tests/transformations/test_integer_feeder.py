@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from sqlalchemy import event, func, insert, select
 from uuid_utils import UUID, uuid7
@@ -23,6 +25,7 @@ from diracx.logic.transformations import (
     load_feeder,
     materialise_feeder_yields,
 )
+from diracx.logic.transformations import feeder as feeder_module
 
 
 @pytest.fixture
@@ -74,14 +77,15 @@ async def _insert_integer_transformation(
     return transformation_id
 
 
-def test_integer_feeder_yields_seeds_then_exhausts():
-    yields = list(
-        integer_feeder(
+async def test_integer_feeder_yields_seeds_then_exhausts():
+    yields = [
+        item
+        async for item in integer_feeder(
             feeder_args=IntegerFeederArgs(max_count=3),
             feeder_state={"next_seed": 0},
             scouting=False,
         )
-    )
+    ]
     assert [type(item) for item in yields] == [
         FeederInput,
         FeederInput,
@@ -97,14 +101,15 @@ def test_integer_feeder_yields_seeds_then_exhausts():
     assert yields[3].state == {"next_seed": 3}
 
 
-def test_integer_feeder_resumes_from_bookmark():
-    yields = list(
-        integer_feeder(
+async def test_integer_feeder_resumes_from_bookmark():
+    yields = [
+        item
+        async for item in integer_feeder(
             feeder_args=IntegerFeederArgs(max_count=4),
             feeder_state={"next_seed": 2},
             scouting=False,
         )
-    )
+    ]
     assert [
         item.descriptor["seed"] for item in yields if isinstance(item, FeederInput)
     ] == [
@@ -115,14 +120,15 @@ def test_integer_feeder_resumes_from_bookmark():
     assert isinstance(yields[-1], NoMoreFeederInputs)
 
 
-def test_integer_feeder_already_exhausted():
-    yields = list(
-        integer_feeder(
+async def test_integer_feeder_already_exhausted():
+    yields = [
+        item
+        async for item in integer_feeder(
             feeder_args=IntegerFeederArgs(max_count=2),
             feeder_state={"next_seed": 2},
             scouting=False,
         )
-    )
+    ]
     assert yields == [NoMoreFeederInputs()]
 
 
@@ -135,6 +141,18 @@ def test_load_feeder_resolves_integer_feeder_entry_point():
 def test_load_feeder_unknown_name():
     with pytest.raises(ConfigurationError, match="No feeder named"):
         load_feeder("DoesNotExistFeeder")
+
+
+def test_load_feeder_rejects_sync_generator(monkeypatch):
+    def sync_feeder(*, feeder_args: IntegerFeederArgs, feeder_state, scouting):
+        yield NoMoreFeederInputs()
+
+    entry_point = SimpleNamespace(load=lambda: sync_feeder)
+    monkeypatch.setattr(
+        feeder_module, "select_from_extension", lambda **_: [entry_point]
+    )
+    with pytest.raises(ConfigurationError, match="async generator function"):
+        load_feeder("SyncFeeder")
 
 
 async def test_integer_feeder_materialises_and_disables(
