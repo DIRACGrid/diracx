@@ -121,8 +121,9 @@ DiracX
 }
 ```
 
-The following table summarizes the DIRAC services for which a Legacy Adaptor is available (tested and certified), per DiracX release:
+The following table summarizes the DIRAC services for which a Legacy Adaptor is available (tested and certified), per DIRAC/DiracX release:
 
-| DiracX release | System             | ServiceName    |
-| -------------- | ------------------ | -------------- |
-| v0.0.1         | WorkloadManagement | JobStateUpdate |
+| DIRAC release | DiracX release | System             | ServiceName    |
+| ------------- | -------------- | ------------------ | -------------- |
+| v9.0.0        | v0.0.1         | WorkloadManagement | JobStateUpdate |
+| v9.1.x        | v0.x.x         | WorkloadManagement | SandboxStore   |
