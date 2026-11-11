@@ -58,7 +58,7 @@ When a reviewer requests changes on your PR, it is back in your hands: it leaves
 Once you've addressed the feedback:
 
 1. Push your updates to the branch. Pushing alone does not bring the PR back, so you can push work in progress.
-2. When the PR is ready, **re-request a review** (the ↻ button next to the reviewer's name in the PR sidebar).
+2. When the PR is ready, **re-request a review** from the reviewer who asked for changes (the ↻ button next to their name in the PR sidebar). If you cannot re-request a review, convert the PR to a draft and mark it **Ready for review** again.
 
 The reviewer is notified and the PR is back in the digest.
 
