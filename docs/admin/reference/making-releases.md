@@ -20,12 +20,12 @@ The releases of `DIRAC` and `DIRACCommon` are managed as they have always been, 
 - the AppVersion
 - the container versions
 
-The `update-charts` [CI job](https://github.com/DIRACGrid/diracx/blob/e552651ac682e7461bc338856d295b0651ec2a26/.github/workflows/deployment.yml#L168) in `diracx` pushes a new commit in `diracx-charts`, which results in a new `diracx-charts` release.
+Renovate, configured in `diracx-charts`, detects the new `diracx` images and opens a pull request in `diracx-charts` with these changes. Once merged, it results in a new `diracx-charts` release.
 
 ## Dependencies between diracx, diracx-web and diracx-charts
 
 The `diracx-web` version is only very loosely coupled with the `diracx` version.
-A new `diracx-web` release will trigger a new `diracx-charts` updating:
+A new `diracx-web` release leads, through the same Renovate pull request mechanism, to a new `diracx-charts` release updating:
 
 - the chart version
 - the container versions
@@ -42,8 +42,8 @@ flowchart LR
     end
 
 
-    diracx -->|commit| diracx-charts
-    diracx-web -->|commit| diracx-charts
+    diracx -->|Renovate PR| diracx-charts
+    diracx-web -->|Renovate PR| diracx-charts
 
     linkStyle 0 stroke: blue
     linkStyle 1 stroke: blue
@@ -56,7 +56,7 @@ Releases are managed by `ReleasePlease`. The token used to perform it belongs to
 
 !!! info "Why a bot token?"
 
-    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment and chart update jobs.
+    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment jobs.
 
 A new release creates:
 
@@ -75,19 +75,17 @@ git push upstream HEAD:main
 
 ## diracx-web release
 
-Releases are managed by `ReleasePlease`. The token used to perform it belongs to `DIRACGridBot` github user, same as `diracx`.
-
-!!! info "Why a bot token?"
-
-    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment and chart update jobs.
+Releases are managed by `ReleasePlease`, which runs in the deployment workflow with the job's own `GITHUB_TOKEN`. A tag created with that token triggers no other workflow, so the release jobs run in the same workflow, after `ReleasePlease`.
 
 A new release creates:
 
 - a [github release](https://github.com/DIRACGrid/diracx-web/releases)
-- an [npm release](https://www.npmjs.com/package/@dirac-grid/diracx-web-components) for `diracx-web-components`
+- an [npm release](https://www.npmjs.com/package/@dirac-grid/diracx-web-components) for `diracx-web-components`: CI stages the version, and a maintainer approves it on npm (2FA) before it is published
 - new [docker images](https://github.com/DIRACGrid/diracx-web/)
 - updated [Storybook documentation](https://diracgrid.github.io/diracx-web/) on GitHub Pages
 
 ## diracx-charts releases
 
 Every commit in master triggers a new release. The releases are published on a [helm repo](https://charts.diracgrid.org/index.yaml)
+
+The pull requests updating the chart for new `diracx` and `diracx-web` releases are opened by Renovate (see `renovate.json` in `diracx-charts`), which merges them once CI passes.
