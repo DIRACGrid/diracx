@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator
+from uuid import UUID
 
 from pydantic import PositiveInt
 
@@ -46,7 +47,7 @@ async def fixed_size_packer(
     Yields:
         One compute parcel per group.
     """
-    group = []
+    group: list[UUID] = []
     async for packer_input in inputs:
         group.append(packer_input.input_id)
         if len(group) == packer_args.group_size:
