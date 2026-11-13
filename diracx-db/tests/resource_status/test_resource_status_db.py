@@ -12,8 +12,8 @@ _FAR = datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
 
 @pytest.fixture
-async def resource_status_db(tmp_path):
-    resource_status_db = ResourceStatusDB("sqlite+aiosqlite:///:memory:")
+async def resource_status_db(tmp_path, sql_db_url):
+    resource_status_db = ResourceStatusDB(sql_db_url)
     async with resource_status_db.engine_context():
         async with resource_status_db.engine.begin() as conn:
             await conn.run_sync(resource_status_db.metadata.create_all)

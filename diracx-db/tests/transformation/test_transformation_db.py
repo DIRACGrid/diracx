@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import delete, event, func, insert, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from uuid_utils import UUID, uuid7
 
 from diracx.core.exceptions import (
@@ -40,22 +40,6 @@ from diracx.db.sql.transformation.schema import (
     Workgraphs,
 )
 from diracx.db.sql.utils.counters import counter_locks_table
-
-
-@pytest.fixture
-async def transformation_db():
-    db = TransformationDB("sqlite+aiosqlite:///:memory:")
-    async with db.engine_context():
-        # SQLite only enforces foreign keys when asked to, per connection
-        event.listen(
-            db.engine.sync_engine,
-            "connect",
-            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-        )
-        async with db.engine.begin() as conn:
-            await conn.run_sync(db.metadata.create_all)
-            await db.post_create(conn)
-        yield db
 
 
 @pytest.fixture
@@ -228,7 +212,9 @@ async def test_data_parcel_deltas_are_never_negative(
             )
         )
 
-    with pytest.raises(IntegrityError):
+    # SQLite reports CHECK violations as IntegrityError, but PyMySQL maps the
+    # MySQL (3819) and MariaDB (4025) errors to OperationalError
+    with pytest.raises((IntegrityError, OperationalError)):
         async with transformation_db as db:
             await db.conn.execute(
                 insert(DataParcelDeltas).values(
