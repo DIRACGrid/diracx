@@ -5,6 +5,8 @@ from __future__ import annotations
 __all__ = [
     "Component",
     "NotSelfContainedError",
+    "PolicyViolationError",
+    "check_policy",
     "check_self_contained",
     "decompose",
     "entry_identity",
@@ -21,3 +23,4 @@ from .identity import (
     format_reference,
     subgraph,
 )
+from .policy import PolicyViolationError, check_policy
