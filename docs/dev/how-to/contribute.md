@@ -51,20 +51,20 @@
 
 DIRACGrid repositories use shared CI workflows (defined in [`DIRACGrid/.github`](https://github.com/DIRACGrid/.github)) to streamline the review process.
 
-#### Automatic draft conversion on changes requested
+#### When changes are requested
 
-When a reviewer requests changes on your PR, it is **automatically converted to a draft**. This makes it clear that the PR is back in the contributor's hands and not ready for another review round.
+When a reviewer requests changes on your PR, it is back in your hands: it leaves the daily review digest (see below) until you say it is ready again.
 
 Once you've addressed the feedback:
 
-1. Push your updates to the branch.
-2. Mark the PR as **Ready for review** again using the GitHub UI.
+1. Push your updates to the branch. Pushing alone does not bring the PR back, so you can push work in progress.
+2. When the PR is ready, **re-request a review** from the reviewer who asked for changes (the ↻ button next to their name in the PR sidebar). If you cannot re-request a review, convert the PR to a draft and mark it **Ready for review** again.
 
-The reviewer will be re-notified and can continue the review.
+The reviewer is notified and the PR is back in the digest.
 
 #### PR review reminders
 
-A daily digest of open (non-draft) PRs is posted to Mattermost on weekday mornings. The digest includes the PR title, author, assigned reviewer, age, and review status for all repositories in the DIRACGrid organisation. This ensures that open PRs don't get forgotten.
+A daily digest of PRs awaiting review is posted to Mattermost on weekday mornings, for `diracx`, `diracx-charts`, `diracx-web` and `mkdocs-diracx-plugin`. It includes the PR title, author, assigned reviewer, age, and review status, and leaves out drafts and PRs waiting on their author. This ensures that open PRs don't get forgotten.
 
 #### Changes to `pixi.lock`
 
