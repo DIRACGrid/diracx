@@ -8,6 +8,7 @@ from sqlalchemy import delete, event, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import UUID, uuid7
 
+from diracx.core.cwl import entry_identity, subgraph
 from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
@@ -400,6 +401,67 @@ async def test_insert_requirements_deduplicates(transformation_db: Transformatio
             select(func.count()).select_from(RequirementsTemplates)
         )
     assert count == 1
+
+
+async def test_insert_processes_deduplicates(transformation_db: TransformationDB):
+    a, b = b"a" * 32, b"b" * 32
+    async with transformation_db as db:
+        await db.insert_processes({a: {"class": "Workflow"}})
+    async with transformation_db as db:
+        await db.insert_processes({a: {"class": "Workflow"}, b: {"class": "Tool"}})
+        await db.insert_processes({})
+        count = await db.conn.scalar(select(func.count()).select_from(Processes))
+    assert count == 2
+
+
+async def test_get_processes_returns_only_what_is_stored(
+    transformation_db: TransformationDB,
+):
+    a = b"a" * 32
+    async with transformation_db as db:
+        await db.insert_processes({a: {"class": "Workflow", "steps": []}})
+        found = await db.get_processes([a, b"z" * 32])
+    assert found == {a: {"class": "Workflow", "steps": []}}
+
+
+async def test_stored_processes_re_hash_to_their_identity(
+    transformation_db: TransformationDB,
+):
+    # A database may re-sort keys and reformat numbers in a JSON column, so a
+    # row read back is not the bytes that were hashed: it must still hash the same
+    tool = {
+        "class": "CommandLineTool",
+        "id": "#tool.cwl",
+        "baseCommand": ["lb-prod-run"],
+        "inputs": [
+            {
+                "id": "#tool.cwl/conf",
+                "type": "Any",
+                "default": [0.1, 1e-7, -0.0, 1.5e300, "ünïcødé", {"z": 1, "a": 2}],
+            }
+        ],
+        "outputs": [],
+    }
+    workflow = {
+        "class": "Workflow",
+        "id": "#main",
+        "inputs": [],
+        "outputs": [],
+        "steps": [{"id": "#main/s0", "run": "#tool.cwl", "in": [], "out": []}],
+    }
+    packed = {"cwlVersion": "v1.2", "$graph": [workflow, tool]}
+    rows = {
+        entry_identity(packed, entry_id): subgraph(packed, entry_id)
+        for entry_id in ("#main", "#tool.cwl")
+    }
+    async with transformation_db as db:
+        await db.insert_processes(rows)
+    async with transformation_db as db:
+        stored = await db.get_processes(rows)
+    assert stored.keys() == rows.keys()
+    for process_id, document in stored.items():
+        root = document["$graph"][0]["id"]
+        assert entry_identity(document, root) == process_id
 
 
 async def test_insert_compute_parcels(

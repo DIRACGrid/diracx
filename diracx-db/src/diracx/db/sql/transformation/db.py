@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Collection, Iterable
+from collections.abc import Collection, Iterable, Mapping
 from datetime import datetime
 from typing import Any, NamedTuple, TypeAlias
 
@@ -34,6 +34,7 @@ from .schema import (
     Inputs,
     ParcelInputs,
     Parcels,
+    Processes,
     RequirementsTemplates,
     TransformationLog,
     Transformations,
@@ -267,6 +268,40 @@ class TransformationDB(BaseSQLDB):
                 requirements_template=requirements,
             )
         )
+
+    async def insert_processes(self, processes: Mapping[bytes, dict[str, Any]]) -> None:
+        """Store process documents unless one with their hash already exists.
+
+        Storing a document that is already present is a no-op, so concurrent
+        submissions of the same process are safe.
+
+        Args:
+            processes: Documents keyed by content hash.
+        """
+        if not processes:
+            return
+        await self.conn.execute(
+            insert(Processes)
+            .prefix_with("IGNORE", dialect="mysql")
+            .prefix_with("OR IGNORE", dialect="sqlite")
+            .values([{"process_id": k, "process": v} for k, v in processes.items()])
+        )
+
+    async def get_processes(
+        self, process_ids: Iterable[bytes]
+    ) -> dict[bytes, dict[str, Any]]:
+        """Fetch stored process documents by content hash.
+
+        Args:
+            process_ids: Content hashes to fetch.
+
+        Returns:
+            The documents found, keyed by content hash.
+        """
+        stmt = select(Processes.process_id, Processes.process).where(
+            Processes.process_id.in_(list(process_ids))
+        )
+        return {pid: process for pid, process in await self.conn.execute(stmt)}
 
     async def insert_compute_parcels(
         self,
