@@ -13,11 +13,30 @@ from diracx.core.models import TokenResponse
 from diracx.core.utils import (
     AsyncTwoLevelCache,
     TwoLevelCache,
+    batched,
     dotenv_files_from_environment,
     read_credentials,
     serialize_credentials,
     write_credentials,
 )
+
+
+@pytest.mark.parametrize(
+    "iterable,n,expected",
+    [
+        ("ABCDEFG", 3, [("A", "B", "C"), ("D", "E", "F"), ("G",)]),
+        ("ABCDEF", 3, [("A", "B", "C"), ("D", "E", "F")]),
+        ("", 3, []),
+        (iter(range(3)), 1, [(0,), (1,), (2,)]),
+    ],
+)
+def test_batched(iterable, n, expected):
+    assert list(batched(iterable, n)) == expected
+
+
+def test_batched_rejects_non_positive_size():
+    with pytest.raises(ValueError, match="at least one"):
+        list(batched("ABC", 0))
 
 
 def test_dotenv_files_from_environment(monkeypatch):

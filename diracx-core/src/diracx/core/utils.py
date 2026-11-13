@@ -6,6 +6,7 @@ __all__ = [
     "EXPIRES_GRACE_SECONDS",
     "AsyncTwoLevelCache",
     "TwoLevelCache",
+    "batched",
     "batched_async",
     "dotenv_files_from_environment",
     "prepare_verify",
@@ -25,9 +26,10 @@ import ssl
 import stat
 import threading
 from collections import defaultdict
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from itertools import islice
 from pathlib import Path
 from typing import Any, AsyncIterable, TypeVar, overload
 
@@ -520,6 +522,34 @@ class AsyncTwoLevelCache:
             self.tasks.clear()
         self.soft_cache.clear()
         self.hard_cache.clear()
+
+
+# TODO: replace with itertools.batched once Python 3.12 is the minimum version
+def batched(iterable: Iterable[T], n: int) -> Iterator[tuple[T, ...]]:
+    """Yield successive n-sized chunks from an iterable.
+
+    Backport of :func:`itertools.batched` from Python 3.12, without ``strict``.
+
+    Args:
+        iterable: The input iterable to be batched.
+        n: The size of each batch.
+
+    Yields:
+        tuple: A tuple containing the next n elements from the iterable.
+
+    Raises:
+        ValueError: If n is less than one.
+
+    Example:
+        >>> list(batched("ABCDEFG", 3))
+        [('A', 'B', 'C'), ('D', 'E', 'F'), ('G',)]
+
+    """
+    if n < 1:
+        raise ValueError("n must be at least one")
+    iterator = iter(iterable)
+    while batch := tuple(islice(iterator, n)):
+        yield batch
 
 
 async def batched_async(

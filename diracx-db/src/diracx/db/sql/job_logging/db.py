@@ -10,7 +10,7 @@ from sqlalchemy import delete, func, insert, select
 
 from diracx.core.models import JobLoggingRecord, JobStatusReturn
 
-from ..utils import BaseSQLDB
+from ..utils import BaseSQLDB, execute_in_chunks, fetch_in_chunks
 from .schema import JobLoggingDBBase, LoggingInfo
 
 
@@ -33,17 +33,19 @@ class JobLoggingDB(BaseSQLDB):
             records: Job status records to insert.
         """
         # First, fetch the maximum SeqNums for the given job_ids
-        seqnum_stmt = (
-            select(
-                LoggingInfo.job_id, func.coalesce(func.max(LoggingInfo.seq_num) + 1, 1)
-            )
-            .where(LoggingInfo.job_id.in_([record.job_id for record in records]))
-            .group_by(LoggingInfo.job_id)
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda job_ids: (
+                select(
+                    LoggingInfo.job_id,
+                    func.coalesce(func.max(LoggingInfo.seq_num) + 1, 1),
+                )
+                .where(LoggingInfo.job_id.in_(job_ids))
+                .group_by(LoggingInfo.job_id)
+            ),
+            (record.job_id for record in records),
         )
-
-        seqnums = {
-            jid: seqnum for jid, seqnum in (await self.conn.execute(seqnum_stmt))
-        }
+        seqnums = {jid: seqnum for jid, seqnum in rows}
         # IF a seqnum is not found, then assume it does not exist and the first sequence number is 1.
         # https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-bulk-insert-statements
         values = []
@@ -84,19 +86,23 @@ class JobLoggingDB(BaseSQLDB):
         """
         # We could potentially use a group_by here, but we need to post-process the
         # results later.
-        stmt = (
-            select(
-                LoggingInfo.job_id,
-                LoggingInfo.status,
-                LoggingInfo.minor_status,
-                LoggingInfo.application_status,
-                LoggingInfo.status_time,
-                LoggingInfo.source,
-            )
-            .where(LoggingInfo.job_id.in_(job_ids))
-            .order_by(LoggingInfo.status_time_order, LoggingInfo.status_time)
+        # Each job's records are in one chunk, so their order is kept
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(
+                    LoggingInfo.job_id,
+                    LoggingInfo.status,
+                    LoggingInfo.minor_status,
+                    LoggingInfo.application_status,
+                    LoggingInfo.status_time,
+                    LoggingInfo.source,
+                )
+                .where(LoggingInfo.job_id.in_(chunk))
+                .order_by(LoggingInfo.status_time_order, LoggingInfo.status_time)
+            ),
+            job_ids,
         )
-        rows = await self.conn.execute(stmt)
 
         values = defaultdict(list)
         for (
@@ -156,8 +162,11 @@ class JobLoggingDB(BaseSQLDB):
         Args:
             job_ids: Identifiers of jobs whose history should be deleted.
         """
-        stmt = delete(LoggingInfo).where(LoggingInfo.job_id.in_(job_ids))
-        await self.conn.execute(stmt)
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: delete(LoggingInfo).where(LoggingInfo.job_id.in_(chunk)),
+            job_ids,
+        )
 
     async def get_wms_time_stamps(
         self, job_ids: Iterable[int]
@@ -171,9 +180,13 @@ class JobLoggingDB(BaseSQLDB):
             Mapping from job identifiers to status names and their timestamps.
         """
         result: defaultdict[int, dict[str, datetime]] = defaultdict(dict)
-        stmt = select(
-            LoggingInfo.job_id, LoggingInfo.status, LoggingInfo.status_time_order
-        ).where(LoggingInfo.job_id.in_(job_ids))
-        for job_id, event, etime in await self.conn.execute(stmt):
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: select(
+                LoggingInfo.job_id, LoggingInfo.status, LoggingInfo.status_time_order
+            ).where(LoggingInfo.job_id.in_(chunk)),
+            job_ids,
+        )
+        for job_id, event, etime in rows:
             result[job_id][event] = etime
         return dict(result)

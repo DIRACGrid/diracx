@@ -14,7 +14,13 @@ from sqlalchemy.sql import expression
 from diracx.core.exceptions import InvalidQueryError
 from diracx.core.models import JobCommand, SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB, _get_columns, utcnow
+from ..utils import (
+    BaseSQLDB,
+    _get_columns,
+    execute_in_chunks,
+    fetch_in_chunks,
+    utcnow,
+)
 from .schema import (
     HeartBeatLoggingInfo,
     InputData,
@@ -122,8 +128,11 @@ class JobDB(BaseSQLDB):
         Args:
             job_ids: Identifiers of jobs to delete.
         """
-        stmt = delete(JobJDLs).where(JobJDLs.job_id.in_(job_ids))
-        await self.conn.execute(stmt)
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: delete(JobJDLs).where(JobJDLs.job_id.in_(chunk)),
+            job_ids,
+        )
 
     async def insert_input_data(self, lfns: dict[int, list[str]]):
         """Insert logical file names associated with jobs.
@@ -198,32 +207,37 @@ class JobDB(BaseSQLDB):
                 job_data[job_id].update(
                     {"LastUpdateTime": datetime.now(tz=timezone.utc)}
                 )
-        columns = set(key for attrs in job_data.values() for key in attrs.keys())
-        case_expressions = {
-            column: case(
-                *[
-                    (
-                        Jobs.__table__.c.JobID == job_id,
-                        # Since the setting of the new column value is obscured by the CASE statement,
-                        # ensure that SQLAlchemy renders the new column value with the correct type
-                        literal(attrs[column], type_=Jobs.__table__.c[column].type)
-                        if not isinstance(attrs[column], expression.FunctionElement)
-                        else attrs[column],
-                    )
-                    for job_id, attrs in job_data.items()
-                    if column in attrs
-                ],
-                else_=getattr(Jobs.__table__.c, column),  # Retain original value
-            )
-            for column in columns
-        }
 
-        stmt = (
-            Jobs.__table__.update()
-            .values(**case_expressions)
-            .where(Jobs.__table__.c.JobID.in_(job_data.keys()))
-        )
-        await self.conn.execute(stmt)
+        def build(job_ids: list[int]):
+            # The CASE expressions grow with the number of jobs too, so they
+            # are built per chunk
+            chunk = {job_id: job_data[job_id] for job_id in job_ids}
+            columns = set(key for attrs in chunk.values() for key in attrs.keys())
+            case_expressions = {
+                column: case(
+                    *[
+                        (
+                            Jobs.__table__.c.JobID == job_id,
+                            # Since the setting of the new column value is obscured by the CASE statement,
+                            # ensure that SQLAlchemy renders the new column value with the correct type
+                            literal(attrs[column], type_=Jobs.__table__.c[column].type)
+                            if not isinstance(attrs[column], expression.FunctionElement)
+                            else attrs[column],
+                        )
+                        for job_id, attrs in chunk.items()
+                        if column in attrs
+                    ],
+                    else_=getattr(Jobs.__table__.c, column),  # Retain original value
+                )
+                for column in columns
+            }
+            return (
+                update(Jobs)
+                .values(**case_expressions)
+                .where(Jobs.__table__.c.JobID.in_(job_ids))
+            )
+
+        await execute_in_chunks(self.conn, build, job_data)
 
     async def get_job_jdls(self, job_ids, original: bool = False) -> dict[int, str]:
         """Get JDLs for the specified jobs.
@@ -235,16 +249,15 @@ class JobDB(BaseSQLDB):
         Returns:
             Mapping from job identifiers to non-empty JDL content.
         """
-        if original:
-            stmt = select(JobJDLs.job_id, JobJDLs.original_jdl).where(
-                JobJDLs.job_id.in_(job_ids)
-            )
-        else:
-            stmt = select(JobJDLs.job_id, JobJDLs.jdl).where(
-                JobJDLs.job_id.in_(job_ids)
-            )
-
-        return {jobid: jdl for jobid, jdl in (await self.conn.execute(stmt)) if jdl}
+        jdl_column = JobJDLs.original_jdl if original else JobJDLs.jdl
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: select(JobJDLs.job_id, jdl_column).where(
+                JobJDLs.job_id.in_(chunk)
+            ),
+            job_ids,
+        )
+        return {jobid: jdl for jobid, jdl in rows if jdl}
 
     async def set_job_commands(self, commands: list[tuple[int, str, str]]) -> None:
         """Store commands to deliver to jobs with their next heartbeat.
@@ -348,20 +361,28 @@ class JobDB(BaseSQLDB):
         Returns:
             Commands awaiting delivery, represented as ``JobCommand`` objects.
         """
+        # Sorted so that the per-chunk ORDER BY gives the overall order
+        job_ids = sorted(job_ids)
         # Get the commands
-        stmt = (
-            select(JobCommands.job_id, JobCommands.command, JobCommands.arguments)
-            .where(JobCommands.job_id.in_(job_ids), JobCommands.status == "Received")
-            .order_by(JobCommands.job_id)
+        commands = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(JobCommands.job_id, JobCommands.command, JobCommands.arguments)
+                .where(JobCommands.job_id.in_(chunk), JobCommands.status == "Received")
+                .order_by(JobCommands.job_id)
+            ),
+            job_ids,
         )
-        commands = await self.conn.execute(stmt)
         # Update the status of the commands
-        stmt = (
-            update(JobCommands)
-            .where(JobCommands.job_id.in_(job_ids))
-            .values(Status="Sent")
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: (
+                update(JobCommands)
+                .where(JobCommands.job_id.in_(chunk))
+                .values(Status="Sent")
+            ),
+            job_ids,
         )
-        await self.conn.execute(stmt)
         # Return the commands grouped by job id
         return [
             JobCommand(job_id=cmd.JobID, command=cmd.Command, arguments=cmd.Arguments)

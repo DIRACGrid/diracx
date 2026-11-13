@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "IN_CHUNK_SIZE",
     "BaseSQLDB",
     "BinaryUUID",
     "EnumBackedBool",
@@ -11,6 +12,8 @@ __all__ = [
     "apply_sort_constraints",
     "datetime_now",
     "enum_column",
+    "execute_in_chunks",
+    "fetch_in_chunks",
     "hash",
     "str32",
     "str64",
@@ -34,6 +37,7 @@ from .base import (
     uuid7_from_datetime,
     uuid7_to_datetime,
 )
+from .chunks import IN_CHUNK_SIZE, execute_in_chunks, fetch_in_chunks
 from .functions import hash, substract_date, utcnow, utcnow_us
 from .types import (
     BinaryUUID,
