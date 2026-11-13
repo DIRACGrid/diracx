@@ -251,6 +251,7 @@ nav:
           - Extensions: dev/explanations/extensions.md
           - Designing functionality: dev/explanations/designing-functionality.md
           - CWL process identity: dev/explanations/cwl-process-identity.md
+          - CWL process store: dev/explanations/cwl-process-store.md
           - Tasks:
               - dev/explanations/tasks/index.md
               - Class details: dev/explanations/tasks/class-details.md
