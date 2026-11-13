@@ -13,6 +13,8 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
+    # Packs CWL files into the one JSON document submitted (DX-ADR-007)
+    "cwltool >=3.3.20260925135507",
     "diraccfg",  # TODO: Should this be an extra
     "diracx-api",
     "diracx-client",
