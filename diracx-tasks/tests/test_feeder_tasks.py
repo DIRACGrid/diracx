@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -10,8 +10,8 @@ import pytest
 from pydantic import BaseModel, ValidationError
 from uuid_utils import uuid7
 
-from diracx.core.exceptions import ConfigurationError
-from diracx.core.models.feeder import Input, SetFeederState
+from diracx.core.exceptions import ConfigurationError, TransformationNotFoundError
+from diracx.core.models.transformation import FeederInput, SetFeederState
 from diracx.tasks.plumbing.locks import MutexLock, SharedRWLock
 from diracx.tasks.transformations import FeedTransformation, PeriodicSweepFeeders
 from diracx.tasks.transformations import feeder as feeder_tasks_module
@@ -21,14 +21,14 @@ class _FakeFeederArgs(BaseModel):
     max_count: int = 3
 
 
-def _fake_feeder(
+async def _fake_feeder(
     *,
     feeder_args: _FakeFeederArgs,
     feeder_state: dict[str, Any],
     scouting: bool,
-) -> Generator[Input | SetFeederState, None, None]:
+) -> AsyncGenerator[FeederInput | SetFeederState, None]:
     del feeder_args, scouting
-    yield Input(descriptor={"seed": feeder_state.get("next_seed", 0)})
+    yield FeederInput(descriptor={"seed": feeder_state.get("next_seed", 0)})
     yield SetFeederState(state={"next_seed": 1})
 
 
@@ -98,7 +98,7 @@ async def test_feed_runs_plugin_and_materialises(monkeypatch):
     transformation_db = MagicMock()
     transformation_db.__aenter__ = AsyncMock(return_value=transformation_db)
     transformation_db.__aexit__ = AsyncMock(return_value=None)
-    transformation_db.get_feeder_columns = AsyncMock(
+    transformation_db.get_transformation = AsyncMock(
         return_value={
             "feeder": "IntegerFeeder",
             "feeder_args": {"max_count": 3},
@@ -115,7 +115,7 @@ async def test_feed_runs_plugin_and_materialises(monkeypatch):
     args = materialise.await_args.args
     assert args[0] == transformation_id
     assert args[2] is transformation_db
-    yields = list(args[1])
+    yields = [item async for item in args[1]]
     assert yields[0].descriptor == {"seed": 0}
     assert yields[1].state == {"next_seed": 1}
 
@@ -129,7 +129,7 @@ async def test_feed_skips_when_disabled(monkeypatch):
     transformation_db = MagicMock()
     transformation_db.__aenter__ = AsyncMock(return_value=transformation_db)
     transformation_db.__aexit__ = AsyncMock(return_value=None)
-    transformation_db.get_feeder_columns = AsyncMock(
+    transformation_db.get_transformation = AsyncMock(
         return_value={
             "feeder": "IntegerFeeder",
             "feeder_args": {},
@@ -147,15 +147,18 @@ async def test_feed_skips_when_disabled(monkeypatch):
 
 
 async def test_feed_skips_when_transformation_missing(monkeypatch):
+    transformation_id = uuid7()
     materialise = AsyncMock()
     monkeypatch.setattr(feeder_tasks_module, "materialise_feeder_yields", materialise)
 
     transformation_db = MagicMock()
     transformation_db.__aenter__ = AsyncMock(return_value=transformation_db)
     transformation_db.__aexit__ = AsyncMock(return_value=None)
-    transformation_db.get_feeder_columns = AsyncMock(return_value=None)
+    transformation_db.get_transformation = AsyncMock(
+        side_effect=TransformationNotFoundError(transformation_id)
+    )
 
-    await FeedTransformation(transformation_id=str(uuid7())).execute(
+    await FeedTransformation(transformation_id=str(transformation_id)).execute(
         transformation_db=transformation_db
     )
 
@@ -240,9 +243,8 @@ async def test_feed_transformation_runs_integer_feeder_end_to_end(
                 )
             )
         ).all()
-        columns = await db.get_feeder_columns(transformation_id)
+        columns = await db.get_transformation(transformation_id)
 
     assert {row.descriptor["seed"] for row in seeds} == {0, 1, 2}
-    assert columns is not None
     assert columns["feeder_enabled"] is False
     assert columns["feeder_state"] == {"next_seed": 3}

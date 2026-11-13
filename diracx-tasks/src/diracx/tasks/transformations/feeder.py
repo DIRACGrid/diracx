@@ -9,7 +9,7 @@ from typing import Annotated
 from pydantic import PositiveInt
 from uuid_utils import UUID
 
-from diracx.core.exceptions import ConfigurationError
+from diracx.core.exceptions import ConfigurationError, TransformationNotFoundError
 from diracx.core.settings import ServiceSettingsBase
 from diracx.db.sql import TransformationDB
 from diracx.logic.transformations import load_feeder, materialise_feeder_yields
@@ -99,8 +99,11 @@ class FeedTransformation(BaseTask):
         transformation_db: Annotated[TransformationDB, NoTransaction()],
     ) -> None:
         transformation_id = UUID(self.transformation_id)
-        async with transformation_db:
-            columns = await transformation_db.get_feeder_columns(transformation_id)
+        try:
+            async with transformation_db:
+                columns = await transformation_db.get_transformation(transformation_id)
+        except TransformationNotFoundError:
+            columns = None
 
         if columns is None or not columns["feeder"] or not columns["feeder_enabled"]:
             logger.info(
