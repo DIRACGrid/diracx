@@ -18,12 +18,8 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
-# Release-producing runs (push to main, manual re-publish) share the "release"
-# group and queue behind each other; the other runs get a unique group each so
-# that they never queue.
-concurrency:
-  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'release' || github.run_id }}
-  cancel-in-progress: false
+# Concurrency is set on the release-please and publish jobs only, so a publish
+# waiting for approval does not hold every later push to main.
 
 permissions: {}
 
@@ -32,6 +28,9 @@ jobs:
   release-please:
     name: release-please
     if: github.event_name == 'push' && github.repository == 'DIRACGrid/diracx'
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: write  # release commit, tag and GitHub release
@@ -125,7 +124,8 @@ jobs:
     name: Build distribution 📦
     needs: release-please
     # !cancelled(): run even when release-please was skipped (PR, schedule, forks).
-    if: ${{ !cancelled() && (github.event_name != 'push' || github.repository == 'DIRACGrid/diracx') }}
+    # A failed release-please must not be read as "not a release".
+    if: ${{ !cancelled() && needs.release-please.result != 'failure' && (github.event_name != 'push' || github.repository == 'DIRACGrid/diracx') }}
     runs-on: "ubuntu-latest"
     outputs:
       new-version: ${{ steps.check-tag.outputs.new-version }}
@@ -170,6 +170,11 @@ jobs:
         run: |
           set -xeuo pipefail
           if [[ "$RELEASE_CREATED" == 'true' ]]; then
+            # A manual dispatch accepts any ref; only publish a real release tag.
+            if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || [[ "$(git describe --exact-match --tags HEAD)" != "$RELEASE_TAG" ]]; then
+              echo "::error::$RELEASE_TAG is not a release tag on the checked-out commit"
+              exit 1
+            fi
             echo "Deploying release $RELEASE_TAG"
             echo "create-release=true" >> "$GITHUB_OUTPUT"
             echo "new-version=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
@@ -199,6 +204,9 @@ jobs:
     needs: build
     # A skipped build upstream would otherwise skip this job too.
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.create-release == 'true' }}
+    concurrency:
+      group: pypi-publish
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -217,9 +225,17 @@ jobs:
         with:
           # Generate and upload PEP 740 attestations (build provenance) for the wheels.
           attestations: true
+          # A re-publish after a partial upload must not fail on files already there.
+          skip-existing: true
 
   docker:
-    needs: build
+    # Release images only after the wheels are on PyPI. publish is skipped on
+    # non-release runs, so check results explicitly: the implicit success()
+    # would also skip docker whenever release-please was skipped.
+    needs:
+      - build
+      - publish
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -231,6 +247,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # The image build copies .git so hatch-vcs can compute the version:
+          # release images need the tag, not the push commit.
+          ref: ${{ needs.build.outputs.new-version || '' }}
           persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -332,7 +351,7 @@ jobs:
       - build
       - docker
     runs-on: ubuntu-latest
-    if: ${{ needs.build.outputs.create-release == 'true' }}
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.build.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
