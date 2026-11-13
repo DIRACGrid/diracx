@@ -132,6 +132,7 @@ addopts = [
     "-pgubbins.testing",
     "-pdiracx.testing",
     "-pdiracx.testing.osdb",
+    "-pdiracx.testing.sqldb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

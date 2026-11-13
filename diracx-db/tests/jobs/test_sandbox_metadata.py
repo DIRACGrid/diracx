@@ -10,12 +10,18 @@ from diracx.core.exceptions import SandboxAlreadyInsertedError, SandboxNotFoundE
 from diracx.core.models import SandboxInfo, UserInfo
 from diracx.db.sql.sandbox_metadata.db import SandboxMetadataDB
 from diracx.db.sql.sandbox_metadata.schema import SandBoxes, SBEntityMapping
+from diracx.testing.sqldb import SERVER_SQL_BACKENDS
 from diracx.testing.time import install_sqlite_time_mock
+
+pytestmark = pytest.mark.xfail_sql_backends(
+    SERVER_SQL_BACKENDS,
+    reason="frozen_time only fakes the time functions of SQLite",
+)
 
 
 @pytest.fixture
-async def sandbox_metadata_db(tmp_path):
-    sandbox_metadata_db = SandboxMetadataDB("sqlite+aiosqlite:///:memory:")
+async def sandbox_metadata_db(tmp_path, sql_db_url):
+    sandbox_metadata_db = SandboxMetadataDB(sql_db_url)
     async with sandbox_metadata_db.engine_context():
         install_sqlite_time_mock(sandbox_metadata_db.engine)
         async with sandbox_metadata_db.engine.begin() as conn:

@@ -81,7 +81,7 @@ addopts = [
   "--cov=diracx.routers",
   "--cov-report=term-missing",
   "-pdiracx.testing",
-  "-pdiracx.testing.osdb",
+  "-pdiracx.testing.osdb", "-pdiracx.testing.sqldb",
   "--import-mode=importlib",
 ]
 asyncio_mode = "auto"

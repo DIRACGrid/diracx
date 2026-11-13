@@ -8,8 +8,8 @@ from diracx.db.sql.auth.schema import RefreshTokenStatus
 
 
 @pytest.fixture
-async def auth_db(tmp_path):
-    auth_db = AuthDB("sqlite+aiosqlite:///:memory:")
+async def auth_db(tmp_path, sql_db_url):
+    auth_db = AuthDB(sql_db_url)
     async with auth_db.engine_context():
         async with auth_db.engine.begin() as conn:
             await conn.run_sync(auth_db.metadata.create_all)

@@ -20,6 +20,7 @@ from diracx.db.sql.auth.db import (
     plan_partition_maintenance,
 )
 from diracx.db.sql.utils import uuid7_from_datetime
+from diracx.testing.sqldb import SERVER_SQL_BACKENDS
 
 
 def m(year: int, month: int) -> datetime:
@@ -28,8 +29,8 @@ def m(year: int, month: int) -> datetime:
 
 
 @pytest.fixture
-async def auth_db(tmp_path):
-    auth_db = AuthDB("sqlite+aiosqlite:///:memory:")
+async def auth_db(tmp_path, sql_db_url):
+    auth_db = AuthDB(sql_db_url)
     async with auth_db.engine_context():
         async with auth_db.engine.begin() as conn:
             await conn.run_sync(auth_db.metadata.create_all)
@@ -179,6 +180,10 @@ def test_plan_added_months_are_contiguous_and_increasing():
 # --- executor: dialect guard ----------------------------------------------
 
 
+@pytest.mark.xfail_sql_backends(
+    SERVER_SQL_BACKENDS,
+    reason="Only meaningful on SQLite: maintenance does run on MySQL/MariaDB",
+)
 async def test_maintain_partitions_requires_mysql(auth_db: AuthDB):
     async with auth_db as auth_db:
         with pytest.raises(NotImplementedError, match="MySQL"):
