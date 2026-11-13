@@ -18,8 +18,8 @@ from diracx.db.sql.pilot.db import PilotAgentsDB
 
 
 @pytest.fixture
-async def pilot_db():
-    db = PilotAgentsDB("sqlite+aiosqlite:///:memory:")
+async def pilot_db(sql_db_url):
+    db = PilotAgentsDB(sql_db_url)
     async with db.engine_context():
         async with db.engine.begin() as conn:
             await conn.run_sync(db.metadata.create_all)

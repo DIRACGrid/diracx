@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import event, insert, select
+from sqlalchemy import insert, select
 from uuid_utils import UUID, uuid7
 
 from diracx.core.models.search import (
@@ -25,22 +25,6 @@ from diracx.db.sql.transformation.schema import (
     Parcels,
     Transformations,
 )
-
-
-@pytest.fixture
-async def transformation_db():
-    db = TransformationDB("sqlite+aiosqlite:///:memory:")
-    async with db.engine_context():
-        # SQLite only enforces foreign keys when asked to, per connection
-        event.listen(
-            db.engine.sync_engine,
-            "connect",
-            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-        )
-        async with db.engine.begin() as conn:
-            await conn.run_sync(db.metadata.create_all)
-            await db.post_create(conn)
-        yield db
 
 
 @pytest.fixture
