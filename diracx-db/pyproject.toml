@@ -26,7 +26,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-testing = ["diracx-testing", "freezegun"]
+testing = ["diracx-testing", "freezegun", "testcontainers[mysql]>=4.15"]
 types = ["types-python-dateutil"]
 
 [project.entry-points."diracx.dbs.sql"]
@@ -71,4 +71,6 @@ asyncio_mode = "auto"
 markers = [
     "enabled_dependencies: List of dependencies which should be available to the FastAPI test client",
     "os_global_prefix: test for global prefix",
+    "mysql: requires MySQL via testcontainers (needs Docker)",
+    "mariadb: requires MariaDB via testcontainers (needs Docker)",
 ]
