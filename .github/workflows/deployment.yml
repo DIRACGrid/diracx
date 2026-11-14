@@ -2,8 +2,14 @@ name: Deployment
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  # Re-publish an existing tag after a failed publish. Run from main (pypi env).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish (e.g. v0.1.0)
+        required: true
   pull_request:
     paths-ignore:
       - '**.md'
@@ -12,30 +18,120 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+# Concurrency is set on the release-please and publish jobs only, so a publish
+# waiting for approval does not hold every later push to main.
+
 permissions: {}
 
 jobs:
-  deploy-pypi:
-    name: PyPI deployment
+  # Tags created with GITHUB_TOKEN trigger no workflows, so publish happens here.
+  release-please:
+    name: release-please
+    if: github.event_name == 'push' && github.repository == 'DIRACGrid/diracx'
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # release commit, tag and GitHub release
+      issues: write  # release labels
+      pull-requests: write  # open and update the release PR
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      sha: ${{ steps.release.outputs.sha }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          release-type: simple
+
+  # Generate and validate the public example and upload it to the GitHub release.
+  release-env:
+    name: Release env asset
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # upload the diracx.env asset to the GitHub release
+    env:
+      RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+      RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
+      RELEASE_UPLOAD_URL: ${{ needs.release-please.outputs.upload_url }}
+    steps:
+      - name: Checkout exact DIRACX release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.release-please.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve current canonical charts commit
+        id: charts
+        shell: bash
+        run: |
+          refs="$(git ls-remote --exit-code https://github.com/DIRACGrid/diracx-charts.git refs/heads/master)" || exit 1
+          ref_pattern=$'^([0-9a-f]{40})\trefs/heads/master$'
+          if [[ "$refs" =~ $ref_pattern ]]; then
+            charts_sha="${BASH_REMATCH[1]}"
+          else
+            echo 'Expected one canonical diracx-charts master commit' >&2
+            exit 1
+          fi
+          echo "sha=$charts_sha" >> "$GITHUB_OUTPUT"
+      - name: Checkout exact diracx-charts commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: DIRACGrid/diracx-charts
+          ref: ${{ steps.charts.outputs.sha }}
+          path: diracx-charts
+          persist-credentials: false
+      - name: Verify release identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHARTS_SHA: ${{ steps.charts.outputs.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          test "$(git -C diracx-charts rev-parse HEAD)" = "$CHARTS_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .upload_url)" = "$RELEASE_UPLOAD_URL"
+      - name: Generate and validate public example
+        env:
+          CHARTS_SHA: ${{ steps.charts.outputs.sha }}
+        run: |
+          python3 scripts/generate_release_env.py \
+            --charts-root diracx-charts --release-tag "$RELEASE_TAG" \
+            --source-commit "$RELEASE_SHA" --charts-commit "$CHARTS_SHA" \
+            --output .env
+          python3 scripts/generate_release_env.py \
+            --charts-root diracx-charts --release-tag "$RELEASE_TAG" \
+            --source-commit "$RELEASE_SHA" --charts-commit "$CHARTS_SHA" \
+            --output .env --validate
+      - name: Upload validated release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+          if printf '%s\n' "$assets" | grep -Fxq diracx.env; then
+            echo 'diracx.env already exists on this release' >&2
+            exit 1
+          fi
+          cp .env diracx.env
+          cmp .env diracx.env
+          gh release upload "$RELEASE_TAG" diracx.env
+
+  build:
+    name: Build distribution 📦
+    needs: release-please
+    # !cancelled(): run even when release-please was skipped (PR, schedule, forks).
+    # A failed release-please must not be read as "not a release".
+    if: ${{ !cancelled() && needs.release-please.result != 'failure' && (github.event_name != 'push' || github.repository == 'DIRACGrid/diracx') }}
     runs-on: "ubuntu-latest"
-    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
     outputs:
       new-version: ${{ steps.check-tag.outputs.new-version }}
       create-release: ${{ steps.check-tag.outputs.create-release }}
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing on pypi
-      actions: write
-      checks: write
-      contents: write
-      deployments: write
-      discussions: write
-      issues: write
-      packages: write
-      pages: write
-      pull-requests: write
-      repository-projects: write
-      security-events: write
-      statuses: write
+      contents: read
     defaults:
       run:
         # We need extglob for REFERENCE_BRANCH substitution
@@ -43,6 +139,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # setuptools_scm needs the release tag to compute the version.
+          ref: ${{ inputs.tag || needs.release-please.outputs.tag_name || '' }}
           token: ${{ github.token }}
           persist-credentials: false
       - run: |
@@ -67,20 +165,23 @@ jobs:
       - name: Extract version from tag
         id: check-tag
         env:
-          GITHUB_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+          RELEASE_CREATED: ${{ github.event_name == 'workflow_dispatch' || needs.release-please.outputs.release_created == 'true' }}
         run: |
           set -xeuo pipefail
-          IFS=$'\n\t'
-          # Check if this is a tag push
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            # Extract version from the tag
-            export NEW_VERSION="${GITHUB_REF#refs/tags/}"
-            echo "Deploying release $NEW_VERSION"
-            echo "create-release=true" >> $GITHUB_OUTPUT
-            echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          if [[ "$RELEASE_CREATED" == 'true' ]]; then
+            # A manual dispatch accepts any ref; only publish a real release tag.
+            if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || [[ "$(git describe --exact-match --tags HEAD)" != "$RELEASE_TAG" ]]; then
+              echo "::error::$RELEASE_TAG is not a release tag on the checked-out commit"
+              exit 1
+            fi
+            echo "Deploying release $RELEASE_TAG"
+            echo "create-release=true" >> "$GITHUB_OUTPUT"
+            echo "new-version=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "Not a tag push, skipping release"
-            echo "create-release=false" >> $GITHUB_OUTPUT
+            echo "Not a release, skipping publish"
+            echo "create-release=false" >> "$GITHUB_OUTPUT"
+            echo "new-version=" >> "$GITHUB_OUTPUT"
           fi
       - name: Build distributions
         run: |
@@ -96,17 +197,45 @@ jobs:
           name: diracx-whl
           path: dist/diracx*.whl
           retention-days: 5
+
+  # Only this job can get a PyPI token; the build above runs without it.
+  publish:
+    name: Publish distribution 📦 to PyPI
+    needs: build
+    # A skipped build upstream would otherwise skip this job too.
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.create-release == 'true' }}
+    concurrency:
+      group: pypi-publish
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing on pypi
+    steps:
+      - name: Download the distribution packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: diracx-whl
+          path: dist/
       # Use trusted publisher for pypi
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
-        if: steps.check-tag.outputs.create-release == 'true'
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           # Generate and upload PEP 740 attestations (build provenance) for the wheels.
           attestations: true
+          # A re-publish after a partial upload must not fail on files already there.
+          skip-existing: true
 
   docker:
-    needs: deploy-pypi
+    # Release images only after the wheels are on PyPI. publish is skipped on
+    # non-release runs, so check results explicitly: the implicit success()
+    # would also skip docker whenever release-please was skipped.
+    needs:
+      - build
+      - publish
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -118,6 +247,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # The image build copies .git so hatch-vcs can compute the version:
+          # release images need the tag, not the push commit.
+          ref: ${{ needs.build.outputs.new-version || '' }}
           persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -133,16 +265,16 @@ jobs:
       - name: Build and push services (release)
         id: build-services-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-services
           push: true
-          tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/services:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest services (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/services
@@ -151,16 +283,16 @@ jobs:
       - name: Build and push tasks (release)
         id: build-tasks-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-tasks
           push: true
-          tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest tasks (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/tasks
@@ -169,16 +301,16 @@ jobs:
       - name: Build and push client (release)
         id: build-client-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-client
           push: true
-          tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/client:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest client (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/client
@@ -216,10 +348,10 @@ jobs:
   update-charts:
     name: Update Helm charts
     needs:
-      - deploy-pypi
+      - build
       - docker
     runs-on: ubuntu-latest
-    if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.build.outputs.create-release == 'true' }}
     steps:
       - name: Checkout diracx
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -243,7 +375,7 @@ jobs:
       - name: Update chart versions
         id: update-versions
         env:
-          NEW_CHART_VERSION: ${{ needs.deploy-pypi.outputs.new-version }}
+          NEW_CHART_VERSION: ${{ needs.build.outputs.new-version }}
         run: |
           cd diracx-charts
           VERSION="${NEW_CHART_VERSION}"
