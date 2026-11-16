@@ -14,13 +14,16 @@ __all__ = [
     "CounterEntity",
     "DataParcel",
     "DelayInput",
+    "Feeder",
     "FeederInput",
     "FeederProposal",
     "InputStatus",
     "NoMoreFeederInputs",
+    "Packer",
     "PackerInput",
     "PackerProposal",
     "ParcelStatus",
+    "PluginArgs",
     "SetFeederState",
     "StorageDelta",
     "TransformationKind",
@@ -57,3 +60,4 @@ from .packer import (
     PackerProposal,
     StorageDelta,
 )
+from .plugins import Feeder, Packer, PluginArgs

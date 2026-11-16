@@ -8,11 +8,16 @@ import pytest
 from pydantic import NonNegativeInt, PositiveInt, ValidationError
 
 from diracx.core.exceptions import ConfigurationError
-from diracx.core.models.transformation import ComputeParcel, NoMoreFeederInputs
+from diracx.core.models.transformation import (
+    ComputeParcel,
+    NoMoreFeederInputs,
+    PluginArgs,
+)
 from diracx.logic.transformations import (
     FEEDER_KIND,
     PACKER_KIND,
-    PluginArgs,
+    FixedSizePackerArgs,
+    fixed_size_packer,
     load_plugin,
     validate_plugin_args,
 )
@@ -54,6 +59,18 @@ async def packer_missing_flush(
 
 
 async def packer_with_kwargs(*, packer_args: GroupArgs, **kwargs):
+    yield ComputeParcel(input_ids=[])
+
+
+async def packer_with_extra_required(
+    *, packer_args: GroupArgs, inputs, flush, feeder_active, input_overview, site
+):
+    yield ComputeParcel(input_ids=[])
+
+
+async def packer_with_extra_optional(
+    *, packer_args: GroupArgs, inputs, flush, feeder_active, input_overview, site=None
+):
     yield ComputeParcel(input_ids=[])
 
 
@@ -104,6 +121,28 @@ def test_load_rejects_missing_contract_param(register):
         load_plugin(PACKER_KIND, "Broken")
 
 
+def test_load_rejects_extra_required_param(register):
+    register(packer_with_extra_required)
+    with pytest.raises(ConfigurationError, match="site"):
+        load_plugin(PACKER_KIND, "Extra")
+
+
+def test_load_accepts_extra_optional_param(register):
+    register(packer_with_extra_optional)
+    assert load_plugin(PACKER_KIND, "Optional")[1] is GroupArgs
+
+
+def test_load_shipped_fixed_size_packer():
+    """Resolves through the real entry point, not a monkeypatched one."""
+    assert load_plugin(PACKER_KIND, "FixedSize") == (
+        fixed_size_packer,
+        FixedSizePackerArgs,
+    )
+    assert validate_plugin_args(
+        PACKER_KIND, "FixedSize", {"group_size": 3}
+    ) == FixedSizePackerArgs(group_size=3)
+
+
 def test_load_accepts_var_keyword(register):
     register(packer_with_kwargs)
     assert load_plugin(PACKER_KIND, "Kwargs")[1] is GroupArgs
@@ -127,9 +166,3 @@ def test_plugin_args_reject_unknown_keys(register):
     register(good_feeder)
     with pytest.raises(ValidationError, match="maxcount"):
         validate_plugin_args(FEEDER_KIND, "Count", {"maxcount": 5})
-
-
-def test_plugin_args_are_frozen():
-    args = CountArgs(max_count=5)
-    with pytest.raises(ValidationError):
-        args.max_count = 6  # type: ignore[misc]

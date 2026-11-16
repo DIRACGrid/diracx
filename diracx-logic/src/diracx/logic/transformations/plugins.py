@@ -1,94 +1,22 @@
-"""Contracts of the Transformation System plugins (DX-ADR-006).
+"""Loading of the Transformation System plugins (DX-ADR-006).
 
-Feeders and packers are plain async generator functions discovered through
-entry points. Each kind fixes a set of keyword parameters (its contract) and
-takes its arguments as a ``PluginArgs`` model read from a JSON column. This
-module writes those contracts down as ``Protocol``s, loads a plugin by name and
-checks it against its contract, and validates the arguments it is called with.
+The ``Feeder`` and ``Packer`` contracts live in
+``diracx.core.models.transformation`` so extensions can type-check their
+plugins against them. This module loads a plugin by name, checks at runtime
+what mypy cannot see through an entry point, and validates the arguments the
+plugin is called with.
 """
 
 from __future__ import annotations
 
 import inspect
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Generic, Protocol, TypeVar, cast, get_type_hints
-
-from pydantic import ConfigDict, JsonValue
+from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models._base import BaseModel
-from diracx.core.models.transformation import (
-    FeederProposal,
-    InputStatus,
-    PackerInput,
-    PackerProposal,
-)
-
-
-class PluginArgs(BaseModel):
-    """Base class of every plugin's arguments model.
-
-    Arguments come from a JSON column written at submission and rewritten by
-    hooks, so an unknown key is an error rather than silently ignored: a typo
-    must not fall back to a default. Instances are immutable so a plugin cannot
-    alter the arguments it was given.
-    """
-
-    model_config = ConfigDict(
-        use_attribute_docstrings=True, extra="forbid", frozen=True
-    )
-
-
-# Contravariant: a plugin accepting any ``PluginArgs`` can stand in for one
-# that expects a specific subclass, not the other way round.
-ArgsT_contra = TypeVar("ArgsT_contra", bound=PluginArgs, contravariant=True)
-
-
-class Feeder(Protocol[ArgsT_contra]):
-    """Signature every feeder must have (DX-ADR-006)."""
-
-    def __call__(
-        self,
-        *,
-        feeder_args: ArgsT_contra,
-        feeder_state: dict[str, JsonValue],
-        scouting: bool,
-    ) -> AsyncIterator[FeederProposal]:
-        """Yield inputs, bookmark updates and an exhaustion signal.
-
-        Args:
-            feeder_args: The transformation's validated ``FeederArgs``.
-            feeder_state: The bookmark last stored with ``SetFeederState``.
-            scouting: Whether the workgraph is in its scouting phase.
-        """
-        ...
-
-
-class Packer(Protocol[ArgsT_contra]):
-    """Signature every packer must have (DX-ADR-006)."""
-
-    def __call__(
-        self,
-        *,
-        packer_args: ArgsT_contra,
-        inputs: AsyncIterator[PackerInput],
-        flush: bool,
-        feeder_active: bool,
-        input_overview: dict[InputStatus, int],
-    ) -> AsyncIterator[PackerProposal]:
-        """Yield parcels, rejected inputs and delayed inputs.
-
-        Args:
-            packer_args: The transformation's validated ``PackerArgs``.
-            inputs: The claimed ``Unassigned`` inputs.
-            flush: Whether to pack groups that would otherwise be held back.
-            feeder_active: Whether more inputs may still arrive.
-            input_overview: Number of the transformation's inputs per status.
-        """
-        ...
-
+from diracx.core.models.transformation import Feeder, Packer, PluginArgs
 
 PluginT = TypeVar("PluginT")
 
@@ -135,19 +63,39 @@ _KEYWORD_KINDS = (
 def _check_contract(
     kind: PluginKind[Any], name: str, plugin: Callable[..., Any]
 ) -> None:
-    """Raise if ``plugin`` cannot be called with the contract's keywords."""
+    """Raise if ``plugin`` cannot be called with exactly the contract's keywords.
+
+    Every contract keyword must be accepted (a ``**kwargs`` accepts them all),
+    and any other parameter must have a default since the core never passes it.
+    """
     params = inspect.signature(plugin).parameters
-    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
-        return
+    expected = kind.contract_params | {kind.args_param}
+    has_var_keyword = any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+    )
     missing = sorted(
         p
-        for p in kind.contract_params | {kind.args_param}
-        if p not in params or params[p].kind not in _KEYWORD_KINDS
+        for p in expected
+        if not has_var_keyword
+        and (p not in params or params[p].kind not in _KEYWORD_KINDS)
     )
     if missing:
         raise ConfigurationError(
             f"{kind.name.capitalize()} {name!r} does not accept the keyword "
             f"parameter(s) {', '.join(missing)} required by the {kind.name} contract"
+        )
+    unexpected = sorted(
+        p.name
+        for p in params.values()
+        if p.name not in expected
+        and p.default is inspect.Parameter.empty
+        and p.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    )
+    if unexpected:
+        raise ConfigurationError(
+            f"{kind.name.capitalize()} {name!r} requires the parameter(s) "
+            f"{', '.join(unexpected)}, which the {kind.name} contract never passes"
         )
 
 
