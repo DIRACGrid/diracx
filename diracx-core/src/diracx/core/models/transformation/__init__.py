@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "INJECTED",
     "INPUT_TRANSITIONS",
     "PARCEL_TRANSITIONS",
     "TRANSFORMATION_TRANSITIONS",
@@ -60,4 +61,4 @@ from .packer import (
     PackerProposal,
     StorageDelta,
 )
-from .plugins import Feeder, Packer, PluginArgs
+from .plugins import INJECTED, Feeder, Packer, PluginArgs

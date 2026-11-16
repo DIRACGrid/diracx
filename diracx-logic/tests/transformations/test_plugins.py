@@ -9,6 +9,7 @@ from pydantic import NonNegativeInt, PositiveInt, ValidationError
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.models.transformation import (
+    INJECTED,
     ComputeParcel,
     NoMoreFeederInputs,
     PluginArgs,
@@ -18,6 +19,7 @@ from diracx.logic.transformations import (
     PACKER_KIND,
     FixedSizePackerArgs,
     fixed_size_packer,
+    injected_parameters,
     load_plugin,
     validate_plugin_args,
 )
@@ -30,6 +32,26 @@ class CountArgs(PluginArgs):
 
 class GroupArgs(PluginArgs):
     group_size: PositiveInt = 1
+
+
+class CatalogueSettings:
+    """Stands in for a settings class an installation provides."""
+
+
+async def feeder_with_injected(
+    *,
+    feeder_args: CountArgs,
+    feeder_state,
+    scouting: bool,
+    catalogue: CatalogueSettings = INJECTED,
+):
+    yield NoMoreFeederInputs()
+
+
+async def feeder_with_untyped_injected(
+    *, feeder_args: CountArgs, feeder_state, scouting: bool, catalogue=INJECTED
+):
+    yield NoMoreFeederInputs()
 
 
 async def good_feeder(*, feeder_args: CountArgs, feeder_state, scouting: bool):
@@ -130,6 +152,23 @@ def test_load_rejects_extra_required_param(register):
 def test_load_accepts_extra_optional_param(register):
     register(packer_with_extra_optional)
     assert load_plugin(PACKER_KIND, "Optional")[1] is GroupArgs
+
+
+def test_load_accepts_injected_param(register):
+    register(feeder_with_injected)
+    plugin, _ = load_plugin(FEEDER_KIND, "Catalogue")
+    assert injected_parameters(plugin) == {"catalogue": CatalogueSettings}
+
+
+def test_load_rejects_injected_param_without_class(register):
+    register(feeder_with_untyped_injected)
+    with pytest.raises(ConfigurationError, match="catalogue"):
+        load_plugin(FEEDER_KIND, "Untyped")
+
+
+def test_contract_params_are_not_injected():
+    assert injected_parameters(good_packer) == {}
+    assert injected_parameters(fixed_size_packer) == {}
 
 
 def test_load_shipped_fixed_size_packer():

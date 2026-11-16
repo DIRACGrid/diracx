@@ -5,12 +5,17 @@ entry points. Each kind fixes a set of keyword parameters and takes its
 arguments as a ``PluginArgs`` model read from a JSON column. The ``Feeder`` and
 ``Packer`` Protocols write those signatures down so that mypy can check a
 plugin against them: a plugin does not inherit from them, it only has to match.
+
+A plugin may declare further keyword parameters for what the installation
+provides (settings, databases). Each takes ``INJECTED`` as its default, which
+keeps the plugin a match for its Protocol, and the core replaces it with an
+instance of the parameter's annotated type when it calls the plugin.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
-from typing import Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from pydantic import ConfigDict, JsonValue
 
@@ -18,6 +23,20 @@ from .._base import BaseModel
 from .enums import InputStatus
 from .feeder import FeederProposal
 from .packer import PackerInput, PackerProposal
+
+
+class _Injected:
+    """Type of the ``INJECTED`` marker."""
+
+    def __repr__(self) -> str:
+        return "INJECTED"
+
+
+INJECTED: Any = _Injected()
+"""Default marking a plugin parameter the core supplies from its annotation.
+
+Typed ``Any`` so it is accepted as the default whatever the parameter's type.
+"""
 
 
 class PluginArgs(BaseModel):

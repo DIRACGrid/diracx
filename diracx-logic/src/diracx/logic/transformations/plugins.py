@@ -16,7 +16,7 @@ from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
-from diracx.core.models.transformation import Feeder, Packer, PluginArgs
+from diracx.core.models.transformation import INJECTED, Feeder, Packer, PluginArgs
 
 PluginT = TypeVar("PluginT")
 
@@ -66,7 +66,8 @@ def _check_contract(
     """Raise if ``plugin`` cannot be called with exactly the contract's keywords.
 
     Every contract keyword must be accepted (a ``**kwargs`` accepts them all),
-    and any other parameter must have a default since the core never passes it.
+    and any other parameter must have a default since the core never passes it:
+    ``INJECTED`` for what the core supplies, a plain value otherwise.
     """
     params = inspect.signature(plugin).parameters
     expected = kind.contract_params | {kind.args_param}
@@ -95,8 +96,38 @@ def _check_contract(
     if unexpected:
         raise ConfigurationError(
             f"{kind.name.capitalize()} {name!r} requires the parameter(s) "
-            f"{', '.join(unexpected)}, which the {kind.name} contract never passes"
+            f"{', '.join(unexpected)}, which the {kind.name} contract never passes; "
+            "give each a default, INJECTED if the core should supply it"
         )
+
+
+def injected_parameters(plugin: Callable[..., Any]) -> dict[str, type]:
+    """Return the parameters of ``plugin`` that default to ``INJECTED``.
+
+    Args:
+        plugin: A loaded feeder or packer.
+
+    Returns:
+        Each injected parameter's name and the annotated type the core must
+        supply an instance of.
+
+    Raises:
+        ConfigurationError: If an injected parameter is not keyword-capable or
+            is not annotated with a class.
+    """
+    hints = get_type_hints(plugin)
+    injected: dict[str, type] = {}
+    for param in inspect.signature(plugin).parameters.values():
+        if param.default is not INJECTED:
+            continue
+        annotation = hints.get(param.name)
+        if param.kind not in _KEYWORD_KINDS or not isinstance(annotation, type):
+            raise ConfigurationError(
+                f"Injected parameter {param.name!r} of {plugin.__qualname__} must "
+                "be a keyword parameter annotated with the class to inject"
+            )
+        injected[param.name] = annotation
+    return injected
 
 
 def load_plugin(
@@ -119,8 +150,10 @@ def load_plugin(
     Raises:
         ConfigurationError: If nothing is registered under ``name``, the plugin
             is not an async generator function, it does not accept the
-            contract's keyword parameters, or its arguments parameter is not
-            annotated with a ``PluginArgs`` subclass.
+            contract's keyword parameters, it requires a parameter the contract
+            never passes, an ``INJECTED`` parameter has no class annotation, or
+            its arguments parameter is not annotated with a ``PluginArgs``
+            subclass.
     """
     entry_points = select_from_extension(group=kind.group, name=name)
     if not entry_points:
@@ -133,6 +166,7 @@ def load_plugin(
             f"{kind.name.capitalize()} {name!r} must be an async generator function"
         )
     _check_contract(kind, name, plugin)
+    injected_parameters(plugin)
     args_model = get_type_hints(plugin).get(kind.args_param)
     if not (isinstance(args_model, type) and issubclass(args_model, PluginArgs)):
         raise ConfigurationError(

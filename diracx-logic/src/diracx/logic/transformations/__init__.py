@@ -8,6 +8,7 @@ __all__ = [
     "FixedSizePackerArgs",
     "PluginKind",
     "fixed_size_packer",
+    "injected_parameters",
     "load_plugin",
     "set_parcel_status",
     "validate_plugin_args",
@@ -19,6 +20,7 @@ from .plugins import (
     FEEDER_KIND,
     PACKER_KIND,
     PluginKind,
+    injected_parameters,
     load_plugin,
     validate_plugin_args,
 )
