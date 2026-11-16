@@ -3,20 +3,7 @@
   "extends": [
     "local>DIRACGrid/.github//renovate-config"
   ],
-  "lockFileMaintenance": {
-    "enabled": true
-  },
   "packageRules": [
-    {
-      "description": "Group pixi lockfile maintenance into a single PR",
-      "matchUpdateTypes": [
-        "lockFileMaintenance"
-      ],
-      "matchManagers": [
-        "pixi"
-      ],
-      "groupName": "pixi lockfile maintenance"
-    },
     {
       "description": "Group all Autorest updates together",
       "matchManagers": [
