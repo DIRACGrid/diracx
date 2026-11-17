@@ -3,10 +3,6 @@
   "extends": [
     "local>DIRACGrid/.github//renovate-config"
   ],
-  "pre-commit": {
-    "description": "The pre-commit.ci app already sends the weekly hook autoupdate PRs here (and runs most hooks on PRs), so the preset's pre-commit manager would only duplicate them.",
-    "enabled": false
-  },
   "packageRules": [
     {
       "description": "Group all Autorest updates together",
