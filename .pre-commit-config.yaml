@@ -7,13 +7,10 @@ default_install_hook_types:
 default_language_version:
   python: python3
 
-ci:
-  skip:
-    - generate-pixi-docs
-    - settings-doc-check
-    - check-all-required
-    - check-all-forbidden
-
+# The pixi-dependent local hooks (stages: [manual] below) need a pixi
+# environment and are run explicitly by the "pre-commit (pixi-dependent
+# hooks)" CI job; the rest run everywhere via pre-commit/action and get
+# auto-fixed by pre-commit-ci/lite-action.
 default_stages: [pre-commit]
 
 repos:
@@ -106,6 +103,7 @@ repos:
         name: Generate pixi tasks documentation
         entry: pixi run -e default python scripts/generate_pixi_tasks_doc.py
         language: system
+        stages: [manual]
         pass_filenames: false
         files: ^pixi\.toml$|^pixi\.lock$ # only run if pixi files change
 
@@ -115,6 +113,7 @@ repos:
         name: Generate settings documentation
         entry: pixi run -e default python scripts/generate_settings_docs.py
         language: system
+        stages: [manual]
         pass_filenames: false
         files: ^(diracx-.*/src/diracx/.*/settings\.py|docs/.*\.j2|docs/templates/.*\.jinja|scripts/generate_settings_docs\.py)$
 
@@ -127,6 +126,7 @@ repos:
         name: Require __all__ list in package and top-level subpackage modules
         language: system
         entry: pixi run -e default python scripts/check_init_files_precommit_hook.py --mode=require-list
+        stages: [manual]
         files: ^(diracx-|extensions/gubbins/gubbins-)[a-z]+/src/[a-z]+/[a-z]+/((.*/)*__init__\.py|[a-zA-Z0-9_]+\.py)$
         exclude: (test|_generated|__main__)
 
@@ -138,6 +138,7 @@ repos:
         name: Forbid __all__ in subpackage submodules
         language: system
         entry: pixi run -e default python scripts/check_init_files_precommit_hook.py --mode=forbid
+        stages: [manual]
         files: ^(diracx-|extensions/gubbins/gubbins-)[a-z]+/src/[a-z]+/[a-z]+/[a-z_]+/.+\.py$
         exclude: (__init__\.py$|test|_generated|__main__|/patches/)
 
