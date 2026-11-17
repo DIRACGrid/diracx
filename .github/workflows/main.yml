@@ -327,10 +327,9 @@ jobs:
         run: pixi run -e ${{ matrix.package }}-generate-client generate-client
 
   pre-commit:
-    # Runs the hooks listed in ``ci.skip`` of .pre-commit-config.yaml — those
-    # are the hooks that require a pixi environment and therefore can't run on
-    # pre-commit.ci. All other hooks are handled by the pre-commit.ci bot.
-    name: pre-commit (pixi-dependent hooks)
+    # Runs every hook (hook updates come from Renovate's pre-commit manager,
+    # not from the pre-commit.ci app).
+    name: pre-commit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -345,8 +344,10 @@ jobs:
         with:
           cache: false
           environments: pre-commit
-      - name: Run pixi-dependent pre-commit hooks
-        run: |
-          for hook in generate-pixi-docs settings-doc-check check-all-required check-all-forbidden; do
-            pixi run pre-commit run "$hook" --all-files
-          done
+      - name: Cache the pre-commit hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Run pre-commit hooks
+        run: pixi run pre-commit run --all-files --show-diff-on-failure
