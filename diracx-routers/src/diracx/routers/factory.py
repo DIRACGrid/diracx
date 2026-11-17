@@ -436,7 +436,7 @@ def document_upsert_error_handler(
         "500 Internal Server Error: %s (path=%s)",
         exc,
         request.url.path,
-        exc_info=True,
+        exc_info=exc,
     )
     return JSONResponse(
         status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -458,7 +458,7 @@ def route_unavailable_error_hander(request: Request, exc: DBUnavailableError):
         "503 Service Unavailable: %s (path=%s)",
         exc,
         request.url.path,
-        exc_info=True,
+        exc_info=exc,
     )
     return JSONResponse(
         status_code=HTTPStatus.SERVICE_UNAVAILABLE,

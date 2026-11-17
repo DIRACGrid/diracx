@@ -331,10 +331,9 @@ class TwoLevelCache:
             result = populate_func()
             success = True
         except Exception:
-            logger.error(
+            logger.exception(
                 "Failed to populate cache key %r, will retry on next request",
                 key,
-                exc_info=True,
             )
             raise
         finally:
@@ -499,10 +498,9 @@ class AsyncTwoLevelCache:
             result = await populate_func()
             success = True
         except Exception:
-            logger.error(
+            logger.exception(
                 "Failed to populate cache key %r, will retry on next request",
                 key,
-                exc_info=True,
             )
             raise
         finally:
