@@ -5,7 +5,7 @@ All repos share a common baseline configuration with repository-specific rules w
 
 ## Shared settings
 
-Every `renovate.json` extends the shared DIRACGrid preset (`local>DIRACGrid/.github//renovate-config`), which builds on `config:recommended` and sets a **7-day minimum release age**.
+Every `renovate.json` extends `config:recommended` and sets a **7-day minimum release age**.
 The cooldown period reduces exposure to broken or yanked releases — see
 [Renovate's *Minimum Release Age* docs](https://docs.renovatebot.com/configuration-options/#minimumreleaseage) for details.
 
@@ -19,7 +19,6 @@ The cooldown period reduces exposure to broken or yanked releases — see
 | Python packages (`pyproject.toml`) | `pep621`         | Auto-detected by `config:recommended` |
 | Dockerfiles                        | `dockerfile`     | Auto-detected by `config:recommended` |
 | `pixi.lock`                        | `pixi`           | Lock file maintenance in a single PR  |
-| pre-commit hooks                   | `pre-commit`     | Grouped into a single PR              |
 
 ### diracx-charts
 
@@ -64,6 +63,9 @@ pixi lock
 If a downgrade or a lock-only change is deliberate, explain why in the pull request description and ask a maintainer to add the `deps: intentional-lock-change` label.
 
 ## What Renovate does *not* manage
+
+pre-commit hooks
+:   Managed by [pre-commit.ci](https://pre-commit.ci/), which opens its own update PRs.
 
 Security alerts
 :   GitHub's Dependabot **security alerts** remain enabled via repository settings.
