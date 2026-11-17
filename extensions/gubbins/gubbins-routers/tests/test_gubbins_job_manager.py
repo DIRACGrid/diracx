@@ -2,6 +2,7 @@
 Just repeat the diracx tests to make sure they still pass
 """
 
+import logging
 from datetime import datetime, timezone
 
 import pytest
@@ -69,10 +70,10 @@ def valid_job_id(normal_user_client: TestClient):
     return r.json()[0]["JobID"]
 
 
-def test_gubbins_job_router(normal_user_client, valid_job_id):
+def test_gubbins_job_router(normal_user_client, valid_job_id, caplog):
     """
-    Basically like diracx test_delete_job_valid_job_id
-    except that the job does not go into DELETED status,
+    Basically like diracx test_delete_job_valid_job_id,
+    except that GubbinsJobDB logs a message when setting job attributes,
     as the method is intercepted by the DB
     """
 
@@ -87,8 +88,8 @@ def test_gubbins_job_router(normal_user_client, valid_job_id):
     assert r.json()[0]["JobID"] == valid_job_id
     assert r.json()[0]["Status"] == JobStatus.RECEIVED
 
-    # We delete the job, and here we expect that nothing
-    # actually happened
+    # We delete the job, and here we want a logging to appear
+    caplog.set_level(logging.INFO)
     r = normal_user_client.patch(
         "/api/jobs/status",
         json={
@@ -102,6 +103,8 @@ def test_gubbins_job_router(normal_user_client, valid_job_id):
     )
 
     assert r.status_code == 200, r.json()
+    # A GubbinsDB logging should be here
+    assert "GubbinsJobDB: setting attributes" in caplog.text
 
     r = normal_user_client.post(
         "/api/jobs/search",
@@ -110,6 +113,5 @@ def test_gubbins_job_router(normal_user_client, valid_job_id):
         },
     )
     assert r.status_code == 200, r.json()
-    # The job would normally be deleted
     assert r.json()[0]["JobID"] == valid_job_id
-    assert r.json()[0]["Status"] == JobStatus.RECEIVED
+    assert r.json()[0]["Status"] == JobStatus.DELETED

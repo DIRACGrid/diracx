@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from diracx.db.sql.job.db import JobDB
 from sqlalchemy import insert, select
 
 from .schema import GubbinsInfo, JobDBBase
+
+logger = logging.getLogger(__name__)
 
 
 class GubbinsJobDB(JobDB):
@@ -53,5 +57,5 @@ class GubbinsJobDB(JobDB):
         so we can test in test_gubbins_job_router that the behavior
         is altered without even redefining a gubbins specific router
         """
-        # We do nothing
-        ...
+        logger.info(f"GubbinsJobDB: setting attributes for jobs {job_data}")
+        return await super().set_job_attributes(job_data)
