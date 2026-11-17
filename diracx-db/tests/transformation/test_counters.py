@@ -17,6 +17,7 @@ tests are *skipped* (visible in ``pytest -v`` output).  In CI, set
 
 from __future__ import annotations
 
+import asyncio
 import os
 from datetime import datetime, timezone
 
@@ -170,6 +171,35 @@ async def sqlite_engine(simple_metadata):
             )
 
     yield eng
+    await eng.dispose()
+
+
+@pytest.fixture(params=["mysql", "mariadb"])
+async def concurrent_engine(request, simple_metadata, mysql_url, mariadb_url):
+    """MySQL/MariaDB-only engine for concurrency tests.
+
+    Concurrency tests require real row locks (FOR UPDATE, SKIP LOCKED)
+    which are no-ops on SQLite's single-writer model.
+    """
+    backend = request.param
+    if backend == "mysql":
+        eng = create_async_engine(mysql_url)
+    else:
+        eng = create_async_engine(mariadb_url)
+
+    async with eng.begin() as conn:
+        await conn.run_sync(simple_metadata.create_all)
+        locks = counter_locks_table(simple_metadata)
+        for ctr in journalled_counters(simple_metadata):
+            await conn.execute(
+                sa_insert(locks).prefix_with("OR IGNORE", dialect="sqlite"),
+                ctr.lock_rows(),
+            )
+
+    yield eng
+
+    async with eng.begin() as conn:
+        await conn.run_sync(simple_metadata.drop_all)
     await eng.dispose()
 
 
@@ -905,3 +935,278 @@ async def test_data_parcels_counter_smoke(real_engine):
         async with conn.begin():
             rows = await ctr.read(conn, scope={"TransformationID": tid})
     assert rows[0].LFNCountAdded == 5
+
+
+# -----------------------------------------------------------------------
+# (1) Concurrency tests — MySQL/MariaDB only (real row locks)
+# -----------------------------------------------------------------------
+
+
+async def test_fold_skips_uncommitted_journal_rows(concurrent_engine, counter):
+    """A fold at READ COMMITTED does not see a writer's uncommitted rows.
+
+    The writer's transaction holds exclusive locks on the new journal rows.
+    fold() runs at READ COMMITTED, so uncommitted rows are invisible.
+    After the writer commits, the next fold picks them up.
+    """
+    async with concurrent_engine.connect() as writer:
+        async with writer.begin():
+            await counter.journal(
+                writer,
+                [{"GroupID": 1, "Status": "New", "CountDelta": 5, "BytesDelta": 100}],
+            )
+            # Writer's transaction is still open — fold should see nothing
+            n = await counter.fold(concurrent_engine)
+            assert n == 0
+
+    # Writer committed on context exit; next fold picks up the row
+    n = await counter.fold(concurrent_engine)
+    assert n == 1
+
+
+async def test_rebuild_and_fold_run_concurrently(
+    concurrent_engine, counter, items_table
+):
+    """Rebuild (REBUILD lock) and fold (FOLD lock) don't block each other.
+
+    Both complete within a reasonable timeout, proving they hold
+    independent lock rows and don't deadlock.
+    """
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            await conn.execute(
+                insert(items_table).values(
+                    [{"ItemID": 1, "GroupID": 1, "Status": "New", "Size": 10}]
+                )
+            )
+            await counter.journal(
+                conn,
+                [{"GroupID": 1, "Status": "New", "CountDelta": 1, "BytesDelta": 10}],
+            )
+
+    counted = [
+        CountedTable(
+            table=items_table,
+            key_exprs={
+                "GroupID": items_table.c.GroupID,
+                "Status": items_table.c.Status,
+            },
+            measure_exprs={
+                "Count": func.count(),
+                "Bytes": func.sum(items_table.c.Size),
+            },
+        )
+    ]
+
+    # Both should complete without deadlock (10s is generous)
+    rebuild_n, fold_n = await asyncio.wait_for(
+        asyncio.gather(
+            counter.rebuild(concurrent_engine, counted, scope={"GroupID": 1}),
+            counter.fold(concurrent_engine),
+        ),
+        timeout=10.0,
+    )
+    assert fold_n >= 0
+    assert rebuild_n >= 0
+
+
+async def test_delete_scope_waits_for_rebuild(
+    concurrent_engine, counter, simple_metadata
+):
+    """delete_scope blocks until a concurrent rebuild releases its lock.
+
+    delete_scope acquires both REBUILD and FOLD locks.  We manually hold
+    the REBUILD lock via SELECT … FOR UPDATE and verify that delete_scope
+    cannot proceed until it is released.
+    """
+    locks = counter_locks_table(simple_metadata)
+
+    async with concurrent_engine.connect() as holder:
+        async with holder.begin():
+            # Hold the REBUILD lock, simulating a long-running rebuild
+            await holder.execute(
+                select(locks.c.CounterName)
+                .where(
+                    locks.c.CounterName == counter.name,
+                    locks.c.Operation == "rebuild",
+                )
+                .with_for_update()
+            )
+
+            # delete_scope needs REBUILD + FOLD; it should block on REBUILD
+            delete_task = asyncio.create_task(
+                counter.delete_scope(concurrent_engine, {"GroupID": 1})
+            )
+
+            # Give the task time to reach the lock — it should NOT complete
+            done, _ = await asyncio.wait({delete_task}, timeout=1.0)
+            assert not done, "delete_scope should be blocked on the REBUILD lock"
+
+        # holder's transaction commits here, releasing the REBUILD lock
+
+    # delete_scope should now complete promptly
+    await asyncio.wait_for(delete_task, timeout=10.0)
+
+
+async def test_concurrent_folds_no_double_count(concurrent_engine, counter):
+    """Two concurrent folds serialise on the FOLD lock; each row folds once.
+
+    Journal 10 rows, launch two folds concurrently.  The FOLD lock
+    serialises them, so the total folded across both calls equals 10.
+    """
+    deltas = [
+        {"GroupID": i, "Status": "New", "CountDelta": 1, "BytesDelta": 10}
+        for i in range(10)
+    ]
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            await counter.journal(conn, deltas)
+
+    n1, n2 = await asyncio.wait_for(
+        asyncio.gather(
+            counter.fold(concurrent_engine, batch_size=100),
+            counter.fold(concurrent_engine, batch_size=100),
+        ),
+        timeout=10.0,
+    )
+    assert n1 + n2 == 10, f"Expected 10 total folded, got {n1} + {n2}"
+
+    # Verify no rows left in the journal
+    jt = counter.journal_table
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            remaining = (
+                await conn.execute(select(func.count()).select_from(jt))
+            ).scalar()
+    assert remaining == 0
+
+
+async def test_delete_scope_waits_for_fold(concurrent_engine, counter, simple_metadata):
+    """delete_scope blocks until a concurrent fold releases the FOLD lock."""
+    locks = counter_locks_table(simple_metadata)
+
+    async with concurrent_engine.connect() as holder:
+        async with holder.begin():
+            # Hold the FOLD lock, simulating a long-running fold
+            await holder.execute(
+                select(locks.c.CounterName)
+                .where(
+                    locks.c.CounterName == counter.name,
+                    locks.c.Operation == "fold",
+                )
+                .with_for_update()
+            )
+
+            delete_task = asyncio.create_task(
+                counter.delete_scope(concurrent_engine, {"GroupID": 1})
+            )
+
+            done, _ = await asyncio.wait({delete_task}, timeout=1.0)
+            assert not done, "delete_scope should be blocked on the FOLD lock"
+
+        # holder releases the FOLD lock
+
+    await asyncio.wait_for(delete_task, timeout=10.0)
+
+
+async def test_rebuild_waits_for_uncommitted_writer(
+    concurrent_engine, counter, items_table
+):
+    """Rebuild blocks until a writer with uncommitted journal rows commits.
+
+    rebuild()'s INSERT … SELECT acquires shared locks on the journal
+    rows it reads, which conflicts with the writer's exclusive locks on
+    uncommitted inserts.  Once the writer commits, rebuild sees the
+    complete journal and produces correct corrections.
+    """
+    ct = counter.counters_table
+    now = datetime.now(tz=timezone.utc)
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            await conn.execute(
+                insert(items_table).values(
+                    [{"ItemID": 1, "GroupID": 1, "Status": "New", "Size": 10}]
+                )
+            )
+            # Counter matches source — no drift yet
+            await conn.execute(
+                insert(ct).values(
+                    GroupID=1, Status="New", Count=1, Bytes=10, UpdatedAt=now
+                )
+            )
+
+    counted = [
+        CountedTable(
+            table=items_table,
+            key_exprs={
+                "GroupID": items_table.c.GroupID,
+                "Status": items_table.c.Status,
+            },
+            measure_exprs={
+                "Count": func.count(),
+                "Bytes": func.sum(items_table.c.Size),
+            },
+        )
+    ]
+
+    async with concurrent_engine.connect() as writer:
+        async with writer.begin():
+            # Writer journals +5 Count / +50 Bytes but doesn't commit
+            await counter.journal(
+                writer,
+                [{"GroupID": 1, "Status": "New", "CountDelta": 5, "BytesDelta": 50}],
+            )
+
+            # Rebuild should block on the writer's journal row locks
+            rebuild_task = asyncio.create_task(
+                counter.rebuild(concurrent_engine, counted, scope={"GroupID": 1})
+            )
+
+            done, _ = await asyncio.wait({rebuild_task}, timeout=1.0)
+            assert not done, "rebuild should be blocked on writer's journal locks"
+
+        # Writer commits here — rebuild unblocks
+
+    # Rebuild sees: source=(1,10), counter=(1,10), journal=(+5,+50)
+    # Correction: (1,10) - (1,10) - (5,50) = (-5,-50)
+    n = await asyncio.wait_for(rebuild_task, timeout=10.0)
+    assert n == 1
+
+
+async def test_read_consistency_across_fold(concurrent_engine, counter):
+    """read() returns the same totals before and after a concurrent fold.
+
+    This is the core invariant: read unions counters + journal, so the
+    answer is the same regardless of how many rows have been folded.
+    """
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            await counter.journal(
+                conn,
+                [
+                    {"GroupID": 1, "Status": "New", "CountDelta": 5, "BytesDelta": 100},
+                    {"GroupID": 1, "Status": "Done", "CountDelta": 3, "BytesDelta": 60},
+                ],
+            )
+
+    # Read before fold
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            before = {
+                (r.GroupID, r.Status): (r.Count, r.Bytes)
+                for r in await counter.read(conn)
+            }
+
+    # Fold moves journal rows into counters
+    n = await counter.fold(concurrent_engine)
+    assert n == 2
+
+    # Read after fold — same totals
+    async with concurrent_engine.connect() as conn:
+        async with conn.begin():
+            after = {
+                (r.GroupID, r.Status): (r.Count, r.Bytes)
+                for r in await counter.read(conn)
+            }
+
+    assert before == after
