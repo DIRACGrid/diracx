@@ -31,7 +31,9 @@ The services first check that the document is self-contained
 
 Then `decompose` hashes each process with `diracx.core.hashing.hash_json`, as
 submitted, except that each step's `run` is replaced by the identity of the
-process it runs (`proc:sha256-<hex>`). Children are hashed before their
+process it runs (`proc:sha256-<hex>`), and that what is hashed is
+`{"cwlVersion": "v1.2", "process": <body>}` with the body's own `cwlVersion`
+dropped. Children are hashed before their
 parents, so a parent's identity covers everything below it (a Merkle tree):
 
 | Entry              | Identity        | Runs                      |
@@ -57,4 +59,5 @@ The identity is the hash of what was submitted. The same files packed by
 another cwltool version, with an edited `doc`, or under another file name get
 other identities. That only costs a duplicate row, and it means DiracX never
 rewrites a document: what is stored is what cwltool resolved, which is what
-the user tested.
+the user tested. The one exception is `cwlVersion`, hashed once for every
+process whether its body repeats it or not.
