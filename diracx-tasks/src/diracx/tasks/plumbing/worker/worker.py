@@ -782,11 +782,10 @@ class Worker:
             if not isinstance(exc, asyncio.CancelledError):
                 # Attach the traceback to the task.execute span
                 trace.get_current_span().record_exception(exc)
-            logger.error(
+            logger.exception(
                 "Exception in task %s: %s",
                 task_message.task_name,
                 exc,
-                exc_info=True,
             )
 
         execution_time = time() - start_time

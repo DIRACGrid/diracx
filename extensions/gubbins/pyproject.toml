@@ -59,6 +59,8 @@ select = [
     "S",   # flake8-bandit
     "N",   # pep8-naming
     "TID251", # flake8-tidy-imports.banned-api
+    "G",   # flake8-logging-format
+    "LOG", # flake8-logging
 ]
 
 ignore = [
