@@ -1,3 +1,5 @@
+"""Singleton scheduler submitting periodic tasks and promoting delayed tasks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -83,7 +85,15 @@ SCHEDULE_DUMP_MAX_ENTRIES = 20
 
 @dataclass(frozen=True)
 class StreamStats:
-    """State of a task stream, as seen by the workers consumer group."""
+    """State of a task stream, as seen by the workers consumer group.
+
+    Attributes:
+        length: Number of entries in the stream.
+        pending: Entries delivered to a worker but not acknowledged yet
+            (i.e. in progress), or None if unknown.
+        lag: Entries not delivered to any worker yet (i.e. backlog), or None
+            if unavailable.
+    """
 
     length: int
     # Delivered to a worker but not acknowledged yet (i.e. in progress)
@@ -95,7 +105,15 @@ class StreamStats:
 async def collect_stream_stats(
     redis: Redis, consumer_group_name: str
 ) -> dict[str, StreamStats]:
-    """Return the length, pending and lag of each of the task streams."""
+    """Return the length, pending and lag of each of the task streams.
+
+    Args:
+        redis: Redis client.
+        consumer_group_name: Name of the workers consumer group.
+
+    Returns:
+        The statistics of each task stream, keyed by stream name.
+    """
     stats = {}
     for stream in ALL_STREAM_NAMES:
         length = await redis.xlen(stream)
@@ -206,7 +224,13 @@ async def schedule_delayed(
     message: TaskMessage,
     run_at: datetime,
 ) -> None:
-    """Add a task to the delayed ZSET for future execution."""
+    """Add a task to the delayed ZSET for future execution.
+
+    Args:
+        redis: Redis client used to write to the delayed ZSET.
+        message: The task message to run later.
+        run_at: Time at which the task becomes due.
+    """
     await redis.zadd(
         DELAYED_ZSET_KEY,
         {message.dumpb(): run_at.timestamp()},
@@ -273,11 +297,13 @@ class TaskScheduler:
         _schedulers.add(self)
 
     async def startup(self) -> None:
+        """Start the broker and log the known tasks."""
         await self.broker.startup()
         self._log_task_registry_awareness()
         logger.info("Scheduler started")
 
     async def shutdown(self) -> None:
+        """Shut down the broker and close the connection pool."""
         await self.broker.shutdown()
         await self.connection_pool.disconnect()
         logger.info("Scheduler shut down")
@@ -288,6 +314,10 @@ class TaskScheduler:
         Acquires a Redis mutex as defense-in-depth (on top of k8s
         StatefulSet ensuring a single replica).  If the lock cannot
         be acquired, waits and retries.
+
+        Args:
+            finish_event: Event that stops the scheduler when set; a new
+                event is used if omitted.
         """
         _finish = finish_event or asyncio.Event()
 
@@ -446,6 +476,9 @@ class TaskScheduler:
 
         Reads from the Config object's Registry section, where each
         key is a VO name.
+
+        Returns:
+            The VO names, or an empty list if no config is available.
         """
         if self._config is None:
             logger.warning("No config available, cannot load VOs")
@@ -499,7 +532,13 @@ class TaskScheduler:
         self._log_next_schedules_snapshot("initial")
 
     def add_vo_schedule(self, task_name: str, vo: str, next_run: datetime) -> None:
-        """Register a VO-specific periodic task schedule."""
+        """Register a VO-specific periodic task schedule.
+
+        Args:
+            task_name: Name of the periodic task.
+            vo: Name of the VO.
+            next_run: Time of the next submission.
+        """
         self._next_runs[(task_name, vo)] = next_run
 
     async def _submit_periodic_task(self, task_name: str, vo: str) -> None:

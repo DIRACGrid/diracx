@@ -1,3 +1,5 @@
+"""Registry of the object types that locks can be taken on."""
+
 from __future__ import annotations
 
 import inspect
@@ -22,6 +24,14 @@ class LockedObjectType(str):
     """
 
     def __new__(cls, value: str):
+        """Create a validated locked-object type.
+
+        Args:
+            value: The name of a registered type.
+
+        Raises:
+            ValueError: If the type is not registered.
+        """
         if value not in _REGISTRY:
             raise ValueError(
                 f"Unknown LockedObjectType {value!r}. "
@@ -31,7 +41,17 @@ class LockedObjectType(str):
 
 
 def register_locked_object_type(name: str) -> LockedObjectType:
-    """Register a new locked-object type and return it as a ``LockedObjectType``."""
+    """Register a new locked-object type.
+
+    Args:
+        name: The name of the type; must be unique.
+
+    Returns:
+        The registered type as a ``LockedObjectType``.
+
+    Raises:
+        ValueError: If the type is already registered.
+    """
     if name in _REGISTRY:
         raise ValueError(
             f"LockedObjectType {name!r} is already registered at {_REGISTRY[name]!r}"
