@@ -89,7 +89,7 @@ def test_gubbins_job_router(normal_user_client, valid_job_id, caplog):
     assert r.json()[0]["Status"] == JobStatus.RECEIVED
 
     # We delete the job, and here we want a logging to appear
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.INFO, logger="gubbins.db.sql.jobs.db")
     r = normal_user_client.patch(
         "/api/jobs/status",
         json={

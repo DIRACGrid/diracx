@@ -57,5 +57,5 @@ class GubbinsJobDB(JobDB):
         so we can test in test_gubbins_job_router that the behavior
         is altered without even redefining a gubbins specific router
         """
-        logger.info(f"GubbinsJobDB: setting attributes for jobs {job_data}")
+        logger.info("GubbinsJobDB: setting attributes for jobs %s", job_data)
         return await super().set_job_attributes(job_data)
