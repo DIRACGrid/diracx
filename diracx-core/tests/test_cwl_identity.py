@@ -208,6 +208,20 @@ def test_runs_inside_inline_bodies_are_checked_and_hashed(packed):
     assert len(inline) == 1 and inline[0].children == (tool_id,)
 
 
+@pytest.mark.parametrize("reverse", [False, True], ids=["entry-last", "entry-first"])
+def test_an_inline_copy_of_an_entry_keeps_the_entry(packed, reverse):
+    # Both hash to one identity: whichever is identified last must not drop
+    # the entry id, or entry_identity misses an entry the document has
+    merge = entry(packed, "#main")["steps"][0]
+    entry_id = merge["run"]
+    merge["run"] = copy.deepcopy(entry(packed, entry_id))
+    if reverse:
+        packed["$graph"].reverse()
+    assert entry_identity(packed, entry_id) == entry_identity(
+        json.loads(FIXTURE.read_text()), entry_id
+    )
+
+
 def test_steps_written_as_a_map_are_hashed_through_their_runs():
     child = tool()
     child["id"] = "#child"
