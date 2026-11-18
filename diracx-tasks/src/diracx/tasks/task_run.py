@@ -36,6 +36,8 @@ _factory_settings = FactorySettings()
 
 
 class DebugOptions(StrEnum):
+    """When ``call`` drops into the debugger."""
+
     NONE = "none"
     BEFORE = "before"
     ON_ERROR = "exception"
@@ -202,7 +204,14 @@ async def start_worker(
     max_concurrent_tasks: int,
     worker_size: str,
 ) -> None:
-    """Start a worker to execute tasks from the broker."""
+    """Start a worker to execute tasks from the broker.
+
+    Args:
+        redis_url: Redis connection URL of the broker.
+        max_concurrent_tasks: Maximum number of tasks run concurrently.
+        worker_size: Size of the worker (``small``, ``medium`` or ``large``),
+            which selects the task streams it listens to.
+    """
     from .plumbing.broker import RedisStreamBroker
     from .plumbing.enums import Size
     from .plumbing.factory import (
@@ -255,7 +264,11 @@ async def start_worker(
 
 
 async def start_scheduler(redis_url: str) -> None:
-    """Start the task scheduler process."""
+    """Start the task scheduler process.
+
+    Args:
+        redis_url: Redis connection URL of the broker.
+    """
     from .plumbing.broker import RedisStreamBroker
     from .plumbing.factory import load_task_registry
     from .plumbing.scheduler import TaskScheduler
@@ -302,7 +315,16 @@ async def submit_task_cli(
     kwargs: dict[str, Any],
     redis_url: str,
 ) -> None:
-    """Submit a task to the broker for execution by workers."""
+    """Submit a task to the broker for execution by workers.
+
+    Exits with status 1 if the task is not found.
+
+    Args:
+        entry_point: Name of the task in the registry.
+        args: Positional arguments for the task.
+        kwargs: Keyword arguments for the task.
+        redis_url: Redis connection URL of the broker.
+    """
     from .plumbing.broker import RedisStreamBroker
     from .plumbing.broker.models import submit_task
     from .plumbing.factory import load_task_registry
@@ -351,6 +373,16 @@ async def call_task(
     Dependency injection (databases, config, settings) is resolved
     automatically from environment variables via
     ``setup_dependency_overrides``.
+
+    Exits with status 1 if the task is not found or its dependencies cannot
+    be resolved.
+
+    Args:
+        entry_point: Name of the task in the registry.
+        args: Positional arguments for the task.
+        kwargs: Keyword arguments for the task, merged over the resolved
+            dependencies.
+        debugger: When to drop into the debugger.
     """
     from .plumbing.broker import RedisStreamBroker
     from .plumbing.factory import (

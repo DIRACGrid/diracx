@@ -1,3 +1,5 @@
+"""Worker consuming tasks from the broker and executing them."""
+
 from __future__ import annotations
 
 import asyncio
@@ -212,7 +214,11 @@ class Worker:
             self.sem_prefetch = asyncio.Semaphore(max_prefetch)
 
     async def listen(self, finish_event: asyncio.Event) -> None:
-        """Start the prefetcher and runner tasks."""
+        """Start the prefetcher and runner tasks.
+
+        Args:
+            finish_event: Event that triggers a cooperative shutdown when set.
+        """
         await self.broker.startup()
         _running_workers.add(self)
 
@@ -241,6 +247,11 @@ class Worker:
         (Redis streams) and the runner.  We wrap broker.__anext__()
         in a task so we can poll it with a timeout — otherwise we'd
         block forever and never notice finish_event.
+
+        Args:
+            queue: Queue feeding the runner; ``QUEUE_DONE`` is put on it when
+                prefetching stops.
+            finish_event: Event that stops the prefetcher when set.
         """
         iterator = self.broker.listen()
         # Kick off the first read from the broker as a background task
@@ -297,6 +308,9 @@ class Worker:
         limits how many tasks run at once; the prefetch semaphore
         (``self.sem_prefetch``) is released here to signal the
         prefetcher that another slot is available.
+
+        Args:
+            queue: Queue of messages to run, terminated by ``QUEUE_DONE``.
         """
         tasks: set[asyncio.Task[Any]] = set()
 
@@ -342,6 +356,10 @@ class Worker:
 
         The whole processing is wrapped in a ``task.process`` span which continues
         the trace of whoever submitted the task.
+
+        Args:
+            message: The raw message data, or a received message which is
+                acknowledged once processed.
         """
         message_data = message.data if isinstance(message, ReceivedMessage) else message
 
@@ -682,6 +700,15 @@ class Worker:
         Passes a Redis connection as ``_redis`` to ``task_wrapper`` for
         lock acquisition.  Task-level callback spawning is available via
         the ``CallbackSpawner`` dependency type.
+
+        Args:
+            task_func: The task function to call.
+            task_message: The message describing the task and its arguments.
+
+        Returns:
+            A ``TaskResult`` holding the return value or the error. A task
+            which could not acquire its lock is rescheduled and reported as a
+            successful result labelled ``_lock_retry``.
         """
         retry_count = task_message.labels.get("_retry_attempt", 0)
         span_attrs = {

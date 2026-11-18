@@ -17,6 +17,12 @@ from diracx.tasks.plumbing.schedules import CronSchedule
 
 @dataclasses.dataclass
 class CleanSandboxStoreTask(PeriodicBaseTask):
+    """Periodic task that removes unused sandboxes from the Sandbox Store.
+
+    Runs daily at 06:00 (cron schedule) with background priority and retries
+    with exponential backoff on failure.
+    """
+
     priority = Priority.BACKGROUND
     size = Size.MEDIUM
     retry_policy = ExponentialBackoff(base_delay_seconds=300, max_retries=3)
@@ -27,4 +33,14 @@ class CleanSandboxStoreTask(PeriodicBaseTask):
         sandbox_metadata_db: Annotated[SandboxMetadataDB, NoTransaction()],
         settings: SandboxStoreSettings,
     ) -> int:
+        """Delete sandboxes that are not assigned to any job.
+
+        Args:
+            sandbox_metadata_db: Sandbox metadata database, accessed without
+                an implicit transaction.
+            settings: Sandbox store settings.
+
+        Returns:
+            The total number of sandboxes deleted.
+        """
         return await clean_sandboxes(sandbox_metadata_db, settings)
