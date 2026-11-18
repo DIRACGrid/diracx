@@ -143,6 +143,10 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
             process_id = hash_json({"cwlVersion": CWL_VERSION, "process": body})
         except ValueError as e:
             raise ValueError(f"{entry_id or 'An inline process'}: {e}") from None
+        # An entry and an identical inline body share an identity: keep the
+        # entry id whichever comes last ($graph ids are unique and hashed)
+        if entry_id is None and process_id in components:
+            entry_id = components[process_id].entry_id
         components[process_id] = Component(
             process_id, entry_id, tuple(sorted(set(children)))
         )
