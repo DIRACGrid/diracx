@@ -88,4 +88,4 @@ A new release creates:
 
 Every commit in master triggers a new release. The releases are published on a [helm repo](https://charts.diracgrid.org/index.yaml)
 
-The pull requests updating the chart for new `diracx` and `diracx-web` releases are opened by Renovate (see `renovate.json` in `diracx-charts`), which merges them once CI passes.
+The pull requests updating the chart for new `diracx` and `diracx-web` releases are opened by Renovate (see `renovate.json` in `diracx-charts`). Patch releases are marked for automerge, minor and major releases wait for a review. The `diracx-charts` ruleset requires an approving review on every pull request, so a maintainer still has to approve each of them before it merges.
