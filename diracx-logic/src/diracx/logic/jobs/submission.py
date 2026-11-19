@@ -157,11 +157,14 @@ async def submit_jdl_jobs(
             config=config,
         )
     except ExceptionGroup as e:
-        logging.exception("JDL syntax error occurred during job submission")
+        logger.exception("JDL syntax error occurred during job submission")
         raise ValueError("JDL syntax error") from e
 
-    logging.debug(
-        f'Jobs added to the JobDB", "{submitted_job_ids} for {user_info.preferred_username}/{user_info.dirac_group}'
+    logger.debug(
+        "Jobs added to the JobDB: %s for %s/%s",
+        submitted_job_ids,
+        user_info.preferred_username,
+        user_info.dirac_group,
     )
 
     job_created_time = datetime.now(timezone.utc)
@@ -266,7 +269,7 @@ async def create_jdl_jobs(jobs: list[JobSubmissionSpec], job_db: JobDB, config: 
             class_ad_req = ClassAd("[]")
             if not class_ad_job.isOK():
                 # Rollback the entire transaction
-                logging.exception(f"Error in JDL syntax for job JDL: {original_jdl}")
+                logger.error("Error in JDL syntax for job JDL: %s", original_jdl)
                 raise ValueError(f"Error in JDL syntax for job JDL: {original_jdl}")
             # TODO: check if that is actually true
             if class_ad_job.lookupAttribute("Parameters"):
