@@ -47,6 +47,7 @@ from .enums import (
     WorkgraphStatus,
 )
 from .feeder import (
+    Feeder,
     FeederInput,
     FeederProposal,
     NoMoreFeederInputs,
@@ -57,8 +58,9 @@ from .packer import (
     ComputeParcel,
     DataParcel,
     DelayInput,
+    Packer,
     PackerInput,
     PackerProposal,
     StorageDelta,
 )
-from .plugins import INJECTED, Feeder, Packer, PluginArgs
+from .plugins import INJECTED, PluginArgs

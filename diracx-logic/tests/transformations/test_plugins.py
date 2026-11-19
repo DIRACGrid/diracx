@@ -18,6 +18,7 @@ from diracx.logic.transformations import (
     FEEDER_KIND,
     PACKER_KIND,
     FixedSizePackerArgs,
+    PluginKind,
     fixed_size_packer,
     injected_parameters,
     load_plugin,
@@ -113,6 +114,23 @@ def register(monkeypatch):
         )
 
     return _register
+
+
+def test_kinds_read_their_contract_from_the_protocol():
+    assert FEEDER_KIND.args_param == "feeder_args"
+    assert FEEDER_KIND.contract_params == {"feeder_state", "scouting"}
+    assert PACKER_KIND.args_param == "packer_args"
+    assert PACKER_KIND.contract_params == {
+        "inputs",
+        "flush",
+        "feeder_active",
+        "input_overview",
+    }
+
+
+def test_kind_name_must_match_the_protocol_args_param():
+    with pytest.raises(TypeError, match="'hook_args'"):
+        PluginKind(name="hook", group=FEEDER_KIND.group, protocol=FEEDER_KIND.protocol)
 
 
 @pytest.mark.parametrize("kind", [FEEDER_KIND, PACKER_KIND], ids=["feeder", "packer"])

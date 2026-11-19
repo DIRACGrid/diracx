@@ -7,12 +7,14 @@ that writes.
 
 from __future__ import annotations
 
-from typing import Self
+from collections.abc import AsyncIterator, Mapping
+from typing import Protocol, Self
 
 from pydantic import Field, JsonValue, model_validator
 
 from .._base import BaseModel
 from ..types import UTCDatetime
+from .plugins import ArgsT_contra
 
 
 class FeederInput(BaseModel):
@@ -55,3 +57,29 @@ class NoMoreFeederInputs(BaseModel):
 
 
 FeederProposal = FeederInput | SetFeederState | NoMoreFeederInputs
+
+
+class Feeder(Protocol[ArgsT_contra]):
+    """Signature every feeder must have (DX-ADR-006).
+
+    Written as a plain ``def`` returning an ``AsyncIterator`` because that is
+    the type of an async generator function: calling it returns the iterator
+    straight away, there is nothing to await.
+    """
+
+    def __call__(
+        self,
+        *,
+        feeder_args: ArgsT_contra,
+        feeder_state: Mapping[str, JsonValue],
+        scouting: bool,
+    ) -> AsyncIterator[FeederProposal]:
+        """Yield inputs, bookmark updates and an exhaustion signal.
+
+        Args:
+            feeder_args: The transformation's validated ``FeederArgs``.
+            feeder_state: The bookmark last stored with ``SetFeederState``;
+                read-only, a new bookmark is yielded instead.
+            scouting: Whether the workgraph is in its scouting phase.
+        """
+        ...

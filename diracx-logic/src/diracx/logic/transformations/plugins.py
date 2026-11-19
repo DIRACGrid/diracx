@@ -26,32 +26,48 @@ class PluginKind(Generic[PluginT]):
     """Static description of one extension point.
 
     Generic over the plugin's ``Protocol`` so ``load_plugin`` returns the
-    right contract type for the kind it is given.
+    right contract type for the kind it is given. The parameters the runtime
+    checks expect are read from that Protocol, so they cannot drift from what
+    mypy checks.
 
     Attributes:
-        name: Human-readable kind, used in error messages.
+        name: Kind of plugin, used in error messages and to name the arguments
+            parameter (``<name>_args``).
         group: Entry-point group the plugins are registered under.
-        args_param: Name of the parameter that receives the arguments model.
-        contract_params: Other keyword parameters the core always passes.
+        protocol: The kind's contract, ``Feeder`` or ``Packer``.
     """
 
     name: str
     group: DiracEntryPoint
-    args_param: str
-    contract_params: frozenset[str]
+    protocol: type
+
+    def __post_init__(self) -> None:
+        if self.args_param not in self._protocol_params():
+            raise TypeError(
+                f"{self.protocol.__name__} has no {self.args_param!r} parameter"
+            )
+
+    def _protocol_params(self) -> frozenset[str]:
+        """Return the parameter names of the Protocol's ``__call__``."""
+        params = inspect.signature(self.protocol.__call__).parameters
+        return frozenset(params) - {"self"}
+
+    @property
+    def args_param(self) -> str:
+        """Name of the parameter that receives the arguments model."""
+        return f"{self.name}_args"
+
+    @property
+    def contract_params(self) -> frozenset[str]:
+        """Other keyword parameters the core always passes."""
+        return self._protocol_params() - {self.args_param}
 
 
 FEEDER_KIND: PluginKind[Feeder[Any]] = PluginKind(
-    name="feeder",
-    group=DiracEntryPoint.FEEDERS,
-    args_param="feeder_args",
-    contract_params=frozenset({"feeder_state", "scouting"}),
+    name="feeder", group=DiracEntryPoint.FEEDERS, protocol=Feeder
 )
 PACKER_KIND: PluginKind[Packer[Any]] = PluginKind(
-    name="packer",
-    group=DiracEntryPoint.PACKERS,
-    args_param="packer_args",
-    contract_params=frozenset({"inputs", "flush", "feeder_active", "input_overview"}),
+    name="packer", group=DiracEntryPoint.PACKERS, protocol=Packer
 )
 
 _KEYWORD_KINDS = (
