@@ -327,9 +327,26 @@ jobs:
         run: pixi run -e ${{ matrix.package }}-generate-client generate-client
 
   pre-commit:
-    # Runs the hooks listed in ``ci.skip`` of .pre-commit-config.yaml — those
-    # are the hooks that require a pixi environment and therefore can't run on
-    # pre-commit.ci. All other hooks are handled by the pre-commit.ci bot.
+    # Runs all the pre-commit-stage hooks (anything not marked
+    # stages: [manual] in .pre-commit-config.yaml) and auto-fixes PRs via
+    # pre-commit-ci/lite-action. Replaces the pre-commit.ci app: hook rev
+    # updates come from Renovate's pre-commit manager instead.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.x
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+      - uses: pre-commit-ci/lite-action@062bca0919bc9d6e66755cc05074b70c77e111fc # v1.2.0
+        if: always()
+
+  pre-commit-pixi-hooks:
+    # Runs the pixi-dependent local hooks (stages: [manual] in
+    # .pre-commit-config.yaml), which need a pixi environment to run.
     name: pre-commit (pixi-dependent hooks)
     runs-on: ubuntu-latest
     steps:
@@ -348,5 +365,5 @@ jobs:
       - name: Run pixi-dependent pre-commit hooks
         run: |
           for hook in generate-pixi-docs settings-doc-check check-all-required check-all-forbidden; do
-            pixi run pre-commit run "$hook" --all-files
+            pixi run pre-commit run "$hook" --all-files --hook-stage manual
           done
