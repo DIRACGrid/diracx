@@ -10,11 +10,15 @@ This guide shows how to write, register, type-check and test either kind. The co
 
 A plugin is an async generator function that takes keyword-only parameters of three kinds. They differ in who decides the value and how often it changes:
 
-| Kind                      | Decided by                              | Varies per     | Stored in                              | Examples                                                       |
-| ------------------------- | --------------------------------------- | -------------- | -------------------------------------- | -------------------------------------------------------------- |
-| **Contract parameters**   | the core, at each call                  | invocation     | nowhere; computed at call time         | `feeder_state`, `scouting`; `inputs`, `flush`, `feeder_active` |
-| **Arguments model**       | the workgraph submitter, then hooks     | transformation | the `FeederArgs` / `PackerArgs` column | a seed count, a dataset name, a group size                     |
-| **Injected dependencies** | the DiracX administrator, at deployment | installation   | settings (environment variables), DBs  | a catalogue's URL and credentials, a database                  |
+| Kind                      | Decided by                              | Varies per     | Stored in                                                                                                    | Examples                                                       |
+| ------------------------- | --------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| **Contract parameters**   | the core, at each call                  | invocation     | the transformation's rows (`FeederState`, `Inputs`, `FeederEnabled`), or an operator's instruction (`flush`) | `feeder_state`, `scouting`; `inputs`, `flush`, `feeder_active` |
+| **Arguments model**       | the workgraph submitter, then hooks     | transformation | the `FeederArgs` / `PackerArgs` column                                                                       | a seed count, a dataset name, a group size                     |
+| **Injected dependencies** | the DiracX administrator, at deployment | installation   | settings (environment variables), DBs                                                                        | a catalogue's URL and credentials, a database                  |
+
+The set of contract parameters is fixed per kind: every feeder receives the same ones, and so does every packer. The core builds them at each call, from what it has stored for the transformation (its bookmark, its `Unassigned` inputs, whether its feeder is enabled), from counts and states it derives (`input_overview`, `scouting`), or from a one-off instruction that is not stored at all (`flush`).
+
+The fields of the arguments model belong to the plugin: the seed feeder below defines `max_count` in its `SeedFeederArgs`. The values belong to each transformation: two transformations using that feeder store their own `max_count`, and hooks may change it while the transformation runs. The plugin itself is a plain function shared by every transformation that uses it.
 
 When deciding where a value belongs, ask who should be able to change it:
 
@@ -142,6 +146,8 @@ async def fixed_size_packer(
 A plugin must accept every contract parameter, even one it does not use, as `fixed_size_packer` does with `input_overview`.
 
 ### Ask for installation dependencies
+
+This is *dependency injection*: the plugin only declares what it needs, and the framework creates the object and hands it over, so the plugin never reads environment variables or opens connections itself. DiracX already works this way for routes and tasks, where a parameter annotated with a database class receives a database.
 
 Declare each dependency as an extra keyword parameter, annotated with its class and defaulting to `INJECTED`. When the core runs the plugin, it passes an instance of that class in place of the marker.
 
