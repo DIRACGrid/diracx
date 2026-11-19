@@ -50,6 +50,7 @@ from ._models import (  # type: ignore
     StorageElementStatusRead,
     StorageElementStatusRemove,
     StorageElementStatusWrite,
+    SubmittedTransformation,
     SummaryParams,
     SummaryParamsSearchItem,
     SupportInfo,
@@ -58,6 +59,7 @@ from ._models import (  # type: ignore
     VOInfo,
     ValidationError,
     VectorSearchSpec,
+    WorkgraphSubmissionResult,
 )
 
 from ._enums import (  # type: ignore
@@ -68,6 +70,7 @@ from ._enums import (  # type: ignore
     SandboxType,
     ScalarSearchOperator,
     SortDirection,
+    SubmittedTransformationKind,
     VectorSearchOperator,
 )
 from ._patch import __all__ as _patch_all
@@ -113,6 +116,7 @@ __all__ = [
     "StorageElementStatusRead",
     "StorageElementStatusRemove",
     "StorageElementStatusWrite",
+    "SubmittedTransformation",
     "SummaryParams",
     "SummaryParamsSearchItem",
     "SupportInfo",
@@ -121,6 +125,7 @@ __all__ = [
     "VOInfo",
     "ValidationError",
     "VectorSearchSpec",
+    "WorkgraphSubmissionResult",
     "ChecksumAlgorithm",
     "JobStatus",
     "PilotStatus",
@@ -128,6 +133,7 @@ __all__ = [
     "SandboxType",
     "ScalarSearchOperator",
     "SortDirection",
+    "SubmittedTransformationKind",
     "VectorSearchOperator",
 ]
 __all__.extend([p for p in _patch_all if p not in __all__])  # pyright: ignore

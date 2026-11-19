@@ -64,6 +64,7 @@ from ...operations._operations import (
     build_resource_status_get_fts_status_request,
     build_resource_status_get_site_status_request,
     build_resource_status_get_storage_status_request,
+    build_transformations_submit_workgraph_request,
     build_well_known_get_installation_metadata_request,
     build_well_known_get_jwks_request,
     build_well_known_get_openid_configuration_request,
@@ -3420,6 +3421,143 @@ class ResourceStatusOperations:
             raise HttpResponseError(response=response)
 
         deserialized = self._deserialize("{FTSStatus}", pipeline_response.http_response)
+
+        if cls:
+            return cls(pipeline_response, deserialized, {})  # type: ignore
+
+        return deserialized  # type: ignore
+
+
+class TransformationsOperations:
+    """
+    .. warning::
+        **DO NOT** instantiate this class directly.
+
+        Instead, you should access the following operations through
+        :class:`~_generated.aio.Dirac`'s
+        :attr:`transformations` attribute.
+    """
+
+    models = _models
+
+    def __init__(self, *args, **kwargs) -> None:
+        input_args = list(args)
+        self._client: AsyncPipelineClient = input_args.pop(0) if input_args else kwargs.pop("client")
+        self._config: DiracConfiguration = input_args.pop(0) if input_args else kwargs.pop("config")
+        self._serialize: Serializer = input_args.pop(0) if input_args else kwargs.pop("serializer")
+        self._deserialize: Deserializer = input_args.pop(0) if input_args else kwargs.pop("deserializer")
+
+    @overload
+    async def submit_workgraph(
+        self, body: dict[str, Any], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.WorkgraphSubmissionResult:
+        """Submit Workgraph.
+
+        Submit a workgraph and create its transformations.
+
+        Every step of the workflow must carry ``dirac:Transformation`` and becomes
+        a compute transformation; each ``data_management`` declaration of
+        ``dirac:Workgraph`` becomes a data transformation. Everything is created
+        in the ``New`` state. A step's ``run`` must be an inline process or a
+        ``#fragment`` of a packed document.
+
+        :param body: Required.
+        :type body: dict[str, any]
+        :keyword content_type: Body Parameter content-type. Content type parameter for JSON body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: WorkgraphSubmissionResult
+        :rtype: ~_generated.models.WorkgraphSubmissionResult
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @overload
+    async def submit_workgraph(
+        self, body: IO[bytes], *, content_type: str = "application/json", **kwargs: Any
+    ) -> _models.WorkgraphSubmissionResult:
+        """Submit Workgraph.
+
+        Submit a workgraph and create its transformations.
+
+        Every step of the workflow must carry ``dirac:Transformation`` and becomes
+        a compute transformation; each ``data_management`` declaration of
+        ``dirac:Workgraph`` becomes a data transformation. Everything is created
+        in the ``New`` state. A step's ``run`` must be an inline process or a
+        ``#fragment`` of a packed document.
+
+        :param body: Required.
+        :type body: IO[bytes]
+        :keyword content_type: Body Parameter content-type. Content type parameter for binary body.
+         Default value is "application/json".
+        :paramtype content_type: str
+        :return: WorkgraphSubmissionResult
+        :rtype: ~_generated.models.WorkgraphSubmissionResult
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+
+    @distributed_trace_async
+    async def submit_workgraph(
+        self, body: Union[dict[str, Any], IO[bytes]], **kwargs: Any
+    ) -> _models.WorkgraphSubmissionResult:
+        """Submit Workgraph.
+
+        Submit a workgraph and create its transformations.
+
+        Every step of the workflow must carry ``dirac:Transformation`` and becomes
+        a compute transformation; each ``data_management`` declaration of
+        ``dirac:Workgraph`` becomes a data transformation. Everything is created
+        in the ``New`` state. A step's ``run`` must be an inline process or a
+        ``#fragment`` of a packed document.
+
+        :param body: Is either a {str: Any} type or a IO[bytes] type. Required.
+        :type body: dict[str, any] or IO[bytes]
+        :return: WorkgraphSubmissionResult
+        :rtype: ~_generated.models.WorkgraphSubmissionResult
+        :raises ~azure.core.exceptions.HttpResponseError:
+        """
+        error_map: MutableMapping = {
+            401: ClientAuthenticationError,
+            404: ResourceNotFoundError,
+            409: ResourceExistsError,
+            304: ResourceNotModifiedError,
+        }
+        error_map.update(kwargs.pop("error_map", {}) or {})
+
+        _headers = case_insensitive_dict(kwargs.pop("headers", {}) or {})
+        _params = kwargs.pop("params", {}) or {}
+
+        content_type: Optional[str] = kwargs.pop("content_type", _headers.pop("Content-Type", None))
+        cls: ClsType[_models.WorkgraphSubmissionResult] = kwargs.pop("cls", None)
+
+        content_type = content_type or "application/json"
+        _json = None
+        _content = None
+        if isinstance(body, (IOBase, bytes)):
+            _content = body
+        else:
+            _json = self._serialize.body(body, "{object}")
+
+        _request = build_transformations_submit_workgraph_request(
+            content_type=content_type,
+            json=_json,
+            content=_content,
+            headers=_headers,
+            params=_params,
+        )
+        _request.url = self._client.format_url(_request.url)
+
+        _stream = False
+        pipeline_response: PipelineResponse = await self._client._pipeline.run(  # pylint: disable=protected-access
+            _request, stream=_stream, **kwargs
+        )
+
+        response = pipeline_response.http_response
+
+        if response.status_code not in [201]:
+            map_error(status_code=response.status_code, response=response, error_map=error_map)
+            raise HttpResponseError(response=response)
+
+        deserialized = self._deserialize("WorkgraphSubmissionResult", pipeline_response.http_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})  # type: ignore

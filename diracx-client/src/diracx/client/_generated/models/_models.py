@@ -1695,6 +1695,53 @@ class StorageElementStatusWrite(_serialization.Model):
     """Write operation status."""
 
 
+class SubmittedTransformation(_serialization.Model):
+    """A transformation created by a workgraph submission.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar transformation_id: Transformation Id. Required.
+    :vartype transformation_id: str
+    :ivar name: Name. Required.
+    :vartype name: str
+    :ivar kind: Kind. Required. Known values are: "Compute" and "Data".
+    :vartype kind: str or ~_generated.models.SubmittedTransformationKind
+    """
+
+    _validation = {
+        "transformation_id": {"required": True},
+        "name": {"required": True},
+        "kind": {"required": True},
+    }
+
+    _attribute_map = {
+        "transformation_id": {"key": "transformation_id", "type": "str"},
+        "name": {"key": "name", "type": "str"},
+        "kind": {"key": "kind", "type": "str"},
+    }
+
+    def __init__(
+        self,
+        *,
+        transformation_id: str,
+        name: str,
+        kind: Union[str, "_models.SubmittedTransformationKind"],
+        **kwargs: Any
+    ) -> None:
+        """
+        :keyword transformation_id: Transformation Id. Required.
+        :paramtype transformation_id: str
+        :keyword name: Name. Required.
+        :paramtype name: str
+        :keyword kind: Kind. Required. Known values are: "Compute" and "Data".
+        :paramtype kind: str or ~_generated.models.SubmittedTransformationKind
+        """
+        super().__init__(**kwargs)
+        self.transformation_id = transformation_id
+        self.name = name
+        self.kind = kind
+
+
 class SummaryParams(_serialization.Model):
     """Parameters for grouping and summarizing search results.
 
@@ -2047,3 +2094,38 @@ class VOInfo(_serialization.Model):
         self.groups = groups
         self.support = support
         self.default_group = default_group
+
+
+class WorkgraphSubmissionResult(_serialization.Model):
+    """What a successful workgraph submission created.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar workgraph_id: Workgraph Id. Required.
+    :vartype workgraph_id: str
+    :ivar transformations: Transformations. Required.
+    :vartype transformations: list[~_generated.models.SubmittedTransformation]
+    """
+
+    _validation = {
+        "workgraph_id": {"required": True},
+        "transformations": {"required": True},
+    }
+
+    _attribute_map = {
+        "workgraph_id": {"key": "workgraph_id", "type": "str"},
+        "transformations": {"key": "transformations", "type": "[SubmittedTransformation]"},
+    }
+
+    def __init__(
+        self, *, workgraph_id: str, transformations: list["_models.SubmittedTransformation"], **kwargs: Any
+    ) -> None:
+        """
+        :keyword workgraph_id: Workgraph Id. Required.
+        :paramtype workgraph_id: str
+        :keyword transformations: Transformations. Required.
+        :paramtype transformations: list[~_generated.models.SubmittedTransformation]
+        """
+        super().__init__(**kwargs)
+        self.workgraph_id = workgraph_id
+        self.transformations = transformations
