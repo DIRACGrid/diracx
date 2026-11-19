@@ -56,15 +56,6 @@ from diracx.db.sql.transformation.db import (
     NewTransformationOutput,
 )
 
-__all__ = [
-    "EDGE_FEEDER",
-    "PROCESS_URI_PREFIX",
-    "CompiledWorkgraph",
-    "compile_workgraph",
-    "ingest_process",
-    "submit_workgraph",
-]
-
 logger = logging.getLogger(__name__)
 
 # The feeder serving an internal edge from the ParcelOutputs of the declared
