@@ -25,9 +25,10 @@ The services first check that the document is self-contained
 (`check_self_contained`), so that nothing ever fetches anything on its behalf:
 
 - no `$` key but the document's own `$graph` and `$namespaces`;
-- no key or `class` written with a prefix of `$namespaces`
-    (`dirac:Transformation`): `cwltool --pack` writes the full IRI, and an
-    identity does not cover what the prefix is bound to;
+- no key, `class` or `format` written with a prefix of `$namespaces`
+    (`dirac:Transformation`, `edam:format_1930`): `cwltool --pack` writes the
+    full IRI, and an identity does not cover what the prefix is bound to;
+- every `$graph` entry has an id of its own;
 - every `run` is an entry of the `$graph` or an inline body;
 - `File` and `Directory` literals carry their `contents` or `listing`
     inline, never a `path` or `location`.

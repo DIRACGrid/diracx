@@ -26,6 +26,9 @@ CWL_VERSION = "v1.2"
 PROCESS_CLASSES = frozenset(
     {"CommandLineTool", "Workflow", "ExpressionTool", "Operation"}
 )
+# Fields whose values CWL resolves through $namespaces, as cwltool --pack
+# writes them expanded: a requirement's or hint's class and a file format
+NAMESPACED_VALUES = frozenset({"class", "format"})
 # The only "$" keys a document may carry, at its top level. $schemas is
 # refused: a runner fetches the schemas it names.
 TOP_LEVEL_KEYS = frozenset({"$graph", "$namespaces", "cwlVersion"})
@@ -69,9 +72,10 @@ def check_self_contained(document: dict[str, Any]) -> None:
         document: A packed CWL document, as made by ``cwltool --pack``.
 
     Raises:
-        NotSelfContainedError: Naming everything found: a ``$`` key other than
-            the document's ``$graph`` and ``$namespaces``; a key or ``class``
-            written with a prefix of ``$namespaces``, which
+        NotSelfContainedError: Naming everything found: a ``$graph`` entry
+            without an id, or with a repeated one; a ``$`` key other than
+            the document's ``$graph`` and ``$namespaces``; a key, ``class``
+            or ``format`` written with a prefix of ``$namespaces``, which
             ``cwltool --pack`` expands and an identity does not cover; a
             ``run`` that is not an entry of the ``$graph`` or an inline body;
             a ``File`` or ``Directory`` given by ``path`` or ``location``,
@@ -80,9 +84,10 @@ def check_self_contained(document: dict[str, Any]) -> None:
         ValueError: If it is not a CWL v1.2 document, or a process in it
             declares another version.
     """
-    graph = _graph(document)
+    problems: list[str] = []
+    graph = _graph(document, problems)
     prefixes = set(document.get("$namespaces") or {})
-    problems = [
+    problems += [
         f"top-level {key} is not allowed"
         for key in document
         if key.startswith("$") and key not in TOP_LEVEL_KEYS
@@ -231,7 +236,14 @@ def subgraph(document: dict[str, Any], entry_id: str) -> dict[str, Any]:
     return result
 
 
-def _graph(document: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _graph(
+    document: dict[str, Any], problems: list[str] | None = None
+) -> dict[str, dict[str, Any]]:
+    """The ``$graph`` entries by id.
+
+    An entry without an id, or with a repeated one, raises a ``ValueError``;
+    given ``problems``, it is listed there instead and left out.
+    """
     if document.get("cwlVersion") != CWL_VERSION:
         raise ValueError(
             f"Only CWL {CWL_VERSION} is supported, got "
@@ -250,10 +262,16 @@ def _graph(document: dict[str, Any]) -> dict[str, dict[str, Any]]:
         # Entries are found by id: one without, or a repeated one, would be
         # silently dropped
         entry_id = entry.get("id", default_id)
+        problem = None
         if entry_id is None:
-            raise ValueError(f"A $graph entry has no id: {entry!r:.80}")
-        if entry_id in graph:
-            raise ValueError(f"Two $graph entries have the id {entry_id!r}")
+            problem = f"A $graph entry has no id: {entry!r:.80}"
+        elif entry_id in graph:
+            problem = f"Two $graph entries have the id {entry_id!r}"
+        if problem is not None:
+            if problems is None:
+                raise ValueError(problem)
+            problems.append(problem)
+            continue
         _check_version(entry, str(entry_id))
         graph[str(entry_id)] = entry
     return graph
@@ -302,12 +320,17 @@ def _check_version(process: dict[str, Any], where: str) -> None:
 def _prefixed_names(
     value: Any, prefixes: set[str], path: str = ""
 ) -> Iterator[tuple[str, str, str]]:
-    """Keys and ``class`` values written with one of ``prefixes``."""
+    """Keys, and values CWL resolves as names, written with one of ``prefixes``."""
     if isinstance(value, dict):
         for key, item in value.items():
-            names = [key, item] if key == "class" and isinstance(item, str) else [key]
+            names = [key]
+            if key in NAMESPACED_VALUES:
+                # A format may be one name or a list of them
+                names += item if isinstance(item, list) else [item]
             for name in names:
-                prefix, colon, _ = str(name).partition(":")
+                if not isinstance(name, str):
+                    continue
+                prefix, colon, _ = name.partition(":")
                 if colon and prefix in prefixes:
                     yield path or "/", name, prefix
             yield from _prefixed_names(item, prefixes, f"{path}/{key}")

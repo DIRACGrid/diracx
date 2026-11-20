@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -153,6 +154,16 @@ def test_a_reference_is_the_childs_hash():
             "'dirac:extension' .* uses the \\$namespaces prefix 'dirac'",
         ),
         (
+            lambda d: entry(d, TOOL)["inputs"][0].update(format="dirac:fmt"),
+            "'dirac:fmt' .* uses the \\$namespaces prefix 'dirac'",
+        ),
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(
+                format=["https://example.org/fmt", "dirac:fmt"]
+            ),
+            "'dirac:fmt' .* uses the \\$namespaces prefix 'dirac'",
+        ),
+        (
             lambda d: entry(d, TOOL)["inputs"][0].update(
                 default={"class": "File", "path": "/home/someone/data.root"}
             ),
@@ -209,6 +220,36 @@ def test_a_body_declaring_another_version_is_refused(packed, inline):
             check(packed)
     merge["cwlVersion"] = "v1.2"
     check_self_contained(packed)
+
+
+@pytest.mark.parametrize(
+    "where",
+    [
+        {"hints": [{"class": "fmt:Hint"}]},
+        {"inputs": [{"id": "x", "type": "File", "format": "fmt:example"}]},
+    ],
+    ids=["class", "format"],
+)
+def test_a_name_whose_meaning_hangs_on_a_binding_is_refused_under_any(where):
+    # The identity does not cover $namespaces, so no binding may matter
+    for iri in ("http://edamontology.org/", "https://example.org/other#"):
+        document = {**tool(), **where, "$namespaces": {"fmt": iri}}
+        with pytest.raises(NotSelfContainedError, match="prefix 'fmt'"):
+            check_self_contained(document)
+
+
+def test_bad_ids_are_listed_with_every_other_problem(packed):
+    # check_self_contained names everything found, ids included
+    packed["$schemas"] = ["https://example.org/s.rdf"]
+    entry(packed, "#merge.cwl")["steps"][0]["run"] = "merge.cwl"
+    packed["$graph"].append(copy.deepcopy(entry(packed, TOOL)))
+    nameless = tool("nameless")
+    del nameless["id"]
+    packed["$graph"].append(nameless)
+    with pytest.raises(NotSelfContainedError) as raised:
+        check_self_contained(packed)
+    for problem in ("Two \\$graph entries", "has no id", "\\$schemas", "merge.cwl"):
+        assert re.search(problem, str(raised.value)), problem
 
 
 def test_prefixed_names_outside_namespaces_are_left_alone(packed):
