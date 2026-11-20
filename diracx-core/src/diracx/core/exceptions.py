@@ -14,6 +14,7 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidParcelTransitionError",
     "InvalidQueryError",
+    "InvalidWorkgraphError",
     "NotReadyError",
     "PendingAuthorizationError",
     "PilotAlreadyAssociatedWithJobError",
@@ -220,6 +221,18 @@ class InputStatusConflictError(DiracError):
             f"Inputs of transformation {transformation_id} changed status"
             + (f" ({detail})" if detail else "")
         )
+
+
+class InvalidWorkgraphError(DiracError):
+    """A submitted workgraph document that cannot be compiled (DX-ADR-007).
+
+    Attributes:
+        errors: One message per problem found, each naming where it is.
+    """
+
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__("Invalid workgraph: " + "; ".join(errors))
 
 
 class InvalidParcelTransitionError(DiracError):

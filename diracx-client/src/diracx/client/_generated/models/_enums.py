@@ -80,6 +80,13 @@ class SortDirection(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     DESC = "desc"
 
 
+class SubmittedTransformationKind(str, Enum, metaclass=CaseInsensitiveEnumMeta):
+    """Kind."""
+
+    COMPUTE = "Compute"
+    DATA = "Data"
+
+
 class VectorSearchOperator(str, Enum, metaclass=CaseInsensitiveEnumMeta):
     """Operators for comparing values against a collection."""
 

@@ -26,21 +26,28 @@ from diracx.core.models.transformation import (
     ParcelStatus,
     TransformationKind,
     TransformationStatus,
+    WorkgraphStatus,
 )
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
-from .schema import Base as TransformationDBBase
 from .schema import (
+    Actions,
     ComputeParcels,
     ComputeTransformations,
     Inputs,
+    Ownership,
     ParcelInputs,
     Parcels,
+    Processes,
     RequirementsTemplates,
     TransformationLog,
+    TransformationOutputs,
     Transformations,
+    WorkgraphLog,
+    Workgraphs,
 )
+from .schema import Base as TransformationDBBase
 
 # BinaryUUID binds either kind; rows come back as uuid_utils.UUID
 AnyUUID: TypeAlias = UUID | uuid.UUID
@@ -83,6 +90,76 @@ class NewComputeParcel(NamedTuple):
     input_ids: list[AnyUUID]
 
 
+class NewTransformation(NamedTuple):
+    """A member transformation of a workgraph, ready to be inserted.
+
+    Attributes:
+        transformation_id: UUIDv7 identifier minted for the transformation.
+        kind: Compute for a step, Data for a data-management declaration.
+        type: VO-defined label selecting default behaviour.
+        packer: Input-packing plugin.
+        packer_args: Arguments of the packer.
+        feeder: Input plugin, or ``None`` when inputs arrive by other means.
+        feeder_args: Arguments of the feeder.
+        annotations: Human-facing labels, among them the step name.
+        hooks: Single-hook bindings (DX-ADR-006).
+        process_id: Content hash of what a compute transformation runs;
+            ``None`` for a data transformation.
+        requirements_template_id: Content hash of the base matching criteria
+            of a compute transformation, if any.
+    """
+
+    transformation_id: AnyUUID
+    kind: TransformationKind
+    type: str
+    packer: str
+    packer_args: dict[str, Any] | None
+    feeder: str | None
+    feeder_args: dict[str, Any] | None
+    annotations: dict[str, Any] | None
+    hooks: dict[str, Any] | None
+    process_id: bytes | None
+    requirements_template_id: bytes | None
+
+
+class NewTransformationOutput(NamedTuple):
+    """A declared step output of a compute transformation.
+
+    Attributes:
+        transformation_output_id: UUIDv7 identifier minted for the output.
+        transformation_id: Transformation declaring the output.
+        name: Step output id in the CWL document.
+        intermediate: Whether the output is not a workgraph output.
+    """
+
+    transformation_output_id: AnyUUID
+    transformation_id: AnyUUID
+    name: str
+    intermediate: bool
+
+
+class NewAction(NamedTuple):
+    """One entry of an ordered lifecycle-action list.
+
+    Exactly one of ``workgraph_id`` and ``transformation_id`` is set.
+
+    Attributes:
+        workgraph_id: Owning workgraph, if the owner is a workgraph.
+        transformation_id: Owning transformation, if the owner is one.
+        state: State whose list the action belongs to.
+        position: Run order within that list.
+        action: Name of the action.
+        args: Arguments of the action.
+    """
+
+    workgraph_id: AnyUUID | None
+    transformation_id: AnyUUID | None
+    state: str
+    position: int
+    action: str
+    args: dict[str, Any] | None
+
+
 class TransformationDB(BaseSQLDB):
     """Workgraphs, transformations, their inputs and the parcels made of them.
 
@@ -115,6 +192,149 @@ class TransformationDB(BaseSQLDB):
                 .prefix_with("IGNORE", dialect="mysql")
                 .prefix_with("OR IGNORE", dialect="sqlite"),
                 rows,
+            )
+
+    async def insert_processes(self, processes: dict[bytes, dict[str, Any]]) -> None:
+        """Store process documents unless one with their hash already exists.
+
+        Args:
+            processes: Documents keyed by the content hash of their canonical
+                form; empty is a no-op.
+        """
+        # TODO(#1109): superseded by the content-addressed process store,
+        # which also records ProcessReferences for nested references
+        if not processes:
+            return
+        await self.conn.execute(
+            insert(Processes)
+            .prefix_with("IGNORE", dialect="mysql")
+            .prefix_with("OR IGNORE", dialect="sqlite")
+            .values(
+                [
+                    {"process_id": process_id, "process": process}
+                    for process_id, process in processes.items()
+                ]
+            )
+        )
+
+    async def insert_workgraph(
+        self,
+        *,
+        workgraph_id: AnyUUID,
+        vo: str,
+        sub: str,
+        type: str,
+        stripped_spec: dict[str, Any],
+        annotations: dict[str, Any] | None,
+        hooks: dict[str, Any] | None,
+        transformations: list[NewTransformation],
+        outputs: list[NewTransformationOutput],
+        actions: list[NewAction],
+        author: str,
+    ) -> None:
+        """Insert the definition side of a workgraph, all ``New``.
+
+        Writes the ``Workgraphs`` row, the ``Ownership`` row its members
+        share, the member ``Transformations`` with the compute facet of each
+        compute one, their declared outputs, the lifecycle actions, and a
+        ``Submitted`` entry in each audit log. The processes and requirement
+        sets the members reference must already be stored.
+
+        Args:
+            workgraph_id: UUIDv7 identifier minted for the workgraph.
+            vo: Virtual organisation of the owner.
+            sub: OIDC subject of the owner.
+            type: VO-defined label selecting default behaviour.
+            stripped_spec: The document with run bodies replaced by hashes.
+            annotations: Human-facing labels of the workgraph.
+            hooks: Single-hook bindings of the workgraph.
+            transformations: The member transformations.
+            outputs: The declared outputs of the compute members.
+            actions: The lifecycle actions of the workgraph and its members.
+            author: Who submitted, recorded in the audit logs.
+        """
+        ownership_id = uuid7()
+        await self.conn.execute(
+            insert(Workgraphs).values(
+                workgraph_id=workgraph_id,
+                type=type,
+                status=WorkgraphStatus.NEW,
+                stripped_spec=stripped_spec,
+                annotations=annotations,
+                hooks=hooks,
+            )
+        )
+        await self.conn.execute(
+            insert(Ownership).values(
+                ownership_id=ownership_id, vo=vo, sub=sub, workgraph_id=workgraph_id
+            )
+        )
+        if transformations:
+            await self.conn.execute(
+                insert(Transformations).values(
+                    [
+                        {
+                            "transformation_id": t.transformation_id,
+                            "ownership_id": ownership_id,
+                            "type": t.type,
+                            "kind": t.kind,
+                            "status": TransformationStatus.NEW,
+                            "feeder": t.feeder,
+                            "feeder_args": t.feeder_args,
+                            "packer": t.packer,
+                            "packer_args": t.packer_args,
+                            "annotations": t.annotations,
+                            "hooks": t.hooks,
+                        }
+                        for t in transformations
+                    ]
+                )
+            )
+        compute = [t for t in transformations if t.kind == TransformationKind.COMPUTE]
+        if compute:
+            await self.conn.execute(
+                insert(ComputeTransformations).values(
+                    [
+                        {
+                            "transformation_id": t.transformation_id,
+                            "process_id": t.process_id,
+                            "requirements_template_id": t.requirements_template_id,
+                        }
+                        for t in compute
+                    ]
+                )
+            )
+        if outputs:
+            await self.conn.execute(
+                insert(TransformationOutputs).values(
+                    [output._asdict() for output in outputs]
+                )
+            )
+        if actions:
+            await self.conn.execute(
+                insert(Actions).values([action._asdict() for action in actions])
+            )
+        await self.conn.execute(
+            insert(WorkgraphLog).values(
+                workgraph_id=workgraph_id,
+                event_type="Submitted",
+                new_status=WorkgraphStatus.NEW,
+                author=author,
+            )
+        )
+        if transformations:
+            await self.conn.execute(
+                insert(TransformationLog).values(
+                    [
+                        {
+                            "transformation_id": t.transformation_id,
+                            "event_type": "Submitted",
+                            "new_status": TransformationStatus.NEW,
+                            "author": author,
+                        }
+                        for t in transformations
+                    ]
+                )
             )
 
     async def get_transformation(self, transformation_id: AnyUUID) -> dict[str, Any]:
