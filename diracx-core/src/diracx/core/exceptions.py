@@ -14,6 +14,8 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidParcelTransitionError",
     "InvalidQueryError",
+    "InvalidWorkgraphError",
+    "InvalidWorkgraphTransitionError",
     "NotReadyError",
     "PendingAuthorizationError",
     "PilotAlreadyAssociatedWithJobError",
@@ -24,6 +26,7 @@ __all__ = [
     "SandboxNotFoundError",
     "TokenNotFoundError",
     "TransformationNotFoundError",
+    "WorkgraphNotFoundError",
 ]
 
 
@@ -207,6 +210,18 @@ class TransformationNotFoundError(DiracError):
         )
 
 
+class WorkgraphNotFoundError(DiracError):
+    """Raised when a workgraph cannot be found.
+
+    Attributes:
+        workgraph_id: Identifier of the missing workgraph.
+    """
+
+    def __init__(self, workgraph_id: UUID):
+        self.workgraph_id = workgraph_id
+        super().__init__(f"Workgraph {workgraph_id} not found")
+
+
 class InputStatusConflictError(DiracError):
     """Raised when transformation inputs are not in the status a change expects.
 
@@ -237,3 +252,29 @@ class InvalidParcelTransitionError(DiracError):
             f"Parcels cannot move from {from_status} to {to_status}"
             + (f" ({detail})" if detail else "")
         )
+
+
+class InvalidWorkgraphError(DiracError):
+    """A submitted workgraph document that cannot be compiled (DX-ADR-007).
+
+    Attributes:
+        errors: One message per problem found, each naming where it is.
+    """
+
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__("Invalid workgraph: " + "; ".join(errors))
+
+
+class InvalidWorkgraphTransitionError(DiracError):
+    """A workgraph status change that the state machine of DX-ADR-005 forbids.
+
+    Attributes:
+        from_status: Status the workgraph is in.
+        to_status: Status it was to enter.
+    """
+
+    def __init__(self, from_status: str, to_status: str):
+        self.from_status = from_status
+        self.to_status = to_status
+        super().__init__(f"Workgraph cannot move from {from_status} to {to_status}")
