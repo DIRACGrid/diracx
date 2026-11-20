@@ -26,6 +26,12 @@ CWL_VERSION = "v1.2"
 PROCESS_CLASSES = frozenset(
     {"CommandLineTool", "Workflow", "ExpressionTool", "Operation"}
 )
+# CWL's own prefixes, bound in every document without $namespaces, and the
+# namespaces of its names: a runner reads cwl:File, or File's IRI, as File.
+# cwltool --pack writes CWL names bare, so only that spelling is accepted, and
+# a check made on a bare name cannot be passed by another spelling of it.
+BUILTIN_PREFIXES = frozenset({"cwl", "sld", "dct", "rdf", "rdfs", "xsd"})
+CWL_NAMESPACES = ("https://w3id.org/cwl/cwl#", "https://w3id.org/cwl/salad#")
 # The only "$" keys a document may carry, at its top level, and all a $graph
 # document may carry there: what cwltool --pack writes. $schemas is refused:
 # a runner fetches the schemas it names.
@@ -76,8 +82,10 @@ def check_self_contained(document: dict[str, Any]) -> None:
             document any other top-level key; a key or string starting with a
             prefix of ``$namespaces`` and a colon, the only strings a binding
             can change, which ``cwltool --pack`` expands wherever CWL resolves
-            them and an identity does not cover; a ``run`` that is not an
-            entry of the ``$graph`` or an inline body;
+            them and an identity does not cover; a CWL name spelled other
+            than bare, with a built-in prefix (``cwl:File``) or as an IRI,
+            which a check on the bare name would miss; a ``run`` that is not
+            an entry of the ``$graph`` or an inline body;
             a ``File`` or ``Directory`` given by ``path`` or ``location``,
             which ``cwltool --pack`` writes as the submitter's absolute path
             or keeps as a URL, instead of inline ``contents`` or ``listing``.
@@ -97,11 +105,26 @@ def check_self_contained(document: dict[str, Any]) -> None:
     for entry_id, process in graph.items():
         for path, key in _dollar_keys(process):
             problems.append(f"{entry_id}: {key} at {path} is not allowed")
-        for path, name, prefix in _prefixed_names(process, prefixes):
-            problems.append(
-                f"{entry_id}: {name!r} at {path} uses the $namespaces prefix "
-                f"{prefix!r}; write the full IRI, as cwltool --pack does"
-            )
+        for path, name in _names(process):
+            # A binding only changes a name starting "<prefix>:": schema-salad
+            # splits a name at its first colon to expand it
+            prefix, colon, _ = name.partition(":")
+            if colon and prefix in prefixes:
+                problems.append(
+                    f"{entry_id}: {name!r} at {path} uses the $namespaces prefix "
+                    f"{prefix!r}; write the full IRI, as cwltool --pack does"
+                )
+            elif colon and prefix in BUILTIN_PREFIXES:
+                problems.append(
+                    f"{entry_id}: {name!r} at {path} spells a CWL name with the "
+                    f"built-in prefix {prefix!r}; write it bare, as cwltool "
+                    "--pack does"
+                )
+            elif name.startswith(CWL_NAMESPACES):
+                problems.append(
+                    f"{entry_id}: {name!r} at {path} spells a CWL name as an IRI; "
+                    "write it bare, as cwltool --pack does"
+                )
         for path, run in _runs(process):
             if isinstance(run, dict):
                 _check_version(run, f"{entry_id}: the inline process at {path}")
@@ -319,25 +342,17 @@ def _check_version(process: dict[str, Any], where: str) -> None:
         )
 
 
-def _prefixed_names(
-    value: Any, prefixes: set[str], path: str = ""
-) -> Iterator[tuple[str, str, str]]:
-    """Keys and strings starting with one of ``prefixes`` and a colon.
-
-    The only strings a ``$namespaces`` binding can change, whatever field they
-    are in: schema-salad expands a name by splitting it at its first colon.
-    """
+def _names(value: Any, path: str = "") -> Iterator[tuple[str, str]]:
+    """Every key and string of a value, with where it is."""
     if isinstance(value, dict):
         for key, item in value.items():
-            yield from _prefixed_names(key, prefixes, path)
-            yield from _prefixed_names(item, prefixes, f"{path}/{key}")
+            yield from _names(key, path)
+            yield from _names(item, f"{path}/{key}")
     elif isinstance(value, list):
         for i, item in enumerate(value):
-            yield from _prefixed_names(item, prefixes, f"{path}/{i}")
+            yield from _names(item, f"{path}/{i}")
     elif isinstance(value, str):
-        prefix, colon, _ = value.partition(":")
-        if colon and prefix in prefixes:
-            yield path or "/", value, prefix
+        yield path or "/", value
 
 
 def _dollar_keys(value: Any, path: str = "") -> Iterator[tuple[str, str]]:

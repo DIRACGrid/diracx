@@ -266,6 +266,71 @@ def test_a_name_whose_meaning_hangs_on_a_binding_is_refused_under_any(where):
             check_self_contained(document)
 
 
+def _rename_run(d, to):
+    step = entry(d, "#merge.cwl")["steps"][0]
+    step[to] = step.pop("run")
+
+
+CWL = "https://w3id.org/cwl/cwl#"
+
+
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(
+                default={"class": "cwl:File", "location": "file:///etc/hosts"}
+            ),
+            "'cwl:File' .* built-in prefix 'cwl'",
+        ),
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(
+                default={"class": f"{CWL}File", "location": "file:///etc/hosts"}
+            ),
+            "'https://w3id.org/cwl/cwl#File' .* as an IRI",
+        ),
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(
+                default={"class": "cwl:Directory", "location": "file:///etc"}
+            ),
+            "'cwl:Directory' .* built-in prefix 'cwl'",
+        ),
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(
+                default={"class": f"{CWL}Directory", "location": "file:///etc"}
+            ),
+            "'https://w3id.org/cwl/cwl#Directory' .* as an IRI",
+        ),
+        (lambda d: _rename_run(d, "cwl:run"), "'cwl:run' .* built-in prefix 'cwl'"),
+        (lambda d: _rename_run(d, f"{CWL}run"), "'https://w3id.org/cwl/cwl#run'"),
+        (
+            lambda d: entry(d, TOOL).update({"https://w3id.org/cwl/salad#anything": 1}),
+            "salad#anything' .* as an IRI",
+        ),
+        (
+            lambda d: entry(d, TOOL)["inputs"][0].update(type="xsd:string"),
+            "'xsd:string' .* built-in prefix 'xsd'",
+        ),
+    ],
+    ids=[
+        "File-prefix",
+        "File-IRI",
+        "Directory-prefix",
+        "Directory-IRI",
+        "run-prefix",
+        "run-IRI",
+        "salad-IRI",
+        "xsd",
+    ],
+)
+def test_cwl_names_are_only_accepted_bare(packed, mutate, message):
+    # A runner reads cwl:File or its IRI as File, and cwl:run as run: other
+    # spellings would slip past every check made on the bare names
+    mutate(packed)
+    with pytest.raises(NotSelfContainedError, match=message):
+        check_self_contained(packed)
+
+
 def test_bad_ids_are_listed_with_every_other_problem(packed):
     # check_self_contained names everything found, ids included
     packed["$schemas"] = ["https://example.org/s.rdf"]

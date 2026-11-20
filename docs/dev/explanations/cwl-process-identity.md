@@ -33,6 +33,11 @@ The services first check that the document is self-contained
     IRIs wherever CWL resolves them, and an identity does not cover what a
     prefix is bound to. A string such as an argument that only happens to
     start that way is refused too;
+- CWL's own names only bare, as `cwltool --pack` writes them: not with one of
+    the prefixes every document has (`cwl:File`, `xsd:string`) nor as an IRI
+    (`https://w3id.org/cwl/cwl#File`). A runner reads these as the bare name,
+    so they would pass the checks made on it, such as `File` literals naming a
+    `location`;
 - every `$graph` entry has an id of its own;
 - every `run` is an entry of the `$graph` or an inline body;
 - `File` and `Directory` literals carry their `contents` or `listing`
