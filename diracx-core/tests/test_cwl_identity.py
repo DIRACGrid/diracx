@@ -227,11 +227,39 @@ def test_a_body_declaring_another_version_is_refused(packed, inline):
     [
         {"hints": [{"class": "fmt:Hint"}]},
         {"inputs": [{"id": "x", "type": "File", "format": "fmt:example"}]},
+        {"inputs": [{"id": "x", "type": "fmt:Colour"}]},
+        {"inputs": [{"id": "x", "type": "fmt:Colour[]"}]},
+        {"inputs": [{"id": "x", "type": "fmt:Colour?"}]},
+        {"inputs": [{"id": "x", "type": ["null", "fmt:Colour"]}]},
+        {"inputs": [{"id": "x", "type": {"type": "array", "items": "fmt:Colour"}}]},
+        {
+            "hints": [
+                {
+                    "class": "SoftwareRequirement",
+                    "packages": [{"package": "gauss", "specs": ["fmt:gauss"]}],
+                }
+            ]
+        },
+        {"baseCommand": ["fmt:not-a-name"]},
+        {"doc": "fmt: a field CWL does not resolve, refused all the same"},
     ],
-    ids=["class", "format"],
+    ids=[
+        "class",
+        "format",
+        "type",
+        "type-array",
+        "type-optional",
+        "type-union",
+        "items",
+        "specs",
+        "argument",
+        "text",
+    ],
 )
 def test_a_name_whose_meaning_hangs_on_a_binding_is_refused_under_any(where):
-    # The identity does not cover $namespaces, so no binding may matter
+    # The identity does not cover $namespaces, so no binding may matter. A
+    # binding only changes a string starting "<prefix>:", whatever its field,
+    # so every such string is refused, even where CWL would not resolve it
     for iri in ("http://edamontology.org/", "https://example.org/other#"):
         document = {**tool(), **where, "$namespaces": {"fmt": iri}}
         with pytest.raises(NotSelfContainedError, match="prefix 'fmt'"):
@@ -252,11 +280,24 @@ def test_bad_ids_are_listed_with_every_other_problem(packed):
         assert re.search(problem, str(raised.value)), problem
 
 
-def test_prefixed_names_outside_namespaces_are_left_alone(packed):
-    # Only a prefix of $namespaces changes meaning with its binding
+def test_strings_no_binding_can_change_are_left_alone(packed):
+    # Only a string starting with a prefix of $namespaces is expanded
     entry(packed, TOOL).setdefault("hints", []).append({"class": "other:Thing"})
-    entry(packed, TOOL)["baseCommand"] = ["dirac:not-a-name"]
+    entry(packed, TOOL)["doc"] = "Mentions dirac:Transformation mid-sentence"
+    entry(packed, TOOL)["baseCommand"] = ["https://example.org/not-bound"]
     check_self_contained(packed)
+
+
+@pytest.mark.parametrize(
+    "wrapper",
+    [{"doc": {"$include": "https://example.org/doc.txt"}}, {"label": "MC"}],
+    ids=["include", "plain"],
+)
+def test_a_graph_document_holds_only_what_cwltool_pack_writes(packed, wrapper):
+    # Nothing scans the wrapper's other keys, so none may be there
+    packed.update(wrapper)
+    with pytest.raises(NotSelfContainedError, match=f"top-level {next(iter(wrapper))}"):
+        check_self_contained(packed)
 
 
 def test_a_single_process_subgraph_is_the_document_itself():

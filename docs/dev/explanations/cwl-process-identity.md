@@ -24,10 +24,15 @@ flowchart TD
 The services first check that the document is self-contained
 (`check_self_contained`), so that nothing ever fetches anything on its behalf:
 
-- no `$` key but the document's own `$graph` and `$namespaces`;
-- no key, `class` or `format` written with a prefix of `$namespaces`
-    (`dirac:Transformation`, `edam:format_1930`): `cwltool --pack` writes the
-    full IRI, and an identity does not cover what the prefix is bound to;
+- no `$` key but the document's own `$graph` and `$namespaces`, and in a
+    `$graph` document no other top-level key than `cwlVersion`: what
+    `cwltool --pack` writes;
+- no key or string starting with a prefix of `$namespaces` and a colon
+    (`dirac:Transformation`, `edam:format_1930`), in whatever field: these are
+    the only strings a binding can change, `cwltool --pack` writes them as full
+    IRIs wherever CWL resolves them, and an identity does not cover what a
+    prefix is bound to. A string such as an argument that only happens to
+    start that way is refused too;
 - every `$graph` entry has an id of its own;
 - every `run` is an entry of the `$graph` or an inline body;
 - `File` and `Directory` literals carry their `contents` or `listing`

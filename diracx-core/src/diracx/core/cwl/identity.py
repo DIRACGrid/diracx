@@ -26,11 +26,9 @@ CWL_VERSION = "v1.2"
 PROCESS_CLASSES = frozenset(
     {"CommandLineTool", "Workflow", "ExpressionTool", "Operation"}
 )
-# Fields whose values CWL resolves through $namespaces, as cwltool --pack
-# writes them expanded: a requirement's or hint's class and a file format
-NAMESPACED_VALUES = frozenset({"class", "format"})
-# The only "$" keys a document may carry, at its top level. $schemas is
-# refused: a runner fetches the schemas it names.
+# The only "$" keys a document may carry, at its top level, and all a $graph
+# document may carry there: what cwltool --pack writes. $schemas is refused:
+# a runner fetches the schemas it names.
 TOP_LEVEL_KEYS = frozenset({"$graph", "$namespaces", "cwlVersion"})
 
 
@@ -74,10 +72,12 @@ def check_self_contained(document: dict[str, Any]) -> None:
     Raises:
         NotSelfContainedError: Naming everything found: a ``$graph`` entry
             without an id, or with a repeated one; a ``$`` key other than
-            the document's ``$graph`` and ``$namespaces``; a key, ``class``
-            or ``format`` written with a prefix of ``$namespaces``, which
-            ``cwltool --pack`` expands and an identity does not cover; a
-            ``run`` that is not an entry of the ``$graph`` or an inline body;
+            the document's ``$graph`` and ``$namespaces``, or in a ``$graph``
+            document any other top-level key; a key or string starting with a
+            prefix of ``$namespaces`` and a colon, the only strings a binding
+            can change, which ``cwltool --pack`` expands wherever CWL resolves
+            them and an identity does not cover; a ``run`` that is not an
+            entry of the ``$graph`` or an inline body;
             a ``File`` or ``Directory`` given by ``path`` or ``location``,
             which ``cwltool --pack`` writes as the submitter's absolute path
             or keeps as a URL, instead of inline ``contents`` or ``listing``.
@@ -87,10 +87,12 @@ def check_self_contained(document: dict[str, Any]) -> None:
     problems: list[str] = []
     graph = _graph(document, problems)
     prefixes = set(document.get("$namespaces") or {})
+    # A single process document's other top-level keys are the process,
+    # scanned below; a $graph document's would be scanned by nothing
     problems += [
         f"top-level {key} is not allowed"
         for key in document
-        if key.startswith("$") and key not in TOP_LEVEL_KEYS
+        if key not in TOP_LEVEL_KEYS and (key.startswith("$") or "$graph" in document)
     ]
     for entry_id, process in graph.items():
         for path, key in _dollar_keys(process):
@@ -320,23 +322,22 @@ def _check_version(process: dict[str, Any], where: str) -> None:
 def _prefixed_names(
     value: Any, prefixes: set[str], path: str = ""
 ) -> Iterator[tuple[str, str, str]]:
-    """Keys, and values CWL resolves as names, written with one of ``prefixes``."""
+    """Keys and strings starting with one of ``prefixes`` and a colon.
+
+    The only strings a ``$namespaces`` binding can change, whatever field they
+    are in: schema-salad expands a name by splitting it at its first colon.
+    """
     if isinstance(value, dict):
         for key, item in value.items():
-            names = [key]
-            if key in NAMESPACED_VALUES:
-                # A format may be one name or a list of them
-                names += item if isinstance(item, list) else [item]
-            for name in names:
-                if not isinstance(name, str):
-                    continue
-                prefix, colon, _ = name.partition(":")
-                if colon and prefix in prefixes:
-                    yield path or "/", name, prefix
+            yield from _prefixed_names(key, prefixes, path)
             yield from _prefixed_names(item, prefixes, f"{path}/{key}")
     elif isinstance(value, list):
         for i, item in enumerate(value):
             yield from _prefixed_names(item, prefixes, f"{path}/{i}")
+    elif isinstance(value, str):
+        prefix, colon, _ = value.partition(":")
+        if colon and prefix in prefixes:
+            yield path or "/", value, prefix
 
 
 def _dollar_keys(value: Any, path: str = "") -> Iterator[tuple[str, str]]:
