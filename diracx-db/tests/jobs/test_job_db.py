@@ -17,11 +17,12 @@ from diracx.core.models import (
     VectorSearchSpec,
 )
 from diracx.db.sql.job.db import JobDB
+from diracx.testing.sqldb import SERVER_SQL_BACKENDS
 
 
 @pytest.fixture
-async def job_db(tmp_path):
-    job_db = JobDB("sqlite+aiosqlite:///:memory:")
+async def job_db(tmp_path, sql_db_url):
+    job_db = JobDB(sql_db_url)
     async with job_db.engine_context():
         async with job_db.engine.begin() as conn:
             # set PRAGMA foreign_keys=ON if sqlite
@@ -68,6 +69,10 @@ async def test_bad_naive_datetime_used(populated_job_db):
             await db.insert_job_attributes(jobs_to_insert)  # should complain
 
 
+@pytest.mark.xfail_sql_backends(
+    SERVER_SQL_BACKENDS,
+    reason="HeartBeatTime is DATETIME (no microseconds) on MySQL/MariaDB",
+)
 async def test_timezone_converted_back_to_utc(populated_job_db):
     current_utc_dt = datetime.now(tz=ZoneInfo("UTC"))
 

@@ -12,6 +12,7 @@ __all__ = [
     "demo_urls",
     "do_device_flow_with_dex",
     "fernet_key",
+    "kubectl_port_forward",
     "private_key",
     "pytest_addoption",
     "session_client_factory",
@@ -33,6 +34,9 @@ import os
 import re
 import ssl
 import subprocess
+import threading
+from collections import deque
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from functools import partial
 from html.parser import HTMLParser
@@ -601,6 +605,80 @@ def demo_kubectl_env(demo_dir):
     assert "diracx" in pods_result
 
     yield env
+
+
+_PORT_FORWARD_READY_RE = re.compile(r"Forwarding from 127\.0\.0\.1:(\d+) ->")
+
+
+@contextlib.contextmanager
+def kubectl_port_forward(
+    env: dict[str, str],
+    target: str,
+    remote_port: int,
+    local_port: int | None = None,
+    timeout: float = 60,
+) -> Iterator[int]:
+    """Run ``kubectl port-forward`` for as long as the context is entered.
+
+    kubectl keeps writing to its stdout/stderr while forwarding (one line per
+    connection), so both are consumed in background threads for the whole
+    lifetime of the process: otherwise it would block once a pipe is full,
+    and so would the connections being forwarded.
+
+    Args:
+        env: Environment in which to run kubectl (see ``demo_kubectl_env``).
+        target: What to forward, e.g. ``service/my-service``.
+        remote_port: Port of the target to forward.
+        local_port: Local port to forward from. If ``None``, kubectl picks a
+            free one, so that concurrent pytest-xdist workers do not conflict.
+        timeout: How long to wait (in seconds) for the forwarding to be ready.
+
+    Yields:
+        The local port which is forwarded.
+
+    Raises:
+        RuntimeError: If the forwarding is not ready within ``timeout``.
+    """
+    cmd = [
+        "kubectl",
+        "port-forward",
+        target,
+        f"{'' if local_port is None else local_port}:{remote_port}",
+    ]
+    # Only the most recent output is kept, for the error messages
+    output: deque[str] = deque(maxlen=50)
+    ready = threading.Event()
+    forwarded_port: list[int] = []
+
+    def consume(stream) -> None:
+        for line in stream:
+            output.append(line)
+            if not ready.is_set() and (match := _PORT_FORWARD_READY_RE.match(line)):
+                forwarded_port.append(int(match[1]))
+                ready.set()
+
+    with subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    ) as proc:
+        threads = [
+            threading.Thread(target=consume, args=(stream,), daemon=True)
+            for stream in (proc.stdout, proc.stderr)
+        ]
+        for thread in threads:
+            thread.start()
+        try:
+            deadline = datetime.now(tz=timezone.utc) + timedelta(seconds=timeout)
+            while not ready.wait(timeout=0.1):
+                if proc.poll() is not None or datetime.now(tz=timezone.utc) > deadline:
+                    raise RuntimeError(
+                        f"Could not start port forwarding with {cmd=}\n{list(output)=}"
+                    )
+            yield forwarded_port[0]
+        finally:
+            proc.kill()
+            proc.wait()
+            for thread in threads:
+                thread.join(timeout=5)
 
 
 @pytest.fixture

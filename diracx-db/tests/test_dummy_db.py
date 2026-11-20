@@ -14,8 +14,8 @@ from diracx.db.sql.utils import SQLDBUnavailableError
 
 
 @pytest.fixture
-async def dummy_db(tmp_path) -> DummyDB:
-    dummy_db = DummyDB("sqlite+aiosqlite:///:memory:")
+async def dummy_db(tmp_path, sql_db_url) -> DummyDB:
+    dummy_db = DummyDB(sql_db_url)
     async with dummy_db.engine_context():
         async with dummy_db.engine.begin() as conn:
             await conn.run_sync(dummy_db.metadata.create_all)

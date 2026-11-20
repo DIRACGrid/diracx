@@ -49,7 +49,7 @@ addopts = [
     # Both gubbins and diracx are needed here
     "-pgubbins.testing",
     "-pdiracx.testing",
-    "-pdiracx.testing.osdb",
+    "-pdiracx.testing.osdb", "-pdiracx.testing.sqldb",
     "--import-mode=importlib",
 ]
 asyncio_mode = "auto"
