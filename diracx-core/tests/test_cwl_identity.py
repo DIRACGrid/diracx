@@ -129,6 +129,14 @@ def test_a_reference_is_the_childs_hash():
             "not in \\$graph",
         ),
         (
+            lambda d: entry(d, "#merge.cwl")["steps"][0].update(run={"class": "Nope"}),
+            "not a process",
+        ),
+        (
+            lambda d: entry(d, "#merge.cwl")["steps"][0].update(run={}),
+            "not a process",
+        ),
+        (
             lambda d: entry(d, "#merge.cwl")["steps"][0].update(run=42),
             "not a process",
         ),
@@ -150,6 +158,14 @@ def test_documents_needing_something_from_outside_are_refused(packed, mutate, me
     mutate(packed)
     with pytest.raises(NotSelfContainedError, match=message):
         check_self_contained(packed)
+
+
+@pytest.mark.parametrize("run", [{"class": "Nope"}, {}], ids=["unknown-class", "empty"])
+def test_inline_bodies_that_are_not_processes_are_not_hashed(packed, run):
+    # As for a $graph entry: no identity for something that is not a process
+    entry(packed, "#merge.cwl")["steps"][0]["run"] = run
+    with pytest.raises(ValueError, match="Not a CWL process"):
+        decompose(packed)
 
 
 def test_file_literals_with_inline_contents_are_allowed(packed):
