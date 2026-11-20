@@ -4,6 +4,10 @@ Feeders and packers are the plugins that shape a transformation's input pool ([D
 
 This guide describes the contract as implemented. It extends the sketches in DX-ADR-006, where plugins are synchronous generators and injected parameters have no default, with async generators and the `INJECTED` marker.
 
+!!! note
+
+    This guide covers the plugin side: the contract, loading and checking. The core code that runs feeders and packers and writes what they yield is being added separately, so where the guide says what the core does with a proposal, it describes the intended behaviour.
+
 This guide shows how to write, register, type-check and test either kind. The contracts live in `diracx.core.models.transformation`, so a plugin in an extension such as `gubbins` only needs `diracx-core` to be type-checked.
 
 ### What a plugin receives
@@ -51,14 +55,14 @@ class SeedFeederArgs(PluginArgs):
         return self
 ```
 
-Use a `model_validator` for rules that span several fields. The core validates the stored arguments against this model whenever they are written or read, so these checks run at submission rather than at the first sweep.
+Use a `model_validator` for rules that span several fields. `validate_plugin_args()` in `diracx.logic.transformations` validates a transformation's stored arguments against the plugin's model. It is meant for every place that writes or reads them, starting with workgraph submission, so that a mistake is refused there rather than at the plugin's first run.
 
 ### Write a feeder
 
 A feeder yields three kinds of proposal:
 
 - `FeederInput` is one input. Give it an `lfn` and `lfn_size` for a file, or only a `descriptor` for anything else, such as a seed. The core inserts it as `Unassigned`, and drops it if the transformation already has an input with the same `(lfn, descriptor)`. Yielding an input twice is therefore harmless.
-- `SetFeederState` stores a new bookmark. It commits together with the inputs yielded before it, so yield it after each batch to make the feeder restartable from that point.
+- `SetFeederState` stores a new bookmark, at the latest together with the inputs yielded before it. Inputs may be committed earlier, in batches, so after a restart the feeder can yield some of them again; the core drops those duplicates. Yield a bookmark after each batch so that a restart repeats as little as possible.
 - `NoMoreFeederInputs` signals that the source is exhausted. The core disables the feeder and stops reading from the generator.
 
 `feeder_state` is the last bookmark the feeder stored. It is read-only: to change it, yield a `SetFeederState`. Its content is whatever JSON the feeder stored, so check its shape before using it.
@@ -83,7 +87,8 @@ async def seed_feeder(
     scouting: bool,
 ) -> AsyncGenerator[FeederProposal, None]:
     next_seed = feeder_state.get("next_seed", 0)
-    if not isinstance(next_seed, int):
+    # bool is a subclass of int, but not a seed
+    if not isinstance(next_seed, int) or isinstance(next_seed, bool):
         raise ValueError(f"Unexpected bookmark: {feeder_state!r}")
     target = feeder_args.scouting_count if scouting else feeder_args.max_count
 
@@ -154,6 +159,8 @@ This is *dependency injection*: the plugin only declares what it needs, and the 
 Declare each dependency as an extra keyword parameter, annotated with its class and defaulting to `INJECTED`. When the core runs the plugin, it passes an instance of that class in place of the marker.
 
 ```python
+from datetime import datetime, timezone
+
 from pydantic import AnyHttpUrl
 
 from diracx.core.models.transformation import INJECTED
@@ -182,10 +189,13 @@ async def catalogue_feeder(
     scouting: bool,
     catalogue: CatalogueSettings = INJECTED,
 ) -> AsyncGenerator[FeederProposal, None]:
+    since = feeder_state.get("since")
+    started = datetime.now(timezone.utc).isoformat()
     # list_files is the extension's own client for the catalogue
-    async for file in list_files(catalogue.url, feeder_args.dataset):
+    async for file in list_files(catalogue.url, feeder_args.dataset, since=since):
         yield FeederInput(lfn=file.lfn, lfn_size=file.size)
-    yield SetFeederState(state={})
+    # The next run only asks for files registered after this one started
+    yield SetFeederState(state={"since": started})
 ```
 
 #### Why a marker default
@@ -223,6 +233,8 @@ proposals = [
 ```
 
 ### Register the plugin
+
+Plugins shipped with DiracX live in `diracx-logic/src/diracx/logic/transformations/feeders/` and `packers/`, and are registered in `diracx-logic/pyproject.toml`. An extension's plugins live in its own logic package, such as `gubbins-logic`, and are registered in that package's `pyproject.toml`.
 
 Add the function to the entry-point group of its kind in your package's `pyproject.toml`. The entry-point name is what a transformation stores in its `Feeder` or `Packer` column:
 
@@ -282,7 +294,7 @@ async def test_seed_feeder_resumes_from_bookmark():
     assert proposals[3] == NoMoreFeederInputs()
 ```
 
-Give a packer its inputs through a small async generator, and pass dependencies directly as shown in [Rules for injected parameters](#rules-for-injected-parameters). Also test that the plugin loads through its real entry point, which runs the runtime checks above:
+Give a packer its inputs through a small async generator, as `diracx-logic/tests/transformations/test_fixed_size_packer.py` does, and pass dependencies directly as shown in [Rules for injected parameters](#rules-for-injected-parameters). Also test that the plugin loads through its real entry point, which runs the runtime checks above:
 
 ```python
 from diracx.logic.transformations import PACKER_KIND, load_plugin
