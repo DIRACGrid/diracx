@@ -1,3 +1,5 @@
+"""Schedules computing the next run time of periodic tasks."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -12,7 +14,11 @@ class TaskScheduleBase(ABC):
 
     @abstractmethod
     def next_occurrence(self) -> datetime:
-        """Return the datetime for the next scheduled occurrence."""
+        """Return the datetime for the next scheduled occurrence.
+
+        Returns:
+            The timezone-aware time of the next occurrence.
+        """
         ...
 
 
@@ -23,6 +29,11 @@ class IntervalSeconds(TaskScheduleBase):
         self.seconds = seconds
 
     def next_occurrence(self) -> datetime:
+        """Return the time one interval from now.
+
+        Returns:
+            The timezone-aware time of the next occurrence.
+        """
         return datetime.now(tz=UTC) + timedelta(seconds=self.seconds)
 
 
@@ -33,6 +44,11 @@ class CronSchedule(TaskScheduleBase):
         self.expression = expression
 
     def next_occurrence(self) -> datetime:
+        """Return the next time matching the cron expression.
+
+        Returns:
+            The timezone-aware time of the next occurrence.
+        """
         cron = croniter(self.expression, datetime.now(tz=UTC))
         return cron.get_next(datetime)
 
@@ -44,6 +60,14 @@ class RRuleSchedule(TaskScheduleBase):
         self.rule = rule
 
     def next_occurrence(self) -> datetime:
+        """Return the next time matching the recurrence rule.
+
+        Returns:
+            The timezone-aware time of the next occurrence.
+
+        Raises:
+            ValueError: If the rule has no future occurrences.
+        """
         now = datetime.now(tz=UTC)
         rrule = rrulestr(self.rule, dtstart=now)
         result = rrule.after(now)

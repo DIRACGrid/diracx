@@ -1,3 +1,5 @@
+"""Redis result backend storing task results with a time-to-live."""
+
 from __future__ import annotations
 
 import msgpack
@@ -33,12 +35,20 @@ class RedisResultBackend:
         return f"{self.prefix}:{task_id}"
 
     async def startup(self) -> None:
+        """Start the backend; nothing to do for Redis."""
         pass
 
     async def shutdown(self) -> None:
+        """Close the connection pool."""
         await self.redis_pool.disconnect()
 
     async def set_result(self, task_id: str, result: TaskResult) -> None:
+        """Store the result of a task, expiring after the configured TTL.
+
+        Args:
+            task_id: ID of the task.
+            result: The result to store.
+        """
         async with Redis(connection_pool=self.redis_pool) as redis:
             serialized = msgpack.packb(result.model_dump(), datetime=True)
             await redis.setex(
@@ -48,10 +58,29 @@ class RedisResultBackend:
             )
 
     async def is_result_ready(self, task_id: str) -> bool:
+        """Check whether a result is stored for a task.
+
+        Args:
+            task_id: ID of the task.
+
+        Returns:
+            True if a result exists and has not expired.
+        """
         async with Redis(connection_pool=self.redis_pool) as redis:
             return bool(await redis.exists(self._task_key(task_id)))
 
     async def get_result(self, task_id: str) -> TaskResult:
+        """Fetch the result of a task.
+
+        Args:
+            task_id: ID of the task.
+
+        Returns:
+            The stored result.
+
+        Raises:
+            ResultIsMissingError: If no result exists or it has expired.
+        """
         async with Redis(connection_pool=self.redis_pool) as redis:
             result_bytes = await redis.get(name=self._task_key(task_id))
 

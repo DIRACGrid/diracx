@@ -1,3 +1,5 @@
+"""Exceptions raised by the task system."""
+
 from __future__ import annotations
 
 
