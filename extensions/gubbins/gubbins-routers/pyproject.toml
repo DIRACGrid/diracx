@@ -36,7 +36,7 @@ types = [
     "types-PyYAML",
 ]
 
-[project.entry-points."diracx.services"]
+[project.entry-points."diracx.routers.services"]
 lollygag = "gubbins.routers.lollygag:router"
 ".well-known" = "gubbins.routers.well_known:router"
 # --8<-- [start:my_pilots_service_entry_point]
