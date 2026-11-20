@@ -70,14 +70,18 @@ def check_self_contained(document: dict[str, Any]) -> None:
 
     Raises:
         NotSelfContainedError: Naming everything found: a ``$`` key other than
-            the document's ``$graph`` and ``$namespaces``; a ``run`` that is
-            not an entry of the ``$graph`` or an inline body; a ``File`` or
-            ``Directory`` given by ``path`` or ``location``, which
-            ``cwltool --pack`` writes as the submitter's absolute path or
-            keeps as a URL, instead of inline ``contents`` or ``listing``.
-        ValueError: If it is not a CWL v1.2 document.
+            the document's ``$graph`` and ``$namespaces``; a key or ``class``
+            written with a prefix of ``$namespaces``, which
+            ``cwltool --pack`` expands and an identity does not cover; a
+            ``run`` that is not an entry of the ``$graph`` or an inline body;
+            a ``File`` or ``Directory`` given by ``path`` or ``location``,
+            which ``cwltool --pack`` writes as the submitter's absolute path
+            or keeps as a URL, instead of inline ``contents`` or ``listing``.
+        ValueError: If it is not a CWL v1.2 document, or a process in it
+            declares another version.
     """
     graph = _graph(document)
+    prefixes = set(document.get("$namespaces") or {})
     problems = [
         f"top-level {key} is not allowed"
         for key in document
@@ -86,7 +90,14 @@ def check_self_contained(document: dict[str, Any]) -> None:
     for entry_id, process in graph.items():
         for path, key in _dollar_keys(process):
             problems.append(f"{entry_id}: {key} at {path} is not allowed")
+        for path, name, prefix in _prefixed_names(process, prefixes):
+            problems.append(
+                f"{entry_id}: {name!r} at {path} uses the $namespaces prefix "
+                f"{prefix!r}; write the full IRI, as cwltool --pack does"
+            )
         for path, run in _runs(process):
+            if isinstance(run, dict):
+                _check_version(run, f"{entry_id}: the inline process at {path}")
             if isinstance(run, str):
                 if run not in graph:
                     problems.append(
@@ -132,6 +143,7 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
         # _graph checks the entries; an inline body is checked here
         if process.get("class") not in PROCESS_CLASSES:
             raise ValueError(f"Not a CWL process inline in a step: {process!r:.80}")
+        _check_version(process, entry_id or "An inline process")
         chain = (*chain, entry_id) if entry_id is not None else chain
         children = []
         if process.get("class") == "Workflow":
@@ -195,9 +207,15 @@ def subgraph(document: dict[str, Any], entry_id: str) -> dict[str, Any]:
         entry_id: The entry, e.g. a workgraph step's ``run``.
 
     Returns:
-        A packed document holding ``entry_id`` and every entry it runs.
+        A packed document holding ``entry_id`` and every entry it runs; a
+        single process document is returned as it is, being its own entry.
     """
     graph = _graph(document)
+    if "$graph" not in document:
+        # Wrapping it would need an id it may not have, changing its identity
+        if entry_id not in graph:
+            raise KeyError(entry_id)
+        return document
     seen: list[str] = []
     stack = [entry_id]
     while stack:
@@ -236,6 +254,7 @@ def _graph(document: dict[str, Any]) -> dict[str, dict[str, Any]]:
             raise ValueError(f"A $graph entry has no id: {entry!r:.80}")
         if entry_id in graph:
             raise ValueError(f"Two $graph entries have the id {entry_id!r}")
+        _check_version(entry, str(entry_id))
         graph[str(entry_id)] = entry
     return graph
 
@@ -257,7 +276,10 @@ def _runs(process: dict[str, Any], path: str = "") -> Iterator[tuple[str, Any]]:
 
 def _replace_runs(process: dict[str, Any], runs: list[str]) -> dict[str, Any]:
     """A copy of a workflow whose steps run ``runs``, in step order."""
-    steps = process.get("steps") or []
+    steps = process.get("steps")
+    if not steps:
+        # Nothing runs: keep the steps as submitted, {} and [] alike
+        return process
     if isinstance(steps, dict):
         steps = {
             k: {**s, "run": r} for (k, s), r in zip(steps.items(), runs, strict=True)
@@ -265,6 +287,33 @@ def _replace_runs(process: dict[str, Any], runs: list[str]) -> dict[str, Any]:
     else:
         steps = [{**s, "run": r} for s, r in zip(steps, runs, strict=True)]
     return {**process, "steps": steps}
+
+
+def _check_version(process: dict[str, Any], where: str) -> None:
+    # A body may repeat the document's version, which is hashed once; another
+    # one would be dropped from the hash and pass for v1.2
+    version = process.get("cwlVersion", CWL_VERSION)
+    if version != CWL_VERSION:
+        raise ValueError(
+            f"{where} declares cwlVersion {version!r} in a {CWL_VERSION} document"
+        )
+
+
+def _prefixed_names(
+    value: Any, prefixes: set[str], path: str = ""
+) -> Iterator[tuple[str, str, str]]:
+    """Keys and ``class`` values written with one of ``prefixes``."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            names = [key, item] if key == "class" and isinstance(item, str) else [key]
+            for name in names:
+                prefix, colon, _ = str(name).partition(":")
+                if colon and prefix in prefixes:
+                    yield path or "/", name, prefix
+            yield from _prefixed_names(item, prefixes, f"{path}/{key}")
+    elif isinstance(value, list):
+        for i, item in enumerate(value):
+            yield from _prefixed_names(item, prefixes, f"{path}/{i}")
 
 
 def _dollar_keys(value: Any, path: str = "") -> Iterator[tuple[str, str]]:

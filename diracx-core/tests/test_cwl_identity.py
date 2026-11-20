@@ -141,6 +141,18 @@ def test_a_reference_is_the_childs_hash():
             "not a process",
         ),
         (
+            lambda d: (
+                entry(d, TOOL)
+                .setdefault("hints", [])
+                .append({"class": "dirac:Anything"})
+            ),
+            "'dirac:Anything' .* uses the \\$namespaces prefix 'dirac'",
+        ),
+        (
+            lambda d: entry(d, TOOL).update({"dirac:extension": 1}),
+            "'dirac:extension' .* uses the \\$namespaces prefix 'dirac'",
+        ),
+        (
             lambda d: entry(d, TOOL)["inputs"][0].update(
                 default={"class": "File", "path": "/home/someone/data.root"}
             ),
@@ -182,6 +194,42 @@ def test_other_versions_and_non_processes_are_refused(packed):
         decompose({**packed, "cwlVersion": "v1.0"})
     with pytest.raises(ValueError, match="Not a CWL process"):
         decompose({"cwlVersion": "v1.2", "$graph": [{"class": "Nope"}]})
+
+
+@pytest.mark.parametrize("inline", [False, True], ids=["entry", "inline-body"])
+def test_a_body_declaring_another_version_is_refused(packed, inline):
+    # Its version is dropped from the hash, so it would pass for v1.2
+    merge = entry(packed, "#merge.cwl")
+    if inline:
+        step = entry(packed, "#main")["steps"][0]
+        step["run"] = merge = copy.deepcopy(merge)
+    merge["cwlVersion"] = "v1.0"
+    for check in (check_self_contained, decompose):
+        with pytest.raises(ValueError, match="declares cwlVersion 'v1.0'"):
+            check(packed)
+    merge["cwlVersion"] = "v1.2"
+    check_self_contained(packed)
+
+
+def test_prefixed_names_outside_namespaces_are_left_alone(packed):
+    # Only a prefix of $namespaces changes meaning with its binding
+    entry(packed, TOOL).setdefault("hints", []).append({"class": "other:Thing"})
+    entry(packed, TOOL)["baseCommand"] = ["dirac:not-a-name"]
+    check_self_contained(packed)
+
+
+def test_a_single_process_subgraph_is_the_document_itself():
+    single = {k: v for k, v in tool().items() if k != "id"}
+    assert subgraph(single, "#main") == single
+    check_self_contained(subgraph(single, "#main"))
+    assert entry_identity(subgraph(single, "#main")) == entry_identity(single)
+
+
+def test_an_empty_steps_map_is_not_an_empty_steps_list():
+    def workflow(steps):
+        return {"cwlVersion": "v1.2", "class": "Workflow", "steps": steps}
+
+    assert entry_identity(workflow({})) != entry_identity(workflow([]))
 
 
 def test_a_process_that_runs_itself_is_refused(packed):
