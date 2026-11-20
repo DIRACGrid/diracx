@@ -52,11 +52,11 @@ flowchart LR
 
 ## diracx release
 
-Releases are managed by `ReleasePlease`. The token used to perform it belongs to `DIRACGridBot` github user.
+Releases are managed by `ReleasePlease`, which runs in the deployment workflow with the job's own `GITHUB_TOKEN`. It keeps the release pull request up to date and, once that is merged, creates a **draft** GitHub release.
 
-!!! info "Why a bot token?"
+!!! info "Why a draft release?"
 
-    `GITHUB_TOKEN` cannot trigger downstream workflows (GitHub's anti-loop protection). Using a bot PAT ensures that the tag created by `release-please` triggers the deployment jobs.
+    Only release managers may create tags, and no long-lived token is stored in the repository. A release manager publishes the draft: this creates the tag and triggers the jobs that publish to PyPI (through the `pypi` environment, approved by a second release manager) and to `ghcr.io`.
 
 A new release creates:
 
