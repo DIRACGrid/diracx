@@ -87,10 +87,13 @@ def check_self_contained(document: dict[str, Any]) -> None:
         for path, key in _dollar_keys(process):
             problems.append(f"{entry_id}: {key} at {path} is not allowed")
         for path, run in _runs(process):
-            if isinstance(run, str) and run not in graph:
-                problems.append(f"{entry_id}: run {run!r} at {path} is not in $graph")
+            if isinstance(run, str):
+                if run not in graph:
+                    problems.append(
+                        f"{entry_id}: run {run!r} at {path} is not in $graph"
+                    )
             # A dict is a process embedded in the step instead of an entry
-            elif not isinstance(run, (str, dict)):
+            elif not isinstance(run, dict) or run.get("class") not in PROCESS_CLASSES:
                 problems.append(f"{entry_id}: run at {path} is not a process")
         for path, literal in _file_literals(process):
             if "path" in literal or "location" in literal:
@@ -126,6 +129,9 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
             return by_entry[entry_id]
         if entry_id in chain:
             raise ValueError(f"{entry_id} runs itself: {' -> '.join(chain)}")
+        # _graph checks the entries; an inline body is checked here
+        if process.get("class") not in PROCESS_CLASSES:
+            raise ValueError(f"Not a CWL process inline in a step: {process!r:.80}")
         chain = (*chain, entry_id) if entry_id is not None else chain
         children = []
         if process.get("class") == "Workflow":
