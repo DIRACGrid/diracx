@@ -176,7 +176,7 @@ This command is provided by `diracx-tasks` package and not `diracx-cli` as it is
 Extensions define tasks in their own packages and register them via entry points. `gubbins-tasks` demonstrates the full pattern:
 
 - **Tasks** are registered under `diracx.tasks.<category>` (e.g. `diracx.tasks.lollygag`).
-- **Custom lock types** are registered under `diracx.lock_object_types` by calling `register_locked_object_type()` at module level.
+- **Custom lock types** are registered under `diracx.tasks.lock-object-types` by calling `register_locked_object_type()` at module level.
 - **Dependency injection** for databases and settings is handled automatically — `auto_inject_depends` in `diracx.tasks.plumbing.depends` detects `BaseSQLDB`, `BaseOSDB`, and `ServiceSettingsBase` subclasses and wraps them with the appropriate `Depends` annotation. Task code should import DB classes directly from their defining packages (e.g. `from gubbins.db.sql import LollygagDB`).
 
 See the [how-to guide](../../how-to/add-a-task.md) for a step-by-step walkthrough.

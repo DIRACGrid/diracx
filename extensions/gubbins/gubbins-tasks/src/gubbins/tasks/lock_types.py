@@ -1,6 +1,6 @@
 """Custom locked-object types for gubbins tasks.
 
-Loaded via the ``diracx.lock_object_types`` entry point so that
+Loaded via the ``diracx.tasks.lock-object-types`` entry point so that
 ``LockedObjectType("lollygag")`` is valid system-wide.
 """
 

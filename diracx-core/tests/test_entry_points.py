@@ -8,7 +8,7 @@ from diracx.core.extensions import DiracEntryPoint
 
 
 def test_diracx_resources_entry_point():
-    """Test that the diracx.resources entry point is properly configured."""
+    """Test that the diracx.core.resources entry point is properly configured."""
     resources_eps = entry_points().select(group=DiracEntryPoint.RESOURCES)
 
     find_platforms_ep = None

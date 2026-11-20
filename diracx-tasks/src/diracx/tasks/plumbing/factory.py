@@ -13,7 +13,7 @@ from typing import Any, Callable, Protocol, TypeVar
 from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant
 
-from diracx.core.extensions import select_from_extension
+from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.settings import FactorySettings
 
 from ._redis_types import LockCoordinator
@@ -33,6 +33,9 @@ class _AsyncContextManager(Protocol):
 _T_DB = TypeVar("_T_DB", bound=_AsyncContextManager)
 
 logger = logging.getLogger(__name__)
+
+# Entry-point groups under ``diracx.tasks.`` that do not contain task classes
+NON_TASK_GROUPS = frozenset({DiracEntryPoint.LOCK_OBJECT_TYPES})
 
 
 async def _lock_watchdog(
@@ -172,12 +175,13 @@ def load_task_registry(
     registry: dict[str, type[BaseTask]] = {}
 
     if groups is None:
-        # Discover all diracx.tasks.* groups
+        # Discover all diracx.tasks.* groups, skipping the non-task groups
+        # that also live under the tasks namespace (e.g. lock object types)
         all_eps = entry_points()
         groups = [
             g
             for g in (all_eps.groups if hasattr(all_eps, "groups") else [])
-            if g.startswith("diracx.tasks.")
+            if g.startswith("diracx.tasks.") and g not in NON_TASK_GROUPS
         ]
 
     for group in groups:

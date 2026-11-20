@@ -17,7 +17,7 @@ These entry points are for the subcommands of the `diracx` command-line interfac
 - `jobs = "diracx.cli.jobs:app"`: This is an entry point for the `diracx jobs` subcommand. It calls the `app` function in `diracx/cli/jobs.py`.
 - `config = "diracx.cli.config:app"`: This is an entry point for the `diracx config` subcommand. It calls the `app` function in `diracx/cli/config.py`.
 
-### `[project.entry-points."diracx.cli.hidden"]`
+### `[project.entry-points."diracx.cli.internal"]`
 
 These entry points are for hidden subcommands of the `diracx` command-line interface.
 

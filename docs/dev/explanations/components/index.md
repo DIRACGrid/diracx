@@ -120,7 +120,7 @@ Container images are self-contained — the Dockerfile copies source code and us
 ### Server Entry Points
 
 - `diracx-routers`:
-    - `diracx.diracx_min_client_version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `diracx-routers/src/__init.py__`
+    - `diracx.routers.min-client-version` entry-point defines the diracx minimum client version required by the server to prevent issues. This also searches for extension names instead of `diracx`. The minimum version number has to be updated in `DIRACX_MIN_CLIENT_VERSION` in `diracx-routers/src/diracx/routers/factory.py`
 
 ## Extensions
 

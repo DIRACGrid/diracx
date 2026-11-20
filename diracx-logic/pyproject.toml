@@ -23,7 +23,7 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.entry-points."diracx.cacheable_sources"]
+[project.entry-points."diracx.resource-status.sources"]
 storage_status = "diracx.logic.resource_status.source:StorageElementStatusSource"
 compute_status = "diracx.logic.resource_status.source:ComputeElementStatusSource"
 fts_status = "diracx.logic.resource_status.source:FTSStatusSource"
