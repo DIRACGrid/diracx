@@ -29,6 +29,11 @@ The services first check that the document is self-contained
 - `File` and `Directory` literals carry their `contents` or `listing`
     inline, never a `path` or `location`.
 
+A `run` naming a stored process (`proc:sha256-<hex>`, the process-library
+reference of DX-ADR-007) is therefore refused for now: the library is out of
+scope for #1080. Once it lands, DiracX will resolve such references against
+its own store before `check_self_contained`.
+
 Then `decompose` hashes each process with `diracx.core.hashing.hash_json`, as
 submitted, except that each step's `run` is replaced by the identity of the
 process it runs (`proc:sha256-<hex>`), and that what is hashed is
@@ -47,7 +52,9 @@ parents, so a parent's identity covers everything below it (a Merkle tree):
 
 An edit to `lb-run-app.cwl` changes every identity in the table; an edit to
 `merge.cwl` changes only its own and the workgraph's. An inline `run` body is
-hashed the same way, so the same process inline or by `#id` has one identity.
+hashed the same way, so an identical body inline or by `#id` has one identity
+(its `id` included: an inline copy without it, or with another, is another
+process).
 
 `subgraph(document, "#merge.cwl")` returns the entry and everything it runs,
 as submitted: the document a stock runner executes for one transformation,
