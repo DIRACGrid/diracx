@@ -58,6 +58,7 @@ from ._models import (  # type: ignore
     VOInfo,
     ValidationError,
     VectorSearchSpec,
+    WorkgraphSubmissionResult,
 )
 
 from ._enums import (  # type: ignore
@@ -121,6 +122,7 @@ __all__ = [
     "VOInfo",
     "ValidationError",
     "VectorSearchSpec",
+    "WorkgraphSubmissionResult",
     "ChecksumAlgorithm",
     "JobStatus",
     "PilotStatus",

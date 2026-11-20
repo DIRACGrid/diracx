@@ -15,6 +15,7 @@ from uuid_utils import UUID, uuid7
 from diracx.core.exceptions import (
     InputStatusConflictError,
     TransformationNotFoundError,
+    WorkgraphNotFoundError,
 )
 from diracx.core.hashing import hash_json
 from diracx.core.models.search import SearchSpec, SortSpec
@@ -26,6 +27,7 @@ from diracx.core.models.transformation import (
     ParcelStatus,
     TransformationKind,
     TransformationStatus,
+    WorkgraphStatus,
 )
 from diracx.db.sql.utils import BaseSQLDB, utcnow
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
@@ -35,11 +37,14 @@ from .schema import (
     ComputeParcels,
     ComputeTransformations,
     Inputs,
+    Ownership,
     ParcelInputs,
     Parcels,
+    Processes,
     RequirementsTemplates,
     TransformationLog,
     Transformations,
+    Workgraphs,
 )
 
 # BinaryUUID binds either kind; rows come back as uuid_utils.UUID
@@ -83,6 +88,33 @@ class NewComputeParcel(NamedTuple):
     input_ids: list[AnyUUID]
 
 
+class NewTransformation(NamedTuple):
+    """A compute transformation of a workgraph, ready to be inserted.
+
+    Attributes:
+        transformation_id: UUIDv7 identifier minted for the transformation.
+        type: VO-defined label selecting default behaviour.
+        packer: Input-packing plugin.
+        packer_args: Arguments of the packer.
+        feeder: Input plugin, or ``None`` when inputs arrive by other means.
+        feeder_args: Arguments of the feeder.
+        annotations: Human-facing labels, among them the step name.
+        process_id: Content hash of the process its parcels run.
+        requirements_template_id: Content hash of the base matching criteria,
+            if any.
+    """
+
+    transformation_id: AnyUUID
+    type: str
+    packer: str
+    packer_args: dict[str, Any] | None
+    feeder: str | None
+    feeder_args: dict[str, Any] | None
+    annotations: dict[str, Any] | None
+    process_id: bytes
+    requirements_template_id: bytes | None
+
+
 class TransformationDB(BaseSQLDB):
     """Workgraphs, transformations, their inputs and the parcels made of them.
 
@@ -116,6 +148,188 @@ class TransformationDB(BaseSQLDB):
                 .prefix_with("OR IGNORE", dialect="sqlite"),
                 rows,
             )
+
+    async def insert_processes(self, processes: dict[bytes, dict[str, Any]]) -> None:
+        """Store process documents unless one with their hash already exists.
+
+        Args:
+            processes: Documents keyed by the content hash of their canonical
+                form; empty is a no-op.
+        """
+        # TODO(#1080): placeholder until the content-addressed process store
+        if not processes:
+            return
+        await self.conn.execute(
+            insert(Processes)
+            .prefix_with("IGNORE", dialect="mysql")
+            .prefix_with("OR IGNORE", dialect="sqlite")
+            .values(
+                [
+                    {"process_id": process_id, "process": process}
+                    for process_id, process in processes.items()
+                ]
+            )
+        )
+
+    async def insert_workgraph(
+        self,
+        *,
+        workgraph_id: AnyUUID,
+        vo: str,
+        sub: str,
+        type: str,
+        stripped_spec: dict[str, Any],
+        annotations: dict[str, Any] | None,
+        transformations: list[NewTransformation],
+    ) -> None:
+        """Insert a workgraph and its compute transformations, all ``New``.
+
+        Writes the ``Workgraphs`` row, the ``Ownership`` row its members
+        share, and each member's ``Transformations`` row with its compute
+        facet. The processes and requirement sets they reference must already
+        be stored.
+
+        Args:
+            workgraph_id: UUIDv7 identifier minted for the workgraph.
+            vo: Virtual organisation of the owner.
+            sub: OIDC subject of the owner.
+            type: VO-defined label selecting default behaviour.
+            stripped_spec: The document with run bodies replaced by hashes.
+            annotations: Human-facing labels of the workgraph.
+            transformations: The member transformations.
+        """
+        ownership_id = uuid7()
+        await self.conn.execute(
+            insert(Workgraphs).values(
+                workgraph_id=workgraph_id,
+                type=type,
+                status=WorkgraphStatus.NEW,
+                stripped_spec=stripped_spec,
+                annotations=annotations,
+            )
+        )
+        await self.conn.execute(
+            insert(Ownership).values(
+                ownership_id=ownership_id, vo=vo, sub=sub, workgraph_id=workgraph_id
+            )
+        )
+        if not transformations:
+            return
+        await self.conn.execute(
+            insert(Transformations).values(
+                [
+                    {
+                        "transformation_id": t.transformation_id,
+                        "ownership_id": ownership_id,
+                        "type": t.type,
+                        "kind": TransformationKind.COMPUTE,
+                        "status": TransformationStatus.NEW,
+                        "feeder": t.feeder,
+                        "feeder_args": t.feeder_args,
+                        "packer": t.packer,
+                        "packer_args": t.packer_args,
+                        "annotations": t.annotations,
+                    }
+                    for t in transformations
+                ]
+            )
+        )
+        await self.conn.execute(
+            insert(ComputeTransformations).values(
+                [
+                    {
+                        "transformation_id": t.transformation_id,
+                        "process_id": t.process_id,
+                        "requirements_template_id": t.requirements_template_id,
+                    }
+                    for t in transformations
+                ]
+            )
+        )
+
+    async def get_workgraph(self, workgraph_id: AnyUUID) -> dict[str, Any]:
+        """Get a workgraph's status and owner.
+
+        Args:
+            workgraph_id: The workgraph.
+
+        Returns:
+            Its ``status``, ``type``, ``vo`` and ``sub``.
+
+        Raises:
+            WorkgraphNotFoundError: If the workgraph does not exist.
+        """
+        stmt = (
+            select(
+                Workgraphs.status.label("status"),
+                Workgraphs.type.label("type"),
+                Ownership.vo.label("vo"),
+                Ownership.sub.label("sub"),
+            )
+            .join(Ownership, Ownership.workgraph_id == Workgraphs.workgraph_id)
+            .where(Workgraphs.workgraph_id == workgraph_id)
+        )
+        row = (await self.conn.execute(stmt)).one_or_none()
+        if row is None:
+            raise WorkgraphNotFoundError(workgraph_id)
+        return dict(row._mapping)
+
+    async def set_workgraph_status(
+        self,
+        workgraph_id: AnyUUID,
+        from_status: WorkgraphStatus,
+        to_status: WorkgraphStatus,
+    ) -> bool:
+        """Move a workgraph between two statuses, if it is still in the first.
+
+        Args:
+            workgraph_id: The workgraph.
+            from_status: Status the workgraph must be in.
+            to_status: Status to move it to.
+
+        Returns:
+            Whether the workgraph moved.
+        """
+        result = await self.conn.execute(
+            update(Workgraphs)
+            .where(
+                Workgraphs.workgraph_id == workgraph_id,
+                Workgraphs.status == from_status,
+            )
+            .values(status=to_status)
+        )
+        return result.rowcount == 1
+
+    async def set_workgraph_transformations_status(
+        self,
+        workgraph_id: AnyUUID,
+        from_status: TransformationStatus,
+        to_status: TransformationStatus,
+    ) -> int:
+        """Move a workgraph's member transformations between two statuses.
+
+        Only members still in ``from_status`` move.
+
+        Args:
+            workgraph_id: The workgraph whose members move.
+            from_status: Status the members must be in.
+            to_status: Status to move them to.
+
+        Returns:
+            How many transformations moved.
+        """
+        members = select(Ownership.ownership_id).where(
+            Ownership.workgraph_id == workgraph_id
+        )
+        result = await self.conn.execute(
+            update(Transformations)
+            .where(
+                Transformations.ownership_id.in_(members),
+                Transformations.status == from_status,
+            )
+            .values(status=to_status)
+        )
+        return result.rowcount
 
     async def get_transformation(self, transformation_id: AnyUUID) -> dict[str, Any]:
         """Get what the packer needs to know about a transformation.
