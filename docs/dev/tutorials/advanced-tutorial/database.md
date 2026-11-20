@@ -107,7 +107,7 @@ The next two steps connect your database to the rest of DiracX.
 
 ### Entry point
 
-Add under `[project.entry-points."diracx.dbs.sql"]`:
+Add under `[project.entry-points."diracx.db.sql"]`:
 
 ```toml title="gubbins-db/pyproject.toml"
 --8<-- "extensions/gubbins/gubbins-db/pyproject.toml:my_pilots_db_entry_point"
