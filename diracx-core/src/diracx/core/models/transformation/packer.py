@@ -118,7 +118,14 @@ PackerProposal = ComputeParcel | DataParcel | BadInput | DelayInput
 
 
 class Packer(Protocol[ArgsT_contra]):
-    """Signature every packer must have (DX-ADR-006)."""
+    """Signature every packer must have (DX-ADR-006).
+
+    Packers are written as ``async def`` functions that ``yield``. Calling one
+    runs none of its code: it returns an async iterator, and the packer runs,
+    reading its ``inputs`` and awaiting any I/O, as the core iterates over it.
+    The Protocol therefore uses a plain ``def`` returning ``AsyncIterator``; an
+    ``async def`` here would describe a coroutine to await first.
+    """
 
     def __call__(
         self,

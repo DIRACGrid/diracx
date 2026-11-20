@@ -248,9 +248,11 @@ if TYPE_CHECKING:
     _: Packer[FixedSizePackerArgs] = fixed_size_packer
 ```
 
-mypy then rejects the plugin if it misses a contract parameter, gives one a narrower type (for example `dict` where the contract passes a `Mapping`), requires a parameter the core never passes, or uses an arguments model that is not a `PluginArgs`.
+mypy then rejects the plugin if it misses a contract parameter, gives one a narrower type (for example `dict` where the contract passes a `Mapping`), returns the wrong kind of proposals, requires a parameter the core never passes, or uses an arguments model that is not a `PluginArgs`.
 
-The core cannot rely on mypy, since plugins arrive through entry points. `load_plugin()` repeats the same checks when it loads a plugin, and raises `ConfigurationError` if the plugin:
+Add this line to every plugin you write. Nothing enforces it, but without it mypy never compares the plugin with its contract.
+
+The core cannot rely on mypy, since plugins arrive through entry points. When it loads a plugin, `load_plugin()` checks the signature's structure, but not its types, and raises `ConfigurationError` if the plugin:
 
 - is not an async generator function;
 - does not accept every contract parameter as a keyword;

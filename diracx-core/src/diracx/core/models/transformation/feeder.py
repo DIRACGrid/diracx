@@ -62,9 +62,11 @@ FeederProposal = FeederInput | SetFeederState | NoMoreFeederInputs
 class Feeder(Protocol[ArgsT_contra]):
     """Signature every feeder must have (DX-ADR-006).
 
-    Written as a plain ``def`` returning an ``AsyncIterator`` because that is
-    the type of an async generator function: calling it returns the iterator
-    straight away, there is nothing to await.
+    Feeders are written as ``async def`` functions that ``yield``. Calling one
+    runs none of its code: it returns an async iterator, and the feeder runs,
+    awaiting any I/O such as catalogue queries, as the core iterates over it.
+    The Protocol therefore uses a plain ``def`` returning ``AsyncIterator``; an
+    ``async def`` here would describe a coroutine to await first.
     """
 
     def __call__(

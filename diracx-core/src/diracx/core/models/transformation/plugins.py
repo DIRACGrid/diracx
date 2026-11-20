@@ -41,6 +41,9 @@ class PluginArgs(BaseModel):
     arguments it was given.
     """
 
+    # use_attribute_docstrings is already inherited from the diracx BaseModel;
+    # it is repeated to make explicit that field docstrings become the argument
+    # descriptions shown to workflow authors.
     model_config = ConfigDict(
         use_attribute_docstrings=True, extra="forbid", frozen=True
     )
