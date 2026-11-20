@@ -25,6 +25,9 @@ The services first check that the document is self-contained
 (`check_self_contained`), so that nothing ever fetches anything on its behalf:
 
 - no `$` key but the document's own `$graph` and `$namespaces`;
+- no key or `class` written with a prefix of `$namespaces`
+    (`dirac:Transformation`): `cwltool --pack` writes the full IRI, and an
+    identity does not cover what the prefix is bound to;
 - every `run` is an entry of the `$graph` or an inline body;
 - `File` and `Directory` literals carry their `contents` or `listing`
     inline, never a `path` or `location`.
@@ -58,7 +61,8 @@ process).
 
 `subgraph(document, "#merge.cwl")` returns the entry and everything it runs,
 as submitted: the document a stock runner executes for one transformation,
-and which re-hashes to the same identities.
+and which re-hashes to the same identities. A single process document, with
+no `$graph`, is returned as it is.
 
 ## What is not normalised
 
@@ -67,4 +71,5 @@ another cwltool version, with an edited `doc`, or under another file name get
 other identities. That only costs a duplicate row, and it means DiracX never
 rewrites a document: what is stored is what cwltool resolved, which is what
 the user tested. The one exception is `cwlVersion`, hashed once for every
-process whether its body repeats it or not.
+process whether its body repeats it or not; a body declaring another version
+is refused.
