@@ -118,9 +118,9 @@ def register(monkeypatch):
 
 def test_kinds_read_their_contract_from_the_protocol():
     assert FEEDER_KIND.args_param == "feeder_args"
-    assert FEEDER_KIND.contract_params == {"feeder_state", "scouting"}
+    assert FEEDER_KIND.core_params == {"feeder_state", "scouting"}
     assert PACKER_KIND.args_param == "packer_args"
-    assert PACKER_KIND.contract_params == {
+    assert PACKER_KIND.core_params == {
         "inputs",
         "flush",
         "feeder_active",
@@ -155,7 +155,7 @@ def test_load_rejects_sync_generator(register):
         load_plugin(FEEDER_KIND, "Sync")
 
 
-def test_load_rejects_missing_contract_param(register):
+def test_load_rejects_missing_core_param(register):
     register(packer_missing_flush)
     with pytest.raises(ConfigurationError, match="flush"):
         load_plugin(PACKER_KIND, "Broken")
@@ -184,7 +184,7 @@ def test_load_rejects_injected_param_without_class(register):
         load_plugin(FEEDER_KIND, "Untyped")
 
 
-def test_contract_params_are_not_injected():
+def test_core_params_are_not_injected():
     assert injected_parameters(good_packer) == {}
     assert injected_parameters(fixed_size_packer) == {}
 

@@ -26,9 +26,11 @@ class PluginKind(Generic[PluginT]):
     """Static description of one extension point.
 
     Generic over the plugin's ``Protocol`` so ``load_plugin`` returns the
-    right contract type for the kind it is given. The parameters the runtime
-    checks expect are read from that Protocol, so they cannot drift from what
-    mypy checks.
+    right contract type for the kind it is given. The contract is that
+    Protocol: the arguments parameter plus the core parameters. The runtime
+    checks read both from it, so they cannot drift from what mypy checks.
+    Injected dependencies are never part of it, since each plugin declares its
+    own.
 
     Attributes:
         name: Kind of plugin, used in error messages and to name the arguments
@@ -48,7 +50,11 @@ class PluginKind(Generic[PluginT]):
             )
 
     def _protocol_params(self) -> frozenset[str]:
-        """Return the parameter names of the Protocol's ``__call__``."""
+        """Return every parameter the Protocol declares.
+
+        That is the arguments parameter plus the core parameters; injected
+        dependencies never appear, since each plugin declares its own.
+        """
         params = inspect.signature(self.protocol.__call__).parameters
         return frozenset(params) - {"self"}
 
@@ -58,8 +64,12 @@ class PluginKind(Generic[PluginT]):
         return f"{self.name}_args"
 
     @property
-    def contract_params(self) -> frozenset[str]:
-        """Other keyword parameters the core always passes."""
+    def core_params(self) -> frozenset[str]:
+        """Parameters whose values the core computes at each call.
+
+        The Protocol's parameters other than the arguments parameter, such as
+        ``feeder_state`` or ``flush``: the same set for every plugin of a kind.
+        """
         return self._protocol_params() - {self.args_param}
 
 
@@ -86,7 +96,7 @@ def _check_contract(
     ``INJECTED`` for what the core supplies, a plain value otherwise.
     """
     params = inspect.signature(plugin).parameters
-    expected = kind.contract_params | {kind.args_param}
+    expected = kind.core_params | {kind.args_param}
     has_var_keyword = any(
         p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
     )

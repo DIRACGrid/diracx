@@ -12,17 +12,19 @@ A plugin is an async generator function that takes keyword-only parameters of th
 
 | Kind                      | Decided by                              | Varies per     | Stored in                                                                                                    | Examples                                                       |
 | ------------------------- | --------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **Contract parameters**   | the core, at each call                  | invocation     | the transformation's rows (`FeederState`, `Inputs`, `FeederEnabled`), or an operator's instruction (`flush`) | `feeder_state`, `scouting`; `inputs`, `flush`, `feeder_active` |
+| **Core parameters**       | the core, at each call                  | invocation     | the transformation's rows (`FeederState`, `Inputs`, `FeederEnabled`), or an operator's instruction (`flush`) | `feeder_state`, `scouting`; `inputs`, `flush`, `feeder_active` |
 | **Arguments model**       | the workgraph submitter, then hooks     | transformation | the `FeederArgs` / `PackerArgs` column                                                                       | a seed count, a dataset name, a group size                     |
 | **Injected dependencies** | the DiracX administrator, at deployment | installation   | settings (environment variables), DBs                                                                        | a catalogue's URL and credentials, a database                  |
 
-The set of contract parameters is fixed per kind: every feeder receives the same ones, and so does every packer. The core builds them at each call, from what it has stored for the transformation (its bookmark, its `Unassigned` inputs, whether its feeder is enabled), from counts and states it derives (`input_overview`, `scouting`), or from a one-off instruction that is not stored at all (`flush`).
+Together, the arguments parameter and the core parameters form the plugin's **contract**: the `Feeder` or `Packer` Protocol it must match. Injected dependencies are not part of the contract, since each plugin declares its own.
+
+The set of core parameters is fixed per kind: every feeder receives the same ones, and so does every packer. The core builds them at each call, from what it has stored for the transformation (its bookmark, its `Unassigned` inputs, whether its feeder is enabled), from counts and states it derives (`input_overview`, `scouting`), or from a one-off instruction that is not stored at all (`flush`).
 
 The fields of the arguments model belong to the plugin: the seed feeder below defines `max_count` in its `SeedFeederArgs`. The values belong to each transformation: two transformations using that feeder store their own `max_count`, and hooks may change it while the transformation runs. The plugin itself is a plain function shared by every transformation that uses it.
 
 When deciding where a value belongs, ask who should be able to change it:
 
-- A value the core already knows at call time is a **contract parameter**. The contract is fixed, so you cannot add one.
+- A value the core already knows at call time is a **core parameter**. The set is fixed by the contract, so you cannot add one.
 - A value that differs between transformations goes in the **arguments model**. Users set it when they submit, so it must be safe for them to choose.
 - A value that is the same for every transformation in an installation is an **injected dependency**. A catalogue URL is one: storing it per transformation would mean rewriting every row when the service moves, and it would let any submitter point the plugin at a server of their choice. If a transformation must choose between a few instances of a service, put the instance *name* in the arguments model and keep the mapping from name to URL in settings.
 
@@ -143,7 +145,7 @@ async def fixed_size_packer(
         yield ComputeParcel(input_ids=group)
 ```
 
-A plugin must accept every contract parameter, even one it does not use, as `fixed_size_packer` does with `input_overview`.
+A plugin must accept every core parameter, even one it does not use, as `fixed_size_packer` does with `input_overview`.
 
 ### Ask for installation dependencies
 
@@ -190,7 +192,7 @@ async def catalogue_feeder(
 
 `INJECTED` is a placeholder object, nothing more. It exists because of how the contract is checked:
 
-- The `Feeder` and `Packer` Protocols list only the contract parameters, and a function matches a Protocol only if it can be called with exactly those arguments. Every extra parameter therefore needs a default. Without one, mypy reports that the plugin does not match its contract, and `load_plugin()` refuses to load it.
+- The `Feeder` and `Packer` Protocols list only the arguments parameter and the core parameters, and a function matches a Protocol only if it can be called with exactly those arguments. Every extra parameter therefore needs a default. Without one, mypy reports that the plugin does not match its contract, and `load_plugin()` refuses to load it.
 - An ordinary default such as `None` would also satisfy that rule, but the annotation would become `CatalogueSettings | None` and the plugin would have to handle a dependency that is missing. `INJECTED` is typed `Any`, so mypy accepts it as the default of a parameter of any type, and the annotation stays exactly the class the plugin needs.
 - The marker tells the core which parameters to fill. `injected_parameters()` in `diracx.logic.transformations` returns each parameter whose default is `INJECTED`, with its annotated class, and the core passes an instance of each class by name.
 
@@ -248,14 +250,14 @@ if TYPE_CHECKING:
     _: Packer[FixedSizePackerArgs] = fixed_size_packer
 ```
 
-mypy then rejects the plugin if it misses a contract parameter, gives one a narrower type (for example `dict` where the contract passes a `Mapping`), returns the wrong kind of proposals, requires a parameter the core never passes, or uses an arguments model that is not a `PluginArgs`.
+mypy then rejects the plugin if it misses a core parameter or its arguments parameter, gives one a narrower type (for example `dict` where the contract passes a `Mapping`), returns the wrong kind of proposals, requires a parameter the core never passes, or uses an arguments model that is not a `PluginArgs`.
 
 Add this line to every plugin you write. Nothing enforces it, but without it mypy never compares the plugin with its contract.
 
 The core cannot rely on mypy, since plugins arrive through entry points. When it loads a plugin, `load_plugin()` checks the signature's structure, but not its types, and raises `ConfigurationError` if the plugin:
 
 - is not an async generator function;
-- does not accept every contract parameter as a keyword;
+- does not accept its arguments parameter and every core parameter as keywords;
 - requires a parameter outside the contract, rather than giving it a default;
 - has an `INJECTED` parameter that is not annotated with a class;
 - does not annotate its arguments parameter with a `PluginArgs` subclass.
