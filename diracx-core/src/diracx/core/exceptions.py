@@ -24,6 +24,7 @@ __all__ = [
     "SandboxNotFoundError",
     "TokenNotFoundError",
     "TransformationNotFoundError",
+    "WorkgraphNotFoundError",
 ]
 
 
@@ -205,6 +206,18 @@ class TransformationNotFoundError(DiracError):
             f"Transformation {transformation_id} not found"
             + (f" ({detail})" if detail else "")
         )
+
+
+class WorkgraphNotFoundError(DiracError):
+    """Raised when a workgraph cannot be found.
+
+    Attributes:
+        workgraph_id: Identifier of the missing workgraph.
+    """
+
+    def __init__(self, workgraph_id: UUID):
+        self.workgraph_id = workgraph_id
+        super().__init__(f"Workgraph {workgraph_id} not found")
 
 
 class InputStatusConflictError(DiracError):
