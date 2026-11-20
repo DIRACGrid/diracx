@@ -2068,3 +2068,36 @@ class VOInfo(_serialization.Model):
         self.groups = groups
         self.support = support
         self.default_group = default_group
+
+
+class WorkgraphSubmissionResult(_serialization.Model):
+    """What a successful workgraph submission created.
+
+    All required parameters must be populated in order to send to server.
+
+    :ivar workgraph_id: Workgraph Id. Required.
+    :vartype workgraph_id: str
+    :ivar transformation_id: Transformation Id. Required.
+    :vartype transformation_id: str
+    """
+
+    _validation = {
+        "workgraph_id": {"required": True},
+        "transformation_id": {"required": True},
+    }
+
+    _attribute_map = {
+        "workgraph_id": {"key": "workgraph_id", "type": "str"},
+        "transformation_id": {"key": "transformation_id", "type": "str"},
+    }
+
+    def __init__(self, *, workgraph_id: str, transformation_id: str, **kwargs: Any) -> None:
+        """
+        :keyword workgraph_id: Workgraph Id. Required.
+        :paramtype workgraph_id: str
+        :keyword transformation_id: Transformation Id. Required.
+        :paramtype transformation_id: str
+        """
+        super().__init__(**kwargs)
+        self.workgraph_id = workgraph_id
+        self.transformation_id = transformation_id
