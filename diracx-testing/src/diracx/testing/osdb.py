@@ -7,13 +7,14 @@ __all__ = [
 ]
 
 import socket
-from subprocess import PIPE, Popen, check_output
+from subprocess import check_output
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from .dummy_osdb import DummyOSDB
 from .mock_osdb import MockOSDBMixin
+from .utils import kubectl_port_forward
 
 OPENSEARCH_PORT = 28000
 
@@ -47,30 +48,17 @@ def opensearch_conn_kwargs(demo_kubectl_env):
     if pod_status != "Running":
         raise RuntimeError(f"OpenSearch pod is not running: {pod_status=}")
 
-    # Forward the actual port and wait until it has been forwarded before yielding
-    cmd = [
-        "kubectl",
-        "port-forward",
+    with kubectl_port_forward(
+        demo_kubectl_env,
         "service/opensearch-cluster-master",
-        f"{OPENSEARCH_PORT}:9200",
-    ]
-    output_lines = []
-    with Popen(cmd, stdout=PIPE, stderr=PIPE, text=True, env=demo_kubectl_env) as proc:
-        for line in proc.stdout:
-            output_lines.append(line)
-            if line.startswith("Forwarding from"):
-                yield {
-                    "hosts": f"admin:admin@localhost:{OPENSEARCH_PORT}",
-                    "use_ssl": True,
-                    "verify_certs": False,
-                }
-                proc.kill()
-                break
-        else:
-            raise RuntimeError(
-                f"Could not start port forwarding with {cmd=}\n{output_lines=}"
-            )
-    proc.wait()
+        9200,
+        local_port=OPENSEARCH_PORT,
+    ):
+        yield {
+            "hosts": f"admin:admin@localhost:{OPENSEARCH_PORT}",
+            "use_ssl": True,
+            "verify_certs": False,
+        }
 
 
 @pytest.fixture
