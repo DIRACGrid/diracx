@@ -17,11 +17,13 @@ Execute the following points in the presented order.
 
     - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
 
-3. Merge the `release-please` PR
+3. Merge the `release-please` PR. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
 
-4. Check the [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush+actor%3ADIRACGridBot)
+4. As a release manager, publish the draft release. Do it soon after the merge: until the tag exists, `release-please` cannot see the release and proposes it again on the next push to `main`.
 
-5. When the above will be finished, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml?query=actor%3ADIRACGridBot) in `diracx-charts` is successful
+5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`.
+
+6. Renovate opens a pull request in `diracx-charts` for the new version. Once it is merged, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml) in `diracx-charts` is successful
 
 At this stage, there is a new `diracx` and `diracx-chart` release.
 

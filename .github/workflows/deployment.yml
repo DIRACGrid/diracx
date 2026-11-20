@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  # A release manager publishes the draft release made by release-please. That
+  # creates the tag (CI is not allowed to) and starts the publish.
+  release:
+    types: [published]
   # Re-publish an existing tag after a failed publish. Run from main (pypi env).
   workflow_dispatch:
     inputs:
@@ -20,11 +24,15 @@ on:
 
 # Concurrency is set on the release-please and publish jobs only, so a publish
 # waiting for approval does not hold every later push to main.
+#
+# Release flow: merging the release PR makes release-please create a draft
+# release, with no tag. Publishing the draft triggers build, publish and docker.
 
 permissions: {}
 
 jobs:
-  # Tags created with GITHUB_TOKEN trigger no workflows, so publish happens here.
+  # Maintains the release PR and, once it is merged, creates the draft release
+  # (see release-please-config.json).
   release-please:
     name: release-please
     if: github.event_name == 'push' && github.repository == 'DIRACGrid/diracx'
@@ -33,7 +41,7 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # release commit, tag and GitHub release
+      contents: write  # release commit and draft GitHub release
       issues: write  # release labels
       pull-requests: write  # open and update the release PR
     outputs:
@@ -44,21 +52,19 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
-        with:
-          release-type: simple
 
-  # Generate and validate the public example and upload it to the GitHub release.
+  # Generate and validate the public example and upload it to the draft release:
+  # releases are immutable, so assets cannot be added once it is published.
   release-env:
     name: Release env asset
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # upload the diracx.env asset to the GitHub release
+      contents: write  # upload the diracx.env asset to the draft release
     env:
       RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
       RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
-      RELEASE_UPLOAD_URL: ${{ needs.release-please.outputs.upload_url }}
     steps:
       - name: Checkout exact DIRACX release commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -92,9 +98,10 @@ jobs:
           CHARTS_SHA: ${{ steps.charts.outputs.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           test "$(git -C diracx-charts rev-parse HEAD)" = "$CHARTS_SHA"
-          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .upload_url)" = "$RELEASE_UPLOAD_URL"
+          # The tag does not exist yet: check the draft release points at this commit.
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)" = "$RELEASE_SHA"
       - name: Generate and validate public example
         env:
           CHARTS_SHA: ${{ steps.charts.outputs.sha }}
@@ -122,10 +129,7 @@ jobs:
 
   build:
     name: Build distribution 📦
-    needs: release-please
-    # !cancelled(): run even when release-please was skipped (PR, schedule, forks).
-    # A failed release-please must not be read as "not a release".
-    if: ${{ !cancelled() && needs.release-please.result != 'failure' && (github.event_name != 'push' || github.repository == 'DIRACGrid/diracx') }}
+    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
     runs-on: "ubuntu-latest"
     outputs:
       new-version: ${{ steps.check-tag.outputs.new-version }}
@@ -140,7 +144,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # setuptools_scm needs the release tag to compute the version.
-          ref: ${{ inputs.tag || needs.release-please.outputs.tag_name || '' }}
+          ref: ${{ github.event.release.tag_name || inputs.tag || '' }}
           token: ${{ github.token }}
           persist-credentials: false
       - run: |
@@ -165,8 +169,8 @@ jobs:
       - name: Extract version from tag
         id: check-tag
         env:
-          RELEASE_TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
-          RELEASE_CREATED: ${{ github.event_name == 'workflow_dispatch' || needs.release-please.outputs.release_created == 'true' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_CREATED: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         run: |
           set -xeuo pipefail
           if [[ "$RELEASE_CREATED" == 'true' ]]; then
@@ -202,8 +206,7 @@ jobs:
   publish:
     name: Publish distribution 📦 to PyPI
     needs: build
-    # A skipped build upstream would otherwise skip this job too.
-    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.create-release == 'true' }}
+    if: needs.build.outputs.create-release == 'true'
     concurrency:
       group: pypi-publish
       cancel-in-progress: false
@@ -230,8 +233,7 @@ jobs:
 
   docker:
     # Release images only after the wheels are on PyPI. publish is skipped on
-    # non-release runs, so check results explicitly: the implicit success()
-    # would also skip docker whenever release-please was skipped.
+    # non-release runs, so check results explicitly instead of the implicit success().
     needs:
       - build
       - publish
@@ -318,29 +320,32 @@ jobs:
           push-to-registry: true
 
       - name: Build and push services (dev)
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-services
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
+          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
           tags: ghcr.io/diracgrid/diracx/services:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push tasks (dev)
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-tasks
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
+          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
           tags: ghcr.io/diracgrid/diracx/tasks:dev
           platforms: linux/amd64,linux/arm64
       - name: Build and push client (dev)
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-client
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
+          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
           tags: ghcr.io/diracgrid/diracx/client:dev
           platforms: linux/amd64,linux/arm64
