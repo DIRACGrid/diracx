@@ -48,7 +48,7 @@ properties_module = "diracx.core.properties"
 config = "diracx.core.config.schema:Config"
 extension = "diracx"
 
-[project.entry-points."diracx.resources"]
+[project.entry-points."diracx.core.resources"]
 find_compatible_platforms = "diracx.core.resources:find_compatible_platforms"
 
 [build-system]

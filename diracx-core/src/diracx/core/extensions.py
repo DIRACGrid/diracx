@@ -21,19 +21,30 @@ P = ParamSpec("P")
 
 
 class DiracEntryPoint(StrEnum):
-    """Available entrypoint group values."""
+    """Available entrypoint group values.
+
+    Naming conventions for entry-point groups:
+      * Always start with `diracx`, using `.` to separate levels.
+      * Namespace by either the system (e.g. `diracx.transformation.*`),
+        or by the python package if no specific system is defined
+        (e.g. `diracx.routers.access-policies`).
+      * The system is singular (`transformation`, `resource-status`);
+        the objects registered under it are plural (`feeders`, `sources`),
+        i.e. `diracx.<system singular>.<components plural>`.
+      * Use hyphens instead of underscores (``access-policies``).
+    """
 
     CORE = "diracx"
-    ACCESS_POLICY = "diracx.access_policies"
-    CACHEABLE_SOURCES = "diracx.cacheable_sources"
+    ACCESS_POLICY = "diracx.routers.access-policies"
+    RESOURCE_STATUS_SOURCES = "diracx.resource-status.sources"
     CLI = "diracx.cli"
-    HIDDEN_CLI = "diracx.cli.hidden"
-    OS_DB = "diracx.dbs.os"
-    SQL_DB = "diracx.dbs.sql"
-    MIN_CLIENT_VERSION = "diracx.min_client_version"
-    RESOURCES = "diracx.resources"
-    SERVICES = "diracx.services"
-    LOCK_OBJECT_TYPES = "diracx.lock_object_types"
+    HIDDEN_CLI = "diracx.cli.internal"
+    OS_DB = "diracx.db.os"
+    SQL_DB = "diracx.db.sql"
+    MIN_CLIENT_VERSION = "diracx.routers.min-client-version"
+    RESOURCES = "diracx.core.resources"
+    SERVICES = "diracx.routers.services"
+    LOCK_OBJECT_TYPES = "diracx.tasks.lock-object-types"
     FEEDERS = "diracx.transformation.feeders"
     PACKERS = "diracx.transformation.packers"
 

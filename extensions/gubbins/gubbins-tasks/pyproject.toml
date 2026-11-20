@@ -35,7 +35,7 @@ MyCheckPilotsTask = "gubbins.tasks.my_pilots:MyCheckPilotsTask"
 MyPilotReportTask = "gubbins.tasks.my_pilots:MyPilotReportTask"
 # --8<-- [end:my_pilots_task_entry_points]
 
-[project.entry-points."diracx.lock_object_types"]
+[project.entry-points."diracx.tasks.lock-object-types"]
 lollygag = "gubbins.tasks.lock_types"
 # --8<-- [start:my_pilots_lock_entry_point]
 my_pilot = "gubbins.tasks.my_pilot_lock_types"

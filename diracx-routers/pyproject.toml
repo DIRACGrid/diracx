@@ -39,7 +39,7 @@ types = [
     "types-PyYAML",
 ]
 
-[project.entry-points."diracx.services"]
+[project.entry-points."diracx.routers.services"]
 ".well-known" = "diracx.routers.auth.well_known:router"
 auth = "diracx.routers.auth:router"
 config = "diracx.routers.configuration:router"
@@ -48,14 +48,14 @@ jobs = "diracx.routers.jobs:router"
 resource-status = "diracx.routers.resource_status:router"
 pilots = "diracx.routers.pilots:router"
 
-[project.entry-points."diracx.access_policies"]
+[project.entry-points."diracx.routers.access-policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 resource-status = "diracx.routers.resource_status.access_policies:ResourceStatusAccessPolicy"
 pilot = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
 
 # Minimum version of the client supported
-[project.entry-points."diracx.min_client_version"]
+[project.entry-points."diracx.routers.min-client-version"]
 diracx = "diracx.routers.factory:DIRACX_MIN_CLIENT_VERSION"
 
 [build-system]
