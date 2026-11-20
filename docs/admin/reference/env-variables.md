@@ -79,6 +79,12 @@ Enable the PILOTS router
 
 Enable the RESOURCE_STATUS router
 
+#### `DIRACX_SERVICE_TRANSFORMATIONS_ENABLED`
+
+*Optional*, default value: `True`
+
+Enable the TRANSFORMATIONS router
+
 ### `OPENSEARCH_DBS`
 
 *Optional*
