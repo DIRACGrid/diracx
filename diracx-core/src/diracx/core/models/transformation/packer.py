@@ -7,11 +7,15 @@ proposal and is the only thing that writes.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Mapping
+from typing import Protocol
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from ..types import UTCDatetime
+from .enums import InputStatus
+from .plugins import ArgsT_contra
 
 
 class PackerInput(BaseModel):
@@ -111,3 +115,35 @@ class DelayInput(BaseModel):
 
 
 PackerProposal = ComputeParcel | DataParcel | BadInput | DelayInput
+
+
+class Packer(Protocol[ArgsT_contra]):
+    """Signature every packer must have (DX-ADR-006).
+
+    Packers are written as ``async def`` functions that ``yield``. Calling one
+    runs none of its code: it returns an async iterator, and the packer runs,
+    reading its ``inputs`` and awaiting any I/O, as the core iterates over it.
+    The Protocol therefore uses a plain ``def`` returning ``AsyncIterator``; an
+    ``async def`` here would describe a coroutine to await first.
+    """
+
+    def __call__(
+        self,
+        *,
+        packer_args: ArgsT_contra,
+        inputs: AsyncIterator[PackerInput],
+        flush: bool,
+        feeder_active: bool,
+        input_overview: Mapping[InputStatus, int],
+    ) -> AsyncIterator[PackerProposal]:
+        """Yield parcels, rejected inputs and delayed inputs.
+
+        Args:
+            packer_args: The transformation's validated ``PackerArgs``.
+            inputs: The claimed ``Unassigned`` inputs.
+            flush: Whether to pack groups that would otherwise be held back.
+            feeder_active: Whether more inputs may still arrive.
+            input_overview: Number of the transformation's inputs per status;
+                read-only.
+        """
+        ...

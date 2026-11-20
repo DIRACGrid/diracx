@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Mapping
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import PositiveInt
 
-from diracx.core.models._base import BaseModel
 from diracx.core.models.transformation import (
     ComputeParcel,
     InputStatus,
+    Packer,
     PackerInput,
+    PluginArgs,
 )
 
 
-class FixedSizePackerArgs(BaseModel):
+class FixedSizePackerArgs(PluginArgs):
     """Arguments of the fixed-size packer."""
 
     group_size: PositiveInt = 1
@@ -28,7 +30,7 @@ async def fixed_size_packer(
     inputs: AsyncIterator[PackerInput],
     flush: bool,
     feeder_active: bool,
-    input_overview: dict[InputStatus, int],
+    input_overview: Mapping[InputStatus, int],
 ) -> AsyncGenerator[ComputeParcel, None]:
     """Pack inputs into parcels of ``group_size``, in the order offered.
 
@@ -55,3 +57,8 @@ async def fixed_size_packer(
             group = []
     if group and (flush or not feeder_active):
         yield ComputeParcel(input_ids=group)
+
+
+if TYPE_CHECKING:
+    # Only mypy reads this: it fails if the packer stops matching the contract
+    _: Packer[FixedSizePackerArgs] = fixed_size_packer

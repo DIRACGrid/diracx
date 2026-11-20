@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "INJECTED",
     "INPUT_TRANSITIONS",
     "PARCEL_TRANSITIONS",
     "TRANSFORMATION_TRANSITIONS",
@@ -14,13 +15,16 @@ __all__ = [
     "CounterEntity",
     "DataParcel",
     "DelayInput",
+    "Feeder",
     "FeederInput",
     "FeederProposal",
     "InputStatus",
     "NoMoreFeederInputs",
+    "Packer",
     "PackerInput",
     "PackerProposal",
     "ParcelStatus",
+    "PluginArgs",
     "SetFeederState",
     "StorageDelta",
     "TransformationKind",
@@ -43,6 +47,7 @@ from .enums import (
     WorkgraphStatus,
 )
 from .feeder import (
+    Feeder,
     FeederInput,
     FeederProposal,
     NoMoreFeederInputs,
@@ -53,7 +58,9 @@ from .packer import (
     ComputeParcel,
     DataParcel,
     DelayInput,
+    Packer,
     PackerInput,
     PackerProposal,
     StorageDelta,
 )
+from .plugins import INJECTED, PluginArgs

@@ -3,10 +3,24 @@
 from __future__ import annotations
 
 __all__ = [
+    "FEEDER_KIND",
+    "PACKER_KIND",
     "FixedSizePackerArgs",
+    "PluginKind",
     "fixed_size_packer",
+    "injected_parameters",
+    "load_plugin",
     "set_parcel_status",
+    "validate_plugin_args",
 ]
 
 from .packers import FixedSizePackerArgs, fixed_size_packer
 from .parcels import set_parcel_status
+from .plugins import (
+    FEEDER_KIND,
+    PACKER_KIND,
+    PluginKind,
+    injected_parameters,
+    load_plugin,
+    validate_plugin_args,
+)
