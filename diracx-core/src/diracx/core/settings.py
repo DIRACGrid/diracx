@@ -359,10 +359,12 @@ class SandboxStoreSettings(ServiceSettingsBase):
     Each batch runs SELECT → S3 delete → DB delete sequentially.
     """
 
-    clean_delete_chunk_size: int = 1000
+    clean_delete_chunk_size: int = Field(999, ge=1, le=999)
     """Number of sandbox DB rows to delete per chunk during cleaning.
 
-    Smaller chunks mean shorter transactions and less lock contention.
+    Smaller chunks mean shorter transactions and less lock contention. The
+    limit of 999 matches ``IN_CHUNK_SIZE`` in diracx-db, as each chunk is
+    deleted with a single ``IN (...)`` list.
     """
 
     clean_max_concurrent_db_deletes: int = 10

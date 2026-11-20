@@ -333,11 +333,13 @@ Each batch runs SELECT → S3 delete → DB delete sequentially.
 
 ### `DIRACX_SANDBOX_STORE_CLEAN_DELETE_CHUNK_SIZE`
 
-*Optional*, default value: `1000`
+*Optional*, default value: `999`
 
 Number of sandbox DB rows to delete per chunk during cleaning.
 
-Smaller chunks mean shorter transactions and less lock contention.
+Smaller chunks mean shorter transactions and less lock contention. The
+limit of 999 matches `IN_CHUNK_SIZE` in diracx-db, as each chunk is
+deleted with a single `IN (...)` list.
 
 ### `DIRACX_SANDBOX_STORE_CLEAN_MAX_CONCURRENT_DB_DELETES`
 

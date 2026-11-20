@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 from collections.abc import Collection, Iterable
 from datetime import datetime
-from itertools import islice
+from functools import partial
 from typing import Any, NamedTuple, TypeAlias
 
-from sqlalchemy import bindparam, func, insert, select, update
+from sqlalchemy import Update, bindparam, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from uuid_utils import UUID, uuid7
 
@@ -27,7 +27,14 @@ from diracx.core.models.transformation import (
     TransformationKind,
     TransformationStatus,
 )
-from diracx.db.sql.utils import BaseSQLDB, utcnow
+from diracx.core.utils import batched
+from diracx.db.sql.utils import (
+    IN_CHUNK_SIZE,
+    BaseSQLDB,
+    execute_in_chunks,
+    fetch_in_chunks,
+    utcnow,
+)
 from diracx.db.sql.utils.counters import counter_locks_table, journalled_counters
 
 from .schema import Base as TransformationDBBase
@@ -498,18 +505,21 @@ class TransformationDB(BaseSQLDB):
         if not parcel_ids:
             return []
         # Lock the rows first, so the caller learns exactly what is updated.
-        # Locking in key order keeps concurrent writers from deadlocking.
-        moved = list(
-            (
-                await self.conn.scalars(
-                    select(Parcels.parcel_id)
-                    .where(Parcels.parcel_id.in_(list(parcel_ids)))
-                    .where(Parcels.status == from_status)
-                    .order_by(Parcels.parcel_id)
-                    .with_for_update()
-                )
-            ).all()
+        # Locking in key order keeps concurrent writers from deadlocking, so
+        # the IDs are sorted the way the column compares them before being
+        # split into chunks.
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(Parcels.parcel_id)
+                .where(Parcels.parcel_id.in_(chunk))
+                .where(Parcels.status == from_status)
+                .order_by(Parcels.parcel_id)
+                .with_for_update()
+            ),
+            sorted(parcel_ids, key=lambda parcel_id: parcel_id.bytes),
         )
+        moved = [row[0] for row in rows]
         if not moved:
             return []
 
@@ -519,11 +529,15 @@ class TransformationDB(BaseSQLDB):
         if not PARCEL_TRANSITIONS[to_status]:
             # Reaching a final status (DX-ADR-005) stamps the completion time
             values["completed_at"] = utcnow()
-        await self.conn.execute(
-            update(Parcels)
-            .where(Parcels.parcel_id.in_(moved))
-            .where(Parcels.status == from_status)
-            .values(**values)
+        await execute_in_chunks(
+            self.conn,
+            lambda chunk: (
+                update(Parcels)
+                .where(Parcels.parcel_id.in_(chunk))
+                .where(Parcels.status == from_status)
+                .values(**values)
+            ),
+            moved,
         )
         return moved
 
@@ -554,6 +568,11 @@ class TransformationDB(BaseSQLDB):
         """
         if not parcel_ids:
             return 0
+        # Not split into chunks: the locks are meant to follow input order,
+        # not the parcel order of the IN list, so sorting the parcel IDs
+        # would not keep chunks in one global lock order. InnoDB locks rows
+        # as it reads them, so the order also depends on the join order the
+        # optimizer picks.
         locked = (
             await self.conn.execute(
                 select(Inputs.transformation_id, Inputs.input_id)
@@ -580,13 +599,19 @@ class TransformationDB(BaseSQLDB):
         values: dict = {"status": to_status}
         if increment_error_count:
             values["error_count"] = Inputs.error_count + 1
-        for transformation_id, input_ids in by_transformation.items():
-            await self.conn.execute(
+
+        def build(transformation_id: UUID, chunk: list[UUID]) -> Update:
+            return (
                 update(Inputs)
                 .where(Inputs.transformation_id == transformation_id)
-                .where(Inputs.input_id.in_(input_ids))
+                .where(Inputs.input_id.in_(chunk))
                 .where(Inputs.status == from_status)
                 .values(**values)
+            )
+
+        for transformation_id, input_ids in by_transformation.items():
+            await execute_in_chunks(
+                self.conn, partial(build, transformation_id), input_ids
             )
 
         return len(locked)
@@ -608,22 +633,28 @@ class TransformationDB(BaseSQLDB):
             InputStatusConflictError: If any of the inputs is not
                 ``Unassigned``.
         """
+        # Duplicates are kept: execute_in_chunks drops them, so a repeated
+        # input makes the row count fall short and raises the conflict below
         input_ids = list(input_ids)
         if not input_ids:
             return
-        result = await self.conn.execute(
-            update(Inputs)
-            .where(
-                Inputs.transformation_id == transformation_id,
-                Inputs.input_id.in_(input_ids),
-                Inputs.status == InputStatus.UNASSIGNED,
-            )
-            .values(**values)
+        rowcount = await execute_in_chunks(
+            self.conn,
+            lambda chunk: (
+                update(Inputs)
+                .where(
+                    Inputs.transformation_id == transformation_id,
+                    Inputs.input_id.in_(chunk),
+                    Inputs.status == InputStatus.UNASSIGNED,
+                )
+                .values(**values)
+            ),
+            input_ids,
         )
-        if result.rowcount != len(input_ids):
+        if rowcount != len(input_ids):
             raise InputStatusConflictError(
                 transformation_id,
-                f"{len(input_ids) - result.rowcount} of {len(input_ids)} inputs "
+                f"{len(input_ids) - rowcount} of {len(input_ids)} inputs "
                 "were not Unassigned",
             )
 
@@ -645,22 +676,23 @@ class TransformationDB(BaseSQLDB):
         self,
         transformation_id: AnyUUID,
         inputs: Iterable[FeederInput],
-        chunk_size: int = 1000,
+        chunk_size: int = IN_CHUNK_SIZE,
     ) -> list[UUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
         Deduplicates by ``InputHash`` (first proposal wins), including across
         chunks of this call. Hashes already stored for the transformation are
-        skipped. Each chunk is at most ``chunk_size`` proposals: one
-        ``SELECT`` of existing hashes, then one ``INSERT`` of the new rows.
+        skipped. Each chunk is at most ``chunk_size`` proposals: a ``SELECT``
+        of existing hashes (split by ``fetch_in_chunks`` if ``chunk_size`` is
+        above ``IN_CHUNK_SIZE``), then one ``INSERT`` of the new rows.
         A UUIDv7 is minted for each new row. Status is always ``Unassigned``.
 
         Args:
             transformation_id: Transformation that owns the inputs.
             inputs: Feeder proposals to insert, in priority order (consumed
                 once, so a generator is accepted); empty input is a no-op.
-            chunk_size: Maximum proposals read, and rows selected or inserted,
-                per statement.
+            chunk_size: Maximum proposals read, and rows inserted, per
+                ``INSERT``.
 
         Returns:
             ``input_id`` values of the rows that were inserted, in first-seen
@@ -676,8 +708,7 @@ class TransformationDB(BaseSQLDB):
         # Hashes already accepted in this call, so a later chunk does not
         # insert or re-select a duplicate of an earlier proposal.
         seen: set[bytes] = set()
-        proposals = iter(inputs)
-        while chunk := list(islice(proposals, chunk_size)):
+        for chunk in batched(inputs, chunk_size):
             by_hash: dict[bytes, FeederInput] = {}
             for item in chunk:
                 digest = _input_hash(item.lfn, item.descriptor)
@@ -687,16 +718,17 @@ class TransformationDB(BaseSQLDB):
             if not by_hash:
                 continue
 
-            existing = set(
-                (
-                    await self.conn.execute(
-                        select(Inputs.input_hash).where(
-                            Inputs.transformation_id == transformation_id,
-                            Inputs.input_hash.in_(by_hash),
-                        )
-                    )
-                ).scalars()
-            )
+            existing = {
+                row[0]
+                for row in await fetch_in_chunks(
+                    self.conn,
+                    lambda hashes: select(Inputs.input_hash).where(
+                        Inputs.transformation_id == transformation_id,
+                        Inputs.input_hash.in_(hashes),
+                    ),
+                    by_hash,
+                )
+            }
             seen.update(by_hash)
             rows = [
                 {

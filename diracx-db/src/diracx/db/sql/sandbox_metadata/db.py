@@ -22,6 +22,7 @@ from diracx.core.exceptions import (
     SandboxNotFoundError,
 )
 from diracx.core.models import SandboxInfo, SandboxType, UserInfo
+from diracx.db.sql.utils import execute_in_chunks, fetch_in_chunks
 from diracx.db.sql.utils.base import BaseSQLDB
 from diracx.db.sql.utils.functions import substract_date, utcnow
 
@@ -296,18 +297,23 @@ class SandboxMetadataDB(BaseSQLDB):
             )
             await self.conn.execute(del_stmt)
 
-            sb_entity_sel_stmt = select(SBEntityMapping.SBId).where(
-                SBEntityMapping.SBId.in_(sb_ids)
+            remaining_sb_ids = await fetch_in_chunks(
+                self.conn,
+                lambda chunk: select(SBEntityMapping.SBId).where(
+                    SBEntityMapping.SBId.in_(chunk)
+                ),
+                sb_ids,
             )
-            result = await self.conn.execute(sb_entity_sel_stmt)
-            remaining_sb_ids = [row.SBId for row in result]
             if not remaining_sb_ids:
-                unassign_stmt = (
-                    update(SandBoxes)
-                    .where(SandBoxes.SBId.in_(sb_ids))
-                    .values(Assigned=False)
+                await execute_in_chunks(
+                    self.conn,
+                    lambda chunk: (
+                        update(SandBoxes)
+                        .where(SandBoxes.SBId.in_(chunk))
+                        .values(Assigned=False)
+                    ),
+                    sb_ids,
                 )
-                await self.conn.execute(unassign_stmt)
 
     async def select_sandboxes_for_deletion(
         self,
@@ -382,6 +388,9 @@ class SandboxMetadataDB(BaseSQLDB):
 
     async def delete_sandboxes(self, sb_ids: list[int]) -> int:
         """Delete sandboxes by their IDs.
+
+        Not split into chunks: the caller passes at most
+        ``clean_delete_chunk_size`` IDs, which is capped at ``IN_CHUNK_SIZE``.
 
         Args:
             sb_ids: List of sandbox IDs to delete.

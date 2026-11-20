@@ -15,7 +15,7 @@ from diracx.core.exceptions import (
 from diracx.core.models.pilot import PilotStatus
 from diracx.core.models.search import SearchSpec, SortSpec
 
-from ..utils import BaseSQLDB
+from ..utils import BaseSQLDB, execute_in_chunks, fetch_in_chunks
 from .schema import (
     JobToPilotMapping,
     PilotAgents,
@@ -125,34 +125,35 @@ class PilotAgentsDB(BaseSQLDB):
         if not updates:
             return
 
-        columns = {col for fields in updates.values() for col in fields}
-
-        case_expressions = {
-            column: case(
-                *[
-                    (
-                        PilotAgents.__table__.c.PilotStamp == stamp,
-                        literal(
-                            fields[column],
-                            type_=PilotAgents.__table__.c[column].type,
-                        ),
-                    )
-                    for stamp, fields in updates.items()
-                    if column in fields
-                ],
-                else_=getattr(PilotAgents.__table__.c, column),
+        def build(stamps: list[str]):
+            # The CASE expressions grow with the number of pilots too, so
+            # they are built per chunk
+            chunk = {stamp: updates[stamp] for stamp in stamps}
+            columns = {col for fields in chunk.values() for col in fields}
+            case_expressions = {
+                column: case(
+                    *[
+                        (
+                            PilotAgents.__table__.c.PilotStamp == stamp,
+                            literal(
+                                fields[column],
+                                type_=PilotAgents.__table__.c[column].type,
+                            ),
+                        )
+                        for stamp, fields in chunk.items()
+                        if column in fields
+                    ],
+                    else_=getattr(PilotAgents.__table__.c, column),
+                )
+                for column in columns
+            }
+            return (
+                update(PilotAgents)
+                .values(**case_expressions)
+                .where(PilotAgents.__table__.c.PilotStamp.in_(stamps))
             )
-            for column in columns
-        }
 
-        stmt = (
-            update(PilotAgents)
-            .values(**case_expressions)
-            .where(PilotAgents.__table__.c.PilotStamp.in_(updates.keys()))
-        )
-        result = await self.conn.execute(stmt)
-
-        if result.rowcount != len(updates):
+        if await execute_in_chunks(self.conn, build, updates) != len(updates):
             raise PilotNotFoundError("at least one of the given pilots does not exist.")
 
     async def search(
@@ -217,17 +218,21 @@ class PilotAgentsDB(BaseSQLDB):
         """
         if not pilot_stamps:
             return []
-        stmt = (
-            select(JobToPilotMapping.job_id)
-            .join(
-                PilotAgents,
-                PilotAgents.pilot_id == JobToPilotMapping.pilot_id,
-            )
-            .where(PilotAgents.pilot_stamp.in_(pilot_stamps))
-            .distinct()
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(JobToPilotMapping.job_id)
+                .join(
+                    PilotAgents,
+                    PilotAgents.pilot_id == JobToPilotMapping.pilot_id,
+                )
+                .where(PilotAgents.pilot_stamp.in_(chunk))
+                .distinct()
+            ),
+            pilot_stamps,
         )
-        result = await self.conn.execute(stmt)
-        return [row[0] for row in result]
+        # DISTINCT only applies within a chunk
+        return list(dict.fromkeys(row[0] for row in rows))
 
     async def get_pilot_ids_for_job_ids(self, job_ids: list[int]) -> list[int]:
         """Return the IDs of pilots that have run any of the given jobs.
@@ -240,10 +245,14 @@ class PilotAgentsDB(BaseSQLDB):
         """
         if not job_ids:
             return []
-        stmt = (
-            select(JobToPilotMapping.pilot_id)
-            .where(JobToPilotMapping.job_id.in_(job_ids))
-            .distinct()
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: (
+                select(JobToPilotMapping.pilot_id)
+                .where(JobToPilotMapping.job_id.in_(chunk))
+                .distinct()
+            ),
+            job_ids,
         )
-        result = await self.conn.execute(stmt)
-        return [row[0] for row in result]
+        # DISTINCT only applies within a chunk
+        return list(dict.fromkeys(row[0] for row in rows))
