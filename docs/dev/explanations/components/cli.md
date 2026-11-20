@@ -17,7 +17,7 @@ For adding a new command, it needs to be added to one of the following entrypoin
 jobs = "diracx.cli.jobs:app"
 config = "diracx.cli.config:app"
 
-[project.entry-points."diracx.cli.hidden"]
+[project.entry-points."diracx.cli.internal"]
 internal = "diracx.cli.internal:app"
 ```
 

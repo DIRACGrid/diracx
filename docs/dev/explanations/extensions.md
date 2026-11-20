@@ -170,7 +170,7 @@ The CLI is managed by the `diracx.cli` entry point
 jobs = "diracx.cli.jobs:app"
 config = "diracx.cli.config:app"
 
-[project.entry-points."diracx.cli.hidden"]
+[project.entry-points."diracx.cli.internal"]
 internal = "diracx.cli.internal:app"
 ```
 

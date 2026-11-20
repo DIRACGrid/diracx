@@ -40,7 +40,7 @@ class BaseOSDB(metaclass=ABCMeta):
 
     The available OpenSearch databases are discovered by calling `BaseOSDB.available_urls`.
     This method returns a dictionary of database names to connection parameters.
-    The available databases are determined by the `diracx.dbs.os` entrypoint in
+    The available databases are determined by the `diracx.db.os` entrypoint in
     the `pyproject.toml` file and the connection parameters are taken from the
     `opensearch_dbs` field in FactorySettings, which reads from environment variables
     prefixed with `DIRACX_OS_DB_{DB_NAME}`.

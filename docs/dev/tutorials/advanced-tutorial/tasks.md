@@ -179,7 +179,7 @@ organises related tasks:
 The entry point names (e.g. `MyPilotTask`) become the task's identifier
 in the broker. The dotted path points to the class.
 
-Lock type entry point (add under `[project.entry-points."diracx.lock_object_types"]`):
+Lock type entry point (add under `[project.entry-points."diracx.tasks.lock-object-types"]`):
 
 ```toml title="gubbins-tasks/pyproject.toml"
 --8<-- "extensions/gubbins/gubbins-tasks/pyproject.toml:my_pilots_lock_entry_point"
