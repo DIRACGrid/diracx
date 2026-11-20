@@ -25,15 +25,17 @@ __all__ = [
 
 import base64
 import contextlib
-import re
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from subprocess import PIPE, Popen, check_output
+from subprocess import check_output
 from typing import TYPE_CHECKING, TypeVar
 
 import pytest
 from sqlalchemy import event
+from sqlalchemy.engine import URL, make_url
 from uuid_utils import uuid7
+
+from .utils import kubectl_port_forward
 
 if TYPE_CHECKING:
     from diracx.db.sql.utils import BaseSQLDB
@@ -47,8 +49,6 @@ SERVER_SQL_BACKENDS = ["mysql", "mariadb"]
 
 # Prefix of the databases created by the tests
 TEST_DB_PREFIX = "diracx_test_"
-
-_FORWARDING_RE = re.compile(r"Forwarding from 127\.0\.0\.1:(\d+) ->")
 
 
 @dataclass(frozen=True)
@@ -69,11 +69,12 @@ _MYSQL = _DemoDBServer(
     secret="mysql-secret",
     secret_key="mysql-root-password",
 )
+# The test MariaDB of the demo uses the same root password as MySQL
 _MARIADB = _DemoDBServer(
     name="MariaDB",
     selector="app.kubernetes.io/name=mariadb,app.kubernetes.io/component=test-database",
-    secret="test-mariadb-secret",
-    secret_key="mariadb-root-password",
+    secret="mysql-secret",
+    secret_key="mysql-root-password",
 )
 
 
@@ -86,6 +87,7 @@ def _demo_server_url(server: _DemoDBServer, demo_kubectl_env) -> Iterator[str]:
 
     The service is forwarded to a random local port, so that several
     pytest-xdist workers can each forward it without conflicting.
+    The URL is yielded as a string, with the password escaped.
 
     Root is used because the DiracX user of the demo is only granted access to
     the pre-created DiracX databases, and the tests need to create their own.
@@ -124,22 +126,15 @@ def _demo_server_url(server: _DemoDBServer, demo_kubectl_env) -> Iterator[str]:
         )
     ).decode()
 
-    # ":3306" lets kubectl choose a free local port, which it then prints
-    cmd = ["kubectl", "port-forward", f"service/{service}", ":3306"]
-    output_lines = []
-    with Popen(cmd, stdout=PIPE, stderr=PIPE, text=True, env=demo_kubectl_env) as proc:
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            output_lines.append(line)
-            if match := _FORWARDING_RE.match(line):
-                yield f"mysql+aiomysql://root:{root_password}@127.0.0.1:{match[1]}"
-                proc.kill()
-                break
-        else:
-            raise RuntimeError(
-                f"Could not start port forwarding with {cmd=}\n{output_lines=}"
-            )
-    proc.wait()
+    with kubectl_port_forward(demo_kubectl_env, f"service/{service}", 3306) as port:
+        # URL.create takes care of escaping the password
+        yield URL.create(
+            "mysql+aiomysql",
+            username="root",
+            password=root_password,
+            host="127.0.0.1",
+            port=port,
+        ).render_as_string(hide_password=False)
 
 
 @pytest.fixture(scope="session")
@@ -160,14 +155,15 @@ def _fresh_database(server_url: str) -> Iterator[str]:
     from sqlalchemy import create_engine, text
 
     db_name = f"{TEST_DB_PREFIX}{uuid7().hex}"
+    url = make_url(server_url)
     # A synchronous engine avoids depending on the event loop of the test
     engine = create_engine(
-        server_url.replace("+aiomysql", "+pymysql"), isolation_level="AUTOCOMMIT"
+        url.set(drivername="mysql+pymysql"), isolation_level="AUTOCOMMIT"
     )
     try:
         with engine.connect() as conn:
             conn.execute(text(f"CREATE DATABASE `{db_name}`"))
-        yield f"{server_url}/{db_name}"
+        yield url.set(database=db_name).render_as_string(hide_password=False)
     finally:
         with engine.connect() as conn:
             conn.execute(text(f"DROP DATABASE IF EXISTS `{db_name}`"))
