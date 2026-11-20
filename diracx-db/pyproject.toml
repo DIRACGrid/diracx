@@ -37,7 +37,7 @@ Security = "https://github.com/DIRACGrid/diracx/security/policy"
 testing = ["diracx-testing", "freezegun"]
 types = ["types-python-dateutil"]
 
-[project.entry-points."diracx.dbs.sql"]
+[project.entry-points."diracx.db.sql"]
 AuthDB = "diracx.db.sql:AuthDB"
 JobDB = "diracx.db.sql:JobDB"
 JobLoggingDB = "diracx.db.sql:JobLoggingDB"
@@ -48,7 +48,7 @@ TaskDB = "diracx.db.sql:TaskDB"
 TaskQueueDB = "diracx.db.sql:TaskQueueDB"
 TransformationDB = "diracx.db.sql:TransformationDB"
 
-[project.entry-points."diracx.dbs.os"]
+[project.entry-points."diracx.db.os"]
 JobParametersDB = "diracx.db.os:JobParametersDB"
 
 [build-system]

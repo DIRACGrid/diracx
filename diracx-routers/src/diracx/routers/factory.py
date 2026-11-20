@@ -191,7 +191,9 @@ def create_app_inner(
     # is registered for every implementation class so that vanilla DiracX
     # routers get an instance of the extension's source.
     source_classes_by_name: dict[str, list[type[AsyncCacheableSource]]] = {}
-    for entry_point in select_from_extension(group=DiracEntryPoint.CACHEABLE_SOURCES):
+    for entry_point in select_from_extension(
+        group=DiracEntryPoint.RESOURCE_STATUS_SOURCES
+    ):
         # Entry points are yielded in priority order, highest first
         source_classes_by_name.setdefault(entry_point.name, []).append(
             entry_point.load()

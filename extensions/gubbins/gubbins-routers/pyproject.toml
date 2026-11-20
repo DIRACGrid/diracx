@@ -43,7 +43,7 @@ lollygag = "gubbins.routers.lollygag:router"
 my_pilots = "gubbins.routers.my_pilots:router"
 # --8<-- [end:my_pilots_service_entry_point]
 
-[project.entry-points."diracx.access_policies"]
+[project.entry-points."diracx.routers.access-policies"]
 lollygag = "gubbins.routers.lollygag.access_policy:LollygagAccessPolicy"
 # --8<-- [start:my_pilots_access_policy_entry_point]
 my_pilots = "gubbins.routers.my_pilots:MyPilotsAccessPolicy"
