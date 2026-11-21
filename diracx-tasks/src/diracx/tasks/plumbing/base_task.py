@@ -27,6 +27,9 @@ class BaseTask:
     size: ClassVar[Size] = Size.MEDIUM
     retry_policy: ClassVar[RetryPolicyBase] = NoRetry()
     dlq_eligible: ClassVar[bool] = False
+    # How long (in seconds) the result of this task is kept in the result
+    # backend. None means the result backend's own default is used.
+    result_ttl_seconds: ClassVar[int | None] = None
 
     # ContextVar so concurrent async contexts (e.g. worker + scheduler in
     # the same process, or parallel test cases) each get their own isolated
