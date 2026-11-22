@@ -14,6 +14,14 @@
         "@autorest/*"
       ],
       "groupName": "Autorest"
+    },
+    {
+      "description": "Upper bounds in pyproject.toml are workarounds for known incompatibilities, so never raise them automatically. The updates are listed in the Dependency Dashboard, where a PR can be requested once the underlying problem is fixed.",
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchCurrentValue": "/</",
+      "dependencyDashboardApproval": true
     }
   ],
   "customManagers": [
