@@ -26219,7 +26219,7 @@ packages:
   - opensearch-py[async]
   - opentelemetry-api>=1.40.0
   - pydantic>=2.10
-  - pymysql<1.2.4
+  - pymysql<1.2.1
   - python-dateutil
   - sqlalchemy[aiomysql,aiosqlite]>=2
   - uuid-utils>=1.0.0
