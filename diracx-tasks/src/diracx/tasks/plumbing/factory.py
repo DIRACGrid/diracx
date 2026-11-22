@@ -58,7 +58,7 @@ async def _lock_watchdog(
                 )
 
 
-async def task_wrapper(  # noqa: D417
+async def task_wrapper(
     cls: type[BaseTask],
     *args: Any,
     _redis: LockCoordinator,

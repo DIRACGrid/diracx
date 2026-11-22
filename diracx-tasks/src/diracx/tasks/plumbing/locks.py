@@ -514,7 +514,9 @@ class ConcurrencyLimiter(BaseLimiter):
             redis: Redis client holding the slots.
 
         Returns:
-            True if the holder's expiry was updated.
+            Always False: ``ZADD`` with ``XX`` reports the number of members
+            added, not updated, so the result does not say whether the
+            holder's expiry was extended.
         """
         expiry_ms = int(time.time() * 1000) + self.ttl_ms
         result = await redis.zadd(self.redis_key, {self._owner_id: expiry_ms}, xx=True)
