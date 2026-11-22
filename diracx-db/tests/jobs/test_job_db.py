@@ -389,3 +389,56 @@ async def test_set_job_commands_invalid_job_id(job_db: JobDB):
     async with job_db as job_db:
         with pytest.raises(IntegrityError):
             await job_db.set_job_commands([(123456, "test_command", "")])
+
+
+@pytest.fixture
+def small_chunks(monkeypatch):
+    """Split IN lists into chunks of two so a few rows cross chunk boundaries."""
+    monkeypatch.setattr("diracx.db.sql.utils.chunks.IN_CHUNK_SIZE", 2)
+
+
+async def test_set_job_attributes_across_chunks(populated_job_db, small_chunks):
+    # Each job sets a different subset of columns, so every chunk builds its
+    # own CASE expressions
+    async with populated_job_db as db:
+        _, jobs = await db.search(["JobID"], [], [])
+        job_ids = sorted(job["JobID"] for job in jobs)[:5]
+        await db.set_job_attributes(
+            {
+                job_id: {"Owner": f"new{job_id}"}
+                if i % 2
+                else {"Status": "Killed", "Owner": f"new{job_id}"}
+                for i, job_id in enumerate(job_ids)
+            }
+        )
+        _, result = await db.search(
+            ["JobID", "Owner", "Status"],
+            [
+                {
+                    "parameter": "JobID",
+                    "operator": VectorSearchOperator.IN,
+                    "values": job_ids,
+                }
+            ],
+            [{"parameter": "JobID", "direction": SortDirection.ASC}],
+        )
+    assert result == [
+        {
+            "JobID": job_id,
+            "Owner": f"new{job_id}",
+            "Status": "New" if i % 2 else "Killed",
+        }
+        for i, job_id in enumerate(job_ids)
+    ]
+
+
+async def test_get_job_commands_across_chunks(populated_job_db, small_chunks):
+    async with populated_job_db as db:
+        _, jobs = await db.search(["JobID"], [], [])
+        job_ids = sorted(job["JobID"] for job in jobs)[:5]
+        await db.set_job_commands([(job_id, "Kill", "") for job_id in job_ids])
+        # Ordered by job ID across chunks, whatever order they are asked in
+        commands = await db.get_job_commands(reversed(job_ids))
+        # Every command is marked as sent, so a second call returns nothing
+        assert await db.get_job_commands(job_ids) == []
+    assert [command.job_id for command in commands] == job_ids

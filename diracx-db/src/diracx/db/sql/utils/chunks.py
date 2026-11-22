@@ -32,17 +32,18 @@ default. Lists of this size avoid both.
 
 
 def _sort_key(value: Any) -> Any:
-    """Order UUIDs by their bytes, which is also how ``BinaryUUID`` sorts.
+    """Compare UUIDs by their bytes, which is also how ``BinaryUUID`` sorts.
 
-    ``uuid.UUID`` and ``uuid_utils.UUID`` are both accepted as UUID values
-    but cannot be compared with each other.
+    ``uuid.UUID`` and ``uuid_utils.UUID`` are both accepted as UUID values,
+    but cannot be ordered against each other and never compare equal, even
+    for the same UUID.
     """
     if isinstance(value, (uuid.UUID, uuid_utils.UUID)):
         return value.bytes
     return value
 
 
-def _chunks(values: Iterable[T], chunk_size: int) -> Iterator[list[T]]:
+def _chunks(values: Iterable[T], chunk_size: int | None) -> Iterator[list[T]]:
     """Split the distinct ``values``, in sorted order, into chunks.
 
     Every chunk runs in the same transaction and keeps its row locks until
@@ -53,8 +54,14 @@ def _chunks(values: Iterable[T], chunk_size: int) -> Iterator[list[T]]:
     the values as that index does (integers, bytes and UUIDs; strings only
     when the collation agrees with Python on case and trailing spaces).
     """
-    for chunk in batched(sorted(set(values), key=_sort_key), chunk_size):
-        yield list(chunk)
+    # Read here rather than bound as a default, so tests can lower it
+    if chunk_size is None:
+        chunk_size = IN_CHUNK_SIZE
+    distinct: dict[Any, T] = {}
+    for value in values:
+        distinct.setdefault(_sort_key(value), value)
+    for chunk in batched(sorted(distinct), chunk_size):
+        yield [distinct[key] for key in chunk]
 
 
 async def fetch_in_chunks(
@@ -62,7 +69,7 @@ async def fetch_in_chunks(
     build: Callable[[list[T]], Select[Unpack[Ts]]],
     values: Iterable[T],
     *,
-    chunk_size: int = IN_CHUNK_SIZE,
+    chunk_size: int | None = None,
 ) -> list[Row[Unpack[Ts]]]:
     """Run a query once per chunk of ``values`` and return every row.
 
@@ -76,7 +83,8 @@ async def fetch_in_chunks(
         conn: Connection to run the queries on.
         build: Returns the query for one chunk, filtering on ``IN (chunk)``.
         values: Values to filter on; nothing is run if it is empty.
-        chunk_size: Largest number of values passed to ``build`` at once.
+        chunk_size: Largest number of values passed to ``build`` at once;
+            ``IN_CHUNK_SIZE`` if not given.
 
     Returns:
         The rows of every chunk, in chunk order.
@@ -92,7 +100,7 @@ async def execute_in_chunks(
     build: Callable[[list[T]], UpdateBase],
     values: Iterable[T],
     *,
-    chunk_size: int = IN_CHUNK_SIZE,
+    chunk_size: int | None = None,
 ) -> int:
     """Run an ``UPDATE`` or ``DELETE`` once per chunk of ``values``.
 
@@ -104,7 +112,8 @@ async def execute_in_chunks(
         build: Returns the statement for one chunk, filtering on
             ``IN (chunk)``.
         values: Values to filter on; nothing is run if it is empty.
-        chunk_size: Largest number of values passed to ``build`` at once.
+        chunk_size: Largest number of values passed to ``build`` at once;
+            ``IN_CHUNK_SIZE`` if not given.
 
     Returns:
         The sum of the row counts of every chunk.

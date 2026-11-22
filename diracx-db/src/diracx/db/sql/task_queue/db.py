@@ -226,7 +226,8 @@ class TaskQueueDB(BaseSQLDB):
             # Grouped by TQId, so each group is in a single chunk
             rows = await fetch_in_chunks(
                 self.conn,
-                lambda chunk: stmt.where(TaskQueues.TQId.in_(chunk)),
+                # stmt is reassigned below, so bind this one now
+                lambda chunk, stmt=stmt: stmt.where(TaskQueues.TQId.in_(chunk)),
                 tq_id_list,
             )
 
