@@ -768,9 +768,8 @@ class TransformationDB(BaseSQLDB):
         if not parcel_ids:
             return []
         # Lock the rows first, so the caller learns exactly what is updated.
-        # Locking in key order keeps concurrent writers from deadlocking, so
-        # the IDs are sorted the way the column compares them before being
-        # split into chunks.
+        # fetch_in_chunks sorts the IDs, and UUIDs sort in the same order as
+        # their bytes in the column, so concurrent writers lock in key order.
         rows = await fetch_in_chunks(
             self.conn,
             lambda chunk: (
@@ -780,7 +779,7 @@ class TransformationDB(BaseSQLDB):
                 .order_by(Parcels.parcel_id)
                 .with_for_update()
             ),
-            sorted(parcel_ids, key=lambda parcel_id: parcel_id.bytes),
+            parcel_ids,
         )
         moved = [row[0] for row in rows]
         if not moved:

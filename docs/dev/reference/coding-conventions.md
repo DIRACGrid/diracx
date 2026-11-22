@@ -181,7 +181,7 @@ rows = await self.conn.execute(stmt)
 
 </table>
 
-When a list of values comes from the caller, use `fetch_in_chunks` for queries and `execute_in_chunks` for `UPDATE` and `DELETE`. They split the list into chunks of `IN_CHUNK_SIZE` values, because long `IN` lists make MySQL fall back to a full table scan. Splitting is only correct when each row depends on a single value: queries with `LIMIT` or aggregates across values have to stay as a single statement. Locks taken with `FOR UPDATE` follow chunk order, so sort the values first when the lock order matters; if the locks are ordered by a column other than the one in the `IN` list, keep a single statement.
+When a list of values comes from the caller, use `fetch_in_chunks` for queries and `execute_in_chunks` for `UPDATE` and `DELETE`. They split the list into chunks of `IN_CHUNK_SIZE` values, because long `IN` lists make MySQL fall back to a full table scan. Splitting is only correct when each row depends on a single value: queries with `LIMIT` or aggregates across values have to stay as a single statement. Both helpers sort the values before splitting them, so concurrent transactions take their row locks in the same order. This only holds when the statement locks rows through an index on the column in the `IN` list; if the locks are ordered by another column, for example because the `IN` column has no index, keep a single statement.
 
 ## Structure
 
