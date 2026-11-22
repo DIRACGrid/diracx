@@ -7,7 +7,7 @@ from uuid import UUID
 # The utils module defines some boilerplate types that should be used
 # in place of the SQLAlchemy ones. Have a look at them.
 from diracx.db.sql.utils import datetime_now, str255
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -16,6 +16,9 @@ class Base(DeclarativeBase):
 
     type_annotation_map = {
         str255: String(255),
+        # CHAR(32) on MySQL and MariaDB alike; without native_uuid=False,
+        # SQLAlchemy 2.1 uses MariaDB's native UUID type from 10.7
+        UUID: Uuid(native_uuid=False),
     }
     """Maps the ``str255`` type to a ``String(255)`` column."""
 

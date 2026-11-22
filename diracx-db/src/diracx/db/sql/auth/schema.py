@@ -24,6 +24,11 @@ from diracx.db.sql.utils import (
 
 USER_CODE_LENGTH = 8
 
+# From SQLAlchemy 2.1, Uuid is a native UUID column on MariaDB >= 10.7 and is
+# bound with dashes, which no longer matches tables created as CHAR(32).
+# Keep CHAR(32) on both MySQL and MariaDB.
+uuid_char32 = Uuid(as_uuid=False, native_uuid=False)
+
 
 class Base(DeclarativeBase):
     """Declarative base with shared SQLAlchemy type mappings.
@@ -109,7 +114,7 @@ class AuthorizationFlows(Base):
     """
 
     __tablename__ = "AuthorizationFlows"
-    uuid: Mapped[UUID] = mapped_column("UUID", Uuid(as_uuid=False), primary_key=True)
+    uuid: Mapped[UUID] = mapped_column("UUID", uuid_char32, primary_key=True)
     status: Mapped[FlowStatus] = enum_column(
         "Status", FlowStatus, server_default=FlowStatus.PENDING.name
     )
@@ -152,7 +157,7 @@ class RefreshTokens(Base):
 
     __tablename__ = "RefreshTokens"
     # Refresh token attributes
-    jti: Mapped[UUID] = mapped_column("JTI", Uuid(as_uuid=False), primary_key=True)
+    jti: Mapped[UUID] = mapped_column("JTI", uuid_char32, primary_key=True)
     status: Mapped[RefreshTokenStatus] = enum_column(
         "Status", RefreshTokenStatus, server_default=RefreshTokenStatus.CREATED.name
     )

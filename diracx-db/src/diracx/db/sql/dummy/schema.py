@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from diracx.db.sql.utils import datetime_now, str255
@@ -21,6 +21,9 @@ class Base(DeclarativeBase):
 
     type_annotation_map = {
         str255: String(255),
+        # CHAR(32) on MySQL and MariaDB alike; without native_uuid=False,
+        # SQLAlchemy 2.1 uses MariaDB's native UUID type from 10.7
+        UUID: Uuid(native_uuid=False),
     }
 
 
