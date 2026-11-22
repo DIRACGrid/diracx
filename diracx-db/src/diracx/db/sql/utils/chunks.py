@@ -46,13 +46,9 @@ def _sort_key(value: Any) -> Any:
 def _chunks(values: Iterable[T], chunk_size: int | None) -> Iterator[list[T]]:
     """Split the distinct ``values``, in sorted order, into chunks.
 
-    Every chunk runs in the same transaction and keeps its row locks until
-    the end, so two transactions taking chunks of overlapping values in
-    different orders can each wait for a lock the other holds. Sorting first
-    makes every caller take the locks in the same order, as long as the
-    statement locks through an index on the ``IN`` column and Python orders
-    the values as that index does (integers, bytes and UUIDs; strings only
-    when the collation agrees with Python on case and trailing spaces).
+    Sorting makes concurrent transactions take their row locks in the same
+    order, provided the statement locks through an index on the ``IN``
+    column. UUIDs are compared by their bytes.
     """
     # Read here rather than bound as a default, so tests can lower it
     if chunk_size is None:
