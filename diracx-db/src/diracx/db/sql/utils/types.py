@@ -100,10 +100,10 @@ class BinaryUUID(types.TypeDecorator):
 
     SQLAlchemy's ``Uuid`` falls back to ``CHAR(32)`` on MySQL and on MariaDB
     before 10.7, which doubles the width of every key and of every secondary
-    index entry that carries it. Any object with a ``bytes`` attribute holding
-    the 16 raw bytes is accepted, so both ``uuid_utils.UUID`` and ``uuid.UUID`` can be
-    bound; values are returned as ``uuid_utils.UUID``, whose UUIDv7 helpers
-    (``uuid7_to_datetime``) diracx relies on.
+    index entry that carries it. Any object with a ``bytes`` attribute
+    holding the 16 raw bytes is accepted, so both ``uuid_utils.UUID`` and
+    ``uuid.UUID`` can be bound; values are returned as ``uuid_utils.UUID``,
+    whose UUIDv7 helpers (``uuid7_to_datetime``) diracx relies on.
 
     Attributes:
         impl: Fixed-width binary type the UUID is stored as.

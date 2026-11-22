@@ -526,7 +526,7 @@ class AsyncTwoLevelCache:
 def batched(iterable: Iterable[T], n: int) -> Iterator[tuple[T, ...]]:
     """Yield successive n-sized chunks from an iterable.
 
-    Backport of :func:`itertools.batched` from Python 3.12, without ``strict``.
+    Backport of :func:`itertools.batched` from Python 3.12.
 
     Args:
         iterable: The input iterable to be batched.
