@@ -122,12 +122,6 @@ async def test_get_pilot_ids_for_job_ids(pilot_db):
         assert await db.get_pilot_ids_for_job_ids([]) == []
 
 
-@pytest.fixture
-def small_chunks(monkeypatch):
-    """Split IN lists into chunks of two so a few rows cross chunk boundaries."""
-    monkeypatch.setattr("diracx.db.sql.utils.chunks.IN_CHUNK_SIZE", 2)
-
-
 async def test_update_pilot_metadata_across_chunks(pilot_db, small_chunks):
     stamps = [f"s{i}" for i in range(5)]
     async with pilot_db as db:
@@ -164,7 +158,7 @@ async def test_update_pilot_metadata_across_chunks(pilot_db, small_chunks):
 async def test_update_pilot_metadata_missing_stamp_across_chunks(
     pilot_db, small_chunks
 ):
-    # The row counts of every chunk are summed before being compared
+    # The other chunks update their rows, but the missing stamp still raises
     async with pilot_db as db:
         await db.register_pilots(pilot_stamps=["s0", "s1", "s2"], vo="lhcb")
     with pytest.raises(PilotNotFoundError):

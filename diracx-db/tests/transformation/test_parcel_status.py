@@ -268,12 +268,6 @@ async def test_empty_transitions_do_nothing(transformation_db: TransformationDB)
         )
 
 
-@pytest.fixture
-def small_chunks(monkeypatch):
-    """Split IN lists into chunks of two so a few rows cross chunk boundaries."""
-    monkeypatch.setattr("diracx.db.sql.utils.chunks.IN_CHUNK_SIZE", 2)
-
-
 async def test_set_parcel_status_across_chunks(
     transformation_db: TransformationDB, transformation_id: UUID, small_chunks
 ):

@@ -361,7 +361,7 @@ class JobDB(BaseSQLDB):
         Returns:
             Commands awaiting delivery, represented as ``JobCommand`` objects.
         """
-        # Sorted so that the per-chunk ORDER BY gives the overall order
+        # Read twice (fetch, then update), so it cannot stay an iterator
         job_ids = sorted(job_ids)
         # Get the commands
         commands = await fetch_in_chunks(

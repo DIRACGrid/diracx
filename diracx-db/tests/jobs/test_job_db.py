@@ -391,12 +391,6 @@ async def test_set_job_commands_invalid_job_id(job_db: JobDB):
             await job_db.set_job_commands([(123456, "test_command", "")])
 
 
-@pytest.fixture
-def small_chunks(monkeypatch):
-    """Split IN lists into chunks of two so a few rows cross chunk boundaries."""
-    monkeypatch.setattr("diracx.db.sql.utils.chunks.IN_CHUNK_SIZE", 2)
-
-
 async def test_set_job_attributes_across_chunks(populated_job_db, small_chunks):
     # Each job sets a different subset of columns, so every chunk builds its
     # own CASE expressions

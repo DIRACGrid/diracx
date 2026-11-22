@@ -31,8 +31,8 @@ from diracx.core.models.transformation import (
 )
 from diracx.core.utils import batched
 from diracx.db.sql.utils import (
-    IN_CHUNK_SIZE,
     BaseSQLDB,
+    chunks,
     execute_in_chunks,
     fetch_in_chunks,
     utcnow,
@@ -938,7 +938,7 @@ class TransformationDB(BaseSQLDB):
         self,
         transformation_id: AnyUUID,
         inputs: Iterable[FeederInput],
-        chunk_size: int = IN_CHUNK_SIZE,
+        chunk_size: int | None = None,
     ) -> list[UUID]:
         """Insert ``Unassigned`` inputs that are not already present by hash.
 
@@ -954,7 +954,7 @@ class TransformationDB(BaseSQLDB):
             inputs: Feeder proposals to insert, in priority order (consumed
                 once, so a generator is accepted); empty input is a no-op.
             chunk_size: Maximum proposals read, and rows inserted, per
-                ``INSERT``.
+                ``INSERT``; ``IN_CHUNK_SIZE`` if not given.
 
         Returns:
             ``input_id`` values of the rows that were inserted, in first-seen
@@ -963,6 +963,8 @@ class TransformationDB(BaseSQLDB):
         Raises:
             ValueError: If ``chunk_size`` is less than 1.
         """
+        if chunk_size is None:
+            chunk_size = chunks.IN_CHUNK_SIZE
         if chunk_size < 1:
             raise ValueError("chunk_size must be at least 1")
 
