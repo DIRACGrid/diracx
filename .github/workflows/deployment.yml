@@ -50,8 +50,9 @@ jobs:
       sha: ${{ steps.release.outputs.sha }}
     steps:
       # release-please ignores draft releases (they have no tag). Until the draft
-      # for the manifest version is published it would propose that release again,
-      # so do not run it in that window. This job has no checkout, so call the API
+      # for the manifest version is published it finds no release for that
+      # version and proposes 1.0.0 with the whole history as changelog, so do not
+      # run it in that window. This job has no checkout, so call the API
       # with an explicit repo; any API error fails the step instead of being read
       # as "no draft".
       - name: Check for an unpublished draft release

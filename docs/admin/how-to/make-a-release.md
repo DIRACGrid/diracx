@@ -25,9 +25,9 @@ Execute the following points in the presented order.
 
         A published release is immutable: `diracx.env` can no longer be added, so nothing is published to PyPI or `ghcr.io`. Deleting the release does not help, because its tag can never be reused. That version is lost, and the next release must use another one (see `Release-As` above).
 
-    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft and then removes the warning from its title.
+    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would propose 1.0.0. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft and then removes the warning from its title. **Never delete the draft**: `release-please` would then propose 1.0.0 on the next push to `main`.
 
-5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`.
+5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`. If a job fails, use **Re-run failed jobs** on that run. Run the deployment workflow manually with the tag (`workflow_dispatch`) only if the fix needs a change to `deployment.yml` (a re-run uses the workflow of the tagged commit) or the run is older than 30 days; it skips what is already published.
 
 6. Renovate opens a pull request in `diracx-charts` for the new version. Once it is merged, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml) in `diracx-charts` is successful
 
