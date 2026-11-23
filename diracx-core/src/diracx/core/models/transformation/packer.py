@@ -30,7 +30,7 @@ class PackerInput(BaseModel):
         error_count: Failed parcels the input was part of since the last reset.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
 
     input_id: UUID
     parent_input_id: UUID | None = None
@@ -40,7 +40,7 @@ class PackerInput(BaseModel):
     error_count: int = Field(default=0, ge=0)
 
 
-class ComputeParcel(BaseModel):
+class ComputeParcel(BaseModel, allow_inf_nan=False):
     """A packer's proposal for a parcel that runs as a job.
 
     Attributes:
@@ -72,7 +72,7 @@ class StorageDelta(BaseModel):
     bytes: int
 
 
-class DataParcel(BaseModel):
+class DataParcel(BaseModel, allow_inf_nan=False):
     """A packer's proposal for a parcel that runs as a request.
 
     Attributes:

@@ -15,6 +15,7 @@ from diracx.core.models.transformation import (
     ActionResult,
     ComputeParcel,
     CounterEntity,
+    DataParcel,
     DelayInput,
     InputStatus,
     PackerInput,
@@ -104,3 +105,18 @@ def test_packer_input_is_frozen():
 def test_packer_input_rejects_invalid_fields(fields):
     with pytest.raises(ValidationError):
         PackerInput(input_id=uuid7(), **fields)
+
+
+@pytest.mark.parametrize("field", ["metadata", "parameters", "requirements"])
+@pytest.mark.parametrize("bad", [math.nan, math.inf, [-math.inf]])
+def test_compute_parcel_rejects_non_finite_numbers(field, bad):
+    with pytest.raises(ValidationError):
+        ComputeParcel(input_ids=[uuid7()], **{field: {"x": bad}})
+
+
+@pytest.mark.parametrize("field", ["metadata", "request"])
+@pytest.mark.parametrize("bad", [math.nan, math.inf, [-math.inf]])
+def test_data_parcel_rejects_non_finite_numbers(field, bad):
+    fields = {"request": {"Operations": []}, field: {"x": bad}}
+    with pytest.raises(ValidationError):
+        DataParcel(input_ids=[uuid7()], **fields)
