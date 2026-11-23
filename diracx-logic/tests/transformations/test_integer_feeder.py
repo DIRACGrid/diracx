@@ -155,6 +155,18 @@ def test_load_feeder_rejects_sync_generator(monkeypatch):
         load_feeder("SyncFeeder")
 
 
+def test_load_feeder_requires_pydantic_feeder_args(monkeypatch):
+    async def untyped_feeder(*, feeder_args: dict, feeder_state, scouting):
+        yield NoMoreFeederInputs()
+
+    entry_point = SimpleNamespace(load=lambda: untyped_feeder)
+    monkeypatch.setattr(
+        feeder_module, "select_from_extension", lambda **_: [entry_point]
+    )
+    with pytest.raises(ConfigurationError, match="pydantic model"):
+        load_feeder("UntypedFeeder")
+
+
 async def test_integer_feeder_materialises_and_disables(
     transformation_db: TransformationDB,
 ):

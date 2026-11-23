@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from pydantic import BaseModel, NonNegativeInt
+from pydantic import NonNegativeInt
 
+from diracx.core.models._base import BaseModel
 from diracx.core.models.transformation import (
     FeederInput,
     NoMoreFeederInputs,
@@ -14,15 +15,11 @@ from diracx.core.models.transformation import (
 )
 
 
-class IntegerFeederArgs(BaseModel):
-    """Arguments of the monotonic integer feeder.
-
-    Attributes:
-        max_count: Exclusive upper bound on seeds; exhaustion when
-            ``next_seed >= max_count``.
-    """
+class IntegerFeederArgs(BaseModel, allow_inf_nan=False):
+    """Arguments of the monotonic integer feeder."""
 
     max_count: NonNegativeInt = 0
+    """Exclusive upper bound on seeds; exhaustion when ``next_seed >= max_count``."""
 
 
 async def integer_feeder(

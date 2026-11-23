@@ -103,7 +103,8 @@ async def materialise_feeder_yields(
         transformation_id: Transformation being fed.
         yields: Async iterable of proposal objects from a feeder plugin.
         transformation_db: DB instance; must not already be in a transaction
-            (this function opens one per batch).
+            (this function opens one per batch). A task obtains it with
+            ``Annotated[TransformationDB, NoTransaction()]``.
         input_batch_size: Max ``FeederInput`` rows buffered before an insert-only
             commit. Must be >= 1.
 
