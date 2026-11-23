@@ -44,10 +44,6 @@ jobs:
       contents: write  # release commit and draft GitHub release
       issues: write  # release labels
       pull-requests: write  # open and update the release PR
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
-      sha: ${{ steps.release.outputs.sha }}
     steps:
       # release-please ignores draft releases (they have no tag). Until the draft
       # for the manifest version is published it finds no release for that
@@ -77,97 +73,6 @@ jobs:
           fi
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         if: steps.pending.outputs.draft != 'true'
-        id: release
-      # A release published without diracx.env can never get it (immutable) and
-      # its tag can never be reused, so warn in the title until release-env has
-      # uploaded it. continue-on-error: a failure here must not skip release-env.
-      - name: Mark the draft as not ready
-        if: steps.release.outputs.release_created == 'true'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
-        run: |
-          gh release edit "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
-            --title "$RELEASE_TAG - DO NOT PUBLISH (waiting for diracx.env)"
-
-  # Generate and validate the public example and upload it to the draft release:
-  # releases are immutable, so assets cannot be added once it is published.
-  release-env:
-    name: Release env asset
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # upload the diracx.env asset to the draft release
-    env:
-      RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
-      RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
-    steps:
-      - name: Checkout exact DIRACX release commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ needs.release-please.outputs.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Resolve current canonical charts commit
-        id: charts
-        shell: bash
-        run: |
-          refs="$(git ls-remote --exit-code https://github.com/DIRACGrid/diracx-charts.git refs/heads/master)" || exit 1
-          ref_pattern=$'^([0-9a-f]{40})\trefs/heads/master$'
-          if [[ "$refs" =~ $ref_pattern ]]; then
-            charts_sha="${BASH_REMATCH[1]}"
-          else
-            echo 'Expected one canonical diracx-charts master commit' >&2
-            exit 1
-          fi
-          echo "sha=$charts_sha" >> "$GITHUB_OUTPUT"
-      - name: Checkout exact diracx-charts commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: DIRACGrid/diracx-charts
-          ref: ${{ steps.charts.outputs.sha }}
-          path: diracx-charts
-          persist-credentials: false
-      - name: Verify release identity
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CHARTS_SHA: ${{ steps.charts.outputs.sha }}
-        run: |
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$(git -C diracx-charts rev-parse HEAD)" = "$CHARTS_SHA"
-          # The tag does not exist yet: check the draft release points at this commit.
-          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = "true"
-          test "$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)" = "$RELEASE_SHA"
-      - name: Generate and validate public example
-        env:
-          CHARTS_SHA: ${{ steps.charts.outputs.sha }}
-        run: |
-          python3 scripts/generate_release_env.py \
-            --charts-root diracx-charts --release-tag "$RELEASE_TAG" \
-            --source-commit "$RELEASE_SHA" --charts-commit "$CHARTS_SHA" \
-            --output .env
-          python3 scripts/generate_release_env.py \
-            --charts-root diracx-charts --release-tag "$RELEASE_TAG" \
-            --source-commit "$RELEASE_SHA" --charts-commit "$CHARTS_SHA" \
-            --output .env --validate
-      - name: Upload validated release asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
-          if printf '%s\n' "$assets" | grep -Fxq diracx.env; then
-            echo 'diracx.env already exists on this release' >&2
-            exit 1
-          fi
-          cp .env diracx.env
-          cmp .env diracx.env
-          gh release upload "$RELEASE_TAG" diracx.env
-      - name: Mark the draft as ready to publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG"
 
   build:
     name: Build distribution 📦
@@ -213,20 +118,12 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
           RELEASE_CREATED: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -xeuo pipefail
           if [[ "$RELEASE_CREATED" == 'true' ]]; then
             # A manual dispatch accepts any ref; only publish a real release tag.
             if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || ! git tag --points-at HEAD | grep -Fx "$RELEASE_TAG" >/dev/null; then
               echo "::error::$RELEASE_TAG is not a release tag on the checked-out commit"
-              exit 1
-            fi
-            # The release is immutable once published: it must already carry
-            # diracx.env, made for the commit the tag points at.
-            gh release download "$RELEASE_TAG" --pattern diracx.env --dir "$RUNNER_TEMP"
-            if ! grep -Fxq "# DIRACX source: $(git rev-parse HEAD)" "$RUNNER_TEMP/diracx.env"; then
-              echo "::error::diracx.env of $RELEASE_TAG was not generated for the tagged commit"
               exit 1
             fi
             echo "Deploying release $RELEASE_TAG"

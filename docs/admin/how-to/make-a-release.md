@@ -17,15 +17,11 @@ Execute the following points in the presented order.
 
     - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
 
-3. Close and reopen the `release-please` PR to run its checks (see the [reference](../reference/making-releases.md#diracx-release)), wait for them to pass, then merge it. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
+3. Close and reopen the `release-please` PR to run its checks (see the [reference](../reference/making-releases.md#diracx-release)), wait for them to pass, then merge it. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases). No tag exists yet.
 
-4. As a release manager, wait until the draft is ready: its title is only the version (for example `v0.8.0`, not `v0.8.0 - DO NOT PUBLISH (waiting for diracx.env)`) and `diracx.env` is attached. Then publish it without changing its target commit.
+4. As a release manager, publish the draft without changing its target commit.
 
-    !!! danger "Never publish a draft that is not ready"
-
-        A published release is immutable: `diracx.env` can no longer be added, so nothing is published to PyPI or `ghcr.io`. Deleting the release does not help, because its tag can never be reused. That version is lost, and the next release must use another one (see `Release-As` above).
-
-    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would propose 1.0.0. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft and then removes the warning from its title. **Never delete the draft**: `release-please` would then propose 1.0.0 on the next push to `main`.
+    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would propose 1.0.0. **Never delete the draft**, for the same reason.
 
 5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`. If a job fails, use **Re-run failed jobs** on that run. Run the deployment workflow manually with the tag (`workflow_dispatch`) only if the fix needs a change to `deployment.yml` (a re-run uses the workflow of the tagged commit) or the run is older than 30 days; it skips what is already published.
 

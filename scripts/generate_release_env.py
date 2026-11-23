@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build the public release .env example from reviewed source contracts.
+"""Build the public `diracx.env` example for installations without Kubernetes.
 
-Only names are read from charts and settings source. Output values come solely
-from the explicit policy below; neither chart values nor runtime values flow to
-the artifact. New chart names require a reviewed policy update.
+Only names are read from the DiracX sources (settings classes and database
+entry points). Output values come solely from the explicit policy below. A new
+database, or a policy name the sources no longer know, fails until the policy
+is updated.
 """
 
 from __future__ import annotations
@@ -12,13 +13,13 @@ import argparse
 import ast
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 NAME_RE = re.compile(r"DIRACX_[A-Z0-9_]+\Z")
-COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
-TAG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
-YAML_KEY_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_]*):(?:\s|$)")
+DB_PREFIXES = ("DIRACX_DB_URL_", "DIRACX_OS_DB_")
+EXAMPLE_PATH = Path("docs/admin/how-to/install-without-kubernetes/diracx.env.example")
 DOTENV_LINE_RE = re.compile(r'^(DIRACX_[A-Z0-9_]+)=("(?:[^"\\]|\\.)*")$')
 
 
@@ -28,8 +29,8 @@ class Rule:
     example: str
 
 
-# Every current chart-derived name has one reviewed output rule. A new DB or
-# setting name fails until a rule is deliberately added here.
+# Every name in the example has one reviewed output rule. A new database fails
+# until a rule is deliberately added here.
 POLICY_ENTRIES = (
     (
         "DIRACX_CONFIG_BACKEND_URL",
@@ -122,14 +123,14 @@ POLICY_ENTRIES = (
         ),
     ),
     (
-        "DIRACX_OS_DB_JOBPARAMETERSDB",
+        "DIRACX_DB_URL_TRANSFORMATIONDB",
         Rule(
-            "json_placeholder",
-            '{"hosts":"USER:PASSWORD@OPENSEARCH_HOST:9200","use_ssl":true,"verify_certs":true}',
+            "url_placeholder",
+            "mysql+aiomysql://USER:PASSWORD@DB_HOST:3306/TransformationDB",
         ),
     ),
     (
-        "DIRACX_OS_DB_PILOTLOGSDB",
+        "DIRACX_OS_DB_JOBPARAMETERSDB",
         Rule(
             "json_placeholder",
             '{"hosts":"USER:PASSWORD@OPENSEARCH_HOST:9200","use_ssl":true,"verify_certs":true}',
@@ -142,7 +143,7 @@ CLASS_SOURCES = {
     "AuthSettings": "diracx-core/src/diracx/core/settings.py",
     "SandboxStoreSettings": "diracx-core/src/diracx/core/settings.py",
     "FactorySettings": "diracx-core/src/diracx/core/settings.py",
-    "OTELSettings": "diracx-routers/src/diracx/routers/otel.py",
+    "OTELSettings": "diracx-core/src/diracx/core/settings.py",
 }
 
 
@@ -166,33 +167,6 @@ def policy_map(entries: tuple[tuple[str, Rule], ...]) -> dict[str, Rule]:
             json.loads(rule.example)
         policy[name] = rule
     return policy
-
-
-def yaml_keys(path: Path, parent: tuple[str, ...]) -> set[str]:
-    """Read key names at a known YAML path, never its values or Jinja tokens."""
-    stack: list[tuple[int, str]] = []
-    found: set[str] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.lstrip(" ")
-        if not stripped or stripped.startswith("#"):
-            continue
-        indent = len(line) - len(stripped)
-        while stack and stack[-1][0] >= indent:
-            stack.pop()
-        match = YAML_KEY_RE.match(stripped)
-        if tuple(item[1] for item in stack) == parent and not match:
-            raise ValueError(f"cannot parse chart key at {'.'.join(parent)} in {path}")
-        if not match:
-            continue
-        key = match.group(1)
-        if tuple(item[1] for item in stack) == parent:
-            if key in found:
-                raise ValueError(f"duplicate chart key {key} in {path}")
-            found.add(key)
-        stack.append((indent, key))
-    if not found:
-        raise ValueError(f"missing chart keys at {'.'.join(parent)} in {path}")
-    return found
 
 
 def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
@@ -265,65 +239,33 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
     return names, dynamic_prefixes
 
 
-def source_inventory(source_root: Path, charts_root: Path) -> set[str]:
-    demo = charts_root / "demo/values.tpl.yaml"
-    defaults = charts_root / "diracx/values.yaml"
-    ci = charts_root / "demo/ci_values.yaml"
-    settings = set().union(
-        *(yaml_keys(path, ("diracx", "settings")) for path in (demo, defaults, ci))
+def database_names(source_root: Path) -> set[str]:
+    """Return the env names of the databases registered by diracx-db."""
+    pyproject = tomllib.loads(
+        (source_root / "diracx-db/pyproject.toml").read_text(encoding="utf-8")
     )
-    if any(not NAME_RE.fullmatch(name) for name in settings):
-        raise ValueError("malformed chart DIRACX setting name")
-    sql_dbs = yaml_keys(demo, ("diracx", "sqlDbs", "dbs"))
-    os_dbs = yaml_keys(demo, ("diracx", "osDbs", "dbs"))
-    if any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*DB", db) for db in sql_dbs | os_dbs):
-        raise ValueError("unrecognized chart database name")
-    template_root = charts_root / "diracx/templates/diracx"
-    template_names = set().union(
-        *(
-            set(re.findall(r"DIRACX_[A-Z0-9_]+", path.read_text(encoding="utf-8")))
-            for path in template_root.rglob("*")
-            if path.is_file()
-        )
-    )
-    if template_names != {
-        "DIRACX_CA_PATH",
-        "DIRACX_URL",
-        "DIRACX_DB_URL_",
-        "DIRACX_OS_DB_",
-        "DIRACX_SERVICE_AUTH_STATE_KEY",
-        "DIRACX_TASKS_REDIS_URL",
-    }:
-        raise ValueError(
-            f"chart template env-name construction changed: {sorted(template_names)}"
-        )
-    init_script = (template_root / "init-secrets/_init-secrets.sh.tpl").read_text(
-        encoding="utf-8"
-    )
-    for marker in (
-        "DIRACX_DB_URL_{{ $dbName | upper }}",
-        "DIRACX_OS_DB_{{ $osDbName | upper }}",
-    ):
-        prefix = marker.split("{{", 1)[0]
-        if marker not in init_script or init_script.count(prefix) != init_script.count(
-            marker
-        ):
-            raise ValueError(f"chart dynamic name contract changed: {marker}")
+    entry_points = pyproject["project"]["entry-points"]
+    return {f"DIRACX_DB_URL_{db.upper()}" for db in entry_points["diracx.dbs.sql"]} | {
+        f"DIRACX_OS_DB_{db.upper()}" for db in entry_points["diracx.dbs.os"]
+    }
+
+
+def check_policy(source_root: Path, policy: dict[str, Rule]) -> None:
+    """Fail when the policy and the DiracX sources disagree."""
     recognized, dynamic = schema_names(source_root)
-    if not settings <= recognized:
-        raise ValueError(
-            f"chart settings absent from DIRACX schema: {sorted(settings - recognized)}"
-        )
-    if not {"DIRACX_DB_URL_", "DIRACX_OS_DB_"} <= dynamic:
+    if not set(DB_PREFIXES) <= dynamic:
         raise ValueError("DIRACX database alias construction changed")
-    if not {"DIRACX_SERVICE_AUTH_STATE_KEY", "DIRACX_TASKS_REDIS_URL"} <= recognized:
-        raise ValueError("DIRACX dynamic secret aliases changed")
-    return (
-        settings
-        | {"DIRACX_SERVICE_AUTH_STATE_KEY", "DIRACX_TASKS_REDIS_URL"}
-        | {f"DIRACX_DB_URL_{db.upper()}" for db in sql_dbs}
-        | {f"DIRACX_OS_DB_{db.upper()}" for db in os_dbs}
-    )
+    databases = database_names(source_root)
+    listed = {name for name in policy if name.startswith(DB_PREFIXES)}
+    unknown = sorted(policy.keys() - listed - recognized)
+    missing = sorted(databases - listed)
+    stale = sorted(listed - databases)
+    if unknown or missing or stale:
+        raise ValueError(
+            "diracx.env policy/source drift: "
+            f"unknown settings={unknown}; databases without a rule={missing}; "
+            f"rules for removed databases={stale}"
+        )
 
 
 def parse_dotenv(data: bytes) -> dict[str, str]:
@@ -342,72 +284,41 @@ def parse_dotenv(data: bytes) -> dict[str, str]:
 
 
 def build_env(
-    source_root: Path,
-    charts_root: Path,
-    release_tag: str,
-    source_commit: str,
-    charts_commit: str,
-    entries: tuple[tuple[str, Rule], ...] = POLICY_ENTRIES,
+    source_root: Path, entries: tuple[tuple[str, Rule], ...] = POLICY_ENTRIES
 ) -> bytes:
-    if not TAG_RE.fullmatch(release_tag) or not COMMIT_RE.fullmatch(source_commit):
-        raise ValueError("invalid release tag or DIRACX commit")
-    if not COMMIT_RE.fullmatch(charts_commit):
-        raise ValueError("invalid charts commit")
-    expected = source_inventory(source_root, charts_root)
     policy = policy_map(entries)
-    if expected != policy.keys():
-        unclassified = sorted(expected - policy.keys())
-        stale = sorted(policy.keys() - expected)
-        raise ValueError(
-            f"release env policy/source drift: unclassified={unclassified}; stale={stale}"
-        )
+    check_policy(source_root, policy)
     lines = [
-        "# DIRACX public container configuration example; save as .env and replace placeholders.",
-        "# This is a template, not a runtime environment dump.",
-        f"# DIRACX release: {release_tag}",
-        f"# DIRACX source: {source_commit}",
-        f"# diracx-charts source: {charts_commit}",
+        "# DiracX container configuration example: save as diracx.env and replace the placeholders.",
+        "# Generated by scripts/generate_release_env.py, do not edit by hand.",
     ]
-    for name in sorted(expected):
+    for name in sorted(policy):
         rule = policy[name]
         lines.append(f"# {rule.classification}")
         lines.append(f"{name}={json.dumps(rule.example, ensure_ascii=True)}")
     data = ("\n".join(lines) + "\n").encode("utf-8")
-    if parse_dotenv(data) != {name: policy[name].example for name in expected}:
+    if parse_dotenv(data) != {name: rule.example for name, rule in policy.items()}:
         raise ValueError("dotenv serialization did not round-trip")
     return data
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--charts-root", type=Path)
-    parser.add_argument("--release-tag")
-    parser.add_argument("--source-commit")
-    parser.add_argument("--charts-commit")
-    parser.add_argument("--output", type=Path, default=Path(".env"))
-    parser.add_argument("--validate", action="store_true")
-    args = parser.parse_args()
-    if not all(
-        (args.charts_root, args.release_tag, args.source_commit, args.charts_commit)
-    ):
-        parser.error(
-            "--charts-root, --release-tag, --source-commit, and --charts-commit are required"
-        )
-    source_root = Path(__file__).resolve().parent.parent
-    data = build_env(
-        source_root,
-        args.charts_root,
-        args.release_tag,
-        args.source_commit,
-        args.charts_commit,
+    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="fail if the file differs, instead of writing it",
     )
+    args = parser.parse_args()
+    source_root = Path(__file__).resolve().parent.parent
+    output = args.output or source_root / EXAMPLE_PATH
+    data = build_env(source_root)
     if args.validate:
-        if args.output.read_bytes() != data:
-            raise ValueError(
-                "existing .env differs from validated source-derived bytes"
-            )
+        if output.read_bytes() != data:
+            raise ValueError(f"{output} is out of date: run {Path(__file__).name}")
     else:
-        args.output.write_bytes(data)
+        output.write_bytes(data)
 
 
 if __name__ == "__main__":

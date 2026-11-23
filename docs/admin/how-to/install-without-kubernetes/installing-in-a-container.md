@@ -33,6 +33,8 @@ Then copy content of /tmp/jwks.json to file outside of the container to be mappe
 
 ### diracx.env
 
+Start from the [example file](diracx.env.example): it lists the variables to set, with placeholders to replace.
+
 At this point you need to have created the `DiracXAuthDB` and the `jwks.json` (see above).
 Now you need two further keys:
 

@@ -60,9 +60,7 @@ Releases are managed by `ReleasePlease`, which runs in the deployment workflow w
 
     Changes made with `GITHUB_TOKEN` trigger no workflows, so no CI runs on the release pull request. release-please updates that pull request after every merge to `main`, and each update removes its checks. To get checks, close and reopen it **right before merging**, then wait for them to pass.
 
-    Right after creating the draft, the same job renames it `vX.Y.Z - DO NOT PUBLISH (waiting for diracx.env)`. The `Release env asset` job changes it to `vX.Y.Z` once it has validated and attached `diracx.env`: only then may it be published. A release published without `diracx.env` can never get it, and its tag cannot be reused.
-
-    While the draft is not published, the deployment workflow skips `ReleasePlease`. Before uploading to PyPI, it checks that the draft has `diracx.env` and that the tag points at the commit it was made for.
+    While the draft is not published, the deployment workflow skips `ReleasePlease`.
 
 A new release creates:
 

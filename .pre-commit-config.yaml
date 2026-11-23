@@ -98,6 +98,15 @@ repos:
 
   - repo: local
     hooks:
+      - id: diracx-env-example
+        name: Generate the diracx.env example
+        entry: python scripts/generate_release_env.py
+        language: python
+        pass_filenames: false
+        files: ^(scripts/generate_release_env\.py|diracx-core/src/diracx/core/settings\.py|diracx-db/pyproject\.toml|docs/admin/how-to/install-without-kubernetes/diracx\.env\.example)$
+
+  - repo: local
+    hooks:
       - id: generate-pixi-docs
         name: Generate pixi tasks documentation
         entry: pixi run -e default python scripts/generate_pixi_tasks_doc.py
