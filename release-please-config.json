@@ -3,6 +3,7 @@
   "release-type": "simple",
   "include-component-in-tag": false,
   "draft": true,
+  "bump-minor-pre-major": true,
   "packages": {
     ".": {}
   }

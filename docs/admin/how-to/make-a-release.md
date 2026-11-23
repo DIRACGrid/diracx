@@ -17,7 +17,7 @@ Execute the following points in the presented order.
 
     - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
 
-3. Merge the `release-please` PR. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
+3. Close and reopen the `release-please` PR to run its checks (see the [reference](../reference/making-releases.md#diracx-release)), wait for them to pass, then merge it. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
 
 4. As a release manager, check that `diracx.env` is attached to the draft, then publish it without changing its target commit. Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft.
 

@@ -56,11 +56,18 @@ jobs:
       # as "no draft".
       - name: Check for an unpublished draft release
         id: pending
+        # bash -eo pipefail: without pipefail a failed `gh api` in the pipeline
+        # below is hidden by jq, which exits 0 on empty input.
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$GITHUB_SHA" \
-            --jq .content | base64 -d | jq -r '."."')"
+            --jq .content | base64 -d | jq -er '."."')"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Unexpected version in .release-please-manifest.json: '$version'"
+            exit 1
+          fi
           drafts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             --jq ".[] | select(.draft and .tag_name == \"v$version\") | .id")"
           if [[ -n "$drafts" ]]; then
@@ -298,10 +305,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A re-publish (workflow_dispatch or re-run) only fills in what is missing:
+      # an image already pushed for this tag is kept, not replaced by a new
+      # build with another digest. A failed lookup counts as missing.
+      - name: Check existing release images
+        id: existing
+        if: ${{ needs.build.outputs.create-release == 'true' }}
+        env:
+          TAG: ${{ needs.build.outputs.new-version }}
+        run: |
+          for img in services tasks client; do
+            if docker buildx imagetools inspect "ghcr.io/diracgrid/diracx/$img:$TAG" >/dev/null 2>&1; then
+              echo "::notice::ghcr.io/diracgrid/diracx/$img:$TAG already exists, not rebuilding it"
+              echo "$img=true" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
       - name: Build and push services (release)
         id: build-services-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.services != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
@@ -310,7 +333,7 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest services (release)
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.services != 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/services
@@ -319,7 +342,7 @@ jobs:
       - name: Build and push tasks (release)
         id: build-tasks-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.tasks != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
@@ -328,7 +351,7 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest tasks (release)
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.tasks != 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/tasks
@@ -337,7 +360,7 @@ jobs:
       - name: Build and push client (release)
         id: build-client-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.client != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
@@ -346,7 +369,7 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest client (release)
-        if: ${{ needs.build.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.client != 'true' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/client
