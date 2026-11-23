@@ -19,7 +19,13 @@ Execute the following points in the presented order.
 
 3. Close and reopen the `release-please` PR to run its checks (see the [reference](../reference/making-releases.md#diracx-release)), wait for them to pass, then merge it. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
 
-4. As a release manager, check that `diracx.env` is attached to the draft, then publish it without changing its target commit. Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft.
+4. As a release manager, wait until the draft is ready: its title is only the version (for example `v0.8.0`, not `v0.8.0 - DO NOT PUBLISH (waiting for diracx.env)`) and `diracx.env` is attached. Then publish it without changing its target commit.
+
+    !!! danger "Never publish a draft that is not ready"
+
+        A published release is immutable: `diracx.env` can no longer be added, so nothing is published to PyPI or `ghcr.io`. Deleting the release does not help, because its tag can never be reused. That version is lost, and the next release must use another one (see `Release-As` above).
+
+    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft and then removes the warning from its title.
 
 5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`.
 

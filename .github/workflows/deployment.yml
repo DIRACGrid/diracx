@@ -77,6 +77,18 @@ jobs:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         if: steps.pending.outputs.draft != 'true'
         id: release
+      # A release published without diracx.env can never get it (immutable) and
+      # its tag can never be reused, so warn in the title until release-env has
+      # uploaded it. continue-on-error: a failure here must not skip release-env.
+      - name: Mark the draft as not ready
+        if: steps.release.outputs.release_created == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          gh release edit "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
+            --title "$RELEASE_TAG - DO NOT PUBLISH (waiting for diracx.env)"
 
   # Generate and validate the public example and upload it to the draft release:
   # releases are immutable, so assets cannot be added once it is published.
@@ -151,6 +163,10 @@ jobs:
           cp .env diracx.env
           cmp .env diracx.env
           gh release upload "$RELEASE_TAG" diracx.env
+      - name: Mark the draft as ready to publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG"
 
   build:
     name: Build distribution 📦
