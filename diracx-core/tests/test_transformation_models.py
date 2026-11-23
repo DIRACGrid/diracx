@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 from pydantic import ValidationError
 from uuid_utils.compat import uuid7
@@ -95,6 +97,8 @@ def test_packer_input_is_frozen():
         {"lfn": "/vo/file", "lfn_size": -1},
         {"error_count": -1},
         {"descriptor": {"not_json": object()}},
+        {"descriptor": {"weight": math.nan}},
+        {"descriptor": {"weight": math.inf}},
     ],
 )
 def test_packer_input_rejects_invalid_fields(fields):

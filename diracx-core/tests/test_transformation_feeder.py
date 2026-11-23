@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -57,7 +58,9 @@ def test_lfn_size_non_negative(lfn_size, ok):
             FeederInput(lfn="/a", lfn_size=lfn_size)
 
 
-@pytest.mark.parametrize("bad", [datetime.now(UTC), {1, 2}, object()])
+@pytest.mark.parametrize(
+    "bad", [datetime.now(UTC), {1, 2}, object(), math.nan, math.inf, [math.nan]]
+)
 def test_descriptor_rejects_non_json_values(bad):
     with pytest.raises(ValidationError):
         FeederInput(descriptor={"x": bad})
@@ -92,3 +95,9 @@ def test_set_feeder_state_requires_a_dict():
         SetFeederState()
     with pytest.raises(ValidationError):
         SetFeederState(state=[1, 2])
+
+
+@pytest.mark.parametrize("bad", [math.nan, -math.inf, {"nested": math.inf}])
+def test_set_feeder_state_rejects_non_finite_numbers(bad):
+    with pytest.raises(ValidationError):
+        SetFeederState(state={"next_seed": bad})

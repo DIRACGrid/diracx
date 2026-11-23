@@ -91,8 +91,9 @@ def _check_contract(
 ) -> None:
     """Raise if ``plugin`` cannot be called with exactly the contract's keywords.
 
-    Every contract keyword must be accepted (a ``**kwargs`` accepts them all),
-    and any other parameter must have a default since the core never passes it:
+    Every contract keyword must be accepted (a ``**kwargs`` accepts them all)
+    and must not default to ``INJECTED``, since the core always passes it. Any
+    other parameter must have a default since the core never passes it:
     ``INJECTED`` for what the core supplies, a plain value otherwise.
     """
     params = inspect.signature(plugin).parameters
@@ -110,6 +111,14 @@ def _check_contract(
         raise ConfigurationError(
             f"{kind.name.capitalize()} {name!r} does not accept the keyword "
             f"parameter(s) {', '.join(missing)} required by the {kind.name} contract"
+        )
+    marked = sorted(
+        p for p in expected if p in params and params[p].default is INJECTED
+    )
+    if marked:
+        raise ConfigurationError(
+            f"{kind.name.capitalize()} {name!r} marks the contract parameter(s) "
+            f"{', '.join(marked)} as INJECTED; the core always passes them"
         )
     unexpected = sorted(
         p.name

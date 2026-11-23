@@ -17,7 +17,7 @@ from ..types import UTCDatetime
 from .plugins import ArgsT_contra
 
 
-class FeederInput(BaseModel):
+class FeederInput(BaseModel, allow_inf_nan=False):
     """One input proposed by a feeder for insertion into ``Inputs``.
 
     May be a file (``lfn`` and ``lfn_size`` both set), a seed/parameter set
@@ -42,7 +42,7 @@ class FeederInput(BaseModel):
         return self
 
 
-class SetFeederState(BaseModel):
+class SetFeederState(BaseModel, allow_inf_nan=False):
     """Bookmark update; commits with inputs yielded before it in the same batch."""
 
     state: dict[str, JsonValue]

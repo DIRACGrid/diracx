@@ -37,15 +37,19 @@ class PluginArgs(BaseModel):
     The plugin defines the fields; each transformation stores its own values,
     set by the workgraph's submitter and possibly changed later by hooks. An
     unknown key is an error rather than ignored, so a typo cannot silently fall
-    back to a default, and instances are immutable so a plugin cannot alter the
-    arguments it was given.
+    back to a default; NaN and infinity are refused, as they cannot be stored
+    as JSON; and instances are immutable so a plugin cannot alter the arguments
+    it was given.
     """
 
     # use_attribute_docstrings is already inherited from the diracx BaseModel;
     # it is repeated to make explicit that field docstrings become the argument
     # descriptions shown to workflow authors.
     model_config = ConfigDict(
-        use_attribute_docstrings=True, extra="forbid", frozen=True
+        use_attribute_docstrings=True,
+        extra="forbid",
+        frozen=True,
+        allow_inf_nan=False,
     )
 
 

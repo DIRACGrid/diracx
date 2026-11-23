@@ -81,6 +81,17 @@ async def packer_missing_flush(
     yield ComputeParcel(input_ids=[])
 
 
+async def packer_injecting_flush(
+    *,
+    packer_args: GroupArgs,
+    inputs,
+    flush: bool = INJECTED,
+    feeder_active: bool,
+    input_overview,
+):
+    yield ComputeParcel(input_ids=[])
+
+
 async def packer_with_kwargs(*, packer_args: GroupArgs, **kwargs):
     yield ComputeParcel(input_ids=[])
 
@@ -159,6 +170,12 @@ def test_load_rejects_missing_core_param(register):
     register(packer_missing_flush)
     with pytest.raises(ConfigurationError, match="flush"):
         load_plugin(PACKER_KIND, "Broken")
+
+
+def test_load_rejects_injected_core_param(register):
+    register(packer_injecting_flush)
+    with pytest.raises(ConfigurationError, match="flush as INJECTED"):
+        load_plugin(PACKER_KIND, "Injecting")
 
 
 def test_load_rejects_extra_required_param(register):
