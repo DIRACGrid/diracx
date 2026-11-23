@@ -1,25 +1,31 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
-  "minimumReleaseAge": "7 days",
-  "lockFileMaintenance": { "enabled": true },
+  "extends": [
+    "local>DIRACGrid/.github//renovate-config"
+  ],
   "packageRules": [
     {
-      "description": "Group pixi lockfile maintenance into a single PR",
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "matchManagers": ["pixi"],
-      "groupName": "pixi lockfile maintenance"
-    },
-    {
-      "description": "Group all GitHub Actions updates together",
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions"
-    },
-    {
       "description": "Group all Autorest updates together",
-      "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["autorest", "@autorest/*"],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "autorest",
+        "@autorest/*"
+      ],
       "groupName": "Autorest"
+    },
+    {
+      "description": "The gubbins chart's diracx pin is only an example and CI replaces it with diracx-charts master, so batch the bumps monthly.",
+      "matchManagers": [
+        "helmv3"
+      ],
+      "matchPackageNames": [
+        "diracx"
+      ],
+      "schedule": [
+        "* * 1 * *"
+      ]
     }
   ],
   "customManagers": [

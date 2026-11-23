@@ -48,6 +48,8 @@ select = [
   "INP",    # flake8-no-implicit-namespace-packages
   "RUF022",
   "TID251", # flake8-tidy-imports.banned-api
+  "G",      # flake8-logging-format
+  "LOG",    # flake8-logging
 ]
 ignore = [
   "B905",
