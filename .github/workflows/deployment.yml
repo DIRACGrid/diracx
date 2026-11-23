@@ -48,9 +48,23 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
       sha: ${{ steps.release.outputs.sha }}
-      upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
+      # release-please ignores draft releases (they have no tag). Until the draft
+      # for the manifest version is published it would propose that release again,
+      # so do not run it in that window.
+      - name: Check for an unpublished draft release
+        id: pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$GITHUB_SHA" \
+            --jq .content | base64 -d | jq -r '."."')"
+          if [[ "$(gh release view "v$version" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
+            echo "::warning::Draft release v$version is not published yet: release-please skipped"
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        if: steps.pending.outputs.draft != 'true'
         id: release
 
   # Generate and validate the public example and upload it to the draft release:
@@ -171,12 +185,20 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
           RELEASE_CREATED: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -xeuo pipefail
           if [[ "$RELEASE_CREATED" == 'true' ]]; then
             # A manual dispatch accepts any ref; only publish a real release tag.
-            if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || [[ "$(git describe --exact-match --tags HEAD)" != "$RELEASE_TAG" ]]; then
+            if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || ! git tag --points-at HEAD | grep -Fx "$RELEASE_TAG" >/dev/null; then
               echo "::error::$RELEASE_TAG is not a release tag on the checked-out commit"
+              exit 1
+            fi
+            # The release is immutable once published: it must already carry
+            # diracx.env, made for the commit the tag points at.
+            gh release download "$RELEASE_TAG" --pattern diracx.env --dir "$RUNNER_TEMP"
+            if ! grep -Fxq "# DIRACX source: $(git rev-parse HEAD)" "$RUNNER_TEMP/diracx.env"; then
+              echo "::error::diracx.env of $RELEASE_TAG was not generated for the tagged commit"
               exit 1
             fi
             echo "Deploying release $RELEASE_TAG"
@@ -198,8 +220,9 @@ jobs:
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: diracx-whl
-          path: dist/diracx*.whl
+          # Wheels and sdists: both are published to PyPI.
+          name: diracx-dist
+          path: dist/diracx*
           retention-days: 5
 
   # Only this job can get a PyPI token; the build above runs without it.
@@ -219,7 +242,7 @@ jobs:
       - name: Download the distribution packages
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: diracx-whl
+          name: diracx-dist
           path: dist/
       # Use trusted publisher for pypi
       # https://docs.pypi.org/trusted-publishers/
@@ -238,6 +261,11 @@ jobs:
       - build
       - publish
     if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
+    # Each push to main builds the :dev images: a newer push cancels the older
+    # build, so an older commit cannot overwrite :dev. Releases are never cancelled.
+    concurrency:
+      group: docker-${{ needs.build.outputs.new-version || github.ref }}
+      cancel-in-progress: ${{ needs.build.outputs.create-release != 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:

@@ -58,6 +58,10 @@ Releases are managed by `ReleasePlease`, which runs in the deployment workflow w
 
     Only release managers may create tags, and no long-lived token is stored in the repository. A release manager publishes the draft: this creates the tag and triggers the jobs that publish to PyPI (through the `pypi` environment, approved by a second release manager) and to `ghcr.io`.
 
+    Changes made with `GITHUB_TOKEN` trigger no workflows, so no CI runs on the release pull request. To get checks on it, close and reopen it.
+
+    While the draft is not published, the deployment workflow skips `ReleasePlease`. Before uploading to PyPI, it checks that the draft has `diracx.env` and that the tag points at the commit it was made for.
+
 A new release creates:
 
 - a [github release](https://github.com/DIRACGrid/diracx/releases)
