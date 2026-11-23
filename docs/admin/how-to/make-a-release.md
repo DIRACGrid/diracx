@@ -19,7 +19,7 @@ Execute the following points in the presented order.
 
 3. Merge the `release-please` PR. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases) and attaches `diracx.env` to it. No tag exists yet.
 
-4. As a release manager, check that `diracx.env` is attached to the draft, then publish it without changing its target commit. Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again.
+4. As a release manager, check that `diracx.env` is attached to the draft, then publish it without changing its target commit. Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft and would propose the same release again. If `diracx.env` is missing because the `Release env asset` job failed (for example, `diracx-charts` does not match the release), fix the cause and re-run that job: it uploads to the existing draft.
 
 5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`.
 

@@ -51,7 +51,9 @@ jobs:
     steps:
       # release-please ignores draft releases (they have no tag). Until the draft
       # for the manifest version is published it would propose that release again,
-      # so do not run it in that window.
+      # so do not run it in that window. This job has no checkout, so call the API
+      # with an explicit repo; any API error fails the step instead of being read
+      # as "no draft".
       - name: Check for an unpublished draft release
         id: pending
         env:
@@ -59,7 +61,9 @@ jobs:
         run: |
           version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$GITHUB_SHA" \
             --jq .content | base64 -d | jq -r '."."')"
-          if [[ "$(gh release view "v$version" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
+          drafts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.draft and .tag_name == \"v$version\") | .id")"
+          if [[ -n "$drafts" ]]; then
             echo "::warning::Draft release v$version is not published yet: release-please skipped"
             echo "draft=true" >> "$GITHUB_OUTPUT"
           fi
@@ -230,8 +234,10 @@ jobs:
     name: Publish distribution 📦 to PyPI
     needs: build
     if: needs.build.outputs.create-release == 'true'
+    # One group per tag: a group keeps only one pending job, so a shared group
+    # would cancel a queued publish of another version.
     concurrency:
-      group: pypi-publish
+      group: pypi-publish-${{ needs.build.outputs.new-version }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
