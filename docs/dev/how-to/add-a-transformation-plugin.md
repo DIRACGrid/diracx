@@ -34,7 +34,7 @@ When deciding where a value belongs, ask who should be able to change it:
 
 ### Define the arguments model
 
-Subclass `PluginArgs`. It is a pydantic model that rejects unknown keys, so a misspelt argument fails validation instead of silently falling back to a default, and its instances are immutable, so a plugin cannot change the arguments it was given. Document each field with a docstring below it.
+Subclass `PluginArgs`. It is a pydantic model that rejects unknown keys, so a misspelt argument fails validation instead of silently falling back to a default. It also rejects NaN and infinity, which cannot be stored as JSON, and its instances are immutable, so a plugin cannot change the arguments it was given. Document each field with a docstring below it.
 
 ```python
 from pydantic import NonNegativeInt, model_validator
@@ -43,7 +43,7 @@ from diracx.core.models.transformation import PluginArgs
 
 
 class SeedFeederArgs(PluginArgs):
-    max_count: NonNegativeInt = 0
+    max_count: NonNegativeInt = 10
     """Number of seeds to issue."""
     scouting_count: NonNegativeInt = 10
     """Number of seeds to issue while the workgraph is scouting."""
@@ -55,7 +55,7 @@ class SeedFeederArgs(PluginArgs):
         return self
 ```
 
-Use a `model_validator` for rules that span several fields. `validate_plugin_args()` in `diracx.logic.transformations` validates a transformation's stored arguments against the plugin's model. It is meant for every place that writes or reads them, starting with workgraph submission, so that a mistake is refused there rather than at the plugin's first run.
+Use a `model_validator` for rules that span several fields, and make sure the defaults pass it: a transformation stored without arguments is validated as `{}`, so defaults that break your own rules would refuse it. `validate_plugin_args()` in `diracx.logic.transformations` validates a transformation's stored arguments against the plugin's model. It is meant for every place that writes or reads them, starting with workgraph submission, so that a mistake is refused there rather than at the plugin's first run.
 
 ### Write a feeder
 
