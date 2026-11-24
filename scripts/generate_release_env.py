@@ -13,9 +13,15 @@ import argparse
 import ast
 import json
 import re
-import tomllib
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+# The pre-commit hook runs on the system python3, which may be older than 3.11.
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 NAME_RE = re.compile(r"DIRACX_[A-Z0-9_]+\Z")
 DB_PREFIXES = ("DIRACX_DB_URL_", "DIRACX_OS_DB_")
