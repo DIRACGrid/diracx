@@ -443,7 +443,27 @@ async def test_stored_processes_re_hash_to_their_identity(
                 "id": "#tool.cwl/conf",
                 "type": "Any",
                 "default": [0.1, 1e-7, -0.0, 1.5e300, "ünïcødé", {"z": 1, "a": 2}],
-            }
+            },
+            # Named types, as cwltool --pack writes them
+            {
+                "id": "#tool.cwl/mode",
+                "type": {
+                    "type": "enum",
+                    "name": "#tool.cwl/mode/Mode",
+                    "symbols": ["#tool.cwl/mode/Mode/fast", "#tool.cwl/mode/Mode/full"],
+                },
+            },
+            {
+                "id": "#tool.cwl/event",
+                "type": {
+                    "type": "record",
+                    "name": "#tool.cwl/event/Event",
+                    "fields": [
+                        {"name": "#tool.cwl/event/Event/run", "type": "int"},
+                        {"name": "#tool.cwl/event/Event/weight", "type": "double"},
+                    ],
+                },
+            },
         ],
         "outputs": [],
     }
