@@ -27,6 +27,8 @@ Execute the following points in the presented order.
 
 6. Renovate opens a pull request in `diracx-charts` for the new version. Once it is merged, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml) in `diracx-charts` is successful
 
+7. On the Monday after the release, the [vulnerability scan](https://github.com/DIRACGrid/diracx/actions/workflows/vulnerabilities.yml) (Trivy) scans the released images. The release manager who published looks at its [alerts](https://github.com/DIRACGrid/diracx/security/code-scanning?query=is%3Aopen+tool%3ATrivy) and opens an issue for each critical or high finding.
+
 At this stage, there is a new `diracx` and `diracx-chart` release.
 
 # How to make a new DiracX-Web release
