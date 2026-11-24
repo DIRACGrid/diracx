@@ -101,6 +101,26 @@ def test_alias_replaces_the_env_prefix(tmp_path: Path) -> None:
         release_env.build_env(root)
 
 
+def test_private_attributes_and_classvars_are_not_settings(tmp_path: Path) -> None:
+    root = copy_sources(
+        tmp_path,
+        "    _cache: dict\n    LIMIT: ClassVar[int]\n",
+        "    token_issuer: str\n",
+    )
+    names, required, _ = release_env.schema_names(root)
+    assert not {"DIRACX_SERVICE_AUTH__CACHE", "DIRACX_SERVICE_AUTH_LIMIT"} & names
+    assert "DIRACX_SANDBOX_STORE__CLIENT" not in names
+    assert release_env.build_env(root) == release_env.build_env(ROOT)
+
+
+def test_development_setting_rule_fails() -> None:
+    entries = ENTRIES + (
+        ("DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY", Rule("safe_literal", "true")),
+    )
+    with pytest.raises(ValueError, match="unknown settings"):
+        release_env.build_env(ROOT, entries)
+
+
 def test_indirect_settings_class_fails(tmp_path: Path) -> None:
     root = copy_sources(tmp_path, "\n\nclass ChildSettings(AuthSettings):\n    pass\n")
     with pytest.raises(ValueError, match="indirect settings class ChildSettings"):

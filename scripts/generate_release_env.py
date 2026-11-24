@@ -17,6 +17,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeGuard
 
 # The pre-commit hook runs on the system python3, which may be older than 3.11.
 if sys.version_info >= (3, 11):
@@ -154,6 +155,8 @@ POLICY_ENTRIES = (
 )
 
 SETTINGS_BASE = "ServiceSettingsBase"
+# Development-only settings are not public: a rule for one is an unknown setting.
+DEVELOPMENT_CLASS = "DevelopmentSettings"
 SOURCE_GLOB = "diracx-*/src/**/*.py"
 
 
@@ -241,6 +244,21 @@ def has_default(field: ast.AnnAssign) -> bool:
     return bool(value.args) and not is_ellipsis(value.args[0])
 
 
+def is_field(node: ast.stmt) -> TypeGuard[ast.AnnAssign]:
+    """Return whether node declares a pydantic field (not a private attr or ClassVar)."""
+    if not isinstance(node, ast.AnnAssign) or not isinstance(node.target, ast.Name):
+        return False
+    annotation = node.annotation
+    if isinstance(annotation, ast.Subscript):
+        annotation = annotation.value
+    is_classvar = (
+        annotation.id
+        if isinstance(annotation, ast.Name)
+        else getattr(annotation, "attr", "")
+    ) == "ClassVar"
+    return not node.target.id.startswith("_") and not is_classvar
+
+
 def is_ellipsis(node: ast.expr) -> bool:
     """Return whether node is ``...``, pydantic's marker for a required field."""
     return isinstance(node, ast.Constant) and node.value is Ellipsis
@@ -268,7 +286,12 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
     names: set[str] = set()
     required: set[str] = set()
     dynamic_prefixes: set[str] = set()
-    for class_name, cls in settings_classes(source_root).items():
+    classes = settings_classes(source_root)
+    if DEVELOPMENT_CLASS not in classes:
+        raise ValueError(f"{DEVELOPMENT_CLASS} not found")
+    for class_name, cls in classes.items():
+        if class_name == DEVELOPMENT_CLASS:
+            continue
         prefixes = [
             node.value
             for node in ast.walk(cls)
@@ -289,18 +312,16 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
                 )
             prefix = prefix_candidates[0]
             for node in cls.body:
-                if isinstance(node, ast.AnnAssign) and isinstance(
-                    node.target, ast.Name
-                ):
-                    name = field_alias(node) or prefix + node.target.id.upper()
+                if is_field(node):
+                    name = (
+                        field_alias(node) or prefix + ast.unparse(node.target).upper()
+                    )
                     names.add(name)
                     if not has_default(node):
                         required.add(name)
         else:
             for node in cls.body:
-                if not isinstance(node, ast.AnnAssign) or not isinstance(
-                    node.value, ast.Call
-                ):
+                if not is_field(node) or not isinstance(node.value, ast.Call):
                     continue
                 if alias := field_alias(node):
                     names.add(alias)
