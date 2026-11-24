@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Build the public `diracx.env` example for installations without Kubernetes.
 
-Only names are read from the DiracX sources (settings classes and database
-entry points). Output values come solely from the explicit policy below. A new
-database, a new setting with no default, or a policy name the sources no longer
-know, fails until the policy is updated.
+Only names are read from the DiracX sources (the ServiceSettingsBase
+subclasses of the diracx-* packages, and the database entry points). Output
+values come solely from the explicit policy below. A new database, a new setting
+with no default, or a policy name the sources no longer know, fails until the
+policy is updated.
 """
 
 from __future__ import annotations
@@ -26,7 +27,10 @@ else:
 NAME_RE = re.compile(r"DIRACX_[A-Z0-9_]+\Z")
 DB_PREFIXES = ("DIRACX_DB_URL_", "DIRACX_OS_DB_")
 EXAMPLE_PATH = Path("docs/admin/how-to/install-without-kubernetes/diracx.env.example")
-DOTENV_LINE_RE = re.compile(r'^(DIRACX_[A-Z0-9_]+)=("(?:[^"\\]|\\.)*")$')
+# Values are written unquoted: podman's --env-file (used by podman-compose
+# up to 1.1.0) keeps quotes, while python-dotenv (podman-compose >= 1.2.0, docker
+# compose) reads an unquoted value as is. Both then see the same string.
+DOTENV_LINE_RE = re.compile(r"^(DIRACX_[A-Z0-9_]+)=(.+)$")
 
 
 @dataclass(frozen=True)
@@ -148,13 +152,30 @@ POLICY_ENTRIES = (
     ),
 )
 
-CLASS_SOURCES = {
-    "DevelopmentSettings": "diracx-core/src/diracx/core/settings.py",
-    "AuthSettings": "diracx-core/src/diracx/core/settings.py",
-    "SandboxStoreSettings": "diracx-core/src/diracx/core/settings.py",
-    "FactorySettings": "diracx-core/src/diracx/core/settings.py",
-    "OTELSettings": "diracx-core/src/diracx/core/settings.py",
-}
+SETTINGS_BASE = "ServiceSettingsBase"
+SOURCE_GLOB = "diracx-*/src/**/*.py"
+
+
+def settings_classes(source_root: Path) -> dict[str, ast.ClassDef]:
+    """Return the direct ServiceSettingsBase subclasses of the DiracX packages."""
+    classes: dict[str, ast.ClassDef] = {}
+    for path in sorted(source_root.glob(SOURCE_GLOB)):
+        text = path.read_text(encoding="utf-8")
+        if SETTINGS_BASE not in text:
+            continue
+        for node in ast.parse(text).body:
+            if not isinstance(node, ast.ClassDef) or not any(
+                (base.id if isinstance(base, ast.Name) else getattr(base, "attr", ""))
+                == SETTINGS_BASE
+                for base in node.bases
+            ):
+                continue
+            if node.name in classes:
+                raise ValueError(f"duplicate settings class {node.name}")
+            classes[node.name] = node
+    if "FactorySettings" not in classes:
+        raise ValueError("FactorySettings not found")
+    return classes
 
 
 def policy_map(entries: tuple[tuple[str, Rule], ...]) -> dict[str, Rule]:
@@ -171,7 +192,15 @@ def policy_map(entries: tuple[tuple[str, Rule], ...]) -> dict[str, Rule]:
             "json_placeholder",
         }:
             raise ValueError(f"unknown classification for {name}")
-        if not rule.example or any(char in rule.example for char in "\r\n\x00"):
+        if (
+            not rule.example
+            or not rule.example.isascii()
+            or any(char in rule.example for char in "\r\n\x00")
+            # dotenv would strip the whitespace, the quotes or a " #" comment
+            or rule.example != rule.example.strip()
+            or rule.example[0] in "\"'`"
+            or " #" in rule.example
+        ):
             raise ValueError(f"unsafe example format for {name}")
         if rule.classification == "json_placeholder":
             json.loads(rule.example)
@@ -209,19 +238,7 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
     names: set[str] = set()
     required: set[str] = set()
     dynamic_prefixes: set[str] = set()
-    parsed = {
-        path: ast.parse((source_root / path).read_text(encoding="utf-8"))
-        for path in set(CLASS_SOURCES.values())
-    }
-    for class_name, path in CLASS_SOURCES.items():
-        classes = [
-            node
-            for node in parsed[path].body
-            if isinstance(node, ast.ClassDef) and node.name == class_name
-        ]
-        if len(classes) != 1:
-            raise ValueError(f"missing or duplicate settings class {class_name}")
-        cls = classes[0]
+    for class_name, cls in settings_classes(source_root).items():
         prefixes = [
             node.value
             for node in ast.walk(cls)
@@ -319,10 +336,7 @@ def parse_dotenv(data: bytes) -> dict[str, str]:
         match = DOTENV_LINE_RE.fullmatch(line)
         if not match or match.group(1) in result:
             raise ValueError(f"malformed or duplicate dotenv line: {line[:80]}")
-        value = json.loads(match.group(2))
-        if not isinstance(value, str):
-            raise ValueError("non-string dotenv value")
-        result[match.group(1)] = value
+        result[match.group(1)] = match.group(2)
     return result
 
 
@@ -338,7 +352,7 @@ def build_env(
     for name in sorted(policy):
         rule = policy[name]
         lines.append(f"# {rule.classification}")
-        lines.append(f"{name}={json.dumps(rule.example, ensure_ascii=True)}")
+        lines.append(f"{name}={rule.example}")
     data = ("\n".join(lines) + "\n").encode("utf-8")
     if parse_dotenv(data) != {name: rule.example for name, rule in policy.items()}:
         raise ValueError("dotenv serialization did not round-trip")

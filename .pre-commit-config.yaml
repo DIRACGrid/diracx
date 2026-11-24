@@ -104,7 +104,7 @@ repos:
         language: python
         additional_dependencies: ["tomli; python_version < '3.11'"]
         pass_filenames: false
-        files: ^(scripts/generate_release_env\.py|diracx-core/src/diracx/core/settings\.py|diracx-db/pyproject\.toml|docs/admin/how-to/install-without-kubernetes/diracx\.env\.example)$
+        files: ^(scripts/generate_release_env\.py|diracx-[a-z]+/src/.*\.py|diracx-db/pyproject\.toml|docs/admin/how-to/install-without-kubernetes/diracx\.env\.example)$
 
   - repo: local
     hooks:

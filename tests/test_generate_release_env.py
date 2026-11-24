@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
 from pathlib import Path
@@ -90,4 +91,41 @@ def test_duplicate_classification_fails() -> None:
 
 def test_malformed_dotenv_rejected() -> None:
     with pytest.raises(ValueError, match="malformed or duplicate"):
-        release_env.parse_dotenv(b"DIRACX_X=unquoted\n")
+        release_env.parse_dotenv(b"DIRACX_X=\n")
+
+
+@pytest.mark.parametrize("example", ['"quoted"', " padded", "a #comment", "\u00b5s"])
+def test_example_unsafe_unquoted_fails(example: str) -> None:
+    entries = ENTRIES + (("DIRACX_OTEL_HEADERS", Rule("safe_literal", example)),)
+    with pytest.raises(ValueError, match="unsafe example format"):
+        release_env.build_env(ROOT, entries)
+
+
+def test_required_settings_match_pydantic() -> None:
+    """The AST scan must find every setting pydantic itself requires."""
+    from diracx.core.settings import ServiceSettingsBase
+
+    # Import every module defining a settings class, so its subclass exists.
+    for path in ROOT.glob(release_env.SOURCE_GLOB):
+        if release_env.SETTINGS_BASE in path.read_text(encoding="utf-8"):
+            src = next(p for p in path.parents if p.name == "src")
+            importlib.import_module(
+                ".".join(path.relative_to(src).with_suffix("").parts)
+            )
+
+    def subclasses(
+        cls: type[ServiceSettingsBase],
+    ) -> list[type[ServiceSettingsBase]]:
+        return [c for sub in cls.__subclasses__() for c in (sub, *subclasses(sub))]
+
+    required = set()
+    for cls in subclasses(ServiceSettingsBase):
+        prefix = cls.model_config.get("env_prefix", "")
+        for name, field in cls.model_fields.items():
+            if field.is_required():
+                alias = field.validation_alias
+                required.add(
+                    alias if isinstance(alias, str) else f"{prefix}{name}".upper()
+                )
+    _, ast_required, _ = release_env.schema_names(ROOT)
+    assert required == ast_required

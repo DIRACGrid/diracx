@@ -152,7 +152,9 @@ jobs:
           # Wheels and sdists: both are published to PyPI.
           name: diracx-dist
           path: dist/diracx*
-          retention-days: 5
+          # publish downloads it after the pypi approval, and a failed publish
+          # can be re-run for 30 days (make-a-release.md): keep it that long.
+          retention-days: 30
 
   # Only this job can get a PyPI token; the build above runs without it.
   publish:
