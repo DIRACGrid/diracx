@@ -81,10 +81,15 @@ def copy_sources(tmp_path: Path, addition: str, after: str | None = None) -> Pat
     return tmp_path
 
 
-def test_field_with_ellipsis_default_is_required(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "declaration", ["= ...", '= Field(default=..., description="x")']
+)
+def test_field_with_ellipsis_default_is_required(
+    tmp_path: Path, declaration: str
+) -> None:
     root = copy_sources(
         tmp_path,
-        '    new_setting: str = Field(default=..., description="x")\n',
+        f"    new_setting: str {declaration}\n",
         "    token_issuer: str\n",
     )
     with pytest.raises(ValueError, match="DIRACX_SERVICE_AUTH_NEW_SETTING"):

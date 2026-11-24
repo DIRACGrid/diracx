@@ -225,7 +225,7 @@ def has_default(field: ast.AnnAssign) -> bool:
     if value is None:
         return False
     if not isinstance(value, ast.Call):
-        return True
+        return not is_ellipsis(value)
     func = value.func
     if (
         func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
