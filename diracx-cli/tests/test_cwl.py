@@ -15,7 +15,7 @@ from schema_salad.exceptions import ValidationException
 from schema_salad.fetcher import DefaultFetcher
 
 from diracx.cli.cwl import pack
-from diracx.core.cwl import NotSelfContainedError, entry_identity
+from diracx.core.cwl import NotSelfContainedError, entry_identity, split_dirac_hints
 
 FIXTURES = Path(__file__).parent / "fixtures"
 WORKGRAPH = FIXTURES / "mc-simulation" / "mc-simulation.cwl"
@@ -35,9 +35,13 @@ def write(directory: Path, name: str, text: str) -> Path:
     return path
 
 
+def test_the_fixture_is_what_the_cli_submits():
+    assert pack(WORKGRAPH) == json.loads(PACKED.read_text())
+
+
 def test_transformations_get_the_identities_cwltool_pack_gives_them():
-    document = pack(WORKGRAPH).document
-    packed = json.loads(PACKED.read_text())
+    document, _ = split_dirac_hints(pack(WORKGRAPH))
+    packed, _ = split_dirac_hints(json.loads(PACKED.read_text()))
     for entry_id in TRANSFORMATIONS:
         assert entry_identity(document, entry_id) == entry_identity(packed, entry_id)
 
@@ -47,10 +51,11 @@ def test_the_same_files_elsewhere_pack_the_same(tmp_path):
     assert pack(tmp_path / "elsewhere" / WORKGRAPH.name) == pack(WORKGRAPH)
 
 
-def test_dirac_hints_are_taken_out_as_written():
-    submission = pack(WORKGRAPH)
-    assert "diracgrid.org/cwl#" not in json.dumps(submission.document["$graph"])
-    hints = submission.hints
+def test_dirac_hints_are_submitted_and_taken_out_as_written():
+    submitted = pack(WORKGRAPH)
+    assert "diracgrid.org/cwl#" in json.dumps(submitted["$graph"])
+    document, hints = split_dirac_hints(submitted)
+    assert "diracgrid.org/cwl#" not in json.dumps(document["$graph"])
     assert set(hints) == {
         "#main",
         "#main/events",
@@ -84,7 +89,7 @@ inputs: []
 outputs: []
 """,
     )
-    hints = pack(tmp_path / "tool.cwl").hints
+    _, hints = split_dirac_hints(pack(tmp_path / "tool.cwl"))
     assert hints["#main"]["Workgraph"]["data_management"] == [
         {"id": "Removal", "packer": {"name": "BySize"}}
     ]
@@ -106,10 +111,8 @@ inputs: []
 outputs: []
 """,
     )
-    submission = pack(tmp_path / "tool.cwl")
-    assert submission.document["hints"] == [
-        {"class": "ResourceRequirement", "coresMin": 2}
-    ]
+    document, _ = split_dirac_hints(pack(tmp_path / "tool.cwl"))
+    assert document["hints"] == [{"class": "ResourceRequirement", "coresMin": 2}]
 
 
 def test_captured_streams_get_fixed_names(tmp_path):
@@ -124,8 +127,8 @@ outputs:
 """
     (tmp_path / "a").mkdir()
     (tmp_path / "b").mkdir()
-    a = pack(write(tmp_path / "a", "echo.cwl", text)).document
-    b = pack(write(tmp_path / "b", "echo.cwl", text)).document
+    a = pack(write(tmp_path / "a", "echo.cwl", text))
+    b = pack(write(tmp_path / "b", "echo.cwl", text))
     assert a == b
     assert (a["stdout"], a["stderr"]) == ("cwl.stdout", "cwl.stderr")
     globs = {o["id"]: o["outputBinding"]["glob"] for o in a["outputs"]}
@@ -145,7 +148,7 @@ inputs:
 outputs: []
 """,
     )
-    assert pack(tmp_path / "tool.cwl").document["inputs"][0]["default"] == "yes"
+    assert pack(tmp_path / "tool.cwl")["inputs"][0]["default"] == "yes"
 
 
 def test_files_given_by_path_are_refused(tmp_path):

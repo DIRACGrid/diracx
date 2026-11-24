@@ -48,6 +48,12 @@ reference of DX-ADR-007) is therefore refused for now: the library is out of
 scope for #1080. Once it lands, DiracX will resolve such references against
 its own store before `check_self_contained`.
 
+It then takes DiracX's own `dirac:` hints and fields out of it
+(`split_dirac_hints`), by the id of the object that held them: they say how
+DiracX schedules the work, not what runs, so editing a transformation's
+packer does not make its process another one. Clients submit the document
+whole, and only the services decide what is identified.
+
 Then `decompose` hashes each process with `diracx.core.hashing.hash_json`, as
 submitted, except that each step's `run` is replaced by the identity of the
 process it runs (`proc:sha256-<hex>`), and that what is hashed is
@@ -62,7 +68,7 @@ parents, so a parent's identity covers everything below it (a Merkle tree):
 | `#digi-reco.cwl`   | `89aa5fb8d5f8…` | `80d85694a863…`           |
 | `#boole-moore.cwl` | `31cd3f1f36f1…` | `89aa5fb8d5f8…`           |
 | `#merge.cwl`       | `9d84d8c7268c…` | `80d85694a863…`           |
-| `#main`            | `db52479ec2d7…` | the three transformations |
+| `#main`            | `02a2cb34a6cc…` | the three transformations |
 
 An edit to `lb-run-app.cwl` changes every identity in the table; an edit to
 `merge.cwl` changes only its own and the workgraph's. An inline `run` body is
