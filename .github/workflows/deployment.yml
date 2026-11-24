@@ -225,17 +225,29 @@ jobs:
 
       # A re-publish (workflow_dispatch or re-run) only fills in what is missing:
       # an image already pushed for this tag is kept, not replaced by a new
-      # build with another digest. A failed lookup counts as missing.
+      # build with another digest. A failed lookup counts as missing. An
+      # existing image with no provenance (its attestation failed) is attested
+      # here; one that has it is not attested again.
       - name: Check existing release images
         id: existing
         if: ${{ needs.build.outputs.create-release == 'true' }}
         env:
           TAG: ${{ needs.build.outputs.new-version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           for img in services tasks client; do
-            if docker buildx imagetools inspect "ghcr.io/diracgrid/diracx/$img:$TAG" >/dev/null 2>&1; then
-              echo "::notice::ghcr.io/diracgrid/diracx/$img:$TAG already exists, not rebuilding it"
+            ref="ghcr.io/diracgrid/diracx/$img:$TAG"
+            if digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' 2>/dev/null | jq -er .digest)"; then
+              echo "::notice::$ref already exists, not rebuilding it"
               echo "$img=true" >> "$GITHUB_OUTPUT"
+              # 404 when the digest has no attestation (gh prints the error body
+              # on stdout, so drop it). Any other error is treated the same, at
+              # worst attesting the image twice.
+              count="$(gh api "repos/$GITHUB_REPOSITORY/attestations/$digest" --jq '.attestations | length' 2>/dev/null)" || count=0
+              if [[ "$count" == 0 ]]; then
+                echo "::warning::$ref has no build provenance, attesting $digest"
+                echo "$img-unattested=$digest" >> "$GITHUB_OUTPUT"
+              fi
             fi
           done
 
@@ -251,11 +263,11 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/services:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest services (release)
-        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.services != 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.services != 'true' || steps.existing.outputs.services-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/services
-          subject-digest: ${{ steps.build-services-release.outputs.digest }}
+          subject-digest: ${{ steps.build-services-release.outputs.digest || steps.existing.outputs.services-unattested }}
           push-to-registry: true
       - name: Build and push tasks (release)
         id: build-tasks-release
@@ -269,11 +281,11 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest tasks (release)
-        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.tasks != 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.tasks != 'true' || steps.existing.outputs.tasks-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/tasks
-          subject-digest: ${{ steps.build-tasks-release.outputs.digest }}
+          subject-digest: ${{ steps.build-tasks-release.outputs.digest || steps.existing.outputs.tasks-unattested }}
           push-to-registry: true
       - name: Build and push client (release)
         id: build-client-release
@@ -287,11 +299,11 @@ jobs:
           tags: "ghcr.io/diracgrid/diracx/client:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest client (release)
-        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.client != 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.client != 'true' || steps.existing.outputs.client-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/client
-          subject-digest: ${{ steps.build-client-release.outputs.digest }}
+          subject-digest: ${{ steps.build-client-release.outputs.digest || steps.existing.outputs.client-unattested }}
           push-to-registry: true
 
       - name: Build and push services (dev)
