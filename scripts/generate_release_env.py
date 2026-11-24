@@ -49,6 +49,7 @@ POLICY_ENTRIES = (
         "DIRACX_CONFIG_BACKEND_URL",
         Rule("url_placeholder", "git+file:///path/to/config-repo"),
     ),
+    ("DIRACX_LOG_FORMAT", Rule("safe_literal", "text")),
     ("DIRACX_OTEL_ENABLED", Rule("safe_literal", "false")),
     ("DIRACX_OTEL_GRPC_ENDPOINT", Rule("safe_synthetic", "otel.example.invalid:4317")),
     ("DIRACX_OTEL_GRPC_INSECURE", Rule("safe_literal", "true")),
