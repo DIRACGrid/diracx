@@ -102,8 +102,6 @@ repos:
         name: Generate the diracx.env example
         entry: python scripts/generate_release_env.py
         language: python
-        # Uses the default python3 (any version >= 3.11, for tomllib), not an
-        # exact python3.11: CI and most developers have only a newer Python.
         pass_filenames: false
         files: ^(scripts/generate_release_env\.py|diracx-[a-z]+/src/.*\.py|diracx-db/pyproject\.toml|docs/admin/how-to/install-without-kubernetes/diracx\.env\.example)$
 

@@ -205,7 +205,7 @@ testpaths = [
   "diracx-logic/tests",
   "diracx-routers/tests",
   "diracx-tasks/tests",
-  "tests/test_generate_release_env.py",
+  "tests",
 ]
 addopts = [
   "-v",
