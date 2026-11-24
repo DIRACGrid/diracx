@@ -140,6 +140,8 @@ jobs:
           fi
       - name: Build distributions
         run: |
+          # The job's custom shell has no -e: without this, a failed package is skipped.
+          set -euo pipefail
           for pkg_dir in $PWD/diracx-*; do
             echo "Building $pkg_dir"
             python -m build --outdir $PWD/dist $pkg_dir
