@@ -114,3 +114,12 @@ def test_docker_images_built_or_fetched_on_the_worker_are_refused(field, where):
     with pytest.raises(PolicyViolationError, match=f"DockerRequirement {field}") as e:
         check_policy(tool(**{where: docker}))
     assert "dockerPull" in str(e.value)
+
+
+@pytest.mark.parametrize("where", ["requirements", "hints"])
+def test_every_docker_requirement_given_is_checked(where):
+    built = {"class": "DockerRequirement", "dockerImageId": "x", "dockerFile": "x"}
+    pulled = {"class": "DockerRequirement", "dockerPull": "alpine"}
+    for docker in ([built, pulled], [pulled, built]):
+        with pytest.raises(PolicyViolationError, match="DockerRequirement dockerFile"):
+            check_policy(tool(**{where: docker}))

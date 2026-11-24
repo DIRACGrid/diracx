@@ -113,26 +113,32 @@ def _check(process: dict[str, Any]) -> Iterator[str]:
     for holder in (process, *_steps(process)):
         requirements = _classes(holder.get("requirements"))
         hints = _classes(holder.get("hints"))
-        for cls in sorted(set(requirements) - ALLOWED_REQUIREMENTS):
+        for cls in sorted({cls for cls, _ in requirements} - ALLOWED_REQUIREMENTS):
             yield f"requires {cls}, which DiracX does not support"
-        for cls in sorted(set(hints) - ALLOWED_HINTS):
+        for cls in sorted({cls for cls, _ in hints} - ALLOWED_HINTS):
             if not cls.startswith(DIRAC_NAMESPACE):
                 yield f"has a {cls} hint, which DiracX does not support"
-        for classes in (requirements, hints):
-            docker = classes.get("DockerRequirement") or {}
-            for field in UNSUPPORTED_DOCKER_FIELDS:
-                if field in docker:
-                    yield (
-                        f"uses DockerRequirement {field}, which would build or "
-                        "fetch an image on the worker node; publish the image "
-                        "and name it with dockerPull"
-                    )
+        # Every occurrence: a class may be given more than once, and which one
+        # a runner acts on is up to the runner.
+        fields = {
+            field
+            for cls, item in requirements + hints
+            if cls == "DockerRequirement"
+            for field in UNSUPPORTED_DOCKER_FIELDS
+            if field in item
+        }
+        for field in sorted(fields):
+            yield (
+                f"uses DockerRequirement {field}, which would build or "
+                "fetch an image on the worker node; publish the image "
+                "and name it with dockerPull"
+            )
 
 
-def _classes(value: Any) -> dict[str, dict]:
-    """Requirements or hints by class, from list or map form."""
+def _classes(value: Any) -> list[tuple[str, dict]]:
+    """Requirements or hints with their class, from list or map form."""
     if isinstance(value, dict):
         items = [{**body, "class": cls} for cls, body in value.items()]
     else:
         items = list(value or [])
-    return {str(item.get("class", "?")): item for item in items}
+    return [(str(item.get("class", "?")), item) for item in items]
