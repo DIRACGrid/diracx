@@ -191,11 +191,17 @@ def has_default(field: ast.AnnAssign) -> bool:
         func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
     ) != "Field":
         return True
-    if any(k.arg in {"default", "default_factory"} for k in value.keywords):
-        return True
-    return bool(value.args) and not (
-        isinstance(value.args[0], ast.Constant) and value.args[0].value is Ellipsis
-    )
+    for keyword in value.keywords:
+        if keyword.arg == "default_factory":
+            return True
+        if keyword.arg == "default":
+            return not is_ellipsis(keyword.value)
+    return bool(value.args) and not is_ellipsis(value.args[0])
+
+
+def is_ellipsis(node: ast.expr) -> bool:
+    """Return whether node is ``...``, pydantic's marker for a required field."""
+    return isinstance(node, ast.Constant) and node.value is Ellipsis
 
 
 def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:

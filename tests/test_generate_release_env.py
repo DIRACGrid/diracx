@@ -64,6 +64,25 @@ def test_setting_with_no_default_and_no_rule_fails() -> None:
         release_env.build_env(ROOT, entries)
 
 
+def test_field_with_ellipsis_default_is_required(tmp_path: Path) -> None:
+    settings = "diracx-core/src/diracx/core/settings.py"
+    for path in (settings, "diracx-db/pyproject.toml"):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).write_bytes((ROOT / path).read_bytes())
+    source = (tmp_path / settings).read_text(encoding="utf-8")
+    field = "    token_issuer: str\n"
+    assert source.count(field) == 1
+    (tmp_path / settings).write_text(
+        source.replace(
+            field,
+            field + '    new_setting: str = Field(default=..., description="x")\n',
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="DIRACX_SERVICE_AUTH_NEW_SETTING"):
+        release_env.build_env(tmp_path)
+
+
 def test_duplicate_classification_fails() -> None:
     with pytest.raises(ValueError, match="duplicate or malformed"):
         release_env.build_env(ROOT, ENTRIES + ENTRIES[:1])
