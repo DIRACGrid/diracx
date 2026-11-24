@@ -193,12 +193,16 @@ jobs:
       - publish
     if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
     # Each push to main builds the :dev images: a newer push cancels the older
-    # build, so an older commit cannot overwrite :dev. Releases are never cancelled.
+    # build, so an older commit cannot overwrite :dev (the tags are moved in the
+    # last step, all three together). Releases are never cancelled.
     concurrency:
       group: docker-${{ needs.build.outputs.new-version || github.ref }}
       cancel-in-progress: ${{ needs.build.outputs.create-release != 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    env:
+      # Only main pushes and the nightly run update :dev; PRs build without pushing.
+      PUSH_DEV: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
     permissions:
       contents: read
       packages: write          # push images to ghcr.io
@@ -306,33 +310,59 @@ jobs:
           subject-digest: ${{ steps.build-client-release.outputs.digest || steps.existing.outputs.client-unattested }}
           push-to-registry: true
 
-      - name: Build and push services (dev)
+      - name: Build services (dev)
+        id: build-services-dev
         if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-services
-          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/services:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/services,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
-      - name: Build and push tasks (dev)
+      - name: Build tasks (dev)
+        id: build-tasks-dev
         if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-tasks
-          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/tasks:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/tasks,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
-      - name: Build and push client (dev)
+      - name: Build client (dev)
+        id: build-client-dev
         if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-client
-          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/client:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/client,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
+      # Move all three :dev tags only once every image is built, so a push
+      # cancelled mid-build cannot leave :dev images from different commits.
+      - name: Tag the dev images
+        if: ${{ needs.build.outputs.create-release != 'true' && env.PUSH_DEV == 'true' }}
+        env:
+          SERVICES: ${{ steps.build-services-dev.outputs.digest }}
+          TASKS: ${{ steps.build-tasks-dev.outputs.digest }}
+          CLIENT: ${{ steps.build-client-dev.outputs.digest }}
+        run: |
+          set -euo pipefail
+          for pair in "services=$SERVICES" "tasks=$TASKS" "client=$CLIENT"; do
+            img="${pair%%=*}"
+            digest="${pair#*=}"
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::No digest for the $img dev image: '$digest'"
+              exit 1
+            fi
+          done
+          for pair in "services=$SERVICES" "tasks=$TASKS" "client=$CLIENT"; do
+            img="${pair%%=*}"
+            docker buildx imagetools create \
+              -t "ghcr.io/diracgrid/diracx/$img:dev" "ghcr.io/diracgrid/diracx/$img@${pair#*=}"
+          done
