@@ -57,45 +57,13 @@ Deciding when to pack a small remainder is the plugin's job, not the core's. Whi
 
 A packer that groups inputs by run number:
 
-```python
-from collections import defaultdict
-from collections.abc import AsyncGenerator, AsyncIterator
+<!-- blacken-docs:off -->
 
-from pydantic import BaseModel, PositiveInt
-
-from diracx.core.models.transformation import (
-    BadInput,
-    ComputeParcel,
-    InputStatus,
-    PackerInput,
-)
-
-
-class ByRunPackerArgs(BaseModel):
-    group_size: PositiveInt = 10
-
-
-async def by_run_packer(
-    *,
-    packer_args: ByRunPackerArgs,
-    inputs: AsyncIterator[PackerInput],
-    flush: bool = False,
-    feeder_active: bool,
-    input_overview: dict[InputStatus, int],
-) -> AsyncGenerator[ComputeParcel | BadInput, None]:
-    groups = defaultdict(list)
-    async for packer_input in inputs:
-        run = packer_input.descriptor.get("Run")
-        if run is None:
-            yield BadInput(input_id=packer_input.input_id, reason="No run number")
-            continue
-        groups[run].append(packer_input.input_id)
-        if len(groups[run]) == packer_args.group_size:
-            yield ComputeParcel(inputs=groups.pop(run), metadata={"Run": run})
-    if flush or not feeder_active:
-        for run, group in groups.items():
-            yield ComputeParcel(inputs=group, metadata={"Run": run})
+```python title="myext/logic/transformations/packers.py"
+--8<-- "diracx-logic/tests/transformations/test_by_run_packer.py:by_run_packer"
 ```
+
+<!-- blacken-docs:on -->
 
 Register it in your extension's `pyproject.toml`:
 
