@@ -22,8 +22,8 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
-# Concurrency is set on the release-please and publish jobs only, so a publish
-# waiting for approval does not hold every later push to main.
+# Concurrency is set per job (release-please, publish, docker), not on the
+# workflow, so a publish waiting for approval does not hold every later push.
 #
 # Release flow: merging the release PR makes release-please create a draft
 # release, with no tag. Publishing the draft triggers build, publish and docker.
@@ -32,10 +32,13 @@ permissions: {}
 
 jobs:
   # Maintains the release PR and, once it is merged, creates the draft release
-  # (see release-please-config.json).
+  # (see release-please-config.json). Also runs when the draft is published, to
+  # open the next release PR without waiting for another merge.
   release-please:
     name: release-please
-    if: github.event_name == 'push' && github.repository == 'DIRACGrid/diracx'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'release')
+      && github.repository == 'DIRACGrid/diracx'
     concurrency:
       group: release-please
       cancel-in-progress: false
@@ -47,10 +50,10 @@ jobs:
     steps:
       # release-please ignores draft releases (they have no tag). Until the draft
       # for the manifest version is published it finds no release for that
-      # version and proposes 1.0.0 with the whole history as changelog, so do not
-      # run it in that window. This job has no checkout, so call the API
-      # with an explicit repo; any API error fails the step instead of being read
-      # as "no draft".
+      # version and builds the release PR from the whole history, so do not run
+      # it in that window. This job has no checkout, so call the API with an
+      # explicit repo; any API error fails the step instead of being read as
+      # "no draft".
       - name: Check for an unpublished draft release
         id: pending
         # bash -eo pipefail: without pipefail a failed `gh api` in the pipeline
@@ -58,8 +61,10 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          # A release event's SHA is the tagged commit: read main's manifest.
+          MANIFEST_REF: ${{ github.event_name == 'release' && github.event.repository.default_branch || github.sha }}
         run: |
-          version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$GITHUB_SHA" \
+          version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$MANIFEST_REF" \
             --jq .content | base64 -d | jq -er '."."')"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             echo "::error::Unexpected version in .release-please-manifest.json: '$version'"
@@ -71,8 +76,17 @@ jobs:
             echo "::warning::Draft release v$version is not published yet: release-please skipped"
             echo "draft=true" >> "$GITHUB_OUTPUT"
           fi
+      # Two calls: within one call the PR step cannot see the draft the release
+      # step just made, and would rebuild the release PR from the whole history.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
         if: steps.pending.outputs.draft != 'true'
+        with:
+          skip-github-pull-request: true
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        if: steps.pending.outputs.draft != 'true' && steps.release.outputs.releases_created != 'true'
+        with:
+          skip-github-release: true
 
   build:
     name: Build distribution 📦

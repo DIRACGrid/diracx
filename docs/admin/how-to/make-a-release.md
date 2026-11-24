@@ -21,7 +21,7 @@ Execute the following points in the presented order.
 
 4. As a release manager, publish the draft without changing its target commit.
 
-    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would propose 1.0.0. **Never delete the draft**, for the same reason.
+    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would build the release PR from the whole history. **Never delete the draft**, for the same reason.
 
 5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`. If a job fails, use **Re-run failed jobs** on that run. Run the deployment workflow manually with the tag (`workflow_dispatch`) only if the fix needs a change to `deployment.yml` (a re-run uses the workflow of the tagged commit) or the run is older than 30 days; it skips what is already published.
 
