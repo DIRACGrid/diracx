@@ -58,6 +58,12 @@ def test_setting_unknown_to_the_schema_fails() -> None:
         release_env.build_env(ROOT, entries)
 
 
+def test_setting_with_no_default_and_no_rule_fails() -> None:
+    entries = tuple(e for e in ENTRIES if e[0] != "DIRACX_SERVICE_AUTH_TOKEN_ISSUER")
+    with pytest.raises(ValueError, match="no default and no rule"):
+        release_env.build_env(ROOT, entries)
+
+
 def test_duplicate_classification_fails() -> None:
     with pytest.raises(ValueError, match="duplicate or malformed"):
         release_env.build_env(ROOT, ENTRIES + ENTRIES[:1])

@@ -3,8 +3,8 @@
 
 Only names are read from the DiracX sources (settings classes and database
 entry points). Output values come solely from the explicit policy below. A new
-database, or a policy name the sources no longer know, fails until the policy
-is updated.
+database, a new setting with no default, or a policy name the sources no longer
+know, fails until the policy is updated.
 """
 
 from __future__ import annotations
@@ -29,14 +29,14 @@ class Rule:
     example: str
 
 
-# Every name in the example has one reviewed output rule. A new database fails
-# until a rule is deliberately added here.
+# Every name in the example has one reviewed output rule. A new database or a
+# new setting with no default fails until a rule is deliberately added here.
+# Settings with a default may be left out (development-only ones must be).
 POLICY_ENTRIES = (
     (
         "DIRACX_CONFIG_BACKEND_URL",
         Rule("url_placeholder", "git+file:///path/to/config-repo"),
     ),
-    ("DIRACX_DEV_CRASH_ON_MISSED_ACCESS_POLICY", Rule("safe_literal", "true")),
     ("DIRACX_OTEL_ENABLED", Rule("safe_literal", "false")),
     ("DIRACX_OTEL_GRPC_ENDPOINT", Rule("safe_synthetic", "otel.example.invalid:4317")),
     ("DIRACX_OTEL_GRPC_INSECURE", Rule("safe_literal", "true")),
@@ -71,6 +71,10 @@ POLICY_ENTRIES = (
     (
         "DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE",
         Rule("structural_placeholder", "file:///path/to/jwks.json"),
+    ),
+    (
+        "DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY",
+        Rule("credential_placeholder", "REPLACE_WITH_SHA256_OF_LEGACY_API_KEY"),
     ),
     (
         "DIRACX_TASKS_REDIS_URL",
@@ -169,8 +173,29 @@ def policy_map(entries: tuple[tuple[str, Rule], ...]) -> dict[str, Rule]:
     return policy
 
 
-def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
+def has_default(field: ast.AnnAssign) -> bool:
+    """Return whether a settings field can be left out of the environment."""
+    value = field.value
+    if value is None:
+        return False
+    if not isinstance(value, ast.Call):
+        return True
+    func = value.func
+    if (
+        func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+    ) != "Field":
+        return True
+    if any(k.arg in {"default", "default_factory"} for k in value.keywords):
+        return True
+    return bool(value.args) and not (
+        isinstance(value.args[0], ast.Constant) and value.args[0].value is Ellipsis
+    )
+
+
+def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
+    """Return the settings env names, those with no default, and dynamic prefixes."""
     names: set[str] = set()
+    required: set[str] = set()
     dynamic_prefixes: set[str] = set()
     parsed = {
         path: ast.parse((source_root / path).read_text(encoding="utf-8"))
@@ -204,11 +229,13 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
                     f"ambiguous env prefix in {class_name}: {prefix_candidates}"
                 )
             prefix = prefix_candidates[0]
-            names.update(
-                prefix + node.target.id.upper()
-                for node in cls.body
-                if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
-            )
+            for node in cls.body:
+                if isinstance(node, ast.AnnAssign) and isinstance(
+                    node.target, ast.Name
+                ):
+                    names.add(prefix + node.target.id.upper())
+                    if not has_default(node):
+                        required.add(prefix + node.target.id.upper())
         else:
             for node in cls.body:
                 if not isinstance(node, ast.AnnAssign) or not isinstance(
@@ -225,6 +252,8 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
                             "FactorySettings validation_alias is no longer a string literal"
                         )
                     names.add(keyword.value.value)
+                    if not has_default(node):
+                        required.add(keyword.value.value)
             dynamic_prefixes = {
                 part.value
                 for node in ast.walk(cls)
@@ -236,7 +265,7 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str]]:
             }
     if dynamic_prefixes != {"DIRACX_SERVICE_", "DIRACX_OS_DB_", "DIRACX_DB_URL_"}:
         raise ValueError(f"DIRACX dynamic settings aliases changed: {dynamic_prefixes}")
-    return names, dynamic_prefixes
+    return names, required, dynamic_prefixes
 
 
 def database_names(source_root: Path) -> set[str]:
@@ -252,7 +281,7 @@ def database_names(source_root: Path) -> set[str]:
 
 def check_policy(source_root: Path, policy: dict[str, Rule]) -> None:
     """Fail when the policy and the DiracX sources disagree."""
-    recognized, dynamic = schema_names(source_root)
+    recognized, required, dynamic = schema_names(source_root)
     if not set(DB_PREFIXES) <= dynamic:
         raise ValueError("DIRACX database alias construction changed")
     databases = database_names(source_root)
@@ -260,11 +289,13 @@ def check_policy(source_root: Path, policy: dict[str, Rule]) -> None:
     unknown = sorted(policy.keys() - listed - recognized)
     missing = sorted(databases - listed)
     stale = sorted(listed - databases)
-    if unknown or missing or stale:
+    unset = sorted(required - policy.keys())
+    if unknown or missing or stale or unset:
         raise ValueError(
             "diracx.env policy/source drift: "
             f"unknown settings={unknown}; databases without a rule={missing}; "
-            f"rules for removed databases={stale}"
+            f"rules for removed databases={stale}; "
+            f"settings with no default and no rule={unset}"
         )
 
 
