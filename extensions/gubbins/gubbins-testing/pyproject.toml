@@ -17,6 +17,14 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+
+[project.urls]
+Homepage = "https://diracgrid.org"
+Documentation = "https://diracx.diracgrid.org"
+Repository = "https://github.com/DIRACGrid/diracx"
+Issues = "https://github.com/DIRACGrid/diracx/issues"
+Security = "https://github.com/DIRACGrid/diracx/security/policy"
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
