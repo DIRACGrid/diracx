@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 # https://opentelemetry.io/blog/2023/logs-collection/
 # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
@@ -181,10 +183,18 @@ def _create_exporters(
         def url(signal: str) -> str | None:
             return f"{base_url}/v1/{signal}" if base_url else None
 
+        # requests accepts an OpenSSL-hashed directory as CA path
+        ca = str(settings.ca_path) if settings.ca_path else None
         return (
-            HTTPSpanExporter(endpoint=url("traces"), headers=settings.headers),
-            HTTPMetricExporter(endpoint=url("metrics"), headers=settings.headers),
-            HTTPLogExporter(endpoint=url("logs"), headers=settings.headers),
+            HTTPSpanExporter(
+                endpoint=url("traces"), headers=settings.headers, certificate_file=ca
+            ),
+            HTTPMetricExporter(
+                endpoint=url("metrics"), headers=settings.headers, certificate_file=ca
+            ),
+            HTTPLogExporter(
+                endpoint=url("logs"), headers=settings.headers, certificate_file=ca
+            ),
         )
 
     from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
@@ -193,15 +203,31 @@ def _create_exporters(
     )
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-    endpoint = settings.grpc_endpoint or None
+    kwargs: dict = {
+        "endpoint": settings.grpc_endpoint or None,
+        "insecure": settings.grpc_insecure,
+        "headers": settings.headers,
+    }
+    if settings.ca_path:
+        from grpc import ssl_channel_credentials
+
+        # gRPC only takes a CA bundle, so we build one from the directory
+        kwargs["insecure"] = False
+        kwargs["credentials"] = ssl_channel_credentials(_ca_bundle(settings.ca_path))
     return (
-        OTLPSpanExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
-        OTLPMetricExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
-        OTLPLogExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
+        OTLPSpanExporter(**kwargs),
+        OTLPMetricExporter(**kwargs),
+        OTLPLogExporter(**kwargs),
     )
+
+
+def _ca_bundle(ca_path: Path) -> bytes:
+    """Concatenate the certificates of an OpenSSL-hashed CA directory."""
+    certificates = [
+        path.read_bytes().strip()
+        for path in sorted(ca_path.iterdir())
+        if re.fullmatch(r"[0-9a-f]{8}\.\d+", path.name)
+    ]
+    if not certificates:
+        raise ValueError(f"No OpenSSL-hashed CA certificates in {ca_path}")
+    return b"\n".join(certificates) + b"\n"

@@ -29,6 +29,7 @@ from joserfc.jwk import KeySet, KeySetSerialization
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    DirectoryPath,
     Field,
     FileUrl,
     PrivateAttr,
@@ -484,6 +485,13 @@ class OTELSettings(ServiceSettingsBase):
     The base URL of the OpenTelemetry collector (e.g. ``http://otel-collector:4318``),
     used with the ``http`` protocol. ``/v1/traces``, ``/v1/metrics`` and ``/v1/logs``
     are appended to it. The scheme (``http`` or ``https``) decides whether TLS is used.
+    """
+
+    ca_path: DirectoryPath | None = None
+    """
+    OpenSSL-hashed directory (see ``openssl rehash``) of the CA certificates used to
+    verify the collector. It replaces the standard OTLP certificate settings.
+    With ``grpc``, setting it enables TLS regardless of ``grpc_insecure``.
     """
 
     headers: dict[str, str] | None = None

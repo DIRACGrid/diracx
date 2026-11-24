@@ -26194,6 +26194,7 @@ packages:
   name: diracx-core
   requires_dist:
   - cachetools
+  - cryptography
   - diraccommon>=9.0.18
   - email-validator
   - gitpython
@@ -26231,6 +26232,7 @@ packages:
   name: diracx-logic
   requires_dist:
   - cachetools
+  - cryptography
   - diraccommon>=9.0.18
   - diracx-core
   - diracx-db
