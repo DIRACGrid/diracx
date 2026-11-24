@@ -39,9 +39,13 @@ ALLOWED_REQUIREMENTS = frozenset(
     }
 )
 
-# Hints a runner may ignore, but which it must recognise: cwltool tries to
-# fetch the schema of a class it does not know.
-ALLOWED_HINTS = ALLOWED_REQUIREMENTS | {"SoftwareRequirement", "WorkReuse"}
+# Hints a runner may ignore, so every CWL v1.2 class, but only those: cwltool
+# fetches the IRI of a class it does not know.
+ALLOWED_HINTS = ALLOWED_REQUIREMENTS | {
+    "InplaceUpdateRequirement",
+    "SoftwareRequirement",
+    "WorkReuse",
+}
 
 # DiracX's own classes (``dirac:Transformation``…), accepted as hints only.
 # cwltool --pack writes them with the prefix expanded, and

@@ -61,7 +61,14 @@ def test_unsupported_requirements_are_refused_wherever_they_are():
 
 
 def test_unknown_hints_are_refused():
-    check_policy(tool(hints=[{"class": "SoftwareRequirement", "packages": []}]))
+    check_policy(
+        tool(
+            hints=[
+                {"class": "SoftwareRequirement", "packages": []},
+                {"class": "InplaceUpdateRequirement", "inplaceUpdate": True},
+            ]
+        )
+    )
     with pytest.raises(PolicyViolationError, match="http://example.org/cwl#Thing"):
         check_policy(tool(hints=[{"class": "http://example.org/cwl#Thing"}]))
 
