@@ -76,7 +76,11 @@ jobs:
 
   build:
     name: Build distribution 📦
-    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
+    # Pushes, releases and manual runs only in DIRACGrid/diracx: a release or
+    # dispatch in a fork must not start publish and docker (they need build).
+    if: >-
+      github.repository == 'DIRACGrid/diracx'
+      || (github.event_name != 'push' && github.event_name != 'release' && github.event_name != 'workflow_dispatch')
     runs-on: "ubuntu-latest"
     outputs:
       new-version: ${{ steps.check-tag.outputs.new-version }}
