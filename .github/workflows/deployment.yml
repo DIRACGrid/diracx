@@ -61,8 +61,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          # A release event's SHA is the tagged commit: read main's manifest.
-          MANIFEST_REF: ${{ github.event_name == 'release' && github.event.repository.default_branch || github.sha }}
+          # Always main's manifest: a release or re-run SHA can be an older commit.
+          MANIFEST_REF: ${{ github.event.repository.default_branch }}
         run: |
           version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$MANIFEST_REF" \
             --jq .content | base64 -d | jq -er '."."')"
