@@ -231,7 +231,8 @@ jobs:
 
       # A re-publish (workflow_dispatch or re-run) only fills in what is missing:
       # an image already pushed for this tag is kept, not replaced by a new
-      # build with another digest. A failed lookup counts as missing. An
+      # build with another digest. Only a registry 404 counts as missing: any
+      # other answer fails the step rather than risk replacing the image. An
       # existing image with no provenance (its attestation failed) is attested
       # here; one that has it is not attested again.
       - name: Check existing release images
@@ -241,19 +242,36 @@ jobs:
           TAG: ${{ needs.build.outputs.new-version }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
           for img in services tasks client; do
-            ref="ghcr.io/diracgrid/diracx/$img:$TAG"
-            if digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' 2>/dev/null | jq -er .digest)"; then
-              echo "::notice::$ref already exists, not rebuilding it"
-              echo "$img=true" >> "$GITHUB_OUTPUT"
-              # 404 when the digest has no attestation (gh prints the error body
-              # on stdout, so drop it). Any other error is treated the same, at
-              # worst attesting the image twice.
-              count="$(gh api "repos/$GITHUB_REPOSITORY/attestations/$digest" --jq '.attestations | length' 2>/dev/null)" || count=0
-              if [[ "$count" == 0 ]]; then
-                echo "::warning::$ref has no build provenance, attesting $digest"
-                echo "$img-unattested=$digest" >> "$GITHUB_OUTPUT"
-              fi
+            repo="diracgrid/diracx/$img"
+            ref="ghcr.io/$repo:$TAG"
+            token="$(curl -fsS -u "$GITHUB_ACTOR:$GH_TOKEN" "https://ghcr.io/token?scope=repository:$repo:pull" | jq -er .token)"
+            headers="$(mktemp)"
+            code="$(curl -sS --head -o /dev/null -D "$headers" -w '%{http_code}' \
+              -H "Authorization: Bearer $token" -H "Accept: $accept" \
+              "https://ghcr.io/v2/$repo/manifests/$TAG")"
+            if [[ "$code" == 404 ]]; then
+              echo "::notice::$ref not found, building it"
+              continue
+            elif [[ "$code" != 200 ]]; then
+              echo "::error::cannot check $ref: HTTP $code"
+              exit 1
+            fi
+            digest="$(tr -d '\r' < "$headers" | awk 'tolower($1) == "docker-content-digest:" {print $2}')"
+            if [[ "$digest" != sha256:* ]]; then
+              echo "::error::no digest for $ref"
+              exit 1
+            fi
+            echo "::notice::$ref already exists, not rebuilding it"
+            echo "$img=true" >> "$GITHUB_OUTPUT"
+            # 404 when the digest has no attestation (gh prints the error body
+            # on stdout, so drop it). Any other error is treated the same, at
+            # worst attesting the image twice.
+            count="$(gh api "repos/$GITHUB_REPOSITORY/attestations/$digest" --jq '.attestations | length' 2>/dev/null)" || count=0
+            if [[ "$count" == 0 ]]; then
+              echo "::warning::$ref has no build provenance, attesting $digest"
+              echo "$img-unattested=$digest" >> "$GITHUB_OUTPUT"
             fi
           done
 

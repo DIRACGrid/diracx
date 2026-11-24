@@ -65,23 +65,46 @@ def test_setting_with_no_default_and_no_rule_fails() -> None:
         release_env.build_env(ROOT, entries)
 
 
-def test_field_with_ellipsis_default_is_required(tmp_path: Path) -> None:
+def copy_sources(tmp_path: Path, addition: str, after: str | None = None) -> Path:
+    """Copy the settings and DB sources, adding text after a unique line or at the end."""
     settings = "diracx-core/src/diracx/core/settings.py"
     for path in (settings, "diracx-db/pyproject.toml"):
         (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / path).write_bytes((ROOT / path).read_bytes())
     source = (tmp_path / settings).read_text(encoding="utf-8")
-    field = "    token_issuer: str\n"
-    assert source.count(field) == 1
-    (tmp_path / settings).write_text(
-        source.replace(
-            field,
-            field + '    new_setting: str = Field(default=..., description="x")\n',
-        ),
-        encoding="utf-8",
+    if after is None:
+        source += addition
+    else:
+        assert source.count(after) == 1
+        source = source.replace(after, after + addition)
+    (tmp_path / settings).write_text(source, encoding="utf-8")
+    return tmp_path
+
+
+def test_field_with_ellipsis_default_is_required(tmp_path: Path) -> None:
+    root = copy_sources(
+        tmp_path,
+        '    new_setting: str = Field(default=..., description="x")\n',
+        "    token_issuer: str\n",
     )
     with pytest.raises(ValueError, match="DIRACX_SERVICE_AUTH_NEW_SETTING"):
-        release_env.build_env(tmp_path)
+        release_env.build_env(root)
+
+
+def test_alias_replaces_the_env_prefix(tmp_path: Path) -> None:
+    root = copy_sources(
+        tmp_path,
+        '    new_setting: str = Field(validation_alias="DIRACX_NEW_SETTING")\n',
+        "    token_issuer: str\n",
+    )
+    with pytest.raises(ValueError, match=r"no rule=\['DIRACX_NEW_SETTING'\]"):
+        release_env.build_env(root)
+
+
+def test_indirect_settings_class_fails(tmp_path: Path) -> None:
+    root = copy_sources(tmp_path, "\n\nclass ChildSettings(AuthSettings):\n    pass\n")
+    with pytest.raises(ValueError, match="indirect settings class ChildSettings"):
+        release_env.build_env(root)
 
 
 def test_duplicate_classification_fails() -> None:
@@ -94,7 +117,9 @@ def test_malformed_dotenv_rejected() -> None:
         release_env.parse_dotenv(b"DIRACX_X=\n")
 
 
-@pytest.mark.parametrize("example", ['"quoted"', " padded", "a #comment", "\u00b5s"])
+@pytest.mark.parametrize(
+    "example", ['"quoted"', " padded", "a #comment", "\u00b5s", "a$b"]
+)
 def test_example_unsafe_unquoted_fails(example: str) -> None:
     entries = ENTRIES + (("DIRACX_OTEL_HEADERS", Rule("safe_literal", example)),)
     with pytest.raises(ValueError, match="unsafe example format"):

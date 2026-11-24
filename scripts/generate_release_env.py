@@ -28,8 +28,9 @@ NAME_RE = re.compile(r"DIRACX_[A-Z0-9_]+\Z")
 DB_PREFIXES = ("DIRACX_DB_URL_", "DIRACX_OS_DB_")
 EXAMPLE_PATH = Path("docs/admin/how-to/install-without-kubernetes/diracx.env.example")
 # Values are written unquoted: podman's --env-file (used by podman-compose
-# up to 1.1.0) keeps quotes, while python-dotenv (podman-compose >= 1.2.0, docker
-# compose) reads an unquoted value as is. Both then see the same string.
+# up to 1.1.0) keeps quotes, while python-dotenv (podman-compose >= 1.2.0) and
+# docker compose read an unquoted value as is. They all see the same string as
+# long as it has no "$", which docker compose and python-dotenv expand.
 DOTENV_LINE_RE = re.compile(r"^(DIRACX_[A-Z0-9_]+)=(.+)$")
 
 
@@ -156,18 +157,24 @@ SETTINGS_BASE = "ServiceSettingsBase"
 SOURCE_GLOB = "diracx-*/src/**/*.py"
 
 
+def base_names(node: ast.ClassDef) -> set[str]:
+    return {
+        base.id if isinstance(base, ast.Name) else getattr(base, "attr", "")
+        for base in node.bases
+    }
+
+
 def settings_classes(source_root: Path) -> dict[str, ast.ClassDef]:
     """Return the direct ServiceSettingsBase subclasses of the DiracX packages."""
     classes: dict[str, ast.ClassDef] = {}
-    for path in sorted(source_root.glob(SOURCE_GLOB)):
-        text = path.read_text(encoding="utf-8")
-        if SETTINGS_BASE not in text:
-            continue
-        for node in ast.parse(text).body:
-            if not isinstance(node, ast.ClassDef) or not any(
-                (base.id if isinstance(base, ast.Name) else getattr(base, "attr", ""))
-                == SETTINGS_BASE
-                for base in node.bases
+    modules = [
+        ast.parse(path.read_text(encoding="utf-8"))
+        for path in sorted(source_root.glob(SOURCE_GLOB))
+    ]
+    for module in modules:
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef) or SETTINGS_BASE not in base_names(
+                node
             ):
                 continue
             if node.name in classes:
@@ -175,6 +182,11 @@ def settings_classes(source_root: Path) -> dict[str, ast.ClassDef]:
             classes[node.name] = node
     if "FactorySettings" not in classes:
         raise ValueError("FactorySettings not found")
+    # A subclass of a settings class inherits fields the scan does not model.
+    for module in modules:
+        for node in ast.walk(module):
+            if isinstance(node, ast.ClassDef) and base_names(node) & classes.keys():
+                raise ValueError(f"unsupported indirect settings class {node.name}")
     return classes
 
 
@@ -200,6 +212,7 @@ def policy_map(entries: tuple[tuple[str, Rule], ...]) -> dict[str, Rule]:
             or rule.example != rule.example.strip()
             or rule.example[0] in "\"'`"
             or " #" in rule.example
+            or "$" in rule.example
         ):
             raise ValueError(f"unsafe example format for {name}")
         if rule.classification == "json_placeholder":
@@ -233,6 +246,23 @@ def is_ellipsis(node: ast.expr) -> bool:
     return isinstance(node, ast.Constant) and node.value is Ellipsis
 
 
+def field_alias(field: ast.AnnAssign) -> str | None:
+    """Return the env name a Field alias sets, which replaces the env prefix."""
+    if not isinstance(field.value, ast.Call):
+        return None
+    for keyword in field.value.keywords:
+        if keyword.arg not in {"alias", "validation_alias"}:
+            continue
+        if not isinstance(keyword.value, ast.Constant) or not isinstance(
+            keyword.value.value, str
+        ):
+            raise ValueError(
+                f"settings alias of {ast.unparse(field.target)} is not a string"
+            )
+        return keyword.value.value
+    return None
+
+
 def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
     """Return the settings env names, those with no default, and dynamic prefixes."""
     names: set[str] = set()
@@ -262,27 +292,20 @@ def schema_names(source_root: Path) -> tuple[set[str], set[str], set[str]]:
                 if isinstance(node, ast.AnnAssign) and isinstance(
                     node.target, ast.Name
                 ):
-                    names.add(prefix + node.target.id.upper())
+                    name = field_alias(node) or prefix + node.target.id.upper()
+                    names.add(name)
                     if not has_default(node):
-                        required.add(prefix + node.target.id.upper())
+                        required.add(name)
         else:
             for node in cls.body:
                 if not isinstance(node, ast.AnnAssign) or not isinstance(
                     node.value, ast.Call
                 ):
                     continue
-                for keyword in node.value.keywords:
-                    if keyword.arg != "validation_alias":
-                        continue
-                    if not isinstance(keyword.value, ast.Constant) or not isinstance(
-                        keyword.value.value, str
-                    ):
-                        raise ValueError(
-                            "FactorySettings validation_alias is no longer a string literal"
-                        )
-                    names.add(keyword.value.value)
+                if alias := field_alias(node):
+                    names.add(alias)
                     if not has_default(node):
-                        required.add(keyword.value.value)
+                        required.add(alias)
             dynamic_prefixes = {
                 part.value
                 for node in ast.walk(cls)
