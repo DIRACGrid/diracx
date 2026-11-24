@@ -211,13 +211,18 @@ jobs:
       - publish
     if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
     # Each push to main builds the :dev images: a newer push cancels the older
-    # build, so an older commit cannot overwrite :dev (the tags are moved in the
-    # last step, all three together). Releases are never cancelled.
+    # build, so an older commit cannot overwrite :dev (the dev-tags job moves the
+    # tags once all three images exist). Releases are never cancelled.
     concurrency:
       group: docker-${{ needs.build.outputs.new-version || github.ref }}
       cancel-in-progress: ${{ needs.build.outputs.create-release != 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    outputs:
+      push-dev: ${{ env.PUSH_DEV }}
+      services-digest: ${{ steps.build-services-dev.outputs.digest }}
+      tasks-digest: ${{ steps.build-tasks-dev.outputs.digest }}
+      client-digest: ${{ steps.build-client-dev.outputs.digest }}
     env:
       # Only main pushes and the nightly run update :dev; PRs build without pushing.
       PUSH_DEV: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
@@ -379,14 +384,34 @@ jobs:
           # Pushed by digest only: the :dev tags are moved together below.
           outputs: type=image,name=ghcr.io/diracgrid/diracx/client,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
-      # Move all three :dev tags only once every image is built, so a push
-      # cancelled mid-build cannot leave :dev images from different commits.
+
+  dev-tags:
+    # Moves the three :dev tags in a group that is never cancelled, so a newer
+    # push cannot stop it with only some of the tags moved.
+    needs:
+      - build
+      - docker
+    if: ${{ needs.build.outputs.create-release != 'true' && needs.docker.outputs.push-dev == 'true' }}
+    concurrency:
+      group: docker-dev-tags
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write          # move the :dev tags on ghcr.io
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Login to GitHub container registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Tag the dev images
-        if: ${{ needs.build.outputs.create-release != 'true' && env.PUSH_DEV == 'true' }}
         env:
-          SERVICES: ${{ steps.build-services-dev.outputs.digest }}
-          TASKS: ${{ steps.build-tasks-dev.outputs.digest }}
-          CLIENT: ${{ steps.build-client-dev.outputs.digest }}
+          SERVICES: ${{ needs.docker.outputs.services-digest }}
+          TASKS: ${{ needs.docker.outputs.tasks-digest }}
+          CLIENT: ${{ needs.docker.outputs.client-digest }}
         run: |
           set -euo pipefail
           for pair in "services=$SERVICES" "tasks=$TASKS" "client=$CLIENT"; do
