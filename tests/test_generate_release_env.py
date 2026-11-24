@@ -94,7 +94,9 @@ def test_field_with_ellipsis_default_is_required(tmp_path: Path) -> None:
 def test_alias_replaces_the_env_prefix(tmp_path: Path) -> None:
     root = copy_sources(
         tmp_path,
-        '    new_setting: str = Field(validation_alias="DIRACX_NEW_SETTING")\n',
+        "    new_setting: str = Field(\n"
+        '        alias="DIRACX_OTHER", validation_alias="DIRACX_NEW_SETTING"\n'
+        "    )\n",
         "    token_issuer: str\n",
     )
     with pytest.raises(ValueError, match=r"no rule=\['DIRACX_NEW_SETTING'\]"):
@@ -104,11 +106,18 @@ def test_alias_replaces_the_env_prefix(tmp_path: Path) -> None:
 def test_private_attributes_and_classvars_are_not_settings(tmp_path: Path) -> None:
     root = copy_sources(
         tmp_path,
-        "    _cache: dict\n    LIMIT: ClassVar[int]\n",
+        '    _cache: dict\n    LIMIT: ClassVar[int]\n    OTHER: "ClassVar[int]"\n',
         "    token_issuer: str\n",
     )
     names, required, _ = release_env.schema_names(root)
-    assert not {"DIRACX_SERVICE_AUTH__CACHE", "DIRACX_SERVICE_AUTH_LIMIT"} & names
+    assert (
+        not {
+            "DIRACX_SERVICE_AUTH__CACHE",
+            "DIRACX_SERVICE_AUTH_LIMIT",
+            "DIRACX_SERVICE_AUTH_OTHER",
+        }
+        & names
+    )
     assert "DIRACX_SANDBOX_STORE__CLIENT" not in names
     assert release_env.build_env(root) == release_env.build_env(ROOT)
 

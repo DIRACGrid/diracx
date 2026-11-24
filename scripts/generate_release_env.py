@@ -14,16 +14,10 @@ import argparse
 import ast
 import json
 import re
-import sys
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeGuard
-
-# The pre-commit hook runs on the system python3, which may be older than 3.11.
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 NAME_RE = re.compile(r"DIRACX_[A-Z0-9_]+\Z")
 DB_PREFIXES = ("DIRACX_DB_URL_", "DIRACX_OS_DB_")
@@ -250,6 +244,8 @@ def is_field(node: ast.stmt) -> TypeGuard[ast.AnnAssign]:
     if not isinstance(node, ast.AnnAssign) or not isinstance(node.target, ast.Name):
         return False
     annotation = node.annotation
+    if isinstance(annotation, ast.Constant) and isinstance(annotation.value, str):
+        annotation = ast.parse(annotation.value, mode="eval").body
     if isinstance(annotation, ast.Subscript):
         annotation = annotation.value
     is_classvar = (
@@ -269,8 +265,11 @@ def field_alias(field: ast.AnnAssign) -> str | None:
     """Return the env name a Field alias sets, which replaces the env prefix."""
     if not isinstance(field.value, ast.Call):
         return None
-    for keyword in field.value.keywords:
-        if keyword.arg not in {"alias", "validation_alias"}:
+    keywords = {k.arg: k for k in field.value.keywords}
+    # pydantic-settings reads validation_alias when both are set.
+    for name in ("validation_alias", "alias"):
+        keyword = keywords.get(name)
+        if keyword is None:
             continue
         if not isinstance(keyword.value, ast.Constant) or not isinstance(
             keyword.value.value, str
