@@ -15,6 +15,14 @@ classifiers = [
 dependencies = ["azure-core[aio]", "diracx-core", "isodate", "httpx2", "pyjwt"]
 dynamic = ["version"]
 
+
+[project.urls]
+Homepage = "https://diracgrid.org"
+Documentation = "https://diracx.diracgrid.org"
+Repository = "https://github.com/DIRACGrid/diracx"
+Issues = "https://github.com/DIRACGrid/diracx/issues"
+Security = "https://github.com/DIRACGrid/diracx/security/policy"
+
 [project.optional-dependencies]
 testing = ["diracx-testing"]
 types = []
