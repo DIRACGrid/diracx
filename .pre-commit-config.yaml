@@ -9,8 +9,7 @@ default_language_version:
 
 # The pixi-dependent local hooks (stages: [manual] below) need a pixi
 # environment and are run explicitly by the "pre-commit (pixi-dependent
-# hooks)" CI job; the rest run everywhere via pre-commit/action and get
-# auto-fixed by pre-commit-ci/lite-action.
+# hooks)" CI job; the rest run everywhere, including the "pre-commit" CI job.
 default_stages: [pre-commit]
 
 repos:
