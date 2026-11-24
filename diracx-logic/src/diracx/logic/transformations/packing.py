@@ -8,9 +8,7 @@ inputs of the failed one stay ``Unassigned`` for the next run.
 
 from __future__ import annotations
 
-import hashlib
 import inspect
-import json
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from datetime import datetime, timezone
@@ -21,6 +19,7 @@ from uuid_utils import uuid7
 
 from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
+from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
     INPUT_TRANSITIONS,
     BadInput,
@@ -89,9 +88,7 @@ def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
             not an async generator function, or its ``packer_args`` is not
             annotated with a pydantic model.
     """
-    entry_points = select_from_extension(
-        group=DiracEntryPoint.PACKERS, name=name
-    )
+    entry_points = select_from_extension(group=DiracEntryPoint.PACKERS, name=name)
     if not entry_points:
         raise ConfigurationError(
             f"No packer named {name!r} is registered under "
@@ -106,19 +103,6 @@ def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
             f"Packer {name!r} must annotate packer_args with a pydantic model"
         )
     return plugin, args_model
-
-
-def content_hash(document: dict[str, Any]) -> bytes:
-    """Hash a JSON document by its canonical form.
-
-    Args:
-        document: The document to hash.
-
-    Returns:
-        The SHA-256 digest of the document with sorted keys and no whitespace.
-    """
-    canonical = json.dumps(document, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).digest()
 
 
 def _require_transition(old: InputStatus, new: InputStatus) -> None:
@@ -254,7 +238,7 @@ async def pack_transformation(
             case ComputeParcel():
                 consume(proposal.input_ids)
                 requirements = recursive_merge(template, proposal.requirements or {})
-                requirements_id = content_hash(requirements) if requirements else None
+                requirements_id = hash_json(requirements) if requirements else None
                 if requirements_id and requirements_id not in stored_requirements:
                     new_requirements[requirements_id] = requirements
                 parcels.append(

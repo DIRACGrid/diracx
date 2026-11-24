@@ -8,6 +8,7 @@ from uuid_utils import UUID, uuid7
 from uuid_utils.compat import uuid7 as std_uuid7
 
 from diracx.core.exceptions import ConfigurationError
+from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
     BadInput,
     ComputeParcel,
@@ -36,11 +37,7 @@ from diracx.logic.transformations.packers import (
     FixedSizePackerArgs,
     fixed_size_packer,
 )
-from diracx.logic.transformations.packing import (
-    content_hash,
-    load_packer,
-    pack_transformation,
-)
+from diracx.logic.transformations.packing import load_packer, pack_transformation
 
 PROCESS_ID = b"\x0a" * 32
 TEMPLATE = {"cpu": 1, "platform": "x86_64", "disk": {"scratch_gb": 10, "io": "local"}}
@@ -64,7 +61,7 @@ async def transformation_db():
 @pytest.fixture
 async def transformation_id(transformation_db: TransformationDB) -> UUID:
     workgraph_id, ownership_id, transformation_id = uuid7(), uuid7(), uuid7()
-    template_id = content_hash(TEMPLATE)
+    template_id = hash_json(TEMPLATE)
     async with transformation_db as db:
         await db.conn.execute(
             insert(Workgraphs).values(
@@ -431,9 +428,3 @@ def test_load_packer_needs_an_args_model(monkeypatch):
     monkeypatch.setattr(packing, "select_from_extension", lambda **_: [EntryPoint()])
     with pytest.raises(ConfigurationError, match="pydantic model"):
         load_packer("Untyped")
-
-
-def test_content_hash_is_canonical():
-    assert content_hash({"a": 1, "b": [1, 2]}) == content_hash({"b": [1, 2], "a": 1})
-    assert len(content_hash({})) == 32
-    assert content_hash({"a": 1}) != content_hash({"a": 2})
