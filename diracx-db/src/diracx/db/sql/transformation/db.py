@@ -44,6 +44,7 @@ from .schema import (
     RequirementsTemplates,
     TransformationLog,
     Transformations,
+    WorkgraphLog,
     Workgraphs,
 )
 
@@ -279,13 +280,18 @@ class TransformationDB(BaseSQLDB):
         workgraph_id: AnyUUID,
         from_status: WorkgraphStatus,
         to_status: WorkgraphStatus,
+        author: str,
     ) -> bool:
         """Move a workgraph between two statuses, if it is still in the first.
+
+        A move is recorded as a ``StateChange`` event in ``WorkgraphLog``, in
+        the same transaction (DX-ADR-004).
 
         Args:
             workgraph_id: The workgraph.
             from_status: Status the workgraph must be in.
             to_status: Status to move it to.
+            author: User or component responsible for the change.
 
         Returns:
             Whether the workgraph moved.
@@ -298,38 +304,81 @@ class TransformationDB(BaseSQLDB):
             )
             .values(status=to_status)
         )
-        return result.rowcount == 1
+        if result.rowcount != 1:
+            return False
+        await self.conn.execute(
+            insert(WorkgraphLog).values(
+                workgraph_id=workgraph_id,
+                event_type="StateChange",
+                old_status=from_status,
+                new_status=to_status,
+                author=author,
+            )
+        )
+        return True
 
     async def set_workgraph_transformations_status(
         self,
         workgraph_id: AnyUUID,
         from_status: TransformationStatus,
         to_status: TransformationStatus,
+        author: str,
     ) -> int:
         """Move a workgraph's member transformations between two statuses.
 
-        Only members still in ``from_status`` move.
+        Only members still in ``from_status`` move. Each move is recorded as a
+        ``StateChange`` event in ``TransformationLog``, in the same
+        transaction (DX-ADR-004).
 
         Args:
             workgraph_id: The workgraph whose members move.
             from_status: Status the members must be in.
             to_status: Status to move them to.
+            author: User or component responsible for the change.
 
         Returns:
             How many transformations moved.
         """
-        members = select(Ownership.ownership_id).where(
-            Ownership.workgraph_id == workgraph_id
+        # Lock the members that will move, so that the rows logged are
+        # exactly the rows updated
+        transformation_ids = list(
+            (
+                await self.conn.execute(
+                    select(Transformations.transformation_id)
+                    .join(
+                        Ownership,
+                        Ownership.ownership_id == Transformations.ownership_id,
+                    )
+                    .where(
+                        Ownership.workgraph_id == workgraph_id,
+                        Transformations.status == from_status,
+                    )
+                    .with_for_update()
+                )
+            ).scalars()
         )
-        result = await self.conn.execute(
+        if not transformation_ids:
+            return 0
+        await self.conn.execute(
             update(Transformations)
-            .where(
-                Transformations.ownership_id.in_(members),
-                Transformations.status == from_status,
-            )
+            .where(Transformations.transformation_id.in_(transformation_ids))
             .values(status=to_status)
         )
-        return result.rowcount
+        await self.conn.execute(
+            insert(TransformationLog).values(
+                [
+                    {
+                        "transformation_id": transformation_id,
+                        "event_type": "StateChange",
+                        "old_status": from_status,
+                        "new_status": to_status,
+                        "author": author,
+                    }
+                    for transformation_id in transformation_ids
+                ]
+            )
+        )
+        return len(transformation_ids)
 
     async def get_transformation(self, transformation_id: AnyUUID) -> dict[str, Any]:
         """Get what the packer needs to know about a transformation.

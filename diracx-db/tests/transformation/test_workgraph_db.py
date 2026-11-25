@@ -20,7 +20,9 @@ from diracx.db.sql.transformation.schema import (
     ComputeTransformations,
     Ownership,
     Processes,
+    TransformationLog,
     Transformations,
+    WorkgraphLog,
     Workgraphs,
 )
 
@@ -169,25 +171,37 @@ async def test_set_workgraph_status(transformation_db):
     async with transformation_db as db:
         workgraph_id = await insert_workgraph(db, new_transformation())
         assert await db.set_workgraph_status(
-            workgraph_id, WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE
+            workgraph_id, WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE, "someone"
         )
-        # Compare-and-set: it is no longer New
+        # Compare-and-set: it is no longer New, and nothing more is logged
         assert not await db.set_workgraph_status(
-            workgraph_id, WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE
+            workgraph_id, WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE, "someone"
         )
         assert (await db.get_workgraph(workgraph_id))[
             "status"
         ] == WorkgraphStatus.ACTIVE
+
+        (log,) = (await db.conn.execute(select(WorkgraphLog))).all()
+        assert log.WorkgraphID == workgraph_id
+        assert (log.EventType, log.OldStatus, log.NewStatus, log.Author) == (
+            "StateChange",
+            WorkgraphStatus.NEW,
+            WorkgraphStatus.ACTIVE,
+            "someone",
+        )
 
 
 async def test_set_workgraph_transformations_status(transformation_db):
     first, second = new_transformation(), new_transformation()
     async with transformation_db as db:
         workgraph_id = await insert_workgraph(db, first)
-        other_workgraph_id = await insert_workgraph(db, second)
+        await insert_workgraph(db, second)
 
         moved = await db.set_workgraph_transformations_status(
-            workgraph_id, TransformationStatus.NEW, TransformationStatus.ACTIVE
+            workgraph_id,
+            TransformationStatus.NEW,
+            TransformationStatus.ACTIVE,
+            "someone",
         )
         assert moved == 1
         # Only the members of that workgraph move
@@ -195,13 +209,49 @@ async def test_set_workgraph_transformations_status(transformation_db):
             first.transformation_id
         ]
         assert await db.list_feedable_transformation_ids() == [first.transformation_id]
+
+        # One StateChange row per member that moved
+        (log,) = (await db.conn.execute(select(TransformationLog))).all()
+        assert log.TransformationID == first.transformation_id
+        assert (log.EventType, log.OldStatus, log.NewStatus, log.Author) == (
+            "StateChange",
+            TransformationStatus.NEW,
+            TransformationStatus.ACTIVE,
+            "someone",
+        )
+
+        # Nothing left in New: nothing moves and nothing is logged
         assert (
             await db.set_workgraph_transformations_status(
-                workgraph_id, TransformationStatus.NEW, TransformationStatus.ACTIVE
+                workgraph_id,
+                TransformationStatus.NEW,
+                TransformationStatus.ACTIVE,
+                "someone",
             )
             == 0
         )
-        assert other_workgraph_id != workgraph_id
+        assert await count(db, TransformationLog) == 1
+
+
+async def test_set_workgraph_transformations_status_logs_each_member(
+    transformation_db,
+):
+    first, second = new_transformation(), new_transformation()
+    async with transformation_db as db:
+        workgraph_id = await insert_workgraph(db, first, second)
+        moved = await db.set_workgraph_transformations_status(
+            workgraph_id,
+            TransformationStatus.NEW,
+            TransformationStatus.ACTIVE,
+            "someone",
+        )
+        assert moved == 2
+        logged = set(
+            (
+                await db.conn.execute(select(TransformationLog.transformation_id))
+            ).scalars()
+        )
+        assert logged == {first.transformation_id, second.transformation_id}
 
 
 async def test_ownership_unique_per_workgraph(transformation_db):
