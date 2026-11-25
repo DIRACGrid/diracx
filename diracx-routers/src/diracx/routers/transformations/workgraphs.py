@@ -129,6 +129,7 @@ async def submit_workgraph(
 async def start_workgraph(
     workgraph_id: UUID,
     transformation_db: TransformationDB,
+    user_info: Annotated[AuthorizedUserInfo, Depends(verify_dirac_access_token)],
     check_permissions: CheckTransformationPolicyCallable,
 ) -> Response:
     """Start a ``New`` workgraph: it and its transformation become ``Active``.
@@ -138,6 +139,8 @@ async def start_workgraph(
     Args:
         workgraph_id: The workgraph to start.
         transformation_db: Database the workgraph is stored in.
+        user_info: Authenticated identity of the caller, recorded as the
+            author of the state changes.
         check_permissions: Access-policy callback for workgraph operations.
 
     Returns:
@@ -153,7 +156,11 @@ async def start_workgraph(
         workgraph_id=workgraph_id,
     )
     try:
-        await start_workgraph_bl(workgraph_id, transformation_db=transformation_db)
+        await start_workgraph_bl(
+            workgraph_id,
+            transformation_db=transformation_db,
+            author=user_info.preferred_username,
+        )
     except WorkgraphNotFoundError as exc:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(exc)) from exc
     except InvalidWorkgraphTransitionError as exc:
