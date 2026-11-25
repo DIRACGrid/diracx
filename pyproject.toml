@@ -79,7 +79,6 @@ required-imports = ["from __future__ import annotations"]
 # import-mode=importlib, packages with common names (e.g. tests/jobs) collide
 # in sys.modules when several diracx-* packages are collected in one run
 "diracx-*/tests/*" = ["S", "INP"]
-"diracx-api/src/diracx/api/**/*.py" = ["D100", "D101", "D102", "D103"]
 "diracx-api/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
 "diracx-db/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
 "diracx-cli/tests/**/*.py" = ["D100", "D101", "D102", "D103"]
