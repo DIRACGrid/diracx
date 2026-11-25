@@ -135,15 +135,17 @@ async def submit_workgraph(
 
 
 async def start_workgraph(
-    workgraph_id: AnyUUID, *, transformation_db: TransformationDB
+    workgraph_id: AnyUUID, *, transformation_db: TransformationDB, author: str
 ) -> None:
     """Move a ``New`` workgraph and its transformations to ``Active``.
 
-    Once ``Active``, the feeder of each transformation starts running.
+    Once ``Active``, the feeder of each transformation starts running. The
+    moves are recorded in the workgraph and transformation audit logs.
 
     Args:
         workgraph_id: The workgraph to start.
         transformation_db: Where the workgraph is stored.
+        author: Who started it, recorded in the audit logs.
 
     Raises:
         WorkgraphNotFoundError: If the workgraph does not exist.
@@ -158,11 +160,11 @@ async def start_workgraph(
 
     status = (await transformation_db.get_workgraph(workgraph_id))["status"]
     if status != from_status or not await transformation_db.set_workgraph_status(
-        workgraph_id, from_status, to_status
+        workgraph_id, from_status, to_status, author
     ):
         raise InvalidWorkgraphTransitionError(str(status), to_status.value)
     await transformation_db.set_workgraph_transformations_status(
-        workgraph_id, TransformationStatus.NEW, TransformationStatus.ACTIVE
+        workgraph_id, TransformationStatus.NEW, TransformationStatus.ACTIVE, author
     )
 
 

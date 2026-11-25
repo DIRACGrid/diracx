@@ -21,7 +21,9 @@ from diracx.db.sql import TransformationDB
 from diracx.db.sql.transformation.schema import (
     Processes,
     RequirementsTemplates,
+    TransformationLog,
     Transformations,
+    WorkgraphLog,
     Workgraphs,
 )
 from diracx.logic.transformations import (
@@ -299,7 +301,9 @@ async def test_start_workgraph(transformation_db):
         assert await db.list_feedable_transformation_ids() == []
 
     async with transformation_db as db:
-        await start_workgraph(result.workgraph_id, transformation_db=db)
+        await start_workgraph(
+            result.workgraph_id, transformation_db=db, author="someone"
+        )
 
     async with transformation_db as db:
         workgraph = await db.get_workgraph(result.workgraph_id)
@@ -309,14 +313,27 @@ async def test_start_workgraph(transformation_db):
         assert [str(t) for t in await db.list_feedable_transformation_ids()] == [
             str(result.transformation_id)
         ]
+        # Each move is in the audit trail
+        assert [
+            (row.OldStatus, row.NewStatus, row.Author)
+            for row in (await db.conn.execute(select(WorkgraphLog))).all()
+        ] == [(WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE, "someone")]
+        assert [
+            (row.OldStatus, row.NewStatus, row.Author)
+            for row in (await db.conn.execute(select(TransformationLog))).all()
+        ] == [(TransformationStatus.NEW, TransformationStatus.ACTIVE, "someone")]
 
 
 async def test_start_twice(transformation_db):
     async with transformation_db as db:
         result = await submit(db, "simulation.cwl")
-        await start_workgraph(result.workgraph_id, transformation_db=db)
+        await start_workgraph(
+            result.workgraph_id, transformation_db=db, author="someone"
+        )
         with pytest.raises(InvalidWorkgraphTransitionError) as exc_info:
-            await start_workgraph(result.workgraph_id, transformation_db=db)
+            await start_workgraph(
+                result.workgraph_id, transformation_db=db, author="someone"
+            )
     assert (exc_info.value.from_status, exc_info.value.to_status) == (
         "Active",
         "Active",
@@ -328,4 +345,4 @@ async def test_start_unknown_workgraph(transformation_db):
 
     async with transformation_db as db:
         with pytest.raises(WorkgraphNotFoundError):
-            await start_workgraph(uuid7(), transformation_db=db)
+            await start_workgraph(uuid7(), transformation_db=db, author="someone")
