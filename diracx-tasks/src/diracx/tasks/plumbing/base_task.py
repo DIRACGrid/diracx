@@ -1,3 +1,5 @@
+"""Base classes for DiracX tasks, including periodic and VO-aware tasks."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -41,6 +43,12 @@ class BaseTask:
 
         Uses context variables to allow multiple concurrent broker bindings
         in different async contexts.
+
+        Args:
+            task_bindings: Broker bindings keyed by task class.
+
+        Raises:
+            RuntimeError: If tasks are already bound in this context.
         """
         if cls._broker_registry.get() is not None:
             raise RuntimeError("Tasks are already bound to a broker in this context")
@@ -52,6 +60,9 @@ class BaseTask:
 
         Default: a RateLimiter and ConcurrencyLimiter (both disabled since
         limit=None), so configuration can enable them without code changes.
+
+        Returns:
+            The locks to acquire before executing the task.
         """
         return [
             RateLimiter(TASK, self.__class__.__name__),
@@ -59,7 +70,12 @@ class BaseTask:
         ]
 
     def serialize(self) -> tuple[Any, ...]:
-        """Serialize the task to a tuple of arguments for reconstruction."""
+        """Serialize the task to a tuple of arguments for reconstruction.
+
+        Returns:
+            The field values of the task if it is a dataclass, else an empty
+            tuple.
+        """
         if dataclasses.is_dataclass(self):
             return dataclasses.astuple(self)
         return ()
@@ -77,6 +93,17 @@ class BaseTask:
 
         Extra ``labels`` are merged into the broker message (e.g. for
         callback group membership).
+
+        Args:
+            at_time: Time at which to run the task; submitted immediately if
+                omitted.
+            labels: Extra labels merged into the broker message.
+
+        Returns:
+            The ID of the submitted task.
+
+        Raises:
+            RuntimeError: If the task is not bound to a broker.
         """
         registry = self._broker_registry.get()
         if registry is None:
@@ -99,6 +126,11 @@ class PeriodicBaseTask(BaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
+        """Return the mutex lock ensuring a single run of the task at a time.
+
+        Returns:
+            A mutex lock for this task.
+        """
         # Intentionally does NOT call super() — periodic tasks use a mutex
         # instead of the default rate/concurrency limiters.
         return [
@@ -117,6 +149,11 @@ class PeriodicVoAwareBaseTask(PeriodicBaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
+        """Return the mutex lock ensuring a single run of the task per VO.
+
+        Returns:
+            A mutex lock for this task and VO.
+        """
         return [
             MutexLock(TASK, self.__class__.__name__, self.vo),
         ]

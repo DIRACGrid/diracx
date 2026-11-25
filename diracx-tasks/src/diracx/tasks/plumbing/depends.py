@@ -61,6 +61,16 @@ def auto_inject_depends(params: list[Parameter]) -> list[Parameter]:
     Already-wrapped ``Annotated[..., Depends(...)]`` types pass through
     unchanged.  Combining ``NoTransaction()`` with an explicit ``Depends``
     raises ``TypeError`` — use one or the other, not both.
+
+    Args:
+        params: Parameters of the function to inspect.
+
+    Returns:
+        The parameters, with the detected ones annotated with ``Depends``.
+
+    Raises:
+        TypeError: If ``NoTransaction()`` is combined with an explicit
+            ``Depends``, or used with a ``BaseOSDB`` subclass.
     """
     result = []
     for p in params:
@@ -135,6 +145,12 @@ def auto_inject(func):
 
     Apply to functions used as FastAPI sub-dependencies that take
     DB or Settings classes as parameters.
+
+    Args:
+        func: The dependency function, whose annotations are updated in place.
+
+    Returns:
+        The same function.
     """
     sig = signature(func, eval_str=True)
     for p in auto_inject_depends(list(sig.parameters.values())):

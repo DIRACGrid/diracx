@@ -1,3 +1,5 @@
+"""Build the task registry, wrapped task callables and dependency overrides."""
+
 from __future__ import annotations
 
 import asyncio
@@ -56,7 +58,7 @@ async def _lock_watchdog(
                 )
 
 
-async def task_wrapper(  # noqa: D417
+async def task_wrapper(
     cls: type[BaseTask],
     *args: Any,
     _redis: LockCoordinator,
@@ -65,16 +67,20 @@ async def task_wrapper(  # noqa: D417
 ) -> Any:
     """Instantiate a task, acquire locks, and execute it.
 
-    ``args`` are the task's constructor arguments (from serialization).
-    ``kwargs`` are resolved dependency injection dependencies for ``execute()``.
-
-    Parameters
-    ----------
+    Args:
+        cls: The task class to instantiate.
+        *args: The task's constructor arguments (from serialization).
         _redis: Redis connection for lock acquisition.
         _interactive: When True, ``BaseLimiter`` subclasses (rate limiters,
             concurrency limiters) are skipped entirely — only hard locks
             (mutex, RW) are acquired.
+        **kwargs: Resolved dependency injection dependencies for ``execute()``.
 
+    Returns:
+        The value returned by the task's ``execute()``.
+
+    Raises:
+        UnableToAcquireLockError: If a lock could not be acquired.
     """
     task = cls(*args)
     held_locks: list[tuple[BaseLock, LockCoordinator]] = []
@@ -124,6 +130,12 @@ def wrap_task(cls: type[BaseTask]) -> Callable[..., Any]:
     - Keyword-only params from ``execute()`` (for dependency injection resolution)
 
     Also attaches ``_dependant`` for FastAPI dependency resolution.
+
+    Args:
+        cls: The task class to wrap.
+
+    Returns:
+        The wrapped callable.
     """
     # Subclasses define execute() with varying signatures for dependency
     # injection, so it can't be declared on BaseTask without LSP violations.
@@ -167,7 +179,12 @@ def load_task_registry(
     Entry points are in groups like ``diracx.tasks.transformations``,
     ``diracx.tasks.jobs``, etc.
 
-    Returns a dict of ``"group:ClassName" -> TaskClass``.
+    Args:
+        groups: Entry point groups to load; all ``diracx.tasks.*`` groups if
+            omitted.
+
+    Returns:
+        A dict of ``"group:ClassName" -> TaskClass``.
     """
     registry: dict[str, type[BaseTask]] = {}
 
@@ -198,6 +215,10 @@ def create_task_bindings(
 ) -> tuple[dict[type[BaseTask], TaskBinding], dict[str, Callable[..., Any]]]:
     """Create task bindings and wrapped function registry.
 
+    Args:
+        broker: Broker the bindings submit tasks to.
+        task_registry: Task classes by task name.
+
     Returns:
         Tuple of (task_bindings, wrapped_registry)
 
@@ -225,8 +246,13 @@ def find_missing_overrides(
 ) -> list[str]:
     """Check a dependency tree for unresolved dependencies.
 
-    Returns a list of human-readable messages describing missing
-    environment variables for each unresolved dependency.
+    Args:
+        dependant: Root of the dependency tree to inspect.
+        overrides: Available dependency overrides.
+
+    Returns:
+        Human-readable messages describing the missing environment variables
+        for each unresolved dependency.
     """
     from diracx.db.os.utils import BaseOSDB
     from diracx.db.sql.utils import BaseSQLDB
@@ -282,6 +308,14 @@ async def setup_dependency_overrides(
     - Config (from ``DIRACX_CONFIG_BACKEND_URL`` env var)
     - Settings (pydantic models reading from env vars, discovered by
       scanning *task_dependants* for ``ServiceSettingsBase`` subclasses)
+
+    Args:
+        task_dependants: Dependency trees of the tasks, scanned to discover
+            the settings classes to instantiate.
+
+    Yields:
+        The dependency overrides, valid while the database connections and
+        settings lifetimes are open.
     """
     from diracx.db.os.utils import BaseOSDB
     from diracx.db.sql.utils import BaseSQLDB

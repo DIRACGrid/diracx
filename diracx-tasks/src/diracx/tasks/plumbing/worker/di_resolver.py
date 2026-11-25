@@ -1,3 +1,5 @@
+"""Dependency injection for tasks, resolving FastAPI-style ``Depends()``."""
+
 from __future__ import annotations
 
 import inspect
@@ -49,9 +51,14 @@ async def solve_task_dependencies(
     If the callable has a pre-computed ``_dependant`` attribute (set by
     ``wrap_task``), it is reused to avoid repeated reflection.
 
-    Returns:
-        Tuple of (resolved kwargs dict, async exit stack).
+    Args:
+        call: The task callable whose dependencies are resolved.
+        dependency_overrides: Replacements for dependency callables, keyed by
+            the original callable.
 
+    Returns:
+        Tuple of (resolved kwargs dict, async exit stack). The caller must
+        close the exit stack to run the teardown of generator dependencies.
     """
     dependant = getattr(call, "_dependant", None) or get_dependant(path="/", call=call)
 

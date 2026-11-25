@@ -1,3 +1,5 @@
+"""Redis-streams task broker with one stream per priority and size."""
+
 from __future__ import annotations
 
 import functools
@@ -35,7 +37,15 @@ def _default_id_generator() -> str:
 
 
 def stream_name_for(priority: Priority | str, size: Size | str) -> str:
-    """Return the Redis stream name for a given priority+size."""
+    """Return the Redis stream name for a given priority and size.
+
+    Args:
+        priority: Task priority.
+        size: Task size.
+
+    Returns:
+        The name of the corresponding Redis stream.
+    """
     return f"diracx:tasks:{priority}:{size}"
 
 
@@ -114,17 +124,24 @@ class RedisStreamBroker:
                     pass  # Group already exists
 
     async def startup(self) -> None:
+        """Start the result backend and declare the consumer groups."""
         if self.result_backend:
             await self.result_backend.startup()
         await self._declare_consumer_groups()
 
     async def shutdown(self) -> None:
+        """Shut down the result backend and close the connection pool."""
         if self.result_backend:
             await self.result_backend.shutdown()
         await self.connection_pool.disconnect()
 
     async def enqueue(self, message: TaskMessage) -> None:
-        """Send a message to the appropriate priority x size stream."""
+        """Send a message to the appropriate priority x size stream.
+
+        Args:
+            message: The message to enqueue; its ``priority`` and ``size``
+                labels select the stream.
+        """
         priority = message.labels.get("priority", Priority.NORMAL)
         size = message.labels.get("size", Size.MEDIUM)
         target_stream = stream_name_for(priority, size)
@@ -175,7 +192,12 @@ class RedisStreamBroker:
     async def listen(self) -> AsyncGenerator[ReceivedMessage, None]:
         """Yield messages from streams in strict priority order.
 
-        Drains higher-priority streams before moving to lower ones.
+        Drains higher-priority streams before moving to lower ones. Messages
+        left unacknowledged past ``idle_timeout`` are periodically reclaimed
+        and yielded with ``reclaimed`` set.
+
+        Yields:
+            Messages to process, to be acknowledged by the consumer.
         """
         async with Redis(connection_pool=self.connection_pool) as redis:
             streams = {s: ">" for s in self._listen_streams}
