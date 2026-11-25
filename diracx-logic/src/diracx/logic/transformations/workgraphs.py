@@ -149,7 +149,8 @@ async def start_workgraph(
 
     Raises:
         WorkgraphNotFoundError: If the workgraph does not exist.
-        InvalidWorkgraphTransitionError: If the workgraph is not ``New``.
+        InvalidWorkgraphTransitionError: If the workgraph is not ``New``, or
+            none of its transformations is.
     """
     from_status, to_status = WorkgraphStatus.NEW, WorkgraphStatus.ACTIVE
     assert to_status in WORKGRAPH_TRANSITIONS[from_status]
@@ -163,9 +164,15 @@ async def start_workgraph(
         workgraph_id, from_status, to_status, author
     ):
         raise InvalidWorkgraphTransitionError(str(status), to_status.value)
-    await transformation_db.set_workgraph_transformations_status(
+    moved = await transformation_db.set_workgraph_transformations_status(
         workgraph_id, TransformationStatus.NEW, TransformationStatus.ACTIVE, author
     )
+    if moved == 0:
+        # A New workgraph has only New members (WORKGRAPH_MEMBER_STATUSES):
+        # raising rolls back the workgraph's own move with the transaction
+        raise InvalidWorkgraphTransitionError(
+            str(status), to_status.value, "none of its transformations is New"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -192,7 +199,15 @@ def _hints(obj: Mapping[str, Any], where: str, errors: list[str]) -> dict[str, A
         if not isinstance(hint, Mapping) or "class" not in hint:
             errors.append(f"{where}: every hint in a list needs a class")
             continue
-        by_class[hint["class"]] = {k: v for k, v in hint.items() if k != "class"}
+        cls = hint["class"]
+        if not isinstance(cls, str):
+            errors.append(f"{where}: a hint class must be a string, not {cls!r}")
+            continue
+        # A class appears at most once (DX-ADR-007)
+        if cls in by_class:
+            errors.append(f"{where}: hint {cls} appears more than once")
+            continue
+        by_class[cls] = {k: v for k, v in hint.items() if k != "class"}
     return by_class
 
 
@@ -218,13 +233,22 @@ def _entries(
     else:
         errors.append(f"{where}: must be a mapping or a list")
         return []
-    return [
-        (
-            str(key).lstrip("#"),
-            dict(body) if isinstance(body, Mapping) else {shorthand: body},
+    entries: list[tuple[str, dict[str, Any]]] = []
+    seen: set[str] = set()
+    for key, body in items:
+        if not isinstance(key, str):
+            errors.append(f"{where}: an id must be a string, not {key!r}")
+            continue
+        key = key.lstrip("#")
+        # A list cannot repeat an id, as a mapping cannot repeat a key
+        if key in seen:
+            errors.append(f"{where}: id {key} appears more than once")
+            continue
+        seen.add(key)
+        entries.append(
+            (key, dict(body) if isinstance(body, Mapping) else {shorthand: body})
         )
-        for key, body in items
-    ]
+    return entries
 
 
 def _validate(model: type[BaseModel], value: Any, where: str, errors: list[str]) -> Any:

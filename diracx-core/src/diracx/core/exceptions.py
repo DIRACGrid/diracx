@@ -274,7 +274,10 @@ class InvalidWorkgraphTransitionError(DiracError):
         to_status: Status it was to enter.
     """
 
-    def __init__(self, from_status: str, to_status: str):
+    def __init__(self, from_status: str, to_status: str, detail: str = ""):
         self.from_status = from_status
         self.to_status = to_status
-        super().__init__(f"Workgraph cannot move from {from_status} to {to_status}")
+        super().__init__(
+            f"Workgraph cannot move from {from_status} to {to_status}"
+            + (f" ({detail})" if detail else "")
+        )

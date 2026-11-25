@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 import yaml
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from diracx.core.exceptions import (
     InvalidWorkgraphError,
@@ -224,6 +224,50 @@ def test_invalid_feeder():
     assert errors_of(document) == ["inputs.events.dirac:Feeder.name: Field required"]
 
 
+def data_processing() -> dict[str, Any]:
+    return load("data-processing.cwl")
+
+
+def test_repeated_hint_class():
+    """A hint class appears at most once (DX-ADR-007), the first is not overridden."""
+    document = data_processing()
+    document["hints"].append(
+        {"class": "dirac:Workgraph", "schema_version": "1.0", "type": "Other"}
+    )
+    assert errors_of(document) == [
+        "workflow: hint dirac:Workgraph appears more than once"
+    ]
+
+
+def test_non_string_hint_class():
+    document = data_processing()
+    document["hints"].append({"class": ["dirac:Workgraph"]})
+    assert errors_of(document) == [
+        "workflow: a hint class must be a string, not ['dirac:Workgraph']"
+    ]
+
+
+def test_repeated_input_id():
+    document = data_processing()
+    document["inputs"].append({"id": "raw-data", "type": "string"})
+    assert errors_of(document) == ["inputs: id raw-data appears more than once"]
+
+
+def test_non_string_id():
+    document = data_processing()
+    document["inputs"].append({"id": 7, "type": "string"})
+    assert errors_of(document) == ["inputs: an id must be a string, not 7"]
+
+
+def test_repeated_step_input_id():
+    document = data_processing()
+    step_inputs = document["steps"][0]["in"]
+    step_inputs.append(copy.deepcopy(step_inputs[0]))
+    assert errors_of(document) == [
+        "steps.sprucing.in: id input-data appears more than once"
+    ]
+
+
 def test_errors_are_collected():
     document = simulation()
     document["cwlVersion"] = "v1.0"
@@ -346,3 +390,28 @@ async def test_start_unknown_workgraph(transformation_db):
     async with transformation_db as db:
         with pytest.raises(WorkgraphNotFoundError):
             await start_workgraph(uuid7(), transformation_db=db, author="someone")
+
+
+async def test_start_without_new_transformations(transformation_db):
+    """A New workgraph whose members are not New does not start at all."""
+    async with transformation_db as db:
+        result = await submit(db, "simulation.cwl")
+        # Break the invariant that a New workgraph has only New members
+        await db.conn.execute(
+            update(Transformations)
+            .where(Transformations.transformation_id == result.transformation_id)
+            .values(status=TransformationStatus.PAUSED)
+        )
+
+    with pytest.raises(InvalidWorkgraphTransitionError) as exc_info:
+        async with transformation_db as db:
+            await start_workgraph(
+                result.workgraph_id, transformation_db=db, author="someone"
+            )
+    assert "none of its transformations is New" in str(exc_info.value)
+
+    # The workgraph's own move was rolled back with its log row
+    async with transformation_db as db:
+        workgraph = await db.get_workgraph(result.workgraph_id)
+        assert workgraph["status"] == WorkgraphStatus.NEW
+        assert await count(db, WorkgraphLog) == 0
