@@ -138,8 +138,6 @@ jobs:
           environments: ${{ matrix.package }}
       - name: Run pytest
         run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
-      - name: Upload coverage report
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
 
   pytest-integration:
     needs: resolve-deps
@@ -298,10 +296,6 @@ jobs:
       - name: Collect demo coverage
         run: |
           pixi run -e ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }} python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
-      - name: Upload coverage report
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          files: ./coverage-pytest.xml,./coverage-demo.xml
 
   client-generation:
     runs-on: ubuntu-latest
