@@ -28,6 +28,9 @@ Repository = "https://github.com/DIRACGrid/diracx"
 Issues = "https://github.com/DIRACGrid/diracx/issues"
 Security = "https://github.com/DIRACGrid/diracx/security/policy"
 
+[project.entry-points."diracx.transformation.packers"]
+Trivial = "gubbins.logic.transformations.packers:trivial_packer"
+
 [project.optional-dependencies]
 testing = []
 types = [
