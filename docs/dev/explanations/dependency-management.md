@@ -64,9 +64,6 @@ If a downgrade or a lock-only change is deliberate, explain why in the pull requ
 
 ## What Renovate does *not* manage
 
-pre-commit hooks
-:   Managed by [pre-commit.ci](https://pre-commit.ci/), which opens its own update PRs.
-
 Security alerts
 :   GitHub's Dependabot **security alerts** remain enabled via repository settings.
     These are independent of Dependabot *version updates*.

@@ -14,6 +14,18 @@
         "@autorest/*"
       ],
       "groupName": "Autorest"
+    },
+    {
+      "description": "The gubbins chart's diracx pin is only an example and CI replaces it with diracx-charts master, so batch the bumps monthly.",
+      "matchManagers": [
+        "helmv3"
+      ],
+      "matchPackageNames": [
+        "diracx"
+      ],
+      "schedule": [
+        "* * 1 * *"
+      ]
     }
   ],
   "customManagers": [
