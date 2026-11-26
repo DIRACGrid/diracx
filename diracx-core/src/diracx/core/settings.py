@@ -494,8 +494,14 @@ class OTELSettings(ServiceSettingsBase):
     ``OTEL_EXPORTER_OTLP_CERTIFICATE``, ``REQUESTS_CA_BUNDLE`` and ``CURL_CA_BUNDLE``.
     With ``grpc``, setting it enables TLS regardless of ``grpc_insecure``, the
     certificates are read once at startup, and the standard OTLP client certificate
-    variables are not used.
+    variables are not used. An empty value is the same as not setting it.
     """
+
+    @field_validator("ca_path", mode="before")
+    @classmethod
+    def _empty_ca_path_is_unset(cls, value: Any) -> Any:
+        # Otherwise an empty environment variable is the current directory
+        return None if value == "" else value
 
     headers: dict[str, str] | None = None
     """

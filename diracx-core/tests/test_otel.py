@@ -24,7 +24,12 @@ from opentelemetry.sdk._logs.export import (
 )
 
 from diracx.core.otel import configure_otel
-from diracx.core.otel._setup import _ca_bundle, _create_exporters, _setup_log_handler
+from diracx.core.otel._setup import (
+    _ca_bundle,
+    _ca_session,
+    _create_exporters,
+    _setup_log_handler,
+)
 from diracx.core.settings import OTELSettings
 from diracx.testing.otel import install_otel_providers
 
@@ -97,25 +102,30 @@ def _self_signed_ca(common_name: str) -> tuple[bytes, bytes]:
     return certificate.public_bytes(serialization.Encoding.PEM), private_key
 
 
-PEM = b"-----BEGIN CERTIFICATE-----\nfirst\n-----END CERTIFICATE-----"
+CORRUPT_PEM = b"-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"
 
 
 def test_ca_bundle_reads_only_hashed_certificates(tmp_path):
-    (tmp_path / "01234567.0").write_bytes(PEM)
+    first, second = _self_signed_ca("First CA")[0], _self_signed_ca("Second CA")[0]
+    # Sorted before the certificates: gRPC would stop reading at such a block
+    (tmp_path / "00000000.0").write_bytes(CORRUPT_PEM)
+    (tmp_path / "01234567.0").write_bytes(b"Some text\n" + first)
+    # The same certificate under another hash is only kept once
     (tmp_path / "89abcdef.1").symlink_to(tmp_path / "01234567.0")
+    (tmp_path / "9abcdef0.0").write_bytes(second)
     (tmp_path / "01234567.r0").write_text("a CRL")
     (tmp_path / "01234567.signing_policy").write_text("a policy")
-    (tmp_path / "ca.pem").write_bytes(PEM)
+    (tmp_path / "ca.pem").write_bytes(first)
     # Not usable as certificates, despite their names
     (tmp_path / "aaaaaaaa.0").write_bytes(b"not PEM")
     (tmp_path / "bbbbbbbb.0").symlink_to(tmp_path / "removed.pem")
     (tmp_path / "cccccccc.0").mkdir()
-    assert _ca_bundle(tmp_path) == PEM + b"\n" + PEM + b"\n"
+    assert _ca_bundle(tmp_path) == first + second
 
 
-@pytest.mark.parametrize("content", [None, b"not PEM"])
+@pytest.mark.parametrize("content", [None, b"not PEM", CORRUPT_PEM])
 def test_ca_bundle_rejects_directory_without_hashed_certificates(tmp_path, content):
-    (tmp_path / "ca.pem").write_bytes(PEM)
+    (tmp_path / "ca.pem").write_bytes(_self_signed_ca("Test CA")[0])
     if content:
         (tmp_path / "01234567.0").write_bytes(content)
     with pytest.raises(ValueError, match="No OpenSSL-hashed PEM CA certificates"):
@@ -123,7 +133,7 @@ def test_ca_bundle_rejects_directory_without_hashed_certificates(tmp_path, conte
 
 
 def test_ca_bundle_rejects_unreadable_certificate(tmp_path):
-    (tmp_path / "01234567.0").write_bytes(PEM)
+    (tmp_path / "01234567.0").write_bytes(_self_signed_ca("Test CA")[0])
     (tmp_path / "01234567.0").chmod(0)
     if os.access(tmp_path / "01234567.0", os.R_OK):
         pytest.skip("Permissions are not enforced for this user")
@@ -138,7 +148,7 @@ def test_ca_directory_is_checked_when_creating_exporters(protocol, tmp_path):
 
 
 def test_ca_directory_is_reported_as_ignored_without_tls(tmp_path, caplog):
-    (tmp_path / "01234567.0").write_bytes(PEM)
+    # The directory is not used, so it is not checked either
     settings = OTELSettings(
         protocol="http", http_endpoint="http://collector:4318", ca_path=tmp_path
     )
@@ -147,6 +157,24 @@ def test_ca_directory_is_reported_as_ignored_without_tls(tmp_path, caplog):
     for exporter in exporters:
         exporter.shutdown()
     assert "DIRACX_OTEL_CA_PATH is ignored" in caplog.text
+
+
+def test_ca_session_does_not_follow_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", "/other/bundle.pem")
+    monkeypatch.setenv("CURL_CA_BUNDLE", "/other/bundle.pem")
+    session = _ca_session(tmp_path)
+    # Whether the exporter sets the CA path on the session or on each request
+    for verify in (None, True, str(tmp_path)):
+        merged = session.merge_environment_settings(
+            "https://collector:4318/v1/traces", {}, None, verify, None
+        )
+        assert merged["verify"] == str(tmp_path)
+    assert _ca_session(None) is None
+
+
+def test_empty_ca_directory_setting_is_unset(monkeypatch):
+    monkeypatch.setenv("DIRACX_OTEL_CA_PATH", "")
+    assert OTELSettings().ca_path is None
 
 
 def test_missing_ca_directory_is_rejected(tmp_path):
@@ -191,6 +219,10 @@ def test_exporters_connect_to_tls_collector_with_ca_directory(
         pytest.skip("openssl is required to prepare the CA directory")
     # The CA bundle of the other clients of the process must not be used instead
     monkeypatch.setenv("REQUESTS_CA_BUNDLE", certifi.where())
+    # The collector is local: do not go through the proxy of the environment
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
     cert, private_key = _self_signed_ca("localhost")
     ca_path = tmp_path / "ca"
     ca_path.mkdir()

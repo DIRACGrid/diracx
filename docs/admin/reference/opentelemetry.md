@@ -28,10 +28,12 @@ PEM CA certificates prepared with `openssl rehash` (e.g. `/etc/grid-security/cer
 With `http`, use an `https://` endpoint. With `grpc`, TLS is then enabled automatically.
 Only the certificates of this directory are trusted: it takes precedence over
 `OTEL_EXPORTER_OTLP_CERTIFICATE`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE`, and revocation lists are not checked.
-The process does not start if the directory cannot be read or has no such certificate.
+The process does not start if the directory does not exist (even if `DIRACX_OTEL_ENABLED` is `false`), cannot be read or has no such certificate.
+Files which are not PEM certificates are ignored, and an empty value is the same as not setting the variable.
 
 With `grpc`, the certificates are read once at startup, so the processes have to be restarted to pick up a new CA,
-and the standard OTLP client certificate variables are not used. With `http`, the directory is read for each new connection.
+and the standard OTLP client certificate variables are not used. With `http`, the directory is read for each new connection,
+and `OTEL_PYTHON_EXPORTER_OTLP_HTTP_CREDENTIAL_PROVIDER` is not used.
 
 ### Standard OpenTelemetry variables
 

@@ -432,7 +432,7 @@ to verify the collector, instead of the system ones. It takes precedence over
 `OTEL_EXPORTER_OTLP_CERTIFICATE`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE`.
 With `grpc`, setting it enables TLS regardless of `grpc_insecure`, the
 certificates are read once at startup, and the standard OTLP client certificate
-variables are not used.
+variables are not used. An empty value is the same as not setting it.
 
 ### `DIRACX_OTEL_HEADERS`
 
