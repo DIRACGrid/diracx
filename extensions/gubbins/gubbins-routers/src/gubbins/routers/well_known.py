@@ -1,5 +1,6 @@
 """Illustrate how to extend/overwrite a diracx router.
-It :
+
+It:
 * changes slightly the return type
 * uses the Gubbins specific configuration
 * uses the Gubbins dependencies
@@ -28,4 +29,17 @@ router.include_router(diracx_wellknown_router)
 async def get_installation_metadata(
     config: Config,
 ) -> ExtendedMetadata:
+    """Return the metadata of the installation, extended with Gubbins information.
+
+    This overwrites the ``dirac-metadata`` endpoint of DiracX.
+
+    \f
+
+    Args:
+        config: Gubbins configuration.
+
+    Returns:
+        The DiracX metadata, extended with the Gubbins-specific information
+        of the users of each VO.
+    """
     return await get_installation_metadata_bl(config)

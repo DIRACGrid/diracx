@@ -68,11 +68,26 @@ class MyPilotTask(BaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
+        """Return a mutex lock on the compute element.
+
+        Returns:
+            A mutex lock for the compute element, of the ``MY_PILOT`` object
+            type.
+        """
         return [MutexLock(LockedObjectType(MY_PILOT), self.ce_name)]
 
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> int:
+        """Submit a pilot to the compute element.
+
+        Args:
+            my_pilot_db: Pilot database.
+            **kwargs: Unused.
+
+        Returns:
+            The ID of the new pilot submission.
+        """
         pilot_id = await submit_pilot(my_pilot_db, self.ce_name)
         logger.info("Submitted pilot %d to %s", pilot_id, self.ce_name)
         return pilot_id
@@ -94,6 +109,15 @@ class MyPilotReportTask(PeriodicBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> dict[str, int]:
+        """Log the number of pilots by status.
+
+        Args:
+            my_pilot_db: Pilot database.
+            **kwargs: Unused.
+
+        Returns:
+            The number of pilots for each status.
+        """
         summary = await get_pilot_summary(my_pilot_db)
         logger.info("Pilot summary: %s", summary)
         return summary
@@ -119,6 +143,12 @@ class MyCheckPilotsTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> None:
+        """Transition the states of the pilots.
+
+        Args:
+            my_pilot_db: Pilot database.
+            **kwargs: Unused.
+        """
         await transition_pilot_states(my_pilot_db)
 
 
@@ -141,6 +171,15 @@ class MySubmitPilotsTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, my_pilot_db: MyPilotDB, **kwargs: Any
     ) -> int:
+        """Spawn a ``MyPilotTask`` for each available slot of the compute elements.
+
+        Args:
+            my_pilot_db: Pilot database.
+            **kwargs: Unused.
+
+        Returns:
+            The number of spawned tasks.
+        """
         available_ces = await get_available_ces(my_pilot_db)
         spawned = 0
         for ce in available_ces:

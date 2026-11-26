@@ -1,3 +1,5 @@
+"""Lollygag logic of the Gubbins extension."""
+
 from __future__ import annotations
 
 __all__ = ["get_gubbins_secrets", "get_owner_object", "insert_owner_object"]

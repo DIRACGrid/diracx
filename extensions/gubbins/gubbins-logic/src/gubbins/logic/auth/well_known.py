@@ -1,3 +1,5 @@
+"""Installation metadata of the Gubbins extension."""
+
 from diracx.logic.auth import (
     get_installation_metadata as get_general_installation_metadata,
 )
@@ -9,7 +11,15 @@ from gubbins.core.models import ExtendedMetadata
 async def get_installation_metadata(
     config: Config,
 ) -> ExtendedMetadata:
-    """Get metadata about the dirac installation."""
+    """Get metadata about the dirac installation.
+
+    Args:
+        config: Gubbins configuration.
+
+    Returns:
+        The DiracX metadata, extended with the Gubbins-specific information
+        of the users of each VO.
+    """
     original_metadata = await get_general_installation_metadata(config)
 
     gubbins_user_info: dict[str, list[str | None]] = {}

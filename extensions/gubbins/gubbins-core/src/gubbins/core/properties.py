@@ -1,3 +1,5 @@
+"""Gubbins-specific security properties."""
+
 from __future__ import annotations
 
 __all__ = ["GUBBINS_SENSEI"]

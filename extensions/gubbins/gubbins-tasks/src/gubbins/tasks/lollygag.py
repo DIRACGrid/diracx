@@ -52,11 +52,25 @@ class SyncOwnersTask(BaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
+        """Return a mutex lock on the owner.
+
+        Returns:
+            A mutex lock for the owner, of the ``LOLLYGAG`` object type.
+        """
         return [MutexLock(LockedObjectType(LOLLYGAG), self.owner_name)]
 
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> int:
+        """Insert the owner into the Lollygag database.
+
+        Args:
+            lollygag_db: Lollygag database.
+            **kwargs: Unused.
+
+        Returns:
+            The ID of the new owner.
+        """
         owner_id = await insert_owner_object(lollygag_db, self.owner_name)
         logger.info("Synced owner %s (id=%d)", self.owner_name, owner_id)
         return owner_id
@@ -73,6 +87,15 @@ class OwnerCleanupTask(PeriodicBaseTask):
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> list[str]:
+        """Log the owners of the Lollygag database.
+
+        Args:
+            lollygag_db: Lollygag database.
+            **kwargs: Unused.
+
+        Returns:
+            The owner names.
+        """
         owners = await get_owner_object(lollygag_db)
         logger.info("Current owners: %s", owners)
         return owners
@@ -93,6 +116,15 @@ class OwnerReportTask(PeriodicVoAwareBaseTask):
     async def execute(  # type: ignore[override]
         self, lollygag_db: LollygagDB, **kwargs: Any
     ) -> list[str]:
+        """Log the owners of the Lollygag database for the VO.
+
+        Args:
+            lollygag_db: Lollygag database.
+            **kwargs: Unused.
+
+        Returns:
+            The owner names.
+        """
         owners = await get_owner_object(lollygag_db)
         logger.info("VO %s owner report: %s", self.vo, owners)
         return owners
