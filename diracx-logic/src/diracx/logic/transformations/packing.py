@@ -69,6 +69,13 @@ class PackingSummary(BaseModel):
     inputs_left: int = 0
 
 
+# TODO(#1179): once #1186 is merged, replace load_packer and its tests with the
+# shared loader, which also checks the plugin against the Packer protocol, and
+# make the docs example's ByRunPackerArgs a PluginArgs:
+#
+#     from diracx.logic.transformations.plugins import PACKER_KIND, load_plugin
+#
+#     plugin, args_model = load_plugin(PACKER_KIND, transformation["packer"])
 def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
     """Find a packer plugin and the model of its arguments.
 
