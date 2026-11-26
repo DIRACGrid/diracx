@@ -489,9 +489,12 @@ class OTELSettings(ServiceSettingsBase):
 
     ca_path: DirectoryPath | None = None
     """
-    OpenSSL-hashed directory (see ``openssl rehash``) of the CA certificates used to
-    verify the collector. It replaces the standard OTLP certificate settings.
-    With ``grpc``, setting it enables TLS regardless of ``grpc_insecure``.
+    OpenSSL-hashed directory (see ``openssl rehash``) of the PEM CA certificates used
+    to verify the collector, instead of the system ones. It takes precedence over
+    ``OTEL_EXPORTER_OTLP_CERTIFICATE``, ``REQUESTS_CA_BUNDLE`` and ``CURL_CA_BUNDLE``.
+    With ``grpc``, setting it enables TLS regardless of ``grpc_insecure``, the
+    certificates are read once at startup, and the standard OTLP client certificate
+    variables are not used.
     """
 
     headers: dict[str, str] | None = None

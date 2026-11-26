@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import ssl
 import subprocess
@@ -96,27 +97,64 @@ def _self_signed_ca(common_name: str) -> tuple[bytes, bytes]:
     return certificate.public_bytes(serialization.Encoding.PEM), private_key
 
 
+PEM = b"-----BEGIN CERTIFICATE-----\nfirst\n-----END CERTIFICATE-----"
+
+
 def test_ca_bundle_reads_only_hashed_certificates(tmp_path):
-    (tmp_path / "01234567.0").write_bytes(b"first")
+    (tmp_path / "01234567.0").write_bytes(PEM)
     (tmp_path / "89abcdef.1").symlink_to(tmp_path / "01234567.0")
     (tmp_path / "01234567.r0").write_text("a CRL")
     (tmp_path / "01234567.signing_policy").write_text("a policy")
-    (tmp_path / "ca.pem").write_text("not hashed")
-    assert _ca_bundle(tmp_path) == b"first\nfirst\n"
+    (tmp_path / "ca.pem").write_bytes(PEM)
+    # Not usable as certificates, despite their names
+    (tmp_path / "aaaaaaaa.0").write_bytes(b"not PEM")
+    (tmp_path / "bbbbbbbb.0").symlink_to(tmp_path / "removed.pem")
+    (tmp_path / "cccccccc.0").mkdir()
+    assert _ca_bundle(tmp_path) == PEM + b"\n" + PEM + b"\n"
 
 
-def test_ca_bundle_rejects_directory_without_hashed_certificates(tmp_path):
-    (tmp_path / "ca.pem").write_text("not hashed")
-    with pytest.raises(ValueError, match="No OpenSSL-hashed CA certificates"):
+@pytest.mark.parametrize("content", [None, b"not PEM"])
+def test_ca_bundle_rejects_directory_without_hashed_certificates(tmp_path, content):
+    (tmp_path / "ca.pem").write_bytes(PEM)
+    if content:
+        (tmp_path / "01234567.0").write_bytes(content)
+    with pytest.raises(ValueError, match="No OpenSSL-hashed PEM CA certificates"):
         _ca_bundle(tmp_path)
 
 
-def test_missing_ca_pathectory_is_rejected(tmp_path):
+def test_ca_bundle_rejects_unreadable_certificate(tmp_path):
+    (tmp_path / "01234567.0").write_bytes(PEM)
+    (tmp_path / "01234567.0").chmod(0)
+    if os.access(tmp_path / "01234567.0", os.R_OK):
+        pytest.skip("Permissions are not enforced for this user")
+    with pytest.raises(ValueError, match="Cannot read the CA certificates"):
+        _ca_bundle(tmp_path)
+
+
+@pytest.mark.parametrize("protocol", ["http", "grpc"])
+def test_ca_directory_is_checked_when_creating_exporters(protocol, tmp_path):
+    with pytest.raises(ValueError, match="No OpenSSL-hashed PEM CA certificates"):
+        _create_exporters(OTELSettings(protocol=protocol, ca_path=tmp_path))
+
+
+def test_ca_directory_is_reported_as_ignored_without_tls(tmp_path, caplog):
+    (tmp_path / "01234567.0").write_bytes(PEM)
+    settings = OTELSettings(
+        protocol="http", http_endpoint="http://collector:4318", ca_path=tmp_path
+    )
+    with caplog.at_level(logging.WARNING, logger="diracx.core.otel._setup"):
+        exporters = _create_exporters(settings)
+    for exporter in exporters:
+        exporter.shutdown()
+    assert "DIRACX_OTEL_CA_PATH is ignored" in caplog.text
+
+
+def test_missing_ca_directory_is_rejected(tmp_path):
     with pytest.raises(ValueError):
         OTELSettings(ca_path=tmp_path / "missing")
 
 
-def test_ca_pathectory_enables_grpc_tls(tmp_path):
+def test_ca_directory_enables_grpc_tls(tmp_path):
     (tmp_path / "01234567.0").write_bytes(_self_signed_ca("Test CA")[0])
     exporters = _create_exporters(OTELSettings(protocol="grpc", ca_path=tmp_path))
     try:
@@ -127,7 +165,10 @@ def test_ca_pathectory_enables_grpc_tls(tmp_path):
 
 
 @pytest.mark.parametrize("protocol", ["http", "grpc"])
-def test_exporters_connect_to_tls_collector_with_ca_pathectory(protocol, tmp_path):
+def test_exporters_connect_to_tls_collector_with_ca_directory(
+    protocol, tmp_path, monkeypatch
+):
+    import certifi
     import grpc
     from opentelemetry.proto.collector.logs.v1 import (
         logs_service_pb2,
@@ -148,6 +189,8 @@ def test_exporters_connect_to_tls_collector_with_ca_pathectory(protocol, tmp_pat
     openssl = shutil.which("openssl")
     if not openssl:
         pytest.skip("openssl is required to prepare the CA directory")
+    # The CA bundle of the other clients of the process must not be used instead
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", certifi.where())
     cert, private_key = _self_signed_ca("localhost")
     ca_path = tmp_path / "ca"
     ca_path.mkdir()

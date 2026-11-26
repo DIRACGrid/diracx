@@ -24,8 +24,14 @@ If the endpoint of the chosen protocol is empty, the standard `OTEL_EXPORTER_OTL
 They are also listed with the other [environment variables](env-variables.md#otelsettings).
 
 For a TLS collector using a private CA, set `DIRACX_OTEL_CA_PATH` to a directory of
-CA certificates prepared with `openssl rehash` (e.g. `/etc/grid-security/certificates`).
+PEM CA certificates prepared with `openssl rehash` (e.g. `/etc/grid-security/certificates`).
 With `http`, use an `https://` endpoint. With `grpc`, TLS is then enabled automatically.
+Only the certificates of this directory are trusted: it takes precedence over
+`OTEL_EXPORTER_OTLP_CERTIFICATE`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE`, and revocation lists are not checked.
+The process does not start if the directory cannot be read or has no such certificate.
+
+With `grpc`, the certificates are read once at startup, so the processes have to be restarted to pick up a new CA,
+and the standard OTLP client certificate variables are not used. With `http`, the directory is read for each new connection.
 
 ### Standard OpenTelemetry variables
 

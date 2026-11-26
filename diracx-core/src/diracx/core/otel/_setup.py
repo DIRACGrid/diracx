@@ -39,6 +39,9 @@ from diracx.core.settings import OTELSettings
 
 logger = logging.getLogger(__name__)
 
+# Name given to a certificate by ``openssl rehash``: subject hash and a counter
+_HASHED_CERTIFICATE_NAME = re.compile(r"[0-9a-f]{8}\.\d+")
+
 
 @dataclass(frozen=True)
 class OTELProviders:
@@ -183,17 +186,25 @@ def _create_exporters(
         def url(signal: str) -> str | None:
             return f"{base_url}/v1/{signal}" if base_url else None
 
-        # requests accepts an OpenSSL-hashed directory as CA path
-        ca = str(settings.ca_path) if settings.ca_path else None
+        http_kwargs: dict = {"headers": settings.headers}
+        if settings.ca_path:
+            # Fail at startup, as with gRPC, rather than at each export
+            _ca_bundle(settings.ca_path)
+            if base_url.startswith("http://"):
+                logger.warning(
+                    "DIRACX_OTEL_CA_PATH is ignored as %s does not use TLS", base_url
+                )
+            # requests accepts an OpenSSL-hashed directory as CA path
+            http_kwargs["certificate_file"] = str(settings.ca_path)
         return (
             HTTPSpanExporter(
-                endpoint=url("traces"), headers=settings.headers, certificate_file=ca
+                endpoint=url("traces"), session=_ca_session(settings), **http_kwargs
             ),
             HTTPMetricExporter(
-                endpoint=url("metrics"), headers=settings.headers, certificate_file=ca
+                endpoint=url("metrics"), session=_ca_session(settings), **http_kwargs
             ),
             HTTPLogExporter(
-                endpoint=url("logs"), headers=settings.headers, certificate_file=ca
+                endpoint=url("logs"), session=_ca_session(settings), **http_kwargs
             ),
         )
 
@@ -221,13 +232,46 @@ def _create_exporters(
     )
 
 
+def _ca_session(settings: OTELSettings):
+    """Return the requests session of an HTTP exporter, if ``ca_path`` needs one.
+
+    requests lets ``REQUESTS_CA_BUNDLE`` and ``CURL_CA_BUNDLE`` take precedence
+    over the CA path of a session, so that ``ca_path`` would be silently ignored
+    wherever one of them is set for the other clients of the process.
+    """
+    if not settings.ca_path:
+        return None
+
+    import requests
+
+    class CAPathSession(requests.Session):
+        def merge_environment_settings(self, url, proxies, stream, verify, cert):
+            merged = super().merge_environment_settings(
+                url, proxies, stream, verify, cert
+            )
+            merged["verify"] = self.verify
+            return merged
+
+    return CAPathSession()
+
+
 def _ca_bundle(ca_path: Path) -> bytes:
-    """Concatenate the certificates of an OpenSSL-hashed CA directory."""
-    certificates = [
-        path.read_bytes().strip()
-        for path in sorted(ca_path.iterdir())
-        if re.fullmatch(r"[0-9a-f]{8}\.\d+", path.name)
-    ]
+    """Concatenate the certificates of an OpenSSL-hashed CA directory.
+
+    Raises:
+        ValueError: If the directory cannot be read, or has no PEM certificate
+            under an OpenSSL-hashed name.
+    """
+    try:
+        candidates = [
+            path.read_bytes().strip()
+            for path in sorted(ca_path.iterdir())
+            # is_file() is False for the dangling links of removed certificates
+            if _HASHED_CERTIFICATE_NAME.fullmatch(path.name) and path.is_file()
+        ]
+    except OSError as e:
+        raise ValueError(f"Cannot read the CA certificates in {ca_path}: {e}") from e
+    certificates = [c for c in candidates if b"-----BEGIN CERTIFICATE-----" in c]
     if not certificates:
-        raise ValueError(f"No OpenSSL-hashed CA certificates in {ca_path}")
+        raise ValueError(f"No OpenSSL-hashed PEM CA certificates in {ca_path}")
     return b"\n".join(certificates) + b"\n"
