@@ -222,6 +222,12 @@ def pytest_collection_modifyitems(items):
             )
 
 
+def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 @contextlib.asynccontextmanager
 async def sql_db_with_schema(db: T) -> AsyncIterator[T]:
     """Enter the engine context of ``db`` and create its schema.
@@ -231,13 +237,7 @@ async def sql_db_with_schema(db: T) -> AsyncIterator[T]:
     """
     async with db.engine_context():
         if db.engine.dialect.name == "sqlite":
-            event.listen(
-                db.engine.sync_engine,
-                "connect",
-                lambda dbapi_conn, _: dbapi_conn.cursor().execute(
-                    "PRAGMA foreign_keys=ON"
-                ),
-            )
+            event.listen(db.engine.sync_engine, "connect", _enable_foreign_keys)
         async with db.engine.begin() as conn:
             await conn.run_sync(db.metadata.create_all)
             await db.post_create(conn)
