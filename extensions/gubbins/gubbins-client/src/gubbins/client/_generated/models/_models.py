@@ -279,7 +279,7 @@ class ComputeElementStatusAll(_serialization.Model):
 
 
 class ExtendedMetadata(_serialization.Model):
-    """ExtendedMetadata.
+    """DiracX metadata extended with Gubbins-specific fields.
 
     All required parameters must be populated in order to send to server.
 

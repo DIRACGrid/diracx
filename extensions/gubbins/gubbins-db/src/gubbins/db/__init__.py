@@ -1,3 +1,5 @@
+"""Databases of the Gubbins extension."""
+
 from __future__ import annotations
 
 # Do not forget that, as otherwise diracx won't find your DBs
