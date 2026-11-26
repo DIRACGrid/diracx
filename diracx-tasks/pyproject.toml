@@ -39,6 +39,10 @@ CleanSandboxStoreTask = "diracx.tasks.jobs:CleanSandboxStoreTask"
 DummyComputeBackendMonitorTask = "diracx.tasks.transformations:DummyComputeBackendMonitorTask"
 DummyComputeBackendTask = "diracx.tasks.transformations:DummyComputeBackendTask"
 
+[project.entry-points."diracx.tasks.transformation"]
+PackerSweepTask = "diracx.tasks.transformations:PackerSweepTask"
+PackTransformationTask = "diracx.tasks.transformations:PackTransformationTask"
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
