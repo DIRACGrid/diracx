@@ -62,6 +62,10 @@ UNSUPPORTED_DOCKER_FIELDS = ("dockerFile", "dockerImport", "dockerLoad")
 # peaks below 20 kB; large data belongs in a sandbox, not in the document.
 MAX_PROCESS_BYTES = 256 * 1024
 
+# Largest canonical form of the whole document. It also bounds each stored
+# row, which is an entry with everything it runs.
+MAX_DOCUMENT_BYTES = 1024 * 1024
+
 
 class PolicyViolationError(ValueError):
     """A process is valid CWL but not something DiracX accepts."""
@@ -83,6 +87,12 @@ def check_policy(document: dict[str, Any]) -> None:
             ``$graph`` entry (or the step running an inline body) it is in.
     """
     problems = []
+    size = len(canonical_json_bytes(document))
+    if size > MAX_DOCUMENT_BYTES:
+        problems.append(
+            f"the document is {size} bytes, more than {MAX_DOCUMENT_BYTES}; "
+            "move large content into a sandbox or File input"
+        )
     for entry_id, entry in _graph(document).items():
         size = len(canonical_json_bytes(entry))
         if size > MAX_PROCESS_BYTES:
@@ -107,6 +117,7 @@ def _processes(name: str, process: dict[str, Any]) -> Iterator[tuple[str, dict]]
 
 
 def _check(process: dict[str, Any]) -> Iterator[str]:
+    """What is wrong with one process, its own steps included but not their runs."""
     if process.get("class") == "Operation":
         yield (
             "is an Operation, an abstract process with no command, expression "
@@ -117,6 +128,11 @@ def _check(process: dict[str, Any]) -> Iterator[str]:
     for holder in (process, *_steps(process)):
         requirements = _classes(holder.get("requirements"))
         hints = _classes(holder.get("hints"))
+        if requirements is None:
+            yield "has requirements that are not a list or map of objects"
+        if hints is None:
+            yield "has hints that are not a list or map of objects"
+        requirements, hints = requirements or [], hints or []
         for cls in sorted({cls for cls, _ in requirements} - ALLOWED_REQUIREMENTS):
             yield f"requires {cls}, which DiracX does not support"
         for cls in sorted({cls for cls, _ in hints} - ALLOWED_HINTS):
@@ -139,10 +155,18 @@ def _check(process: dict[str, Any]) -> Iterator[str]:
             )
 
 
-def _classes(value: Any) -> list[tuple[str, dict]]:
-    """Requirements or hints with their class, from list or map form."""
+def _classes(value: Any) -> list[tuple[str, dict]] | None:
+    """Requirements or hints with their class, from list or map form.
+
+    ``None`` if they are neither: the schema is only validated after the
+    policy, so the document may not be valid CWL yet.
+    """
+    if value is None:
+        return []
     if isinstance(value, dict):
-        items = [{**body, "class": cls} for cls, body in value.items()]
-    else:
-        items = list(value or [])
-    return [(str(item.get("class", "?")), item) for item in items]
+        if not all(isinstance(body, dict) for body in value.values()):
+            return None
+        return [(str(cls), {**body, "class": cls}) for cls, body in value.items()]
+    if not isinstance(value, list) or not all(isinstance(i, dict) for i in value):
+        return None
+    return [(str(item.get("class", "?")), item) for item in value]
