@@ -149,6 +149,21 @@ The URL for the SQL database TaskQueueDB.
 
 The URL for the SQL database TransformationDB.
 
+### `DIRACX_DB_POOL_SIZE`
+
+*Optional*, default value: `5`
+The number of connections to keep open in each SQL database pool.
+
+### `DIRACX_DB_MAX_OVERFLOW`
+
+*Optional*, default value: `10`
+The number of extra connections allowed in each SQL database pool.
+
+### `DIRACX_DB_POOL_TIMEOUT`
+
+*Optional*, default value: `30`
+The number of seconds to wait for a connection from a SQL database pool.
+
 ## AuthSettings
 
 Settings for the authentication service.
