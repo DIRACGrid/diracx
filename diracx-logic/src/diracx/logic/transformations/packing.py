@@ -11,6 +11,7 @@ from __future__ import annotations
 import inspect
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, get_type_hints
 
@@ -67,6 +68,22 @@ class PackingSummary(BaseModel):
     inputs_problematic: int = 0
     inputs_delayed: int = 0
     inputs_left: int = 0
+
+
+@dataclass
+class _Batch:
+    """Proposals written together, in one transaction."""
+
+    parcels: list[NewComputeParcel] = field(default_factory=list)
+    problematic: dict[AnyUUID, str] = field(default_factory=dict)
+    # Requirement sets first used in this batch, by their hash
+    requirements: dict[bytes, dict[str, Any]] = field(default_factory=dict)
+    # Delays are written as they come, not buffered, but each is a statement
+    # in the batch's transaction, so they count towards its size
+    delays: int = 0
+
+    def __len__(self) -> int:
+        return len(self.parcels) + len(self.problematic) + self.delays
 
 
 # TODO(#1179): once #1186 is merged, replace load_packer and its tests with the
@@ -200,10 +217,7 @@ async def pack_transformation(
 
     summary = PackingSummary()
     used: set[AnyUUID] = set()
-    parcels: list[NewComputeParcel] = []
-    problematic: dict[AnyUUID, str] = {}
-    # Requirement sets awaiting insertion, and those already inserted
-    new_requirements: dict[bytes, dict[str, Any]] = {}
+    # Requirement sets inserted by an earlier batch
     stored_requirements: set[bytes] = set()
 
     def consume(input_ids: list[AnyUUID]) -> None:
@@ -223,36 +237,15 @@ async def pack_transformation(
                 raise ValueError(f"Packer proposed input {input_id} twice")
             used.add(input_id)
 
-    async def write() -> None:
-        for requirements_id, requirements in new_requirements.items():
-            await transformation_db.insert_requirements(requirements_id, requirements)
-        stored_requirements.update(new_requirements)
-        new_requirements.clear()
-        if parcels:
-            _require_transition(InputStatus.UNASSIGNED, InputStatus.ASSIGNED)
-            await transformation_db.insert_compute_parcels(
-                transformation_id, process_id, parcels
-            )
-            summary.parcels_created += len(parcels)
-            summary.inputs_assigned += sum(len(p.input_ids) for p in parcels)
-            parcels.clear()
-        if problematic:
-            _require_transition(InputStatus.UNASSIGNED, InputStatus.PROBLEMATIC)
-            await transformation_db.set_inputs_problematic(
-                transformation_id, problematic, author=PACKER_AUTHOR
-            )
-            summary.inputs_problematic += len(problematic)
-            problematic.clear()
-
-    async def apply(proposal: PackerProposal) -> None:
+    async def apply(batch: _Batch, proposal: PackerProposal) -> None:
         match proposal:
             case ComputeParcel():
                 consume(proposal.input_ids)
                 requirements = recursive_merge(template, proposal.requirements or {})
                 requirements_id = hash_json(requirements) if requirements else None
                 if requirements_id and requirements_id not in stored_requirements:
-                    new_requirements[requirements_id] = requirements
-                parcels.append(
+                    batch.requirements[requirements_id] = requirements
+                batch.parcels.append(
                     NewComputeParcel(
                         parcel_id=uuid7(),
                         requirements_id=requirements_id,
@@ -263,17 +256,34 @@ async def pack_transformation(
                 )
             case BadInput():
                 consume([proposal.input_id])
-                problematic[proposal.input_id] = proposal.reason
+                batch.problematic[proposal.input_id] = proposal.reason
             case DelayInput():
                 consume(proposal.input_ids)
                 await transformation_db.delay_inputs(
                     transformation_id, proposal.input_ids, proposal.delay_until
                 )
+                batch.delays += 1
                 summary.inputs_delayed += len(proposal.input_ids)
             case DataParcel():
                 raise NotImplementedError("Data parcels are not supported yet")
             case _:
                 raise TypeError(f"Packer yielded {proposal!r}, not a proposal")
+
+    async def write(batch: _Batch) -> None:
+        for requirements_id, requirements in batch.requirements.items():
+            await transformation_db.insert_requirements(requirements_id, requirements)
+        stored_requirements.update(batch.requirements)
+        _require_transition(InputStatus.UNASSIGNED, InputStatus.ASSIGNED)
+        await transformation_db.insert_compute_parcels(
+            transformation_id, process_id, batch.parcels
+        )
+        _require_transition(InputStatus.UNASSIGNED, InputStatus.PROBLEMATIC)
+        await transformation_db.set_inputs_problematic(
+            transformation_id, batch.problematic, author=PACKER_AUTHOR
+        )
+        summary.parcels_created += len(batch.parcels)
+        summary.inputs_assigned += sum(len(p.input_ids) for p in batch.parcels)
+        summary.inputs_problematic += len(batch.problematic)
 
     finished = False
     while not finished:
@@ -282,18 +292,14 @@ async def pack_transformation(
         # Breaking out of the loop leaves the packer paused, and the next batch
         # resumes it where it stopped.
         async with transformation_db:
+            batch = _Batch()
             finished = True
-            # Delays are written as they come, not buffered, but each is a
-            # statement in this transaction, so they count towards the batch
-            delays = 0
             async for proposal in proposals:
-                await apply(proposal)
-                if isinstance(proposal, DelayInput):
-                    delays += 1
-                if len(parcels) + len(problematic) + delays >= PARCEL_BATCH_SIZE:
+                await apply(batch, proposal)
+                if len(batch) >= PARCEL_BATCH_SIZE:
                     finished = False
                     break
-            await write()
+            await write(batch)
 
     # Inputs the packer held back stay Unassigned; their locks went at commit
     summary.inputs_left = len(claimed) - len(used)
