@@ -19,6 +19,8 @@ One rule applies throughout: **plugins propose, the core writes.**
 
 If anything fails, whether a check, the plugin or the database, only the batch in progress rolls back. Batches already committed stay, and the inputs of the failed batch stay `Unassigned`, so the next run carries on from there.
 
+Runs for one transformation must not overlap, and the packer task holds a mutex to ensure it. Inputs the plugin holds back are locked only until the batch that claimed them commits, so an overlapping run could take them, and the first run would then fail when it writes them.
+
 ## The plugin contract
 
 A packer is an asynchronous generator function, called with keyword arguments only:

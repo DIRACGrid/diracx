@@ -146,6 +146,11 @@ async def pack_transformation(
     Each batch of proposals is written in its own transaction (DX-ADR-006),
     opened here: a batch that fails is rolled back, the ones before it stay.
 
+    Runs for one transformation must not overlap; the packer task holds a
+    mutex for this. Inputs the packer holds back are locked only until the
+    batch that claimed them commits, so a second run could take them, and the
+    first would then fail when it writes them.
+
     Args:
         transformation_db: Database, not entered by the caller.
         transformation_id: The transformation to pack.
@@ -161,8 +166,11 @@ async def pack_transformation(
             the core does not support yet.
         ValueError: If the packer proposes an input it was not offered, or the
             same input twice.
+        TypeError: If the packer yields something that is not a proposal.
         ConfigurationError: If the packer is unknown or its arguments are
             invalid.
+        InputStatusConflictError: If an input is no longer ``Unassigned``
+            when its batch is written.
     """
     async with transformation_db:
         transformation = await transformation_db.get_transformation(transformation_id)
