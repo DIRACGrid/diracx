@@ -22,12 +22,10 @@ from diracx.core.exceptions import ConfigurationError
 from diracx.core.extensions import DiracEntryPoint, select_from_extension
 from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
-    INPUT_TRANSITIONS,
     BadInput,
     ComputeParcel,
     DataParcel,
     DelayInput,
-    InputStatus,
     PackerInput,
     PackerProposal,
     TransformationKind,
@@ -129,11 +127,6 @@ def load_packer(name: str) -> tuple[Callable[..., Any], type[BaseModel]]:
     return plugin, args_model
 
 
-def _require_transition(old: InputStatus, new: InputStatus) -> None:
-    if new not in INPUT_TRANSITIONS[old]:
-        raise ValueError(f"Inputs cannot move from {old} to {new}")
-
-
 async def pack_transformation(
     transformation_db: TransformationDB,
     transformation_id: AnyUUID,
@@ -215,13 +208,13 @@ async def pack_transformation(
                 return
             after = page[-1].input_id
 
-    kwargs = {
-        "packer_args": packer_args,
-        "flush": flush,
-        "feeder_active": feeder_active,
-        "input_overview": input_overview,
-    }
-    proposals: AsyncIterator[PackerProposal] = plugin(inputs=claim(), **kwargs)
+    proposals: AsyncIterator[PackerProposal] = plugin(
+        packer_args=packer_args,
+        inputs=claim(),
+        flush=flush,
+        feeder_active=feeder_active,
+        input_overview=input_overview,
+    )
 
     summary = PackingSummary()
     used: set[AnyUUID] = set()
@@ -281,11 +274,9 @@ async def pack_transformation(
         for requirements_id, requirements in batch.requirements.items():
             await transformation_db.insert_requirements(requirements_id, requirements)
         stored_requirements.update(batch.requirements)
-        _require_transition(InputStatus.UNASSIGNED, InputStatus.ASSIGNED)
         await transformation_db.insert_compute_parcels(
             transformation_id, process_id, batch.parcels
         )
-        _require_transition(InputStatus.UNASSIGNED, InputStatus.PROBLEMATIC)
         await transformation_db.set_inputs_problematic(
             transformation_id, batch.problematic, author=PACKER_AUTHOR
         )

@@ -48,7 +48,7 @@ The plugin yields proposals, all defined in `diracx.core.models.transformation`:
 
 - Every input in a proposal must have been offered to the plugin in this run.
 - No input may appear in more than one proposal in a run.
-- Every input must still be `Unassigned` when it is written, and the move must be allowed by the input state machine of [DX-ADR-005](../../../adr/DX-ADR-005_state_machines.md).
+- Every input must still be `Unassigned` when it is written. The moves the core makes, from `Unassigned` to `Assigned` or `Problematic`, are edges of the input state machine of [DX-ADR-005](../../../adr/DX-ADR-005_state_machines.md); a test checks that they stay so.
 - `PackerArgs` must validate against the plugin's arguments model.
 
 ### Using `flush` and `feeder_active`

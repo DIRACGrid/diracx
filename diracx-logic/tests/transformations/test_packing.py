@@ -10,6 +10,7 @@ from uuid_utils.compat import uuid7 as std_uuid7
 from diracx.core.exceptions import ConfigurationError, InputStatusConflictError
 from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
+    INPUT_TRANSITIONS,
     BadInput,
     ComputeParcel,
     DataParcel,
@@ -418,6 +419,25 @@ async def test_a_conflict_rolls_back_the_whole_batch(
     async with transformation_db as db:
         assert await db.conn.scalar(select(func.count()).select_from(Parcels)) == 0
         assert await db.conn.scalar(select(func.count()).select_from(ParcelInputs)) == 0
+
+
+async def test_a_non_proposal_is_rejected(
+    transformation_db, transformation_id, use_packer
+):
+    await add_inputs(transformation_db, transformation_id, 1)
+
+    async def plugin(*, packer_args, inputs, **_):
+        yield "not a proposal"
+
+    use_packer(plugin)
+    with pytest.raises(TypeError, match="not a proposal"):
+        await pack(transformation_db, transformation_id)
+
+
+def test_the_core_moves_are_in_the_state_machine():
+    """The core moves inputs only along edges of DX-ADR-005."""
+    allowed = INPUT_TRANSITIONS[InputStatus.UNASSIGNED]
+    assert {InputStatus.ASSIGNED, InputStatus.PROBLEMATIC} <= allowed
 
 
 async def test_inactive_transformation_is_skipped(
