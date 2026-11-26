@@ -21,7 +21,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "sh",
-    "signurlarity >=0.3.1",
+    "signurlarity >=0.3.2",
     "diraccommon >=9.0.18",
     "rfc8785 >=0.1.4",
 ]
