@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from diracx.core.cwl import PolicyViolationError, check_policy
-from diracx.core.cwl.policy import MAX_PROCESS_BYTES
+from diracx.core.cwl.policy import MAX_DOCUMENT_BYTES, MAX_PROCESS_BYTES
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mc-simulation.packed.json"
 
@@ -83,6 +83,39 @@ def test_dirac_classes_are_hints_only():
 def test_oversized_processes_are_refused():
     with pytest.raises(PolicyViolationError, match="#main is .* bytes.*sandbox"):
         check_policy(tool(arguments=["x" * MAX_PROCESS_BYTES]))
+
+
+def test_oversized_documents_are_refused():
+    # Each entry is within its own limit, but not all of them together
+    entries = [
+        tool(id=f"#t{i}.cwl", arguments=["x" * (MAX_PROCESS_BYTES // 2)])
+        for i in range(2 * MAX_DOCUMENT_BYTES // MAX_PROCESS_BYTES + 1)
+    ]
+    for entry in entries:
+        del entry["cwlVersion"]
+    document = {"cwlVersion": "v1.2", "$graph": entries}
+    with pytest.raises(PolicyViolationError) as e:
+        check_policy(document)
+    assert str(e.value).startswith("the document is")
+    assert "#t0.cwl is" not in str(e.value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        ["DockerRequirement"],
+        [None],
+        5,
+        {"DockerRequirement": "alpine"},
+        {"ResourceRequirement": None},
+    ],
+)
+@pytest.mark.parametrize("where", ["requirements", "hints"])
+def test_requirements_and_hints_that_are_not_objects_are_refused(value, where):
+    with pytest.raises(
+        PolicyViolationError, match=f"#main has {where} that are not a list or map"
+    ):
+        check_policy(tool(**{where: value}))
 
 
 def test_abstract_operations_are_refused_wherever_they_are():
