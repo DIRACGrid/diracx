@@ -7,7 +7,7 @@ from sqlalchemy import event, func, insert, select, update
 from uuid_utils import UUID, uuid7
 from uuid_utils.compat import uuid7 as std_uuid7
 
-from diracx.core.exceptions import ConfigurationError
+from diracx.core.exceptions import ConfigurationError, InputStatusConflictError
 from diracx.core.hashing import hash_json
 from diracx.core.models.transformation import (
     BadInput,
@@ -134,10 +134,9 @@ async def add_inputs(transformation_db, transformation_id, n: int) -> list[UUID]
 
 
 async def pack(transformation_db, transformation_id, *, flush=False, max_inputs=100):
-    async with transformation_db as db:
-        return await pack_transformation(
-            db, transformation_id, flush=flush, max_inputs=max_inputs
-        )
+    return await pack_transformation(
+        transformation_db, transformation_id, flush=flush, max_inputs=max_inputs
+    )
 
 
 async def input_statuses(transformation_db) -> dict[UUID, InputStatus]:
@@ -362,6 +361,37 @@ async def test_a_failure_keeps_the_batches_already_committed(
     ]
     async with transformation_db as db:
         assert await db.conn.scalar(select(func.count()).select_from(Parcels)) == 2
+
+
+async def test_a_conflict_rolls_back_the_whole_batch(
+    transformation_db, transformation_id, use_packer
+):
+    """A batch that fails half-way leaves nothing behind, even if caught.
+
+    The parcel and its links are inserted before the inputs are found not to
+    be Unassigned any more; all of it must be rolled back.
+    """
+    (input_id,) = await add_inputs(transformation_db, transformation_id, 1)
+
+    async def plugin(*, packer_args, inputs, **_):
+        offered = [i.input_id async for i in inputs]
+        # Someone else moves the input on before the core writes the parcel
+        await transformation_db.conn.execute(
+            update(Inputs).values(status=InputStatus.PROBLEMATIC)
+        )
+        yield ComputeParcel(input_ids=offered)
+
+    use_packer(plugin)
+    # The caller swallows the error: the batch must be rolled back anyway
+    with pytest.raises(InputStatusConflictError):
+        await pack(transformation_db, transformation_id)
+
+    assert (await input_statuses(transformation_db))[input_id] == (
+        InputStatus.UNASSIGNED
+    )
+    async with transformation_db as db:
+        assert await db.conn.scalar(select(func.count()).select_from(Parcels)) == 0
+        assert await db.conn.scalar(select(func.count()).select_from(ParcelInputs)) == 0
 
 
 async def test_inactive_transformation_is_skipped(

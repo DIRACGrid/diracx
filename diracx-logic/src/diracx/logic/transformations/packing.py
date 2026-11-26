@@ -119,9 +119,11 @@ async def pack_transformation(
 ) -> PackingSummary:
     """Run a transformation's packer once and apply what it proposes.
 
+    Each batch of proposals is written in its own transaction (DX-ADR-006),
+    opened here: a batch that fails is rolled back, the ones before it stay.
+
     Args:
-        transformation_db: Database, entered by the caller; each batch is
-            committed as it is written.
+        transformation_db: Database, not entered by the caller.
         transformation_id: The transformation to pack.
         flush: Ask the packer to also pack groups it would hold back as too
             small.
@@ -138,11 +140,18 @@ async def pack_transformation(
         ConfigurationError: If the packer is unknown or its arguments are
             invalid.
     """
-    transformation = await transformation_db.get_transformation(transformation_id)
-    if transformation["status"] != TransformationStatus.ACTIVE:
-        return PackingSummary(skipped=True)
-    if transformation["kind"] != TransformationKind.COMPUTE:
-        raise NotImplementedError("Packing data transformations is not supported yet")
+    async with transformation_db:
+        transformation = await transformation_db.get_transformation(transformation_id)
+        if transformation["status"] != TransformationStatus.ACTIVE:
+            return PackingSummary(skipped=True)
+        if transformation["kind"] != TransformationKind.COMPUTE:
+            raise NotImplementedError(
+                "Packing data transformations is not supported yet"
+            )
+        input_overview = await transformation_db.get_input_overview(transformation_id)
+        process_id, template = await transformation_db.get_compute_facet(
+            transformation_id
+        )
 
     plugin, args_model = load_packer(transformation["packer"])
     try:
@@ -154,8 +163,6 @@ async def pack_transformation(
     feeder_active = (
         transformation["feeder"] is not None and transformation["feeder_enabled"]
     )
-    input_overview = await transformation_db.get_input_overview(transformation_id)
-    process_id, template = await transformation_db.get_compute_facet(transformation_id)
 
     now = datetime.now(tz=timezone.utc)
     claimed: set[AnyUUID] = set()
@@ -229,11 +236,8 @@ async def pack_transformation(
             )
             summary.inputs_problematic += len(problematic)
             problematic.clear()
-        # Each batch is its own transaction (DX-ADR-006): it releases the row
-        # locks taken so far, and a later failure does not undo it
-        await transformation_db.conn.commit()
 
-    async for proposal in proposals:
+    async def apply(proposal: PackerProposal) -> None:
         match proposal:
             case ComputeParcel():
                 consume(proposal.input_ids)
@@ -263,11 +267,23 @@ async def pack_transformation(
                 raise NotImplementedError("Data parcels are not supported yet")
             case _:
                 raise TypeError(f"Packer yielded {proposal!r}, not a proposal")
-        if len(parcels) + len(problematic) >= PARCEL_BATCH_SIZE:
-            await write()
-    await write()
 
-    # Inputs the packer held back stay Unassigned; their locks go at commit
+    finished = False
+    while not finished:
+        # One transaction per batch: leaving the block commits it, which also
+        # releases the row locks claimed so far, or rolls it back on an error.
+        # Breaking out of the loop leaves the packer paused, and the next batch
+        # resumes it where it stopped.
+        async with transformation_db:
+            finished = True
+            async for proposal in proposals:
+                await apply(proposal)
+                if len(parcels) + len(problematic) >= PARCEL_BATCH_SIZE:
+                    finished = False
+                    break
+            await write()
+
+    # Inputs the packer held back stay Unassigned; their locks went at commit
     summary.inputs_left = len(claimed) - len(used)
     logger.info("Packed transformation %s: %s", transformation_id, summary)
     return summary
