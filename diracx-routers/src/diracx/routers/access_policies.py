@@ -3,7 +3,7 @@
 We define a set of Policy classes (WMS, DFC, etc).
 They have a default implementation in diracx.
 If an extension wants to change it, it can be overwritten in the entry point
-diracx.access_policies
+diracx.routers.access-policies
 
 Each route should either:
 * have the open_access decorator to make explicit that it does not implement policy
@@ -11,7 +11,7 @@ Each route should either:
 
 Adding a new policy:
 1. Create a class that inherits from BaseAccessPolicy and implement the ``policy`` and ``enrich_tokens`` methods
-2. create an entry in diracx.access_policy entrypoints
+2. create an entry in diracx.routers.access-policies entrypoints
 3. Create a dependency such as CheckMyPolicyCallable = Annotated[Callable, Depends(MyAccessPolicy.check)]
 
 """
