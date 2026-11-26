@@ -363,6 +363,32 @@ async def test_a_failure_keeps_the_batches_already_committed(
         assert await db.conn.scalar(select(func.count()).select_from(Parcels)) == 2
 
 
+async def test_delays_count_towards_the_batch(
+    transformation_db, transformation_id, use_packer, monkeypatch
+):
+    """A packer yielding only delays still commits in batches."""
+    monkeypatch.setattr(packing, "PARCEL_BATCH_SIZE", 1)
+    input_ids = await add_inputs(transformation_db, transformation_id, 3)
+    later = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+
+    async def plugin(*, packer_args, inputs, **_):
+        offered = [i.input_id async for i in inputs]
+        yield DelayInput(input_ids=offered[:1], delay_until=later)
+        yield DelayInput(input_ids=offered[1:2], delay_until=later)
+        yield ComputeParcel(input_ids=[std_uuid7()])
+
+    use_packer(plugin)
+    with pytest.raises(ValueError, match="not offered"):
+        await pack(transformation_db, transformation_id)
+
+    # The two delays were committed in their own batches before the failure
+    async with transformation_db as db:
+        delayed = dict(
+            (await db.conn.execute(select(Inputs.input_id, Inputs.delayed_until))).all()
+        )
+    assert [delayed[i] is not None for i in input_ids] == [True, True, False]
+
+
 async def test_a_conflict_rolls_back_the_whole_batch(
     transformation_db, transformation_id, use_packer
 ):

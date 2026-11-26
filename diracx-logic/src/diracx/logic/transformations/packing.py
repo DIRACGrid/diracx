@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # Inputs claimed from the database per query
 CLAIM_BATCH_SIZE = 1000
-# Parcels buffered before they are written
+# Parcels, problematic inputs and delays written per transaction
 PARCEL_BATCH_SIZE = 500
 # Author recorded on the log rows the packer writes
 PACKER_AUTHOR = "TransformationPacker"
@@ -276,9 +276,14 @@ async def pack_transformation(
         # resumes it where it stopped.
         async with transformation_db:
             finished = True
+            # Delays are written as they come, not buffered, but each is a
+            # statement in this transaction, so they count towards the batch
+            delays = 0
             async for proposal in proposals:
                 await apply(proposal)
-                if len(parcels) + len(problematic) >= PARCEL_BATCH_SIZE:
+                if isinstance(proposal, DelayInput):
+                    delays += 1
+                if len(parcels) + len(problematic) + delays >= PARCEL_BATCH_SIZE:
                     finished = False
                     break
             await write()
