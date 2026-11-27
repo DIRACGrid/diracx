@@ -36,6 +36,11 @@ CWL_NAMESPACES = ("https://w3id.org/cwl/cwl#", "https://w3id.org/cwl/salad#")
 # document may carry there: what cwltool --pack writes. $schemas is refused:
 # a runner fetches the schemas it names.
 TOP_LEVEL_KEYS = frozenset({"$graph", "$namespaces", "cwlVersion"})
+# How deep inline run bodies may nest. cwltool --pack makes an entry of every
+# process a step runs, so real documents nest none or a handful; without a
+# bound, a small document could nest enough of them to exhaust the stack of
+# whatever walks it.
+MAX_INLINE_DEPTH = 32
 
 
 class NotSelfContainedError(ValueError):
@@ -90,11 +95,28 @@ def check_self_contained(document: dict[str, Any]) -> None:
             which ``cwltool --pack`` writes as the submitter's absolute path
             or keeps as a URL, instead of inline ``contents`` or ``listing``.
         ValueError: If it is not a CWL v1.2 document, or a process in it
-            declares another version.
+            declares another version; if it does not have the shape of a
+            packed document: ``$graph`` is not a list of processes,
+            ``$namespaces`` is not a map, or ``steps`` are not a list or map
+            of objects; or if it is nested too deeply to be read, inline
+            ``run`` bodies more than :data:`MAX_INLINE_DEPTH` deep.
     """
+    try:
+        problems = _problems(document)
+    except RecursionError:
+        # Whatever is nested, nothing below could walk it either
+        raise ValueError("The document is nested too deeply to be read") from None
+    if problems:
+        raise NotSelfContainedError("; ".join(problems))
+
+
+def _problems(document: dict[str, Any]) -> list[str]:
+    """What a packed document needs from outside itself."""
     problems: list[str] = []
     graph = _graph(document, problems)
-    prefixes = set(document.get("$namespaces") or {})
+    prefixes = document.get("$namespaces") or {}
+    if not isinstance(prefixes, dict):
+        raise ValueError(f"$namespaces is not a map of prefixes: {prefixes!r:.80}")
     # A single process document's other top-level keys are the process,
     # scanned below; a $graph document's would be scanned by nothing
     problems += [
@@ -103,6 +125,7 @@ def check_self_contained(document: dict[str, Any]) -> None:
         if key not in TOP_LEVEL_KEYS and (key.startswith("$") or "$graph" in document)
     ]
     for entry_id, process in graph.items():
+        _check_steps(process, entry_id)
         for path, key in _dollar_keys(process):
             problems.append(f"{entry_id}: {key} at {path} is not allowed")
         for path, name in _names(process):
@@ -134,7 +157,7 @@ def check_self_contained(document: dict[str, Any]) -> None:
                         f"{entry_id}: run {run!r} at {path} is not in $graph"
                     )
             # A dict is a process embedded in the step instead of an entry
-            elif not isinstance(run, dict) or run.get("class") not in PROCESS_CLASSES:
+            elif not _is_process(run):
                 problems.append(f"{entry_id}: run at {path} is not a process")
         for path, literal in _file_literals(process):
             if "path" in literal or "location" in literal:
@@ -142,8 +165,7 @@ def check_self_contained(document: dict[str, Any]) -> None:
                     f"{entry_id}: {literal['class']} at {path} names a path or "
                     "location; give its contents inline"
                 )
-    if problems:
-        raise NotSelfContainedError("; ".join(problems))
+    return problems
 
 
 def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
@@ -158,8 +180,9 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
         picks out one entry.
 
     Raises:
-        ValueError: If a ``run`` refers back to a process running it, or a
-            number lies outside the range canonical JSON can represent.
+        ValueError: If a ``run`` refers back to a process running it, a
+            number lies outside the range canonical JSON can represent, or
+            the document is nested too deeply to be hashed.
     """
     graph = _graph(document)
     components: dict[bytes, Component] = {}
@@ -171,7 +194,7 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
         if entry_id in chain:
             raise ValueError(f"{entry_id} runs itself: {' -> '.join(chain)}")
         # _graph checks the entries; an inline body is checked here
-        if process.get("class") not in PROCESS_CLASSES:
+        if not _is_process(process):
             raise ValueError(f"Not a CWL process inline in a step: {process!r:.80}")
         _check_version(process, entry_id or "An inline process")
         chain = (*chain, entry_id) if entry_id is not None else chain
@@ -202,8 +225,13 @@ def decompose(document: dict[str, Any]) -> dict[bytes, Component]:
             by_entry[entry_id] = process_id
         return process_id
 
-    for entry_id, process in graph.items():
-        identify(process, entry_id, ())
+    try:
+        for entry_id, process in graph.items():
+            identify(process, entry_id, ())
+    except RecursionError:
+        # Only inline bodies are bounded: not what a process nests in its
+        # fields, nor how many entries run one another in a row
+        raise ValueError("The document is nested too deeply to be hashed") from None
     return components
 
 
@@ -267,8 +295,12 @@ def _graph(
     """The ``$graph`` entries by id.
 
     An entry without an id, or with a repeated one, raises a ``ValueError``;
-    given ``problems``, it is listed there instead and left out.
+    given ``problems``, it is listed there instead and left out. A document
+    or ``$graph`` of another type always raises one: nothing has validated
+    the document as CWL yet.
     """
+    if not isinstance(document, dict):
+        raise ValueError(f"Not a CWL document: {document!r:.80}")
     if document.get("cwlVersion") != CWL_VERSION:
         raise ValueError(
             f"Only CWL {CWL_VERSION} is supported, got "
@@ -280,9 +312,11 @@ def _graph(
         # cwltool --pack writes a process that runs nothing as itself
         entries = [{k: v for k, v in document.items() if k not in TOP_LEVEL_KEYS}]
         default_id = "#main"
+    if not isinstance(entries, list):
+        raise ValueError(f"$graph is not a list of processes: {entries!r:.80}")
     graph = {}
     for entry in entries:
-        if not isinstance(entry, dict) or entry.get("class") not in PROCESS_CLASSES:
+        if not _is_process(entry):
             raise ValueError(f"Not a CWL process in $graph: {entry!r:.80}")
         # Entries are found by id: one without, or a repeated one, would be
         # silently dropped
@@ -290,6 +324,8 @@ def _graph(
         problem = None
         if entry_id is None:
             problem = f"A $graph entry has no id: {entry!r:.80}"
+        elif not isinstance(entry_id, str):
+            problem = f"A $graph entry has an id that is not a string: {entry!r:.80}"
         elif entry_id in graph:
             problem = f"Two $graph entries have the id {entry_id!r}"
         if problem is not None:
@@ -300,6 +336,37 @@ def _graph(
         _check_version(entry, str(entry_id))
         graph[str(entry_id)] = entry
     return graph
+
+
+def _is_process(value: Any) -> bool:
+    # A class of another type, which may not hash, is not one of them either
+    if not isinstance(value, dict) or not isinstance(value.get("class"), str):
+        return False
+    return value["class"] in PROCESS_CLASSES
+
+
+def _check_steps(
+    process: dict[str, Any], entry_id: str, path: str = "", depth: int = 0
+) -> None:
+    """Refuse steps :func:`_runs` cannot walk, down through inline bodies."""
+    steps = process.get("steps") or []
+    if isinstance(steps, dict):
+        steps = list(steps.values())
+    if not isinstance(steps, list) or not all(isinstance(s, dict) for s in steps):
+        raise ValueError(
+            f"{entry_id}: steps at {path or '/'} are not a list or map of objects"
+        )
+    for step in steps:
+        if not isinstance(step.get("run"), dict):
+            continue
+        if depth == MAX_INLINE_DEPTH:
+            raise ValueError(
+                f"{entry_id}: inline processes are nested more than "
+                f"{MAX_INLINE_DEPTH} deep; make them $graph entries and name "
+                "them in run"
+            )
+        where = f"{path}/{step.get('id', '?')}"
+        _check_steps(step["run"], entry_id, where, depth + 1)
 
 
 def _steps(process: dict[str, Any]) -> list[dict[str, Any]]:

@@ -48,6 +48,13 @@ reference of DX-ADR-007) is therefore refused for now: the library is out of
 scope for #1080. Once it lands, DiracX will resolve such references against
 its own store before `check_self_contained`.
 
+Nothing has validated the document as CWL at that point, so
+`check_self_contained` also refuses one that does not have the shape of a
+packed document, such as a `$graph` that is not a list of processes or `steps`
+that are not a list or map of objects, and one nested too deeply to be read.
+Inline `run` bodies may nest 32 deep: `cwltool --pack` makes an entry of every
+process a step runs, so real documents nest none or a handful.
+
 Then `decompose` hashes each process with `diracx.core.hashing.hash_json`, as
 submitted, except that each step's `run` is replaced by the identity of the
 process it runs (`proc:sha256-<hex>`), and that what is hashed is
