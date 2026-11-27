@@ -231,6 +231,15 @@ Note that even if you have your own `testing` package depending on `diracx-testi
 
 Although you could simply replace the docker images used in the `diracx-charts` by your own, having the umbrella extension is strongly recommended. The reason is that you will be able to properly manage your release cycle and manage proper dependencies, `AppVersion` corresponding to your app, etc.
 
+The umbrella chart declares the DiracX chart as a dependency, taken from the `ghcr.io` registry:
+
+```yaml
+dependencies:
+  - name: diracx
+    version: "<chart-version>"
+    repository: "oci://ghcr.io/diracgrid/diracx-charts"
+```
+
 Note that your `value.yaml` needs an extra `diracx` layer:
 
 ```yaml
@@ -244,23 +253,26 @@ diracx:
 
 How the repositories are setup is very extension specific and flexible. Here we describe one possible set up.
 
-This setup works by having one GitLab repository for you extension's code and a separate GitLab repository for an extension to `diracx-charts`. One or more installations are then managed via the GitLab CI of `<extension>-charts`. Updating the DiracX dependency of `<extension>` is handled via [`renovate`](https://github.com/renovatebot/renovate). `Renovate` should be configured to update the `pyproject.toml` and the `dockerfile` (see [lhcb configuration](https://gitlab.cern.ch/lhcb-dirac/lhcbdiracx/-/blob/master/renovate.json)) Updating the `<extension>-charts` repository is handled by the GitLab CI job of `<extension>` whenever a Git tag is created.
+This setup works by having one GitLab repository for you extension's code and a separate GitLab repository for an extension to `diracx-charts`. One or more installations are then managed via the GitLab CI of `<extension>-charts`. Updating the DiracX dependency of `<extension>` is handled via [`renovate`](https://github.com/renovatebot/renovate). `Renovate` should be configured to update the `pyproject.toml` and the `dockerfile` (see [lhcb configuration](https://gitlab.cern.ch/lhcb-dirac/lhcbdiracx/-/blob/master/renovate.json)) Updating the `<extension>-charts` repository is also handled by `Renovate`, running for that repository: it proposes the new images of the extension, and the new versions of the DiracX chart published on `ghcr.io`.
 
-A new extension release should trigger a release of your extension chart. (See `deploy-chart` job in [lhcb ci config](https://gitlab.cern.ch/lhcb-dirac/lhcbdiracx/-/blob/master/.gitlab-ci.yml))
-In this case, a new extension-chart release means updating:
+A new extension release should lead to a release of your extension chart. In this case, a new extension-chart release means updating:
 
 - the chart version
 - the AppVersion
 - the containers versions
-- the diracx-charts version to the latest compatible with the diracx version required by lhcbdiracx
+- the DiracX chart version, to one whose `appVersion` is the DiracX version required by the extension
+
+The `appVersion` of a chart version can be read with `helm show chart oci://ghcr.io/diracgrid/diracx-charts/diracx --version <chart-version>`.
 
 ```mermaid
 flowchart LR
     subgraph diracx-block["diracx"]
-        diracx-charts("diracx-charts")
         diracx("diracx")
         diracx-web("diracx-web")
+        diracx-charts("diracx-charts")
     end
+
+    registry[("ghcr.io")]
 
     subgraph extension-block["extension"]
         extension("extension")
@@ -268,19 +280,17 @@ flowchart LR
         extension-charts("extension-charts")
     end
 
+    diracx -->|Renovate PR| diracx-charts
+    diracx-web -->|Renovate PR| diracx-charts
+    diracx-charts -->|publishes the chart| registry
 
-    diracx -->|commit| diracx-charts
-    diracx-web -->|commit| diracx-charts
+    diracx -->|Renovate| extension
+    diracx-web -->|Renovate| extension-web
+    registry -->|Renovate: new DiracX chart| extension-charts
+    extension -->|Renovate: new images| extension-charts
+    extension-web -->|Renovate: new images| extension-charts
 
-    diracx -->|renovate| extension
-    diracx-web -->|renovate| extension-web
-    extension -->|commit and bump diracx-charts| extension-charts
-    extension-web -->|commit| extension-charts
-
-    linkStyle 0 stroke: blue
-    linkStyle 1 stroke: blue
-    linkStyle 2 stroke: red
-    linkStyle 3 stroke: red
-    linkStyle 4 stroke: blue
-    linkStyle 5 stroke: blue
+    linkStyle 2 stroke: blue
 ```
+
+All the arrows but one are pull or merge requests opened by Renovate. The blue one is the only publication: `diracx-charts` pushes the chart to the registry when a pull request is merged.

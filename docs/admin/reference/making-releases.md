@@ -86,6 +86,12 @@ A new release creates:
 
 ## diracx-charts releases
 
-Every commit in master triggers a new release. The releases are published on a [helm repo](https://charts.diracgrid.org/index.yaml)
+Every commit in `master` that changes the chart publishes a new chart version. The chart is pushed to the `ghcr.io` registry, at `oci://ghcr.io/diracgrid/diracx-charts/diracx` ([package page](https://github.com/DIRACGrid/diracx-charts/pkgs/container/diracx-charts%2Fdiracx)).
+
+No git tag and no GitHub release are created for a chart version: the version is the one in `diracx/Chart.yaml` at that commit. Unlike the other releases, no release manager is involved: merging the pull request publishes the chart.
+
+!!! note "The former chart repository"
+
+    Until version 1.1.20 the chart was published on `https://charts.diracgrid.org/`. That address no longer receives new versions.
 
 The pull requests updating the chart for new `diracx` and `diracx-web` releases are opened by Renovate (see `renovate.json` in `diracx-charts`). Patch releases are marked for automerge, minor and major releases wait for a review. The `diracx-charts` ruleset requires an approving review on every pull request, so a maintainer still has to approve each of them before it merges.
