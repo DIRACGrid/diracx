@@ -216,6 +216,7 @@ nav:
           - dev/how-to/add-functionality/index.md
           - New route or router: dev/how-to/add-a-route.md
           - New task: dev/how-to/add-a-task.md
+          - New feeder or packer: dev/how-to/add-a-transformation-plugin.md
           - Spawn a task: dev/how-to/spawn-a-task.md
           - Use task callbacks: dev/how-to/use-task-callbacks.md
           - Add telemetry: dev/how-to/add-telemetry.md

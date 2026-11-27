@@ -7,15 +7,17 @@ that writes.
 
 from __future__ import annotations
 
-from typing import Self
+from collections.abc import AsyncIterator, Mapping
+from typing import Protocol, Self
 
 from pydantic import Field, JsonValue, model_validator
 
 from .._base import BaseModel
 from ..types import UTCDatetime
+from .plugins import ArgsT_contra
 
 
-class FeederInput(BaseModel):
+class FeederInput(BaseModel, allow_inf_nan=False):
     """One input proposed by a feeder for insertion into ``Inputs``.
 
     May be a file (``lfn`` and ``lfn_size`` both set), a seed/parameter set
@@ -40,7 +42,7 @@ class FeederInput(BaseModel):
         return self
 
 
-class SetFeederState(BaseModel):
+class SetFeederState(BaseModel, allow_inf_nan=False):
     """Bookmark update; commits with inputs yielded before it in the same batch."""
 
     state: dict[str, JsonValue]
@@ -55,3 +57,31 @@ class NoMoreFeederInputs(BaseModel):
 
 
 FeederProposal = FeederInput | SetFeederState | NoMoreFeederInputs
+
+
+class Feeder(Protocol[ArgsT_contra]):
+    """Signature every feeder must have (DX-ADR-006).
+
+    Feeders are written as ``async def`` functions that ``yield``. Calling one
+    runs none of its code: it returns an async iterator, and the feeder runs,
+    awaiting any I/O such as catalogue queries, as the core iterates over it.
+    The Protocol therefore uses a plain ``def`` returning ``AsyncIterator``; an
+    ``async def`` here would describe a coroutine to await first.
+    """
+
+    def __call__(
+        self,
+        *,
+        feeder_args: ArgsT_contra,
+        feeder_state: Mapping[str, JsonValue],
+        scouting: bool,
+    ) -> AsyncIterator[FeederProposal]:
+        """Yield inputs, bookmark updates and an exhaustion signal.
+
+        Args:
+            feeder_args: The transformation's validated ``FeederArgs``.
+            feeder_state: The bookmark last stored with ``SetFeederState``;
+                read-only, a new bookmark is yielded instead.
+            scouting: Whether the workgraph is in its scouting phase.
+        """
+        ...
