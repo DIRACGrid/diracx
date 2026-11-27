@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import event, func, insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.exc import IntegrityError
 from uuid_utils import uuid7
 
@@ -28,22 +28,6 @@ from diracx.db.sql.transformation.schema import (
 
 PROCESS = {"cwlVersion": "v1.2", "class": "CommandLineTool", "baseCommand": "echo"}
 PROCESS_ID = hash_json(PROCESS)
-
-
-@pytest.fixture
-async def transformation_db():
-    db = TransformationDB("sqlite+aiosqlite:///:memory:")
-    async with db.engine_context():
-        # SQLite only enforces foreign keys when asked to, per connection
-        event.listen(
-            db.engine.sync_engine,
-            "connect",
-            lambda dbapi_conn, _: dbapi_conn.cursor().execute("PRAGMA foreign_keys=ON"),
-        )
-        async with db.engine.begin() as conn:
-            await conn.run_sync(db.metadata.create_all)
-            await db.post_create(conn)
-        yield db
 
 
 def new_transformation(**overrides) -> NewTransformation:

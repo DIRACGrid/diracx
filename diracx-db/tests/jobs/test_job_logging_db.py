@@ -6,17 +6,22 @@ import pytest
 
 from diracx.core.models import JobLoggingRecord, JobStatus
 from diracx.db.sql import JobLoggingDB
+from diracx.testing.sqldb import SERVER_SQL_BACKENDS
 
 
 @pytest.fixture
-async def job_logging_db():
-    job_logging_db = JobLoggingDB("sqlite+aiosqlite:///:memory:")
+async def job_logging_db(sql_db_url):
+    job_logging_db = JobLoggingDB(sql_db_url)
     async with job_logging_db.engine_context():
         async with job_logging_db.engine.begin() as conn:
             await conn.run_sync(job_logging_db.metadata.create_all)
         yield job_logging_db
 
 
+@pytest.mark.xfail_sql_backends(
+    SERVER_SQL_BACKENDS,
+    reason="StatusTime is DATETIME (no microseconds) on MySQL/MariaDB",
+)
 async def test_insert_records(job_logging_db: JobLoggingDB):
     date_1 = datetime.now(timezone.utc) - timedelta(minutes=1)
     date_2 = datetime.now(timezone.utc) - timedelta(seconds=1)
