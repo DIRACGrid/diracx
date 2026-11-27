@@ -8,10 +8,13 @@ step and maps its hints to the columns of DX-ADR-004, :func:`submit_workgraph`
 stores the rows ``New``, and :func:`start_workgraph` moves the workgraph and
 its transformation to ``Active``, which is when the feeder starts.
 
-Process ingestion is not here: validating the process as CWL, canonicalising
-it for content identity and storing nested references are the job of
-DIRACGrid/diracx#1080. Until it lands, :func:`ingest_process` is a placeholder
-that hashes the step's inline ``run`` body as submitted.
+The document is the one ``cwltool --pack`` makes: a ``$graph`` whose ``#main``
+entry is the workgraph, its step's ``run`` naming another entry (``#gauss``)
+or holding an inline body, and ``dirac:`` names written as full IRIs. It must
+pass :func:`~diracx.core.cwl.check_self_contained`. Two pieces of the process
+ingestion of DIRACGrid/diracx#1080 are not merged yet and have placeholders
+here: reading the ``dirac:`` hints (``split_dirac_hints``, #1120) and storing
+the process (``store_process``, #1118).
 """
 
 from __future__ import annotations
@@ -25,6 +28,13 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 from uuid_utils import UUID, uuid7
 
+from diracx.core.cwl import (
+    NotSelfContainedError,
+    check_self_contained,
+    entry_identity,
+    format_reference,
+    subgraph,
+)
 from diracx.core.exceptions import (
     InvalidWorkgraphError,
     InvalidWorkgraphTransitionError,
@@ -43,12 +53,20 @@ from diracx.core.models.transformation import (
 from diracx.db.sql import TransformationDB
 from diracx.db.sql.transformation.db import AnyUUID, NewTransformation
 
-# How the stripped spec refers to a stored process in place of its run body
-PROCESS_URI_PREFIX = "diracx://"
+# The dirac: namespace; cwltool --pack writes its names as full IRIs
+DIRAC_NAMESPACE = "https://diracgrid.org/cwl#"
+WORKGRAPH_HINT = f"{DIRAC_NAMESPACE}Workgraph"
+TRANSFORMATION_HINT = f"{DIRAC_NAMESPACE}Transformation"
+FEEDER_HINT = f"{DIRAC_NAMESPACE}Feeder"
 
-WORKGRAPH_HINT = "dirac:Workgraph"
-TRANSFORMATION_HINT = "dirac:Transformation"
-FEEDER_HINT = "dirac:Feeder"
+
+def _name(iri: str) -> str:
+    """The prefixed name of a dirac: IRI, for messages."""
+    return "dirac:" + iri.removeprefix(DIRAC_NAMESPACE)
+
+
+# The entry of a packed document that is the workgraph
+MAIN_ENTRY = "#main"
 
 
 @dataclass
@@ -74,21 +92,33 @@ class CompiledWorkgraph:
     requirements_templates: dict[bytes, dict[str, Any]] = field(default_factory=dict)
 
 
-def ingest_process(process: dict[str, Any]) -> tuple[bytes, dict[str, Any]]:
-    """Return the content hash a process is stored under, and what is stored.
+def ingest_process(
+    document: dict[str, Any], run: str | dict[str, Any]
+) -> tuple[bytes, dict[str, Any]]:
+    """Return the identity a step's process is stored under, and what is stored.
 
-    Placeholder for the process ingestion of DIRACGrid/diracx#1080, which
-    validates the process and canonicalises it before hashing. Here the body
-    is hashed as submitted.
+    Placeholder for ``store_process`` (DIRACGrid/diracx#1118), which also
+    checks the process against the VO policy and validates it with
+    ``cwl-utils`` before storing it. The identity and the stored document are
+    already those of DIRACGrid/diracx#1114: what is stored is the document the
+    step runs, which a runner can start.
 
     Args:
-        process: A CWL process, inline.
+        document: The packed workgraph document; it is self-contained.
+        run: The step's ``run``: a ``$graph`` entry id, or an inline body.
 
     Returns:
-        The SHA-256 digest of its JCS form, and the document to store.
+        The identity of the process, and the document to store under it.
     """
-    # TODO(#1080): replace with the process ingestion
-    return hash_json(process), process
+    # TODO(#1118): replace with store_process
+    if isinstance(run, str):
+        return entry_identity(document, run), subgraph(document, run)
+    # An inline body is its own document; its identity is the same as inside
+    # the workgraph, the version being hashed apart from the body
+    process = {"cwlVersion": document["cwlVersion"], **run}
+    if "$namespaces" in document:
+        process["$namespaces"] = document["$namespaces"]
+    return entry_identity(process, run.get("id", MAIN_ENTRY)), process
 
 
 async def submit_workgraph(
@@ -186,6 +216,7 @@ def _hints(obj: Mapping[str, Any], where: str, errors: list[str]) -> dict[str, A
     CWL writes hints either as a mapping keyed by class or as a list of
     objects carrying ``class``; both mean the same (DX-ADR-007).
     """
+    # TODO(#1120): replace with diracx.core.cwl.split_dirac_hints
     hints = obj.get("hints")
     if hints is None:
         return {}
@@ -205,7 +236,8 @@ def _hints(obj: Mapping[str, Any], where: str, errors: list[str]) -> dict[str, A
             continue
         # A class appears at most once (DX-ADR-007)
         if cls in by_class:
-            errors.append(f"{where}: hint {cls} appears more than once")
+            shown = _name(cls) if cls.startswith(DIRAC_NAMESPACE) else cls
+            errors.append(f"{where}: hint {shown} appears more than once")
             continue
         by_class[cls] = {k: v for k, v in hint.items() if k != "class"}
     return by_class
@@ -271,6 +303,19 @@ def _labels(body: Mapping[str, Any], name: str | None) -> dict[str, Any]:
     return labels
 
 
+def _local(ref: Any, *scopes: str) -> str:
+    """Strip the ``#`` and the enclosing scopes from a CWL identifier.
+
+    ``cwltool --pack`` writes ``#main/MCSimulation/seed`` where the unpacked
+    document writes ``seed``.
+    """
+    ref = str(ref).lstrip("#")
+    for scope in scopes:
+        if scope and ref.startswith(f"{scope}/"):
+            ref = ref[len(scope) + 1 :]
+    return ref
+
+
 def compile_workgraph(document: Any) -> CompiledWorkgraph:
     """Decompose a single-transformation workgraph into the rows of DX-ADR-004.
 
@@ -278,7 +323,7 @@ def compile_workgraph(document: Any) -> CompiledWorkgraph:
     touches no database.
 
     Args:
-        document: The CWL workgraph document, as JSON.
+        document: The packed CWL workgraph document, as JSON.
 
     Returns:
         The rows to insert.
@@ -286,38 +331,58 @@ def compile_workgraph(document: Any) -> CompiledWorkgraph:
     Raises:
         InvalidWorkgraphError: Listing every problem found.
     """
-    errors: list[str] = []
     if not isinstance(document, Mapping):
         raise InvalidWorkgraphError(["the document must be a JSON object"])
-    if document.get("cwlVersion") != "v1.2":
-        errors.append(f"cwlVersion must be v1.2, not {document.get('cwlVersion')!r}")
-    if document.get("class") != "Workflow":
-        errors.append(f"a workgraph must be a Workflow, not {document.get('class')!r}")
-    hints = _hints(document, "workflow", errors)
+    document = dict(document)
+    try:
+        check_self_contained(document)
+    except (NotSelfContainedError, ValueError) as exc:
+        raise InvalidWorkgraphError([str(exc)]) from exc
+
+    if "$graph" in document:
+        graph = {entry["id"]: entry for entry in document["$graph"]}
+        if MAIN_ENTRY not in graph:
+            raise InvalidWorkgraphError(
+                [f"a packed workgraph needs a {MAIN_ENTRY} entry"]
+            )
+        main = graph[MAIN_ENTRY]
+    else:
+        main = document
+    main_id = _local(main.get("id", MAIN_ENTRY))
+
+    errors: list[str] = []
+    if main.get("class") != "Workflow":
+        errors.append(f"a workgraph must be a Workflow, not {main.get('class')!r}")
+    hints = _hints(main, "workflow", errors)
     wg_hint: WorkgraphHint | None = None
     if WORKGRAPH_HINT in hints:
         wg_hint = _validate(
-            WorkgraphHint, hints[WORKGRAPH_HINT], WORKGRAPH_HINT, errors
+            WorkgraphHint, hints[WORKGRAPH_HINT], _name(WORKGRAPH_HINT), errors
         )
     else:
-        errors.append(f"the workflow must carry the {WORKGRAPH_HINT} hint")
+        errors.append(f"the workflow must carry the {_name(WORKGRAPH_HINT)} hint")
 
     # Workflow inputs, with the feeder of those that carry one
     feeders: dict[str, FeederHint | None] = {}
-    for name, body in _entries(document.get("inputs"), "inputs", "type", errors):
+    for raw_name, body in _entries(main.get("inputs"), "inputs", "type", errors):
+        name = _local(raw_name, main_id)
         feeders[name] = None
         if FEEDER_HINT in body:
             feeders[name] = _validate(
-                FeederHint, body[FEEDER_HINT], f"inputs.{name}.{FEEDER_HINT}", errors
+                FeederHint,
+                body[FEEDER_HINT],
+                f"inputs.{name}.{_name(FEEDER_HINT)}",
+                errors,
             )
 
-    steps = _entries(document.get("steps"), "steps", "run", errors)
+    steps = _entries(main.get("steps"), "steps", "run", errors)
     if len(steps) != 1:
         errors.append(
             f"a workgraph must have exactly one step for now, not {len(steps)}"
         )
         raise InvalidWorkgraphError(errors)
-    name, step = steps[0]
+    raw_name, step = steps[0]
+    name = _local(raw_name, main_id)
     where = f"steps.{name}"
 
     step_hints = _hints(step, where, errors)
@@ -326,26 +391,35 @@ def compile_workgraph(document: Any) -> CompiledWorkgraph:
         hint = _validate(
             TransformationHint,
             step_hints[TRANSFORMATION_HINT],
-            f"{where}.{TRANSFORMATION_HINT}",
+            f"{where}.{_name(TRANSFORMATION_HINT)}",
             errors,
         )
     else:
-        errors.append(f"{where}: the step must carry {TRANSFORMATION_HINT}")
+        errors.append(f"{where}: the step must carry {_name(TRANSFORMATION_HINT)}")
 
+    # check_self_contained has made sure it is a $graph entry or a process
     run = step.get("run")
-    if not isinstance(run, Mapping):
+    if isinstance(run, Mapping) and any(
+        isinstance(s.get("run"), str)
+        for s in (
+            run.get("steps", {}).values()
+            if isinstance(run.get("steps"), Mapping)
+            else run.get("steps", [])
+        )
+    ):
         errors.append(
-            f"{where}.run: must be an inline process; references such as "
-            f"{run!r} are not supported yet"
+            f"{where}.run: an inline process running $graph entries is not "
+            "supported yet; name it by its $graph id instead"
         )
 
     # The step input fed from a workflow input carrying dirac:Feeder
     fed: list[tuple[str, FeederHint]] = []
-    for in_name, in_body in _entries(step.get("in"), f"{where}.in", "source", errors):
+    for raw_in, in_body in _entries(step.get("in"), f"{where}.in", "source", errors):
+        in_name = _local(raw_in, main_id, name)
         source = in_body.get("source")
         sources = source if isinstance(source, list) else [source]
         for src in sources:
-            src = str(src).lstrip("#")
+            src = _local(src, main_id)
             if src not in feeders:
                 errors.append(
                     f"{where}.in.{in_name}: source {src} is not a workflow input"
@@ -364,28 +438,35 @@ def compile_workgraph(document: Any) -> CompiledWorkgraph:
 
     if errors:
         raise InvalidWorkgraphError(errors)
-    assert wg_hint is not None and hint is not None and isinstance(run, Mapping)
+    assert wg_hint is not None and hint is not None and run is not None
 
-    process_id, process = ingest_process(dict(run))
+    process_id, process = ingest_process(
+        document, run if isinstance(run, str) else dict(run)
+    )
     requirements_id = None
     compiled_requirements: dict[bytes, dict[str, Any]] = {}
     if hint.requirements_template is not None:
+        # TODO(#1213): hash with the Requirements model once it exists
         requirements_id = hash_json(hint.requirements_template)
         compiled_requirements[requirements_id] = hint.requirements_template
     feeder = fed[0][1] if fed else None
 
-    stripped = copy.deepcopy(dict(document))
+    # The workgraph's own entry, its step running the stored process
+    stripped = copy.deepcopy(dict(main))
+    for key in ("cwlVersion", "$namespaces"):
+        if key in document:
+            stripped[key] = copy.deepcopy(document[key])
     stripped_steps = stripped["steps"]
     stripped_step = (
         stripped_steps[next(iter(stripped_steps))]
         if isinstance(stripped_steps, Mapping)
         else stripped_steps[0]
     )
-    stripped_step["run"] = f"{PROCESS_URI_PREFIX}{process_id.hex()}"
+    stripped_step["run"] = format_reference(process_id)
 
-    workgraph_labels = _labels(document, None)
-    if isinstance(document.get("id"), str):
-        workgraph_labels["id"] = document["id"]
+    workgraph_labels = _labels(main, None)
+    if isinstance(main.get("id"), str):
+        workgraph_labels["id"] = main["id"]
     return CompiledWorkgraph(
         workgraph_id=uuid7(),
         type=wg_hint.type,

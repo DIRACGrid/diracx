@@ -10,6 +10,7 @@ import pytest
 import yaml
 from sqlalchemy import func, select, update
 
+from diracx.core.cwl import decompose, entry_identity, format_reference, subgraph
 from diracx.core.exceptions import (
     InvalidWorkgraphError,
     InvalidWorkgraphTransitionError,
@@ -31,7 +32,11 @@ from diracx.logic.transformations import (
     start_workgraph,
     submit_workgraph,
 )
-from diracx.logic.transformations.workgraphs import PROCESS_URI_PREFIX
+from diracx.logic.transformations.workgraphs import (
+    FEEDER_HINT,
+    TRANSFORMATION_HINT,
+    WORKGRAPH_HINT,
+)
 
 EXAMPLES = Path(__file__).parent / "workgraphs"
 
@@ -40,12 +45,26 @@ def load(name: str) -> dict[str, Any]:
     return yaml.safe_load((EXAMPLES / name).read_text())
 
 
+def main_of(document: dict[str, Any]) -> dict[str, Any]:
+    """The #main entry of a packed document."""
+    return next(e for e in document["$graph"] if e["id"] == "#main")
+
+
+def step_of(document: dict[str, Any]) -> dict[str, Any]:
+    return main_of(document)["steps"][0]
+
+
+def hint(obj: dict[str, Any], cls: str) -> dict[str, Any]:
+    return next(h for h in obj["hints"] if h["class"] == cls)
+
+
 # --------------------------------------------------------------------------
 # Compilation
 # --------------------------------------------------------------------------
 
 
 def test_simulation():
+    """A packed document whose step runs another $graph entry."""
     document = load("simulation.cwl")
     original = copy.deepcopy(document)
     compiled = compile_workgraph(document)
@@ -64,23 +83,29 @@ def test_simulation():
         "doc": "Gauss, one seed per job",
     }
     assert compiled.annotations == {
-        "id": "MC_2026_Bs2JpsiPhi_Sim12",
+        "id": "#main",
         "label": "MC simulation",
         "doc": "Gauss, one seed per job.",
     }
 
-    # The run body is stored under its hash and replaced by it in the spec
-    run = document["steps"]["MCSimulation"]["run"]
-    assert t.process_id == hash_json(run)
-    assert compiled.processes == {t.process_id: run}
-    stripped_step = compiled.stripped_spec["steps"]["MCSimulation"]
-    assert stripped_step["run"] == f"{PROCESS_URI_PREFIX}{t.process_id.hex()}"
-    assert stripped_step["in"] == {"seed": "events"}
+    # The process is the document the step runs, under its #1114 identity
+    assert t.process_id == entry_identity(document, "#gauss.cwl")
+    assert compiled.processes == {t.process_id: subgraph(document, "#gauss.cwl")}
+
+    # The stripped spec is #main, its step running the stored process
+    stripped = compiled.stripped_spec
+    assert "$graph" not in stripped
+    assert stripped["id"] == "#main"
+    assert stripped["cwlVersion"] == "v1.2"
+    assert stripped["$namespaces"] == {"dirac": "https://diracgrid.org/cwl#"}
+    assert stripped["steps"][0]["run"] == format_reference(t.process_id)
+    assert stripped["steps"][0]["in"] == step_of(document)["in"]
 
 
-def test_data_processing_list_forms():
-    """List-form hints, inputs and steps; a non-fed input is a parameter."""
-    compiled = compile_workgraph(load("data-processing.cwl"))
+def test_data_processing_inline_run():
+    """An inline run body; a non-fed input is a job parameter."""
+    document = load("data-processing.cwl")
+    compiled = compile_workgraph(document)
     t = compiled.transformation
     assert compiled.type == "Sprucing"
     assert t.feeder == "LHCbBookkeeping"
@@ -88,13 +113,27 @@ def test_data_processing_list_forms():
     requirements = {"priority": 2, "output_se": "CERN-BUFFER"}
     assert t.requirements_template_id == hash_json(requirements)
     assert compiled.requirements_templates == {hash_json(requirements): requirements}
-    assert compiled.stripped_spec["steps"][0]["run"].startswith(PROCESS_URI_PREFIX)
     assert t.annotations == {"name": "sprucing"}
 
+    # The inline body has the identity it has inside the workgraph
+    assert t.process_id in decompose(document)
+    (stored,) = compiled.processes.values()
+    assert stored["class"] == "CommandLineTool"
+    assert stored["cwlVersion"] == "v1.2"
+    assert entry_identity(stored) == t.process_id
+    assert compiled.stripped_spec["steps"][0]["run"] == format_reference(t.process_id)
 
-def test_without_feeder():
-    t = compile_workgraph(load("parameters-only.cwl")).transformation
+
+def test_single_process_document():
+    """A document without $graph, with map-form fields and no feeder."""
+    document = load("parameters-only.cwl")
+    compiled = compile_workgraph(document)
+    t = compiled.transformation
     assert (t.feeder, t.feeder_args) == (None, None)
+    assert t.process_id in decompose(document)
+    assert compiled.stripped_spec["steps"]["echo"]["run"] == format_reference(
+        t.process_id
+    )
 
 
 def test_identifiers_are_minted_per_compilation():
@@ -130,33 +169,57 @@ def test_not_an_object():
 def test_wrong_cwl_version():
     document = simulation()
     document["cwlVersion"] = "v1.0"
-    assert errors_of(document) == ["cwlVersion must be v1.2, not 'v1.0'"]
+    (error,) = errors_of(document)
+    assert "Only CWL v1.2 is supported" in error
+
+
+def test_prefixed_dirac_names_are_refused():
+    """dirac: names arrive as full IRIs; check_self_contained refuses prefixes."""
+    document = simulation()
+    hint(main_of(document), WORKGRAPH_HINT)["class"] = "dirac:Workgraph"
+    (error,) = errors_of(document)
+    assert "uses the $namespaces prefix 'dirac'" in error
+
+
+def test_not_self_contained():
+    document = simulation()
+    step_of(document)["run"] = "transformations/gauss.cwl"
+    (error,) = errors_of(document)
+    assert "'transformations/gauss.cwl'" in error
+    assert "is not in $graph" in error
+
+
+def test_packed_without_main():
+    document = simulation()
+    main_of(document)["id"] = "#workgraph"
+    assert errors_of(document) == ["a packed workgraph needs a #main entry"]
 
 
 def test_not_a_workflow():
-    document = simulation()
+    document = load("parameters-only.cwl")
     document["class"] = "CommandLineTool"
-    assert errors_of(document) == [
-        "a workgraph must be a Workflow, not 'CommandLineTool'"
-    ]
+    del document["steps"]
+    document["outputs"] = []
+    errors = errors_of(document)
+    assert "a workgraph must be a Workflow, not 'CommandLineTool'" in errors
 
 
 def test_missing_workgraph_hint():
     document = simulation()
-    del document["hints"]
+    del main_of(document)["hints"]
     assert errors_of(document) == ["the workflow must carry the dirac:Workgraph hint"]
 
 
 def test_missing_type():
     document = simulation()
-    del document["hints"]["dirac:Workgraph"]["type"]
+    del hint(main_of(document), WORKGRAPH_HINT)["type"]
     assert errors_of(document) == ["dirac:Workgraph.type: Field required"]
 
 
 def test_unsupported_hint_field():
     """Fields beyond deliverable 1 are rejected, not silently dropped."""
     document = simulation()
-    document["hints"]["dirac:Workgraph"]["approving"] = [{"action": "Manual"}]
+    hint(main_of(document), WORKGRAPH_HINT)["approving"] = [{"action": "Manual"}]
     assert errors_of(document) == [
         "dirac:Workgraph.approving: Extra inputs are not permitted"
     ]
@@ -164,15 +227,16 @@ def test_unsupported_hint_field():
 
 def test_several_steps():
     document = simulation()
-    step = document["steps"]["MCSimulation"]
-    document["steps"]["MCReconstruction"] = copy.deepcopy(step)
+    second = copy.deepcopy(step_of(document))
+    second["id"] = "#main/MCReconstruction"
+    main_of(document)["steps"].append(second)
     assert errors_of(document) == [
         "a workgraph must have exactly one step for now, not 2"
     ]
 
 
 def test_no_step():
-    document = simulation()
+    document = load("parameters-only.cwl")
     document["steps"] = {}
     assert errors_of(document) == [
         "a workgraph must have exactly one step for now, not 0"
@@ -181,7 +245,7 @@ def test_no_step():
 
 def test_bare_step():
     document = simulation()
-    del document["steps"]["MCSimulation"]["hints"]
+    del step_of(document)["hints"]
     assert errors_of(document) == [
         "steps.MCSimulation: the step must carry dirac:Transformation"
     ]
@@ -189,22 +253,28 @@ def test_bare_step():
 
 def test_missing_packer():
     document = simulation()
-    del document["steps"]["MCSimulation"]["hints"]["dirac:Transformation"]["packer"]
+    del hint(step_of(document), TRANSFORMATION_HINT)["packer"]
     assert errors_of(document) == [
         "steps.MCSimulation.dirac:Transformation.packer: Field required"
     ]
 
 
-def test_run_reference():
+def test_inline_run_of_graph_entries():
+    """An inline workflow running $graph entries waits for store_process."""
     document = simulation()
-    document["steps"]["MCSimulation"]["run"] = "transformations/gauss.cwl"
+    step_of(document)["run"] = {
+        "class": "Workflow",
+        "inputs": [],
+        "outputs": [],
+        "steps": [{"id": "#inner/gauss", "run": "#gauss.cwl", "in": [], "out": []}],
+    }
     (error,) = errors_of(document)
-    assert error.startswith("steps.MCSimulation.run: must be an inline process")
+    assert error.startswith("steps.MCSimulation.run: an inline process running")
 
 
 def test_unknown_source():
     document = simulation()
-    document["steps"]["MCSimulation"]["in"] = {"seed": "nothing"}
+    step_of(document)["in"][0]["source"] = "#main/nothing"
     assert errors_of(document) == [
         "steps.MCSimulation.in.seed: source nothing is not a workflow input"
     ]
@@ -212,27 +282,28 @@ def test_unknown_source():
 
 def test_several_fed_inputs():
     document = simulation()
-    document["inputs"]["more-events"] = copy.deepcopy(document["inputs"]["events"])
-    document["steps"]["MCSimulation"]["in"]["extra"] = "more-events"
+    inputs = main_of(document)["inputs"]
+    extra = copy.deepcopy(inputs[0])
+    extra["id"] = "#main/more-events"
+    inputs.append(extra)
+    step_of(document)["in"].append(
+        {"id": "#main/MCSimulation/extra", "source": "#main/more-events"}
+    )
     (error,) = errors_of(document)
     assert "are all fed" in error
 
 
 def test_invalid_feeder():
     document = simulation()
-    document["inputs"]["events"]["dirac:Feeder"] = {"args": {}}
+    main_of(document)["inputs"][0][FEEDER_HINT] = {"args": {}}
     assert errors_of(document) == ["inputs.events.dirac:Feeder.name: Field required"]
-
-
-def data_processing() -> dict[str, Any]:
-    return load("data-processing.cwl")
 
 
 def test_repeated_hint_class():
     """A hint class appears at most once (DX-ADR-007), the first is not overridden."""
-    document = data_processing()
-    document["hints"].append(
-        {"class": "dirac:Workgraph", "schema_version": "1.0", "type": "Other"}
+    document = simulation()
+    main_of(document)["hints"].append(
+        {"class": WORKGRAPH_HINT, "schema_version": "1.0", "type": "Other"}
     )
     assert errors_of(document) == [
         "workflow: hint dirac:Workgraph appears more than once"
@@ -240,38 +311,36 @@ def test_repeated_hint_class():
 
 
 def test_non_string_hint_class():
-    document = data_processing()
-    document["hints"].append({"class": ["dirac:Workgraph"]})
-    assert errors_of(document) == [
-        "workflow: a hint class must be a string, not ['dirac:Workgraph']"
-    ]
+    document = simulation()
+    main_of(document)["hints"].append({"class": ["a"]})
+    assert errors_of(document) == ["workflow: a hint class must be a string, not ['a']"]
 
 
 def test_repeated_input_id():
-    document = data_processing()
-    document["inputs"].append({"id": "raw-data", "type": "string"})
-    assert errors_of(document) == ["inputs: id raw-data appears more than once"]
+    document = load("data-processing.cwl")
+    main_of(document)["inputs"].append({"id": "#main/raw-data", "type": "string"})
+    assert errors_of(document) == ["inputs: id main/raw-data appears more than once"]
 
 
 def test_non_string_id():
-    document = data_processing()
-    document["inputs"].append({"id": 7, "type": "string"})
-    assert errors_of(document) == ["inputs: an id must be a string, not 7"]
+    document = load("parameters-only.cwl")
+    document["inputs"] = [{"id": 7, "type": "string"}]
+    assert "inputs: an id must be a string, not 7" in errors_of(document)
 
 
 def test_repeated_step_input_id():
-    document = data_processing()
-    step_inputs = document["steps"][0]["in"]
+    document = load("data-processing.cwl")
+    step_inputs = step_of(document)["in"]
     step_inputs.append(copy.deepcopy(step_inputs[0]))
     assert errors_of(document) == [
-        "steps.sprucing.in: id input-data appears more than once"
+        "steps.sprucing.in: id main/sprucing/input-data appears more than once"
     ]
 
 
 def test_errors_are_collected():
     document = simulation()
-    document["cwlVersion"] = "v1.0"
-    del document["steps"]["MCSimulation"]["hints"]
+    del hint(main_of(document), WORKGRAPH_HINT)["type"]
+    del step_of(document)["hints"]
     assert len(errors_of(document)) == 2
 
 
@@ -330,7 +399,7 @@ async def test_resubmission_reuses_the_process(transformation_db):
 
 async def test_invalid_submission_stores_nothing(transformation_db):
     document = simulation()
-    del document["steps"]["MCSimulation"]["hints"]
+    del step_of(document)["hints"]
     async with transformation_db as db:
         with pytest.raises(InvalidWorkgraphError):
             await submit_workgraph(document, transformation_db=db, vo="lhcb", sub="s")
