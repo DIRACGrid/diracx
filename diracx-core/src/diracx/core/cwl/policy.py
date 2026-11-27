@@ -50,6 +50,8 @@ ALLOWED_HINTS = ALLOWED_REQUIREMENTS | {
 # DiracX's own classes (``dirac:Transformation``…), accepted as hints only.
 # cwltool --pack writes them with the prefix expanded, and
 # check_self_contained refuses them written with it.
+# TODO: any class under the namespace is accepted for now; list the classes
+# DiracX defines once they are settled.
 DIRAC_NAMESPACE = "https://diracgrid.org/cwl#"
 
 # DockerRequirement fields that make the worker node build an image or fetch
@@ -81,7 +83,8 @@ def check_policy(document: dict[str, Any]) -> None:
     """Check every process of a packed document against the submission rules.
 
     This is the second check on a submission, after it has been found to be
-    valid, self-contained CWL.
+    self-contained. The schema is only validated afterwards, so the document
+    may not be valid CWL yet.
 
     Args:
         document: A packed CWL document that passes
