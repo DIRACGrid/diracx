@@ -53,7 +53,7 @@ class BaseSQLDB(metaclass=ABCMeta):
 
     The available databases are discovered by calling `BaseSQLDB.available_urls`.
     This method returns a mapping of database names to connection URLs. The
-    available databases are determined by the `diracx.dbs.sql` entrypoint in the
+    available databases are determined by the `diracx.db.sql` entrypoint in the
     `pyproject.toml` file and the connection URLs are taken from the
     `sql_dbs` field in FactorySettings, which reads from environment variables
     of the form `DIRACX_DB_URL_<db-name>`.

@@ -1,6 +1,6 @@
 """Custom locked-object types for my_pilot tasks.
 
-Loaded via the ``diracx.lock_object_types`` entry point so that
+Loaded via the ``diracx.tasks.lock-object-types`` entry point so that
 ``LockedObjectType("my_pilot")`` is valid system-wide.
 """
 

@@ -18,7 +18,7 @@ This setup considers environment variables and installed packages to enable Dira
 
 <div class="annotate" markdown>
 - Services are served under `/api/`(1)
-- A `DiracxRouter` corresponds to a prefix under `/api/<system-name>`, where `<system-name>` is defined by the entry in the `diracx.services` entrypoint in the `pyproject.toml`.
+- A `DiracxRouter` corresponds to a prefix under `/api/<system-name>`, where `<system-name>` is defined by the entry in the `diracx.routers.services` entrypoint in the `pyproject.toml`.
 - Services can be disabled by setting `DIRACX_SERVICE_<system-name>_ENABLED=false`.
 </div>
 
@@ -165,7 +165,7 @@ Permission management in `diracx` is managed by `AccessPolicy`. The idea is that
 The various policies are defined in `diracx-routers/pyproject.toml`:
 
 ```toml
-[project.entry-points."diracx.access_policies"]
+[project.entry-points."diracx.routers.access-policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 ```
@@ -205,7 +205,7 @@ Implementing a new `AccessPolicy` is done by:
 1. Creating a module in `diracx.routers.<service>access_policies.py`
 2. Creating a new class inheriting from `BaseAccessPolicy`
 3. For specific instructions, see `diracx-routers/src/diracx/routers/access_policies.py`
-4. Adding an entry to the `diracx.access_policies` entrypoint.
+4. Adding an entry to the `diracx.routers.access-policies` entrypoint.
 
 !!! warning
 

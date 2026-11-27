@@ -3,7 +3,7 @@
 To add a router there are two steps:
 
 1. Create a module in `diracx.routers` for the given service.
-2. Add an entry to the `diracx.services` entrypoint.
+2. Add an entry to the `diracx.routers.services` entrypoint.
 3. Do not forget the Access Policy (see chapter lower down)
 
 We'll now make a `/parking/` router which contains information store in the `DummyDB`.
@@ -12,14 +12,13 @@ We'll now make a `/parking/` router which contains information store in the `Dum
 
 TODO: This isn't yet documented here however see `diracx.routers.auth.well_known` for an example.
 
-### Defining the new router in the `diracx.services` entrypoint
+### Defining the new router in the `diracx.routers.services` entrypoint
 
-Modify the package's `setup.cfg`
+Modify the package's `pyproject.toml`
 
-```ini
-[options.entry_points]
-diracx.services =
-	parking = diracx.routers.parking:router
+```toml
+[project.entry-points."diracx.routers.services"]
+parking = "diracx.routers.parking:router"
 ```
 
 This will prefix the routes with `/parking/` and mark them with the `"parking"` tag in the OpenAPI spec.

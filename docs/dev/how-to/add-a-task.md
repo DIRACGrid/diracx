@@ -64,7 +64,7 @@ class SyncOwnersTask(BaseTask):
         return [MutexLock(LockedObjectType(LOLLYGAG), self.owner_name)]
 ```
 
-To use a custom `LockedObjectType`, register it in a module and expose it via the `diracx.lock_object_types` entry point:
+To use a custom `LockedObjectType`, register it in a module and expose it via the `diracx.tasks.lock-object-types` entry point:
 
 ```python
 # gubbins/tasks/lock_types.py
@@ -74,7 +74,7 @@ LOLLYGAG = register_locked_object_type("lollygag")
 ```
 
 ```toml
-[project.entry-points."diracx.lock_object_types"]
+[project.entry-points."diracx.tasks.lock-object-types"]
 lollygag = "gubbins.tasks.lock_types"
 ```
 

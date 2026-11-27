@@ -6,7 +6,7 @@ import inspect
 
 # String-based extensible registry for locked object types.
 # Core types are registered here; extensions add their own via the
-# ``diracx.lock_object_types`` entry-point group.
+# ``diracx.tasks.lock-object-types`` entry-point group.
 
 # If an extension registers a type with the same name as a core type, that's a
 # potential bug due to a new object type being added to diracx which conflicts
