@@ -3170,10 +3170,11 @@ class TransformationsOperations:
 
         Submit a workgraph made of a single transformation.
 
-        The workflow must have exactly one step, carrying
-        ``dirac:Transformation``\\ , with its process inline in ``run``. The
-        workgraph and its transformation are created ``New``\\ ; start the workgraph
-        to run it.
+        The document is the one ``cwltool --pack`` makes, self-contained: a
+        ``$graph`` whose ``#main`` workflow has exactly one step carrying
+        ``dirac:Transformation``\\ , its ``run`` naming another entry or holding an
+        inline body. The workgraph and its transformation are created ``New``\\ ;
+        start the workgraph to run it.
 
         :param body: Required.
         :type body: dict[str, any]
@@ -3193,10 +3194,11 @@ class TransformationsOperations:
 
         Submit a workgraph made of a single transformation.
 
-        The workflow must have exactly one step, carrying
-        ``dirac:Transformation``\\ , with its process inline in ``run``. The
-        workgraph and its transformation are created ``New``\\ ; start the workgraph
-        to run it.
+        The document is the one ``cwltool --pack`` makes, self-contained: a
+        ``$graph`` whose ``#main`` workflow has exactly one step carrying
+        ``dirac:Transformation``\\ , its ``run`` naming another entry or holding an
+        inline body. The workgraph and its transformation are created ``New``\\ ;
+        start the workgraph to run it.
 
         :param body: Required.
         :type body: IO[bytes]
@@ -3216,10 +3218,11 @@ class TransformationsOperations:
 
         Submit a workgraph made of a single transformation.
 
-        The workflow must have exactly one step, carrying
-        ``dirac:Transformation``\\ , with its process inline in ``run``. The
-        workgraph and its transformation are created ``New``\\ ; start the workgraph
-        to run it.
+        The document is the one ``cwltool --pack`` makes, self-contained: a
+        ``$graph`` whose ``#main`` workflow has exactly one step carrying
+        ``dirac:Transformation``\\ , its ``run`` naming another entry or holding an
+        inline body. The workgraph and its transformation are created ``New``\\ ;
+        start the workgraph to run it.
 
         :param body: Is either a {str: Any} type or a IO[bytes] type. Required.
         :type body: dict[str, any] or IO[bytes]
