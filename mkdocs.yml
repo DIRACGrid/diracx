@@ -301,6 +301,7 @@ nav:
       - DX-ADR-007 - CWL specification: adr/DX-ADR-007_cwl.md
       - DX-ADR-008 - Data management transformations: adr/DX-ADR-008_data_management.md
       - DX-ADR-009 - Journalled counters: adr/DX-ADR-009_counters.md
+      - DX-ADR-012 - The DiracX Analytics Platform: adr/DX-ADR-012_analytics_platform.md
 
 markdown_extensions:
   - admonition
