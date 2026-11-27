@@ -8,7 +8,7 @@ Naming conventions for entrypoint groups:
 
 - Always start with `diracx`, using `.` to separate levels.
 - Namespace by either the system (e.g. `diracx.transformation.*`), or by the python package if no specific system is defined (e.g. `diracx.routers.access-policies`).
-- The last component is plural when it registers a collection of components (`feeders`, `sources`), singular when it names a package or a single value (`sql`, `mib-client-version`), i.e. `diracx.<system singular>.<last component>`.
+- The last component is plural when it registers a collection of components (`feeders`, `sources`), singular when it names a package or a single value (`sql`, `min-client-version`), i.e. `diracx.<system singular>.<last component>`.
 - Use hyphens instead of underscores (`access-policies`).
 
 DiracX entrypoint groups are registered in the `diracx-core` package under the `diracx-core.diracx.core.extensions:DiracEntryPoint` class.

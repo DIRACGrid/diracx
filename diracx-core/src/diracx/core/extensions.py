@@ -30,7 +30,7 @@ class DiracEntryPoint(StrEnum):
         (e.g. `diracx.routers.access-policies`).
       * The last component is plural when it registers a collection
         of components (`feeders`, `sources`), singular when it names
-        a package or a single value (`sql`, `mib-client-version`),
+        a package or a single value (`sql`, `min-client-version`),
         i.e. `diracx.<system singular>.<last component>`.
       * Use hyphens instead of underscores (`access-policies`).
     """
