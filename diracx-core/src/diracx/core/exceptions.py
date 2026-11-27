@@ -14,6 +14,8 @@ __all__ = [
     "InvalidCredentialsError",
     "InvalidParcelTransitionError",
     "InvalidQueryError",
+    "InvalidWorkgraphError",
+    "InvalidWorkgraphTransitionError",
     "NotReadyError",
     "PendingAuthorizationError",
     "PilotAlreadyAssociatedWithJobError",
@@ -248,5 +250,34 @@ class InvalidParcelTransitionError(DiracError):
         self.to_status = to_status
         super().__init__(
             f"Parcels cannot move from {from_status} to {to_status}"
+            + (f" ({detail})" if detail else "")
+        )
+
+
+class InvalidWorkgraphError(DiracError):
+    """A submitted workgraph document that cannot be compiled (DX-ADR-007).
+
+    Attributes:
+        errors: One message per problem found, each naming where it is.
+    """
+
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__("Invalid workgraph: " + "; ".join(errors))
+
+
+class InvalidWorkgraphTransitionError(DiracError):
+    """A workgraph status change that the state machine of DX-ADR-005 forbids.
+
+    Attributes:
+        from_status: Status the workgraph is in.
+        to_status: Status it was to enter.
+    """
+
+    def __init__(self, from_status: str, to_status: str, detail: str = ""):
+        self.from_status = from_status
+        self.to_status = to_status
+        super().__init__(
+            f"Workgraph cannot move from {from_status} to {to_status}"
             + (f" ({detail})" if detail else "")
         )

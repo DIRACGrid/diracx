@@ -23,6 +23,7 @@ from .operations import (
     MyOperations,
     PilotsOperations,
     ResourceStatusOperations,
+    TransformationsOperations,
     WellKnownOperations,
 )
 
@@ -46,6 +47,8 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword,too-many-inst
     :vartype pilots: _generated.aio.operations.PilotsOperations
     :ivar resource_status: ResourceStatusOperations operations
     :vartype resource_status: _generated.aio.operations.ResourceStatusOperations
+    :ivar transformations: TransformationsOperations operations
+    :vartype transformations: _generated.aio.operations.TransformationsOperations
     :keyword endpoint: Service URL. Required. Default value is "".
     :paramtype endpoint: str
     """
@@ -86,6 +89,7 @@ class Dirac:  # pylint: disable=client-accepts-api-version-keyword,too-many-inst
         self.my = MyOperations(self._client, self._config, self._serialize, self._deserialize)
         self.pilots = PilotsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.resource_status = ResourceStatusOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.transformations = TransformationsOperations(self._client, self._config, self._serialize, self._deserialize)
 
     def send_request(
         self, request: HttpRequest, *, stream: bool = False, **kwargs: Any

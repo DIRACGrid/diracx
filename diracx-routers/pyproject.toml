@@ -55,12 +55,14 @@ health = "diracx.routers.health:router"
 jobs = "diracx.routers.jobs:router"
 resource-status = "diracx.routers.resource_status:router"
 pilots = "diracx.routers.pilots:router"
+transformations = "diracx.routers.transformations:router"
 
 [project.entry-points."diracx.access_policies"]
 wms = "diracx.routers.jobs.access_policies:WMSAccessPolicy"
 sandbox = "diracx.routers.jobs.access_policies:SandboxAccessPolicy"
 resource-status = "diracx.routers.resource_status.access_policies:ResourceStatusAccessPolicy"
 pilot = "diracx.routers.pilots.access_policies:PilotManagementAccessPolicy"
+transformation = "diracx.routers.transformations.access_policies:TransformationAccessPolicy"
 
 # Minimum version of the client supported
 [project.entry-points."diracx.min_client_version"]
